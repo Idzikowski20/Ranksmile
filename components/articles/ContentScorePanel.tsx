@@ -11,8 +11,6 @@ interface Props {
   isAutoOptimizing?: boolean;
   onResearchOutline?: () => void;
   onInternalLinks?: () => void;
-  competitorCache?: string | null;
-  editorHtml?: string;
 }
 
 function computeScore(plainText: string, wordCount: number, headingCount: number, paragraphCount: number, scoreData: ScoreData, internalLinksCount?: number): number {
@@ -203,144 +201,10 @@ const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClic
   </button>
 );
 
-/* ── SERP Fit Score ─────────────────────────────────────────────────── */
-function normaliseHeading(text: string): Set<string> {
-  return new Set(
-    text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter((w) => w.length > 2),
-  );
-}
-
-function jaccard(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 && b.size === 0) return 0;
-  let inter = 0;
-  a.forEach((w) => { if (b.has(w)) inter++; });
-  const union = a.size + b.size - inter;
-  return union === 0 ? 0 : inter / union;
-}
-
-function computeSerpFit(
-  articleHtml: string,
-  plainText: string,
-  wordCount: number,
-  scoreData: ScoreData,
-  competitorCache: string | null | undefined,
-): number {
-  if (!competitorCache) return 0;
-  let competitors: any[];
-  try {
-    const parsed = JSON.parse(competitorCache);
-    competitors = parsed.competitors || [];
-  } catch {
-    return 0;
-  }
-  if (!competitors.length) return 0;
-
-  // Article headings word-set
-  const articleHeadings = new Set<string>();
-  const hMatches = [...(articleHtml || '').matchAll(/<h[23][^>]*>(.*?)<\/h[23]>/gi)];
-  for (const m of hMatches) {
-    normaliseHeading(m[1].replace(/<[^>]+>/g, '')).forEach((w) => articleHeadings.add(w));
-  }
-
-  // 1. Heading Jaccard — average across competitors
-  let headingJaccardSum = 0;
-  let headingJaccardCount = 0;
-  for (const comp of competitors) {
-    const compHeadings = new Set<string>();
-    for (const h of (comp.headings || []) as Array<{ level: number; text: string }>) {
-      if ((h.level || 2) <= 3) {
-        normaliseHeading(h.text || '').forEach((w) => compHeadings.add(w));
-      }
-    }
-    if (compHeadings.size > 0) {
-      headingJaccardSum += jaccard(articleHeadings, compHeadings);
-      headingJaccardCount++;
-    }
-  }
-  const headingScore = headingJaccardCount > 0 ? headingJaccardSum / headingJaccardCount : 0;
-
-  // 2. NLP Term Overlap
-  const terms = scoreData?.terms || [];
-  let nlpScore = 0;
-  if (terms.length > 0) {
-    const lowerText = plainText.toLowerCase();
-    const matched = terms.filter((t) => lowerText.includes(t.term.toLowerCase())).length;
-    nlpScore = matched / terms.length;
-  }
-
-  // 3. Length Fit
-  const competitorWordCounts = competitors
-    .map((c) => c.word_count || 0)
-    .filter((n) => n > 100);
-  let lengthScore = 0;
-  if (competitorWordCounts.length > 0) {
-    const avg = competitorWordCounts.reduce((a: number, b: number) => a + b, 0) / competitorWordCounts.length;
-    lengthScore = avg > 0 ? Math.max(0, 1 - Math.abs(wordCount - avg) / avg) : 0;
-  }
-
-  return Math.round(Math.min(0.4 * headingScore * 100 + 0.4 * nlpScore * 100 + 0.2 * lengthScore * 100, 100));
-}
-
-/* ── SERP Fit small gauge ────────────────────────────────────────────── */
-const SerpFitGauge = ({ score }: { score: number }) => {
-  const [display, setDisplay] = React.useState(0);
-  const animRef = React.useRef<number | null>(null);
-  const fromRef = React.useRef(0);
-
-  useEffect(() => {
-    const from = fromRef.current;
-    const to = score;
-    if (from === to) return;
-    const duration = from === 0 ? 1400 : 600;
-    let startTs: number | null = null;
-    if (animRef.current) cancelAnimationFrame(animRef.current);
-    const animate = (ts: number) => {
-      if (!startTs) startTs = ts;
-      const t = Math.min((ts - startTs) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 4);
-      setDisplay(Math.round(from + (to - from) * eased));
-      if (t < 1) { animRef.current = requestAnimationFrame(animate); } else { fromRef.current = to; animRef.current = null; }
-    };
-    animRef.current = requestAnimationFrame(animate);
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-  }, [score]);
-
-  const color = display >= 70 ? '#1ab25e' : display >= 40 ? '#efa00d' : '#d70028';
-  const r = 24, sw = 5;
-  const circ = Math.PI * r;
-  const fill = (display / 100) * circ;
-  const arcPath = `M ${50 - r} 32 A ${r} ${r} 0 0 1 ${50 + r} 32`;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 16px 10px', borderTop: '1px solid #f4f4f5' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', marginBottom: 4 }}>
-        SERP Fit
-        <span title="How closely your article's structure matches top-ranking competitors.">
-          <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="#9f9fa9" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-            <path d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-9-3.75h.008v.008H12z" />
-          </svg>
-        </span>
-      </div>
-      <svg viewBox="0 0 100 40" style={{ width: 130, height: 52 }}>
-        <path d={arcPath} fill="none" stroke="#e4e4e7" strokeWidth={sw} strokeLinecap="round" />
-        {fill > 0 && (
-          <path d={arcPath} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round"
-            strokeDasharray={`${fill} 9999`} strokeDashoffset={0} />
-        )}
-        <text x="50" y="30" textAnchor="middle" fontSize={14} fontWeight={600} fill={color}
-          fontFamily="var(--font-family-primary)">{display}</text>
-        <text x="50" y="39" textAnchor="middle" fontSize={9} fill="#9f9fa9"
-          fontFamily="var(--font-family-primary)">/ 100</text>
-      </svg>
-    </div>
-  );
-};
-
 /* ── Main panel ────────────────────────────────────────────────────── */
-const ContentScorePanel = ({ plainText, wordCount, headingCount, scoreData, internalLinksCount, onAutoOptimize, isAutoOptimizing, onResearchOutline, onInternalLinks, competitorCache, editorHtml }: Props) => {
+const ContentScorePanel = ({ plainText, wordCount, headingCount, scoreData, internalLinksCount, onAutoOptimize, isAutoOptimizing, onResearchOutline, onInternalLinks }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
-  const [serpFit, setSerpFit] = useState(0);
   const [nlpOpen, setNlpOpen] = useState(false);
   const [termSearch, setTermSearch] = useState('');
 
@@ -357,8 +221,7 @@ const ContentScorePanel = ({ plainText, wordCount, headingCount, scoreData, inte
     setTerms(updated);
     const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
     setScore(computeScore(plainText, wordCount, headingCount, paraCount, scoreData, internalLinksCount));
-    setSerpFit(computeSerpFit(editorHtml || '', plainText, wordCount, scoreData, competitorCache));
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, competitorCache, editorHtml]);
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
@@ -421,9 +284,6 @@ const ContentScorePanel = ({ plainText, wordCount, headingCount, scoreData, inte
         <div style={{ width: 1, background: '#e4e4e7', height: 36, flexShrink: 0 }} />
         <MetricCol label="Paragraphs" current={paragraphCount} range={parasRange} />
       </div>
-
-      {/* ── SERP Fit Gauge (only shown when competitor data is available) ── */}
-      {competitorCache && <SerpFitGauge score={serpFit} />}
 
       {/* ── Scrollable action area ── */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
