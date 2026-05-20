@@ -5,6 +5,7 @@ import Domain from '../../database/models/domain';
 import Keyword from '../../database/models/keyword';
 import getdomainStats from '../../utils/domains';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
 
@@ -32,18 +33,19 @@ type DomainsUpdateRes = {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
-   const authorized = verifyUser(req, res);
+   const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
    }
+   const userId = await getCurrentUserId(req, res);
    if (req.method === 'GET') {
-      return getDomains(req, res);
+      return getDomains(req, res, userId);
    }
    if (req.method === 'POST') {
-      return addDomain(req, res);
+      return addDomain(req, res, userId);
    }
    if (req.method === 'DELETE') {
-      return deleteDomain(req, res);
+      return deleteDomain(req, res, userId);
    }
    if (req.method === 'PUT') {
       return updateDomain(req, res);
@@ -51,10 +53,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    return res.status(502).json({ error: 'Unrecognized Route.' });
 }
 
-export const getDomains = async (req: NextApiRequest, res: NextApiResponse<DomainsGetRes>) => {
+export const getDomains = async (req: NextApiRequest, res: NextApiResponse<DomainsGetRes>, userId?: string | null) => {
    const withStats = !!req?.query?.withstats;
    try {
-      const allDomains: Domain[] = await Domain.findAll();
+      // Pokaż domeny należące do usera LUB domeny legacy (userId = NULL — dodane przed migracją)
+      const { Op } = await import('sequelize');
+      const whereClause = userId
+         ? { [Op.or]: [{ userId }, { userId: null }] }
+         : {};
+      const allDomains: Domain[] = await Domain.findAll({ where: whereClause });
       const formattedDomains: DomainType[] = allDomains.map((el) => {
          const domainItem:DomainType = el.get({ plain: true });
          const scData = domainItem?.search_console ? JSON.parse(domainItem.search_console) : {};
@@ -69,7 +76,7 @@ export const getDomains = async (req: NextApiRequest, res: NextApiResponse<Domai
    }
 };
 
-const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddResponse>) => {
+const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddResponse>, userId?: string | null) => {
    const { domains } = req.body;
    if (domains && Array.isArray(domains) && domains.length > 0) {
       const domainsToAdd: any = [];
@@ -80,6 +87,7 @@ const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddRes
             slug: domain.trim().replaceAll('-', '_').replaceAll('.', '-').replaceAll('/', '-'),
             lastUpdated: new Date().toJSON(),
             added: new Date().toJSON(),
+            userId: userId || null,
          });
       });
       try {
@@ -95,12 +103,17 @@ const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddRes
    }
 };
 
-export const deleteDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsDeleteRes>) => {
+export const deleteDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsDeleteRes>, userId?: string | null) => {
    if (!req.query.domain && typeof req.query.domain !== 'string') {
       return res.status(400).json({ domainRemoved: 0, keywordsRemoved: 0, SCDataRemoved: false, error: 'Domain is Required!' });
    }
    try {
       const { domain } = req.query || {};
+      // Sprawdź własność — userId musi pasować LUB domena jest legacy (NULL)
+      const domainRecord = await Domain.findOne({ where: { domain } });
+      if (domainRecord && domainRecord.userId && domainRecord.userId !== userId) {
+         return res.status(403).json({ domainRemoved: 0, keywordsRemoved: 0, SCDataRemoved: false, error: 'Access denied.' });
+      }
       await Promise.all((await Keyword.findAll({ where: { domain } })).map((keyword) => removeFromRetryQueue(keyword.ID)));
       const removedDomCount: number = await Domain.destroy({ where: { domain } });
       const removedKeywordCount: number = await Keyword.destroy({ where: { domain } });
@@ -121,7 +134,7 @@ export const updateDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
    const {
       notification_interval, notification_emails, search_console,
       scrape_strategy, scrape_pagination_limit, scrape_smart_full_fallback,
-      subdomain_matching,
+      subdomain_matching, brand_voice,
    } = req.body as DomainSettings;
 
    try {
@@ -146,6 +159,7 @@ export const updateDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
             scrape_pagination_limit: scrape_pagination_limit || 0,
             scrape_smart_full_fallback: !!scrape_smart_full_fallback,
             subdomain_matching: subdomain_matching || '',
+            brand_voice: brand_voice ?? '',
          });
          await domainToUpdate.save();
       }

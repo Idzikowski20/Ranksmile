@@ -53,6 +53,13 @@ class Domain extends Model {
 
    @Column({ type: DataType.STRING, allowNull: true, defaultValue: '' })
    subdomain_matching!: string;
+
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: '' })
+   brand_voice!: string;
+
+   // Auth0 user ID — null oznacza domenę "wspólną" (legacy / nie przypisaną)
+   @Column({ type: DataType.STRING, allowNull: true, defaultValue: null })
+   userId!: string | null;
 }
 
 export default Domain;
