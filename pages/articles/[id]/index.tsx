@@ -987,6 +987,8 @@ const ArticleEditorPage: NextPage = () => {
                   onClose={() => setShowResearchPanel(false)}
                   onInsertOutline={handleInsertOutline}
                   onAiActivity={setResearchAiActive}
+                  editorHtml={editorHtml}
+                  articleWordCount={wordCount}
                 />
               ) : showInternalLinksPanel ? (
                 <InternalLinksPanel
@@ -1025,8 +1027,6 @@ const ArticleEditorPage: NextPage = () => {
                       onInternalLinks={() => setShowInternalLinksPanel(true)}
                       onAutoOptimize={() => handleAutoOptimize()}
                       isAutoOptimizing={isAutoOptimizing}
-                      competitorCache={article?.competitor_outlines_cache ?? null}
-                      editorHtml={editorHtml}
                     />
                   </div>
                 </>
