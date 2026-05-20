@@ -23,6 +23,7 @@ type DomainType = {
    scrape_pagination_limit?: number,
    scrape_smart_full_fallback?: boolean,
    subdomain_matching?: string,
+   brand_voice?: string,
 }
 
 type KeywordHistory = {
@@ -77,6 +78,8 @@ type DomainSearchConsole = {
    url: string,
    client_email:string,
    private_key:string,
+   auth_type?: 'oauth' | 'service_account',
+   oauth_refresh_token?: string,
 }
 
 type DomainSettings = {
@@ -87,6 +90,7 @@ type DomainSettings = {
    scrape_pagination_limit?: number,
    scrape_smart_full_fallback?: boolean,
    subdomain_matching?: string,
+   brand_voice?: string,
 }
 
 type SettingsType = {
