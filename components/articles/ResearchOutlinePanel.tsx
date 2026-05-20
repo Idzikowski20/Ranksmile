@@ -60,20 +60,83 @@ function competitorSimilarity(
   return Math.round(Math.min(headingSim * 80 * 100 + lengthFit * 20, 100));
 }
 
-/* ── Mini similarity badge ─────────────────────────────────────────── */
-const SimilarityBadge = ({ score }: { score: number }) => {
-  const color = score >= 70 ? '#1ab25e' : score >= 40 ? '#efa00d' : '#d70028';
-  const bg = score >= 70 ? '#f0fdf4' : score >= 40 ? '#fffbeb' : '#fff1f2';
+/* ── Mini semi-circle gauge (same style as main ScoreGauge) ────────── */
+const MiniGauge = ({ score }: { score: number }) => {
+  const [display, setDisplay] = React.useState(0);
+  const animRef = React.useRef<number | null>(null);
+  const fromRef = React.useRef(0);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = score;
+    if (from === to) return;
+    const duration = from === 0 ? 900 : 500;
+    let startTs: number | null = null;
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    const animate = (ts: number) => {
+      if (!startTs) startTs = ts;
+      const t = Math.min((ts - startTs) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 5);
+      setDisplay(Math.round(from + (to - from) * eased));
+      if (t < 1) { animRef.current = requestAnimationFrame(animate); }
+      else { fromRef.current = to; animRef.current = null; }
+    };
+    animRef.current = requestAnimationFrame(animate);
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [score]);
+
+  // Same math as ScoreGauge but scaled for 60×30 viewBox
+  const cx = 30, cy = 26, r = 18, sw = 5;
+  const totalArc = Math.PI * r;
+  const gap = 6, capR = sw / 2;
+
+  const seg1End = (33 / 100) * totalArc;
+  const seg2End = (66 / 100) * totalArc;
+  const seg1Len = seg1End - gap / 2 - capR;
+  const seg2Start = seg1End + gap / 2 + capR;
+  const seg2Len = (seg2End - gap / 2 - capR) - seg2Start;
+  const seg3Start = seg2End + gap / 2 + capR;
+  const seg3Len = totalArc - capR - seg3Start;
+
+  const ds = Math.max(0, Math.min(display, 100));
+  const dsArcPos = (ds / 100) * totalArc;
+
+  const redFill    = Math.max(0, Math.min(dsArcPos - capR, seg1Len));
+  const yellowFill = dsArcPos > seg2Start ? Math.max(0, Math.min(dsArcPos - seg2Start, seg2Len)) : 0;
+  const greenFill  = dsArcPos > seg3Start ? Math.max(0, Math.min(dsArcPos - seg3Start, seg3Len)) : 0;
+
+  const fraction = ds / 100;
+  const angleRad = -Math.PI + fraction * Math.PI;
+  const innerR = r - sw / 2 - 1, outerR = r + sw / 2 + 1;
+  const nx1 = cx + Math.cos(angleRad) * innerR, ny1 = cy + Math.sin(angleRad) * innerR;
+  const nx2 = cx + Math.cos(angleRad) * outerR, ny2 = cy + Math.sin(angleRad) * outerR;
+
+  const scoreColor = ds >= 66 ? '#1ab25e' : ds >= 33 ? '#efa00d' : '#d70028';
+  const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
-      background: bg, border: `1px solid ${color}22`, borderRadius: 6,
-      padding: '2px 7px',
-    }}>
-      <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-      <span style={{ fontSize: 12, fontWeight: 700, color, fontFamily: 'var(--font-family-primary)', lineHeight: 1 }}>
-        {score}%
-      </span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+      <svg viewBox="0 0 60 30" style={{ width: 64, height: 32, overflow: 'visible' }}>
+        {/* Tracks */}
+        <path d={arcPath} fill="none" stroke="#ef4444" strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={`${seg1Len} 9999`} strokeDashoffset={0} opacity={0.18} />
+        <path d={arcPath} fill="none" stroke="#efa00d" strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={`${seg2Len} 9999`} strokeDashoffset={-seg2Start} opacity={0.18} />
+        <path d={arcPath} fill="none" stroke="#1ab25e" strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={`${seg3Len} 9999`} strokeDashoffset={-seg3Start} opacity={0.18} />
+        {/* Fills */}
+        {redFill > 0 && <path d={arcPath} fill="none" stroke="#ef4444" strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={`${redFill} 9999`} strokeDashoffset={0} />}
+        {yellowFill > 0 && <path d={arcPath} fill="none" stroke="#efa00d" strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={`${yellowFill} 9999`} strokeDashoffset={-seg2Start} />}
+        {greenFill > 0 && <path d={arcPath} fill="none" stroke="#1ab25e" strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={`${greenFill} 9999`} strokeDashoffset={-seg3Start} />}
+        {/* Needle */}
+        <line x1={nx1} y1={ny1} x2={nx2} y2={ny2} stroke="#09090b" strokeWidth={1.5} strokeLinecap="round" />
+        {/* Score */}
+        <text x={cx} y={cy + 1} textAnchor="middle" fontSize={9} fontWeight={700} fill={scoreColor}
+          fontFamily="var(--font-family-primary)">{display}</text>
+      </svg>
     </div>
   );
 };
@@ -439,7 +502,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                                 {comp.title}
                               </span>
                               {editorHtml && (
-                                <SimilarityBadge score={competitorSimilarity(editorHtml, articleWordCount, comp)} />
+                                <MiniGauge score={competitorSimilarity(editorHtml, articleWordCount, comp)} />
                               )}
                             </div>
                             <a
