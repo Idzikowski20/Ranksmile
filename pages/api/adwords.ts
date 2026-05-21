@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method === 'GET' && req.query.code) {
       return getAdwordsRefreshToken(req, res);
    }
-   const authorized = verifyUser(req, res);
+   const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
    }

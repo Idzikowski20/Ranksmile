@@ -11,6 +11,19 @@ from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 
+POLISH_STOPWORDS = {
+    "aby", "ale", "albo", "ani", "bez", "bo", "by", "byc", "być", "byla", "była",
+    "bylo", "było", "byly", "były", "czy", "dla", "do", "gdy", "gdzie", "ich",
+    "im", "jest", "jeśli", "jesli", "już", "juz", "kiedy", "kto", "ktora", "która",
+    "ktore", "które", "ktory", "który", "lub", "ma", "moze", "może", "na", "nad",
+    "nie", "oraz", "po", "pod", "przed", "przez", "przy", "są", "sa", "sie", "się",
+    "tak", "ten", "to", "u", "w", "we", "z", "za", "ze", "że",
+}
+
+
+def keyword_has_polish_context(keyword: str) -> bool:
+    return True
+
 
 async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10) -> dict:
     """
@@ -146,10 +159,11 @@ def _extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
 
     try:
         vectorizer = TfidfVectorizer(
-            ngram_range=(1, 3),
-            max_features=80,
-            stop_words="english",
+            ngram_range=(2, 4),
+            max_features=120,
+            stop_words=list(POLISH_STOPWORDS) if keyword_has_polish_context(keyword) else "english",
             min_df=1,
+            token_pattern=r"(?u)\b[\wąćęłńóśźżĄĆĘŁŃÓŚŹŻ]{3,}\b",
         )
         tfidf_matrix = vectorizer.fit_transform(texts)
         terms = vectorizer.get_feature_names_out()
@@ -157,7 +171,12 @@ def _extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
 
         result = []
         for i, term in enumerate(terms):
-            if avg_scores[i] > 0.02 and len(term) > 2:
+            tokens = term.split()
+            if (
+                avg_scores[i] > 0.02
+                and len(term) > 3
+                and not all(token in POLISH_STOPWORDS for token in tokens)
+            ):
                 # target_count = ile razy powinien pojawić się w artykule
                 target_count = max(1, round(avg_scores[i] * 15))
                 result.append({"term": term, "target_count": int(target_count)})

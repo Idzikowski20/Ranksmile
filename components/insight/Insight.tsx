@@ -12,15 +12,25 @@ type SCInsightProps = {
    isConsoleIntegrated: boolean,
 }
 
+const DATE_BUTTONS: { label: string; value: number; display: string }[] = [
+   { label: '24h', value: 1, display: 'Last 24 Hours' },
+   { label: '7 days', value: 7, display: 'Last 7 Days' },
+   { label: '28 days', value: 28, display: 'Last 28 Days' },
+   { label: '3 months', value: 90, display: 'Last 3 Months' },
+];
+
 const SCInsight = ({ insight, isLoading = true, isConsoleIntegrated = true, domain }: SCInsightProps) => {
    const [activeTab, setActiveTab] = useState<string>('stats');
+   const [dateRange, setDateRange] = useState<number>(90);
 
    const insightItems = insight[activeTab as keyof InsightDataType];
-   const startDate = insight && insight.stats && insight.stats.length > 0 ? new Date(insight.stats[0].date) : null;
-   const endDate = insight && insight.stats && insight.stats.length > 0 ? new Date(insight.stats[insight.stats.length - 1].date) : null;
+   const allStats = insight?.stats || [];
+   const visibleStats = allStats.slice(-dateRange);
+   const startDate = visibleStats.length > 0 ? new Date(visibleStats[0].date) : null;
+   const endDate = visibleStats.length > 0 ? new Date(visibleStats[visibleStats.length - 1].date) : null;
+   const dateLabel = DATE_BUTTONS.find(b => b.value === dateRange)?.display || 'Last 30 Days';
 
    const switchTab = (tab: string) => {
-      // window.insightTab = tab;
       setActiveTab(tab);
    };
 
@@ -82,12 +92,41 @@ const SCInsight = ({ insight, isLoading = true, isConsoleIntegrated = true, doma
                      />
                   </div>
                </div>
-               {isConsoleIntegrated && (<div className='py-2 text-xs text-center mt-2 lg:text-sm lg:mt-0'>
-                  {startDate && new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(startDate))}
-                  <span className='px-2 inline-block'>-</span>
-                  {endDate && new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(endDate))}
-                  <span className='ml-2'>(Last 30 Days)</span>
-               </div>
+               {isConsoleIntegrated && (
+                  <div className='flex flex-col lg:flex-row items-end lg:items-center gap-3 mt-2 lg:mt-0'>
+                     {/* GSC-style connected pill group */}
+                     <div className="inline-flex rounded-full border border-gray-200 overflow-hidden" style={{ height: 32 }}>
+                        {DATE_BUTTONS.map((btn, idx) => {
+                           const isActive = dateRange === btn.value;
+                           return (
+                              <button
+                                 key={btn.value}
+                                 onClick={() => setDateRange(btn.value)}
+                                 className="relative flex items-center gap-1 px-4 text-xs font-medium transition-colors focus:outline-none select-none"
+                                 style={{
+                                    backgroundColor: isActive ? '#c2e7ff' : 'white',
+                                    color: isActive ? '#004a77' : '#444746',
+                                    borderRight: idx < DATE_BUTTONS.length - 1 ? '1px solid #e0e0e0' : 'none',
+                                 }}
+                              >
+                                 {isActive && (
+                                    <svg width="13" height="13" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
+                                       <path d="M3 9.23529L6.84 13L15 5" stroke="#004a77" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                 )}
+                                 {btn.label}
+                              </button>
+                           );
+                        })}
+                     </div>
+                     {/* Dynamic date range display */}
+                     <div className='py-1 text-xs text-gray-500'>
+                        {startDate && new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(startDate)}
+                        <span className='px-1 inline-block'>–</span>
+                        {endDate && new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(endDate)}
+                        <span className='ml-1 text-gray-400'>({dateLabel})</span>
+                     </div>
+                  </div>
                )}
             </div>
             {isConsoleIntegrated && activeTab === 'stats' && (
@@ -96,6 +135,7 @@ const SCInsight = ({ insight, isLoading = true, isConsoleIntegrated = true, doma
                totalKeywords={insight?.keywords?.length || 0}
                totalCountries={insight?.countries?.length || 0}
                totalPages={insight?.pages?.length || 0}
+               dateRange={dateRange}
                />
             )}
 

@@ -26,9 +26,9 @@ const SCKeyword = (props: SCKeywordProps) => {
 
          <div className=' w-3/4 lg:flex-1 lg:basis-20 lg:w-auto font-semibold cursor-pointer'>
             <button
-               className={`p-0 mr-2 leading-[0px] inline-block rounded-sm pt-0 px-[1px] pb-[3px] border 
-               ${isTracked || selected ? ' bg-blue-700 border-blue-700 text-white' : 'text-transparent'}
-               ${isTracked ? 'bg-gray-400 border-gray-400 cursor-default' : ''}`}
+               className={`inline-flex items-center justify-center p-0 mr-2 rounded-sm w-[18px] h-[18px] border
+               ${isTracked || selected ? ' bg-black border-black text-white' : 'text-transparent'}
+               ${isTracked ? ' bg-gray-600 border-gray-600 cursor-default' : ''}`}
                onClick={() => !isTracked && selectKeyword(uid)}
                >
                   <Icon type="check" size={10} title={isTracked ? 'Already in Tracker' : ''} />

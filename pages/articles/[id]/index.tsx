@@ -10,7 +10,7 @@ import {
   Cancel01Icon,
   WordpressIcon,
 } from 'hugeicons-react';
-import Sidebar from '../../../components/common/Sidebar';
+import AppShell from '../../../components/common/AppShell';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
 import ResearchOutlinePanel from '../../../components/articles/ResearchOutlinePanel';
 import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
@@ -81,6 +81,7 @@ const ArticleEditorPage: NextPage = () => {
   const domains: DomainType[] = domainsData?.domains || [];
 
   const editorRef = useRef<any>(null);
+  const pixabayCallbackRef = useRef<((img: { url: string; alt: string }) => void) | null>(null);
   const [article, setArticle] = useState<Article | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,6 +119,17 @@ const ArticleEditorPage: NextPage = () => {
     headings_min: 10,
     headings_max: 20,
   });
+
+  // Listen for Pixabay open events dispatched from TipTap image node toolbar
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { onSelect } = (e as CustomEvent).detail as { onSelect: (img: { url: string; alt: string }) => void };
+      pixabayCallbackRef.current = onSelect;
+      setShowPixabay(true);
+    };
+    window.addEventListener('surfer:open-pixabay', handler);
+    return () => window.removeEventListener('surfer:open-pixabay', handler);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -578,9 +590,15 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   const handlePixabaySelect = (image: { url: string; alt: string; width: number; height: number }) => {
-    const editor = editorRef.current?.getEditor();
-    if (!editor) return;
-    editor.chain().focus().setImage({ src: image.url, alt: image.alt }).run();
+    // If opened from image node toolbar, update that node's src; otherwise insert at cursor
+    if (pixabayCallbackRef.current) {
+      pixabayCallbackRef.current({ url: image.url, alt: image.alt });
+      pixabayCallbackRef.current = null;
+    } else {
+      const editor = editorRef.current?.getEditor();
+      if (!editor) return;
+      editor.chain().focus().setImage({ src: image.url, alt: image.alt }).run();
+    }
   };
 
   if (isLoading) {
@@ -604,13 +622,14 @@ const ArticleEditorPage: NextPage = () => {
   const PANEL_GAP = 8; // gap-2xs = 0.25rem × 4 = ~8px in practice
 
   return (
-    <div className="flex" style={{ height: '100%', overflow: 'hidden' }}>
-      <Sidebar
-        domains={domains}
-        showAddModal={() => setShowAddDomain(true)}
-        showSettings={() => setShowSettings(true)}
-      />
-
+    <AppShell
+      domains={domains}
+      showAddModal={() => setShowAddDomain(true)}
+      showSettings={() => setShowSettings(true)}
+      showSidebar={false}
+      topbarTitle={article.target_keyword || article.title}
+      contentClassName="article-editor-shell"
+    >
       <style>{`
         @keyframes ai-glow-shift {
           0%   { box-shadow: inset 0 0 6px  4px rgba(120,58,251,0.5), inset 0 0 18px 10px rgba(120,58,251,0.3), inset 0 0 45px 20px rgba(120,58,251,0.15), inset 0 0 90px 10px rgba(120,58,251,0.06); }
@@ -987,8 +1006,6 @@ const ArticleEditorPage: NextPage = () => {
                   onClose={() => setShowResearchPanel(false)}
                   onInsertOutline={handleInsertOutline}
                   onAiActivity={setResearchAiActive}
-                  editorHtml={editorHtml}
-                  articleWordCount={wordCount}
                 />
               ) : showInternalLinksPanel ? (
                 <InternalLinksPanel
@@ -1237,7 +1254,7 @@ const ArticleEditorPage: NextPage = () => {
         {/* ── AI glow overlay — last child so it renders above everything ── */}
         <div className={`ai-glow-ring${isAiActive ? ' active' : ''}`} />
       </div>
-    </div>
+    </AppShell>
   );
 };
 

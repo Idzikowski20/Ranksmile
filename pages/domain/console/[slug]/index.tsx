@@ -5,8 +5,7 @@ import { useRouter } from 'next/router';
 // import { useQuery } from 'react-query';
 // import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
-import Sidebar from '../../../../components/common/Sidebar';
-import TopBar from '../../../../components/common/TopBar';
+import AppShell from '../../../../components/common/AppShell';
 import DomainHeader from '../../../../components/domains/DomainHeader';
 import AddDomain from '../../../../components/domains/AddDomain';
 import DomainSettings from '../../../../components/domains/DomainSettings';
@@ -27,9 +26,24 @@ const DiscoverPage: NextPage = () => {
    const { data: appSettings } = useFetchSettings();
    const { data: domainsData } = useFetchDomains(router);
    const scConnected = !!(appSettings && appSettings?.settings?.search_console_integrated);
-   const { data: keywordsData, isLoading: keywordsLoading, isFetching } = useFetchSCKeywords(router, !!(domainsData?.domains?.length) && scConnected);
 
    const theDomains: DomainType[] = (domainsData && domainsData.domains) || [];
+
+   const activDomainEarly: DomainType|null = useMemo(() => {
+      if (domainsData?.domains && router.query?.slug) {
+         return domainsData.domains.find((x:DomainType) => x.slug === router.query.slug) || null;
+      }
+      return null;
+   }, [router.query.slug, domainsData]);
+
+   const domainHasScAPIEarly = useMemo(() => {
+      const domainSc = activDomainEarly?.search_console ? JSON.parse(activDomainEarly.search_console) : {};
+      const hasOAuth = domainSc?.auth_type === 'oauth' && !!domainSc?.oauth_refresh_token;
+      const hasServiceAccount = !!(domainSc?.client_email && domainSc?.private_key);
+      return hasOAuth || hasServiceAccount;
+   }, [activDomainEarly]);
+
+   const { data: keywordsData, isLoading: keywordsLoading, isFetching } = useFetchSCKeywords(router, !!(domainsData?.domains?.length) && (scConnected || domainHasScAPIEarly));
    const theKeywords: SearchAnalyticsItem[] = useMemo(() => {
       return keywordsData?.data && keywordsData.data[scDateFilter] ? keywordsData.data[scDateFilter] : [];
    }, [keywordsData, scDateFilter]);
@@ -82,22 +96,17 @@ const DiscoverPage: NextPage = () => {
       return active;
    }, [router.query.slug, domainsData]);
 
-   const domainHasScAPI = useMemo(() => {
-      const domainSc = activDomain?.search_console ? JSON.parse(activDomain.search_console) : {};
-      return !!(domainSc?.client_email && domainSc?.private_key);
-   }, [activDomain]);
+   const domainHasScAPI = domainHasScAPIEarly;
 
    return (
-      <div className="Domain ">
+      <AppShell domains={theDomains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
          {activDomain && activDomain.domain
          && <Head>
                <title>{`${activDomain.domain} - SerpBear` } </title>
             </Head>
          }
-         <TopBar showSettings={() => setShowSettings(true)} showAddModal={() => setShowAddDomain(true)} />
-         <div className="flex w-full max-w-7xl mx-auto">
-            <Sidebar domains={theDomains} showAddModal={() => setShowAddDomain(true)} />
-            <div className="domain_keywords px-5 pt-10 lg:px-0 lg:pt-8 w-full">
+         <div className="flex w-full">
+            <div className="domain_keywords px-5 pt-6 lg:px-8 lg:pt-6 w-full">
                {activDomain && activDomain.domain
                ? <DomainHeader
                   domain={activDomain}
@@ -133,7 +142,7 @@ const DiscoverPage: NextPage = () => {
              <Settings closeSettings={() => setShowSettings(false)} />
          </CSSTransition>
          <Footer currentVersion={appSettings?.settings?.version ? appSettings.settings.version : ''} />
-      </div>
+      </AppShell>
    );
 };
 

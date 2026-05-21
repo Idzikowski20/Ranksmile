@@ -11,9 +11,10 @@ type IntegrationSettingsProps = {
    },
    updateSettings: Function,
    performUpdate: Function,
-   closeSettings: Function
+   closeSettings: Function,
+   domains?: DomainType[],
 }
-const IntegrationSettings = ({ settings, settingsError, updateSettings, performUpdate, closeSettings }:IntegrationSettingsProps) => {
+const IntegrationSettings = ({ settings, settingsError, updateSettings, performUpdate, closeSettings, domains = [] }:IntegrationSettingsProps) => {
    const [currentTab, setCurrentTab] = useState<string>('searchconsole');
    const tabStyle = 'inline-block px-4 py-1 rounded-full mr-3 cursor-pointer text-sm';
    return (
@@ -34,7 +35,7 @@ const IntegrationSettings = ({ settings, settingsError, updateSettings, performU
          </div>
          <div>
             {currentTab === 'searchconsole' && settings && (
-               <SearchConsoleSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} />
+               <SearchConsoleSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} domains={domains} />
             )}
             {currentTab === 'adwords' && settings && (
                <AdWordsSettings

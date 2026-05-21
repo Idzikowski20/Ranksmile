@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import { CSSTransition } from 'react-transition-group';
 import Icon from '../../components/common/Icon';
-import TopBar from '../../components/common/TopBar';
+import DashboardLayout from '../../components/common/DashboardLayout';
 import KeywordIdeasTable from '../../components/ideas/KeywordIdeasTable';
 import { exportKeywordIdeas } from '../../utils/client/exportcsv';
 import { useFetchKeywordIdeas, useMutateKeywordIdeas } from '../../services/adwords';
@@ -57,13 +57,12 @@ const Research: NextPage = () => {
    const labelStyle = 'mb-2 font-semibold inline-block text-sm text-gray-700 capitalize w-full';
 
    return (
-      <div className={'Login'}>
+      <DashboardLayout domains={[]} showAddModal={() => null} showSettings={() => setShowSettings(true)}>
          <Head>
             <title>Research Keywords - SerpBear</title>
          </Head>
-         <TopBar showSettings={() => setShowSettings(true)} showAddModal={() => null } />
-         <div className=" w-full max-w-7xl mx-auto lg:flex lg:flex-row">
-            <div className="sidebar w-full p-6 lg:pt-44 lg:w-1/5 lg:block lg:pr-0" data-testid="sidebar">
+         <div className="w-full lg:flex lg:flex-row">
+            <div className="sidebar w-full p-6 lg:pt-8 lg:w-72 lg:block lg:pr-0" data-testid="sidebar">
                <h3 className="hidden py-7 text-base font-bold text-blue-700 lg:block">
                   <span className=' relative top-[3px] mr-1'><Icon type="logo" size={24} color="#364AFF" /></span> SerpBear
                </h3>
@@ -143,7 +142,7 @@ const Research: NextPage = () => {
              <Settings closeSettings={() => setShowSettings(false)} />
          </CSSTransition>
          <Footer currentVersion={appSettings?.settings?.version ? appSettings.settings.version : ''} />
-      </div>
+      </DashboardLayout>
    );
 };
 

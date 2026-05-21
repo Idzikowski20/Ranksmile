@@ -26,6 +26,7 @@ const DomainHeader = (
    const isConsole = router.pathname === '/domain/console/[slug]';
    const isInsight = router.pathname === '/domain/insight/[slug]';
    const isIdeas = router.pathname === '/domain/ideas/[slug]';
+   const isAudit = router.pathname === '/domain/audit/[slug]';
 
    const daysName = (dayKey:string) => dayKey.replace('three', '3').replace('seven', '7').replace('thirty', '30').replace('Days', ' Days');
    const buttonStyle = 'leading-6 inline-block px-2 py-2 text-gray-500 hover:text-gray-700';
@@ -88,6 +89,20 @@ const DomainHeader = (
                   </a>
                </Link>
             </li>
+            <li className={`${tabStyle} ${router.pathname === '/domain/audit/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
+               <Link href={`/domain/audit/${domain.slug}`} passHref={true}>
+                  <a className='px-4 py-2 inline-block'><Icon type="check" size={13} classes='hidden lg:inline-block' />
+                     <span className='text-xs lg:text-sm lg:ml-2'>Audit</span>
+                     <Icon
+                     type='help'
+                     size={14}
+                     color="#aaa"
+                     classes="ml-2 hidden lg:inline-block"
+                     title='Content Audit — analyze your articles against SERP data'
+                     />
+                  </a>
+               </Link>
+            </li>
          </ul>
          <div className={'flex mb-0 lg:mb-1 lg:mt-3'}>
             {!isInsight && <button className={`${buttonStyle} lg:hidden`} onClick={() => setShowOptions(!showOptions)}>
@@ -135,7 +150,6 @@ const DomainHeader = (
             )}
             {isConsole && (
                <div className='text-xs pl-4 ml-2 border-l border-gray-200 relative'>
-                  {/* <span className='hidden lg:inline-block'>Data From Last: </span> */}
                   <span className='block cursor-pointer py-3' onClick={() => setShowSCDates(!ShowSCDates)}>
                      <Icon type='date' size={13} classes="mr-1" /> {daysName(scFilter)}
                   </span>

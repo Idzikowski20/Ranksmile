@@ -32,7 +32,7 @@ export const defaultSettings: SettingsType = {
    search_console: true,
    search_console_client_email: '',
    search_console_private_key: '',
-   keywordsColumns: ['Best', 'History', 'Volume', 'Search Console'],
+   keywordsColumns: ['Best', 'Worst', 'History', 'Volume', 'Search Console'],
 };
 
 const Settings = ({ closeSettings }:SettingsProps) => {

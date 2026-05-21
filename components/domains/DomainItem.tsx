@@ -1,6 +1,4 @@
 /* eslint-disable @next/next/no-img-element */
-// import { useRouter } from 'next/router';
-// import { useState } from 'react';
 import TimeAgo from 'react-timeago';
 import dayjs from 'dayjs';
 import Link from 'next/link';
@@ -16,7 +14,10 @@ type DomainItemProps = {
 
 const DomainItem = ({ domain, selected, isConsoleIntegrated = false, thumb, updateThumb }: DomainItemProps) => {
    const { keywordsUpdated, slug, keywordCount = 0, avgPosition = 0, scVisits = 0, scImpressions = 0, scPosition = 0 } = domain;
-   // const router = useRouter();
+
+   // v=3 bust cache przeglądarki (poprzednie wersje API mogły cachować złe odpowiedzi)
+   const defaultFaviconSrc = `/api/favicon?v=3&domain=${encodeURIComponent(domain.domain)}`;
+
    return (
       <div className={`domItem bg-white border rounded w-full text-sm mb-10 hover:border-indigo-200 ${selected ? '' : ''}`}>
          <Link href={`/domain/${slug}`} passHref={true}>
@@ -27,14 +28,17 @@ const DomainItem = ({ domain, selected, isConsoleIntegrated = false, thumb, upda
                   <button
                      className=' absolute right-1 top-0 text-gray-400 p-1 transition-all
                      invisible opacity-0 group-hover:visible group-hover:opacity-100 hover:text-gray-600 z-10'
-                     title='Reload Website Screenshot'
+                     title='Reload favicon'
                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateThumb(domain.domain); }}
                   >
                      <Icon type="reload" size={12} />
                   </button>
                   <img
-                  className={`self-center ${!thumb ? 'max-w-[50px]' : ''}`}
-                  src={thumb || `https://www.google.com/s2/favicons?domain=${domain.domain}&sz=128`} alt={domain.domain}
+                     className="self-center max-w-[50px]"
+                     src={thumb || defaultFaviconSrc}
+                     alt={domain.domain}
+                     width={50}
+                     height={50}
                   />
                </div>
                <div className="domain_details flex-1">
