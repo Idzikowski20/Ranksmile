@@ -1,0 +1,19 @@
+<h2>Jak chcesz strukturyzować stronę Content Audit?</h2>
+<p class="subtitle">Wybierz podejście do routingu i selekcji domeny</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Ścieżka domenowa: /domain/audit/[slug]</h3>
+      <p>Tak jak istniejące <code>/domain/insight/[slug]</code>, <code>/domain/console/[slug]</code>. Domena wybierana z URL-a. Sidebar z listą domen. Spójne z resztą podstron domenowych.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Dropdown w /articles/audit</h3>
+      <p>Tak jak działa obecny filtr na <code>/articles</code>. Dropdown z listą domen na górze strony. Bardziej "dashboardowe" podejście — jedna strona, przełączanie domen.</p>
+    </div>
+  </div>
+</div>

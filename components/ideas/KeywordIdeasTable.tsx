@@ -186,8 +186,8 @@ const IdeasKeywordsTable = ({
                      <span className='domKeywords_head_keyword flex-1 basis-20 w-auto '>
                      {finalKeywords.length > 0 && (
                         <button
-                           className={`p-0 mr-2 leading-[0px] inline-block rounded-sm pt-0 px-[1px] pb-[3px]  border border-slate-300 
-                           ${selectedAllItems ? ' bg-blue-700 border-blue-700 text-white' : 'text-transparent'}`}
+                           className={`inline-flex items-center justify-center p-0 mr-2 rounded-sm w-[18px] h-[18px] border border-slate-300
+                           ${selectedAllItems ? ' bg-black border-black text-white' : 'text-transparent'}`}
                            onClick={() => setSelectedKeywords(selectedAllItems ? [] : finalKeywords.map((k: IdeaKeyword) => k.uid))}
                            >
                               <Icon type="check" size={10} />

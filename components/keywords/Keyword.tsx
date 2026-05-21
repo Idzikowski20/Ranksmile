@@ -88,6 +88,18 @@ const Keyword = (props: KeywordProps) => {
       return bestPos || false;
    }, [history]);
 
+   const worstPosition: false | {position: number, date: string} = useMemo(() => {
+      if (Object.keys(history).length > 0) {
+         const historyArray = Object.keys(history).map((itemID) => ({ date: itemID, position: history[itemID] }))
+            .filter((el) => el.position > 0)
+            .sort((a, b) => b.position - a.position);
+         if (historyArray[0]) {
+            return { ...historyArray[0] };
+         }
+      }
+      return false;
+   }, [history]);
+
    const optionsButtonStyle = 'block px-2 py-2 cursor-pointer hover:bg-indigo-50 hover:text-blue-700';
 
    return (
@@ -99,8 +111,8 @@ const Keyword = (props: KeywordProps) => {
 
          <div className=' w-3/4 font-semibold cursor-pointer lg:flex-1 lg:shrink-0 lg:basis-28 lg:w-auto lg:flex lg:items-center'>
             <button
-               className={`p-0 mr-2 leading-[0px] inline-block rounded-sm pt-0 px-[1px] pb-[3px] border 
-               ${selected ? ' bg-blue-700 border-blue-700 text-white' : 'text-transparent'}`}
+               className={`inline-flex items-center justify-center p-0 mr-2 rounded-sm w-[18px] h-[18px] border
+               ${selected ? ' bg-black border-black text-white' : 'text-transparent'}`}
                onClick={() => selectKeyword(ID)}
                >
                   <Icon type="check" size={10} />
@@ -141,6 +153,17 @@ const Keyword = (props: KeywordProps) => {
           ${!tableColumns.includes('Best') ? 'lg:hidden' : ''}
           `}>
             {bestPosition ? bestPosition.position || '-' : (position || '-')}
+         </div>
+
+         <div
+         title={worstPosition && worstPosition.date
+            ? new Date(worstPosition.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }) : ''
+         }
+         className={`keyword_worst mr-1 bg-[#f8f9ff] float-right mt-8 w-14 rounded right-5 lg:relative lg:block
+          lg:bg-transparent lg:w-auto lg:h-auto lg:mt-0 lg:mr-0 lg:p-0 lg:text-sm lg:flex-1 lg:basis-16 lg:grow-0 lg:right-0 text-center font-semibold
+          ${!tableColumns.includes('Worst') ? 'lg:hidden' : ''}
+          `}>
+            {worstPosition ? worstPosition.position || '-' : (position || '-')}
          </div>
 
          {chartData.labels.length > 0 && (

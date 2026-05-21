@@ -3,8 +3,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
-import Sidebar from '../../../../components/common/Sidebar';
-import TopBar from '../../../../components/common/TopBar';
+import AppShell from '../../../../components/common/AppShell';
 import DomainHeader from '../../../../components/domains/DomainHeader';
 import AddDomain from '../../../../components/domains/AddDomain';
 import DomainSettings from '../../../../components/domains/DomainSettings';
@@ -46,16 +45,14 @@ const DiscoverPage: NextPage = () => {
    }, [router.query.slug, domainsData]);
 
    return (
-      <div className="Domain ">
+      <AppShell domains={theDomains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
          {activDomain && activDomain.domain
          && <Head>
                <title>{`${activDomain.domain} - Keyword Ideas` } </title>
             </Head>
          }
-         <TopBar showSettings={() => setShowSettings(true)} showAddModal={() => setShowAddDomain(true)} />
-         <div className="flex w-full max-w-7xl mx-auto">
-            <Sidebar domains={theDomains} showAddModal={() => setShowAddDomain(true)} />
-            <div className="domain_keywords px-5 pt-10 lg:px-0 lg:pt-8 w-full">
+         <div className="flex w-full">
+            <div className="domain_keywords px-5 pt-6 lg:px-8 lg:pt-6 w-full">
                {activDomain && activDomain.domain ? (
                   <DomainHeader
                   domain={activDomain}
@@ -106,7 +103,7 @@ const DiscoverPage: NextPage = () => {
             </Modal>
          )}
          <Footer currentVersion={appSettings?.settings?.version ? appSettings.settings.version : ''} />
-      </div>
+      </AppShell>
    );
 };
 

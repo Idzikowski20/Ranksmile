@@ -9,6 +9,17 @@ export type SCDomainFetchError = {
 }
 
 type SCAPISettings = { client_email: string, private_key: string }
+type SCOAuthSettings = { auth_type: 'oauth', refresh_token: string }
+type SCAuthSettings = SCAPISettings | SCOAuthSettings
+
+function isOAuth(s: SCAuthSettings): s is SCOAuthSettings {
+   return (s as SCOAuthSettings).auth_type === 'oauth';
+}
+
+export function hasValidSCAuth(s: SCAuthSettings): boolean {
+   if (isOAuth(s)) return !!s.refresh_token;
+   return !!(s.client_email && s.private_key);
+}
 
 type fetchConsoleDataResponse = SearchAnalyticsItem[] | SearchAnalyticsStat[] | SCDomainFetchError;
 
@@ -20,25 +31,34 @@ type fetchConsoleDataResponse = SearchAnalyticsItem[] | SearchAnalyticsStat[] | 
  * @param {SCAPISettings} [api] - (optional) specifies the Seach Console API Information.
  * @returns {Promise<fetchConsoleDataResponse>}
  */
-const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:string, api?:SCAPISettings): Promise<fetchConsoleDataResponse> => {
+const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:string, api?:SCAuthSettings): Promise<fetchConsoleDataResponse> => {
    if (!domain) return { error: true, errorMsg: 'Domain Not Provided!' };
-   if (!api?.private_key || !api?.client_email) return { error: true, errorMsg: 'Search Console API Data Not Available.' };
+   if (!api) return { error: true, errorMsg: 'Search Console API Data Not Available.' };
+   if (!isOAuth(api) && (!api.private_key || !api.client_email)) return { error: true, errorMsg: 'Search Console API Data Not Available.' };
    const domainName = domain.domain;
    const defaultSCSettings = { property_type: 'domain', url: '', client_email: '', private_key: '' };
    const domainSettings = domain.search_console ? JSON.parse(domain.search_console) : defaultSCSettings;
-   const sCPrivateKey = api?.private_key || process.env.SEARCH_CONSOLE_PRIVATE_KEY || '';
-   const sCClientEmail = api?.client_email || process.env.SEARCH_CONSOLE_CLIENT_EMAIL || '';
 
    try {
-   const authClient = new auth.GoogleAuth({
-      credentials: {
-        private_key: (sCPrivateKey).replaceAll('\\n', '\n'),
-        client_email: (sCClientEmail || '').trim(),
-      },
-      scopes: [
-        'https://www.googleapis.com/auth/webmasters.readonly',
-      ],
-   });
+   let authClient: any;
+   if (isOAuth(api)) {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const baseUrl = process.env.AUTH0_BASE_URL || 'http://localhost:3000';
+      const oauth2 = new auth.OAuth2(clientId, clientSecret, `${baseUrl}/api/gsc/callback`);
+      oauth2.setCredentials({ refresh_token: api.refresh_token });
+      authClient = oauth2;
+   } else {
+      const sCPrivateKey = api.private_key || process.env.SEARCH_CONSOLE_PRIVATE_KEY || '';
+      const sCClientEmail = api.client_email || process.env.SEARCH_CONSOLE_CLIENT_EMAIL || '';
+      authClient = new auth.GoogleAuth({
+         credentials: {
+           private_key: (sCPrivateKey).replaceAll('\\n', '\n'),
+           client_email: (sCClientEmail || '').trim(),
+         },
+         scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+      });
+   }
    const startDateRaw = new Date(new Date().setDate(new Date().getDate() - days));
    const padDate = (num:number) => String(num).padStart(2, '0');
    const startDate = `${startDateRaw.getFullYear()}-${padDate(startDateRaw.getMonth() + 1)}-${padDate(startDateRaw.getDate())}`;
@@ -99,10 +119,11 @@ const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:stri
  * @returns The function `fetchDomainSCData` is returning a Promise that resolves to an object of type
  * `SCDomainDataType`.
  */
-export const fetchDomainSCData = async (domain:DomainType, scAPI?: SCAPISettings): Promise<SCDomainDataType> => {
+export const fetchDomainSCData = async (domain:DomainType, scAPI?: SCAuthSettings): Promise<SCDomainDataType> => {
    const days = [3, 7, 30];
    const scDomainData:SCDomainDataType = { threeDays: [], sevenDays: [], thirtyDays: [], lastFetched: '', lastFetchError: '', stats: [] };
-   if (domain.domain && scAPI) {
+   const hasAuth = scAPI && (isOAuth(scAPI) ? scAPI.refresh_token : (scAPI as SCAPISettings).private_key);
+   if (domain.domain && hasAuth) {
       const theDomain = domain;
       for (const day of days) {
          const items = await fetchSearchConsoleData(theDomain, day, undefined, scAPI);
@@ -115,7 +136,7 @@ export const fetchDomainSCData = async (domain:DomainType, scAPI?: SCAPISettings
             scDomainData.lastFetchError = items.errorMsg;
          }
       }
-      const stats = await fetchSearchConsoleData(theDomain, 30, 'stat', scAPI);
+      const stats = await fetchSearchConsoleData(theDomain, 90, 'stat', scAPI);
       if (stats && Array.isArray(stats) && stats.length > 0) {
          scDomainData.stats = stats as SearchAnalyticsStat[];
       }
@@ -187,13 +208,22 @@ export const integrateKeywordSCData = (keyword: KeywordType, SCData:SCDomainData
  * console settings, etc.
  * @returns an object of type `SCAPISettings`.
  */
-export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAPISettings> => {
-   const scAPIData = { client_email: '', private_key: '' };
-   // Check if the Domain Has the API Data
+export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAuthSettings> => {
+   const cryptr = new Cryptr(process.env.SECRET as string);
    const domainSCSettings = domain.search_console && JSON.parse(domain.search_console);
-   if (domainSCSettings && domainSCSettings.private_key) {
+
+   // 1. OAuth2 refresh token (new flow)
+   if (domainSCSettings?.auth_type === 'oauth' && domainSCSettings?.oauth_refresh_token) {
+      try {
+         const refresh_token = cryptr.decrypt(domainSCSettings.oauth_refresh_token);
+         return { auth_type: 'oauth', refresh_token };
+      } catch { /* fall through to service account */ }
+   }
+
+   // 2. Service account — domain-level
+   const scAPIData: SCAPISettings = { client_email: '', private_key: '' };
+   if (domainSCSettings?.private_key) {
       if (!domainSCSettings.private_key.includes('BEGIN PRIVATE KEY')) {
-         const cryptr = new Cryptr(process.env.SECRET as string);
          scAPIData.client_email = domainSCSettings.client_email ? cryptr.decrypt(domainSCSettings.client_email) : '';
          scAPIData.private_key = domainSCSettings.private_key ? cryptr.decrypt(domainSCSettings.private_key) : '';
       } else {
@@ -201,15 +231,17 @@ export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAPI
          scAPIData.private_key = domainSCSettings.private_key;
       }
    }
-   // Check if the App Settings Has the API Data
-   if (!scAPIData?.private_key) {
+
+   // 3. Service account — global settings
+   if (!scAPIData.private_key) {
       const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' });
       const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
-      const cryptr = new Cryptr(process.env.SECRET as string);
       scAPIData.client_email = settings.search_console_client_email ? cryptr.decrypt(settings.search_console_client_email) : '';
       scAPIData.private_key = settings.search_console_private_key ? cryptr.decrypt(settings.search_console_private_key) : '';
    }
-   if (!scAPIData?.private_key && process.env.SEARCH_CONSOLE_PRIVATE_KEY && process.env.SEARCH_CONSOLE_CLIENT_EMAIL) {
+
+   // 4. Service account — environment variables
+   if (!scAPIData.private_key && process.env.SEARCH_CONSOLE_PRIVATE_KEY && process.env.SEARCH_CONSOLE_CLIENT_EMAIL) {
       scAPIData.client_email = process.env.SEARCH_CONSOLE_CLIENT_EMAIL;
       scAPIData.private_key = process.env.SEARCH_CONSOLE_PRIVATE_KEY;
    }
@@ -224,8 +256,8 @@ export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAPI
  */
 export const checkSerchConsoleIntegration = async (domain: DomainType): Promise<{ isValid: boolean, error: string }> => {
    const res = { isValid: false, error: '' };
-   const { client_email, private_key } = await getSearchConsoleApiInfo(domain);
-   const response = await fetchSearchConsoleData(domain, 3, undefined, { client_email, private_key });
+   const apiInfo = await getSearchConsoleApiInfo(domain);
+   const response = await fetchSearchConsoleData(domain, 3, undefined, apiInfo);
    if (Array.isArray(response)) { res.isValid = true; }
    if ((response as SCDomainFetchError)?.errorMsg) { res.error = (response as SCDomainFetchError).errorMsg; }
    return res;

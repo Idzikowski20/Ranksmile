@@ -14,7 +14,7 @@ type MigrationPostResponse = {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-   const authorized = verifyUser(req, res);
+   const authorized = await verifyUser(req, res);
    if (authorized === 'authorized' && req.method === 'GET') {
       await db.sync();
       return getMigrationStatus(req, res);

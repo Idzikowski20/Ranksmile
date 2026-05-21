@@ -3,8 +3,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
-import Sidebar from '../../../components/common/Sidebar';
-import TopBar from '../../../components/common/TopBar';
+import AppShell from '../../../components/common/AppShell';
 import DomainHeader from '../../../components/domains/DomainHeader';
 import KeywordsTable from '../../../components/keywords/KeywordsTable';
 import AddDomain from '../../../components/domains/AddDomain';
@@ -48,7 +47,7 @@ const SingleDomain: NextPage = () => {
    const theKeywords: KeywordType[] = keywordsData && keywordsData.keywords;
 
    return (
-      <div className="Domain ">
+      <AppShell domains={theDomains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
          {((!scraper_type || (scraper_type === 'none')) && !isAppSettingsLoading) && (
                <div className=' p-3 bg-red-600 text-white text-sm text-center'>
                   A Scrapper/Proxy has not been set up Yet. Open Settings to set it up and start using the app.
@@ -59,10 +58,8 @@ const SingleDomain: NextPage = () => {
                <title>{`${activDomain.domain} - SerpBear` } </title>
             </Head>
          }
-         <TopBar showSettings={() => setShowSettings(true)} showAddModal={() => setShowAddDomain(true)} />
-         <div className="flex w-full max-w-7xl mx-auto">
-            <Sidebar domains={theDomains} showAddModal={() => setShowAddDomain(true)} />
-            <div className="domain_keywords px-5 pt-10 lg:px-0 lg:pt-8 w-full">
+         <div className="flex w-full">
+            <div className="domain_keywords px-5 pt-6 lg:px-8 lg:pt-6 w-full">
                {activDomain && activDomain.domain
                ? <DomainHeader
                   domain={activDomain}
@@ -108,7 +105,7 @@ const SingleDomain: NextPage = () => {
                />
          </CSSTransition>
          <Footer currentVersion={appSettings?.version ? appSettings.version : ''} />
-      </div>
+      </AppShell>
    );
 };
 
