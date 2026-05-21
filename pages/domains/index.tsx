@@ -4,11 +4,11 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
 import toast, { Toaster } from 'react-hot-toast';
-import TopBar from '../../components/common/TopBar';
+import DashboardLayout from '../../components/common/DashboardLayout';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
 import { useCheckMigrationStatus, useFetchSettings } from '../../services/settings';
-import { fetchDomainScreenshot, useFetchDomains } from '../../services/domains';
+import { useFetchDomains } from '../../services/domains';
 import DomainItem from '../../components/domains/DomainItem';
 import Icon from '../../components/common/Icon';
 import Footer from '../../components/common/Footer';
@@ -48,33 +48,38 @@ const Domains: NextPage = () => {
       return domainsSCAPI;
    }, [domainsData]);
 
+   // Pre-populate thumbs — v=3 bust cache starej wersji API
    useEffect(() => {
-      if (domainsData?.domains && domainsData.domains.length > 0 && appSettings.screenshot_key) {
-         domainsData.domains.forEach(async (domain:DomainType) => {
-            if (domain.domain) {
-               const domainThumb = await fetchDomainScreenshot(domain.domain, appSettings.screenshot_key || '');
-               if (domainThumb) {
-                  setDomainThumbs((currentThumbs) => ({ ...currentThumbs, [domain.domain]: domainThumb }));
+      if (domainsData?.domains) {
+         setDomainThumbs((current) => {
+            const updated: thumbImages = { ...current };
+            domainsData.domains.forEach((domain: DomainType) => {
+               if (!updated[domain.domain]) {
+                  updated[domain.domain] = `/api/favicon?v=3&domain=${encodeURIComponent(domain.domain)}`;
                }
-            }
+            });
+            return updated;
          });
       }
-   }, [domainsData, appSettings.screenshot_key]);
+   }, [domainsData]);
 
+   // Favikony są teraz ładowane bezpośrednio przez server-side proxy /api/favicon
+   // Nie potrzebujemy screenshot_key ani localStorage
    const manuallyUpdateThumb = async (domain: string) => {
-      if (domain && appSettings.screenshot_key) {
-         const domainThumb = await fetchDomainScreenshot(domain, appSettings.screenshot_key, true);
-         if (domainThumb) {
-            toast(`${domain} Screenshot Updated Successfully!`, { icon: '✔️' });
-            setDomainThumbs((currentThumbs) => ({ ...currentThumbs, [domain]: domainThumb }));
-         } else {
-            toast(`Failed to Fetch ${domain} Screenshot!`, { icon: '⚠️' });
-         }
-      }
+      // Wymuszamy reload przez dodanie timestamp do URL (browser pominie cache)
+      setDomainThumbs((currentThumbs) => ({
+         ...currentThumbs,
+         [domain]: `/api/favicon?domain=${encodeURIComponent(domain)}&t=${Date.now()}`,
+      }));
+      toast(`${domain} favicon reloaded!`, { icon: '✔️' });
    };
 
    return (
-      <div data-testid="domains" className="Domain flex flex-col min-h-screen">
+      <DashboardLayout
+         domains={domainsData?.domains || []}
+         showAddModal={() => setShowAddDomain(true)}
+         showSettings={() => setShowSettings(true)}
+      >
          {((!scraper_type || (scraper_type === 'none')) && !isAppSettingsLoading) && (
                <div className=' p-3 bg-red-600 text-white text-sm text-center'>
                   A Scrapper/Proxy has not been set up Yet. Open Settings to set it up and start using the app.
@@ -89,9 +94,7 @@ const Domains: NextPage = () => {
          <Head>
             <title>Domains - SerpBear</title>
          </Head>
-         <TopBar showSettings={() => setShowSettings(true)} showAddModal={() => setShowAddDomain(true)} />
-
-         <div className="flex flex-col w-full max-w-5xl mx-auto p-6 lg:mt-24 lg:p-0">
+         <div className="flex flex-col w-full max-w-5xl mx-auto p-6 lg:p-8 lg:pt-8">
             <div className='flex justify-between mb-2 items-center'>
                <div className=' text-sm text-gray-600'>
                   {domainsData?.domains?.length || 0} Domains <span className=' text-gray-300 ml-1 mr-1'>|</span> {totalKeywords} keywords
@@ -140,7 +143,7 @@ const Domains: NextPage = () => {
          </CSSTransition>
          <Footer currentVersion={appSettings?.version ? appSettings.version : ''} />
          <Toaster position='bottom-center' containerClassName="react_toaster" />
-      </div>
+      </DashboardLayout>
    );
 };
 

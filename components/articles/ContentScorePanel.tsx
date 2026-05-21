@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScoreData, NlpTerm, countOccurrences } from '../../lib/contentScore';
+import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
+import AiSearchPanel from './AiSearchPanel';
 
 interface Props {
   plainText: string;
@@ -11,6 +13,9 @@ interface Props {
   isAutoOptimizing?: boolean;
   onResearchOutline?: () => void;
   onInternalLinks?: () => void;
+  aiVisibilitySummary?: AiVisibilitySummary | null;
+  onRunAiVisibility?: () => void;
+  isRunningAiVisibility?: boolean;
 }
 
 function computeScore(plainText: string, wordCount: number, headingCount: number, paragraphCount: number, scoreData: ScoreData, internalLinksCount?: number): number {
@@ -202,10 +207,24 @@ const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClic
 );
 
 /* ── Main panel ────────────────────────────────────────────────────── */
-const ContentScorePanel = ({ plainText, wordCount, headingCount, scoreData, internalLinksCount, onAutoOptimize, isAutoOptimizing, onResearchOutline, onInternalLinks }: Props) => {
+const ContentScorePanel = ({
+  plainText,
+  wordCount,
+  headingCount,
+  scoreData,
+  internalLinksCount,
+  onAutoOptimize,
+  isAutoOptimizing,
+  onResearchOutline,
+  onInternalLinks,
+  aiVisibilitySummary,
+  onRunAiVisibility,
+  isRunningAiVisibility,
+}: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
   const [nlpOpen, setNlpOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [termSearch, setTermSearch] = useState('');
 
   const paragraphCount = useMemo(() => {
@@ -238,6 +257,9 @@ const ContentScorePanel = ({ plainText, wordCount, headingCount, scoreData, inte
 
   const avgScore = score;
   const topScore = Math.min(score + 3, 100);
+  const aiScore = computeAiSearchScore(aiVisibilitySummary);
+  const aiCovered = aiVisibilitySummary?.prompts_cited ?? 0;
+  const aiTotal = aiVisibilitySummary?.prompts_total ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>

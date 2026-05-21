@@ -59,7 +59,7 @@ const KeywordsTable = (props: KeywordsTableProps) => {
       }
    }, [titleColumnRef]);
 
-   const tableColumns = settings?.keywordsColumns || ['Best', 'History', 'Volume', 'Search Console'];
+   const tableColumns = settings?.keywordsColumns || ['Best', 'Worst', 'History', 'Volume', 'Search Console'];
    const { mutate: updateMutate, isLoading: isUpdatingSettings } = useUpdateSettings(() => console.log(''));
 
    const scDataObject:{ [k:string] : string} = {
@@ -183,8 +183,8 @@ const KeywordsTable = (props: KeywordsTableProps) => {
                         ${showSCData && tableColumns.includes('Search Console') ? 'lg:basis-20' : 'lg:basis-10'} lg:w-auto lg:flex lg:items-center `}>
                      {processedKeywords[device].length > 0 && (
                         <button
-                           className={`p-0 mr-2 leading-[0px] inline-block rounded-sm pt-0 px-[1px] pb-[3px]  border border-slate-300 
-                           ${selectedAllItems ? ' bg-blue-700 border-blue-700 text-white' : 'text-transparent'}`}
+                           className={`inline-flex items-center justify-center p-0 mr-2 rounded-sm w-[18px] h-[18px] border border-slate-300
+                           ${selectedAllItems ? ' bg-black border-black text-white' : 'text-transparent'}`}
                            onClick={() => setSelectedKeywords(selectedAllItems ? [] : processedKeywords[device].map((k: KeywordType) => k.ID))}
                            >
                               <Icon type="check" size={10} />
@@ -198,6 +198,7 @@ const KeywordsTable = (props: KeywordsTableProps) => {
                      </span>
                      <span className='domKeywords_head_position flex-1 basis-24 grow-0 text-center'>Position</span>
                      <span className={`domKeywords_head_best flex-1 basis-16 grow-0 text-center  ${shouldHideColumn('Best')}`}>Best</span>
+                     <span className={`domKeywords_head_worst flex-1 basis-16 grow-0 text-center ${shouldHideColumn('Worst')}`}>Worst</span>
                      <span className={`domKeywords_head_history flex-1 basis-20 grow-0  ${shouldHideColumn('History')}`}>History (7d)</span>
                      <span className={`domKeywords_head_volume flex-1 basis-24 grow-0 text-center ${shouldHideColumn('Volume')}`}>Volume</span>
                      <span className='domKeywords_head_url flex-1'>URL</span>

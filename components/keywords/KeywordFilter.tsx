@@ -101,6 +101,7 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       { value: 'URL', label: 'URL', locked: true },
       { value: 'Updated', label: 'Updated', locked: true },
       { value: 'Best', label: 'Best', locked: false },
+      { value: 'Worst', label: 'Worst', locked: false },
       { value: 'History', label: 'History', locked: false },
       { value: 'Volume', label: 'Volume', locked: false },
       { value: 'Search Console', label: 'Search Console', locked: false },

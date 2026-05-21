@@ -5,8 +5,7 @@ import { useRouter } from 'next/router';
 // import { useQuery } from 'react-query';
 // import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
-import Sidebar from '../../../../components/common/Sidebar';
-import TopBar from '../../../../components/common/TopBar';
+import AppShell from '../../../../components/common/AppShell';
 import DomainHeader from '../../../../components/domains/DomainHeader';
 import AddDomain from '../../../../components/domains/AddDomain';
 import DomainSettings from '../../../../components/domains/DomainSettings';
@@ -27,10 +26,8 @@ const InsightPage: NextPage = () => {
    const { data: appSettings } = useFetchSettings();
    const { data: domainsData } = useFetchDomains(router);
    const scConnected = !!(appSettings && appSettings?.settings?.search_console_integrated);
-   const { data: insightData } = useFetchSCInsight(router, !!(domainsData?.domains?.length) && scConnected);
 
    const theDomains: DomainType[] = (domainsData && domainsData.domains) || [];
-   const theInsight: InsightDataType = insightData && insightData.data ? insightData.data : {};
 
    const activDomain: DomainType|null = useMemo(() => {
       let active:DomainType|null = null;
@@ -42,20 +39,24 @@ const InsightPage: NextPage = () => {
 
    const domainHasScAPI = useMemo(() => {
       const domainSc = activDomain?.search_console ? JSON.parse(activDomain.search_console) : {};
-      return !!(domainSc?.client_email && domainSc?.private_key);
+      const hasOAuth = domainSc?.auth_type === 'oauth' && !!domainSc?.oauth_refresh_token;
+      const hasServiceAccount = !!(domainSc?.client_email && domainSc?.private_key);
+      return hasOAuth || hasServiceAccount;
    }, [activDomain]);
 
+   const { data: insightData } = useFetchSCInsight(router, !!(domainsData?.domains?.length) && (scConnected || domainHasScAPI));
+
+   const theInsight: InsightDataType = insightData && insightData.data ? insightData.data : {};
+
    return (
-      <div className="Domain ">
+      <AppShell domains={theDomains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
          {activDomain && activDomain.domain
          && <Head>
                <title>{`${activDomain.domain} - SerpBear` } </title>
             </Head>
          }
-         <TopBar showSettings={() => setShowSettings(true)} showAddModal={() => setShowAddDomain(true)} />
-         <div className="flex w-full max-w-7xl mx-auto">
-            <Sidebar domains={theDomains} showAddModal={() => setShowAddDomain(true)} />
-            <div className="domain_keywords px-5 pt-10 lg:px-0 lg:pt-8 w-full">
+         <div className="flex w-full">
+            <div className="domain_keywords px-5 pt-6 lg:px-8 lg:pt-6 w-full">
                {activDomain && activDomain.domain
                ? <DomainHeader
                   domain={activDomain}
@@ -91,7 +92,7 @@ const InsightPage: NextPage = () => {
              <Settings closeSettings={() => setShowSettings(false)} />
          </CSSTransition>
          <Footer currentVersion={appSettings?.settings?.version ? appSettings.settings.version : ''} />
-      </div>
+      </AppShell>
    );
 };
 

@@ -4,6 +4,7 @@ import { dummyKeywords } from '../../__mocks__/data';
 
 const keywordProps = {
    keywordData: dummyKeywords[0],
+   maxTitleColumnWidth: 300,
    selected: false,
    index: 0,
    showSCData: false,

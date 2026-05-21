@@ -11,7 +11,7 @@ type SettingsGetResponse = {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-   const authorized = verifyUser(req, res);
+   const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
    }
@@ -105,7 +105,7 @@ export const getAppSettings = async () : Promise<SettingsType> => {
       search_console: true,
       search_console_client_email: '',
       search_console_private_key: '',
-      keywordsColumns: ['Best', 'History', 'Volume', 'Search Console'],
+      keywordsColumns: ['Best', 'Worst', 'History', 'Volume', 'Search Console'],
       scrape_strategy: 'basic',
       scrape_pagination_limit: 5,
       scrape_smart_full_fallback: false,
