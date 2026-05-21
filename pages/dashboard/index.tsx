@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { Toaster } from 'react-hot-toast';
+import { CSSTransition } from 'react-transition-group';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 
 const Greeting = () => {
-  const hour = new Date().getHours();
+  const [hour, setHour] = useState<number | null>(null);
+
+  useEffect(() => {
+    setHour(new Date().getHours());
+  }, []);
+
+  if (hour === null) return <>Welcome back!</>;
   if (hour < 12) return <>Good morning!</>;
   if (hour < 18) return <>Good afternoon!</>;
   return <>Good evening!</>;
@@ -425,6 +432,17 @@ const DashboardPage: NextPage = () => {
           },
         }}
       />
+
+      {showAddDomain && (
+        <AddDomain
+          domains={domainsData?.domains || []}
+          closeModal={() => setShowAddDomain(false)}
+        />
+      )}
+
+      <CSSTransition in={showSettings} timeout={300} classNames="settings_anim" unmountOnExit mountOnEnter>
+        <Settings closeSettings={() => setShowSettings(false)} />
+      </CSSTransition>
       </>
     </DashboardLayout>
   );

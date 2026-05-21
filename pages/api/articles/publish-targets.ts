@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       const [insertId] = await db.query(
          `INSERT INTO publish_targets (domain_id, type, url, api_key, created_at)
-          VALUES (?, ?, ?, ?, datetime('now'))`,
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
          { replacements: [domain_id, type, url, api_key || ''], type: QueryTypes.INSERT },
       );
       return res.status(200).json({ id: insertId });

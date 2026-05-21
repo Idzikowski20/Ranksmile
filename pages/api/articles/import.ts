@@ -321,10 +321,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          _heading_count: headingTexts.length,
          _paragraph_count: paragraphCount,
       };
-      scoreData._computed_score = computeContentScore(plainText, wordCount, headingTexts.length, scoreData, paragraphCount);
+      scoreData._computed_score = computeContentScore(
+         plainText, wordCount, headingTexts.length, scoreData, paragraphCount, undefined,
+         contentHtml, (keywords as string[])[0] || '',
+      );
 
       // Get first available domain
-      const [domains] = await db.query('SELECT ID FROM domain LIMIT 1', { replacements: [] });
+      const [domains] = await db.query('SELECT "ID" FROM domain LIMIT 1', { replacements: [] });
       const domainId = (domains as any[])[0]?.ID || 1;
 
       // Slug from title
@@ -345,7 +348,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          `INSERT INTO articles
             (domain_id, title, slug, content, target_keyword, meta_title, meta_description,
              score_data, word_count, featured_image, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', datetime('now'), datetime('now'))`,
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
          {
             replacements: [
                domainId,

@@ -16,6 +16,7 @@ from analyzers.site_analyzer import analyze_site
 from analyzers.serp_analyzer import analyze_serp, extract_competitor_outlines
 from analyzers.meta_generator import generate_meta
 from analyzers.image_generator import generate_article_image
+from analyzers.ai_visibility import run_ai_visibility
 from pipeline.article_pipeline import run_pipeline, suggest_internal_links
 
 app = FastAPI(
@@ -239,6 +240,18 @@ async def competitor_outlines_endpoint(body: dict):
     except Exception as e:
         print(f"[competitor-outlines] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ai-visibility")
+async def ai_visibility_endpoint(body: dict):
+    """AI Search visibility check for one article/keyword."""
+    keyword = body.get("keyword", "")
+    own_domain = body.get("own_domain", "")
+    competitor_domains = body.get("competitor_domains", [])
+    article_content = body.get("article_content", "")
+    if not keyword:
+        raise HTTPException(status_code=400, detail="keyword is required")
+    return await run_ai_visibility(keyword, own_domain, competitor_domains, article_content)
 
 
 # ── Optimization Advisor ──────────────────────────────────────────────

@@ -5,6 +5,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { publishToWordPress, publishToNextJs } from '../../../lib/wordpressPublish';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -23,9 +24,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
 
    try {
+      const articleIdSql = await getArticleIdSql();
       // Pobierz artykuł
       const [articleRows] = await db.query(
-         `SELECT * FROM articles WHERE id = ? LIMIT 1`,
+         `SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
          { replacements: [articleId] },
       );
       const article = (articleRows as any[])[0];
@@ -74,8 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await db.query(
          `UPDATE articles
           SET status = 'published', publish_target = ?, publish_url = ?,
-              published_at = datetime('now'), updated_at = datetime('now')
-          WHERE id = ?`,
+              published_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+          WHERE ${articleIdSql} = ?`,
          { replacements: [target, publishedUrl, articleId] },
       );
 
@@ -83,13 +85,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (article.target_keyword) {
          try {
             const [existing] = await db.query(
-               `SELECT ID FROM keyword WHERE domain = ? AND keyword = ? LIMIT 1`,
+               `SELECT "ID" FROM keyword WHERE domain = ? AND keyword = ? LIMIT 1`,
                { replacements: [article.domain_id?.toString() || '', article.target_keyword] },
             );
             if ((existing as any[]).length === 0) {
                await db.query(
                   `INSERT INTO keyword (keyword, domain, device, country, position, history, added, lastUpdated)
-                   VALUES (?, ?, 'desktop', 'pl', 0, '[]', datetime('now'), datetime('now'))`,
+                   VALUES (?, ?, 'desktop', 'pl', 0, '[]', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
                   { replacements: [article.target_keyword, article.domain_id?.toString() || ''] },
                );
             }

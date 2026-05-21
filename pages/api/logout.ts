@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 /**
- * Logout obsługiwany przez Auth0 v3 pod /api/auth/logout.
- * Ten endpoint istnieje dla kompatybilności wstecznej.
+ * Legacy logout endpoint — przekierowuje do strony sign-in po wylogowaniu.
+ * Faktyczne usunięcie sesji odbywa się client-side przez authClient.signOut().
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-   res.redirect(307, '/api/auth/logout');
+   res.redirect(307, '/auth/sign-in');
 }
