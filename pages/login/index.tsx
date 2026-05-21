@@ -1,118 +1,34 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
-import { useState } from 'react';
-import Icon from '../../components/common/Icon';
-
-type LoginError = {
-   type: string,
-   msg: string,
-}
+import { useEffect } from 'react';
 
 const Login: NextPage = () => {
-   const [error, setError] = useState<LoginError|null>(null);
-   const [username, setUsername] = useState<string>('');
-   const [password, setPassword] = useState<string>('');
-   const router = useRouter();
+   useEffect(() => {
+      // Przekierowanie do Auth0 Universal Login
+      window.location.href = '/api/auth/login';
+   }, []);
 
-   const loginuser = async () => {
-      let loginError: LoginError |null = null;
-      if (!username || !password) {
-         if (!username && !password) {
-            loginError = { type: 'empty_username_password', msg: 'Please Insert Your App Username & Password to login.' };
-         }
-         if (!username && password) {
-            loginError = { type: 'empty_username', msg: 'Please Insert Your App Username' };
-         }
-         if (!password && username) {
-            loginError = { type: 'empty_password', msg: 'Please Insert Your App Password' };
-         }
-         setError(loginError);
-         setTimeout(() => { setError(null); }, 3000);
-      } else {
-         try {
-            const header = new Headers({ 'Content-Type': 'application/json', Accept: 'application/json' });
-            const fetchOpts = { method: 'POST', headers: header, body: JSON.stringify({ username, password }) };
-            const fetchRoute = `${window.location.origin}/api/login`;
-            const res = await fetch(fetchRoute, fetchOpts).then((result) => result.json());
-            // console.log(res);
-            if (!res.success) {
-               let errorType = '';
-               if (res.error && res.error.toLowerCase().includes('username')) {
-                   errorType = 'incorrect_username';
-               }
-               if (res.error && res.error.toLowerCase().includes('password')) {
-                   errorType = 'incorrect_password';
-               }
-               setError({ type: errorType, msg: res.error });
-               setTimeout(() => { setError(null); }, 3000);
-            } else {
-               router.push('/');
-            }
-         } catch (fetchError) {
-            setError({ type: 'unknown', msg: 'Could not login, The Server is not responsive.' });
-            setTimeout(() => { setError(null); }, 3000);
-         }
-      }
-   };
-
-   const labelStyle = 'mb-2 font-semibold inline-block text-sm text-gray-700';
-   // eslint-disable-next-line max-len
-   const inputStyle = 'w-full p-2 border border-gray-200 rounded mb-3 focus:outline-none focus:border-blue-200';
-   const errorBorderStyle = 'border-red-400 focus:border-red-400';
    return (
-      <div className={'Login'}>
+      <>
          <Head>
-            <title>Login - SerpBear</title>
+            <title>Log in — SerpBear</title>
+            <style>{`
+               *, *::before, *::after { box-sizing: border-box; font-family: "Inter", sans-serif; }
+               html, body { margin: 0; padding: 0; background: #000; }
+               .splash { background: #000; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; }
+               .splash-title { margin: 0; font-size: clamp(1.5rem, 6vw, 3.75rem); font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+               .splash-spin { width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #783AFB; border-radius: 50%; animation: sp 0.75s linear infinite; }
+               .splash-sub { font-size: 0.9rem; color: rgba(255,255,255,0.45); }
+               @keyframes sp { to { transform: rotate(360deg); } }
+            `}</style>
          </Head>
-         <div className='flex items-center justify-center w-full h-screen'>
-            <div className='w-80 mt-[-300px]'>
-               <h3 className="py-7 text-2xl font-bold text-blue-700 text-center">
-                  <span className=' relative top-[3px] mr-1'>
-                     <Icon type="logo" size={30} color="#364AFF" />
-                  </span> SerpBear
-               </h3>
-               <div className='relative bg-[white] rounded-md text-sm border p-5'>
-                  <div className="settings__section__input mb-5">
-                     <label className={labelStyle}>Username</label>
-                     <input
-                        className={`
-                           ${inputStyle} 
-                           ${error && error.type.includes('username') ? errorBorderStyle : ''} 
-                        `}
-                        type="text"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                     />
-                  </div>
-                  <div className="settings__section__input mb-5">
-                     <label className={labelStyle}>Password</label>
-                     <input
-                        className={`
-                           ${inputStyle} 
-                           ${error && error.type.includes('password') ? errorBorderStyle : ''} 
-                        `}
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                     />
-                  </div>
-                  <button
-                  onClick={() => loginuser()}
-                  className={'py-3 px-5 w-full rounded cursor-pointer bg-blue-700 text-white font-semibold text-sm'}>
-                     Login
-                  </button>
-                  {error && error.msg
-                  && <div
-                     className={'absolute w-full bottom-[-100px] ml-[-20px] rounded text-center p-3 bg-red-100 text-red-600 text-sm font-semibold'}>
-                        {error.msg}
-                     </div>
-                  }
-               </div>
-            </div>
-         </div>
 
-      </div>
+         <div className="splash">
+            <h1 className="splash-title">SerpBear</h1>
+            <div className="splash-spin" />
+            <p className="splash-sub">Redirecting to login…</p>
+         </div>
+      </>
    );
 };
 

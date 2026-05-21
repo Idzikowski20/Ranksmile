@@ -17,47 +17,35 @@ interface Props {
   onClose: () => void;
   onInsertOutline: (headings: Array<{ level: number; text: string }>) => void;
   onAiActivity?: (active: boolean) => void;
-  editorHtml?: string;
-  articleWordCount?: number;
 }
 
-/* ── Per-competitor similarity ─────────────────────────────────────── */
-function normWords(text: string): Set<string> {
-  return new Set(text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter((w) => w.length > 2));
-}
+/* ── Per-competitor content score (relative to peer group) ────────── */
+/**
+ * Score 0-100 for a competitor article based on how it compares
+ * to the median word count and heading count of all competitors.
+ * Higher = more comprehensive / better structured.
+ */
+function competitorScore(comp: CompetitorOutline, allComps: CompetitorOutline[]): number {
+  if (allComps.length === 0) return 0;
 
-function jaccardSets(a: Set<string>, b: Set<string>): number {
-  if (!a.size && !b.size) return 0;
-  let inter = 0;
-  a.forEach((w) => { if (b.has(w)) inter++; });
-  const union = a.size + b.size - inter;
-  return union === 0 ? 0 : inter / union;
-}
+  const words = allComps.map((c) => c.word_count ?? 0).filter((n) => n > 0);
+  const headings = allComps.map((c) => c.heading_count).filter((n) => n > 0);
 
-function competitorSimilarity(
-  editorHtml: string,
-  articleWordCount: number,
-  comp: CompetitorOutline,
-): number {
-  // Article heading word-set (h2+h3)
-  const articleH = new Set<string>();
-  for (const m of [...editorHtml.matchAll(/<h[23][^>]*>(.*?)<\/h[23]>/gi)]) {
-    normWords(m[1].replace(/<[^>]+>/g, '')).forEach((w) => articleH.add(w));
-  }
-  // Competitor heading word-set
-  const compH = new Set<string>();
-  for (const h of comp.headings) {
-    if (h.level <= 3) normWords(h.text).forEach((w) => compH.add(w));
-  }
-  const headingSim = jaccardSets(articleH, compH);
+  const medianWords = words.length ? words.slice().sort((a, b) => a - b)[Math.floor(words.length / 2)] : 1;
+  const medianHeadings = headings.length ? headings.slice().sort((a, b) => a - b)[Math.floor(headings.length / 2)] : 1;
 
-  // Word count fit (20%)
-  let lengthFit = 0;
-  if (comp.word_count && comp.word_count > 100 && articleWordCount > 0) {
-    lengthFit = Math.max(0, 1 - Math.abs(articleWordCount - comp.word_count) / comp.word_count);
-  }
+  // Word score: 1 = at median, diminishing returns above, penalised below
+  const wordScore = comp.word_count && comp.word_count > 0
+    ? Math.min((comp.word_count / medianWords) * 100, 100)
+    : 0;
 
-  return Math.round(Math.min(headingSim * 80 * 100 + lengthFit * 20, 100));
+  // Heading score: 1 = at median
+  const headingScore = comp.heading_count > 0
+    ? Math.min((comp.heading_count / medianHeadings) * 100, 100)
+    : 0;
+
+  // 70% word count, 30% heading structure
+  return Math.round(wordScore * 0.7 + headingScore * 0.3);
 }
 
 /* ── Mini semi-circle gauge (same style as main ScoreGauge) ────────── */
@@ -149,8 +137,6 @@ const ResearchOutlinePanel: React.FC<Props> = ({
   onClose,
   onInsertOutline,
   onAiActivity,
-  editorHtml = '',
-  articleWordCount = 0,
 }) => {
   const [tab, setTab] = useState<'competitors' | 'questions'>('competitors');
   const [competitors, setCompetitors] = useState<CompetitorOutline[]>([]);
@@ -501,8 +487,8 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                               <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                                 {comp.title}
                               </span>
-                              {editorHtml && (
-                                <MiniGauge score={competitorSimilarity(editorHtml, articleWordCount, comp)} />
+                              {competitors.length > 0 && (
+                                <MiniGauge score={competitorScore(comp, competitors)} />
                               )}
                             </div>
                             <a

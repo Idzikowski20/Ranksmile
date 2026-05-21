@@ -1,0 +1,760 @@
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+
+interface Article {
+  id: number;
+  title: string;
+  status: string;
+  score_data?: string;
+  content_score?: number;
+  target_keyword: string;
+  word_count: number | null;
+  publish_target: string | null;
+  publish_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Props {
+  articles: Article[];
+  onDelete: (id: number) => void;
+  onDeleteMultiple: (ids: number[]) => Promise<void>;
+  isLoading?: boolean;
+}
+
+const timeAgo = (dateStr: string): { relative: string; full: string } => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  let relative: string;
+  if (diffMins < 1) relative = 'just now';
+  else if (diffMins < 60) relative = `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+  else if (diffHrs < 24) relative = `${diffHrs} hour${diffHrs !== 1 ? 's' : ''} ago`;
+  else relative = `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+
+  const full = date.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  });
+
+  return { relative, full };
+};
+
+// Returns the correct color for the score fill — matches SurferSEO color scheme
+function gaugeColor(score: number): string {
+  if (score >= 70) return '#22C55E'; // green
+  if (score >= 40) return '#F59E0B'; // amber
+  return '#EF4444';                  // red for low scores
+}
+
+// Inline SVG score gauge — semicircle from right (0%) to left (100%), counterclockwise
+// Arc math: point at fraction f is (150 - 120·cos(f·π), 150 - 120·sin(f·π))
+const ScoreGauge = ({ score }: { score: number | null }) => {
+  if (score === null) {
+    return (
+      <svg viewBox="0 0 300 175" style={{ width: '100%', height: 'auto', verticalAlign: 'middle' }}>
+        <path fill="transparent" stroke="#E4E4E7" strokeWidth="30" strokeLinecap="round"
+          d="M 270 150 A 120 120 0 0 0 30 150" style={{ pointerEvents: 'none' }} />
+      </svg>
+    );
+  }
+
+  const fraction = Math.max(0, Math.min(score, 100)) / 100;
+  // Point on the arc at the score's position
+  const sx = 150 - 120 * Math.cos(fraction * Math.PI);
+  const sy = 150 - 120 * Math.sin(fraction * Math.PI);
+  const color = gaugeColor(score);
+
+  return (
+    <svg viewBox="0 0 300 175" style={{ width: '100%', height: 'auto', verticalAlign: 'middle' }}>
+      {/* Background track */}
+      <path fill="transparent" stroke="#E4E4E7" strokeWidth="30" strokeLinecap="round"
+        d="M 270 149.99999999999997 A 120 120 0 0 0 30 150.00000000000003"
+        style={{ pointerEvents: 'none' }} />
+      {/* Score fill — from score point counterclockwise to left (30, 150) */}
+      {score > 0 && (
+        <path fill="transparent" stroke={color} strokeWidth="30" strokeLinecap="round"
+          d={`M ${sx.toFixed(4)} ${sy.toFixed(4)} A 120 120 0 0 0 30 150`}
+          style={{ pointerEvents: 'none' }} />
+      )}
+      {/* Score number */}
+      <text x="150" y="90" fill="#2F2F34" textAnchor="middle" dominantBaseline="text-before-edge"
+        style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '4.5rem', letterSpacing: '0.02em', cursor: 'default' }}>
+        {score}
+      </text>
+    </svg>
+  );
+};
+
+const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props) => {
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuId]);
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteMultiple(Array.from(selectedIds));
+      clearSelection();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
+        Loading articles...
+      </div>
+    );
+  }
+
+  if (!articles || articles.length === 0) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '64px 40px',
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            width: 48, height: 48, borderRadius: 12, background: '#F4F4F5',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" style={{ color: '#9F9FA9' }}>
+            <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9z" />
+          </svg>
+        </div>
+        <span style={{ fontSize: 15, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+          No articles yet
+        </span>
+        <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+          Import content from a URL or create a new article to get started.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+      {articles.map((article) => {
+        const time = timeAgo(article.updated_at || article.created_at);
+        // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
+        const score = typeof article.content_score === 'number' ? article.content_score : null;
+
+        // Analyzing state — simplified row with spinner
+        if (article.status === 'analyzing') {
+          return (
+            <div
+              key={article.id}
+              style={{
+                height: 133,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                border: '1px solid #E4E4E7',
+                borderRadius: 12,
+                paddingRight: 24,
+                gap: 12,
+                userSelect: 'none',
+                opacity: 0.7,
+              }}
+            >
+              {/* Left: Spinner */}
+              <div
+                style={{
+                  display: 'flex',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingLeft: 24,
+                  paddingRight: 12,
+                  width: 84,
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    border: '2.5px solid #E4E4E7',
+                    borderTopColor: '#783AFB',
+                    borderRadius: '50%',
+                    animation: 'spin 0.7s linear infinite',
+                  }}
+                />
+              </div>
+
+              {/* Main content */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                <span
+                  style={{
+                    fontSize: 14,
+                    lineHeight: '20px',
+                    fontWeight: 600,
+                    color: '#3F3F47',
+                    fontFamily: 'var(--font-family-primary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: 450,
+                  }}
+                >
+                  {article.title || article.target_keyword || '(untitled)'}
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    lineHeight: '16px',
+                    color: '#9F9FA9',
+                    fontFamily: 'var(--font-family-primary)',
+                  }}
+                >
+                  Analyzing content…
+                </span>
+              </div>
+
+              {/* Right: nothing */}
+            </div>
+          );
+        }
+
+        return (
+          <div
+            key={article.id}
+            className={`article-list-item group/selectable-item select-none gap-md relative flex h-[133px] w-full items-center justify-between border border-solid hover:shadow-sm cursor-pointer pr-lg border-gray-20 rounded-xl${selectedIds.has(article.id) ? ' is-selected' : ''}`}
+            style={{
+              height: 133,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: '1px solid #E4E4E7',
+              borderRadius: 12,
+              paddingRight: 24,
+              gap: 12,
+              userSelect: 'none',
+              cursor: 'pointer',
+              transition: 'box-shadow 0.2s, border-color 0.2s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0px 4px 4px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.08), 0px -1px 1px 0px rgba(0,0,0,0.02)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+          >
+            {/* Left: Score gauge / Checkbox */}
+            <div
+              className="group flex h-full items-center justify-between border-r hover:border-gray-10 border-transparent pl-lg pr-md"
+              style={{
+                display: 'flex',
+                height: '100%',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRight: '1px solid transparent',
+                paddingLeft: 24,
+                paddingRight: 12,
+                transition: 'border-color 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = '#F4F4F5'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = 'transparent'; }}
+            >
+              <div style={{ width: 48 }}>
+                {/* Score gauge — visible by default, hidden on group hover */}
+                <div className="article-gauge-default">
+                  <ScoreGauge score={score} />
+                </div>
+                {/* Checkbox — hidden by default, shown on group hover */}
+                <div className="article-gauge-checkbox hidden">
+                  <label
+                    style={{
+                      fontSize: 16,
+                      lineHeight: '24px',
+                      color: '#2F2F34',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      position: 'relative',
+                    }}
+                  >
+                    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(article.id)}
+                        onChange={() => toggleSelect(article.id)}
+                        style={{
+                          margin: 0,
+                          width: 20,
+                          height: 20,
+                          borderRadius: 4,
+                          border: '1px solid #D4D4D8',
+                          background: selectedIds.has(article.id) ? '#783AFB' : '#fff',
+                          boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
+                          cursor: 'pointer',
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          flexShrink: 0,
+                          display: 'grid',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background 0.25s, border-color 0.25s',
+                        }}
+                      />
+                      {selectedIds.has(article.id) && (
+                        <svg
+                          viewBox="0 0 20 20"
+                          width="16"
+                          height="16"
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            color: '#fff',
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          <path fill="currentColor" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Main content */}
+            <div style={{ position: 'relative', display: 'flex', height: '100%', flex: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+              <Link href={`/articles/${article.id}`}>
+                <a style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+              </Link>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
+                {/* Top row: title + meta */}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          lineHeight: '20px',
+                          fontWeight: 600,
+                          maxWidth: 450,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          color: '#2F2F34',
+                          fontFamily: 'var(--font-family-primary)',
+                        }}
+                      >
+                        {article.title || '(untitled)'}
+                      </span>
+                    </div>
+                    {article.target_keyword && (
+                      <span
+                        style={{
+                          fontSize: 14,
+                          lineHeight: '20px',
+                          maxWidth: 450,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          color: '#3F3F47',
+                          fontFamily: 'var(--font-family-primary)',
+                        }}
+                      >
+                        {article.target_keyword}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Right meta: status check, avatar, menu */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, zIndex: 1 }}>
+                    {/* Check icon if accepted or published */}
+                    {(article.status === 'accepted' || article.status === 'published') && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#16a34a',
+                          padding: 0,
+                          flexShrink: 0,
+                        }}
+                        title={article.status === 'published' ? 'Published' : 'Accepted'}
+                      >
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                          <path fill="currentColor" fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75s-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12m13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                    )}
+
+                    {/* Avatar */}
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: '#F4F4F5',
+                        color: '#09090B',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 11,
+                        fontWeight: 500,
+                        textTransform: 'uppercase',
+                        fontFamily: 'var(--font-family-primary)',
+                        flexShrink: 0,
+                        position: 'relative',
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                        b
+                      </span>
+                    </div>
+
+                    {/* Triple-dot menu */}
+                    <div style={{ position: 'relative' }} ref={openMenuId === article.id ? menuRef : undefined}>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenMenuId(openMenuId === article.id ? null : article.id); }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#3F3F47',
+                          padding: 0,
+                          transition: 'opacity 0.15s',
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M19 13C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11C18.4477 11 18 11.4477 18 12C18 12.5523 18.4477 13 19 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M5 13C5.55228 13 6 12.5523 6 12C6 11.4477 5.55228 11 5 11C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown menu */}
+                      {openMenuId === article.id && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            marginTop: 4,
+                            zIndex: 100,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: 6,
+                            borderRadius: 8,
+                            background: '#fff',
+                            boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.06), 0px 2px 8px 0px rgba(24,26,34,0.03), 0px 1px 2px 0px rgba(24,26,34,0.06)',
+                            border: '1px solid #F4F4F5',
+                            minWidth: 220,
+                            animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)',
+                            transformOrigin: '100% 0',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* Folders — disabled */}
+                          <div
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 12px', borderRadius: 6,
+                              fontSize: 14, fontWeight: 500, color: '#9F9FA9',
+                              cursor: 'not-allowed', opacity: 0.6,
+                              fontFamily: 'var(--font-family-primary)',
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0, color: '#9F9FA9' }}>
+                              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+                            </svg>
+                            Folders
+                            <div style={{ marginLeft: 'auto' }}>
+                              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+                            </div>
+                          </div>
+
+                          {/* Get shareable link */}
+                          <div
+                            role="button"
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 12px', borderRadius: 6,
+                              fontSize: 14, fontWeight: 500, color: '#2F2F34',
+                              cursor: 'pointer', transition: 'background 0.12s',
+                              fontFamily: 'var(--font-family-primary)',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#F8F8F9'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                            onClick={() => { setOpenMenuId(null); }}
+                          >
+                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
+                              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185" />
+                            </svg>
+                            Get shareable link
+                          </div>
+
+                          {/* Add Tags — disabled */}
+                          <div
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 12px', borderRadius: 6,
+                              fontSize: 14, fontWeight: 500, color: '#9F9FA9',
+                              cursor: 'not-allowed', opacity: 0.6,
+                              fontFamily: 'var(--font-family-primary)',
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0, color: '#9F9FA9' }}>
+                              <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5">
+                                <path d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.224-5.223c.54-.827.368-1.908-.33-2.607l-9.583-9.58A2.25 2.25 0 0 0 9.568 3" />
+                                <path d="M6 6h.008v.008H6z" />
+                              </g>
+                            </svg>
+                            Add Tags
+                            <div style={{ marginLeft: 'auto' }}>
+                              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+                            </div>
+                          </div>
+
+                          {/* Separator */}
+                          <div style={{ height: 1, background: '#F4F4F5', margin: '4px -6px' }} />
+
+                          {/* Delete */}
+                          <div
+                            role="button"
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 12px', borderRadius: 6,
+                              fontSize: 14, fontWeight: 500, color: '#EF4444',
+                              cursor: 'pointer', transition: 'background 0.12s',
+                              fontFamily: 'var(--font-family-primary)',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#FEF2F2'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                            onClick={() => { setOpenMenuId(null); onDelete(article.id); }}
+                          >
+                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
+                              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0" />
+                            </svg>
+                            Delete
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom row: tags + country + timestamp */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+                  {/* Left tags */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 24, flexWrap: 'wrap' }}>
+                    {/* Folder tag */}
+                    <button
+                      type="button"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '2px 12px',
+                        borderRadius: 24,
+                        background: '#F8F8F9',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        lineHeight: '16px',
+                        color: '#3F3F47',
+                        fontFamily: 'var(--font-family-primary)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
+                        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
+                      </svg>
+                      <span>Unassigned</span>
+                    </button>
+
+                    {/* Tag button */}
+                    <button
+                      type="button"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        fontSize: 13,
+                        lineHeight: '16px',
+                        fontWeight: 600,
+                        color: '#3F3F47',
+                        fontFamily: 'var(--font-family-primary)',
+                      }}
+                    >
+                      <svg viewBox="0 0 20 20" width="16" height="16">
+                        <path fill="currentColor" d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
+                      </svg>
+                      <span>Tag</span>
+                    </button>
+                  </div>
+
+                  {/* Right: country + timestamp */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    {/* Country */}
+                    <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, lineHeight: '16px', color: '#3F3F47', gap: 2, fontFamily: 'var(--font-family-primary)' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
+                        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
+                      </svg>
+                      <span>Poland</span>
+                    </div>
+
+                    {/* Timestamp */}
+                    <div style={{ fontSize: 13, lineHeight: '16px', color: '#3F3F47', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>
+                      <span className="article-time-relative">{time.relative}</span>
+                      <span className="article-time-full hidden">{time.full}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* No more results */}
+      <div className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
+        No more results found.
+      </div>
+
+      {/* ── Bulk selection bar ── */}
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minHeight: 48,
+            minWidth: 480,
+            padding: '8px 16px',
+            borderRadius: 8,
+            background: '#18181B',
+            boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.12), 0px 2px 4px 0px rgba(24,26,34,0.06), 0px 1px 2px 0px rgba(0,0,0,0.08)',
+          }}
+        >
+          {/* Deselect all */}
+          <button
+            type="button"
+            onClick={clearSelection}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#fff',
+              padding: 0,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path fill="currentColor" fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
+            </svg>
+          </button>
+
+          {/* Count */}
+          <span
+            style={{
+              margin: 0,
+              fontSize: 13,
+              lineHeight: '16px',
+              color: '#fff',
+              fontFamily: 'var(--font-family-primary)',
+              fontWeight: 400,
+              flex: 1,
+            }}
+          >
+            {selectedIds.size} selected
+          </span>
+
+          {/* Put in trash */}
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={isDeleting}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 12px',
+              borderRadius: 24,
+              background: '#EF444420',
+              border: 'none',
+              cursor: isDeleting ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              lineHeight: '16px',
+              color: '#FCA5A5',
+              fontFamily: 'var(--font-family-primary)',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              opacity: isDeleting ? 0.6 : 1,
+              transition: 'opacity 0.15s',
+            }}
+            onMouseEnter={(e) => { if (!isDeleting) (e.currentTarget as HTMLButtonElement).style.background = '#EF444440'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#EF444420'; }}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
+              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-1.935l-1.342-9.523m16.498 0a48.108 48.108 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.166m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            </svg>
+            <span>{isDeleting ? 'Deleting…' : 'Put in trash'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ArticleList;

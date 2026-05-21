@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
-import { fetchDomainSCData, getSearchConsoleApiInfo, readLocalSCData } from '../../utils/searchConsole';
+import { fetchDomainSCData, getSearchConsoleApiInfo, readLocalSCData, hasValidSCAuth } from '../../utils/searchConsole';
 import verifyUser from '../../utils/verifyUser';
 
 type searchConsoleRes = {
@@ -16,7 +16,7 @@ type searchConsoleCRONRes = {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
-   const authorized = verifyUser(req, res);
+   const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
    }
@@ -41,7 +41,7 @@ const getDomainSearchConsoleData = async (req: NextApiRequest, res: NextApiRespo
       const foundDomain:Domain| null = await Domain.findOne({ where: query });
       const domainObj: DomainType = foundDomain && foundDomain.get({ plain: true });
       const scDomainAPI = await getSearchConsoleApiInfo(domainObj);
-      if (!(scDomainAPI.client_email && scDomainAPI.private_key)) {
+      if (!hasValidSCAuth(scDomainAPI)) {
          return res.status(200).json({ data: null, error: 'Google Search Console is not Integrated.' });
       }
       const scData = await fetchDomainSCData(domainObj, scDomainAPI);
@@ -58,7 +58,7 @@ const cronRefreshSearchConsoleData = async (req: NextApiRequest, res: NextApiRes
       const Domains: DomainType[] = allDomainsRaw.map((el) => el.get({ plain: true }));
       for (const domain of Domains) {
          const scDomainAPI = await getSearchConsoleApiInfo(domain);
-         if (scDomainAPI.client_email && scDomainAPI.private_key) {
+         if (hasValidSCAuth(scDomainAPI)) {
             await fetchDomainSCData(domain, scDomainAPI);
          }
       }

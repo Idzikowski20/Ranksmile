@@ -35,31 +35,34 @@ export async function fetchDomain(router: NextRouter, domainName: string): Promi
 export async function fetchDomainScreenshot(domain: string, screenshot_key:string, forceFetch = false): Promise<string | false> {
    const domainThumbsRaw = localStorage.getItem('domainThumbs');
    const domThumbs = domainThumbsRaw ? JSON.parse(domainThumbsRaw) : {};
-   if (!domThumbs[domain] || forceFetch) {
-      try {
-         const screenshotURL = `https://image.thum.io/get/auth/${screenshot_key}/maxAge/96/width/200/https://${domain}`;
-         const domainImageRes = await fetch(screenshotURL);
-         const domainImageBlob = domainImageRes.status === 200 ? await domainImageRes.blob() : false;
-         if (domainImageBlob) {
-            const reader = new FileReader();
-            await new Promise((resolve, reject) => {
-               reader.onload = resolve;
-               reader.onerror = reject;
-               reader.readAsDataURL(domainImageBlob);
-            });
-            const imageBase: string = reader.result && typeof reader.result === 'string' ? reader.result : '';
+
+   // Zwróć z cache jeśli dostępny i nie wymuszamy odświeżenia
+   if (domThumbs[domain] && !forceFetch) {
+      return domThumbs[domain];
+   }
+
+   try {
+      // Lokalny proxy — Next.js pobiera favicon server-side (omija CORS Google)
+      const faviconURL = `/api/favicon?domain=${encodeURIComponent(domain)}`;
+      const faviconRes = await fetch(faviconURL);
+      const faviconBlob = faviconRes.status === 200 ? await faviconRes.blob() : false;
+      if (faviconBlob) {
+         const reader = new FileReader();
+         await new Promise((resolve, reject) => {
+            reader.onload = resolve;
+            reader.onerror = reject;
+            reader.readAsDataURL(faviconBlob);
+         });
+         const imageBase: string = reader.result && typeof reader.result === 'string' ? reader.result : '';
+         if (imageBase) {
             localStorage.setItem('domainThumbs', JSON.stringify({ ...domThumbs, [domain]: imageBase }));
             return imageBase;
          }
-         return false;
-      } catch (error) {
-         return false;
       }
-   } else if (domThumbs[domain]) {
-         return domThumbs[domain];
+      return false;
+   } catch (error) {
+      return false;
    }
-
-   return false;
 }
 
 export function useFetchDomains(router: NextRouter, withStats:boolean = false) {

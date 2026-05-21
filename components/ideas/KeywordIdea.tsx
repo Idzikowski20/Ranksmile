@@ -37,8 +37,8 @@ const KeywordIdea = (props: KeywordIdeaProps) => {
 
          <div className=' w-3/4 lg:flex-1 lg:basis-20 lg:w-auto font-semibold cursor-pointer'>
             <button
-               className={`p-0 mr-2 leading-[0px] inline-block rounded-sm pt-0 px-[1px] pb-[3px] border 
-               ${selected ? ' bg-blue-700 border-blue-700 text-white' : 'text-transparent'}`}
+               className={`inline-flex items-center justify-center p-0 mr-2 rounded-sm w-[18px] h-[18px] border
+               ${selected ? ' bg-black border-black text-white' : 'text-transparent'}`}
                onClick={() => selectKeyword(uid)}
                >
                   <Icon type="check" size={10} />
