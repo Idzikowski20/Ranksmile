@@ -1,9 +1,10 @@
-// GET /api/gsc/connect?domain=example.com&redirect=/settings
-// Redirects the user to Google OAuth2 consent screen for Search Console access.
+// GET /api/gsc/connect?redirect=/settings
+// Redirects the user to Google OAuth2 consent screen for Search Console access (account-level).
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@googleapis/searchconsole';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
+import { getCurrentUserId } from '../../../utils/getUser';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -11,11 +12,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') {
     return res.status(401).json({ error: authorized });
   }
+  const userId = await getCurrentUserId(req, res);
 
-  const { domain, redirect } = req.query;
-  if (!domain || typeof domain !== 'string') {
-    return res.status(400).json({ error: 'domain is required' });
-  }
+  const { redirect } = req.query;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -28,17 +27,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUri);
 
-  // Encode domain + optional return redirect in state
   const state = JSON.stringify({
-    domain,
     redirect: typeof redirect === 'string' ? redirect : null,
+    userId,
   });
 
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: ['https://www.googleapis.com/auth/webmasters.readonly'],
+    scope: [
+      'openid',
+      'email',
+      'profile',
+      'https://www.googleapis.com/auth/webmasters.readonly',
+    ],
     state,
-    prompt: 'consent',
+    prompt: 'consent select_account',
   });
 
   return res.redirect(302, authUrl);

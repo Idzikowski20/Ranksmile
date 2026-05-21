@@ -14,9 +14,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    try {
       // Pobierz wszystkie domeny z topics w site_context
       const [domains] = await db.query(
-         `SELECT d.ID, d.domain, sc.topics
+         `SELECT d."ID", d.domain, sc.topics
           FROM domain d
-          JOIN site_context sc ON sc.domain_id = d.ID
+          JOIN site_context sc ON sc.domain_id = d."ID"
           WHERE sc.topics IS NOT NULL AND sc.topics != '[]'`,
       );
 

@@ -9,7 +9,8 @@ type Props = {
 };
 
 function getSection(pathname: string) {
-   if (pathname.startsWith('/articles')) return { href: '/articles', label: 'Content Editor' };
+   if (pathname.startsWith('/articles') || pathname.startsWith('/content-editor')) return { href: '/content-editor', label: 'Content Editor' };
+   if (pathname.startsWith('/sites')) return { href: '/sites', label: 'Sites' };
    if (pathname.startsWith('/research')) return { href: '/research', label: 'Research' };
    if (pathname.startsWith('/domain')) return { href: '/domains', label: 'Domains' };
    if (pathname.startsWith('/settings')) return { href: '/settings', label: 'Settings' };
@@ -19,7 +20,7 @@ function getSection(pathname: string) {
 const GlobalTopbar = ({ title }: Props) => {
    const router = useRouter();
    const section = getSection(router.pathname);
-   const crumbTitle = title || (router.pathname.includes('/[id]') ? 'Article' : section.label);
+   const crumbTitle = title || (router.pathname.includes('/[id]') ? 'Article' : null);
 
    return (
       <header className="global-topbar">
@@ -33,28 +34,17 @@ const GlobalTopbar = ({ title }: Props) => {
             <Link href={section.href} passHref>
                <a className="global-topbar-link">{section.label}</a>
             </Link>
-            <Icon type="caret-right" size={18} color="var(--topbar-muted)" />
-            <div className="global-topbar-title">
-               <span>{crumbTitle}</span>
-               <button type="button" className="global-topbar-info" aria-label="Page info">
-                  <Icon type="question" size={16} />
-               </button>
-            </div>
+            {crumbTitle && (
+               <>
+                  <Icon type="caret-right" size={18} color="var(--topbar-muted)" />
+                  <div className="global-topbar-title">
+                     <span>{crumbTitle}</span>
+                  </div>
+               </>
+            )}
          </div>
 
-         <button type="button" className="global-topbar-search" aria-label="Search">
-            <Icon type="search" size={20} />
-            <span>Search</span>
-            <kbd>Ctrl+K</kbd>
-         </button>
-
          <div className="global-topbar-actions">
-            <button type="button" className="global-topbar-icon" aria-label="Notifications">
-               <Icon type="download" size={20} />
-            </button>
-            <button type="button" className="global-topbar-icon" aria-label="Help">
-               <Icon type="question" size={20} />
-            </button>
             <TopbarAccountMenu />
          </div>
       </header>

@@ -1,9 +1,9 @@
 import React, { useLayoutEffect, useMemo } from 'react';
-import TimeAgo from 'react-timeago';
 import dayjs from 'dayjs';
 import SidePanel from '../common/SidePanel';
 import { useFetchChangelog } from '../../services/misc';
 import Icon from '../common/Icon';
+import ClientTimeAgo from '../common/ClientTimeAgo';
 
 const Markdown = React.lazy(() => import('react-markdown'));
 
@@ -63,7 +63,7 @@ const ChangeLog = ({ closeChangeLog }: ChangeLogProps) => {
                                     {version} {major && <span className=' text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded ml-2'>Major</span>}
                                  </a>
                                  <span className=' text-sm text-gray-500'>
-                                    <TimeAgo title={dayjs(date).format('DD-MMM-YYYY, hh:mm:ss A')} date={date} />
+                                    <ClientTimeAgo title={dayjs(date).format('DD-MMM-YYYY, hh:mm:ss A')} date={date} />
                                  </span>
                               </h4>
                               <div className='changelog-content px-5 py-3 text-sm text-left'><Markdown>{content}</Markdown></div>

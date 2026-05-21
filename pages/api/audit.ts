@@ -5,6 +5,8 @@ import db from '../../database/database';
 import { getPagesInsight } from '../../utils/insight';
 import { readLocalSCData, fetchDomainSCData, getSearchConsoleApiInfo, hasValidSCAuth } from '../../utils/searchConsole';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
 
 export interface AuditItem {
@@ -36,11 +38,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const scFilter = (req.query.scFilter as string) || 'thirtyDays';
 
   if (!domainSlug) return res.status(400).json({ error: 'domain is required' });
+  const userId = await getCurrentUserId(req, res);
 
   try {
-    // Look up domain
-    const foundDomain = await Domain.findOne({ where: { slug: domainSlug.replaceAll('.', '-') } });
-    if (!foundDomain) return res.status(404).json({ error: 'Domain not found' });
+    // Look up domain + sprawdź własność
+    const slug = domainSlug.replaceAll('.', '-');
+    const ownership = await verifyDomainOwnershipBySlug(slug, userId);
+    if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
+    const foundDomain = ownership;
     const domainObj: DomainType = foundDomain.get({ plain: true });
 
     // Fetch articles
@@ -67,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         scPages = getPagesInsight(localSCData, 'clicks', scFilter);
       } else {
-        const scDomainAPI = await getSearchConsoleApiInfo(domainObj);
+        const scDomainAPI = await getSearchConsoleApiInfo(domainObj, userId);
         if (hasValidSCAuth(scDomainAPI)) {
           const scData = await fetchDomainSCData(domainObj, scDomainAPI);
           lastSCUpdate = scData.lastFetched || null;

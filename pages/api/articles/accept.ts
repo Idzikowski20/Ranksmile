@@ -4,6 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -21,8 +22,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const newStatus = action === 'reject' ? 'rejected' : 'accepted';
 
    try {
+      const articleIdSql = await getArticleIdSql();
       await db.query(
-         `UPDATE articles SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+         `UPDATE articles SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
          { replacements: [newStatus, articleId] },
       );
       return res.status(200).json({ status: newStatus });

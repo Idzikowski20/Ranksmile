@@ -379,6 +379,22 @@ const DeepAnalysisPage: NextPage = () => {
                   <SearchEngineIcons />
                 </div>
 
+                {/* ── Keyword Analysis row ─────────────────────────────────── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 15.4,
+                      lineHeight: '21px',
+                      fontWeight: 600,
+                      color: '#09090b',
+                      fontFamily: 'var(--font-family-primary)',
+                    }}
+                  >
+                    Keyword Analysis
+                  </span>
+                  <SearchEngineIcons />
+                </div>
+
                 {/* ── Steps list ────────────────────────────────────── */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {steps.map((step) => (

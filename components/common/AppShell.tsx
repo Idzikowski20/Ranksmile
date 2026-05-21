@@ -1,6 +1,7 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import GlobalTopbar from './GlobalTopbar';
+import MobileBottomNav from './MobileBottomNav';
 
 type AppShellProps = {
    domains?: DomainType[];
@@ -8,6 +9,7 @@ type AppShellProps = {
    showSettings?: () => void;
    children: React.ReactNode;
    showSidebar?: boolean;
+   sidebar?: React.ReactNode;
    topbarTitle?: string;
    contentClassName?: string;
 };
@@ -18,6 +20,7 @@ const AppShell = ({
    showSettings,
    children,
    showSidebar = true,
+   sidebar,
    topbarTitle,
    contentClassName = '',
 }: AppShellProps) => {
@@ -25,17 +28,22 @@ const AppShell = ({
       <div className="app-shell">
          <GlobalTopbar title={topbarTitle} />
          <div className="app-shell-body">
-            {showSidebar && (
+            {sidebar ?? (showSidebar && (
                <Sidebar
                   domains={domains}
                   showAddModal={showAddModal}
                   showSettings={showSettings}
                />
-            )}
+            ))}
             <main className={`app-content ${contentClassName}`}>
                {children}
             </main>
          </div>
+         <MobileBottomNav
+            domains={domains}
+            showAddModal={showAddModal}
+            showSettings={showSettings}
+         />
       </div>
    );
 };

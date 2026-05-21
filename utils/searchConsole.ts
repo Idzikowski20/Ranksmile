@@ -1,7 +1,8 @@
 import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
 import { readFile, writeFile, unlink } from 'fs/promises';
-import { getCountryCodeFromAlphaThree } from './countries';
+import { countryAlphaTwoCodes, getCountryCodeFromAlphaThree } from './countries';
+import GscAccount from '../database/models/gscAccount';
 
 export type SCDomainFetchError = {
    error: boolean,
@@ -11,6 +12,15 @@ export type SCDomainFetchError = {
 type SCAPISettings = { client_email: string, private_key: string }
 type SCOAuthSettings = { auth_type: 'oauth', refresh_token: string }
 type SCAuthSettings = SCAPISettings | SCOAuthSettings
+type SearchConsoleQueryOperator = 'contains' | 'equals' | 'notContains' | 'includingRegex' | 'excludingRegex'
+type SearchConsoleQueryOptions = {
+   startDate?: string,
+   endDate?: string,
+   country?: string,
+   device?: string,
+   keywordOperator?: SearchConsoleQueryOperator,
+   keywordValue?: string,
+}
 
 function isOAuth(s: SCAuthSettings): s is SCOAuthSettings {
    return (s as SCOAuthSettings).auth_type === 'oauth';
@@ -23,6 +33,66 @@ export function hasValidSCAuth(s: SCAuthSettings): boolean {
 
 type fetchConsoleDataResponse = SearchAnalyticsItem[] | SearchAnalyticsStat[] | SCDomainFetchError;
 
+const alphaThreeByAlphaTwo = Object.entries(countryAlphaTwoCodes).reduce((acc, [alphaThree, alphaTwo]) => {
+   acc[alphaTwo] = alphaThree;
+   return acc;
+}, {} as Record<string, string>);
+
+const padDate = (num:number) => String(num).padStart(2, '0');
+
+const toDateString = (value:Date) => `${value.getFullYear()}-${padDate(value.getMonth() + 1)}-${padDate(value.getDate())}`;
+
+const parseDateString = (value:string) => {
+   const [year, month, day] = value.split('-').map(Number);
+   return new Date(year, month - 1, day, 12);
+};
+
+const getDateDaysAgo = (days:number) => {
+   const now = new Date();
+   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 12);
+};
+
+const getPreviousRange = (startDate:string, endDate:string) => {
+   const start = parseDateString(startDate);
+   const end = parseDateString(endDate);
+   const rangeLength = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+   const previousEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate() - 1, 12);
+   const previousStart = new Date(previousEnd.getFullYear(), previousEnd.getMonth(), previousEnd.getDate() - (rangeLength - 1), 12);
+
+   return {
+      previousRangeStart: toDateString(previousStart),
+      previousRangeEnd: toDateString(previousEnd),
+   };
+};
+
+const buildDimensionFilterGroups = (options?: SearchConsoleQueryOptions) => {
+   if (!options) return undefined;
+   const filters:any[] = [];
+
+   if (options.country && options.country !== 'ALL') {
+      const alphaThree = alphaThreeByAlphaTwo[options.country.toUpperCase()];
+      if (alphaThree) {
+         filters.push({ dimension: 'country', operator: 'equals', expression: alphaThree });
+      }
+   }
+
+   if (options.device && options.device !== 'all') {
+      filters.push({ dimension: 'device', operator: 'equals', expression: options.device.toUpperCase() });
+   }
+
+   if (options.keywordOperator && options.keywordValue?.trim()) {
+      filters.push({
+         dimension: 'query',
+         operator: options.keywordOperator,
+         expression: options.keywordValue.trim(),
+      });
+   }
+
+   if (!filters.length) return undefined;
+
+   return [{ groupType: 'and', filters }];
+};
+
 /**
  * Retrieves data from the Google Search Console API based on the provided domain name, number of days, and optional type.
  * @param {DomainType} domain - The domain for which you want to fetch search console data.
@@ -31,7 +101,13 @@ type fetchConsoleDataResponse = SearchAnalyticsItem[] | SearchAnalyticsStat[] | 
  * @param {SCAPISettings} [api] - (optional) specifies the Seach Console API Information.
  * @returns {Promise<fetchConsoleDataResponse>}
  */
-const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:string, api?:SCAuthSettings): Promise<fetchConsoleDataResponse> => {
+const fetchSearchConsoleData = async (
+   domain:DomainType,
+   days:number,
+   type?:string,
+   api?:SCAuthSettings,
+   options?: SearchConsoleQueryOptions,
+): Promise<fetchConsoleDataResponse> => {
    if (!domain) return { error: true, errorMsg: 'Domain Not Provided!' };
    if (!api) return { error: true, errorMsg: 'Search Console API Data Not Available.' };
    if (!isOAuth(api) && (!api.private_key || !api.client_email)) return { error: true, errorMsg: 'Search Console API Data Not Available.' };
@@ -59,19 +135,19 @@ const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:stri
          scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
       });
    }
-   const startDateRaw = new Date(new Date().setDate(new Date().getDate() - days));
-   const padDate = (num:number) => String(num).padStart(2, '0');
-   const startDate = `${startDateRaw.getFullYear()}-${padDate(startDateRaw.getMonth() + 1)}-${padDate(startDateRaw.getDate())}`;
-   const endDate = `${new Date().getFullYear()}-${padDate(new Date().getMonth() + 1)}-${padDate(new Date().getDate())}`;
+   const startDate = options?.startDate || toDateString(getDateDaysAgo(days));
+   const endDate = options?.endDate || toDateString(getDateDaysAgo(0));
+   const dimensionFilterGroups = buildDimensionFilterGroups(options);
    const client = new searchconsole_v1.Searchconsole({ auth: authClient });
    // Params: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
    let requestBody:any = {
       startDate,
       endDate,
       type: 'web',
-      rowLimit: 1000,
+      rowLimit: 25000,
       dataState: 'all',
       dimensions: ['query', 'device', 'country', 'page'],
+      dimensionFilterGroups,
    };
    if (type === 'stat') {
       requestBody = {
@@ -79,6 +155,7 @@ const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:stri
          endDate,
          dataState: 'all',
          dimensions: ['date'],
+         dimensionFilterGroups,
       };
    }
 
@@ -119,12 +196,84 @@ const fetchSearchConsoleData = async (domain:DomainType, days:number, type?:stri
  * @returns The function `fetchDomainSCData` is returning a Promise that resolves to an object of type
  * `SCDomainDataType`.
  */
-export const fetchDomainSCData = async (domain:DomainType, scAPI?: SCAuthSettings): Promise<SCDomainDataType> => {
+export const fetchDomainSCData = async (
+   domain:DomainType,
+   scAPI?: SCAuthSettings,
+   options?: SearchConsoleQueryOptions,
+): Promise<SCDomainDataType> => {
    const days = [3, 7, 30];
-   const scDomainData:SCDomainDataType = { threeDays: [], sevenDays: [], thirtyDays: [], lastFetched: '', lastFetchError: '', stats: [] };
+   const scDomainData:SCDomainDataType = {
+      threeDays: [],
+      sevenDays: [],
+      thirtyDays: [],
+      selectedRange: [],
+      previousRange: [],
+      previousStats: [],
+      lastFetched: '',
+      lastFetchError: '',
+      stats: [],
+   };
    const hasAuth = scAPI && (isOAuth(scAPI) ? scAPI.refresh_token : (scAPI as SCAPISettings).private_key);
    if (domain.domain && hasAuth) {
       const theDomain = domain;
+      const hasCustomQuery = !!(
+         options?.startDate
+         && options?.endDate
+      );
+
+      if (hasCustomQuery) {
+         const previousRange = getPreviousRange(options.startDate as string, options.endDate as string);
+         const currentOptions = {
+            ...options,
+            startDate: options.startDate,
+            endDate: options.endDate,
+         };
+         const previousOptions = {
+            ...options,
+            startDate: previousRange.previousRangeStart,
+            endDate: previousRange.previousRangeEnd,
+         };
+
+         const [selectedRange, previousSelectedRange, selectedStats, previousStats] = await Promise.all([
+            fetchSearchConsoleData(theDomain, 0, undefined, scAPI, currentOptions),
+            fetchSearchConsoleData(theDomain, 0, undefined, scAPI, previousOptions),
+            fetchSearchConsoleData(theDomain, 0, 'stat', scAPI, currentOptions),
+            fetchSearchConsoleData(theDomain, 0, 'stat', scAPI, previousOptions),
+         ]);
+
+         scDomainData.lastFetched = new Date().toJSON();
+         scDomainData.selectedRangeStart = options.startDate;
+         scDomainData.selectedRangeEnd = options.endDate;
+         scDomainData.previousRangeStart = previousRange.previousRangeStart;
+         scDomainData.previousRangeEnd = previousRange.previousRangeEnd;
+
+         if (Array.isArray(selectedRange)) {
+            scDomainData.selectedRange = selectedRange as SearchAnalyticsItem[];
+         } else if (selectedRange.error) {
+            scDomainData.lastFetchError = selectedRange.errorMsg;
+         }
+
+         if (Array.isArray(previousSelectedRange)) {
+            scDomainData.previousRange = previousSelectedRange as SearchAnalyticsItem[];
+         } else if (previousSelectedRange.error) {
+            scDomainData.lastFetchError = previousSelectedRange.errorMsg;
+         }
+
+         if (Array.isArray(selectedStats)) {
+            scDomainData.stats = selectedStats as SearchAnalyticsStat[];
+         } else if (selectedStats.error) {
+            scDomainData.lastFetchError = selectedStats.errorMsg;
+         }
+
+         if (Array.isArray(previousStats)) {
+            scDomainData.previousStats = previousStats as SearchAnalyticsStat[];
+         } else if (previousStats.error) {
+            scDomainData.lastFetchError = previousStats.errorMsg;
+         }
+
+         return scDomainData;
+      }
+
       for (const day of days) {
          const items = await fetchSearchConsoleData(theDomain, day, undefined, scAPI);
           scDomainData.lastFetched = new Date().toJSON();
@@ -208,11 +357,24 @@ export const integrateKeywordSCData = (keyword: KeywordType, SCData:SCDomainData
  * console settings, etc.
  * @returns an object of type `SCAPISettings`.
  */
-export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAuthSettings> => {
+export const getSearchConsoleApiInfo = async (domain: DomainType, userId?: string | null): Promise<SCAuthSettings> => {
    const cryptr = new Cryptr(process.env.SECRET as string);
    const domainSCSettings = domain.search_console && JSON.parse(domain.search_console);
 
-   // 1. OAuth2 refresh token (new flow)
+   // 1. Per-user Neon Auth GSC account
+   if (userId) {
+      try {
+         const account = await GscAccount.findOne({ where: { userId }, order: [['connected_at', 'DESC'], ['ID', 'DESC']] });
+         if (account?.get) {
+            const plain = account.get({ plain: true }) as { refresh_token?: string };
+            if (plain.refresh_token) {
+               return { auth_type: 'oauth', refresh_token: cryptr.decrypt(plain.refresh_token) };
+            }
+         }
+      } catch { /* fall through */ }
+   }
+
+   // 2. Domain-level OAuth2 refresh token (legacy per-domain)
    if (domainSCSettings?.auth_type === 'oauth' && domainSCSettings?.oauth_refresh_token) {
       try {
          const refresh_token = cryptr.decrypt(domainSCSettings.oauth_refresh_token);
@@ -220,7 +382,7 @@ export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAut
       } catch { /* fall through to service account */ }
    }
 
-   // 2. Service account — domain-level
+   // 3. Service account — domain-level
    const scAPIData: SCAPISettings = { client_email: '', private_key: '' };
    if (domainSCSettings?.private_key) {
       if (!domainSCSettings.private_key.includes('BEGIN PRIVATE KEY')) {
@@ -232,7 +394,7 @@ export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAut
       }
    }
 
-   // 3. Service account — global settings
+   // 4. Service account — global settings
    if (!scAPIData.private_key) {
       const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' });
       const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
@@ -240,7 +402,7 @@ export const getSearchConsoleApiInfo = async (domain: DomainType): Promise<SCAut
       scAPIData.private_key = settings.search_console_private_key ? cryptr.decrypt(settings.search_console_private_key) : '';
    }
 
-   // 4. Service account — environment variables
+   // 5. Service account — environment variables
    if (!scAPIData.private_key && process.env.SEARCH_CONSOLE_PRIVATE_KEY && process.env.SEARCH_CONSOLE_CLIENT_EMAIL) {
       scAPIData.client_email = process.env.SEARCH_CONSOLE_CLIENT_EMAIL;
       scAPIData.private_key = process.env.SEARCH_CONSOLE_PRIVATE_KEY;

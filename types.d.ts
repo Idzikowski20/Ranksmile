@@ -205,6 +205,13 @@ type SCDomainDataType = {
    threeDays : SearchAnalyticsItem[],
    sevenDays : SearchAnalyticsItem[],
    thirtyDays : SearchAnalyticsItem[],
+   selectedRange?: SearchAnalyticsItem[],
+   previousRange?: SearchAnalyticsItem[],
+   previousStats?: SearchAnalyticsStat[],
+   selectedRangeStart?: string,
+   selectedRangeEnd?: string,
+   previousRangeStart?: string,
+   previousRangeEnd?: string,
    lastFetched?: string,
    lastFetchError?: string,
    stats? : SearchAnalyticsStat[],
@@ -276,4 +283,29 @@ interface ScraperSettings {
    scrapeURL?(keyword:KeywordType, settings:SettingsType, countries:countryData, pagination?: ScraperPagination): string,
    /** Custom function to extract the serp result from the scraped data. The extracted data should be @return {scraperExtractedItem[]} */
    serpExtractor?(content:string): scraperExtractedItem[],
+}
+
+// Neon Auth subpath declarations (needed because TypeScript 4.x doesn't resolve package exports)
+declare module '@neondatabase/auth/next' {
+   export function createAuthClient(): any;
+}
+
+declare module '@neondatabase/auth/next/server' {
+   export function createNeonAuth(config: any): any;
+   export function authApiHandler(config: any): any;
+}
+
+declare module '@neondatabase/auth/react' {
+   import * as React from 'react';
+   export const NeonAuthUIProvider: React.FC<any>;
+   export const AuthView: React.FC<any>;
+   export const AuthUIProvider: React.FC<any>;
+   export function useAuthenticate(): any;
+   export function useAuthData(): any;
+   export const SignedIn: React.FC<any>;
+   export const SignedOut: React.FC<any>;
+   export const SignOut: React.FC<any>;
+   export const UserButton: React.FC<any>;
+   export const RedirectToSignIn: React.FC<any>;
+   export const RedirectToSignUp: React.FC<any>;
 }

@@ -4,6 +4,8 @@ import db from '../../database/database';
 import Keyword from '../../database/models/keyword';
 import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import parseKeywords from '../../utils/parseKeywords';
 import { integrateKeywordSCData, readLocalSCData } from '../../utils/searchConsole';
 import refreshAndUpdateKeywords from '../../utils/refresh';
@@ -28,27 +30,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: authorized });
    }
 
+   const userId = await getCurrentUserId(req, res);
    if (req.method === 'GET') {
-      return getKeywords(req, res);
+      return getKeywords(req, res, userId);
    }
    if (req.method === 'POST') {
-      return addKeywords(req, res);
+      return addKeywords(req, res, userId);
    }
    if (req.method === 'DELETE') {
-      return deleteKeywords(req, res);
+      return deleteKeywords(req, res, userId);
    }
    if (req.method === 'PUT') {
-      return updateKeywords(req, res);
+      return updateKeywords(req, res, userId);
    }
    return res.status(502).json({ error: 'Unrecognized Route.' });
 }
 
-const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>) => {
+const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>, userId?: string | null) => {
    if (!req.query.domain && typeof req.query.domain !== 'string') {
       return res.status(400).json({ error: 'Domain is Required!' });
    }
-   const settings = await getAppSettings();
    const domain = (req.query.domain as string);
+   const ownership = await verifyDomainOwnership(domain, userId ?? null);
+   if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+   if (ownership === null) return res.status(404).json({ error: 'Domain not found.' });
+   const settings = await getAppSettings();
    const integratedSC = process.env.SEARCH_CONSOLE_PRIVATE_KEY && process.env.SEARCH_CONSOLE_CLIENT_EMAIL;
    const { search_console_client_email, search_console_private_key } = settings;
    const domainSCData = integratedSC || (search_console_client_email && search_console_private_key) ? await readLocalSCData(domain) : false;
@@ -76,9 +82,15 @@ const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
    }
 };
 
-const addKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>) => {
+const addKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>, userId?: string | null) => {
    const { keywords } = req.body;
    if (keywords && Array.isArray(keywords) && keywords.length > 0) {
+      // Sprawdź własność domeny na podstawie pierwszego słowa kluczowego
+      const firstDomain = keywords[0]?.domain;
+      if (firstDomain) {
+         const ownership = await verifyDomainOwnership(firstDomain, userId ?? null);
+         if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+      }
       // const keywordsArray = keywords.replaceAll('\n', ',').split(',').map((item:string) => item.trim());
       const keywordsToAdd: any = []; // QuickFIX for bug: https://github.com/sequelize/sequelize-typescript/issues/936
 
@@ -131,14 +143,19 @@ const addKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
    }
 };
 
-const deleteKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsDeleteRes>) => {
+const deleteKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsDeleteRes>, userId?: string | null) => {
    if (!req.query.id && typeof req.query.id !== 'string') {
       return res.status(400).json({ error: 'keyword ID is Required!' });
    }
-   console.log('req.query.id: ', req.query.id);
 
    try {
       const keywordsToRemove = (req.query.id as string).split(',').map((item) => parseInt(item, 10));
+      // Sprawdź własność domeny przez pierwszy keyword
+      const firstKeyword = await Keyword.findOne({ where: { ID: keywordsToRemove[0] } });
+      if (firstKeyword) {
+         const ownership = await verifyDomainOwnership(firstKeyword.domain, userId ?? null);
+         if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+      }
       const removeQuery = { where: { ID: { [Op.in]: keywordsToRemove } } };
       const removedKeywordCount: number = await Keyword.destroy(removeQuery);
 
@@ -152,7 +169,7 @@ const deleteKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
    }
 };
 
-const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>) => {
+const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>, userId?: string | null) => {
    if (!req.query.id && typeof req.query.id !== 'string') {
       return res.status(400).json({ error: 'keyword ID is Required!' });
    }

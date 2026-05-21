@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import TimeAgo from 'react-timeago';
 import dayjs from 'dayjs';
 import Icon from '../common/Icon';
 import countries from '../../utils/countries';
@@ -7,6 +6,7 @@ import ChartSlim from '../common/ChartSlim';
 import KeywordPosition from './KeywordPosition';
 import { generateTheChartData } from '../../utils/client/generateChartData';
 import { formattedNum } from '../../utils/client/helpers';
+import ClientTimeAgo from '../common/ClientTimeAgo';
 
 type KeywordProps = {
    keywordData: KeywordType,
@@ -193,7 +193,7 @@ const Keyword = (props: KeywordProps) => {
          <div
          className='inline-block mt-[4] top-[-5px] relative lg:flex-1 lg:m-0 lg:top-0 max-w-[150px]'>
             <span className='mr-2 lg:hidden'><Icon type="clock" size={14} color="#999" /></span>
-            <TimeAgo title={dayjs(lastUpdated).format('DD-MMM-YYYY, hh:mm:ss A')} date={lastUpdated} />
+            <ClientTimeAgo title={dayjs(lastUpdated).format('DD-MMM-YYYY, hh:mm:ss A')} date={lastUpdated} />
          </div>
 
          {showSCData && tableColumns.includes('Search Console') && (
@@ -249,7 +249,7 @@ const Keyword = (props: KeywordProps) => {
          {lastUpdateError && lastUpdateError.date && showPositionError && (
             <div className={`absolute p-2 bg-white z-30 border border-red-200 rounded w-[220px] left-4 shadow-sm text-xs 
             ${index > 2 ? 'lg:bottom-12 mt-[-70px]' : ' top-12'}`}>
-               Error Updating Keyword position (Tried <TimeAgo
+               Error Updating Keyword position (Tried <ClientTimeAgo
                                                          title={dayjs(lastUpdateError.date).format('DD-MMM-YYYY, hh:mm:ss A')}
                                                          date={lastUpdateError.date} />)
                <i className='absolute top-0 right-0 ml-2 p-2 font-semibold not-italic cursor-pointer' onClick={() => setPositionError(false)}>

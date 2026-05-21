@@ -12,6 +12,8 @@ import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
 import { computeContentScore } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { dedupeUsefulTerms } from '../../../lib/articleTerms';
+import { computeAiSearchScore, AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 // Try plain HTTP fetch first (fast). Falls back to Puppeteer if the content
 // looks like a JS-rendered SPA (fewer than 200 words extracted from body).
@@ -104,10 +106,19 @@ const STOP_WORDS = new Set([
   'take','taken','come','came','see','seen','know','known','think','thought','want',
   'like','look','go','going','gone','give','given','said','say','says','new','one',
   'two','three','four','five','six','seven','eight','nine','ten','first','last','next',
+  'aby','ale','albo','ani','bez','bo','by','byc','byl','byla','bylo','byly','czy',
+  'dla','do','gdy','gdzie','ich','im','jest','jesli','juz','kiedy','kto','ktora',
+  'ktore','ktory','lub','ma','mial','miec','mnie','moze','mozna','na','nad','nam',
+  'nas','nie','nim','niz','oraz','po','pod','przed','przez','przy','sa','sie','sobie',
+  'tak','takze','tego','tej','ten','teraz','tez','to','tych','tym','u','w','we','z',
+  'za','ze','zeby','warto','nalezy','czasem','sytuacja','informacje',
 ]);
 
 function extractTopWords(text: string, topN: number): Array<{ term: string; count: number }> {
-  const lower = text.toLowerCase();
+  const lower = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
   const freq: Record<string, number> = {};
 
   const words = lower.match(/\b[a-zÀ-ſ]{3,}\b/g) || [];
@@ -119,13 +130,13 @@ function extractTopWords(text: string, topN: number): Array<{ term: string; coun
   for (const sentence of sentences) {
     const tokens = sentence.match(/\b[a-zÀ-ſ]{2,}\b/g) || [];
     for (let i = 0; i < tokens.length - 1; i++) {
-      if (STOP_WORDS.has(tokens[i]) && STOP_WORDS.has(tokens[i + 1])) continue;
+      if (STOP_WORDS.has(tokens[i]) || STOP_WORDS.has(tokens[i + 1])) continue;
       const bigram = `${tokens[i]} ${tokens[i + 1]}`;
       freq[bigram] = (freq[bigram] || 0) + 1;
     }
     for (let i = 0; i < tokens.length - 2; i++) {
       const stopCount = [tokens[i], tokens[i + 1], tokens[i + 2]].filter((t) => STOP_WORDS.has(t)).length;
-      if (stopCount >= 2) continue;
+      if (stopCount > 0) continue;
       const trigram = `${tokens[i]} ${tokens[i + 1]} ${tokens[i + 2]}`;
       freq[trigram] = (freq[trigram] || 0) + 1;
     }
@@ -161,6 +172,7 @@ export const DEEP_ANALYSIS_STEPS = [
   { key: 'score',     label: 'Computing content score…' },
   { key: 'image',     label: 'Uploading featured image…' },
   { key: 'save',      label: 'Saving article…' },
+  { key: 'ai_visibility', label: 'Checking AI Search visibility...' },
 ] as const;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -192,24 +204,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ── Create skeleton article immediately ─────────────────────────────
   let articleId: number;
+  let articleDomain = '';
+  const articleIdSql = await getArticleIdSql();
   try {
-    const [domains] = await db.query('SELECT ID FROM domain LIMIT 1', { replacements: [] });
+    const [domains] = await db.query('SELECT "ID", domain FROM domain LIMIT 1', { replacements: [] });
     const domainId = (domains as any[])[0]?.ID || 1;
+    articleDomain = (domains as any[])[0]?.domain || '';
 
     const skeletonSlug = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
-    const [newArticleId] = await db.query(
-      `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
-       VALUES (?, ?, ?, '', ?, 'analyzing', datetime('now'), datetime('now'))`,
-      {
-        replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
-        type: QueryTypes.INSERT,
-      },
-    );
-    articleId = newArticleId as unknown as number;
+    if (process.env.DATABASE_URL) {
+      const rows = await db.query<{ id: number }>(
+        `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
+         VALUES (?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         RETURNING ${articleIdSql} AS id`,
+        {
+          replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
+          type: QueryTypes.SELECT,
+        },
+      );
+      articleId = rows[0]?.id;
+    } else {
+      const [newArticleId] = await db.query(
+        `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
+         VALUES (?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        {
+          replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
+          type: QueryTypes.INSERT,
+        },
+      );
+      articleId = newArticleId as unknown as number;
+    }
+    if (!articleId) throw new Error('Failed to resolve inserted article id');
     sse(res, 'created', { articleId });
   } catch (err: any) {
     console.error('[deep-analysis] Skeleton insert failed:', err.message);
-    return res.status(500).json({ error: 'Failed to initialize analysis' });
+    sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
+    return res.end();
   }
 
   // Helper to update article status/progress — non-fatal if fails
@@ -223,7 +253,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const sets = Object.keys(clean).map((k) => `${k} = ?`).join(', ');
       const values = Object.values(clean).map((v) => (v === undefined ? null : v));
       await db.query(
-        `UPDATE articles SET ${sets}, updated_at = datetime('now') WHERE id = ?`,
+        `UPDATE articles SET ${sets}, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
         { replacements: [...values, articleId] },
       );
     } catch (e: any) {
@@ -387,6 +417,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ── Step 5: SERP competitor analysis (optional, non-fatal) ────
     sse(res, 'progress', { step: 'serp', status: 'running' });
+    let serpCompetitors: any[] = [];
+    let serpPaaQuestions: string[] = [];
     try {
       const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
       const axios = require('axios');
@@ -394,6 +426,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         keyword: (keywords as string[])[0] || title,
         language: country === 'PL' ? 'pl' : 'en',
       }, { timeout: 30000 });
+      serpCompetitors = Array.isArray(serpRes.data?.competitors) ? serpRes.data.competitors.slice(0, 5) : [];
+      serpPaaQuestions = Array.isArray(serpRes.data?.paa_questions) ? serpRes.data.paa_questions : [];
       if (serpRes.data?.terms?.length) {
         // Merge SERP terms into our NLP terms (avoiding duplicates)
         const existingTerms = new Set(allTerms.map((t) => t.term.toLowerCase()));
@@ -430,8 +464,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       paragraphs_max: Math.max(20, Math.ceil(paragraphsTarget * 1.5)),
       _heading_count: headingTexts.length,
       _paragraph_count: paragraphCount,
+      ...(serpPaaQuestions.length ? { paa_questions: serpPaaQuestions } : {}),
     };
-    scoreData._computed_score = computeContentScore(plainText, wordCount, headingTexts.length, scoreData, paragraphCount);
+    scoreData._computed_score = computeContentScore(
+      plainText, wordCount, headingTexts.length, scoreData, paragraphCount, undefined,
+      contentHtml, (keywords as string[])[0] || title,
+    );
+    await db.query('DELETE FROM article_terms WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
+    await db.query('DELETE FROM article_competitors WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
+    for (const term of usefulTerms) {
+      await db.query(
+        `INSERT INTO article_terms
+           (article_id, term, term_type, source, current_count, target_min, target_max, importance, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        {
+          replacements: [
+            articleId,
+            term.term,
+            (term as any).term_type || 'topic',
+            'serp',
+            term.current_count || 0,
+            Math.max(1, Math.round(term.target_count * 0.7)),
+            Math.max(1, Math.round(term.target_count * 1.5)),
+            (term as any).importance || term.target_count || 1,
+          ],
+        },
+      ).catch(() => {});
+    }
+    for (const competitor of serpCompetitors) {
+      await db.query(
+        `INSERT INTO article_competitors
+           (article_id, url, domain, title, snippet, created_at)
+         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        {
+          replacements: [
+            articleId,
+            competitor.url || '',
+            competitor.domain || '',
+            competitor.title || '',
+            competitor.snippet || '',
+          ],
+        },
+      ).catch(() => {});
+    }
     sse(res, 'progress', { step: 'score', status: 'done' });
 
     // ── Step 7: Image upload ──────────────────────────────────────
@@ -455,8 +530,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          score_data = ?,
          featured_image = ?,
          status = 'draft',
-         updated_at = datetime('now')
-       WHERE id = ?`,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE ${articleIdSql} = ?`,
       {
         replacements: [
           contentHtml ?? '',
@@ -469,8 +544,110 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
     sse(res, 'progress', { step: 'save', status: 'done' });
 
+    // AI Search visibility is part of deep-analysis, but non-fatal for import.
+    sse(res, 'progress', { step: 'ai_visibility', status: 'running' });
+    let aiVisibilitySummary: (AiVisibilitySummary & { score?: number }) | null = null;
+    try {
+      const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+      const competitorDomains = Array.from(new Set(
+        serpCompetitors
+          .map((competitor) => competitor.domain || (competitor.url ? new URL(competitor.url).hostname.replace(/^www\./, '') : ''))
+          .filter(Boolean),
+      ));
+      const sidecarRes = await fetch(`${sidecarUrl}/ai-visibility`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: (keywords as string[])[0] || title,
+          own_domain: articleDomain,
+          competitor_domains: competitorDomains,
+          article_content: `${metaTitle || ''}\n${metaDescription || ''}\n${contentHtml || ''}`,
+        }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined,
+      } as RequestInit);
+
+      if (!sidecarRes.ok) throw new Error(await sidecarRes.text());
+      const sidecarData = await sidecarRes.json();
+      const summary: AiVisibilitySummary = {
+        prompts_total: sidecarData.prompts_total || 0,
+        prompts_cited: sidecarData.prompts_cited || 0,
+        competitor_citations: sidecarData.competitor_citations || 0,
+        extractability_score: sidecarData.extractability_score || 0,
+        citations: sidecarData.citations || [],
+      };
+      const aiScore = computeAiSearchScore(summary);
+      let runId: number | undefined;
+      if (process.env.DATABASE_URL) {
+        const rows = await db.query<{ id: number }>(
+          `INSERT INTO ai_visibility_runs
+             (article_id, target_keyword, score, prompts_total, prompts_cited, competitor_citations, summary_json, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+           RETURNING id`,
+          {
+            replacements: [
+              articleId,
+              (keywords as string[])[0] || title || '',
+              aiScore,
+              summary.prompts_total,
+              summary.prompts_cited,
+              summary.competitor_citations,
+              JSON.stringify(summary),
+            ],
+            type: QueryTypes.SELECT,
+          },
+        );
+        runId = rows[0]?.id;
+      } else {
+        const [insertedRunId] = await db.query(
+          `INSERT INTO ai_visibility_runs
+             (article_id, target_keyword, score, prompts_total, prompts_cited, competitor_citations, summary_json, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          {
+            replacements: [
+              articleId,
+              (keywords as string[])[0] || title || '',
+              aiScore,
+              summary.prompts_total,
+              summary.prompts_cited,
+              summary.competitor_citations,
+              JSON.stringify(summary),
+            ],
+            type: QueryTypes.INSERT,
+          },
+        );
+        runId = insertedRunId as unknown as number;
+      }
+      if (!runId) throw new Error('Failed to resolve AI visibility run id');
+
+      for (const citation of summary.citations) {
+        await db.query(
+          `INSERT INTO ai_visibility_citations
+             (run_id, prompt, answer, cited_url, cited_domain, is_own_domain, is_competitor, sentiment, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          {
+            replacements: [
+              runId,
+              citation.prompt,
+              citation.answer || '',
+              citation.cited_url || '',
+              citation.cited_domain || '',
+              citation.is_own_domain ? 1 : 0,
+              citation.is_competitor ? 1 : 0,
+              '',
+            ],
+          },
+        );
+      }
+      aiVisibilitySummary = { ...summary, score: aiScore };
+      sse(res, 'ai_visibility', { summary: aiVisibilitySummary, warning: sidecarData.warning || null });
+      sse(res, 'progress', { step: 'ai_visibility', status: 'done' });
+    } catch (aiErr: any) {
+      console.warn('[deep-analysis] AI visibility skipped:', aiErr?.message);
+      sse(res, 'progress', { step: 'ai_visibility', status: 'warning', message: aiErr?.message || 'AI visibility skipped' });
+    }
+
     // ── Done! ─────────────────────────────────────────────────────
-    sse(res, 'done', { articleId });
+    sse(res, 'done', { articleId, aiVisibilitySummary });
 
   } catch (error: any) {
     console.error('[deep-analysis] Unexpected error:', error);

@@ -34,33 +34,35 @@ const getSettings = async (req: NextApiRequest, res: NextApiResponse<SettingsGet
    return res.status(400).json({ error: 'Error Loading Settings!' });
 };
 
+// Fields that live in .env — never written to settings.json
+const SCRAPER_FIELDS = ['scraper_type', 'scaping_api', 'proxy', 'scrape_interval', 'scrape_delay',
+   'scrape_retry', 'scrape_strategy', 'scrape_pagination_limit', 'scrape_smart_full_fallback'] as const;
+
+// Adwords credential fields live in .env — strip them from settings.json writes.
+// (adwords_refresh_token is the only adwords field still stored in settings.json)
+const ADWORDS_FIELDS = ['adwords_client_id', 'adwords_client_secret', 'adwords_developer_token', 'adwords_account_id'] as const;
+
 const updateSettings = async (req: NextApiRequest, res: NextApiResponse<SettingsGetResponse>) => {
    const { settings } = req.body || {};
-   // console.log('### settings: ', settings);
    if (!settings) {
       return res.status(200).json({ error: 'Settings Data not Provided!' });
    }
    try {
       const cryptr = new Cryptr(process.env.SECRET as string);
-      const scaping_api = settings.scaping_api ? cryptr.encrypt(settings.scaping_api.trim()) : '';
       const smtp_password = settings.smtp_password ? cryptr.encrypt(settings.smtp_password.trim()) : '';
       const search_console_client_email = settings.search_console_client_email ? cryptr.encrypt(settings.search_console_client_email.trim()) : '';
       const search_console_private_key = settings.search_console_private_key ? cryptr.encrypt(settings.search_console_private_key.trim()) : '';
-      const adwords_client_id = settings.adwords_client_id ? cryptr.encrypt(settings.adwords_client_id.trim()) : '';
-      const adwords_client_secret = settings.adwords_client_secret ? cryptr.encrypt(settings.adwords_client_secret.trim()) : '';
-      const adwords_developer_token = settings.adwords_developer_token ? cryptr.encrypt(settings.adwords_developer_token.trim()) : '';
-      const adwords_account_id = settings.adwords_account_id ? cryptr.encrypt(settings.adwords_account_id.trim()) : '';
+
+      // Strip scraper and adwords fields — they live in .env, not settings.json
+      const stripped = { ...settings };
+      SCRAPER_FIELDS.forEach((f) => { delete stripped[f]; });
+      ADWORDS_FIELDS.forEach((f) => { delete (stripped as any)[f]; });
 
       const securedSettings = {
-         ...settings,
-         scaping_api,
+         ...stripped,
          smtp_password,
          search_console_client_email,
          search_console_private_key,
-         adwords_client_id,
-         adwords_client_secret,
-         adwords_developer_token,
-         adwords_account_id,
       };
 
       await writeFile(`${process.cwd()}/data/settings.json`, JSON.stringify(securedSettings), { encoding: 'utf-8' });
@@ -87,6 +89,19 @@ const safeReadJSON = async (filePath: string, fallback: any): Promise<any> => {
       return fallback;
    }
 };
+
+// Read scraper config from env vars
+const getScraperEnvConfig = () => ({
+   scraper_type: process.env.SCRAPER_TYPE || 'none',
+   scaping_api: process.env.SCRAPER_API_KEY || '',
+   proxy: process.env.SCRAPER_PROXY || '',
+   scrape_interval: process.env.SCRAPE_INTERVAL || 'daily',
+   scrape_delay: process.env.SCRAPE_DELAY || '0',
+   scrape_retry: process.env.SCRAPE_RETRY === 'true',
+   scrape_strategy: (process.env.SCRAPE_STRATEGY || 'basic') as SettingsType['scrape_strategy'],
+   scrape_pagination_limit: parseInt(process.env.SCRAPE_PAGINATION_LIMIT || '5', 10),
+   scrape_smart_full_fallback: process.env.SCRAPE_SMART_FULL_FALLBACK === 'true',
+});
 
 export const getAppSettings = async () : Promise<SettingsType> => {
    const screenshotAPIKey = process.env.SCREENSHOT_API || '69408-serpbear';
@@ -117,18 +132,19 @@ export const getAppSettings = async () : Promise<SettingsType> => {
    let decryptedSettings = settings;
    try {
       const cryptr = new Cryptr(process.env.SECRET as string);
-      const scaping_api = settings.scaping_api ? cryptr.decrypt(settings.scaping_api) : '';
       const smtp_password = settings.smtp_password ? cryptr.decrypt(settings.smtp_password) : '';
       const search_console_client_email = settings.search_console_client_email ? cryptr.decrypt(settings.search_console_client_email) : '';
       const search_console_private_key = settings.search_console_private_key ? cryptr.decrypt(settings.search_console_private_key) : '';
-      const adwords_client_id = settings.adwords_client_id ? cryptr.decrypt(settings.adwords_client_id) : '';
-      const adwords_client_secret = settings.adwords_client_secret ? cryptr.decrypt(settings.adwords_client_secret) : '';
-      const adwords_developer_token = settings.adwords_developer_token ? cryptr.decrypt(settings.adwords_developer_token) : '';
-      const adwords_account_id = settings.adwords_account_id ? cryptr.decrypt(settings.adwords_account_id) : '';
+      // Adwords credentials come from .env; refresh_token may be stored in settings.json via OAuth callback
+      let adwords_refresh_token = process.env.ADWORDS_REFRESH_TOKEN || '';
+      if (!adwords_refresh_token && settings.adwords_refresh_token) {
+         try { adwords_refresh_token = cryptr.decrypt(settings.adwords_refresh_token); } catch (e) { /* ignore */ }
+      }
 
       decryptedSettings = {
          ...settings,
-         scaping_api,
+         // Scraper config always comes from .env
+         ...getScraperEnvConfig(),
          smtp_password,
          search_console_client_email,
          search_console_private_key,
@@ -137,13 +153,12 @@ export const getAppSettings = async () : Promise<SettingsType> => {
          available_scrapers: allScrapers.map((scraper) => ({ label: scraper.name, value: scraper.id, allowsCity: !!scraper.allowsCity })),
          failed_queue: failedQueue,
          screenshot_key: screenshotAPIKey,
-         adwords_client_id,
-         adwords_client_secret,
-         adwords_developer_token,
-         adwords_account_id,
-         scrape_strategy: settings.scrape_strategy || 'basic',
-         scrape_pagination_limit: settings.scrape_pagination_limit || 5,
-         scrape_smart_full_fallback: settings.scrape_smart_full_fallback || false,
+         // Adwords: expose only status indicators (not actual credential values)
+         adwords_client_id: process.env.ADWORDS_CLIENT_ID ? '(set)' : '',
+         adwords_client_secret: process.env.ADWORDS_CLIENT_SECRET ? '(set)' : '',
+         adwords_developer_token: process.env.ADWORDS_DEVELOPER_TOKEN ? '(set)' : '',
+         adwords_account_id: process.env.ADWORDS_ACCOUNT_ID ? '(set)' : '',
+         adwords_refresh_token: adwords_refresh_token ? '(connected)' : '',
       };
    } catch (error) {
       console.log('Error Decrypting Settings API Keys!');

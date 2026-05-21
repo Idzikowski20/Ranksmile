@@ -21,7 +21,6 @@ interface Props {
   metaDescription?: string;
   scoreData?: ScoreData;
   internalArticles?: Array<{ id: number; title: string; url: string }>;
-  leftSlot?: React.ReactNode;
   onChange: (html: string, plainText: string, wordCount: number, headingCount: number, paragraphCount: number) => void;
   onMetaTitleChange?: (v: string) => void;
   onMetaDescriptionChange?: (v: string) => void;
@@ -39,8 +38,6 @@ interface Props {
 interface MenuBarProps {
   editor: any;
   keyword?: string;
-  metaTitle?: string;
-  leftSlot?: React.ReactNode;
   onAskSurfy: () => void;
 }
 
@@ -51,29 +48,9 @@ const Sep = () => (
   </div>
 );
 
-const MenuBar = ({ editor, keyword, metaTitle, leftSlot, onAskSurfy }: MenuBarProps) => {
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   if (!editor) return null;
-
-  const handleGenerateImage = async () => {
-    if (!keyword) return;
-    setIsGeneratingImage(true);
-    try {
-      const res = await fetch('/api/articles/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, title: metaTitle || keyword, style: 'professional' }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      editor.chain().focus().setImage({ src: data.url, alt: data.alt || keyword }).run();
-    } catch (err: any) {
-      alert('Image generation error: ' + err.message);
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
 
   const canUndo = editor.can().undo();
   const canRedo = editor.can().redo();
@@ -91,21 +68,18 @@ const MenuBar = ({ editor, keyword, metaTitle, leftSlot, onAskSurfy }: MenuBarPr
       style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         padding: '0 12px',
         height: 44,
         background: '#fff',
         flexShrink: 0,
-        borderBottom: '1px solid #E4E4E7',
+        borderBottom: 'none',
         gap: 8,
         overflow: 'hidden',
       }}
     >
-      {/* Left: breadcrumb + formatting */}
+      {/* Formatting */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-        {leftSlot ? (
-          <div style={{ minWidth: 0, overflow: 'hidden', marginRight: 8 }}>{leftSlot}</div>
-        ) : null}
 
         {/* Headings */}
         {([1, 2, 3] as const).map((lvl) => {
@@ -204,34 +178,6 @@ const MenuBar = ({ editor, keyword, metaTitle, leftSlot, onAskSurfy }: MenuBarPr
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m15 15l6-6m0 0l-6-6m6 6H9a6 6 0 0 0 0 12h3" /></svg>
         </button>
 
-        <Sep />
-
-        {/* Write with AI */}
-        {keyword && (
-          <button
-            type="button"
-            onClick={handleGenerateImage}
-            disabled={isGeneratingImage}
-            title="Generate AI image"
-            style={{
-              ...btnStyle, width: 'auto', padding: '0 8px', gap: 4,
-              fontSize: 12, fontWeight: 500, color: '#630DE3',
-              fontFamily: 'var(--font-family-primary)',
-              opacity: isGeneratingImage ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#F3EEFF'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            {isGeneratingImage ? (
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}>
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor"><path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5" clipRule="evenodd" /></svg>
-            )}
-            AI
-          </button>
-        )}
       </div>
 
       {/* Right: Ask Surfy */}
@@ -282,28 +228,26 @@ const MenuBar = ({ editor, keyword, metaTitle, leftSlot, onAskSurfy }: MenuBarPr
 
 /* Featured image block — sits between Title/Description and the editor */
 const FeaturedImageBlock = ({
-  imageUrl, imageAlt, isGenerating, keyword, metaTitle, onGenerate,
+  imageUrl, imageAlt, isGenerating, keyword, onGenerate,
 }: {
   imageUrl?: string;
   imageAlt?: string;
   isGenerating: boolean;
   keyword?: string;
-  metaTitle?: string;
   onGenerate: () => void;
 }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [hovered, setHovered] = useState(false);
+
+  if (!imageUrl) return null;
 
   return (
     <div style={{ marginBottom: 24 }}>
       {!collapsed && (
         <div style={{ background: '#fff', borderBottom: '1px solid #e4e4e7', padding: '16px 16px 12px', marginBottom: 8 }}>
-          {imageUrl ? (
+          {(
             /* Image with hover regenerate overlay */
             <div
-              style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', cursor: 'pointer' }}
-              onMouseEnter={() => setHovered(true)}
-              onMouseLeave={() => setHovered(false)}
+              style={{ position: 'relative', borderRadius: 8, overflow: 'hidden' }}
             >
               <img
                 src={imageUrl}
@@ -316,17 +260,17 @@ const FeaturedImageBlock = ({
                   position: 'absolute', inset: 0,
                   background: 'rgba(255,255,255,0.55)',
                   backdropFilter: 'blur(2px)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: hovered ? 1 : 0,
+                  display: 'none', alignItems: 'center', justifyContent: 'center',
+                  opacity: 0,
                   transition: 'opacity 0.18s ease',
-                  pointerEvents: hovered ? 'auto' : 'none',
+                  pointerEvents: 'none',
                 }}
               >
                 <button
                   type="button"
                   onClick={() => onGenerate()}
                   disabled={isGenerating || !keyword}
-                  title="Regenerate image"
+                  title=""
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 44, height: 44, borderRadius: '50%',
@@ -357,7 +301,7 @@ const FeaturedImageBlock = ({
             /* No image — generate button */
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 0' }}>
               <p style={{ fontSize: 13, color: '#9ca3af', fontFamily: 'var(--font-family-primary)', margin: 0 }}>
-                Generate a featured image for this article
+                Featured image
               </p>
               <button
                 type="button"
@@ -378,7 +322,7 @@ const FeaturedImageBlock = ({
                 onMouseLeave={(e) => { if (!isGenerating && keyword) { e.currentTarget.style.background = 'var(--color-surface-raised)'; } }}
               >
                 <AiImageIcon size={14} color={isGenerating || !keyword ? '#6b7280' : '#fff'} />
-                {isGenerating ? 'Generating…' : 'Generate Featured Image'}
+                Featured Image
               </button>
             </div>
           )}
@@ -462,7 +406,7 @@ const TitleDescriptionBlock = ({
   );
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, leftSlot, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, onAiActivity }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, onAiActivity }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -737,7 +681,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         `}</style>
 
         {/* Toolbar */}
-        <MenuBar editor={editor} keyword={keyword} metaTitle={metaTitle} leftSlot={leftSlot} onAskSurfy={handleAskSurfy} />
+        <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} />
 
         {/* Scrollable editor */}
         <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'}>
@@ -758,7 +702,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               imageAlt={featuredImage?.alt}
               isGenerating={isGeneratingImage}
               keyword={keyword}
-              metaTitle={metaTitle}
               onGenerate={handleGenerateFeaturedImage}
             />
           </div>

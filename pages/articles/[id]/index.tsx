@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast, { Toaster } from 'react-hot-toast';
 import {
-  ArrowLeft01Icon,
   CheckmarkCircle01Icon,
   Cancel01Icon,
   WordpressIcon,
@@ -19,6 +18,7 @@ import PixabayImageModal from '../../../components/articles/PixabayImageModal';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
 import { ScoreData, countOccurrences, computeContentScore } from '../../../lib/contentScore';
+import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -40,6 +40,7 @@ interface Article {
   publish_target: string | null;
   publish_url: string | null;
   competitor_outlines_cache: string | null;
+  ai_visibility_summary?: AiVisibilitySummary | null;
 }
 
 /* ── Icon button used in the top action bar ──────────────────────── */
@@ -101,7 +102,9 @@ const ArticleEditorPage: NextPage = () => {
   const [surfyAiActive, setSurfyAiActive] = useState(false);
   const [researchAiActive, setResearchAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
-  const isAiActive = surfyAiActive || researchAiActive || linksAiActive || isAutoOptimizing;
+  const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
+  const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
+  const isAiActive = surfyAiActive || researchAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -159,6 +162,9 @@ const ArticleEditorPage: NextPage = () => {
           }
           if (art.score_data) {
             try { setScoreData(JSON.parse(art.score_data)); } catch {}
+          }
+          if (art.ai_visibility_summary) {
+            setAiVisibilitySummary(art.ai_visibility_summary);
           }
           // Restore internal links panel state from DB into localStorage (if localStorage is empty)
           if (art.internal_links_cache) {
@@ -236,6 +242,8 @@ const ArticleEditorPage: NextPage = () => {
           { ...scoreData, terms: updatedTerms },
           paragraphCount,
           (editorHtml.match(/<a\s[^>]*href=/gi) || []).length,
+          editorHtml,
+          article?.target_keyword || '',
         ),
       };
 
@@ -311,6 +319,26 @@ const ArticleEditorPage: NextPage = () => {
       toast.error(err.message);
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const handleRunAiVisibility = async () => {
+    if (!id) return;
+    setIsRunningAiVisibility(true);
+    try {
+      const res = await fetch('/api/articles/ai-visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'AI visibility check failed');
+      setAiVisibilitySummary(data.summary);
+      toast.success('AI Search checked');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsRunningAiVisibility(false);
     }
   };
 
@@ -517,6 +545,18 @@ const ArticleEditorPage: NextPage = () => {
     setIsAutoOptimizing(true);
     setAutoOptimizeStatus('Starting…');
     try {
+      if (!fromHtml && id) {
+        await fetch(`/api/articles/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: preHtml,
+            word_count: wordCount,
+            score_data: scoreData,
+            version_type: 'pre_auto_optimize',
+          }),
+        }).catch(() => {});
+      }
       const res = await fetch('/api/articles/auto-optimize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -526,6 +566,7 @@ const ArticleEditorPage: NextPage = () => {
           keyword: article?.target_keyword,
           articleId: article?.id,
           brandVoice: domains.find((d) => d.ID === article?.domain_id)?.brand_voice ?? '',
+          aiVisibilitySummary,
         }),
       });
       if (!res.ok || !res.body) throw new Error('Auto-optimize request failed');
@@ -864,24 +905,6 @@ const ArticleEditorPage: NextPage = () => {
               onMetaDescriptionChange={handleMetaDescriptionChange}
               initialFeaturedImage={featuredImage}
               onFeaturedImageChange={setFeaturedImage}
-              leftSlot={
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, overflow: 'hidden', paddingRight: 8 }}>
-                  <Link href="/articles">
-                    <a
-                      style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#9f9fa9', textDecoration: 'none', fontFamily: 'var(--font-family-primary)', flexShrink: 0, transition: 'color 0.15s' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#18181b'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#9f9fa9'; }}
-                    >
-                      <ArrowLeft01Icon size={13} />
-                      Articles
-                    </a>
-                  </Link>
-                  <span style={{ color: '#d4d4d8', fontSize: 12, flexShrink: 0 }}>/</span>
-                  <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                    {article.target_keyword || article.title}
-                  </span>
-                </div>
-              }
             />
           </div>
 
@@ -1040,10 +1063,15 @@ const ArticleEditorPage: NextPage = () => {
                       headingCount={headingCount}
                       scoreData={scoreData}
                       internalLinksCount={(editorHtml.match(/<a\s[^>]*href=/gi) || []).length}
+                      html={editorHtml}
+                      keyword={article?.target_keyword || ''}
                       onResearchOutline={() => setShowResearchPanel(true)}
                       onInternalLinks={() => setShowInternalLinksPanel(true)}
                       onAutoOptimize={() => handleAutoOptimize()}
                       isAutoOptimizing={isAutoOptimizing}
+                      aiVisibilitySummary={aiVisibilitySummary}
+                      onRunAiVisibility={handleRunAiVisibility}
+                      isRunningAiVisibility={isRunningAiVisibility}
                     />
                   </div>
                 </>

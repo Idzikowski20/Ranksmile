@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getCurrentUserId } from './getUser';
 
 /**
- * Weryfikuje użytkownika przez sesję Auth0 lub klucz API.
+ * Weryfikuje użytkownika przez sesję Neon Auth lub klucz API.
  * Zwraca 'authorized' gdy dostęp jest dozwolony, w przeciwnym razie komunikat błędu.
  */
 const verifyUser = async (req: NextApiRequest, res: NextApiResponse): Promise<string> => {
@@ -30,12 +30,17 @@ const verifyUser = async (req: NextApiRequest, res: NextApiResponse): Promise<st
    if (verifiedAPI && !accessingAllowedRoute) return 'This Route cannot be accessed with API.';
    if (req.headers.authorization && !verifiedAPI) return 'Invalid API Key Provided.';
 
-   // Auth0 session check — getSession jest async w v3.5+
-   try {
-      const session = await getSession(req, res);
-      if (session?.user) return 'authorized';
-   } catch (_err) {
-      // brak sesji lub błąd dekryptowania
+   // Neon Auth session check
+   const userId = await getCurrentUserId(req, res);
+   if (userId) return 'authorized';
+
+   // Fallback: local USER/PASSWORD auth (dla prostych instalacji bez Neon Auth)
+   const basicAuth = req.headers.authorization
+      ? Buffer.from(req.headers.authorization.split(' ')[1] || '', 'base64').toString()
+      : null;
+   if (basicAuth) {
+      const [user, pass] = basicAuth.split(':');
+      if (user === process.env.USER && pass === process.env.PASSWORD) return 'authorized';
    }
 
    return 'Not authorized';

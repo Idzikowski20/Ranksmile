@@ -1,197 +1,241 @@
 """
-SERP Analyzer — pobiera top 10 wyników dla keyword przez serper.dev
-i liczy TF-IDF terms (scikit-learn) oraz metryki struktury.
-
-Klucz API: https://serper.dev  (2500 darmowych zapytań, potem ~$0.001/zapytanie)
-Zmienna środowiskowa: SERPER_API_KEY
+SERP analyzer: fetches top results, scrapes competitor pages, and extracts
+SEO terms from competitor content.
 """
 import os
+import re
+import unicodedata
+from urllib.parse import urlparse
+
 import httpx
+import numpy as np
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
+
 
 POLISH_STOPWORDS = {
-    "aby", "ale", "albo", "ani", "bez", "bo", "by", "byc", "być", "byla", "była",
-    "bylo", "było", "byly", "były", "czy", "dla", "do", "gdy", "gdzie", "ich",
-    "im", "jest", "jeśli", "jesli", "już", "juz", "kiedy", "kto", "ktora", "która",
-    "ktore", "które", "ktory", "który", "lub", "ma", "moze", "może", "na", "nad",
-    "nie", "oraz", "po", "pod", "przed", "przez", "przy", "są", "sa", "sie", "się",
-    "tak", "ten", "to", "u", "w", "we", "z", "za", "ze", "że",
+    "aby", "ale", "albo", "ani", "bez", "bo", "by", "byc", "byl", "byla", "bylo",
+    "byly", "czy", "dla", "do", "gdy", "gdzie", "go", "ich", "im", "jest",
+    "jesli", "juz", "kiedy", "kto", "ktora", "ktore", "ktory", "lub", "ma",
+    "mial", "miec", "mnie", "moze", "mozna", "na", "nad", "nam", "nas", "nie",
+    "nim", "niz", "oraz", "po", "pod", "przed", "przez", "przy", "sa", "sie",
+    "sobie", "tak", "takze", "tego", "tej", "ten", "teraz", "tez", "to",
+    "tych", "tym", "u", "w", "we", "z", "za", "ze", "zeby", "warto",
+    "nalezy", "czasem", "sytuacja", "informacje",
+}
+
+GENERIC_TERMS = {
+    "strona", "artykul", "tekst", "temat", "firma", "firmy", "osoba", "osoby",
+    "przypadek", "przyklad", "mozliwosc", "rozwiazanie",
 }
 
 
-def keyword_has_polish_context(keyword: str) -> bool:
-    return True
+def normalize_text(text: str) -> str:
+    normalized = unicodedata.normalize("NFD", text.lower())
+    normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def is_useful_phrase(phrase: str) -> bool:
+    tokens = [t for t in phrase.split() if t]
+    if not tokens:
+        return False
+    if all(t in POLISH_STOPWORDS or t in GENERIC_TERMS for t in tokens):
+        return False
+    if len(tokens) == 1 and (tokens[0] in POLISH_STOPWORDS or len(tokens[0]) < 5):
+        return False
+    return not any(t in POLISH_STOPWORDS for t in tokens)
+
+
+def domain_from_url(url: str) -> str:
+    try:
+        return urlparse(url).netloc.replace("www.", "")
+    except Exception:
+        return ""
 
 
 async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10) -> dict:
-    """
-    Pobierz top 10 SERP i wylicz:
-    - NLP terms (TF-IDF)
-    - targets: word_count, heading_count
-    """
     serper_key = os.getenv("SERPER_API_KEY", "")
 
-    serp_urls: list[str] = []
-
-    if serper_key:
-        serp_urls = await _fetch_serp_urls(keyword, language, num_results, serper_key)
-    else:
-        print("[serp_analyzer] No SERPER_API_KEY — using placeholder data")
-        print("[serp_analyzer] Get your free key at https://serper.dev")
-
-    # Scrape top 10 stron
-    if serp_urls:
-        serp_texts, _ = await _scrape_pages(serp_urls)
-    else:
+    if not serper_key:
+        print("[serp_analyzer] No SERPER_API_KEY - using placeholder data")
         return _placeholder_score_data()
 
-    # TF-IDF
-    nlp_terms = _extract_nlp_terms(serp_texts, keyword)
+    serp_results, paa_questions = await _fetch_serp_results(keyword, language, num_results, serper_key)
+    serp_urls = [r["link"] for r in serp_results]
+    if not serp_urls:
+        return _placeholder_score_data()
 
-    # Targets strukturalne
-    targets = _compute_targets(serp_texts)
+    serp_texts, soups = await _scrape_pages(serp_urls)
+    if not serp_texts:
+        return _placeholder_score_data()
+
+    nlp_terms = _extract_nlp_terms(serp_texts, keyword)
+    targets = _compute_targets(serp_texts, soups)
 
     return {
         "terms": nlp_terms,
+        "paa_questions": paa_questions,
+        "competitors": [
+            {
+                "url": result["link"],
+                "domain": domain_from_url(result["link"]),
+                "title": result.get("title", ""),
+                "snippet": result.get("snippet", ""),
+            }
+            for result in serp_results[:5]
+        ],
         **targets,
     }
 
 
 async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: str) -> list[dict]:
-    """Pobierz wyniki z serper.dev — zwraca listę {title, link, snippet, date}."""
-    # Mapuj język na kraj (GL) dla lepszych wyników lokalnych
     lang_to_gl = {
         "pl": "pl", "en": "us", "de": "de", "fr": "fr",
         "es": "es", "it": "it", "nl": "nl", "pt": "pt",
     }
     gl = lang_to_gl.get(language, "us")
-
-    # Build a smarter query that prefers articles/blogs over e-commerce/business listings
-    # Add negative keywords to filter out common false positives
     negatives_by_lang = {
-        "pl": "-przesyłka -paczka -kurier -nadanie -zamówienie -cena -sklep -allegro -olx",
+        "pl": "-przesylka -paczka -kurier -nadanie -zamowienie -cena -sklep -allegro -olx",
         "en": "-price -buy -shop -amazon -ebay -etsy -walmart -order -shipping -tracking",
         "de": "-preis -kaufen -shop -amazon -ebay -bestellung -versand",
     }
-    negatives = negatives_by_lang.get(language, negatives_by_lang["en"])
-
-    # Construct query: keyword + article context + exclude noise
-    query = f"{keyword} {negatives}"
+    query = f"{keyword} {negatives_by_lang.get(language, negatives_by_lang['en'])}"
 
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            r = await client.post(
+            response = await client.post(
                 "https://google.serper.dev/search",
-                headers={
-                    "X-API-KEY": api_key,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "q": query,
-                    "hl": language,
-                    "gl": gl,
-                    "num": num + 5,
-                },
+                headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+                json={"q": query, "hl": language, "gl": gl, "num": num + 5},
             )
-            r.raise_for_status()
-            data = r.json()
-            results = data.get("organic", [])
-
-            # Filter out marketplace/e-commerce domains
-            blocked_domains = {
-                "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com",
-                "etsy.com", "alibaba.com", "aliexpress.com", "ceneo.pl", "sklep.",
-                "walmart.com", "shopee.pl", "erli.pl",
-            }
-
-            serp_results = []
-            for res in results:
-                link = res.get("link", "")
-                if not link:
-                    continue
-                if any(b in link.lower() for b in blocked_domains):
-                    continue
-                serp_results.append({
-                    "title": res.get("title", ""),
-                    "link": link,
-                    "snippet": res.get("snippet", ""),
-                    "date": res.get("date", ""),
-                })
-
-            return serp_results[:num]
-    except Exception as e:
-        print(f"[serp_analyzer] serper.dev error: {e}")
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:
+        print(f"[serp_analyzer] serper.dev error: {exc}")
         return []
+
+    blocked_domains = {
+        "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com", "etsy.com",
+        "alibaba.com", "aliexpress.com", "ceneo.pl", "walmart.com", "shopee.pl",
+        "erli.pl",
+    }
+
+    results = []
+    for item in data.get("organic", []):
+        link = item.get("link", "")
+        if not link:
+            continue
+        domain = domain_from_url(link)
+        if any(blocked in domain for blocked in blocked_domains):
+            continue
+        results.append({
+            "title": item.get("title", ""),
+            "link": link,
+            "snippet": item.get("snippet", ""),
+            "date": item.get("date", ""),
+        })
+
+    paa_questions = [
+        item.get("question", "").strip()
+        for item in data.get("peopleAlsoAsk", [])
+        if item.get("question")
+    ][:8]
+
+    return results[:num], paa_questions
 
 
 async def _fetch_serp_urls(keyword: str, language: str, num: int, api_key: str) -> list[str]:
-    """Backward-compat wrapper — zwraca tylko URLe."""
-    results = await _fetch_serp_results(keyword, language, num, api_key)
+    results, _ = await _fetch_serp_results(keyword, language, num, api_key)
     return [r["link"] for r in results]
 
 
 async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
-    """Scrape tekst z listy URLi."""
     texts = []
     soups = []
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
         for url in urls:
             try:
-                r = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                soup = BeautifulSoup(r.text, "lxml")
-                # Usuń skrypty i style
-                for tag in soup(["script", "style", "nav", "footer"]):
+                response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                soup = BeautifulSoup(response.text, "lxml")
+                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                     tag.decompose()
                 text = soup.get_text(separator=" ", strip=True)
-                texts.append(text[:10000])
+                texts.append(text[:15000])
                 soups.append(soup)
-            except Exception as e:
-                print(f"[serp_analyzer] Failed to scrape {url}: {e}")
+            except Exception as exc:
+                print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
     return texts, soups
 
 
 def _extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
-    """TF-IDF z top 10 — wyciągnij terminy SEO."""
+    """
+    Extracts NLP terms from competitor pages using a two-pass approach:
+    1. TF-IDF discovers candidate phrases (good at surfacing relevant multi-word terms)
+    2. Actual term frequency sets target_count (reflects real competitor usage)
+
+    Only terms appearing in ≥30% of competitor pages are included — this ensures
+    we measure terms that are CONSISTENTLY used across top results, not outliers.
+    """
     if not texts:
         return []
 
+    n_docs = len(texts)
+    normalized_texts = [normalize_text(text) for text in texts]
+
+    # Step 1: TF-IDF discovers candidate phrases that must appear in ≥30% of pages
+    min_df = max(2, int(n_docs * 0.3))
     try:
         vectorizer = TfidfVectorizer(
-            ngram_range=(2, 4),
-            max_features=120,
-            stop_words=list(POLISH_STOPWORDS) if keyword_has_polish_context(keyword) else "english",
-            min_df=1,
-            token_pattern=r"(?u)\b[\wąćęłńóśźżĄĆĘŁŃÓŚŹŻ]{3,}\b",
+            ngram_range=(1, 3),
+            max_features=300,
+            stop_words=list(POLISH_STOPWORDS),
+            min_df=min_df,
+            token_pattern=r"(?u)\b[a-z0-9][a-z0-9-]{2,}\b",
         )
-        tfidf_matrix = vectorizer.fit_transform(texts)
-        terms = vectorizer.get_feature_names_out()
-        avg_scores = np.asarray(tfidf_matrix.mean(axis=0)).flatten()
+        vectorizer.fit_transform(normalized_texts)
+        candidate_terms: set[str] = set(vectorizer.get_feature_names_out())
+    except Exception as exc:
+        print(f"[serp_analyzer] TF-IDF error: {exc}")
+        candidate_terms = set()
 
-        result = []
-        for i, term in enumerate(terms):
-            tokens = term.split()
-            if (
-                avg_scores[i] > 0.02
-                and len(term) > 3
-                and not all(token in POLISH_STOPWORDS for token in tokens)
-            ):
-                # target_count = ile razy powinien pojawić się w artykule
-                target_count = max(1, round(avg_scores[i] * 15))
-                result.append({"term": term, "target_count": int(target_count)})
+    # Step 2: For each candidate, count real occurrences across all pages.
+    # target_count = average count across ALL competitor pages (not just those containing the term),
+    # so a term in 10/10 pages with avg 5 occurrences → target=5;
+    # a term in 3/10 pages with avg 2 occurrences → target=1 (rounds down — correct, it's rare).
+    result_by_term: dict[str, dict] = {}
 
-        # Sortuj po ważności
-        result.sort(key=lambda x: x["target_count"], reverse=True)
-        return result[:50]
+    # Always seed with keyword itself (TF-IDF may miss it due to low IDF if it's ubiquitous)
+    kw = normalize_text(keyword)
+    if kw and is_useful_phrase(kw):
+        kw_total = sum(t.count(kw) for t in normalized_texts)
+        result_by_term[kw] = {
+            "term": kw,
+            "target_count": max(1, round(kw_total / n_docs)),
+            "doc_freq": n_docs,
+        }
 
-    except Exception as e:
-        print(f"[serp_analyzer] TF-IDF error: {e}")
-        return []
+    for term in candidate_terms:
+        if not is_useful_phrase(term):
+            continue
+        doc_counts = [t.count(term) for t in normalized_texts]
+        docs_with_term = sum(1 for c in doc_counts if c > 0)
+        if docs_with_term < min_df:
+            continue
+        avg_across_all = sum(doc_counts) / n_docs
+        result_by_term[term] = {
+            "term": term,
+            "target_count": max(1, round(avg_across_all)),
+            "doc_freq": docs_with_term,
+        }
+
+    # Sort: terms appearing in more competitor pages first, then by count
+    result = list(result_by_term.values())
+    result.sort(key=lambda x: (x["doc_freq"], x["target_count"]), reverse=True)
+    return [{"term": r["term"], "target_count": r["target_count"]} for r in result[:50]]
 
 
-def _compute_targets(texts: list[str]) -> dict:
-    """Wylicz target word/heading count z top 10."""
+def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None) -> dict:
     if not texts:
         return {
             "words_min": 1500,
@@ -202,29 +246,28 @@ def _compute_targets(texts: list[str]) -> dict:
             "headings_target": 15,
         }
 
-    word_counts = [len(t.split()) for t in texts]
-    # Nie możemy łatwo liczyć nagłówków z tekstu — estymacja
-    estimated_heading_counts = [max(5, wc // 150) for wc in word_counts]
+    word_counts = [len(text.split()) for text in texts]
+    if soups:
+        heading_counts = [max(1, len(soup.select("h1,h2,h3,h4"))) for soup in soups]
+    else:
+        heading_counts = [max(5, wc // 150) for wc in word_counts]
 
     return {
         "words_min": int(min(word_counts) * 0.85),
         "words_max": int(max(word_counts) * 1.15),
         "words_target": int(sum(word_counts) / len(word_counts)),
-        "headings_min": max(5, min(estimated_heading_counts)),
-        "headings_max": max(10, max(estimated_heading_counts)),
-        "headings_target": int(sum(estimated_heading_counts) / len(estimated_heading_counts)),
+        "headings_min": max(3, min(heading_counts)),
+        "headings_max": max(8, max(heading_counts)),
+        "headings_target": int(sum(heading_counts) / len(heading_counts)),
     }
 
 
 def _placeholder_score_data() -> dict:
-    """Zwraca placeholder gdy brak danych SERP."""
     return {
         "terms": [
-            {"term": "seo", "target_count": 10},
             {"term": "content marketing", "target_count": 5},
             {"term": "keyword research", "target_count": 4},
-            {"term": "backlinks", "target_count": 3},
-            {"term": "on-page seo", "target_count": 3},
+            {"term": "on page seo", "target_count": 3},
         ],
         "words_min": 1500,
         "words_max": 3000,
@@ -235,68 +278,36 @@ def _placeholder_score_data() -> dict:
     }
 
 
-async def extract_competitor_outlines(keyword: str, language: str = "pl", num_results: int = 5) -> list[dict]:
-    """
-    Pobiera top N wyników z serper.dev, scrapuje każdą stronę i zwraca
-    strukturę headingów (h1-h3) + meta dane dla panelu Research & Outline.
-    """
+async def extract_competitor_outlines(keyword: str, language: str = "pl", num: int = 5) -> list[dict]:
     serper_key = os.getenv("SERPER_API_KEY", "")
     if not serper_key:
         return []
 
-    serp_results = await _fetch_serp_results(keyword, language, num_results, serper_key)
-    if not serp_results:
-        return []
-
-    urls = [r["link"] for r in serp_results]
-
-    # Scrape pages
-    _, soups = await _scrape_pages(urls)
-
-    results = []
-    for i, (serp, (url, soup)) in enumerate(zip(serp_results, zip(urls, soups))):
-        try:
-            # Extract headings hierarchically
-            headings = []
-            for tag in soup.select("h1, h2, h3, h4"):
-                level = int(tag.name[1])
-                text = tag.get_text(strip=True)
-                if text and len(text) > 2:
-                    headings.append({"level": level, "text": text[:200]})
-
-            # Page title — prefer scraped h1, fall back to SERP title
-            page_title = ""
-            h1 = soup.find("h1")
-            if h1:
-                page_title = h1.get_text(strip=True)
-            if not page_title:
-                page_title = serp.get("title", "")
-            title_tag = soup.find("title")
-            if not page_title and title_tag:
-                page_title = title_tag.get_text(strip=True)
-
-            # Favicon
-            domain = url.split("/")[2] if "://" in url else url
-            favicon = f"https://website-info.yourseo.pro/favicon/?domain={domain}"
-
-            # Word count from body text (strip scripts/nav/etc first)
-            for noise_tag in soup.select('script, style, nav, footer, header, aside, noscript'):
-                noise_tag.decompose()
-            body_text = soup.get_text(separator=' ')
-            word_count_val = len(body_text.split())
-
-            results.append({
-                "url": url,
-                "title": page_title or url,
-                "serp_title": serp.get("title", ""),
-                "snippet": serp.get("snippet", ""),
-                "date": serp.get("date", ""),
-                "favicon": favicon,
-                "headings": headings[:80],
-                "heading_count": len(headings),
-                "word_count": word_count_val,
-            })
-        except Exception as e:
-            print(f"[serp_analyzer] Failed to extract outline from {url}: {e}")
-
-    return results
+    results, _ = await _fetch_serp_results(keyword, language, num, serper_key)
+    outlines = []
+    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        for result in results[:num]:
+            url = result["link"]
+            try:
+                response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                soup = BeautifulSoup(response.text, "lxml")
+                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                    tag.decompose()
+                headings = [
+                    {"level": int(tag.name[1]), "text": tag.get_text(" ", strip=True)}
+                    for tag in soup.select("h1,h2,h3,h4")
+                    if tag.get_text(" ", strip=True)
+                ]
+                text = soup.get_text(" ", strip=True)
+                outlines.append({
+                    "url": url,
+                    "domain": domain_from_url(url),
+                    "title": soup.select_one("title").get_text(" ", strip=True) if soup.select_one("title") else result.get("title", ""),
+                    "serp_title": result.get("title", ""),
+                    "snippet": result.get("snippet", ""),
+                    "word_count": len(text.split()),
+                    "headings": headings[:60],
+                })
+            except Exception as exc:
+                print(f"[serp_analyzer] outline failed for {url}: {exc}")
+    return outlines

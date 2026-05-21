@@ -3,9 +3,12 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import toast, { Toaster } from 'react-hot-toast';
+import { CSSTransition } from 'react-transition-group';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import ArticleList from '../../components/articles/ArticleList';
 import GenerateModal from '../../components/articles/GenerateModal';
+import AddDomain from '../../components/domains/AddDomain';
+import Settings from '../../components/settings/Settings';
 import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
 import { useQuery, useQueryClient } from 'react-query';
@@ -421,6 +424,17 @@ const ArticlesPage: NextPage = () => {
           isGenerating={isGenerating}
         />
       )}
+
+      {showAddDomain && (
+        <AddDomain
+          domains={domains}
+          closeModal={() => setShowAddDomain(false)}
+        />
+      )}
+
+      <CSSTransition in={showSettings} timeout={300} classNames="settings_anim" unmountOnExit mountOnEnter>
+        <Settings closeSettings={() => setShowSettings(false)} />
+      </CSSTransition>
 
       <Toaster position="bottom-center" containerClassName="react_toaster" />
     </DashboardLayout>
