@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import Icon from './Icon';
+import { authClient } from '../../lib/auth/client';
 
 type TopbarProps = {
    showSettings: Function,
@@ -13,8 +14,9 @@ const TopBar = ({ showSettings, showAddModal }: TopbarProps) => {
    const [showMobileMenu, setShowMobileMenu] = useState<boolean>(false);
    const router = useRouter();
 
-   const logoutUser = () => {
-      window.location.href = '/api/auth/logout';
+   const logoutUser = async () => {
+      await authClient.signOut();
+      window.location.href = '/auth/sign-in';
    };
 
    return (

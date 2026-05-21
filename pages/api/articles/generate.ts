@@ -6,6 +6,7 @@ import axios from 'axios';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -24,9 +25,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
 
    try {
+      const articleIdSql = await getArticleIdSql();
       // Pobierz URL domeny
       const [domains] = await db.query(
-         `SELECT * FROM domain WHERE ID = ? LIMIT 1`,
+         `SELECT * FROM domain WHERE "ID" = ? LIMIT 1`,
          { replacements: [domainId] },
       );
       const domain = (domains as any[])[0];
@@ -76,28 +78,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Zapisz draft do SQLite
-      // QueryTypes.INSERT zwraca [lastInsertRowid, rowsAffected] dla SQLite
-      const [articleId] = await db.query(
-         `INSERT INTO articles
-            (domain_id, title, content, target_keyword, meta_title, meta_description, meta_url,
-             schema_json, score_data, internal_links_cache, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', datetime('now'), datetime('now'))`,
-         {
-            replacements: [
-               domainId,
-               sidecarData.meta_title || keyword,
-               sidecarData.article_html || '',
-               keyword,
-               sidecarData.meta_title || keyword,
-               sidecarData.meta_description || '',
-               sidecarData.meta_url || '',
-               JSON.stringify(sidecarData.article_schema || sidecarData.schema_json || {}),
-               JSON.stringify(sidecarData.score_data || {}),
-               JSON.stringify({ suggestions: sidecarData.internal_links || [] }),
-            ],
-            type: QueryTypes.INSERT,
-         },
-      );
+      let articleId: number | undefined;
+      if (process.env.DATABASE_URL) {
+         const rows = await db.query<{ id: number }>(
+            `INSERT INTO articles
+               (domain_id, title, content, target_keyword, meta_title, meta_description, meta_url,
+                schema_json, score_data, internal_links_cache, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+             RETURNING ${articleIdSql} AS id`,
+            {
+               replacements: [
+                  domainId,
+                  sidecarData.meta_title || keyword,
+                  sidecarData.article_html || '',
+                  keyword,
+                  sidecarData.meta_title || keyword,
+                  sidecarData.meta_description || '',
+                  sidecarData.meta_url || '',
+                  JSON.stringify(sidecarData.article_schema || sidecarData.schema_json || {}),
+                  JSON.stringify(sidecarData.score_data || {}),
+                  JSON.stringify({ suggestions: sidecarData.internal_links || [] }),
+               ],
+               type: QueryTypes.SELECT,
+            },
+         );
+         articleId = rows[0]?.id;
+      } else {
+         const [newArticleId] = await db.query(
+            `INSERT INTO articles
+               (domain_id, title, content, target_keyword, meta_title, meta_description, meta_url,
+                schema_json, score_data, internal_links_cache, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            {
+               replacements: [
+                  domainId,
+                  sidecarData.meta_title || keyword,
+                  sidecarData.article_html || '',
+                  keyword,
+                  sidecarData.meta_title || keyword,
+                  sidecarData.meta_description || '',
+                  sidecarData.meta_url || '',
+                  JSON.stringify(sidecarData.article_schema || sidecarData.schema_json || {}),
+                  JSON.stringify(sidecarData.score_data || {}),
+                  JSON.stringify({ suggestions: sidecarData.internal_links || [] }),
+               ],
+               type: QueryTypes.INSERT,
+            },
+         );
+         articleId = newArticleId as unknown as number;
+      }
 
       return res.status(200).json({
          articleId,

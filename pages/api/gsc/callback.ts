@@ -1,34 +1,33 @@
 // GET /api/gsc/callback?code=...&state=...
-// Handles Google OAuth2 callback: exchanges code for tokens and stores refresh_token.
+// Handles Google OAuth2 callback: exchanges code for tokens and stores a per-user GSC account.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@googleapis/searchconsole';
-import Cryptr from 'cryptr';
+import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
-import Domain from '../../../database/models/domain';
+import { upsertAccountForUser } from '../../../lib/gscAccounts';
 
-function parseState(state: string): { domain: string; redirect: string | null } {
-  // New format: JSON with domain + optional redirect
+function parseState(state: string): { domain?: string; redirect: string | null; userId?: string | null } {
   try {
     const parsed = JSON.parse(state);
-    if (parsed.domain) return parsed;
+    return { domain: parsed.domain || undefined, redirect: parsed.redirect || null, userId: parsed.userId || null };
   } catch { /* fall through */ }
-  // Legacy format: plain domain string
-  return { domain: state, redirect: null };
+  return { redirect: null };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { code, state, error: oauthError } = req.query;
 
+  await db.sync();
+  const sessionUserId = await getCurrentUserId(req, res);
+
   if (oauthError) {
     console.error('[GSC OAuth] Error from Google:', oauthError);
-    return res.redirect(302, `/domains?gsc_error=${encodeURIComponent(oauthError as string)}`);
+    return res.redirect(302, `/settings/google_search_console?gsc_error=${encodeURIComponent(oauthError as string)}`);
   }
 
   if (!code || !state || typeof code !== 'string' || typeof state !== 'string') {
     return res.status(400).json({ error: 'Missing code or state parameter.' });
   }
-
-  const { domain, redirect } = parseState(state);
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -44,41 +43,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { tokens } = await oauth2Client.getToken(code);
 
     if (!tokens.refresh_token) {
-      const connectParams = new URLSearchParams({ domain });
-      if (redirect) connectParams.set('redirect', redirect);
+      const { redirect } = parseState(state);
+      const connectParams = new URLSearchParams({
+        redirect: redirect || '/settings/google_search_console',
+      });
       return res.redirect(302, `/api/gsc/connect?${connectParams.toString()}`);
     }
 
-    const cryptr = new Cryptr(process.env.SECRET as string);
-    const encryptedToken = cryptr.encrypt(tokens.refresh_token);
-
-    await db.sync();
-    const domainRecord = await Domain.findOne({ where: { domain } });
-    if (!domainRecord) {
-      return res.status(404).json({ error: `Domain "${domain}" not found.` });
+    // Decode id_token to get Google account info
+    let email = '';
+    let picture = '';
+    let googleSub = '';
+    if (tokens.id_token) {
+      try {
+        const payloadPart = tokens.id_token.split('.')[1] || '';
+        const normalizedPayload = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=');
+        const payload = JSON.parse(Buffer.from(paddedPayload, 'base64').toString('utf-8'));
+        email = payload.email || '';
+        picture = payload.picture || '';
+        googleSub = payload.sub || '';
+      } catch { /* ignore decode errors */ }
     }
 
-    const currentSC = domainRecord.search_console ? JSON.parse(domainRecord.search_console) : {};
-    await domainRecord.update({
-      search_console: JSON.stringify({
-        ...currentSC,
-        auth_type: 'oauth',
-        oauth_refresh_token: encryptedToken,
-        client_email: '',
-        private_key: '',
-      }),
+    if (!email || !picture) {
+      try {
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+          },
+        });
+        if (userInfoRes.ok) {
+          const userInfo = await userInfoRes.json();
+          email = email || userInfo.email || '';
+          picture = picture || userInfo.picture || '';
+          googleSub = googleSub || userInfo.sub || '';
+        }
+      } catch { /* ignore userinfo failures */ }
+    }
+
+    const { redirect } = parseState(state);
+    const ownerUserId = sessionUserId;
+    if (!ownerUserId) {
+      return res.status(401).json({ error: 'Missing Neon Auth user session.' });
+    }
+
+    await upsertAccountForUser({
+      userId: ownerUserId,
+      googleSub: googleSub || `email:${email || Date.now()}`,
+      email: email || 'Google Account',
+      picture,
+      refreshToken: tokens.refresh_token,
+      scopes: 'openid email profile https://www.googleapis.com/auth/webmasters.readonly',
     });
 
-    console.log(`[GSC OAuth] Connected Google Search Console for domain: ${domain}`);
+    console.log('[GSC OAuth] Connected Google Search Console for user', ownerUserId);
 
-    // Redirect back to the caller's page
     if (redirect) {
       return res.redirect(302, `${redirect}?gsc_connected=1`);
     }
-    const slug = domain.replace(/\./g, '-');
-    return res.redirect(302, `/domain/${slug}?gsc_connected=1`);
+    return res.redirect(302, `/settings/google_search_console?gsc_connected=1`);
   } catch (err: any) {
     console.error('[GSC OAuth] Token exchange failed:', err?.message || err);
-    return res.redirect(302, `/domains?gsc_error=${encodeURIComponent('Token exchange failed')}`);
+    return res.redirect(302, `/settings/google_search_console?gsc_error=${encodeURIComponent('Token exchange failed')}`);
   }
 }

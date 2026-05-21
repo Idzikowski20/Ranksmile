@@ -7,6 +7,7 @@ import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
@@ -20,8 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // ── Return from DB cache if available ─────────────────────────────
   if (articleId) {
     try {
+      const articleIdSql = await getArticleIdSql();
       const [rows] = await db.query(
-        `SELECT competitor_outlines_cache FROM articles WHERE id = ? LIMIT 1`,
+        `SELECT competitor_outlines_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
         { replacements: [articleId] },
       );
       const cached = (rows as any[])[0]?.competitor_outlines_cache;
@@ -47,8 +49,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ── Persist to DB cache ──────────────────────────────────────────
     if (articleId && result.competitors?.length) {
       try {
+        const articleIdSql = await getArticleIdSql();
         await db.query(
-          `UPDATE articles SET competitor_outlines_cache = ?, updated_at = datetime('now') WHERE id = ?`,
+          `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(result), articleId] },
         );
         console.log(`[competitor-outlines] cached ${result.competitors.length} competitors for article ${articleId}`);

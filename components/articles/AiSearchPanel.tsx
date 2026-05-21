@@ -45,6 +45,11 @@ const AiSearchPanel = ({ summary, onRun, running = false }: Props) => {
                      <div style={{ color: citation.is_own_domain ? '#1ab25e' : '#9f9fa9', fontSize: 12, fontFamily: 'var(--font-family-primary)', marginTop: 4 }}>
                         {citation.cited_domain || 'No citation'}
                      </div>
+                     {citation.answer_readiness_score !== undefined && (
+                        <div style={{ color: '#52525c', fontSize: 12, fontFamily: 'var(--font-family-primary)', marginTop: 4 }}>
+                           Answer-ready: {citation.answer_readiness_score}/100
+                        </div>
+                     )}
                   </div>
                ))}
             </>

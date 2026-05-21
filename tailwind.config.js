@@ -32,6 +32,8 @@ module.exports = {
             'ds-2xl': 'var(--font-size-2xl)',
             'ds-3xl': 'var(--font-size-3xl)',
             'ds-4xl': 'var(--font-size-4xl)',
+            /* Light design-system font sizes */
+            'md': ['0.875rem', { lineHeight: '1.25rem' }],
          },
          colors: {
             'surface-base': 'var(--color-surface-base)',
@@ -40,6 +42,20 @@ module.exports = {
             'text-primary': 'var(--color-text-primary)',
             'text-tertiary': 'var(--color-text-tertiary)',
             'border-strong': 'var(--color-border-strong)',
+            /* Light design-system tokens */
+            'white-base': 'var(--white-base)',
+            'gray-10': 'var(--gray-10)',
+            'gray-20': 'var(--gray-20)',
+            'gray-40': 'var(--gray-40)',
+            'gray-60': 'var(--gray-60)',
+            'gray-100': 'var(--gray-100)',
+            'gray-120': 'var(--gray-120)',
+            'gray-140': 'var(--gray-140)',
+            'gray-160': 'var(--gray-160)',
+            'gray-base': 'var(--gray-base)',
+            'purple-40': 'var(--purple-40)',
+            'purple-base': 'var(--purple-base)',
+            'purple-100': 'var(--purple-100)',
          },
          borderRadius: {
             'ds-xs': 'var(--radius-xs)',
@@ -57,6 +73,15 @@ module.exports = {
             'ds-6': 'var(--space-6)',
             'ds-7': 'var(--space-7)',
             'ds-8': 'var(--space-8)',
+            /* Light design-system spacing */
+            '2xs': '0.25rem',
+            'xs': '0.375rem',
+            'sm': '0.5rem',
+            'md': '0.75rem',
+            'base': '1rem',
+            'lg': '1.5rem',
+            'xl': '2rem',
+            '2xl': '2.5rem',
          },
          boxShadow: {
             'ds-1': 'var(--shadow-1)',
