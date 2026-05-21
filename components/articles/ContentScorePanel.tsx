@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScoreData, NlpTerm, countOccurrences } from '../../lib/contentScore';
+import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../lib/contentScore';
 import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
 import AiSearchPanel from './AiSearchPanel';
 
@@ -9,6 +9,8 @@ interface Props {
   headingCount: number;
   scoreData: ScoreData;
   internalLinksCount?: number;
+  html?: string;
+  keyword?: string;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
   onResearchOutline?: () => void;
@@ -16,35 +18,6 @@ interface Props {
   aiVisibilitySummary?: AiVisibilitySummary | null;
   onRunAiVisibility?: () => void;
   isRunningAiVisibility?: boolean;
-}
-
-function computeScore(plainText: string, wordCount: number, headingCount: number, paragraphCount: number, scoreData: ScoreData, internalLinksCount?: number): number {
-  if (!scoreData?.terms?.length) return 0;
-
-  const wordScore = Math.min(wordCount / Math.max(scoreData.words_target, 1), 1) * 30;
-  const headingScore = Math.min(headingCount / Math.max(scoreData.headings_target, 1), 1) * 20;
-
-  let paraScore = 0;
-  let termsWeight = 50;
-  if (scoreData.paragraphs_target) {
-    paraScore = Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 15;
-    termsWeight = 35;
-  }
-
-  const termsRatio = scoreData.terms.reduce((sum, t) => {
-    const actual = countOccurrences(plainText, t.term);
-    return sum + Math.min(actual / Math.max(t.target_count, 1), 1);
-  }, 0) / scoreData.terms.length;
-  const termsScore = termsRatio * termsWeight;
-
-  let linksScore = 0;
-  if (internalLinksCount !== undefined && internalLinksCount > 0) {
-    const bonus = Math.min(internalLinksCount, 5);
-    const penalty = internalLinksCount > 10 ? (internalLinksCount - 10) : 0;
-    linksScore = Math.max(0, bonus - penalty);
-  }
-
-  return Math.round(wordScore + headingScore + paraScore + termsScore + linksScore);
 }
 
 /* ── Score Gauge (SurferSEO-style SVG) ─────────────────────────────── */
@@ -213,6 +186,8 @@ const ContentScorePanel = ({
   headingCount,
   scoreData,
   internalLinksCount,
+  html,
+  keyword,
   onAutoOptimize,
   isAutoOptimizing,
   onResearchOutline,
@@ -239,8 +214,8 @@ const ContentScorePanel = ({
     }));
     setTerms(updated);
     const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-    setScore(computeScore(plainText, wordCount, headingCount, paraCount, scoreData, internalLinksCount));
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount]);
+    setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword));
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
@@ -343,16 +318,28 @@ const ContentScorePanel = ({
                 <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{coveredCount}/{terms.length}</span>
               </div>
             </div>
-            <div style={{ flex: 1, background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '12px 14px', opacity: 0.6 }}>
+            <button
+              type="button"
+              onClick={() => setAiOpen((v) => !v)}
+              style={{ flex: 1, background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '12px 14px', textAlign: 'left', cursor: 'pointer' }}
+            >
               <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)', marginBottom: 6 }}>AI Search</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CircleProgress value={0} max={1} color="#9f9fa9" />
-                <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>0/0</span>
+                <CircleProgress value={aiCovered} max={Math.max(aiTotal, 1)} color={aiScore >= 60 ? '#1ab25e' : '#efa00d'} />
+                <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{aiCovered}/{aiTotal}</span>
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Auto-Optimize — always visible */}
+          {aiOpen && (
+            <AiSearchPanel
+              summary={aiVisibilitySummary}
+              onRun={onRunAiVisibility}
+              running={isRunningAiVisibility}
+            />
+          )}
+
           <div style={{ padding: '0 16px 12px' }}>
             <button
               onClick={isAutoOptimizing ? undefined : onAutoOptimize}

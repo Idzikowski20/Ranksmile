@@ -6,6 +6,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import type { ScoreData } from '../../../lib/contentScore';
 import { countOccurrences } from '../../../lib/contentScore';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export const config = { api: { responseLimit: '10mb' } };
 
@@ -86,8 +87,9 @@ interface SerpMeta { url: string; snippet: string; serpTitle: string; }
 async function getCompetitorData(keyword: string, articleId?: number): Promise<{ urls: string[]; serpMeta: SerpMeta[] }> {
   if (articleId) {
     try {
+      const articleIdSql = await getArticleIdSql();
       const [rows] = await db.query(
-        'SELECT competitor_outlines_cache FROM articles WHERE id = ? LIMIT 1',
+        `SELECT competitor_outlines_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
         { replacements: [articleId] },
       );
       const cached = (rows as any[])[0]?.competitor_outlines_cache;
@@ -123,8 +125,9 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
         serpTitle: c.serp_title || '',
       }));
       if (articleId && urls.length) {
+        const articleIdSql = await getArticleIdSql();
         await db.query(
-          `UPDATE articles SET competitor_outlines_cache = ?, updated_at = datetime('now') WHERE id = ?`,
+          `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(data), articleId] },
         ).catch(() => {});
       }
@@ -141,8 +144,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { content, scoreData, keyword, articleId, brandVoice }:
-    { content: string; scoreData?: ScoreData; keyword?: string; articleId?: number; brandVoice?: string } = req.body;
+  const { content, scoreData, keyword, articleId, brandVoice, aiVisibilitySummary }:
+    {
+      content: string;
+      scoreData?: ScoreData;
+      keyword?: string;
+      articleId?: number;
+      brandVoice?: string;
+      aiVisibilitySummary?: {
+        prompts_total: number;
+        prompts_cited: number;
+        competitor_citations: number;
+        citations: Array<{ prompt: string; cited_domain?: string; answer?: string }>;
+      };
+    } = req.body;
   if (!content) return res.status(400).json({ error: 'content is required' });
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -202,6 +217,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const gapBlock = gaps.length
       ? `CONTENT GAPS TO FIX:\n${gaps.map((g, i) => `${i + 1}. ${g}`).join('\n\n')}`
       : 'Article is already well-optimized. Improve NLP term density and expand thin sections.';
+    const aiSearchBlock = aiVisibilitySummary?.citations?.length
+      ? `\n\nAI SEARCH VISIBILITY GAPS:\n${aiVisibilitySummary.citations
+        .slice(0, 10)
+        .map((c, i) => `${i + 1}. Prompt: "${c.prompt}" | cited: ${c.cited_domain || 'none'} | answer snippet: "${(c.answer || '').slice(0, 180)}"`)
+        .join('\n')}\nUse these gaps to add answer-ready sections, definitions, FAQs, and source-worthy statements.`
+      : '';
 
     sse(res, 'progress', {
       message: `Found ${missingTerms.length} missing terms, ${lowTerms.length} underused — ready to fix`,
@@ -282,7 +303,7 @@ STRICT RULES:
 - Do NOT change the meta title or meta description
 - Keep the human, expert tone — avoid AI-sounding filler phrases
 
-${gapBlock}${competitorBlock}
+${gapBlock}${competitorBlock}${aiSearchBlock}
 
 OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.${brandVoiceBlock}`;
 

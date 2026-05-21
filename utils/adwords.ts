@@ -48,38 +48,36 @@ export type KeywordIdeasDatabase = {
 }
 
 /**
- * The function `getAdwordsCredentials` reads and decrypts Google Ads credentials from the App settings file.
- * @returns {Promise<false | AdwordsCredentials>} returns either a decrypted `AdwordsCredentials` object if the settings are successfully decrypted,
- * or `false` if the decryption process fails.
+ * The function `getAdwordsCredentials` reads Google Ads credentials from environment variables.
+ * The refresh token falls back to `settings.json` (written by the OAuth callback) when
+ * `ADWORDS_REFRESH_TOKEN` env var is not set.
+ * @returns {Promise<false | AdwordsCredentials>} returns either a credentials object or `false`.
  */
 export const getAdwordsCredentials = async (): Promise<false | AdwordsCredentials> => {
    try {
-      const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' });
-      const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
-      let decryptedSettings: false | AdwordsCredentials = false;
+      const client_id = process.env.ADWORDS_CLIENT_ID || '';
+      const client_secret = process.env.ADWORDS_CLIENT_SECRET || '';
+      const developer_token = process.env.ADWORDS_DEVELOPER_TOKEN || '';
+      const account_id = process.env.ADWORDS_ACCOUNT_ID || '';
 
-      try {
-         const cryptr = new Cryptr(process.env.SECRET as string);
-         const client_id = settings.adwords_client_id ? cryptr.decrypt(settings.adwords_client_id) : '';
-         const client_secret = settings.adwords_client_secret ? cryptr.decrypt(settings.adwords_client_secret) : '';
-         const developer_token = settings.adwords_developer_token ? cryptr.decrypt(settings.adwords_developer_token) : '';
-         const account_id = settings.adwords_account_id ? cryptr.decrypt(settings.adwords_account_id) : '';
-         const refresh_token = settings.adwords_refresh_token ? cryptr.decrypt(settings.adwords_refresh_token) : '';
+      if (!client_id || !client_secret) return false;
 
-         decryptedSettings = {
-            client_id,
-            client_secret,
-            developer_token,
-            account_id,
-            refresh_token,
-         };
-      } catch (error) {
-         console.log('Error Decrypting Settings API Keys!');
+      // Refresh token: env var takes priority; fall back to settings.json (set by OAuth callback)
+      let refresh_token = process.env.ADWORDS_REFRESH_TOKEN || '';
+      if (!refresh_token) {
+         try {
+            const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' });
+            const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
+            if (settings.adwords_refresh_token) {
+               const cryptr = new Cryptr(process.env.SECRET as string);
+               refresh_token = cryptr.decrypt(settings.adwords_refresh_token);
+            }
+         } catch (e) { /* settings.json missing or unreadable — not fatal */ }
       }
 
-      return decryptedSettings;
+      return { client_id, client_secret, developer_token, account_id, refresh_token };
    } catch (error) {
-      console.log('[ERROR] Getting App Settings. ', error);
+      console.log('[ERROR] Getting Adwords Credentials. ', error);
    }
 
    return false;

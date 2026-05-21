@@ -5,6 +5,7 @@ export type AiCitation = {
    cited_domain?: string;
    is_own_domain?: boolean;
    is_competitor?: boolean;
+   answer_readiness_score?: number;
 };
 
 export type AiVisibilitySummary = {

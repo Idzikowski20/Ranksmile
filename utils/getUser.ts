@@ -1,14 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from '@auth0/nextjs-auth0';
+
+const NEON_AUTH_BASE_URL = process.env.NEON_AUTH_BASE_URL!;
+const SESSION_COOKIE = '__Secure-neon-auth.session_token';
 
 /**
- * Zwraca Auth0 userId (sub) z aktywnej sesji, lub null gdy niezalogowany.
- * getSession jest async w @auth0/nextjs-auth0 v3.5+
+ * Zwraca Neon Auth userId z aktywnej sesji, lub null gdy niezalogowany.
  */
-export const getCurrentUserId = async (req: NextApiRequest, res: NextApiResponse): Promise<string | null> => {
+export const getCurrentUserId = async (req: NextApiRequest, _res: NextApiResponse): Promise<string | null> => {
+   const sessionToken = req.cookies?.[SESSION_COOKIE];
+   if (!sessionToken || !NEON_AUTH_BASE_URL) return null;
+
    try {
-      const session = await getSession(req, res);
-      return session?.user?.sub ?? null;
+      const response = await fetch(`${NEON_AUTH_BASE_URL}/get-session`, {
+         method: 'GET',
+         headers: {
+            cookie: `${SESSION_COOKIE}=${sessionToken}`,
+         },
+      });
+      if (!response.ok) return null;
+      const data = await response.json() as { user?: { id?: string } };
+      return data?.user?.id ?? null;
    } catch {
       return null;
    }

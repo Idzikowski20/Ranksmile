@@ -3,6 +3,8 @@ import Cryptr from 'cryptr';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 
 type DomainGetResponse = {
    domain?: DomainType | null
@@ -13,19 +15,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const authorized = await verifyUser(req, res);
    if (authorized === 'authorized' && req.method === 'GET') {
       await db.sync();
-      return getDomain(req, res);
+      const userId = await getCurrentUserId(req, res);
+      return getDomain(req, res, userId);
    }
    return res.status(401).json({ error: authorized });
 }
 
-const getDomain = async (req: NextApiRequest, res: NextApiResponse<DomainGetResponse>) => {
+const getDomain = async (req: NextApiRequest, res: NextApiResponse<DomainGetResponse>, userId?: string | null) => {
    if (!req.query.domain && typeof req.query.domain !== 'string') {
        return res.status(400).json({ error: 'Domain Name is Required!' });
    }
 
    try {
-      const query = { domain: req.query.domain as string };
-      const foundDomain:Domain| null = await Domain.findOne({ where: query });
+      const domainName = req.query.domain as string;
+      const ownership = await verifyDomainOwnership(domainName, userId ?? null);
+      if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+      if (ownership === null) return res.status(404).json({ error: 'Domain not found.' });
+      const foundDomain: Domain | null = ownership;
       const parsedDomain = foundDomain?.get({ plain: true }) || false;
 
       if (parsedDomain && parsedDomain.search_console) {

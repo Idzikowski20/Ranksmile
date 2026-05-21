@@ -1,12 +1,27 @@
 const POLISH_STOPWORDS = new Set([
-   'aby', 'ale', 'albo', 'ani', 'bez', 'bo', 'by', 'byc', 'być', 'byla', 'była',
-   'bylo', 'było', 'byly', 'były', 'czy', 'dla', 'do', 'gdy', 'gdzie', 'go',
-   'ich', 'im', 'jest', 'jesli', 'jeśli', 'juz', 'już', 'kiedy', 'kto', 'ktora',
-   'która', 'ktore', 'które', 'ktory', 'który', 'lub', 'ma', 'mial', 'miał',
-   'miec', 'mieć', 'moze', 'może', 'na', 'nad', 'nie', 'nim', 'oraz', 'po',
-   'pod', 'przed', 'przez', 'przy', 'sa', 'są', 'sie', 'się', 'tak', 'te',
-   'tego', 'tej', 'ten', 'to', 'tych', 'tym', 'u', 'w', 'we', 'z', 'za', 'ze',
-   'że',
+   'aby', 'acz', 'aczkolwiek', 'ale', 'albo', 'ani', 'az', 'bardziej', 'bardzo',
+   'bez', 'bo', 'bowiem', 'by', 'byc', 'byl', 'byla', 'bylo', 'byly', 'beda',
+   'bedzie', 'cala', 'cali', 'caly', 'ci', 'cie', 'ciebie', 'co', 'czy', 'dla',
+   'do', 'gdy', 'gdyz', 'gdzie', 'go', 'ich', 'im', 'inna', 'inne', 'inny',
+   'jest', 'jestem', 'jesli', 'juz', 'kazdy', 'kiedy', 'kto', 'ktora', 'ktore',
+   'ktory', 'ku', 'lub', 'ma', 'maja', 'mam', 'mial', 'miec', 'mnie', 'moze',
+   'mozna', 'na', 'nad', 'nam', 'nas', 'nasi', 'nasz', 'nasza', 'nasze', 'nic',
+   'nich', 'nie', 'nim', 'niz', 'oraz', 'pan', 'pani', 'po', 'pod', 'poniewaz',
+   'przed', 'przez', 'przy', 'sa', 'sie', 'sobie', 'sposob', 'ta', 'tak',
+   'takze', 'tam', 'te', 'tego', 'tej', 'ten', 'teraz', 'tez', 'to', 'toba',
+   'tobie', 'trzeba', 'tu', 'tych', 'tylko', 'tym', 'u', 'was', 'we', 'wedlug',
+   'wiele', 'wlasnie', 'wszystko', 'wtedy', 'z', 'za', 'zaden', 'ze', 'zeby',
+]);
+
+const ENGLISH_STOPWORDS = new Set([
+   'the', 'and', 'for', 'with', 'that', 'this', 'from', 'are', 'was', 'were',
+   'has', 'have', 'had', 'not', 'you', 'your', 'can', 'will', 'would', 'could',
+   'should', 'about', 'into', 'than', 'then', 'when', 'where', 'what', 'how',
+]);
+
+const GENERIC_WORDS = new Set([
+   'artykul', 'strona', 'tekst', 'temat', 'informacje', 'warto', 'mozna',
+   'nalezy', 'czas', 'czasem', 'sytuacja', 'sytuacji', 'ktos', 'cos',
 ]);
 
 export type ArticleTerm = {
@@ -17,27 +32,46 @@ export type ArticleTerm = {
 };
 
 export function normalizeTerm(term: string): string {
-   return term.toLowerCase().replace(/\s+/g, ' ').trim();
+   return term
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+}
+
+function isStopword(token: string): boolean {
+   return POLISH_STOPWORDS.has(token) || ENGLISH_STOPWORDS.has(token) || GENERIC_WORDS.has(token);
 }
 
 export function isUsefulTerm(term: string): boolean {
    const normalized = normalizeTerm(term);
    if (normalized.length < 4) return false;
-   const tokens = normalized.split(' ');
-   if (tokens.every((token) => POLISH_STOPWORDS.has(token))) return false;
-   if (tokens.length === 1 && POLISH_STOPWORDS.has(tokens[0])) return false;
    if (/^\d+$/.test(normalized)) return false;
-   return true;
+
+   const tokens = normalized.split(' ').filter(Boolean);
+   if (!tokens.length) return false;
+   if (tokens.every(isStopword)) return false;
+   if (tokens.length === 1) {
+      if (isStopword(tokens[0])) return false;
+      if (tokens[0].length < 5) return false;
+   }
+
+   const meaningfulTokens = tokens.filter((token) => !isStopword(token));
+   return meaningfulTokens.length > 0;
 }
 
 export function dedupeUsefulTerms<T extends ArticleTerm>(terms: T[]): T[] {
    const seen = new Set<string>();
    const result: T[] = [];
+
    for (const term of terms) {
       const key = normalizeTerm(term.term);
       if (!isUsefulTerm(key) || seen.has(key)) continue;
       seen.add(key);
       result.push({ ...term, term: key });
    }
+
    return result;
 }

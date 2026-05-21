@@ -94,6 +94,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu on outside click
@@ -107,6 +108,10 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [openMenuId]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
@@ -172,7 +177,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
       {articles.map((article) => {
-        const time = timeAgo(article.updated_at || article.created_at);
+        const time = mounted ? timeAgo(article.updated_at || article.created_at) : null;
         // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
         const score = typeof article.content_score === 'number' ? article.content_score : null;
 
@@ -248,7 +253,41 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
                 </span>
               </div>
 
-              {/* Right: nothing */}
+              {/* Right: delete button */}
+              <button
+                type="button"
+                title="Delete"
+                onClick={() => onDelete(article.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: '#9F9FA9',
+                  flexShrink: 0,
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = '#dc2626';
+                  (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.color = '#9F9FA9';
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>
+              </button>
             </div>
           );
         }
@@ -645,9 +684,9 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
                     </div>
 
                     {/* Timestamp */}
-                    <div style={{ fontSize: 13, lineHeight: '16px', color: '#3F3F47', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>
-                      <span className="article-time-relative">{time.relative}</span>
-                      <span className="article-time-full hidden">{time.full}</span>
+                    <div style={{ fontSize: 13, lineHeight: '16px', color: '#3F3F47', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }} suppressHydrationWarning>
+                      <span className="article-time-relative">{time?.relative || ''}</span>
+                      <span className="article-time-full hidden">{time?.full || ''}</span>
                     </div>
                   </div>
                 </div>

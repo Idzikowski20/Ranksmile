@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -25,11 +26,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function getArticle(id: string, res: NextApiResponse) {
    try {
-      const [rows] = await db.query(`SELECT * FROM articles WHERE id = ? LIMIT 1`, {
+      const articleIdSql = await getArticleIdSql();
+      const [rows] = await db.query(`SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, {
          replacements: [id],
       });
       const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
+      const [visibilityRows] = await db.query(
+         `SELECT summary_json, score
+          FROM ai_visibility_runs
+          WHERE article_id = ?
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1`,
+         { replacements: [id] },
+      );
+      const latestVisibility = (visibilityRows as any[])[0];
+      if (latestVisibility?.summary_json) {
+         try {
+            article.ai_visibility_summary = {
+               ...JSON.parse(latestVisibility.summary_json),
+               score: latestVisibility.score,
+            };
+         } catch {
+            article.ai_visibility_summary = null;
+         }
+      }
       return res.status(200).json({ article });
    } catch (error: any) {
       return res.status(500).json({ error: error?.message || 'DB error' });
@@ -37,7 +58,7 @@ async function getArticle(id: string, res: NextApiResponse) {
 }
 
 async function updateArticle(id: string, req: NextApiRequest, res: NextApiResponse) {
-   const { title, content, status, target_keyword, meta_title, meta_description, meta_url, word_count, score_data, featured_image, internal_links_cache } = req.body;
+   const { title, content, status, target_keyword, meta_title, meta_description, meta_url, word_count, score_data, featured_image, internal_links_cache, version_type } = req.body;
 
    // Extract content score from score_data
    let contentScore = 0;
@@ -49,6 +70,21 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
    } catch { contentScore = 0; }
 
    try {
+      const articleIdSql = await getArticleIdSql();
+      if (version_type && content !== undefined) {
+         await db.query(
+            `INSERT INTO article_versions (article_id, version_type, content, score_data, created_at)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            {
+               replacements: [
+                  id,
+                  version_type,
+                  content ?? '',
+                  score_data ? JSON.stringify(score_data) : null,
+               ],
+            },
+         );
+      }
       await db.query(
          `UPDATE articles
           SET title = COALESCE(?, title),
@@ -63,8 +99,8 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
               content_score = ?,
               featured_image = CASE WHEN ? IS NOT NULL THEN ? ELSE featured_image END,
               internal_links_cache = CASE WHEN ? IS NOT NULL THEN ? ELSE internal_links_cache END,
-              updated_at = datetime('now')
-          WHERE id = ?`,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE ${articleIdSql} = ?`,
          {
             replacements: [
                title ?? null,
@@ -93,7 +129,8 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
 
 async function deleteArticle(id: string, res: NextApiResponse) {
    try {
-      await db.query(`DELETE FROM articles WHERE id = ?`, { replacements: [id] });
+      const articleIdSql = await getArticleIdSql();
+      await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id] });
       return res.status(200).json({ deleted: true });
    } catch (error: any) {
       return res.status(500).json({ error: error?.message || 'DB error' });

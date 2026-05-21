@@ -8,6 +8,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getArticleIdSql } from '../../../lib/articleSql';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -37,8 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // ── Return from DB cache if available ────────────────────────────
   if (articleId) {
     try {
+      const articleIdSql = await getArticleIdSql();
       const [rows] = await db.query(
-        `SELECT internal_links_cache FROM articles WHERE id = ? LIMIT 1`,
+        `SELECT internal_links_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
         { replacements: [articleId] },
       );
       const cached = (rows as any[])[0]?.internal_links_cache;
@@ -129,8 +131,9 @@ If no natural links found, return: []`;
     // ── Save to DB cache ──────────────────────────────────────────
     if (articleId && suggestions.length > 0) {
       try {
+        const articleIdSql = await getArticleIdSql();
         await db.query(
-          `UPDATE articles SET internal_links_cache = ?, updated_at = datetime('now') WHERE id = ?`,
+          `UPDATE articles SET internal_links_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(result), articleId] },
         );
       } catch (e: any) {
