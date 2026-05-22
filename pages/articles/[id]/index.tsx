@@ -1049,6 +1049,7 @@ const ArticleEditorPage: NextPage = () => {
                       aiVisibilitySummary={aiVisibilitySummary}
                       onRunAiVisibility={handleRunAiVisibility}
                       isRunningAiVisibility={isRunningAiVisibility}
+                      articleId={article.id}
                     />
                   </div>
                 </>
