@@ -121,12 +121,13 @@ const ContentScorePanel = ({
     scoreTimerRef.current = setTimeout(() => {
       scoreTimerRef.current = null;
       const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-      setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword));
+      const kwCov = keywords.map((k: any) => ({ keyword: k.keyword, is_covered: k.is_covered }));
+      setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov));
     }, 400);
     return () => {
       if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     };
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword]);
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
