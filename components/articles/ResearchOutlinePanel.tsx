@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '../../lib/researchUtils';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 export interface CompetitorOutline {
@@ -185,7 +186,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
       const res = await fetch('/api/articles/generate-outline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, competitors, language }),
+        body: JSON.stringify({ keyword, competitors, language, currentHeadings }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
@@ -362,27 +363,46 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                         <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />
                       </svg>
                     </button>
+                    {currentHeadings.length > 0 && (
+                      <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+                        {[
+                          { color: '#1ab25e', label: 'Covered' },
+                          { color: '#efa00d', label: 'Expand' },
+                          { color: '#ef4444', label: 'Missing' },
+                        ].map(({ color, label }) => (
+                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                            <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Heading list */}
                   <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 220, overflowY: 'auto' }} className="styled-scrollbar">
-                    {generatedHeadings.map((h, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 6,
-                          paddingLeft: headingIndent(h.level),
-                          fontSize: 13, lineHeight: '18px',
-                          color: h.level === 1 ? '#09090b' : '#3f3f47',
-                          fontWeight: h.level <= 2 ? 500 : 400,
-                        }}
-                      >
-                        <span style={{ color: '#9f9fa9', fontSize: 11, minWidth: 16, paddingTop: 3, flexShrink: 0 }}>
-                          {headingTag(h.level)}
-                        </span>
-                        <span>{h.text}</span>
-                      </div>
-                    ))}
+                    {generatedHeadings.map((h, i) => {
+                      const status = classifyHeadingStatus(h, currentHeadings);
+                      const dotColor = status === 'covered' ? '#1ab25e' : status === 'expand' ? '#efa00d' : '#ef4444';
+                      const textColor = status === 'covered' ? '#9f9fa9' : status === 'expand' ? '#3f3f47' : '#09090b';
+                      const fontWeight = status === 'missing' && h.level <= 2 ? 700 : h.level <= 2 ? 500 : 400;
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            display: 'flex', alignItems: 'flex-start', gap: 6,
+                            paddingLeft: headingIndent(h.level),
+                            fontSize: 13, lineHeight: '18px',
+                          }}
+                        >
+                          <span style={{ color: '#9f9fa9', fontSize: 11, minWidth: 16, paddingTop: 3, flexShrink: 0 }}>
+                            {headingTag(h.level)}
+                          </span>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0, marginTop: 6 }} />
+                          <span style={{ color: textColor, fontWeight }}>{h.text}</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Insert button */}
@@ -427,6 +447,66 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                 </div>
               )}
             </div>
+
+            {/* ── SERP Insights ─────────────────────────────────────── */}
+            {!loading && competitors.length > 0 && (() => {
+              const { avgWordCount, commonTopics } = computeSerpInsights(competitors);
+              const visibleTopics = commonTopics.slice(0, 6);
+              const hiddenCount = Math.max(0, commonTopics.length - 6);
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>SERP Insights</span>
+
+                  {/* Word count comparison */}
+                  <div
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 0,
+                      border: '1px solid #f4f4f5', borderRadius: 8, overflow: 'hidden',
+                    }}
+                  >
+                    <div style={{ flex: 1, padding: '10px 14px', borderRight: '1px solid #f4f4f5' }}>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: '#9f9fa9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Avg. competitor</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#09090b' }}>{avgWordCount.toLocaleString()} words</div>
+                    </div>
+                    <div style={{ flex: 1, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: '#9f9fa9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Your article</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: currentWordCount !== undefined && currentWordCount < avgWordCount * 0.7 ? '#ef4444' : '#09090b' }}>
+                        {currentWordCount !== undefined ? currentWordCount.toLocaleString() : '—'} words
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Common topics */}
+                  {visibleTopics.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#9f9fa9', marginBottom: 6 }}>
+                        Common topics (≥3/{competitors.length} competitors)
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {visibleTopics.map((topic) => (
+                          <span
+                            key={topic}
+                            style={{
+                              display: 'inline-block', padding: '3px 9px',
+                              borderRadius: 9999, fontSize: 12, fontWeight: 500,
+                              background: '#f4f4f5', color: '#3f3f47',
+                              fontFamily: 'var(--font-family-primary)',
+                            }}
+                          >
+                            {topic}
+                          </span>
+                        ))}
+                        {hiddenCount > 0 && (
+                          <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 9999, fontSize: 12, fontWeight: 500, background: '#f4f4f5', color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>
+                            +{hiddenCount} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div style={{ height: 1, background: '#f4f4f5', flexShrink: 0 }} />
 
@@ -540,13 +620,54 @@ const ResearchOutlinePanel: React.FC<Props> = ({
         )}
 
         {tab === 'questions' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 12 }}>
-            <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="#9f9fa9" strokeWidth={1}>
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" strokeLinecap="round" />
-              <line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round" strokeWidth={2} />
-            </svg>
-            <span style={{ fontSize: 14, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>Questions coming soon</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>People Also Ask</span>
+            <span style={{ fontSize: 13, color: '#52525c' }}>
+              Coverage based on your current headings
+            </span>
+
+            {paaQuestions.length === 0 ? (
+              <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                <span style={{ fontSize: 13, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>
+                  No PAA questions found — run deep analysis to fetch them.
+                </span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                {paaQuestions.map((q, i) => {
+                  const covered = isPaaCovered(q, currentHeadings);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        border: '1px solid #f4f4f5',
+                        borderRadius: 8,
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>❓</span>
+                        <span style={{ fontSize: 13, color: '#3f3f47', lineHeight: '18px', fontWeight: 500 }}>{q}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 22 }}>
+                        <div
+                          style={{
+                            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                            background: covered ? '#1ab25e' : '#ef4444',
+                          }}
+                        />
+                        <span style={{ fontSize: 12, color: covered ? '#1ab25e' : '#ef4444', fontWeight: 500 }}>
+                          {covered ? 'Covered' : 'Not covered'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
