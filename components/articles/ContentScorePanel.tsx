@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../lib/contentScore';
 import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
+import { computeOpportunityScore } from '../../lib/keywordEnrichment';
 import AiSearchPanel from './AiSearchPanel';
 import ScoreGauge from './ScoreGauge';
+import KeywordResearchSection from './KeywordResearchSection';
 
 interface Props {
   plainText: string;
@@ -19,6 +21,7 @@ interface Props {
   aiVisibilitySummary?: AiVisibilitySummary | null;
   onRunAiVisibility?: () => void;
   isRunningAiVisibility?: boolean;
+  articleId?: number;
 }
 
 /* ── Small circular progress ───────────────────────────────────────── */
@@ -83,12 +86,19 @@ const ContentScorePanel = ({
   aiVisibilitySummary,
   onRunAiVisibility,
   isRunningAiVisibility,
+  articleId,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
   const [nlpOpen, setNlpOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const [termSearch, setTermSearch] = useState('');
+
+  // Keyword research state
+  const [keywords, setKeywords] = useState<any[]>([]);
+  const [isLoadingKeywords, setIsLoadingKeywords] = useState(false);
+  const [suggestedKeywords, setSuggestedKeywords] = useState<any[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [gapKeywords, setGapKeywords] = useState<any[]>([]);
 
   const paragraphCount = useMemo(() => {
     return plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
@@ -120,10 +130,127 @@ const ContentScorePanel = ({
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
-  const filteredTerms = useMemo(() => {
-    if (!termSearch) return terms;
-    return terms.filter((t) => t.term.toLowerCase().includes(termSearch.toLowerCase()));
-  }, [terms, termSearch]);
+  // Fetch keywords when panel opens
+  useEffect(() => {
+    if (!nlpOpen || !articleId) return;
+    setIsLoadingKeywords(true);
+    fetch(`/api/articles/${articleId}/keywords`)
+      .then(r => r.json())
+      .then(d => {
+        const kws = (d.keywords || []).map((k: any) => ({
+          ...k,
+          is_covered: !!k.is_covered,
+          opportunity_score: computeOpportunityScore({
+            gsc_position: k.gsc_position,
+            ads_monthly_volume: k.ads_monthly_volume,
+            ads_competition: k.ads_competition,
+            is_covered: !!k.is_covered,
+          }),
+        }));
+        setKeywords(kws);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingKeywords(false));
+  }, [nlpOpen, articleId]);
+
+  // Auto-enrich on first load if no keywords have ads_monthly_volume
+  useEffect(() => {
+    if (!nlpOpen || !articleId || keywords.length === 0) return;
+    const hasEnriched = keywords.some((k: any) => k.ads_monthly_volume != null);
+    if (!hasEnriched && plainText) {
+      fetch(`/api/articles/${articleId}/keywords/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keywords: keywords.map((k: any) => k.keyword),
+          targetKeyword: keyword,
+          plainText,
+        }),
+      }).then(r => r.json()).then(d => {
+        if (d.keywords) {
+          setKeywords(d.keywords.map((k: any) => ({
+            ...k,
+            is_covered: !!k.is_covered,
+            opportunity_score: computeOpportunityScore({
+              gsc_position: k.gsc_position,
+              ads_monthly_volume: k.ads_monthly_volume,
+              ads_competition: k.ads_competition,
+              is_covered: !!k.is_covered,
+            }),
+          })));
+        }
+      }).catch(() => {});
+    }
+  }, [nlpOpen, keywords.length]);
+
+  // Fetch gap keywords from competitor outlines
+  useEffect(() => {
+    if (!nlpOpen || !articleId) return;
+    fetch(`/api/articles/${articleId}/keywords/gap`)
+      .then(r => r.json())
+      .then(d => {
+        setGapKeywords((d.gapKeywords || []).map((g: any) => ({
+          keyword: g.keyword,
+          frequency: g.frequency,
+        })));
+      })
+      .catch(() => {});
+  }, [nlpOpen, articleId]);
+
+  const handleSuggest = async () => {
+    if (!articleId) return;
+    setIsSuggesting(true);
+    try {
+      const res = await fetch(`/api/articles/${articleId}/keywords/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetKeyword: keyword }),
+      });
+      const data = await res.json();
+      setSuggestedKeywords(data.suggestions || []);
+    } catch { /* ignore */ }
+    finally { setIsSuggesting(false); }
+  };
+
+  const handleAcceptSuggestion = async (kw: any) => {
+    setSuggestedKeywords(prev => prev.filter(k => k.keyword !== kw.keyword));
+    setKeywords(prev => [...prev, {
+      ...kw,
+      keyword: kw.keyword,
+      source: 'ads_suggestion',
+      is_covered: false,
+      ads_monthly_volume: kw.avgMonthlySearches || kw.ads_monthly_volume || 0,
+      ads_competition: kw.competition,
+      opportunity_score: computeOpportunityScore({ gsc_position: null, ads_monthly_volume: kw.avgMonthlySearches || kw.ads_monthly_volume || 0, ads_competition: kw.competition, is_covered: false }),
+    }]);
+    if (articleId) {
+      fetch(`/api/articles/${articleId}/keywords/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keywords: [kw.keyword],
+          targetKeyword: keyword,
+          plainText,
+        }),
+      }).catch(() => {});
+    }
+  };
+
+  const handleDismissSuggestion = (kw: any) => {
+    setSuggestedKeywords(prev => prev.filter(k => k.keyword !== kw.keyword));
+  };
+
+  const handleToggleCoverage = async (kw: any) => {
+    const newCovered = !kw.is_covered;
+    setKeywords(prev => prev.map(k => k.keyword === kw.keyword ? { ...k, is_covered: newCovered } : k));
+    if (kw.id && articleId) {
+      fetch(`/api/articles/${articleId}/keywords`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywordId: kw.id, is_covered: newCovered }),
+      }).catch(() => {});
+    }
+  };
 
   const wordsRange = scoreData ? `${(scoreData.words_min / 1000).toFixed(1)}K – ${(scoreData.words_max / 1000).toFixed(1)}K` : '–';
   const headingsRange = scoreData ? `${scoreData.headings_min} – ${scoreData.headings_max}` : '–';
@@ -267,53 +394,17 @@ const ContentScorePanel = ({
           </div>
 
           {nlpOpen && (
-            <div style={{ padding: '0 16px 16px' }}>
-              {/* NLP Terms search */}
-              <div style={{ position: 'relative', marginBottom: 10 }}>
-                <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search terms"
-                  value={termSearch}
-                  onChange={(e) => setTermSearch(e.target.value)}
-                  style={{ width: '100%', padding: '6px 10px 6px 28px', fontSize: 13, border: '1px solid #e4e4e7', borderRadius: 6, outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box', fontFamily: 'var(--font-family-primary)' }}
-                />
-              </div>
-
-              {/* Terms list */}
-              {filteredTerms.length === 0 ? (
-                <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', padding: '12px 0', fontStyle: 'italic', fontFamily: 'var(--font-family-primary)' }}>
-                  {terms.length === 0 ? 'No NLP terms available.' : 'No terms match.'}
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {filteredTerms.map((t) => {
-                    const current = t.current_count ?? 0;
-                    const target = t.target_count;
-                    const min = Math.max(1, Math.round(target * 0.7));
-                    const max = Math.round(target * 1.5);
-                    const covered = current >= min && current <= max;
-                    const over = current > max;
-                    const zero = current === 0;
-                    const chip = covered
-                      ? { bg: '#f0fdf4', text: '#15803d', metaText: '#16a34a' }
-                      : over
-                        ? { bg: '#fefce8', text: '#92400e', metaText: '#d97706' }
-                        : zero
-                          ? { bg: '#fff1f2', text: '#9f1239', metaText: '#dc2626' }
-                          : { bg: '#fefce8', text: '#92400e', metaText: '#d97706' };
-                    return (
-                      <div key={t.term} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 12px', borderRadius: 999, background: chip.bg, gap: 6 }}>
-                        <span style={{ fontSize: 12, color: chip.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, fontFamily: 'var(--font-family-primary)' }} title={t.term}>{t.term}</span>
-                        <span style={{ fontSize: 11, color: chip.metaText, flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>{current}/{min}–{max}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <KeywordResearchSection
+              keywords={keywords}
+              isLoading={isLoadingKeywords}
+              onSuggest={handleSuggest}
+              isSuggesting={isSuggesting}
+              suggestedKeywords={suggestedKeywords}
+              onAcceptSuggestion={handleAcceptSuggestion}
+              onDismissSuggestion={handleDismissSuggestion}
+              onToggleCoverage={handleToggleCoverage}
+              gapKeywords={gapKeywords}
+            />
           )}
         </div>
 
