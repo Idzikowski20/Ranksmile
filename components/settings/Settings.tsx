@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import Icon from '../common/Icon';
 import NotificationSettings from './NotificationSettings';
-import ScraperSettings from './ScraperSettings';
 import useOnKey from '../../hooks/useOnKey';
 import IntegrationSettings from './IntegrationSettings';
 
@@ -36,7 +35,7 @@ export const defaultSettings: SettingsType = {
 };
 
 const Settings = ({ closeSettings }:SettingsProps) => {
-   const [currentTab, setCurrentTab] = useState<string>('scraper');
+   const [currentTab, setCurrentTab] = useState<string>('notification');
    const [settings, setSettings] = useState<SettingsType>(defaultSettings);
    const [settingsError, setSettingsError] = useState<SettingsError|null>(null);
    const { mutate: updateMutate, isLoading: isUpdating } = useUpdateSettings(() => console.log(''));
@@ -61,7 +60,7 @@ const Settings = ({ closeSettings }:SettingsProps) => {
 
    const performUpdate = () => {
       let error: null|SettingsError = null;
-      const { notification_interval, notification_email, notification_email_from, scraper_type, smtp_port, smtp_server, scaping_api } = settings;
+      const { notification_interval, notification_email, notification_email_from, smtp_port, smtp_server } = settings;
       if (notification_interval !== 'never') {
          if (!settings.notification_email) {
             error = { type: 'no_email', msg: 'Insert a Valid Email address' };
@@ -74,20 +73,12 @@ const Settings = ({ closeSettings }:SettingsProps) => {
          }
       }
 
-      if (scraper_type !== 'proxy' && scraper_type !== 'none' && !scaping_api) {
-         error = { type: 'no_api_key', msg: 'Insert a Valid API Key or Token for the Scraper Service.' };
-      }
-
       if (error) {
          setSettingsError(error);
          setTimeout(() => { setSettingsError(null); }, 3000);
       } else {
          // Perform Update
          updateMutate(settings);
-         // If Scraper is updated, refresh the page.
-         if (appSettings.settings === 'none' && scraper_type !== 'none') {
-            window.location.reload();
-         }
       }
    };
 
@@ -110,11 +101,6 @@ const Settings = ({ closeSettings }:SettingsProps) => {
                <div className='border border-slate-200 px-3 py-4 pb-0 border-l-0 border-r-0 bg-[#f8f9ff]'>
                   <ul>
                      <li
-                     className={`${tabStyle} ${currentTab === 'scraper' ? tabStyleActive : 'border-transparent '}`}
-                     onClick={() => setCurrentTab('scraper')}>
-                       <Icon type='scraper' /> Scraper
-                     </li>
-                     <li
                      className={`${tabStyle} ${currentTab === 'notification' ? tabStyleActive : 'border-transparent'}`}
                      onClick={() => setCurrentTab('notification')}>
                         <Icon type='email' /> Notification
@@ -126,10 +112,6 @@ const Settings = ({ closeSettings }:SettingsProps) => {
                      </li>
                   </ul>
                </div>
-               {currentTab === 'scraper' && settings && (
-                  <ScraperSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} />
-               )}
-
                {currentTab === 'notification' && settings && (
                   <NotificationSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} />
                )}

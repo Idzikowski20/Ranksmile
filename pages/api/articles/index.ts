@@ -35,27 +35,31 @@ async function getUserDomainIds(userId: string | null): Promise<number[]> {
 }
 
 async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: string | null) {
-   const { domainId } = req.query;
+   const { domainId, domain: domainSlug } = req.query;
 
    try {
       const articleIdSql = await getArticleIdSql();
       let where = '';
       const replacements: any[] = [];
 
-      const totalDomains = await Domain.count();
       const allowedIds = await getUserDomainIds(userId);
 
+      // Resolve domain ID — support both domainId (int) and domain (slug)
+      let resolvedDomainId: number | undefined;
       if (domainId) {
-         const domainIdInt = parseInt(domainId as string, 10);
-         // If domains exist, enforce ownership check; if table is empty allow all (fresh install)
-         if (totalDomains > 0 && !allowedIds.includes(domainIdInt)) {
+         resolvedDomainId = parseInt(domainId as string, 10);
+      } else if (domainSlug) {
+         const slugToDomain = (domainSlug as string).replaceAll('-', '.').replaceAll('_', '-');
+         const d = await Domain.findOne({ where: { domain: slugToDomain }, attributes: ['ID'] });
+         resolvedDomainId = d?.ID;
+      }
+
+      if (resolvedDomainId) {
+         if (allowedIds.length > 0 && !allowedIds.includes(resolvedDomainId)) {
             return res.status(403).json({ error: 'Access denied.' });
          }
          where = 'WHERE domain_id = ?';
-         replacements.push(domainIdInt);
-      } else if (totalDomains === 0) {
-         // No domains in DB yet (fresh install / migration from SQLite) — return all articles
-         where = '';
+         replacements.push(resolvedDomainId);
       } else if (allowedIds.length === 0) {
          return res.status(200).json({ articles: [] });
       } else {
@@ -65,11 +69,50 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
 
       const [articles] = await db.query(
          `SELECT ${articleIdSql} AS id, domain_id, title, slug, status, target_keyword, meta_title, word_count,
-                 published_at, publish_target, publish_url, created_at, updated_at, content_score
+                 published_at, publish_target, publish_url, meta_url, created_at, updated_at, content_score
           FROM articles ${where}
           ORDER BY created_at DESC`,
          { replacements },
       );
+
+      // Merge site_context entries that don't have matching articles yet.
+      // Pages imported during /sites configuration live in site_context and may
+      // not have corresponding articles — include them so they show in recommendations.
+      if (resolvedDomainId) {
+         const [scRows] = await db.query(
+            `SELECT sc.id, sc.domain_id, COALESCE(NULLIF(sc.title,''), sc.url) AS title,
+                    sc.url AS publish_url, sc.language, sc.created_at
+             FROM site_context sc
+             WHERE sc.domain_id = ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM articles a
+                 WHERE a.domain_id = sc.domain_id
+                   AND (a.publish_url = sc.url OR a.meta_url = sc.url)
+               )
+             ORDER BY sc.created_at DESC`,
+            { replacements: [resolvedDomainId] },
+         );
+         const merged = (scRows as any[]).map((sc: any) => ({
+            id: `sc_${sc.id}`,
+            domain_id: sc.domain_id,
+            title: sc.title,
+            slug: null,
+            status: 'not_started',
+            target_keyword: null,
+            meta_title: null,
+            word_count: 0,
+            published_at: null,
+            publish_target: null,
+            publish_url: sc.publish_url,
+            meta_url: sc.publish_url,
+            created_at: sc.created_at,
+            updated_at: sc.created_at,
+            content_score: 0,
+            source: 'site_context',
+         }));
+         return res.status(200).json({ articles: [...(articles as any[]), ...merged] });
+      }
+
       return res.status(200).json({ articles });
    } catch (error: any) {
       return res.status(500).json({ error: error?.message || 'DB error' });

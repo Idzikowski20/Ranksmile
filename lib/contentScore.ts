@@ -124,6 +124,74 @@ function _externalLinks(html: string): number {
    return 3; // too many external links slightly penalised
 }
 
+/**
+ * Title tag quality (max 7).
+ * Checks <title> tag: keyword presence (+4) and optimal length 50-60 chars (+3, partial +1).
+ * _kwPlacement already checks H1/H2 — this targets the <title> element specifically.
+ */
+function _titleQuality(html: string, keyword: string): number {
+   const kw = keyword.toLowerCase().trim();
+   if (!kw) return 0;
+   const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+   if (!match) return 0;
+   const title = match[1].replace(/<[^>]+>/g, '').trim();
+   let score = 0;
+   if (title.toLowerCase().includes(kw)) score += 4;
+   const len = title.length;
+   if (len >= 50 && len <= 60) score += 3;
+   else if (len >= 40 && len <= 70) score += 1;
+   return score; // max 7
+}
+
+/**
+ * Meta description quality (max 5).
+ * Keyword presence (+3) and optimal length 140-165 chars (+2, partial +1).
+ */
+function _metaDescQuality(html: string, keyword: string): number {
+   const kw = keyword.toLowerCase().trim();
+   const match = /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i.exec(html)
+      || /<meta[^>]+content=["']([^"']*)[^>]+name=["']description["']/i.exec(html);
+   if (!match) return 0;
+   const desc = match[1].trim();
+   let score = 0;
+   if (kw && desc.toLowerCase().includes(kw)) score += 3;
+   const len = desc.length;
+   if (len >= 140 && len <= 165) score += 2;
+   else if (len >= 100 && len <= 200) score += 1;
+   return score; // max 5
+}
+
+/**
+ * Image alt text coverage (max 4).
+ * Rewards having descriptive alt text on images — an on-page SEO and accessibility signal.
+ * Returns null (skip slot) if no images are found.
+ */
+function _imageAltCoverage(html: string): number | null {
+   const imgs = html.match(/<img[^>]+>/gi) || [];
+   // Filter out tiny/decorative data URIs
+   const content = imgs.filter((img) => !img.includes('data:'));
+   if (content.length === 0) return null; // no images → skip slot
+   const withAlt = content.filter((img) => /alt=["'][^"']+["']/i.test(img)).length;
+   const ratio = withAlt / content.length;
+   if (ratio >= 0.8) return 4;
+   if (ratio >= 0.5) return 2;
+   if (ratio > 0) return 1;
+   return 0;
+}
+
+/**
+ * List usage — organization signal (max 3).
+ * Pages using structured lists (ul/ol with ≥3 items) are better organized.
+ */
+function _listUsage(html: string): number {
+   const lists = html.match(/<(ul|ol)[^>]*>([\s\S]*?)<\/(ul|ol)>/gi) || [];
+   const substantial = lists.filter((l) => (l.match(/<li/gi) || []).length >= 3);
+   if (substantial.length >= 2) return 3;
+   if (substantial.length === 1) return 2;
+   if (lists.length > 0) return 1;
+   return 0;
+}
+
 // ── Main scoring function ─────────────────────────────────────────────────────
 
 export function computeContentScore(
@@ -167,6 +235,15 @@ export function computeContentScore(
       add(_kwPlacement(html, keyword), 15);
       add(_readability(html), 10);
       add(_externalLinks(html), 5);
+      add(_titleQuality(html, keyword), 7);
+      add(_metaDescQuality(html, keyword), 5);
+   }
+
+   // ── HTML-only signals ──
+   if (html) {
+      const imgScore = _imageAltCoverage(html);
+      if (imgScore !== null) add(imgScore, 4);
+      add(_listUsage(html), 3);
    }
 
    // ── FAQ coverage ──

@@ -2,6 +2,11 @@ import Keyword from '../database/models/keyword';
 import parseKeywords from './parseKeywords';
 import { readLocalSCData } from './searchConsole';
 
+/** Convert URL-safe slug back to domain name */
+export function slugToDomain(slug: string): string {
+   return slug.replaceAll('-', '.').replaceAll('_', '-');
+}
+
 /**
  * The function `getdomainStats` takes an array of domain objects, retrieves keyword and stats data for
  * each domain, and calculates various statistics for each domain.

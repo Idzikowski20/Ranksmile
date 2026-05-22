@@ -26,8 +26,7 @@ async function fetchPlain(url: string): Promise<string> {
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    // @ts-ignore — Node 18+ fetch supports signal+timeout via AbortSignal.timeout
-    signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
+    signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.text();
@@ -186,7 +185,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { url, keywords = [], country = 'US', device = 'Desktop' } = req.body;
+  const { url, keywords = [], country = 'US', device = 'Desktop', articleId: existingArticleId, domainId: reqDomainId } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   // Set SSE headers
@@ -202,44 +201,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Write priming comment to force socket flush
   res.write(':ok\n\n');
 
-  // ── Create skeleton article immediately ─────────────────────────────
+  // ── Create or reuse article ─────────────────────────────────────────
   let articleId: number;
   let articleDomain = '';
   const articleIdSql = await getArticleIdSql();
-  try {
-    const [domains] = await db.query('SELECT "ID", domain FROM domain LIMIT 1', { replacements: [] });
-    const domainId = (domains as any[])[0]?.ID || 1;
-    articleDomain = (domains as any[])[0]?.domain || '';
 
-    const skeletonSlug = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
-    if (process.env.DATABASE_URL) {
-      const rows = await db.query<{ id: number }>(
-        `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
-         VALUES (?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         RETURNING ${articleIdSql} AS id`,
-        {
-          replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
-          type: QueryTypes.SELECT,
-        },
-      );
-      articleId = rows[0]?.id;
-    } else {
-      const [newArticleId] = await db.query(
-        `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
-         VALUES (?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        {
-          replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
-          type: QueryTypes.INSERT,
-        },
-      );
-      articleId = newArticleId as unknown as number;
-    }
-    if (!articleId) throw new Error('Failed to resolve inserted article id');
+  if (existingArticleId) {
+    // Reuse existing article — fetch its domain
+    articleId = existingArticleId;
+    const [rows] = await db.query(
+      `SELECT a.domain_id, d.domain FROM articles a LEFT JOIN domain d ON d."ID" = a.domain_id WHERE a.${articleIdSql} = ?`,
+      { replacements: [existingArticleId] },
+    );
+    const existing = (rows as any[])[0];
+    articleDomain = existing?.domain || '';
+    await db.query(`UPDATE articles SET status = 'analyzing', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`, { replacements: [articleId] });
     sse(res, 'created', { articleId });
-  } catch (err: any) {
-    console.error('[deep-analysis] Skeleton insert failed:', err.message);
-    sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
-    return res.end();
+  } else {
+    try {
+      let domainId: number;
+      let domain = '';
+      if (reqDomainId) {
+        const [domains] = await db.query('SELECT "ID", domain FROM domain WHERE "ID" = ?', { replacements: [reqDomainId] });
+        domainId = (domains as any[])[0]?.ID || 1;
+        domain = (domains as any[])[0]?.domain || '';
+      } else {
+        const [domains] = await db.query('SELECT "ID", domain FROM domain LIMIT 1', { replacements: [] });
+        domainId = (domains as any[])[0]?.ID || 1;
+        domain = (domains as any[])[0]?.domain || '';
+      }
+      articleDomain = domain;
+
+      const skeletonSlug = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
+      if (process.env.DATABASE_URL) {
+        const rows = await db.query<{ id: number }>(
+          `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           RETURNING ${articleIdSql} AS id`,
+          {
+            replacements: [domainId, url, skeletonSlug, url, (keywords as string[])[0] || ''],
+            type: QueryTypes.SELECT,
+          },
+        );
+        articleId = rows[0]?.id;
+      } else {
+        const [newArticleId] = await db.query(
+          `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          {
+            replacements: [domainId, url, skeletonSlug, url, (keywords as string[])[0] || ''],
+            type: QueryTypes.INSERT,
+          },
+        );
+        articleId = newArticleId as unknown as number;
+      }
+      if (!articleId) throw new Error('Failed to resolve inserted article id');
+      sse(res, 'created', { articleId });
+    } catch (err: any) {
+      console.error('[deep-analysis] Skeleton insert failed:', err.message);
+      sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
+      return res.end();
+    }
   }
 
   // Helper to update article status/progress — non-fatal if fails
@@ -442,6 +464,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     sse(res, 'progress', { step: 'serp', status: 'done' });
 
+    // ── Background: competitor outlines cache (runs during Steps 6-9) ──
+    const competitorOutlinesPromise = (async () => {
+      const kw = (keywords as string[])[0] || title;
+      const lang = country === 'PL' ? 'pl' : 'en';
+      const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+      const axiosLib = require('axios');
+      const r = await axiosLib.post(
+        `${sidecarUrl}/competitor-outlines`,
+        { keyword: kw, language: lang, num: 5 },
+        { timeout: 60000 },
+      );
+      return r.data;
+    })().catch((err: any) => {
+      console.warn('[deep-analysis] competitor outlines cache failed:', err.message);
+      return null;
+    });
+
     // ── Step 6: Score data ────────────────────────────────────────
     sse(res, 'progress', { step: 'score', status: 'running' });
     const usefulTerms = dedupeUsefulTerms(allTerms).map((t) => ({
@@ -523,11 +562,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ── Step 8: Save — finalize article ───────────────────────────
     sse(res, 'progress', { step: 'save', status: 'running' });
+    const computedScore = (scoreData as any)?._computed_score ?? 0;
     await db.query(
       `UPDATE articles SET
          content = ?,
-         target_keyword = ?,
+         target_keyword = COALESCE(NULLIF(?, ''), target_keyword),
          score_data = ?,
+         content_score = ?,
          featured_image = ?,
          status = 'draft',
          updated_at = CURRENT_TIMESTAMP
@@ -535,8 +576,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       {
         replacements: [
           contentHtml ?? '',
-          (keywords as string[])[0] || title || '',
+          (keywords as string[])[0] || '',
           JSON.stringify(scoreData) ?? '{}',
+          computedScore,
           featuredImageUrl ?? null,
           articleId,
         ],
@@ -563,7 +605,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           competitor_domains: competitorDomains,
           article_content: `${metaTitle || ''}\n${metaDescription || ''}\n${contentHtml || ''}`,
         }),
-        signal: AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined,
+        signal: AbortSignal.timeout(60000),
       } as RequestInit);
 
       if (!sidecarRes.ok) throw new Error(await sidecarRes.text());
@@ -644,6 +686,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (aiErr: any) {
       console.warn('[deep-analysis] AI visibility skipped:', aiErr?.message);
       sse(res, 'progress', { step: 'ai_visibility', status: 'warning', message: aiErr?.message || 'AI visibility skipped' });
+    }
+
+    // ── Await competitor outlines + cache (non-fatal) ──────────────────
+    try {
+      const outlinesData = await competitorOutlinesPromise;
+      if (outlinesData?.competitors?.length) {
+        await db.query(
+          `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(outlinesData), articleId] },
+        );
+        console.log(`[deep-analysis] cached ${outlinesData.competitors.length} competitor outlines for article ${articleId}`);
+      }
+    } catch (e: any) {
+      console.warn('[deep-analysis] competitor outlines DB cache write failed:', e.message);
     }
 
     // ── Done! ─────────────────────────────────────────────────────

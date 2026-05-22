@@ -16,7 +16,7 @@ const MobileBottomNav = ({ domains = [], showAddModal, showSettings }: MobileBot
 
    const isActive = (path: string) => router.asPath === path;
    const isActivePrefix = (prefix: string) => router.asPath.startsWith(prefix);
-   const isActiveDomain = (slug: string) => router.asPath.includes('/domain/') && router.asPath.includes(`/${slug}`);
+   const isActiveDomain = (slug: string) => router.asPath.includes('/sites/') && router.asPath.includes(`/${slug}`);
 
    const primaryItems = [
       {
@@ -39,7 +39,7 @@ const MobileBottomNav = ({ domains = [], showAddModal, showSettings }: MobileBot
       },
    ];
 
-   const domainsActive = router.asPath.includes('/domain/');
+   const domainsActive = router.asPath.includes('/sites/');
 
    return (
       <>
@@ -97,7 +97,7 @@ const MobileBottomNav = ({ domains = [], showAddModal, showSettings }: MobileBot
                         const domActive = isActiveDomain(d.slug);
                         return (
                            <li key={d.domain}>
-                              <Link href={`/domain/${d.slug}`} passHref>
+                              <Link href={`/sites/${d.slug}`} passHref>
                                  <a
                                     className={`mobile-sheet-item${domActive ? ' mobile-sheet-item--active' : ''}`}
                                     onClick={() => setSheetOpen(false)}

@@ -174,7 +174,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    const isActivePrefix = (prefix: string) => router.asPath.startsWith(prefix);
 
    // Detect active domain slug from router
-   const domainSlugMatch = router.asPath.match(/^\/domain\/([^/]+)/);
+   const domainSlugMatch = router.asPath.match(/^\/(?:domain|sites)\/([^/]+)/);
    const activeDomainSlug = domainSlugMatch ? domainSlugMatch[1] : null;
    const activeDomain = activeDomainSlug ? domains.find((d) => d.slug === activeDomainSlug) : null;
 
@@ -195,7 +195,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
          href: '/sites',
          label: 'Sites',
          icon: <IcoSites />,
-         active: isActivePrefix('/sites') || isActivePrefix('/domain/'),
+         active: isActivePrefix('/sites'),
       },
    ];
 
@@ -281,7 +281,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                   <div style={{ overflow: 'hidden', maxHeight: domainNavOpen ? '400px' : '0', transition: 'max-height 200ms ease-out' }}>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', paddingLeft: '8px' }}>
                         {DOMAIN_SUB_NAV.map((item) => {
-                           const href = `/domain/${activeDomainSlug}/${item.key}`;
+                           const href = `/sites/${activeDomainSlug}/${item.key}`;
                            const active = router.asPath === href || router.asPath.startsWith(href + '?');
                            return (
                               <Link key={item.key} href={href} passHref>

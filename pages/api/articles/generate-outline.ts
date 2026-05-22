@@ -11,10 +11,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { keyword, competitors = [], language = 'pl' } = req.body as {
+  const { keyword, competitors = [], language = 'pl', currentHeadings = [] } = req.body as {
     keyword: string;
     competitors: CompetitorOutline[];
     language?: string;
+    currentHeadings?: Array<{ level: number; text: string }>;
   };
   if (!keyword) return res.status(400).json({ error: 'keyword is required' });
 
@@ -39,11 +40,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const lang = language === 'pl' ? 'Polish' : 'English';
 
+  const currentHeadingsSummary = (currentHeadings as Array<{ level: number; text: string }>).length > 0
+    ? `\nCURRENT ARTICLE HEADINGS (already written — do NOT repeat these):\n${(currentHeadings as Array<{ level: number; text: string }>).map((h) => `H${h.level}: ${h.text}`).join('\n')}\n\nFOCUS: Generate a complete outline that emphasises the MISSING topics — sections not yet covered by the current article.\n`
+    : '';
+
   const prompt = `You are an expert SEO content strategist. Analyze these competitor outlines for the keyword "${keyword}" and create a UNIQUE, ORIGINAL article outline.
 
 COMPETITOR OUTLINES:
 ${competitorSummary || 'No competitor data available — use your expertise for this keyword.'}
-
+${currentHeadingsSummary}
 TASK:
 1. Identify the most important topics covered across competitors (their "median" structure)
 2. Create an ORIGINAL outline covering the same important topics but with UNIQUE headings — never copy wording from competitors

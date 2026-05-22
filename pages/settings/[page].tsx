@@ -10,10 +10,21 @@ const SettingsRoutePage: NextPage<SettingsRouteProps> = ({ page }) => {
 };
 
 export const getServerSideProps: GetServerSideProps<SettingsRouteProps> = async (ctx) => {
-  const rawPage = typeof ctx.params?.page === 'string' ? ctx.params.page : 'general';
+  const rawPage = typeof ctx.params?.page === 'string' ? ctx.params.page : 'google_search_console';
+  const page = normalizeSettingsPage(rawPage);
+
+  if (page !== rawPage) {
+    return {
+      redirect: {
+        destination: `/settings/${page}`,
+        permanent: false,
+      },
+    };
+  }
+
   return {
     props: {
-      page: normalizeSettingsPage(rawPage),
+      page,
     },
   };
 };
