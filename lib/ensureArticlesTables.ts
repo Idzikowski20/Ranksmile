@@ -144,6 +144,25 @@ export async function ensureArticlesTables() {
       )
    `);
 
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS article_keywords (
+         id               ${PK},
+         article_id       INTEGER NOT NULL,
+         keyword          TEXT NOT NULL,
+         gsc_volume_range TEXT,
+         gsc_position     DECIMAL(5,2),
+         ads_monthly_volume INTEGER,
+         ads_competition  TEXT,
+         ads_cpc          DECIMAL(10,2),
+         relevance_score  DECIMAL(3,2),
+         is_covered       INTEGER DEFAULT 0,
+         source           TEXT DEFAULT 'gsc',
+         uid              TEXT,
+         created_at       TIMESTAMP DEFAULT ${NOW_DEFAULT},
+         updated_at       TIMESTAMP DEFAULT ${NOW_DEFAULT}
+      )
+   `);
+
    // Migrations dla SQLite (Postgres dostaje kolumny już w CREATE TABLE)
    if (!isPostgres) {
       try { await db.query(`ALTER TABLE articles ADD COLUMN featured_image TEXT`); } catch {}
@@ -160,6 +179,8 @@ export async function ensureArticlesTables() {
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_visibility_runs_article ON ai_visibility_runs(article_id)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_visibility_citations_run ON ai_visibility_citations(run_id)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_versions_article ON article_versions(article_id)`); } catch {}
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_keywords_article ON article_keywords(article_id)`); } catch {}
+   try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_article_keywords_uid ON article_keywords(uid)`); } catch {}
 
    tablesChecked = true;
    console.log('[articles] Tables ready');
