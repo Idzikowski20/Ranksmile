@@ -17,6 +17,9 @@ interface Props {
   onClose: () => void;
   onInsertOutline: (headings: Array<{ level: number; text: string }>) => void;
   onAiActivity?: (active: boolean) => void;
+  currentHeadings?: Array<{ level: number; text: string }>;
+  currentWordCount?: number;
+  paaQuestions?: string[];
 }
 
 /* ── Per-competitor content score (relative to peer group) ────────── */
@@ -137,6 +140,9 @@ const ResearchOutlinePanel: React.FC<Props> = ({
   onClose,
   onInsertOutline,
   onAiActivity,
+  currentHeadings = [],
+  currentWordCount,
+  paaQuestions = [],
 }) => {
   const [tab, setTab] = useState<'competitors' | 'questions'>('competitors');
   const [competitors, setCompetitors] = useState<CompetitorOutline[]>([]);
@@ -234,7 +240,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
               <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" />
             </svg>
           </button>
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#09090b' }}>Research & Create Outline</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#09090b' }}>SERP Research</span>
         </div>
         <div style={{ width: 32, height: 32, flexShrink: 0 }} />
       </div>
@@ -286,7 +292,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
           <>
             {/* ── AI-Generated Outline section ──────────────────── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>AI-Generated Outline</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b' }}>Generated Outline</span>
               <span style={{ fontSize: 14, color: '#52525c' }}>
                 Based on median structure from <strong>{competitors.length}</strong> competitor{competitors.length !== 1 ? 's' : ''}
               </span>
@@ -315,7 +321,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                     <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5" clipRule="evenodd" />
                   </svg>
                 )}
-                {isGenerating ? 'Generating…' : 'Generate Outline'}
+                {isGenerating ? 'Generating…' : currentHeadings.length > 0 ? 'Analyze & Improve' : 'Create Outline'}
               </button>
 
               {/* Generate error */}
@@ -524,43 +530,6 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.text}</span>
                           </div>
                         ))}
-                        <div style={{ height: 1, background: '#f4f4f5', marginTop: 4 }} />
-                        <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', justifyContent: 'space-between' }}>
-                          <button
-                            type="button"
-                            onClick={() => onInsertOutline(comp.headings)}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                              flex: 1, padding: '6px 12px', borderRadius: 6, border: 'none',
-                              background: 'transparent', color: '#52525c', fontSize: 14, fontWeight: 600,
-                              cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
-                              boxShadow: 'inset 0 0 0 1px #e4e4e7', transition: 'background 0.15s, color 0.15s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; e.currentTarget.style.color = '#09090b'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#52525c'; }}
-                          >
-                            Insert outline
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const text = comp.headings.map((h) => `${'  '.repeat(h.level - 1)}${h.text}`).join('\n');
-                              navigator.clipboard.writeText(text);
-                            }}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              width: 32, height: 32, borderRadius: 6, border: 'none',
-                              background: 'transparent', color: '#52525c', cursor: 'pointer', padding: 0,
-                              boxShadow: 'inset 0 0 0 1px #e4e4e7', transition: 'background 0.15s, color 0.15s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; e.currentTarget.style.color = '#09090b'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#52525c'; }}
-                          >
-                            <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" />
-                            </svg>
-                          </button>
-                        </div>
                       </div>
                     )}
                   </div>
