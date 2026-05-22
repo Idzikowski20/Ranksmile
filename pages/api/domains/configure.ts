@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const domainId = domain.ID;
 
-      // Create site_context entries
+      // Create site_context entries + skeleton articles for each page
       const pagesToInsert: string[] = pages.length > 0
          ? (pages as string[]).filter(Boolean)
          : [`https://${domainTrimmed}`];
@@ -54,6 +54,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             );
          } catch {
             // ignore duplicate entries
+         }
+
+         // Create skeleton article so deep-analysis can find & update it
+         try {
+            const articleSlug = pageUrl
+               .replace(/https?:\/\//, '')
+               .replace(/[^a-z0-9]/gi, '-')
+               .substring(0, 60);
+            await db.query(
+               `INSERT INTO articles (domain_id, title, slug, meta_url, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+               { replacements: [domainId, pageUrl.trim(), articleSlug, pageUrl.trim()] },
+            );
+         } catch {
+            // article may already exist — skip
          }
       }
 

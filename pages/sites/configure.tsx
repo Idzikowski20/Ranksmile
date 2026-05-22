@@ -179,7 +179,15 @@ const ConfigureSite: NextPage = () => {
             return;
          }
          const data = await res.json();
-         router.push(`/domain/${data.domainSlug}/performance`);
+
+         // Trigger deep analysis for all configured pages in background
+         fetch('/api/articles/analyze-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domainId: data.domainId }),
+         }).catch(() => {});
+
+         router.push(`/sites/${data.domainSlug}/performance`);
       } catch (e: any) {
          setError(e?.message || 'Network error');
          setSubmitting(false);

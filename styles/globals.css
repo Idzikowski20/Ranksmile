@@ -136,7 +136,7 @@ body {
 
 .app-shell {
    height: 100%;
-   min-height: 100vh;
+   min-height: 90vh;
    display: flex;
    flex-direction: column;
    background: var(--topbar-bg);
@@ -232,7 +232,8 @@ body {
 
 @media (min-width: 1024px) {
    .app-shell-body {
-      padding-bottom: 15px;
+      padding-right: 3px;
+      padding-bottom: 3px;
    }
 }
 
@@ -769,6 +770,11 @@ body {
 @keyframes growOut {
    0%   { opacity: 0; transform: scale(0.85); }
    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes skeletonPulse {
+   0%, 100% { opacity: 1; }
+   50%      { opacity: 0.4; }
 }
 
 @keyframes spin {

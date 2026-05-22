@@ -47,6 +47,44 @@ function findMatchingDomain(gscDomain: string, domains: DomainType[]): DomainTyp
   });
 }
 
+const MetricWithTooltip = ({ icon, value, label, tooltip, color }: { icon: React.ReactNode; value: string; label: string; tooltip: string; color: string }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 4, position: 'relative' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ color, display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</div>
+      <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{value}</span>
+      <span style={{ fontSize: 12, lineHeight: '16px', color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
+      {hovered && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 6px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap',
+            padding: '4px 8px',
+            borderRadius: 6,
+            background: '#18181B',
+            color: '#fff',
+            fontSize: 12,
+            lineHeight: '16px',
+            fontFamily: 'var(--font-family-primary)',
+            zIndex: 20,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        >
+          {tooltip}
+          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #18181B' }} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Sites: NextPage = () => {
   const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
@@ -55,6 +93,7 @@ const Sites: NextPage = () => {
   const [sortOpen, setSortOpen] = useState(false);
   const [toConfigureOpen, setToConfigureOpen] = useState(true);
   const [configuredOpen, setConfiguredOpen] = useState(true);
+  const [openMenuSite, setOpenMenuSite] = useState<string | null>(null);
 
   const handleConfigure = (site: SiteInfo) => {
     router.push(`/sites/configure?siteUrl=${encodeURIComponent(site.siteUrl)}`);
@@ -63,8 +102,16 @@ const Sites: NextPage = () => {
   const { data: gscData, isLoading } = useQuery('gsc-sites', async () => {
     const res = await fetch('/api/sites');
     if (!res.ok) throw new Error('Failed to fetch GSC sites');
-    return res.json() as Promise<{ sites: GSCSite[]; error?: string }>;
+    return res.json() as Promise<{ sites: GSCSite[]; domainStats?: Record<string, { impressions: number; clicks: number; position: number; chart: { date: string; clicks: number; impressions: number }[] }>; error?: string }>;
   });
+
+  const { data: gscAccounts } = useQuery('gsc-accounts-avatar', async () => {
+    const res = await fetch('/api/gsc/accounts', { credentials: 'include' });
+    if (!res.ok) return null;
+    return res.json() as Promise<{ accounts?: { picture?: string; email?: string }[] }>;
+  });
+  const accountPicture = gscAccounts?.accounts?.[0]?.picture || '';
+  const accountInitial = gscAccounts?.accounts?.[0]?.email?.charAt(0).toUpperCase() || '?';
 
   const { data: domainsData } = useFetchDomains(router, true);
   const domains = domainsData?.domains || [];
@@ -115,6 +162,29 @@ const Sites: NextPage = () => {
     return n.toString();
   };
 
+  function buildAreaPath(data: number[], width: number, height: number): string {
+    if (!data.length) return '';
+    const max = Math.max(...data, 1);
+    const stepX = width / (data.length - 1 || 1);
+    let d = `M0,${height}`;
+    data.forEach((v, i) => {
+      const y = height - (v / max) * height;
+      d += ` L${i * stepX},${y}`;
+    });
+    d += ` L${width},${height} Z`;
+    return d;
+  }
+
+  function buildLinePath(data: number[], width: number, height: number): string {
+    if (!data.length) return '';
+    const max = Math.max(...data, 1);
+    const stepX = width / (data.length - 1 || 1);
+    return data.map((v, i) => {
+      const y = height - (v / max) * height;
+      return `${i === 0 ? 'M' : 'L'}${i * stepX},${y}`;
+    }).join(' ');
+  }
+
   const sortLabel: Record<string, string> = {
     az: 'Alphabetically (A-Z)',
     clicks: 'Clicks',
@@ -124,73 +194,71 @@ const Sites: NextPage = () => {
   const renderCard = (site: SiteInfo) => {
     const displayName = site.propertyType === 'url' ? site.siteUrl : site.domain;
     const faviconDomain = site.domain;
+    const stats = gscData?.domainStats?.[site.domain];
+    const chartData = stats?.chart || [];
+    const chartW = 300;
+    const chartH = 80;
+    const impressionPath = buildAreaPath(chartData.map((d) => d.impressions), chartW, chartH);
+    const clickPath = buildLinePath(chartData.map((d) => d.clicks), chartW, chartH);
+
+    const firstDate = chartData[0]?.date || '';
+    const lastDate = chartData[chartData.length - 1]?.date || '';
+    const dateLabel = firstDate && lastDate ? `${firstDate} – ${lastDate}` : 'Last 30 days';
+
+    // Find matched domain record for last-edited info
+    const matchedDomain = domains.find((d) => d.slug === site.slug);
+    const lastEdited = matchedDomain?.lastUpdated
+      ? (() => {
+          const d = new Date(matchedDomain.lastUpdated);
+          const diff = Date.now() - d.getTime();
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          if (days === 0) return 'Today';
+          if (days === 1) return 'Yesterday';
+          return `${days}d ago`;
+        })()
+      : null;
+
+    const menuOpen = openMenuSite === site.siteUrl;
 
     return (
       <div
         key={site.siteUrl}
-        className="group/card"
         style={{
           position: 'relative',
-          minHeight: 242,
           width: '100%',
-          cursor: 'pointer',
+          cursor: site.gscConfigured ? 'pointer' : 'default',
           borderRadius: 12,
           border: '1px solid #E4E4E7',
           padding: 24,
-          transition: 'box-shadow 0.15s',
+          transition: 'border-color 0.15s',
           background: '#fff',
         }}
+        onClick={() => {
+          if (site.gscConfigured) {
+            router.push(`/sites/${site.slug}/performance`);
+          }
+        }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            borderRadius: 12,
-            opacity: 0,
-            boxShadow: '0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.06)',
-            transition: 'opacity 0.15s',
-          }}
-          className="group-hover/card:opacity-100"
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, height: '100%', flexGrow: 1, justifyContent: 'space-between', position: 'relative' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, height: '100%', flexGrow: 1, justifyContent: 'space-between' }}>
-            {/* Domain name row */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <img
-                    alt=""
-                    style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0 }}
-                    src={`https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=32`}
-                  />
-                  {site.gscConfigured ? (
-                    <Link href={`/domain/${site.slug}`} passHref>
-                      <a
-                        title={site.siteUrl}
-                        style={{
-                          fontSize: 16,
-                          lineHeight: '24px',
-                          fontWeight: 600,
-                          color: '#2F2F34',
-                          textDecoration: 'none',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        {displayName}
-                      </a>
-                    </Link>
-                  ) : (
-                    <span
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
+          {/* Header row: favicon + domain + menu */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <img
+                alt=""
+                style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0 }}
+                src={`https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=32`}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                {site.gscConfigured ? (
+                  <Link href={`/sites/${site.slug}/performance`} passHref>
+                    <a
                       title={site.siteUrl}
                       style={{
                         fontSize: 16,
                         lineHeight: '24px',
                         fontWeight: 600,
                         color: '#2F2F34',
+                        textDecoration: 'none',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -198,118 +266,212 @@ const Sites: NextPage = () => {
                       }}
                     >
                       {displayName}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  aria-label="Open details"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    padding: 0,
-                    color: '#9F9FA9',
-                    flexShrink: 0,
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (site.gscConfigured) {
-                      router.push(`/domain/${site.slug}`);
-                    }
-                  }}
-                >
-                  <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" style={{ flexShrink: 0 }}>
-                    <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m5.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m7-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3" />
-                  </svg>
-                </button>
+                    </a>
+                  </Link>
+                ) : (
+                  <span
+                    title={site.siteUrl}
+                    style={{
+                      fontSize: 16,
+                      lineHeight: '24px',
+                      fontWeight: 600,
+                      color: '#2F2F34',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontFamily: 'var(--font-family-primary)',
+                    }}
+                  >
+                    {displayName}
+                  </span>
+                )}
+                <span style={{ fontSize: 11, lineHeight: '16px', fontWeight: 500, textTransform: 'uppercase', color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
+                  {site.propertyType === 'domain' ? 'Domain Property' : 'URL Property'}
+                </span>
               </div>
-              <span style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-                {site.propertyType === 'domain' ? 'Domain Property' : 'URL Property'}
-              </span>
             </div>
 
-            {/* Metrics row */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative' }}>
-                  <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" style={{ flexShrink: 0, color: '#3B82F6' }}>
+            {/* "..." menu */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                type="button"
+                aria-label="More actions"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenMenuSite(menuOpen ? null : site.siteUrl); }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  border: 'none',
+                  background: menuOpen ? '#F4F4F5' : 'transparent',
+                  cursor: 'pointer',
+                  padding: 0,
+                  color: '#9F9FA9',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" style={{ flexShrink: 0 }}>
+                  <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m5.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m7-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={(e) => { e.stopPropagation(); setOpenMenuSite(null); }} />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      zIndex: 10,
+                      background: '#fff',
+                      border: '1px solid #E4E4E7',
+                      borderRadius: 8,
+                      boxShadow: '0px 4px 16px rgba(0,0,0,0.12)',
+                      overflow: 'hidden',
+                      minWidth: 140,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {site.gscConfigured && (
+                      <button
+                        type="button"
+                        onClick={() => { setOpenMenuSite(null); router.push(`/sites/${site.slug}/performance`); }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '8px 14px',
+                          border: 'none',
+                          background: 'transparent',
+                          fontSize: 13,
+                          lineHeight: '18px',
+                          color: '#18181B',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-family-primary)',
+                        }}
+                      >
+                        View details
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setOpenMenuSite(null); handleConfigure(site); }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 14px',
+                        border: 'none',
+                        background: 'transparent',
+                        fontSize: 13,
+                        lineHeight: '18px',
+                        color: '#18181B',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-family-primary)',
+                      }}
+                    >
+                      {site.gscConfigured ? 'Reconfigure' : 'Configure'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Chart — for configured sites with data, placeholder spacer otherwise */}
+          {site.gscConfigured && chartData.length > 1 ? (
+            <div style={{ width: '100%', height: chartH, overflow: 'hidden' }}>
+              <svg viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+                <path d={impressionPath} fill="rgba(168,85,247,0.15)" />
+                <path d={buildLinePath(chartData.map((d) => d.impressions), chartW, chartH)} fill="none" stroke="#A855F7" strokeWidth="1" />
+                <path d={clickPath} fill="none" stroke="#3B82F6" strokeWidth="1" />
+              </svg>
+            </div>
+          ) : (
+            <div style={{ width: '100%', height: chartH }} />
+          )}
+
+          {/* Bottom row: metrics + edited + avatar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 14 }}>
+              <MetricWithTooltip
+                color="#3B82F6"
+                value={site.gscConfigured ? formatNumber(site.clicks) : '—'}
+                label=""
+                tooltip={site.gscConfigured ? `${formatNumber(site.clicks)} clicks · ${dateLabel}` : 'No data'}
+                icon={
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
                     <path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1M5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06A.75.75 0 1 1 6.11 5.173L5.05 4.11a.75.75 0 0 1 0-1.06m9.9 0a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.061l1.061-1.06a.75.75 0 0 1 1.06 0M3 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 8m11 0a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 8m-6.828 2.828a.75.75 0 0 1 0 1.061L6.11 12.95a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0m3.596-3.32a.75.75 0 0 0-1.37.365l-.492 6.861a.75.75 0 0 0 1.204.65l1.043-.799.985 3.678a.75.75 0 0 0 1.45-.388l-.978-3.646 1.292.204a.75.75 0 0 0 .74-1.16z" />
                   </svg>
-                  <span style={{ fontSize: 16, lineHeight: '24px', fontWeight: 600, color: '#2F2F34', fontFamily: 'var(--font-family-primary)' }}>
-                    {site.gscConfigured ? formatNumber(site.clicks) : '—'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative' }}>
-                  <svg viewBox="0 0 20 20" width="20" height="20" style={{ flexShrink: 0, color: '#A855F7' }}>
-                    <g fill="currentColor">
-                      <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" />
-                      <path fillRule="evenodd" d="M.664 10.59a1.65 1.65 0 0 1 0-1.186A10 10 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10 10 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41M14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0" clipRule="evenodd" />
-                    </g>
+                }
+              />
+              <MetricWithTooltip
+                color="#A855F7"
+                value={site.gscConfigured ? formatNumber(site.impressions) : '—'}
+                label=""
+                tooltip={site.gscConfigured ? `${formatNumber(site.impressions)} impressions · ${dateLabel}` : 'No data'}
+                icon={
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
+                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" />
+                    <path fillRule="evenodd" d="M.664 10.59a1.65 1.65 0 0 1 0-1.186A10 10 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10 10 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41M14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0" clipRule="evenodd" />
                   </svg>
-                  <span style={{ fontSize: 16, lineHeight: '24px', fontWeight: 600, color: '#2F2F34', fontFamily: 'var(--font-family-primary)' }}>
-                    {site.gscConfigured ? formatNumber(site.impressions) : '—'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative' }}>
-                  <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" style={{ flexShrink: 0, color: '#EF4444' }}>
+                }
+              />
+              <MetricWithTooltip
+                color="#EF4444"
+                value={site.gscConfigured && site.position > 0 ? site.position.toFixed(1) : '—'}
+                label=""
+                tooltip={site.gscConfigured && site.position > 0 ? `Avg position ${site.position.toFixed(1)} · ${dateLabel}` : 'No data'}
+                icon={
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
                     <path fillRule="evenodd" d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12" clipRule="evenodd" />
                   </svg>
-                  <span style={{ fontSize: 16, lineHeight: '24px', fontWeight: 600, color: '#2F2F34', fontFamily: 'var(--font-family-primary)' }}>
-                    {site.gscConfigured && site.position > 0 ? site.position.toFixed(1) : '—'}
-                  </span>
+                }
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {site.gscConfigured && lastEdited && (
+                <span style={{ fontSize: 12, lineHeight: '16px', color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
+                  Edited {lastEdited}
+                </span>
+              )}
+              {site.gscConfigured ? (
+                <div style={{ width: 32, height: 32, borderRadius: 999, background: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#18181B', flexShrink: 0, overflow: 'hidden', fontFamily: 'var(--font-family-primary)' }}>
+                  {accountPicture ? (
+                    <img alt="" src={accountPicture} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <span>{accountInitial}</span>
+                  )}
                 </div>
-              </div>
-              {!site.gscConfigured ? (
+              ) : (
                 <button
                   type="button"
-                  onClick={() => handleConfigure(site)}
+                  onClick={(e) => { e.stopPropagation(); handleConfigure(site); }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '4px 16px',
+                    padding: '4px 12px',
                     borderRadius: 6,
                     border: 'none',
                     background: '#F4F4F5',
-                    fontSize: 14,
-                    lineHeight: '20px',
+                    fontSize: 13,
+                    lineHeight: '16px',
                     fontWeight: 600,
-                    color: '#2F2F34',
+                    color: '#18181B',
                     cursor: 'pointer',
                     fontFamily: 'var(--font-family-primary)',
-                    transition: 'background 0.15s',
+                    transition: 'background-color 150ms, color 150ms, box-shadow 150ms, opacity 150ms',
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
+                  onMouseDown={(e) => { e.currentTarget.style.background = '#D4D4D8'; }}
+                  onMouseUp={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
                 >
                   Configure
                 </button>
-              ) : (
-                <Link href={`/domain/console/${site.slug}`} passHref>
-                  <a
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '4px 16px',
-                      borderRadius: 6,
-                      border: 'none',
-                      background: '#F4F4F5',
-                      fontSize: 14,
-                      lineHeight: '20px',
-                      fontWeight: 600,
-                      color: '#2F2F34',
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      fontFamily: 'var(--font-family-primary)',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    View
-                  </a>
-                </Link>
               )}
             </div>
           </div>
@@ -510,7 +672,7 @@ const Sites: NextPage = () => {
             <div style={{ width: 200 }}>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <div style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', color: '#9F9FA9' }}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" />
                   </svg>
                 </div>
@@ -572,50 +734,6 @@ const Sites: NextPage = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {toConfigure.length > 0 && (
-                <div>
-                  <h3 style={{ margin: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => setToConfigureOpen(!toConfigureOpen)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        border: 'none',
-                        background: 'transparent',
-                        padding: 0,
-                        fontSize: 16,
-                        lineHeight: '24px',
-                        fontWeight: 600,
-                        color: '#52525C',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family-primary)',
-                        marginBottom: toConfigureOpen ? 24 : 0,
-                      }}
-                    >
-                      To configure
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="20"
-                        height="20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        style={{ flexShrink: 0, transition: 'transform 0.2s', transform: toConfigureOpen ? 'rotate(180deg)' : undefined }}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                      </svg>
-                    </button>
-                  </h3>
-                  {toConfigureOpen && (
-                    <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 24 }}>
-                      {toConfigure.map(renderCard)}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {configured.length > 0 && (
                 <div>
                   <h3 style={{ margin: 0 }}>
@@ -645,7 +763,7 @@ const Sites: NextPage = () => {
                         height="20"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="1.5"
+                        strokeWidth="1"
                         style={{ flexShrink: 0, transition: 'transform 0.2s', transform: configuredOpen ? 'rotate(180deg)' : undefined }}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -653,8 +771,52 @@ const Sites: NextPage = () => {
                     </button>
                   </h3>
                   {configuredOpen && (
-                    <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 24 }}>
+                    <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
                       {configured.map(renderCard)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {toConfigure.length > 0 && (
+                <div>
+                  <h3 style={{ margin: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setToConfigureOpen(!toConfigureOpen)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        border: 'none',
+                        background: 'transparent',
+                        padding: 0,
+                        fontSize: 16,
+                        lineHeight: '24px',
+                        fontWeight: 600,
+                        color: '#52525C',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-family-primary)',
+                        marginBottom: toConfigureOpen ? 24 : 0,
+                      }}
+                    >
+                      To configure
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                        style={{ flexShrink: 0, transition: 'transform 0.2s', transform: toConfigureOpen ? 'rotate(180deg)' : undefined }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </button>
+                  </h3>
+                  {toConfigureOpen && (
+                    <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+                      {toConfigure.map(renderCard)}
                     </div>
                   )}
                 </div>

@@ -2,6 +2,7 @@
 SERP analyzer: fetches top results, scrapes competitor pages, and extracts
 SEO terms from competitor content.
 """
+import asyncio
 import os
 import re
 import unicodedata
@@ -151,20 +152,23 @@ async def _fetch_serp_urls(keyword: str, language: str, num: int, api_key: str) 
 
 
 async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
-    texts = []
-    soups = []
+    async def _fetch_one(client: httpx.AsyncClient, url: str):
+        try:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            soup = BeautifulSoup(response.text, "lxml")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                tag.decompose()
+            text = soup.get_text(separator=" ", strip=True)
+            return (text[:15000], soup)
+        except Exception as exc:
+            print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
+            return ("", None)
+
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        for url in urls:
-            try:
-                response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                soup = BeautifulSoup(response.text, "lxml")
-                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-                    tag.decompose()
-                text = soup.get_text(separator=" ", strip=True)
-                texts.append(text[:15000])
-                soups.append(soup)
-            except Exception as exc:
-                print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
+        results = await asyncio.gather(*(_fetch_one(client, url) for url in urls), return_exceptions=False)
+
+    texts = [r[0] for r in results if r[1] is not None]
+    soups = [r[1] for r in results if r[1] is not None]
     return texts, soups
 
 
@@ -284,30 +288,34 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
         return []
 
     results, _ = await _fetch_serp_results(keyword, language, num, serper_key)
-    outlines = []
+
+    async def _fetch_one(client: httpx.AsyncClient, result: dict):
+        url = result["link"]
+        try:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            soup = BeautifulSoup(response.text, "lxml")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                tag.decompose()
+            headings = [
+                {"level": int(tag.name[1]), "text": tag.get_text(" ", strip=True)}
+                for tag in soup.select("h1,h2,h3,h4")
+                if tag.get_text(" ", strip=True)
+            ]
+            text = soup.get_text(" ", strip=True)
+            return {
+                "url": url,
+                "domain": domain_from_url(url),
+                "title": soup.select_one("title").get_text(" ", strip=True) if soup.select_one("title") else result.get("title", ""),
+                "serp_title": result.get("title", ""),
+                "snippet": result.get("snippet", ""),
+                "word_count": len(text.split()),
+                "headings": headings[:60],
+            }
+        except Exception as exc:
+            print(f"[serp_analyzer] outline failed for {url}: {exc}")
+            return None
+
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        for result in results[:num]:
-            url = result["link"]
-            try:
-                response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                soup = BeautifulSoup(response.text, "lxml")
-                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-                    tag.decompose()
-                headings = [
-                    {"level": int(tag.name[1]), "text": tag.get_text(" ", strip=True)}
-                    for tag in soup.select("h1,h2,h3,h4")
-                    if tag.get_text(" ", strip=True)
-                ]
-                text = soup.get_text(" ", strip=True)
-                outlines.append({
-                    "url": url,
-                    "domain": domain_from_url(url),
-                    "title": soup.select_one("title").get_text(" ", strip=True) if soup.select_one("title") else result.get("title", ""),
-                    "serp_title": result.get("title", ""),
-                    "snippet": result.get("snippet", ""),
-                    "word_count": len(text.split()),
-                    "headings": headings[:60],
-                })
-            except Exception as exc:
-                print(f"[serp_analyzer] outline failed for {url}: {exc}")
-    return outlines
+        outlines = await asyncio.gather(*(_fetch_one(client, r) for r in results[:num]), return_exceptions=False)
+
+    return [o for o in outlines if o is not None]

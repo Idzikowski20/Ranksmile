@@ -37,7 +37,7 @@ const IdeasKeywordsTable = ({
    const [listHeight, setListHeight] = useState(500);
    const [addKeywordDevice, setAddKeywordDevice] = useState<'desktop'|'mobile'>('desktop');
    const [addKeywordDomain, setAddKeywordDomain] = useState('');
-   const { mutate: addKeywords } = useAddKeywords(() => { if (domain && domain.slug) router.push(`/domain/${domain.slug}`); });
+   const { mutate: addKeywords } = useAddKeywords(() => { if (domain && domain.slug) router.push(`/sites/${domain.slug}`); });
    const { mutate: faveKeyword, isLoading: isFaving } = useMutateFavKeywordIdeas(router);
    const [isMobile] = useIsMobile();
    const isResearchPage = router.pathname === '/research';

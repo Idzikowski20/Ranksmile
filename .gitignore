@@ -45,3 +45,10 @@ data/
 
 #copilot
 .github/*.md
+
+# graphify knowledge graph
+graphify-out/
+
+# codeql static analysis
+.codeqlignore
+static_analysis_codeql_1/
