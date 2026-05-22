@@ -23,6 +23,8 @@ interface Props {
   /** Called with suggestions to insert; returns per-URL results */
   onInsertLinks: (links: Array<{ anchorText: string; url: string }>) => InsertResult[];
   onAiActivity?: (active: boolean) => void;
+  articleKeywords?: string[];
+  internalArticles?: Array<{ id: number; url: string }>;
 }
 
 const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'dark' | 'ghost' }> = ({
@@ -53,6 +55,7 @@ const Spinner = () => (
 
 const InternalLinksPanel: React.FC<Props> = ({
   articleId, keyword, plainText, domainBaseUrl, onClose, onInsertLinks, onAiActivity,
+  articleKeywords, internalArticles,
 }) => {
   const storageKey = `internal-links-${articleId}`;
 
@@ -74,6 +77,32 @@ const InternalLinksPanel: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [isRecommending, setIsRecommending] = useState(false);
   const [cachedSuggestions, setCachedSuggestions] = useState<LinkSuggestion[] | null>(null);
+  const [sharedKeywordCounts, setSharedKeywordCounts] = useState<Record<string, number>>({});
+
+  // Compute shared keyword counts when insertion is done
+  useEffect(() => {
+    if (phase !== 'done' || !articleKeywords?.length || !internalArticles?.length) return;
+    const computeShared = async () => {
+      const counts: Record<string, number> = {};
+      const ourKws = new Set(articleKeywords.map(k => k.toLowerCase()));
+      for (const r of results) {
+        if (!r.success) continue;
+        try {
+          const pathname = new URL(r.url).pathname;
+          const matched = internalArticles.find(a => a.url === pathname || a.url.endsWith(pathname));
+          if (matched) {
+            const res = await fetch(`/api/articles/${matched.id}/keywords`);
+            const data = await res.json();
+            const linkedKws = (data.keywords || []).map((k: any) => k.keyword?.toLowerCase()).filter(Boolean);
+            const overlapping = linkedKws.filter((k: string) => ourKws.has(k)).length;
+            counts[r.url] = overlapping;
+          }
+        } catch { /* skip */ }
+      }
+      setSharedKeywordCounts(counts);
+    };
+    computeShared();
+  }, [phase, results, articleKeywords, internalArticles]);
 
   useEffect(() => {
     onAiActivity?.(phase === 'fetching' || phase === 'inserting');
@@ -380,6 +409,11 @@ const InternalLinksPanel: React.FC<Props> = ({
                 {r.success && r.anchorText && (
                   <span style={{ fontSize: 11, color: '#783afb', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.anchorText}>
                     &ldquo;{r.anchorText}&rdquo;
+                  </span>
+                )}
+                {r.success && sharedKeywordCounts[r.url] > 0 && (
+                  <span style={{ fontSize: 11, color: '#783afb', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>
+                    {sharedKeywordCounts[r.url]} shared KW
                   </span>
                 )}
               </div>

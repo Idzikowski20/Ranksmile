@@ -102,6 +102,7 @@ const ArticleEditorPage: NextPage = () => {
   const [linksAiActive, setLinksAiActive] = useState(false);
   const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
+  const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const isAiActive = surfyAiActive || researchAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
 
   const [editorHtml, setEditorHtml] = useState('');
@@ -121,6 +122,15 @@ const ArticleEditorPage: NextPage = () => {
     headings_min: 10,
     headings_max: 20,
   });
+
+  // Fetch article keywords when internal links panel opens
+  useEffect(() => {
+    if (!showInternalLinksPanel || !id) return;
+    fetch(`/api/articles/${id}/keywords`)
+      .then(r => r.json())
+      .then(d => setArticleKeywords((d.keywords || []).map((k: any) => k.keyword)))
+      .catch(() => {});
+  }, [showInternalLinksPanel, id]);
 
   // Listen for Pixabay open events dispatched from TipTap image node toolbar
   useEffect(() => {
@@ -1008,6 +1018,8 @@ const ArticleEditorPage: NextPage = () => {
                   onClose={() => setShowInternalLinksPanel(false)}
                   onInsertLinks={handleInsertLinks}
                   onAiActivity={setLinksAiActive}
+                  articleKeywords={articleKeywords}
+                  internalArticles={internalArticles}
                 />
               ) : showHistory ? (
                 <VersionHistoryPanel
