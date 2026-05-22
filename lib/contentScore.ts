@@ -203,6 +203,7 @@ export function computeContentScore(
    internalLinksCount?: number,
    html?: string,
    keyword?: string,
+   keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
 ): number {
    if (!scoreData?.terms?.length) return 0;
 
@@ -249,6 +250,12 @@ export function computeContentScore(
    // ── FAQ coverage ──
    if (html && scoreData.paa_questions?.length) {
       add(_faqCoverage(html, scoreData.paa_questions), 10);
+   }
+
+   // ── Keyword coverage ──
+   if (keywordCoverage !== undefined && keywordCoverage.length > 0) {
+      const coveredCount = keywordCoverage.filter((k) => k.is_covered).length;
+      add((coveredCount / keywordCoverage.length) * 10, 10);
    }
 
    // Normalise to 100
