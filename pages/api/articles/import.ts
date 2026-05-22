@@ -411,6 +411,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          },
       );
 
+      // Auto-enrich keywords in background (fire-and-forget)
+      if (keywords.length > 0) {
+         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+         fetch(`${baseUrl}/api/articles/${articleId}/keywords/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+               keywords: keywords as string[],
+               targetKeyword: (keywords as string[])[0] || title,
+               plainText,
+            }),
+         }).catch(() => {}); // fire-and-forget
+      }
+
       return res.status(200).json({ articleId });
    } catch (error: any) {
       console.error('[import] error:', error);
