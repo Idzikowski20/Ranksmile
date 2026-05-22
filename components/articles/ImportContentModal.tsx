@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -28,6 +28,30 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
   const [showDeviceMenu, setShowDeviceMenu] = useState(false);
   const [folderId] = useState<number | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
+  const [cannibalWarnings, setCannibalWarnings] = useState<string[]>([]);
+
+  // Check cannibalization when keywords change
+  useEffect(() => {
+    if (keywords.length === 0 || !domains.length) return;
+    const domainSlug = domains[0]?.domain || '';
+    if (!domainSlug) return;
+    // Check each keyword for cannibalization
+    const checks = keywords.map((kw) =>
+      fetch(`/api/domains/${domainSlug}/cannibalization?keyword=${encodeURIComponent(kw)}`)
+        .then(r => r.json())
+        .then(d => ({ kw, cannibalized: d.cannibalized || [] }))
+        .catch(() => ({ kw, cannibalized: [] }))
+    );
+    Promise.all(checks).then(results => {
+      const warnings: string[] = [];
+      for (const { kw, cannibalized } of results) {
+        for (const c of cannibalized) {
+          warnings.push(`"${c.keyword}" already targeted by: ${c.articles.map((a: any) => a.title).join(', ')}`);
+        }
+      }
+      setCannibalWarnings(warnings);
+    });
+  }, [keywords, domains]);
 
   const canProceed = url.trim().length > 0;
 
@@ -384,6 +408,21 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                     Enter the URL from which you&apos;d like to import content into Content Editor
                   </span>
                 </div>
+
+                {/* Cannibalization warnings */}
+                {cannibalWarnings.length > 0 && (
+                  <div style={{
+                    padding: '10px 12px', background: '#fffbeb', border: '1px solid #fde68a',
+                    borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 6,
+                  }}>
+                    {cannibalWarnings.map((w, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
+                        <span style={{ fontSize: 12, color: '#92400e', fontFamily: 'var(--font-family-primary)' }}>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Bottom bar: country + device + button */}
                 <div

@@ -11,8 +11,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { slug } = req.query;
   const checkKeyword = req.query.keyword as string | undefined;
 
-  // Get domain ID from slug
-  const [domains] = await db.query(`SELECT "ID" FROM domain WHERE slug = ?`, { replacements: [slug] });
+  // Get domain ID from slug (or domain name)
+  let [domains] = await db.query(`SELECT "ID" FROM domain WHERE slug = ?`, { replacements: [slug] });
+  if (!(domains as any[])[0]) {
+    [domains] = await db.query(`SELECT "ID" FROM domain WHERE domain = ?`, { replacements: [slug] });
+  }
   const domain = (domains as any[])[0];
   if (!domain) return res.status(404).json({ error: 'Domain not found' });
 
