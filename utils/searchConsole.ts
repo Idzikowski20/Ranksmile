@@ -1,6 +1,6 @@
 import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
-import { readFile, writeFile, unlink } from 'fs/promises';
+import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
 import { countryAlphaTwoCodes, getCountryCodeFromAlphaThree } from './countries';
 import GscAccount from '../database/models/gscAccount';
 
@@ -433,7 +433,7 @@ export const checkSerchConsoleIntegration = async (domain: DomainType): Promise<
 export const readLocalSCData = async (domain:string): Promise<SCDomainDataType|false> => {
    try {
       const filePath = `${process.cwd()}/data/SC_${domain.replaceAll('/', '-')}.json`;
-      const currentQueueRaw = await readFile(filePath, { encoding: 'utf-8' }).catch(async () => { await updateLocalSCData(domain); return '{}'; });
+      const currentQueueRaw = await readFile(filePath, { encoding: 'utf-8' }).catch(() => '{}');
       const domainSCData = JSON.parse(currentQueueRaw);
       return domainSCData;
    } catch (error) {
@@ -449,8 +449,10 @@ export const readLocalSCData = async (domain:string): Promise<SCDomainDataType|f
  */
 export const updateLocalSCData = async (domain:string, scDomainData?:SCDomainDataType): Promise<SCDomainDataType|false> => {
    try {
-      const filePath = `${process.cwd()}/data/SC_${domain.replaceAll('/', '-')}.json`;
+      const dirPath = `${process.cwd()}/data`;
+      const filePath = `${dirPath}/SC_${domain.replaceAll('/', '-')}.json`;
       const emptyData:SCDomainDataType = { threeDays: [], sevenDays: [], thirtyDays: [], lastFetched: '', lastFetchError: '' };
+      await mkdir(dirPath, { recursive: true }).catch(() => {});
       await writeFile(filePath, JSON.stringify(scDomainData || emptyData), { encoding: 'utf-8' }).catch((err) => { console.log(err); });
       return scDomainData || emptyData;
    } catch (error) {

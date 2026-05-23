@@ -8,7 +8,7 @@ import { AuthView } from '@neondatabase/auth/react';
 const SignUp: NextPage = () => (
    <>
       <Head>
-         <title>Sign up — SerpBear</title>
+         <title>Sign up - SerpBear</title>
       </Head>
       <div style={{
          minHeight: '100vh',

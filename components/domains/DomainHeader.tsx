@@ -23,10 +23,10 @@ const DomainHeader = (
    const [showOptions, setShowOptions] = useState<boolean>(false);
    const [ShowSCDates, setShowSCDates] = useState<boolean>(false);
    const { mutate: refreshMutate } = useRefreshKeywords(() => {});
-   const isConsole = router.pathname === '/domain/console/[slug]';
-   const isInsight = router.pathname === '/domain/insight/[slug]';
-   const isIdeas = router.pathname === '/domain/ideas/[slug]';
-   const isAudit = router.pathname === '/domain/audit/[slug]';
+   const isConsole = router.pathname === '/sites/console/[slug]';
+   const isInsight = router.pathname === '/sites/insight/[slug]';
+   const isIdeas = router.pathname === '/sites/ideas/[slug]';
+   const isAudit = router.pathname === '/sites/audit/[slug]';
 
    const daysName = (dayKey:string) => dayKey.replace('three', '3').replace('seven', '7').replace('thirty', '30').replace('Days', ' Days');
    const buttonStyle = 'leading-6 inline-block px-2 py-2 text-gray-500 hover:text-gray-700';
@@ -52,31 +52,31 @@ const DomainHeader = (
          </div>
       <div className='flex w-full justify-between mt-4 lg:mt-0'>
          <ul className=' max-w-[270px] overflow-auto flex items-end text-sm relative top-[2px] lg:max-w-none'>
-            <li className={`${tabStyle} ${router.pathname === '/domain/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
-               <Link href={`/domain/${domain.slug}`} passHref={true}>
+            <li className={`${tabStyle} ${router.pathname === '/sites/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
+               <Link href={`/sites/${domain.slug}`} passHref={true}>
                   <a className='px-4 py-2 inline-block'><Icon type="tracking" color='#999' classes='hidden lg:inline-block' />
                      <span className='text-xs lg:text-sm lg:ml-2'>Tracking</span>
                   </a>
                </Link>
             </li>
-            <li className={`${tabStyle} ${router.pathname === '/domain/console/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
-               <Link href={`/domain/console/${domain.slug}`} passHref={true}>
+            <li className={`${tabStyle} ${router.pathname === '/sites/console/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
+               <Link href={`/sites/console/${domain.slug}`} passHref={true}>
                   <a className='px-4 py-2 inline-block'><Icon type="google" size={13} classes='hidden lg:inline-block' />
                      <span className='text-xs lg:text-sm lg:ml-2'>Discover</span>
                      <Icon type='help' size={14} color="#aaa" classes="ml-2 hidden lg:inline-block" title='Discover Keywords you already Rank For' />
                   </a>
                </Link>
             </li>
-            <li className={`${tabStyle} ${router.pathname === '/domain/insight/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
-               <Link href={`/domain/insight/${domain.slug}`} passHref={true}>
+            <li className={`${tabStyle} ${router.pathname === '/sites/insight/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
+               <Link href={`/sites/insight/${domain.slug}`} passHref={true}>
                   <a className='px-4 py-2 inline-block'><Icon type="google" size={13} classes='hidden lg:inline-block' />
                      <span className='text-xs lg:text-sm lg:ml-2'>Insight</span>
                      <Icon type='help' size={14} color="#aaa" classes="ml-2 hidden lg:inline-block" title='Insight for Google Search Console Data' />
                   </a>
                </Link>
             </li>
-            <li className={`${tabStyle} ${router.pathname === '/domain/ideas/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
-               <Link href={`/domain/ideas/${domain.slug}`} passHref={true}>
+            <li className={`${tabStyle} ${router.pathname === '/sites/ideas/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
+               <Link href={`/sites/ideas/${domain.slug}`} passHref={true}>
                   <a className='px-4 py-2 inline-block'><Icon type="adwords" size={13} classes='hidden lg:inline-block' />
                      <span className='text-xs lg:text-sm lg:ml-2'>Ideas</span>
                      <Icon
@@ -89,8 +89,8 @@ const DomainHeader = (
                   </a>
                </Link>
             </li>
-            <li className={`${tabStyle} ${router.pathname === '/domain/audit/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
-               <Link href={`/domain/audit/${domain.slug}`} passHref={true}>
+            <li className={`${tabStyle} ${router.pathname === '/sites/audit/[slug]' ? 'bg-white border border-b-0 font-semibold' : ''}`}>
+               <Link href={`/sites/audit/${domain.slug}`} passHref={true}>
                   <a className='px-4 py-2 inline-block'><Icon type="check" size={13} classes='hidden lg:inline-block' />
                      <span className='text-xs lg:text-sm lg:ml-2'>Audit</span>
                      <Icon

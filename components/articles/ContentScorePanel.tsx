@@ -1,7 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../lib/contentScore';
-import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
-import AiSearchPanel from './AiSearchPanel';
+import { computeOpportunityScore } from '../../lib/keywordEnrichment';
+import ScoreGauge from './ScoreGauge';
+import KeywordResearchSection from './KeywordResearchSection';
+
+interface CompetitorHeading {
+  level: number;
+  text: string;
+}
+interface Competitor {
+  url: string;
+  domain: string;
+  title: string;
+  serp_title?: string;
+  word_count: number;
+  heading_count?: number;
+  serp_position?: number;
+  headings: CompetitorHeading[];
+}
 
 interface Props {
   plainText: string;
@@ -13,125 +29,10 @@ interface Props {
   keyword?: string;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
-  onResearchOutline?: () => void;
   onInternalLinks?: () => void;
-  aiVisibilitySummary?: AiVisibilitySummary | null;
-  onRunAiVisibility?: () => void;
-  isRunningAiVisibility?: boolean;
+  articleId?: number;
+  cachedOutlines?: string | null;
 }
-
-/* ── Score Gauge (SurferSEO-style SVG) ─────────────────────────────── */
-const ScoreGauge = ({ score }: { score: number }) => {
-  // Animate displayScore from previous value to target using rAF
-  const [displayScore, setDisplayScore] = React.useState(0);
-  const animRef = React.useRef<number | null>(null);
-  const startTimeRef = React.useRef<number | null>(null);
-  const fromRef = React.useRef(0);
-
-  useEffect(() => {
-    const from = fromRef.current;
-    const to = score;
-    if (from === to) return;
-
-    // Slower on first paint (0→N), gentle for live edits
-    const duration = from === 0 ? 2800 : 900;
-
-    if (animRef.current !== null) cancelAnimationFrame(animRef.current);
-    startTimeRef.current = null;
-
-    const animate = (ts: number) => {
-      if (startTimeRef.current === null) startTimeRef.current = ts;
-      const t = Math.min((ts - startTimeRef.current) / duration, 1);
-      // Ease-out quint — very gentle, decelerates smoothly
-      const eased = 1 - Math.pow(1 - t, 5);
-      setDisplayScore(Math.round(from + (to - from) * eased));
-      if (t < 1) {
-        animRef.current = requestAnimationFrame(animate);
-      } else {
-        fromRef.current = to;
-        animRef.current = null;
-      }
-    };
-
-    animRef.current = requestAnimationFrame(animate);
-    return () => { if (animRef.current !== null) { cancelAnimationFrame(animRef.current); animRef.current = null; } };
-  }, [score]);
-
-  const cx = 250, cy = 190, r = 120, sw = 25;
-  const totalArc = Math.PI * r;
-  const gap = 10;
-  const capR = sw / 2;
-
-  // Segment boundaries
-  const seg1End = (33 / 100) * totalArc;
-  const seg2End = (66 / 100) * totalArc;
-  const seg1Len = seg1End - gap / 2 - capR;
-  const seg2Start = seg1End + gap / 2 + capR;
-  const seg2Len = (seg2End - gap / 2 - capR) - seg2Start;
-  const seg3Start = seg2End + gap / 2 + capR;
-  const seg3Len = totalArc - capR - seg3Start;
-
-  const ds = Math.max(0, Math.min(displayScore, 100));
-  const dsArcPos = (ds / 100) * totalArc;
-
-  // Filled portions — grow from 0 as displayScore increases
-  const redFillLen   = Math.max(0, Math.min(dsArcPos - capR, seg1Len));
-  const yellowFillLen = dsArcPos > seg2Start ? Math.max(0, Math.min(dsArcPos - seg2Start, seg2Len)) : 0;
-  const greenFillLen  = dsArcPos > seg3Start ? Math.max(0, Math.min(dsArcPos - seg3Start, seg3Len)) : 0;
-
-  // Needle follows displayScore
-  const fraction = ds / 100;
-  const angleRad = -Math.PI + fraction * Math.PI;
-  const innerR = r - sw / 2 - 2;
-  const outerR = r + sw / 2 + 3;
-  const nx1 = cx + Math.cos(angleRad) * innerR;
-  const ny1 = cy + Math.sin(angleRad) * innerR;
-  const nx2 = cx + Math.cos(angleRad) * outerR;
-  const ny2 = cy + Math.sin(angleRad) * outerR;
-
-  const scoreColor = ds >= 66 ? '#1ab25e' : ds >= 33 ? '#efa00d' : '#d70028';
-  const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
-
-  return (
-    <svg
-      viewBox="0 0 500 200"
-      style={{ width: 300, height: 116, marginLeft: -18, marginTop: -24, marginBottom: -8 }}
-    >
-      {/* Faded tracks */}
-      <path d={arcPath} fill="none" stroke="#ef4444" strokeWidth={sw}
-        strokeLinecap="round" strokeDasharray={`${seg1Len} 9999`} strokeDashoffset={0} opacity={0.18} />
-      <path d={arcPath} fill="none" stroke="#efa00d" strokeWidth={sw}
-        strokeLinecap="round" strokeDasharray={`${seg2Len} 9999`} strokeDashoffset={-seg2Start} opacity={0.18} />
-      <path d={arcPath} fill="none" stroke="#1ab25e" strokeWidth={sw}
-        strokeLinecap="round" strokeDasharray={`${seg3Len} 9999`} strokeDashoffset={-seg3Start} opacity={0.18} />
-
-      {/* Animated fills growing from left */}
-      {redFillLen > 0 && (
-        <path d={arcPath} fill="none" stroke="#ef4444" strokeWidth={sw}
-          strokeLinecap="round" strokeDasharray={`${redFillLen} 9999`} strokeDashoffset={0} />
-      )}
-      {yellowFillLen > 0 && (
-        <path d={arcPath} fill="none" stroke="#efa00d" strokeWidth={sw}
-          strokeLinecap="round" strokeDasharray={`${yellowFillLen} 9999`} strokeDashoffset={-seg2Start} />
-      )}
-      {greenFillLen > 0 && (
-        <path d={arcPath} fill="none" stroke="#1ab25e" strokeWidth={sw}
-          strokeLinecap="round" strokeDasharray={`${greenFillLen} 9999`} strokeDashoffset={-seg3Start} />
-      )}
-
-      {/* Needle */}
-      <line x1={nx1} y1={ny1} x2={nx2} y2={ny2} stroke="#09090b" strokeWidth={3} strokeLinecap="round" />
-
-      {/* Score text */}
-      <g transform={`translate(${cx}, ${cy - 6})`}>
-        <text textAnchor="middle" fontFamily="var(--font-family-primary)">
-          <tspan fontSize={48} fontWeight={500} fill={scoreColor} letterSpacing="0.02em">{displayScore}</tspan>
-          <tspan fontSize={24} fontWeight={400} fill="#3f3f47"> / 100</tspan>
-        </text>
-      </g>
-    </svg>
-  );
-};
 
 /* ── Small circular progress ───────────────────────────────────────── */
 const CircleProgress = ({ value, max, color }: { value: number; max: number; color: string }) => {
@@ -152,11 +53,38 @@ const MetricCol = ({ label, current, range }: { label: string; current: number; 
   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
     <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
     <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b', fontFamily: 'var(--font-family-primary)', lineHeight: 1 }}>{current.toLocaleString()}</span>
-    <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>{range}</span>
+    <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>{range}</span>
   </div>
 );
 
-/* ── Action row ─────────────────────────────────────────────────────── */
+/* ── Collapsible section header ─────────────────────────────────────── */
+const SectionRow = ({ num, label, open, onToggle, badge }: {
+  num: number; label: string; open?: boolean; onToggle?: () => void; badge?: React.ReactNode;
+}) => (
+  <button
+    onClick={onToggle}
+    style={{
+      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 16px', background: 'transparent',
+      border: 'none', borderTop: '1px solid #f4f4f5', cursor: 'pointer',
+      transition: 'opacity 0.15s', fontFamily: 'var(--font-family-primary)',
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 13, fontWeight: 400, color: '#9f9fa9' }}>#{num}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>{label}</span>
+      {badge}
+    </div>
+    <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor"
+      style={{ color: '#9f9fa9', flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+      <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
+    </svg>
+  </button>
+);
+
+/* ── Action row (non-expandable) ────────────────────────────────────── */
 const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClick?: () => void }) => (
   <button
     onClick={onClick}
@@ -179,6 +107,90 @@ const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClic
   </button>
 );
 
+/* ── Competitor card (inline, read-only) ────────────────────────────── */
+const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  const domain = competitor.domain || (() => {
+    try { return new URL(competitor.url).hostname.replace(/^www\./, ''); } catch { return competitor.url; }
+  })();
+  const pos = competitor.serp_position;
+
+  return (
+    <div style={{ border: '1px solid #f4f4f5', borderRadius: 8, overflow: 'hidden', background: '#fafafa' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+          padding: '8px 10px', background: 'transparent', border: 'none', cursor: 'pointer', gap: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, flex: 1, minWidth: 0 }}>
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
+            alt="" width={14} height={14}
+            style={{ borderRadius: 2, marginTop: 2, flexShrink: 0 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 12, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {competitor.serp_title || competitor.title}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+              <span style={{ fontSize: 11, color: '#783afb', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
+              <span style={{ fontSize: 11, color: '#9f9fa9' }}>·</span>
+              <span style={{ fontSize: 11, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>
+                {competitor.word_count.toLocaleString()}w
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginTop: 1 }}>
+          {pos != null && (
+            <span style={{
+              fontSize: 10, fontWeight: 700,
+              color: pos <= 3 ? '#16a34a' : pos <= 7 ? '#d97706' : '#52525c',
+              background: pos <= 3 ? '#f0fdf4' : pos <= 7 ? '#fffbeb' : '#f4f4f5',
+              border: `1px solid ${pos <= 3 ? '#bbf7d0' : pos <= 7 ? '#fde68a' : '#e4e4e7'}`,
+              borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-family-primary)',
+            }}>#{pos}</span>
+          )}
+          <svg viewBox="0 0 20 20" width={13} height={13} fill="currentColor"
+            style={{ color: '#9f9fa9', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>
+            <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
+          </svg>
+        </div>
+      </button>
+
+      {open && (
+        <div style={{ borderTop: '1px solid #f4f4f5', padding: '6px 10px 8px' }}>
+          <a
+            href={competitor.url} target="_blank" rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontSize: 10, color: '#783afb', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
+          >
+            {competitor.url.replace(/^https?:\/\//, '').substring(0, 60)}{competitor.url.length > 66 ? '…' : ''}
+          </a>
+          {competitor.headings.map((h, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginLeft: (h.level - 1) * 8, marginBottom: 1 }}>
+              <span style={{ fontSize: 10, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', flexShrink: 0, width: 14, textAlign: 'right' }}>h{h.level}</span>
+              <span style={{
+                fontSize: 11, color: h.level === 1 ? '#18181b' : '#3f3f47',
+                fontFamily: 'var(--font-family-primary)', fontWeight: h.level === 1 ? 600 : 400,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4,
+              }} title={h.text}>{h.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ── Main panel ────────────────────────────────────────────────────── */
 const ContentScorePanel = ({
   plainText,
@@ -190,21 +202,29 @@ const ContentScorePanel = ({
   keyword,
   onAutoOptimize,
   isAutoOptimizing,
-  onResearchOutline,
   onInternalLinks,
-  aiVisibilitySummary,
-  onRunAiVisibility,
-  isRunningAiVisibility,
+  articleId,
+  cachedOutlines,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
   const [nlpOpen, setNlpOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
-  const [termSearch, setTermSearch] = useState('');
+  const [competitorOpen, setCompetitorOpen] = useState(false);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false);
+
+  // Keyword research state
+  const [keywords, setKeywords] = useState<any[]>([]);
+  const [isLoadingKeywords, setIsLoadingKeywords] = useState(false);
+  const [suggestedKeywords, setSuggestedKeywords] = useState<any[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [gapKeywords, setGapKeywords] = useState<any[]>([]);
 
   const paragraphCount = useMemo(() => {
     return plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
   }, [plainText]);
+
+  const scoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!scoreData?.terms) return;
@@ -213,28 +233,191 @@ const ContentScorePanel = ({
       current_count: countOccurrences(plainText, t.term),
     }));
     setTerms(updated);
-    const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-    setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword));
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword]);
+  }, [plainText, scoreData]);
+
+  useEffect(() => {
+    if (!scoreData?.terms) return;
+    if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
+    scoreTimerRef.current = setTimeout(() => {
+      scoreTimerRef.current = null;
+      const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
+      const kwCov = keywords.map((k: any) => ({ keyword: k.keyword, is_covered: k.is_covered }));
+      setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov));
+    }, 400);
+    return () => {
+      if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
+    };
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
-  const filteredTerms = useMemo(() => {
-    if (!termSearch) return terms;
-    return terms.filter((t) => t.term.toLowerCase().includes(termSearch.toLowerCase()));
-  }, [terms, termSearch]);
+  // Load competitors when section opens
+  useEffect(() => {
+    if (!competitorOpen) return;
+    if (competitors.length > 0) return; // already loaded
 
-  const wordsRange = scoreData ? `${(scoreData.words_min / 1000).toFixed(1)}K – ${(scoreData.words_max / 1000).toFixed(1)}K` : '–';
-  const headingsRange = scoreData ? `${scoreData.headings_min} – ${scoreData.headings_max}` : '–';
+    // Try cache first
+    if (cachedOutlines) {
+      try {
+        const parsed = JSON.parse(cachedOutlines);
+        const list: Competitor[] = Array.isArray(parsed) ? parsed : (parsed.competitors || []);
+        if (list.length > 0) { setCompetitors(list); return; }
+      } catch { /* fall through */ }
+    }
+
+    // Fetch from API
+    if (!keyword || !articleId) return;
+    setIsLoadingCompetitors(true);
+    fetch('/api/articles/competitor-outlines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword, language: 'pl', num: 5, articleId }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list: Competitor[] = Array.isArray(d) ? d : (d.competitors || []);
+        setCompetitors(list);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingCompetitors(false));
+  }, [competitorOpen, keyword, articleId, cachedOutlines]);
+
+  // Fetch keywords when NLP section opens
+  useEffect(() => {
+    if (!nlpOpen || !articleId) return;
+    setIsLoadingKeywords(true);
+    fetch(`/api/articles/${articleId}/keywords`)
+      .then(r => r.json())
+      .then(d => {
+        const kws = (d.keywords || []).map((k: any) => ({
+          ...k,
+          is_covered: !!k.is_covered,
+          opportunity_score: computeOpportunityScore({
+            gsc_position: k.gsc_position,
+            ads_monthly_volume: k.ads_monthly_volume,
+            ads_competition: k.ads_competition,
+            is_covered: !!k.is_covered,
+          }),
+        }));
+        setKeywords(kws);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingKeywords(false));
+  }, [nlpOpen, articleId]);
+
+  // Auto-enrich on first load if no keywords have ads_monthly_volume
+  useEffect(() => {
+    if (!nlpOpen || !articleId || keywords.length === 0) return;
+    const hasEnriched = keywords.some((k: any) => k.ads_monthly_volume != null);
+    if (!hasEnriched && plainText) {
+      fetch(`/api/articles/${articleId}/keywords/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keywords: keywords.map((k: any) => k.keyword),
+          targetKeyword: keyword,
+          plainText,
+        }),
+      }).then(r => r.json()).then(d => {
+        if (d.keywords) {
+          setKeywords(d.keywords.map((k: any) => ({
+            ...k,
+            is_covered: !!k.is_covered,
+            opportunity_score: computeOpportunityScore({
+              gsc_position: k.gsc_position,
+              ads_monthly_volume: k.ads_monthly_volume,
+              ads_competition: k.ads_competition,
+              is_covered: !!k.is_covered,
+            }),
+          })));
+        }
+      }).catch(() => {});
+    }
+  }, [nlpOpen, keywords.length]);
+
+  // Fetch gap keywords from competitor outlines
+  useEffect(() => {
+    if (!nlpOpen || !articleId) return;
+    fetch(`/api/articles/${articleId}/keywords/gap`)
+      .then(r => r.json())
+      .then(d => {
+        setGapKeywords((d.gapKeywords || []).map((g: any) => ({
+          keyword: g.keyword,
+          frequency: g.frequency,
+        })));
+      })
+      .catch(() => {});
+  }, [nlpOpen, articleId]);
+
+  const handleSuggest = async () => {
+    if (!articleId) return;
+    setIsSuggesting(true);
+    try {
+      const res = await fetch(`/api/articles/${articleId}/keywords/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetKeyword: keyword }),
+      });
+      const data = await res.json();
+      setSuggestedKeywords(data.suggestions || []);
+    } catch { /* ignore */ }
+    finally { setIsSuggesting(false); }
+  };
+
+  const handleAcceptSuggestion = async (kw: any) => {
+    setSuggestedKeywords(prev => prev.filter(k => k.keyword !== kw.keyword));
+    setKeywords(prev => [...prev, {
+      ...kw,
+      keyword: kw.keyword,
+      source: 'ads_suggestion',
+      is_covered: false,
+      ads_monthly_volume: kw.avgMonthlySearches || kw.ads_monthly_volume || 0,
+      ads_competition: kw.competition,
+      opportunity_score: computeOpportunityScore({ gsc_position: null, ads_monthly_volume: kw.avgMonthlySearches || kw.ads_monthly_volume || 0, ads_competition: kw.competition, is_covered: false }),
+    }]);
+    if (articleId) {
+      fetch(`/api/articles/${articleId}/keywords/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keywords: [kw.keyword],
+          targetKeyword: keyword,
+          plainText,
+        }),
+      }).catch(() => {});
+    }
+  };
+
+  const handleDismissSuggestion = (kw: any) => {
+    setSuggestedKeywords(prev => prev.filter(k => k.keyword !== kw.keyword));
+  };
+
+  const handleToggleCoverage = async (kw: any) => {
+    const newCovered = !kw.is_covered;
+    setKeywords(prev => prev.map(k => k.keyword === kw.keyword ? { ...k, is_covered: newCovered } : k));
+    if (kw.id && articleId) {
+      fetch(`/api/articles/${articleId}/keywords`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywordId: kw.id, is_covered: newCovered }),
+      }).catch(() => {});
+    }
+  };
+
+  const hasCompetitorData = (scoreData?.competitor_count ?? 0) > 0;
+  const competitorLabel = hasCompetitorData ? ` avg` : '';
+  const wordsRange = scoreData
+    ? `${(scoreData.words_min / 1000).toFixed(1)}K – ${(scoreData.words_max / 1000).toFixed(1)}K${competitorLabel}`
+    : '–';
+  const headingsRange = scoreData
+    ? `${scoreData.headings_min} – ${scoreData.headings_max}${competitorLabel}`
+    : '–';
   const parasMin = scoreData?.paragraphs_min ?? Math.round((scoreData?.headings_min || 10) * 2.5);
   const parasMax = scoreData?.paragraphs_max ?? Math.round((scoreData?.headings_max || 20) * 3);
-  const parasRange = `${parasMin}+`;
+  const parasRange = `${parasMin} – ${parasMax}${competitorLabel}`;
 
   const avgScore = score;
   const topScore = Math.min(score + 3, 100);
-  const aiScore = computeAiSearchScore(aiVisibilitySummary);
-  const aiCovered = aiVisibilitySummary?.prompts_cited ?? 0;
-  const aiTotal = aiVisibilitySummary?.prompts_total ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
@@ -282,137 +465,98 @@ const ContentScorePanel = ({
         <MetricCol label="Paragraphs" current={paragraphCount} range={parasRange} />
       </div>
 
+      {/* ── Auto-Optimize button (pinned above sections) ── */}
+      <div style={{ padding: '0 16px 12px', borderTop: '1px solid #f4f4f5', paddingTop: 12 }}>
+        <button
+          onClick={isAutoOptimizing ? undefined : onAutoOptimize}
+          disabled={isAutoOptimizing}
+          style={{
+            width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
+            background: '#18181b', color: '#fff', border: 'none',
+            cursor: isAutoOptimizing ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-family-primary)',
+            transition: 'background 0.15s',
+            opacity: isAutoOptimizing ? 0.7 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+          onMouseEnter={(e) => { if (!isAutoOptimizing) e.currentTarget.style.background = '#630de3'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
+        >
+          {isAutoOptimizing ? (
+            <>
+              <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              Optimizing…
+            </>
+          ) : 'Auto-Optimize'}
+        </button>
+      </div>
+
       {/* ── Scrollable action area ── */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
         className="styled-scrollbar">
 
-        <ActionRow num={1} label="Research & Create Outline" onClick={onResearchOutline} />
-
-        {/* #2 Write & Optimize — expandable, shows NLP terms */}
+        {/* #1 Competitors — expandable */}
         <div>
-          <button
-            onClick={() => setNlpOpen((v) => !v)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 16px', background: 'transparent',
-              border: 'none', borderTop: '1px solid #f4f4f5', cursor: 'pointer',
-              fontFamily: 'var(--font-family-primary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 400, color: '#9f9fa9' }}>#2</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>Write & Optimize</span>
-            </div>
-            <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor"
-              style={{ color: '#9f9fa9', flexShrink: 0, transform: nlpOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
-              <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-            </svg>
-          </button>
-
-          {/* SEO / AI Search mini cards — always visible */}
-          <div style={{ padding: '0 16px 12px', display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1, background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '12px 14px' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)', marginBottom: 6 }}>SEO</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? '#1ab25e' : '#d70028'} />
-                <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{coveredCount}/{terms.length}</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAiOpen((v) => !v)}
-              style={{ flex: 1, background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '12px 14px', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)', marginBottom: 6 }}>AI Search</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CircleProgress value={aiCovered} max={Math.max(aiTotal, 1)} color={aiScore >= 60 ? '#1ab25e' : '#efa00d'} />
-                <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{aiCovered}/{aiTotal}</span>
-              </div>
-            </button>
-          </div>
-
-          {/* Auto-Optimize — always visible */}
-          {aiOpen && (
-            <AiSearchPanel
-              summary={aiVisibilitySummary}
-              onRun={onRunAiVisibility}
-              running={isRunningAiVisibility}
-            />
-          )}
-
-          <div style={{ padding: '0 16px 12px' }}>
-            <button
-              onClick={isAutoOptimizing ? undefined : onAutoOptimize}
-              disabled={isAutoOptimizing}
-              style={{
-                width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
-                background: '#18181b', color: '#fff', border: 'none',
-                cursor: isAutoOptimizing ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-family-primary)',
-                transition: 'background 0.15s',
-                opacity: isAutoOptimizing ? 0.7 : 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-              onMouseEnter={(e) => { if (!isAutoOptimizing) e.currentTarget.style.background = '#630de3'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
-            >
-              {isAutoOptimizing ? (
-                <>
-                  <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                  Optimizing…
-                </>
-              ) : 'Auto-Optimize'}
-            </button>
-          </div>
-
-          {nlpOpen && (
-            <div style={{ padding: '0 16px 16px' }}>
-              {/* NLP Terms search */}
-              <div style={{ position: 'relative', marginBottom: 10 }}>
-                <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search terms"
-                  value={termSearch}
-                  onChange={(e) => setTermSearch(e.target.value)}
-                  style={{ width: '100%', padding: '6px 10px 6px 28px', fontSize: 13, border: '1px solid #e4e4e7', borderRadius: 6, outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box', fontFamily: 'var(--font-family-primary)' }}
-                />
-              </div>
-
-              {/* Terms list */}
-              {filteredTerms.length === 0 ? (
-                <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', padding: '12px 0', fontStyle: 'italic', fontFamily: 'var(--font-family-primary)' }}>
-                  {terms.length === 0 ? 'No NLP terms available.' : 'No terms match.'}
+          <SectionRow
+            num={1} label="Competitors" open={competitorOpen}
+            onToggle={() => setCompetitorOpen((v) => !v)}
+            badge={competitors.length > 0 ? (
+              <span style={{
+                fontSize: 10, color: '#9f9fa9', background: '#f4f4f5',
+                borderRadius: 20, padding: '1px 6px', fontFamily: 'var(--font-family-primary)',
+              }}>{competitors.length}</span>
+            ) : undefined}
+          />
+          {competitorOpen && (
+            <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {isLoadingCompetitors ? (
+                [1, 2, 3].map((i) => (
+                  <div key={i} style={{ border: '1px solid #f4f4f5', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8 }}>
+                    <div style={{ width: 14, height: 14, borderRadius: 2, background: '#ebebed', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ width: '65%', height: 11, borderRadius: 3, background: '#ebebed', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
+                      <div style={{ width: '40%', height: 9, borderRadius: 3, background: '#ebebed', marginTop: 5, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
+                    </div>
+                  </div>
+                ))
+              ) : competitors.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#9f9fa9', textAlign: 'center', padding: '10px 0', fontFamily: 'var(--font-family-primary)', fontStyle: 'italic' }}>
+                  No competitor data yet. Re-run deep analysis.
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {filteredTerms.map((t) => {
-                    const current = t.current_count ?? 0;
-                    const target = t.target_count;
-                    const min = Math.max(1, Math.round(target * 0.7));
-                    const max = Math.round(target * 1.5);
-                    const covered = current >= min && current <= max;
-                    const over = current > max;
-                    const zero = current === 0;
-                    const chip = covered
-                      ? { bg: '#f0fdf4', text: '#15803d', metaText: '#16a34a' }
-                      : over
-                        ? { bg: '#fefce8', text: '#92400e', metaText: '#d97706' }
-                        : zero
-                          ? { bg: '#fff1f2', text: '#9f1239', metaText: '#dc2626' }
-                          : { bg: '#fefce8', text: '#92400e', metaText: '#d97706' };
-                    return (
-                      <div key={t.term} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 12px', borderRadius: 999, background: chip.bg, gap: 6 }}>
-                        <span style={{ fontSize: 12, color: chip.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, fontFamily: 'var(--font-family-primary)' }} title={t.term}>{t.term}</span>
-                        <span style={{ fontSize: 11, color: chip.metaText, flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>{current}/{min}–{max}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                competitors.map((comp, i) => (
+                  <CompetitorCard key={comp.url + i} competitor={comp} defaultOpen={i === 0} />
+                ))
               )}
             </div>
+          )}
+        </div>
+
+        {/* #2 Keywords & Terms — expandable */}
+        <div>
+          <SectionRow num={2} label="Keywords & Terms" open={nlpOpen} onToggle={() => setNlpOpen((v) => !v)} />
+
+          {nlpOpen && (
+            <>
+              {/* NLP coverage card — inside the section */}
+              <div style={{ padding: '0 16px 8px' }}>
+                <div style={{ background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? '#1ab25e' : '#d70028'} />
+                  <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>NLP terms: {coveredCount}/{terms.length} covered</span>
+                </div>
+              </div>
+            <KeywordResearchSection
+              keywords={keywords}
+              isLoading={isLoadingKeywords}
+              onSuggest={handleSuggest}
+              isSuggesting={isSuggesting}
+              suggestedKeywords={suggestedKeywords}
+              onAcceptSuggestion={handleAcceptSuggestion}
+              onDismissSuggestion={handleDismissSuggestion}
+              onToggleCoverage={handleToggleCoverage}
+              gapKeywords={gapKeywords}
+            />
+            </>
           )}
         </div>
 

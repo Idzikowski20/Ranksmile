@@ -13,6 +13,25 @@ type MigrationPostResponse = {
    error?: string
 }
 
+function getSequelizeForMigrations(): Sequelize {
+   const DATABASE_URL = process.env.DATABASE_URL;
+   if (DATABASE_URL) {
+      return new Sequelize(DATABASE_URL, {
+         dialect: 'postgres',
+         dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },
+         logging: false,
+      });
+   }
+   // eslint-disable-next-line @typescript-eslint/no-var-requires
+   const sqlite3 = require('sqlite3');
+   return new Sequelize({
+      dialect: 'sqlite',
+      dialectModule: sqlite3,
+      storage: './data/database.sqlite',
+      logging: false,
+   });
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized === 'authorized' && req.method === 'GET') {
@@ -26,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 const getMigrationStatus = async (req: NextApiRequest, res: NextApiResponse<MigrationGetResponse>) => {
-   const sequelize = new Sequelize({ dialect: 'sqlite', storage: './data/database.sqlite', logging: false });
+   const sequelize = getSequelizeForMigrations();
    const umzug = new Umzug({
       migrations: { glob: 'database/migrations/*.js' },
       context: sequelize.getQueryInterface(),
@@ -34,12 +53,11 @@ const getMigrationStatus = async (req: NextApiRequest, res: NextApiResponse<Migr
       logger: undefined,
    });
    const migrations = await umzug.pending();
-   // console.log('migrations :', migrations);
    return res.status(200).json({ hasMigrations: migrations.length > 0 });
 };
 
 const migrateDatabase = async (req: NextApiRequest, res: NextApiResponse<MigrationPostResponse>) => {
-   const sequelize = new Sequelize({ dialect: 'sqlite', storage: './data/database.sqlite', logging: false });
+   const sequelize = getSequelizeForMigrations();
    const umzug = new Umzug({
       migrations: { glob: 'database/migrations/*.js' },
       context: sequelize.getQueryInterface(),

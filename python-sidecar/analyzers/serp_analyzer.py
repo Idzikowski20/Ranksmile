@@ -2,6 +2,7 @@
 SERP analyzer: fetches top results, scrapes competitor pages, and extracts
 SEO terms from competitor content.
 """
+import asyncio
 import os
 import re
 import unicodedata
@@ -11,6 +12,32 @@ import httpx
 import numpy as np
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+
+# ── SPA fallback: use Next.js headless browser endpoint for JS-rendered pages ──
+NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+
+
+async def _fetch_via_spa_fallback(url: str, plain_text: str) -> str | None:
+    """If plain-text content is thin (< 200 chars), retry via headless browser."""
+    if len(plain_text) >= 200:
+        return None  # Content is fine, no need for fallback
+
+    try:
+        async with httpx.AsyncClient(timeout=25) as client:
+            resp = await client.post(
+                f"{NEXTJS_URL}/api/render-page",
+                json={"url": url, "timeout": 15000},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("html"):
+                print(f"[serp_analyzer] SPA fallback success for {url} ({len(plain_text)} → {len(data['html'])} chars)")
+                return data["html"]
+    except Exception as exc:
+        print(f"[serp_analyzer] SPA fallback failed for {url}: {exc}")
+
+    return None
 
 
 POLISH_STOPWORDS = {
@@ -151,20 +178,31 @@ async def _fetch_serp_urls(keyword: str, language: str, num: int, api_key: str) 
 
 
 async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
-    texts = []
-    soups = []
+    async def _fetch_one(client: httpx.AsyncClient, url: str):
+        try:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html = response.text
+            # SPA fallback: if content looks thin, retry with headless browser
+            text_check = BeautifulSoup(html, "lxml").get_text(separator=" ", strip=True)
+            if len(text_check) < 200:
+                rendered = await _fetch_via_spa_fallback(url, text_check)
+                if rendered:
+                    html = rendered
+
+            soup = BeautifulSoup(html, "lxml")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                tag.decompose()
+            text = soup.get_text(separator=" ", strip=True)
+            return (text[:15000], soup)
+        except Exception as exc:
+            print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
+            return ("", None)
+
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        for url in urls:
-            try:
-                response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                soup = BeautifulSoup(response.text, "lxml")
-                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-                    tag.decompose()
-                text = soup.get_text(separator=" ", strip=True)
-                texts.append(text[:15000])
-                soups.append(soup)
-            except Exception as exc:
-                print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
+        results = await asyncio.gather(*(_fetch_one(client, url) for url in urls), return_exceptions=False)
+
+    texts = [r[0] for r in results if r[1] is not None]
+    soups = [r[1] for r in results if r[1] is not None]
     return texts, soups
 
 
@@ -244,13 +282,21 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
             "headings_min": 10,
             "headings_max": 25,
             "headings_target": 15,
+            "paragraphs_min": 10,
+            "paragraphs_max": 40,
+            "paragraphs_target": 20,
         }
 
     word_counts = [len(text.split()) for text in texts]
     if soups:
         heading_counts = [max(1, len(soup.select("h1,h2,h3,h4"))) for soup in soups]
+        paragraph_counts = [
+            max(1, len([p for p in soup.select("p") if len(p.get_text().split()) >= 3]))
+            for soup in soups
+        ]
     else:
         heading_counts = [max(5, wc // 150) for wc in word_counts]
+        paragraph_counts = [max(5, wc // 120) for wc in word_counts]
 
     return {
         "words_min": int(min(word_counts) * 0.85),
@@ -259,6 +305,9 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
         "headings_min": max(3, min(heading_counts)),
         "headings_max": max(8, max(heading_counts)),
         "headings_target": int(sum(heading_counts) / len(heading_counts)),
+        "paragraphs_min": max(5, min(paragraph_counts)),
+        "paragraphs_max": max(20, max(paragraph_counts)),
+        "paragraphs_target": int(sum(paragraph_counts) / len(paragraph_counts)),
     }
 
 
@@ -283,31 +332,59 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
     if not serper_key:
         return []
 
-    results, _ = await _fetch_serp_results(keyword, language, num, serper_key)
-    outlines = []
+    # Fetch more results than needed so we can skip thin/error pages
+    results, _ = await _fetch_serp_results(keyword, language, num * 2, serper_key)
+
+    async def _fetch_one(client: httpx.AsyncClient, result: dict, serp_position: int):
+        url = result["link"]
+        try:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html = response.text
+
+            # SPA fallback: if content is thin, retry with headless browser
+            text_check = BeautifulSoup(html, "lxml").get_text(" ", strip=True)
+            if len(text_check.split()) < 200:
+                rendered = await _fetch_via_spa_fallback(url, text_check)
+                if rendered:
+                    html = rendered
+
+            soup = BeautifulSoup(html, "lxml")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                tag.decompose()
+            text = soup.get_text(" ", strip=True)
+            word_count = len(text.split())
+
+            # Reject thin-content pages (JS-rendered SPAs, cookie walls, errors)
+            if word_count < 200:
+                print(f"[serp_analyzer] skipping thin page ({word_count} words): {url}")
+                return None
+
+            headings = [
+                {"level": int(tag.name[1]), "text": tag.get_text(" ", strip=True)}
+                for tag in soup.select("h1,h2,h3,h4")
+                if tag.get_text(" ", strip=True)
+            ]
+            heading_count = len(headings)
+            title_tag = soup.select_one("title")
+            return {
+                "url": url,
+                "domain": domain_from_url(url),
+                "title": title_tag.get_text(" ", strip=True) if title_tag else result.get("title", ""),
+                "serp_title": result.get("title", ""),
+                "snippet": result.get("snippet", ""),
+                "word_count": word_count,
+                "heading_count": heading_count,
+                "serp_position": serp_position,
+                "headings": headings[:60],
+            }
+        except Exception as exc:
+            print(f"[serp_analyzer] outline failed for {url}: {exc}")
+            return None
+
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        for result in results[:num]:
-            url = result["link"]
-            try:
-                response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                soup = BeautifulSoup(response.text, "lxml")
-                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-                    tag.decompose()
-                headings = [
-                    {"level": int(tag.name[1]), "text": tag.get_text(" ", strip=True)}
-                    for tag in soup.select("h1,h2,h3,h4")
-                    if tag.get_text(" ", strip=True)
-                ]
-                text = soup.get_text(" ", strip=True)
-                outlines.append({
-                    "url": url,
-                    "domain": domain_from_url(url),
-                    "title": soup.select_one("title").get_text(" ", strip=True) if soup.select_one("title") else result.get("title", ""),
-                    "serp_title": result.get("title", ""),
-                    "snippet": result.get("snippet", ""),
-                    "word_count": len(text.split()),
-                    "headings": headings[:60],
-                })
-            except Exception as exc:
-                print(f"[serp_analyzer] outline failed for {url}: {exc}")
-    return outlines
+        tasks = [_fetch_one(client, r, i + 1) for i, r in enumerate(results)]
+        all_outlines = await asyncio.gather(*tasks, return_exceptions=False)
+
+    # Filter thin/failed pages, keep top `num` by original SERP order
+    valid = [o for o in all_outlines if o is not None]
+    return valid[:num]

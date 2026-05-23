@@ -220,14 +220,16 @@ export const scrapeKeywordWithStrategy = async (
       pagesToScrape = [1]; // Basic: first page only
    }
 
+   const pageResults = await Promise.all(
+      pagesToScrape.map((pageNum) => {
+         const pagination: ScraperPagination = { start: (pageNum - 1) * PAGE_SIZE, num: PAGE_SIZE, page: pageNum };
+         return scrapeSinglePage(keyword, settings, scraperObj, pagination);
+      }),
+   );
    const allScrapedResults: SearchResult[] = [];
    let pageErrors = 0;
    let totalPagesAttempted = pagesToScrape.length;
-   for (const pageNum of pagesToScrape) {
-      const pagination: ScraperPagination = { start: (pageNum - 1) * PAGE_SIZE, num: PAGE_SIZE, page: pageNum };
-      // eslint-disable-next-line no-await-in-loop
-      const pageResult = await scrapeSinglePage(keyword, settings, scraperObj, pagination);
-      const errTag = pageResult.error ? ` (error: ${pageResult.error})` : '';
+   for (const pageResult of pageResults) {
       if (pageResult.error) { pageErrors += 1; }
       if (pageResult.results.length > 0) { allScrapedResults.push(...pageResult.results); }
    }

@@ -57,7 +57,7 @@ const DomainSubLayout = ({ domain, slug, section, children, actions, contentMaxW
                style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0 }}
                src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
             />
-            <Link href={`/domain/${slug}`} passHref>
+            <Link href={`/sites/${slug}`} passHref>
                <a style={BC_LINK}>{domain}</a>
             </Link>
             <ChevronRight />

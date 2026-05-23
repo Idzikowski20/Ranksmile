@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -163,20 +163,75 @@ const DOMAIN_SUB_NAV = [
    { key: 'activity-log', label: 'Activity Log', icon: <IcoActivityLog /> },
 ];
 
+const LS_KEY = 'serpbear_selected_domain';
+
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 
 const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: SidebarProps) => {
    const router = useRouter();
    const [toolsOpen, setToolsOpen] = useState(true);
-   const [domainNavOpen, setDomainNavOpen] = useState(true);
+   const [switcherOpen, setSwitcherOpen] = useState(false);
+   const switcherRef = useRef<HTMLDivElement>(null);
 
    const isActive = (path: string) => router.asPath === path;
    const isActivePrefix = (prefix: string) => router.asPath.startsWith(prefix);
 
-   // Detect active domain slug from router
-   const domainSlugMatch = router.asPath.match(/^\/domain\/([^/]+)/);
-   const activeDomainSlug = domainSlugMatch ? domainSlugMatch[1] : null;
-   const activeDomain = activeDomainSlug ? domains.find((d) => d.slug === activeDomainSlug) : null;
+   // Detect domain slug from current URL (e.g. /sites/[slug]/...)
+   const urlSlugMatch = router.asPath.match(/^\/(?:domain|sites)\/([^/?#]+)/);
+   const urlSlug = urlSlugMatch ? urlSlugMatch[1] : null;
+
+   // selectedDomainSlug — initialized from localStorage, synced from URL when on a domain page
+   const [selectedDomainSlug, setSelectedDomainSlug] = useState<string | null>(() => {
+      if (typeof window !== 'undefined') {
+         return localStorage.getItem(LS_KEY) || null;
+      }
+      return null;
+   });
+
+   // When the URL points to a specific domain, sync it as selected + persist
+   useEffect(() => {
+      if (urlSlug && urlSlug !== selectedDomainSlug) {
+         setSelectedDomainSlug(urlSlug);
+         localStorage.setItem(LS_KEY, urlSlug);
+      }
+   }, [urlSlug]);
+
+   // Fallback: if no selection yet but domains are loaded, pick the first one
+   useEffect(() => {
+      if (!selectedDomainSlug && domains.length > 0) {
+         const first = domains[0].slug;
+         setSelectedDomainSlug(first);
+         localStorage.setItem(LS_KEY, first);
+      }
+   }, [domains, selectedDomainSlug]);
+
+   // Close popover on outside click
+   useEffect(() => {
+      if (!switcherOpen) return;
+      const handler = (e: MouseEvent) => {
+         if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+            setSwitcherOpen(false);
+         }
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+   }, [switcherOpen]);
+
+   const selectedDomain = selectedDomainSlug
+      ? domains.find((d) => d.slug === selectedDomainSlug) ?? null
+      : null;
+
+   const handleSelectDomain = (slug: string) => {
+      setSelectedDomainSlug(slug);
+      localStorage.setItem(LS_KEY, slug);
+      setSwitcherOpen(false);
+
+      // If currently on a domain sub-page, navigate to the same section on the new domain
+      const subPageMatch = router.asPath.match(/^\/(?:domain|sites)\/[^/?#]+\/([^/?#]+)/);
+      if (subPageMatch) {
+         router.push(`/sites/${slug}/${subPageMatch[1]}`);
+      }
+   };
 
    const topItems = [
       {
@@ -195,7 +250,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
          href: '/sites',
          label: 'Sites',
          icon: <IcoSites />,
-         active: isActivePrefix('/sites') || isActivePrefix('/domain/'),
+         active: isActive('/sites'),
       },
    ];
 
@@ -214,6 +269,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
             .sidebar-nav-item:hover .sidebar-nav-bg { opacity: 1 !important; }
             .sidebar-nav-item:hover { color: #ffffff !important; }
             .sidebar-nav-item[data-active="true"] .sidebar-nav-bg { opacity: 1 !important; }
+            .domain-switcher-row:hover { background: rgba(255,255,255,0.07) !important; }
          ` }} />
 
          <div
@@ -241,74 +297,143 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                ))}
             </nav>
 
-            {/* Domain sub-nav — visible when on a domain page */}
-            {activeDomainSlug && (
-               <div style={{ padding: '0 8px' }}>
-                  {/* Domain header button */}
-                  <button
-                     type="button"
-                     onClick={() => setDomainNavOpen((v) => !v)}
-                     style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        width: '100%',
-                        padding: '6px 8px',
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        borderRadius: '0.5rem',
-                        color: 'rgba(255,255,255,0.9)',
-                        marginTop: '4px',
-                     }}
-                  >
-                     <img
-                        alt=""
-                        style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0 }}
-                        src={`https://www.google.com/s2/favicons?domain=${activeDomain?.domain || activeDomainSlug.replace(/_/g, '-').replace(/-/g, '.')}&sz=32`}
-                     />
-                     <span style={{ fontSize: '0.8125rem', fontWeight: 600, flexGrow: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {activeDomain?.domain || activeDomainSlug}
-                     </span>
-                     <svg
-                        viewBox="0 0 24 24" width="14" height="14"
-                        style={{ flexShrink: 0, color: 'rgba(255,255,255,0.4)', transition: 'transform 200ms', transform: domainNavOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+            {/* Domain section — always visible when domains exist */}
+            {(selectedDomainSlug || domains.length > 0) && (
+               <div style={{ padding: '4px 8px 0' }}>
+                  {/* Domain switcher button */}
+                  <div ref={switcherRef} style={{ position: 'relative' }}>
+                     <button
+                        type="button"
+                        onClick={() => setSwitcherOpen((v) => !v)}
+                        style={{
+                           display: 'flex',
+                           alignItems: 'center',
+                           gap: '0.5rem',
+                           width: '100%',
+                           padding: '6px 8px',
+                           border: 'none',
+                           background: switcherOpen ? 'rgba(255,255,255,0.07)' : 'transparent',
+                           cursor: 'pointer',
+                           borderRadius: '0.5rem',
+                           color: 'rgba(255,255,255,0.9)',
+                           transition: 'background 150ms',
+                        }}
+                        className="domain-switcher-row"
                      >
-                        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
-                     </svg>
-                  </button>
-                  {/* Sub-items */}
-                  <div style={{ overflow: 'hidden', maxHeight: domainNavOpen ? '400px' : '0', transition: 'max-height 200ms ease-out' }}>
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', paddingLeft: '8px' }}>
-                        {DOMAIN_SUB_NAV.map((item) => {
-                           const href = `/domain/${activeDomainSlug}/${item.key}`;
-                           const active = router.asPath === href || router.asPath.startsWith(href + '?');
-                           return (
-                              <Link key={item.key} href={href} passHref>
-                                 <a
+                        {/* Favicon */}
+                        <img
+                           alt=""
+                           style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0 }}
+                           src={`https://www.google.com/s2/favicons?domain=${selectedDomain?.domain || (selectedDomainSlug || '').replace(/_/g, '-').replace(/-/g, '.')}&sz=32`}
+                        />
+                        {/* Domain name */}
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, flexGrow: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                           {selectedDomain?.domain || selectedDomainSlug}
+                        </span>
+                        {/* Chevron — rotates when open */}
+                        <svg
+                           viewBox="0 0 24 24" width="14" height="14"
+                           style={{ flexShrink: 0, color: 'rgba(255,255,255,0.4)', transition: 'transform 200ms', transform: switcherOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        >
+                           <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
+                        </svg>
+                     </button>
+
+                     {/* Domain switcher popover */}
+                     {switcherOpen && (
+                        <div
+                           style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 4px)',
+                              left: 0,
+                              right: 0,
+                              zIndex: 200,
+                              background: '#1C1C20',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: 10,
+                              boxShadow: '0px 16px 40px rgba(0,0,0,0.5)',
+                              overflow: 'hidden',
+                              animation: 'growOut 0.15s cubic-bezier(0.16,1,0.3,1)',
+                              transformOrigin: 'top center',
+                           }}
+                        >
+                           {domains.length === 0 ? (
+                              <div style={{ padding: '10px 12px', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-family-primary)' }}>
+                                 No domains added yet
+                              </div>
+                           ) : domains.map((d) => {
+                              const isSelected = d.slug === selectedDomainSlug;
+                              return (
+                                 <button
+                                    key={d.slug}
+                                    type="button"
+                                    onClick={() => handleSelectDomain(d.slug)}
                                     style={{
                                        display: 'flex',
                                        alignItems: 'center',
-                                       gap: '0.5rem',
-                                       padding: '5px 8px',
-                                       borderRadius: '0.375rem',
-                                       fontSize: '0.8125rem',
-                                       fontWeight: active ? 600 : 400,
-                                       textDecoration: 'none',
-                                       color: active ? '#ffffff' : 'rgba(255,255,255,0.55)',
-                                       background: active ? '#2F2F34' : 'transparent',
-                                       transition: 'color 120ms, background 120ms',
+                                       gap: 8,
+                                       width: '100%',
+                                       padding: '8px 12px',
+                                       border: 'none',
+                                       background: isSelected ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                       cursor: 'pointer',
+                                       color: isSelected ? '#fff' : 'rgba(255,255,255,0.7)',
+                                       fontSize: 13,
+                                       fontWeight: isSelected ? 600 : 400,
+                                       fontFamily: 'var(--font-family-primary)',
+                                       textAlign: 'left',
+                                       transition: 'background 100ms',
                                     }}
-                                    onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'; } }}
-                                    onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
+                                    className="domain-switcher-row"
                                  >
-                                    {item.icon}
-                                    <span>{item.label}</span>
-                                 </a>
-                              </Link>
-                           );
-                        })}
-                     </div>
+                                    <img
+                                       alt=""
+                                       style={{ width: 14, height: 14, borderRadius: 2, flexShrink: 0 }}
+                                       src={`https://www.google.com/s2/favicons?domain=${d.domain}&sz=32`}
+                                    />
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.domain}</span>
+                                    {isSelected && (
+                                       <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" style={{ flexShrink: 0, color: '#783AFB' }}>
+                                          <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
+                                       </svg>
+                                    )}
+                                 </button>
+                              );
+                           })}
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Sub-nav items — always visible */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', paddingLeft: '8px', marginTop: 2 }}>
+                     {DOMAIN_SUB_NAV.map((item) => {
+                        const href = `/sites/${selectedDomainSlug}/${item.key}`;
+                        const active = router.asPath === href || router.asPath.startsWith(href + '?');
+                        return (
+                           <Link key={item.key} href={href} passHref>
+                              <a
+                                 style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '5px 8px',
+                                    borderRadius: '0.375rem',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: active ? 600 : 400,
+                                    textDecoration: 'none',
+                                    color: active ? '#ffffff' : 'rgba(255,255,255,0.55)',
+                                    background: active ? '#2F2F34' : 'transparent',
+                                    transition: 'color 120ms, background 120ms',
+                                 }}
+                                 onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'; } }}
+                                 onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
+                              >
+                                 {item.icon}
+                                 <span>{item.label}</span>
+                              </a>
+                           </Link>
+                        );
+                     })}
                   </div>
                </div>
             )}

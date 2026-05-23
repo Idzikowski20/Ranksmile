@@ -23,6 +23,8 @@ interface Props {
   /** Called with suggestions to insert; returns per-URL results */
   onInsertLinks: (links: Array<{ anchorText: string; url: string }>) => InsertResult[];
   onAiActivity?: (active: boolean) => void;
+  articleKeywords?: string[];
+  internalArticles?: Array<{ id: number; url: string }>;
 }
 
 const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'dark' | 'ghost' }> = ({
@@ -53,6 +55,7 @@ const Spinner = () => (
 
 const InternalLinksPanel: React.FC<Props> = ({
   articleId, keyword, plainText, domainBaseUrl, onClose, onInsertLinks, onAiActivity,
+  articleKeywords, internalArticles,
 }) => {
   const storageKey = `internal-links-${articleId}`;
 
@@ -72,8 +75,43 @@ const InternalLinksPanel: React.FC<Props> = ({
   const [checked, setChecked] = useState<Set<number>>(new Set(saved?.checked ?? []));
   const [results, setResults] = useState<InsertResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [isRecommending, setIsRecommending] = useState(false);
   const [cachedSuggestions, setCachedSuggestions] = useState<LinkSuggestion[] | null>(null);
+  const [sharedKeywordCounts, setSharedKeywordCounts] = useState<Record<string, number>>({});
+
+  // Compute shared keyword counts when insertion is done
+  useEffect(() => {
+    if (phase !== 'done' || !articleKeywords?.length || !internalArticles?.length) return;
+    const computeShared = async () => {
+      const counts: Record<string, number> = {};
+      const ourKws = new Set(articleKeywords.map(k => k.toLowerCase()));
+      const fetches = results
+        .filter(r => r.success)
+        .map(async (r) => {
+          try {
+            const pathname = new URL(r.url).pathname;
+            const matched = internalArticles.find(a => a.url === pathname || a.url.endsWith(pathname));
+            if (matched) {
+              const res = await fetch(`/api/articles/${matched.id}/keywords`);
+              const data = await res.json();
+              const linkedKws = (data.keywords || []).map((k: any) => k.keyword?.toLowerCase()).filter(Boolean);
+              const overlapping = linkedKws.filter((k: string) => ourKws.has(k)).length;
+              return { url: r.url, overlapping };
+            }
+          } catch { /* skip */ }
+          return null;
+        });
+      const results2 = await Promise.allSettled(fetches);
+      for (const r of results2) {
+        if (r.status === 'rejected') continue;
+        const item = r.value;
+        if (item) counts[item.url] = item.overlapping;
+      }
+      setSharedKeywordCounts(counts);
+    };
+    computeShared();
+  }, [phase, results, articleKeywords, internalArticles]);
 
   useEffect(() => {
     onAiActivity?.(phase === 'fetching' || phase === 'inserting');
@@ -105,6 +143,7 @@ const InternalLinksPanel: React.FC<Props> = ({
       if (data.error) throw new Error(data.error);
       const links: FetchedLink[] = data.links || [];
       setFetchedLinks(links);
+      setHint(data.hint || null);
       setChecked(new Set(links.map((_, i) => i))); // all pre-checked
       setPhase('selecting');
     } catch (err: any) {
@@ -206,7 +245,21 @@ const InternalLinksPanel: React.FC<Props> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0 }}>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            if (phase === 'selecting' || phase === 'done') {
+              setPhase('idle');
+              setFetchedLinks([]);
+              setChecked(new Set());
+              setResults([]);
+              setError(null);
+              setHint(null);
+              setCachedSuggestions(null);
+              setSharedKeywordCounts({});
+              try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+            } else {
+              onClose();
+            }
+          }}
           style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: '#f4f4f5', color: '#52525c', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
@@ -277,6 +330,11 @@ const InternalLinksPanel: React.FC<Props> = ({
             {fetchedLinks.length === 0 ? (
               <div style={{ padding: '40px 16px', textAlign: 'center', fontSize: 13, color: '#9f9fa9' }}>
                 No internal links found on that page.
+                {hint && (
+                  <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, fontSize: 12, color: '#92400e', lineHeight: '18px' }}>
+                    {hint}
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -380,6 +438,11 @@ const InternalLinksPanel: React.FC<Props> = ({
                 {r.success && r.anchorText && (
                   <span style={{ fontSize: 11, color: '#783afb', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.anchorText}>
                     &ldquo;{r.anchorText}&rdquo;
+                  </span>
+                )}
+                {r.success && sharedKeywordCounts[r.url] > 0 && (
+                  <span style={{ fontSize: 11, color: '#783afb', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>
+                    {sharedKeywordCounts[r.url]} shared KW
                   </span>
                 )}
               </div>

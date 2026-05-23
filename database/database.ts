@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize-typescript';
 import Domain from './models/domain';
 import Keyword from './models/keyword';
 import GscAccount from './models/gscAccount';
+import ArticleKeyword from './models/articleKeyword';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -19,7 +20,7 @@ if (DATABASE_URL) {
       },
       pool: { max: 5, min: 0, idle: 10000 },
       logging: false,
-      models: [Domain, Keyword, GscAccount],
+      models: [Domain, Keyword, GscAccount, ArticleKeyword],
    });
 } else {
    // Fallback SQLite (dev bez DATABASE_URL)
@@ -34,7 +35,7 @@ if (DATABASE_URL) {
       dialectModule: sqlite3,
       pool: { max: 5, min: 0, idle: 10000 },
       logging: false,
-      models: [Domain, Keyword, GscAccount],
+      models: [Domain, Keyword, GscAccount, ArticleKeyword],
       storage: './data/database.sqlite',
    });
 }
