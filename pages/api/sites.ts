@@ -7,14 +7,23 @@ import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../lib/gscAccounts';
+import { readLocalSCData } from '../../utils/searchConsole';
 
 type GSCSite = {
   siteUrl: string;
   permissionLevel: string;
 };
 
+type DomainStats = {
+  impressions: number;
+  clicks: number;
+  position: number;
+  chart: { date: string; clicks: number; impressions: number }[];
+};
+
 type SitesResponse = {
   sites?: GSCSite[];
+  domainStats?: Record<string, DomainStats>;
   error?: string;
 };
 
@@ -47,6 +56,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   const allSites: GSCSite[] = [];
   const errors: string[] = [];
+
+  // Fetch configured domains for chart data
+  const configuredDomains = userId
+    ? await Domain.findAll({ where: { userId } })
+    : [];
+  const domainStats: Record<string, DomainStats> = {};
+
+  for (const d of configuredDomains) {
+    const plain = d.get({ plain: true });
+    const scData = await readLocalSCData(plain.domain);
+    const statsArr = scData && scData.stats ? scData.stats : [];
+    // Take last 30 days of daily stats
+    const recentStats = statsArr.slice(-30);
+    domainStats[plain.domain] = {
+      impressions: plain.scImpressions || 0,
+      clicks: plain.scVisits || 0,
+      position: plain.scPosition ? Math.round(plain.scPosition) : 0,
+      chart: recentStats.map((s: any) => ({
+        date: s.date,
+        clicks: s.clicks || 0,
+        impressions: s.impressions || 0,
+      })),
+    };
+  }
 
   try {
     const userAccounts = userId
@@ -102,10 +135,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     if (allSites.length === 0 && errors.length > 0) {
       console.log('[SITES API] All attempts failed:', errors.join(' | '));
-      return res.status(200).json({ sites: [], error: 'Could not fetch sites from any GSC account. Check your Search Console integration.' });
+      return res.status(200).json({ sites: [], domainStats, error: 'Could not fetch sites from any GSC account. Check your Search Console integration.' });
     }
 
-    return res.status(200).json({ sites: allSites });
+    return res.status(200).json({ sites: allSites, domainStats });
   } catch (err: any) {
     console.log('[ERROR] Fetching GSC sites:', err?.message || err);
     return res.status(500).json({ error: 'Failed to fetch sites from Search Console.' });

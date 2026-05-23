@@ -14,6 +14,7 @@ import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { dedupeUsefulTerms } from '../../../lib/articleTerms';
 import { computeAiSearchScore, AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { renderPage } from '../../../utils/spaScraper';
 
 // Try plain HTTP fetch first (fast). Falls back to Puppeteer if the content
 // looks like a JS-rendered SPA (fewer than 200 words extracted from body).
@@ -26,50 +27,15 @@ async function fetchPlain(url: string): Promise<string> {
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },
-    // @ts-ignore — Node 18+ fetch supports signal+timeout via AbortSignal.timeout
-    signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
+    signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.text();
 }
 
 async function fetchWithPuppeteer(url: string): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const puppeteer = require('puppeteer-core');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const chromium = require('@sparticuz/chromium-min');
-
-  const candidates = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-  ];
-  let executablePath: string;
-  try {
-    executablePath = candidates.find((p: string) => {
-      try { require('fs').accessSync(p); return true; } catch { return false; }
-    }) || await chromium.executablePath();
-  } catch {
-    executablePath = await chromium.executablePath();
-  }
-
-  const browser = await puppeteer.launch({
-    executablePath,
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-  });
-
-  try {
-    const page = await browser.newPage();
-    await page.setUserAgent(FETCH_UA);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForSelector('p, article, h1', { timeout: 8000 }).catch(() => {});
-    return await page.content();
-  } finally {
-    await browser.close();
-  }
+  const rendered = await renderPage(url, 30_000);
+  return rendered.html;
 }
 
 // Smart fetch: plain HTTP first, Puppeteer if content looks JS-rendered
@@ -186,7 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { url, keywords = [], country = 'US', device = 'Desktop' } = req.body;
+  const { url, keywords = [], country = 'US', device = 'Desktop', articleId: existingArticleId, domainId: reqDomainId } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   // Set SSE headers
@@ -202,44 +168,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Write priming comment to force socket flush
   res.write(':ok\n\n');
 
-  // ── Create skeleton article immediately ─────────────────────────────
+  // ── Create or reuse article ─────────────────────────────────────────
   let articleId: number;
   let articleDomain = '';
   const articleIdSql = await getArticleIdSql();
-  try {
-    const [domains] = await db.query('SELECT "ID", domain FROM domain LIMIT 1', { replacements: [] });
-    const domainId = (domains as any[])[0]?.ID || 1;
-    articleDomain = (domains as any[])[0]?.domain || '';
 
-    const skeletonSlug = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
-    if (process.env.DATABASE_URL) {
-      const rows = await db.query<{ id: number }>(
-        `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
-         VALUES (?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         RETURNING ${articleIdSql} AS id`,
-        {
-          replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
-          type: QueryTypes.SELECT,
-        },
-      );
-      articleId = rows[0]?.id;
-    } else {
-      const [newArticleId] = await db.query(
-        `INSERT INTO articles (domain_id, title, slug, content, target_keyword, status, created_at, updated_at)
-         VALUES (?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        {
-          replacements: [domainId, url, skeletonSlug, (keywords as string[])[0] || ''],
-          type: QueryTypes.INSERT,
-        },
-      );
-      articleId = newArticleId as unknown as number;
-    }
-    if (!articleId) throw new Error('Failed to resolve inserted article id');
+  if (existingArticleId) {
+    // Reuse existing article — fetch its domain
+    articleId = existingArticleId;
+    const [rows] = await db.query(
+      `SELECT a.domain_id, d.domain FROM articles a LEFT JOIN domain d ON d."ID" = a.domain_id WHERE a.${articleIdSql} = ?`,
+      { replacements: [existingArticleId] },
+    );
+    const existing = (rows as any[])[0];
+    articleDomain = existing?.domain || '';
+    await db.query(`UPDATE articles SET status = 'analyzing', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`, { replacements: [articleId] });
     sse(res, 'created', { articleId });
-  } catch (err: any) {
-    console.error('[deep-analysis] Skeleton insert failed:', err.message);
-    sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
-    return res.end();
+  } else {
+    try {
+      let domainId: number;
+      let domain = '';
+      if (reqDomainId) {
+        const [domains] = await db.query('SELECT "ID", domain FROM domain WHERE "ID" = ?', { replacements: [reqDomainId] });
+        domainId = (domains as any[])[0]?.ID || 1;
+        domain = (domains as any[])[0]?.domain || '';
+      } else {
+        const [domains] = await db.query('SELECT "ID", domain FROM domain LIMIT 1', { replacements: [] });
+        domainId = (domains as any[])[0]?.ID || 1;
+        domain = (domains as any[])[0]?.domain || '';
+      }
+      articleDomain = domain;
+
+      const skeletonSlug = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
+      if (process.env.DATABASE_URL) {
+        const rows = await db.query<{ id: number }>(
+          `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           RETURNING ${articleIdSql} AS id`,
+          {
+            replacements: [domainId, url, skeletonSlug, url, (keywords as string[])[0] || ''],
+            type: QueryTypes.SELECT,
+          },
+        );
+        articleId = rows[0]?.id;
+      } else {
+        const [newArticleId] = await db.query(
+          `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, '', ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          {
+            replacements: [domainId, url, skeletonSlug, url, (keywords as string[])[0] || ''],
+            type: QueryTypes.INSERT,
+          },
+        );
+        articleId = newArticleId as unknown as number;
+      }
+      if (!articleId) throw new Error('Failed to resolve inserted article id');
+      sse(res, 'created', { articleId });
+    } catch (err: any) {
+      console.error('[deep-analysis] Skeleton insert failed:', err.message);
+      sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
+      return res.end();
+    }
   }
 
   // Helper to update article status/progress — non-fatal if fails
@@ -419,6 +408,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sse(res, 'progress', { step: 'serp', status: 'running' });
     let serpCompetitors: any[] = [];
     let serpPaaQuestions: string[] = [];
+    // Competitor-derived targets (null = no data, fall back to local estimates in Step 6)
+    let serpWordsTarget: number | null = null;
+    let serpWordsMin: number | null = null;
+    let serpWordsMax: number | null = null;
+    let serpHeadingsTarget: number | null = null;
+    let serpHeadingsMin: number | null = null;
+    let serpHeadingsMax: number | null = null;
+    let serpParagraphsTarget: number | null = null;
+    let serpParagraphsMin: number | null = null;
+    let serpParagraphsMax: number | null = null;
     try {
       const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
       const axios = require('axios');
@@ -428,6 +427,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, { timeout: 30000 });
       serpCompetitors = Array.isArray(serpRes.data?.competitors) ? serpRes.data.competitors.slice(0, 5) : [];
       serpPaaQuestions = Array.isArray(serpRes.data?.paa_questions) ? serpRes.data.paa_questions : [];
+      // Capture competitor-derived structural targets
+      if (serpRes.data?.words_target) {
+        serpWordsTarget = serpRes.data.words_target;
+        serpWordsMin = serpRes.data.words_min ?? null;
+        serpWordsMax = serpRes.data.words_max ?? null;
+        serpHeadingsTarget = serpRes.data.headings_target ?? null;
+        serpHeadingsMin = serpRes.data.headings_min ?? null;
+        serpHeadingsMax = serpRes.data.headings_max ?? null;
+        serpParagraphsTarget = serpRes.data.paragraphs_target ?? null;
+        serpParagraphsMin = serpRes.data.paragraphs_min ?? null;
+        serpParagraphsMax = serpRes.data.paragraphs_max ?? null;
+      }
       if (serpRes.data?.terms?.length) {
         // Merge SERP terms into our NLP terms (avoiding duplicates)
         const existingTerms = new Set(allTerms.map((t) => t.term.toLowerCase()));
@@ -442,28 +453,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     sse(res, 'progress', { step: 'serp', status: 'done' });
 
+    // ── Background: competitor outlines cache (runs during Steps 6-9) ──
+    const competitorOutlinesPromise = (async () => {
+      const kw = (keywords as string[])[0] || title;
+      const lang = country === 'PL' ? 'pl' : 'en';
+      const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+      const axiosLib = require('axios');
+      const r = await axiosLib.post(
+        `${sidecarUrl}/competitor-outlines`,
+        { keyword: kw, language: lang, num: 5 },
+        { timeout: 60000 },
+      );
+      return r.data;
+    })().catch((err: any) => {
+      console.warn('[deep-analysis] competitor outlines cache failed:', err.message);
+      return null;
+    });
+
     // ── Step 6: Score data ────────────────────────────────────────
     sse(res, 'progress', { step: 'score', status: 'running' });
     const usefulTerms = dedupeUsefulTerms(allTerms).map((t) => ({
       ...t,
       current_count: countOccurrences(plainText, t.term),
     }));
-    const wordsTarget = Math.max(1000, Math.ceil(wordCount * 1.5));
-    const headingsTarget = Math.max(5, Math.ceil(headingTexts.length * 2.5));
-    const paragraphsTarget = Math.max(15, Math.ceil(paragraphCount * 2.5));
+    // Use competitor-derived targets when available; fall back to article-based estimates
+    const wordsTarget = serpWordsTarget ?? Math.max(1000, Math.ceil(wordCount * 1.5));
+    const headingsTarget = serpHeadingsTarget ?? Math.max(5, Math.ceil(headingTexts.length * 2.5));
+    const paragraphsTarget = serpParagraphsTarget ?? Math.max(15, Math.ceil(paragraphCount * 2.5));
     const scoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number } = {
       terms: usefulTerms,
       words_target: wordsTarget,
-      words_min: Math.max(600, Math.ceil(wordCount * 0.9)),
-      words_max: Math.max(2000, Math.ceil(wordCount * 2.5)),
+      words_min: serpWordsMin ?? Math.max(600, Math.ceil(wordCount * 0.9)),
+      words_max: serpWordsMax ?? Math.max(2000, Math.ceil(wordCount * 2.5)),
       headings_target: headingsTarget,
-      headings_min: Math.max(2, Math.ceil(headingTexts.length * 1.5)),
-      headings_max: Math.max(10, Math.ceil(headingsTarget * 1.5)),
+      headings_min: serpHeadingsMin ?? Math.max(2, Math.ceil(headingTexts.length * 1.5)),
+      headings_max: serpHeadingsMax ?? Math.max(10, Math.ceil(headingsTarget * 1.5)),
       paragraphs_target: paragraphsTarget,
-      paragraphs_min: Math.max(5, Math.ceil(paragraphCount * 1.5)),
-      paragraphs_max: Math.max(20, Math.ceil(paragraphsTarget * 1.5)),
+      paragraphs_min: serpParagraphsMin ?? Math.max(5, Math.ceil(paragraphCount * 1.5)),
+      paragraphs_max: serpParagraphsMax ?? Math.max(20, Math.ceil(paragraphsTarget * 1.5)),
       _heading_count: headingTexts.length,
       _paragraph_count: paragraphCount,
+      competitor_count: serpWordsTarget !== null ? serpCompetitors.length : 0,
       ...(serpPaaQuestions.length ? { paa_questions: serpPaaQuestions } : {}),
     };
     scoreData._computed_score = computeContentScore(
@@ -523,11 +553,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ── Step 8: Save — finalize article ───────────────────────────
     sse(res, 'progress', { step: 'save', status: 'running' });
+    const computedScore = (scoreData as any)?._computed_score ?? 0;
     await db.query(
       `UPDATE articles SET
          content = ?,
-         target_keyword = ?,
+         target_keyword = COALESCE(NULLIF(?, ''), target_keyword),
          score_data = ?,
+         content_score = ?,
          featured_image = ?,
          status = 'draft',
          updated_at = CURRENT_TIMESTAMP
@@ -535,8 +567,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       {
         replacements: [
           contentHtml ?? '',
-          (keywords as string[])[0] || title || '',
+          (keywords as string[])[0] || '',
           JSON.stringify(scoreData) ?? '{}',
+          computedScore,
           featuredImageUrl ?? null,
           articleId,
         ],
@@ -563,7 +596,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           competitor_domains: competitorDomains,
           article_content: `${metaTitle || ''}\n${metaDescription || ''}\n${contentHtml || ''}`,
         }),
-        signal: AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined,
+        signal: AbortSignal.timeout(60000),
       } as RequestInit);
 
       if (!sidecarRes.ok) throw new Error(await sidecarRes.text());
@@ -644,6 +677,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (aiErr: any) {
       console.warn('[deep-analysis] AI visibility skipped:', aiErr?.message);
       sse(res, 'progress', { step: 'ai_visibility', status: 'warning', message: aiErr?.message || 'AI visibility skipped' });
+    }
+
+    // ── Await competitor outlines + cache (non-fatal) ──────────────────
+    try {
+      const outlinesData = await competitorOutlinesPromise;
+      if (outlinesData?.competitors?.length) {
+        await db.query(
+          `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(outlinesData), articleId] },
+        );
+        console.log(`[deep-analysis] cached ${outlinesData.competitors.length} competitor outlines for article ${articleId}`);
+      }
+    } catch (e: any) {
+      console.warn('[deep-analysis] competitor outlines DB cache write failed:', e.message);
     }
 
     // ── Done! ─────────────────────────────────────────────────────

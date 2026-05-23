@@ -91,17 +91,24 @@ const safeReadJSON = async (filePath: string, fallback: any): Promise<any> => {
 };
 
 // Read scraper config from env vars
-const getScraperEnvConfig = () => ({
-   scraper_type: process.env.SCRAPER_TYPE || 'none',
-   scaping_api: process.env.SCRAPER_API_KEY || '',
-   proxy: process.env.SCRAPER_PROXY || '',
-   scrape_interval: process.env.SCRAPE_INTERVAL || 'daily',
-   scrape_delay: process.env.SCRAPE_DELAY || '0',
-   scrape_retry: process.env.SCRAPE_RETRY === 'true',
-   scrape_strategy: (process.env.SCRAPE_STRATEGY || 'basic') as SettingsType['scrape_strategy'],
-   scrape_pagination_limit: parseInt(process.env.SCRAPE_PAGINATION_LIMIT || '5', 10),
-   scrape_smart_full_fallback: process.env.SCRAPE_SMART_FULL_FALLBACK === 'true',
-});
+const getScraperEnvConfig = () => {
+   const scraper_type = process.env.SCRAPER_TYPE || 'none';
+   const scaping_api = process.env.SCRAPER_API_KEY
+      || (scraper_type === 'serper' ? process.env.SERPER_API_KEY : '')
+      || '';
+
+   return {
+      scraper_type,
+      scaping_api,
+      proxy: process.env.SCRAPER_PROXY || '',
+      scrape_interval: process.env.SCRAPE_INTERVAL || 'daily',
+      scrape_delay: process.env.SCRAPE_DELAY || '0',
+      scrape_retry: process.env.SCRAPE_RETRY === 'true',
+      scrape_strategy: (process.env.SCRAPE_STRATEGY || 'basic') as SettingsType['scrape_strategy'],
+      scrape_pagination_limit: parseInt(process.env.SCRAPE_PAGINATION_LIMIT || '5', 10),
+      scrape_smart_full_fallback: process.env.SCRAPE_SMART_FULL_FALLBACK === 'true',
+   };
+};
 
 export const getAppSettings = async () : Promise<SettingsType> => {
    const screenshotAPIKey = process.env.SCREENSHOT_API || '69408-serpbear';

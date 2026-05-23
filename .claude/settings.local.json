@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Skill(systematic-debugging)",
-      "Skill(systematic-debugging:*)"
+      "Skill(systematic-debugging:*)",
+      "Skill(frontend-design)",
+      "Skill(frontend-design:*)"
     ]
   }
 }

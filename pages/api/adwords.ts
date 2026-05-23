@@ -29,6 +29,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method === 'POST') {
       return validateAdwordsIntegration(req, res);
    }
+   if (req.method === 'DELETE') {
+      return disconnectGoogleAds(req, res);
+   }
    return res.status(502).json({ error: 'Unrecognized Route.' });
 }
 
@@ -115,6 +118,24 @@ const validateAdwordsIntegration = async (req: NextApiRequest, res: NextApiRespo
    } catch (error) {
       console.log('[ERROR] Validating Google Ads Integration: ', error);
       return res.status(400).json({ valid: false, error: errMsg });
+   }
+};
+
+/** Remove the stored Google Ads refresh token (disconnect). */
+const disconnectGoogleAds = async (_req: NextApiRequest, res: NextApiResponse) => {
+   try {
+      const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' }).catch(() => '{}');
+      const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
+      delete settings.adwords_refresh_token;
+      await writeFile(
+         `${process.cwd()}/data/settings.json`,
+         JSON.stringify(settings),
+         { encoding: 'utf-8' },
+      );
+      return res.status(200).json({ disconnected: true });
+   } catch (error) {
+      console.log('[ERROR] Disconnecting Google Ads:', error);
+      return res.status(400).json({ error: 'Failed to disconnect Google Ads' });
    }
 };
 

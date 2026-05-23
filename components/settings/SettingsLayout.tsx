@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import { Toaster } from 'react-hot-toast';
 import AppShell from '../common/AppShell';
 import Icon from '../common/Icon';
-import ScraperEnvInfo from './ScraperEnvInfo';
 import NotificationSettings from './NotificationSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
 import AdWordsSettings from './AdWordsSettings';
@@ -35,7 +34,7 @@ type SettingsError = {
 };
 
 const PAGE_ALIASES: Record<string, SettingsPageSlug> = {
-  scraper: 'general',
+  scraper: 'google_search_console',
   notification: 'people',
   searchconsole: 'google_search_console',
   adwords: 'google_ads',
@@ -77,6 +76,7 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     label: 'Integrations',
     items: [
       { slug: 'google_search_console', label: 'Search Console' },
+      { slug: 'google_ads', label: 'Google Ads' },
       { slug: 'wordpress', label: 'WordPress' },
       { slug: 'api', label: 'API' },
     ],
@@ -96,11 +96,12 @@ type SettingsLayoutProps = {
 
 export const normalizeSettingsPage = (page?: string): SettingsPageSlug => {
   if (!page) return 'google_search_console';
+  if (page === 'general') return 'google_search_console';
   if (PAGE_ALIASES[page]) return PAGE_ALIASES[page];
   if (Object.prototype.hasOwnProperty.call(PAGE_TITLES, page)) {
     return page as SettingsPageSlug;
   }
-  return 'general';
+  return 'google_search_console';
 };
 
 const SettingsLayout = ({ page }: SettingsLayoutProps) => {
@@ -171,9 +172,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     }
 
     updateMutate(settings);
-    if (appSettings?.settings === 'none' && settings.scraper_type !== 'none') {
-      window.location.reload();
-    }
   };
 
   const settingsSidebar = (
@@ -181,7 +179,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
       <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden">
         <div className="sticky top-0 z-[100] bg-[#09090B] px-[8px] py-[24px]">
           <Link href="/dashboard" passHref>
-            <a className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[14px] font-normal text-white/70 no-underline transition-colors hover:text-white">
+            <a
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[14px]
+              font-normal text-white/70 no-underline transition-colors hover:text-white"
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                 <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -227,16 +228,24 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
       );
     }
 
-    if (currentPage === 'general') {
-      return <ScraperEnvInfo settings={settings} />;
-    }
-
     if (currentPage === 'people') {
-      return <NotificationSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} />;
+      return (
+        <NotificationSettings
+          settings={settings}
+          updateSettings={updateSettings}
+          settingsError={settingsError}
+        />
+      );
     }
 
     if (currentPage === 'google_search_console') {
-      return <SearchConsoleSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} />;
+      return (
+        <SearchConsoleSettings
+          settings={settings}
+          updateSettings={updateSettings}
+          settingsError={settingsError}
+        />
+      );
     }
 
     if (currentPage === 'google_ads') {
@@ -304,7 +313,13 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
                     type="button"
                     onClick={performUpdate}
                     disabled={isUpdating}
-                    className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100 disabled:opacity-60"
+                    className="gap-sm focus-visible:outline-purple-40 relative inline-flex
+                    cursor-pointer items-center justify-center border-none font-sans
+                    font-semibold transition-[color,background-color,box-shadow,opacity]
+                    focus-visible:outline-2 focus-visible:outline-offset-2
+                    [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md
+                    bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100
+                    disabled:opacity-60"
                   >
                     {isUpdating && <Icon type="loading" size={16} />}
                     Update Settings

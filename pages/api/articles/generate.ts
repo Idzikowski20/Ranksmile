@@ -128,6 +128,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          articleId = newArticleId as unknown as number;
       }
 
+      // Auto-enrich keywords in background (fire-and-forget)
+      if (articleId) {
+         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+         fetch(`${baseUrl}/api/articles/${articleId}/keywords/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+               keywords: [keyword],
+               targetKeyword: keyword,
+               plainText: sidecarData.article_html?.replace(/<[^>]+>/g, ' ') || '',
+            }),
+         }).catch(() => {}); // fire-and-forget
+      }
+
       return res.status(200).json({
          articleId,
          ...sidecarData,

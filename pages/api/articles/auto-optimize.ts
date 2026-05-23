@@ -42,41 +42,63 @@ interface CompetitorSummary {
   serpTitle: string;
 }
 
+function parseCompetitorHtml(html: string, url: string): CompetitorSummary {
+  const $ = cheerio.load(html);
+  $('script, style, nav, footer, header, aside, .sidebar, .ad, .cookie-banner, noscript, iframe').remove();
+
+  const title = $('h1').first().text().trim()
+    || $('meta[property="og:title"]').attr('content')?.trim()
+    || $('title').text().trim()
+    || url;
+
+  const headings: string[] = [];
+  $('h2, h3').each((_, el) => {
+    const t = $(el).text().trim();
+    if (t && t.length > 2) headings.push(t);
+  });
+
+  const candidateSelectors = [
+    'article', '[role="main"]', 'main',
+    '.post-content', '.entry-content', '.article-content', '.article-body',
+    '.content-body', '.blog-content', '.post-body', '#content', '#main-content',
+  ];
+  let bestEl: any = $('body')[0];
+  let bestWc = 0;
+  for (const sel of candidateSelectors) {
+    $(sel).each((_, el) => {
+      const wc = $(el).text().replace(/\s+/g, ' ').trim().split(' ').length;
+      if (wc > bestWc) { bestWc = wc; bestEl = el; }
+    });
+  }
+  const bodyText = $(bestEl).text().replace(/\s+/g, ' ').trim();
+  const words = bodyText.split(/\s+/).filter(Boolean);
+  const intro = words.slice(0, 120).join(' ');
+
+  return { url, title, headings: headings.slice(0, 15), intro, wordCount: words.length, snippet: '', serpTitle: '' };
+}
+
 async function scrapeCompetitor(url: string): Promise<CompetitorSummary | null> {
   try {
     const html = await fetchPlain(url, 10000);
-    const $ = cheerio.load(html);
-    $('script, style, nav, footer, header, aside, .sidebar, .ad, .cookie-banner, noscript, iframe').remove();
+    const result = parseCompetitorHtml(html, url);
 
-    const title = $('h1').first().text().trim()
-      || $('meta[property="og:title"]').attr('content')?.trim()
-      || $('title').text().trim()
-      || url;
-
-    const headings: string[] = [];
-    $('h2, h3').each((_, el) => {
-      const t = $(el).text().trim();
-      if (t && t.length > 2) headings.push(t);
-    });
-
-    const candidateSelectors = [
-      'article', '[role="main"]', 'main',
-      '.post-content', '.entry-content', '.article-content', '.article-body',
-      '.content-body', '.blog-content', '.post-body', '#content', '#main-content',
-    ];
-    let bestEl: any = $('body')[0];
-    let bestWc = 0;
-    for (const sel of candidateSelectors) {
-      $(sel).each((_, el) => {
-        const wc = $(el).text().replace(/\s+/g, ' ').trim().split(' ').length;
-        if (wc > bestWc) { bestWc = wc; bestEl = el; }
-      });
+    // If cheerio found thin content (< 200 words), retry with Puppeteer for JS-rendered pages
+    if (result.wordCount < 200 || result.headings.length === 0) {
+      try {
+        const { renderPage } = await import('../../../utils/spaScraper');
+        console.log(`[auto-optimize] thin content (${result.wordCount} words), trying puppeteer for ${url}`);
+        const rendered = await renderPage(url, 15000);
+        const reParsed = parseCompetitorHtml(rendered.html, rendered.url);
+        if (reParsed.wordCount > result.wordCount) {
+          console.log(`[auto-optimize] puppeteer improved: ${result.wordCount} -> ${reParsed.wordCount} words`);
+          return reParsed;
+        }
+      } catch (err: any) {
+        console.warn('[auto-optimize] puppeteer fallback failed:', err.message);
+      }
     }
-    const bodyText = $(bestEl).text().replace(/\s+/g, ' ').trim();
-    const words = bodyText.split(/\s+/).filter(Boolean);
-    const intro = words.slice(0, 120).join(' ');
 
-    return { url, title, headings: headings.slice(0, 15), intro, wordCount: words.length, snippet: '', serpTitle: '' };
+    return result;
   } catch {
     return null;
   }
@@ -288,6 +310,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[auto-optimize] gap summary: ${missingTerms.length} missing terms, ${lowTerms.length} underused, wordGap=${wordGap}, headingGap=${headingGap}`);
     console.log(`[auto-optimize] sending to AI: ${wordCount} words, ${headingCount} headings, ${competitorBlock ? 'with' : 'no'} competitor data`);
 
+    // Build protected terms list for the humanizer pass
+    const protectedTerms = [...missingTerms, ...lowTerms.map((t) => t.term)];
+    const protectedTermsBlock = protectedTerms.length
+      ? `\n- USE THESE NLP TERMS VERBATIM — do not paraphrase, inflect, or substitute synonyms for: ${protectedTerms.map((t) => `"${t}"`).join(', ')}`
+      : '';
+
     const systemPrompt = `You are an expert SEO content optimizer, similar to Surfer SEO's Auto-Optimize feature.
 
 Your task: improve the provided HTML article to increase its content score by addressing the specific gaps listed below. Preserve the article's ORIGINAL MEANING, LANGUAGE, TONE and STRUCTURE.
@@ -296,12 +324,15 @@ STRICT RULES:
 - Write ONLY in the SAME LANGUAGE as the article (auto-detect — do NOT translate)
 - Preserve ALL existing headings, links (<a> tags), images (<img>), and lists
 - Do NOT remove or shorten any existing sentences — only ADD or EXPAND
-- Add missing NLP terms by weaving them naturally into existing or new sentences
+- Add missing NLP terms by weaving them naturally into existing or new sentences — use them in their EXACT written form, no inflection or synonyms
 - When adding headings: use H3 inside existing H2 sections only
-- Expand thin paragraphs (under 40 words) with relevant, factual supporting sentences
+- Ensure the target keyword "${keyword || ''}" appears verbatim in at least one H2 heading
+- Keep each paragraph between 40–80 words; split any paragraph that exceeds 100 words
+- If the article has no bullet or numbered list with ≥3 items, add one where appropriate
+- Add 2–3 external links to authoritative sources (Wikipedia, industry associations, .gov/.edu) as inline citations — use <a href="URL" target="_blank" rel="noopener noreferrer">anchor text</a>
 - Do NOT add image tags — leave image placement to the user
 - Do NOT change the meta title or meta description
-- Keep the human, expert tone — avoid AI-sounding filler phrases
+- Keep the human, expert tone — avoid AI-sounding filler phrases${protectedTermsBlock}
 
 ${gapBlock}${competitorBlock}${aiSearchBlock}
 
@@ -344,6 +375,10 @@ OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, 
     // ── Phase 2: Humanize ─────────────────────────────────────────────────
     sse(res, 'progress', { message: 'Humanizing content…' });
 
+    const humanizeProtectedBlock = protectedTerms.length
+      ? `\n- Do NOT change or paraphrase these exact strings — preserve them verbatim: ${protectedTerms.map((t) => `"${t}"`).join(', ')}`
+      : '';
+
     const humanizeSystemPrompt = `You are an expert content editor. Your job is to rewrite the article to sound authentically human — natural, confident, and engaging.
 
 RULES:
@@ -352,7 +387,7 @@ RULES:
 - Remove AI-sounding filler phrases ("It's worth noting that", "In today's world", "Furthermore", "In conclusion", "Delve into")
 - Vary sentence length — mix short punchy sentences with longer ones
 - Add concrete specifics where generic phrases exist
-- Keep every NLP keyword that was injected — do NOT remove them
+- Keep every NLP keyword that was injected — do NOT remove them${humanizeProtectedBlock}
 - Do NOT shorten the article — you may expand thin paragraphs slightly
 - Do NOT change meta title/description${brandVoiceBlock}
 
@@ -364,7 +399,7 @@ OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, 
       body: JSON.stringify({
         model: 'deepseek-chat',
         max_tokens: 32000,
-        temperature: 0.6,
+        temperature: 0.4,
         messages: [
           { role: 'system', content: humanizeSystemPrompt },
           { role: 'user', content: `Humanize this article:\n\n${optimized}` },

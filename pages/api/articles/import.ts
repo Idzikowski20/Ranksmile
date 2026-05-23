@@ -9,47 +9,25 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
 import { computeContentScore } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
+import { renderPage } from '../../../utils/spaScraper';
+
+async function fetchWithHttp(url: string): Promise<string> {
+   const res = await fetch(url, {
+      headers: {
+         'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+         'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
+      },
+      signal: AbortSignal.timeout(10000),
+   });
+   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+   const buf = await res.arrayBuffer();
+   return new TextDecoder('utf-8').decode(buf);
+}
 
 async function fetchWithPuppeteer(url: string): Promise<string> {
-   // eslint-disable-next-line @typescript-eslint/no-var-requires
-   const puppeteer = require('puppeteer-core');
-   // eslint-disable-next-line @typescript-eslint/no-var-requires
-   const chromium = require('@sparticuz/chromium-min');
-
-   let executablePath: string;
-   try {
-      // Try local Chrome/Chromium first (dev environment)
-      const { execSync } = require('child_process');
-      const candidates = [
-         'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-         'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-         '/usr/bin/google-chrome',
-         '/usr/bin/chromium-browser',
-         '/usr/bin/chromium',
-      ];
-      executablePath = candidates.find(p => {
-         try { require('fs').accessSync(p); return true; } catch { return false; }
-      }) || await chromium.executablePath();
-   } catch {
-      executablePath = await chromium.executablePath();
-   }
-
-   const browser = await puppeteer.launch({
-      executablePath,
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-   });
-
-   try {
-      const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-      // Wait for content to render
-      await page.waitForSelector('p, article, h1', { timeout: 8000 }).catch(() => {});
-      return await page.content();
-   } finally {
-      await browser.close();
-   }
+   const rendered = await renderPage(url, 30_000);
+   return rendered.html;
 }
 
 const STOP_WORDS = new Set([
@@ -129,15 +107,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
 
    try {
-      // Always use Puppeteer — handles both SPA (React/Vue/Vite) and regular HTML.
-      // Puppeteer renders JavaScript before returning HTML, just like a real browser.
-      console.log(`[import] Fetching with Puppeteer: ${url}`);
+      // Try plain HTTP first — cheaper, and paywalled sites (e.g. Piano/Onet) often include
+      // the full article in the raw server HTML before JS strips it for non-subscribers.
       let html = '';
       try {
-         html = await fetchWithPuppeteer(url);
-         console.log(`[import] Puppeteer fetched ${html.length} chars`);
-      } catch (fetchErr: any) {
-         return res.status(400).json({ error: `Could not fetch URL: ${fetchErr?.message || 'unknown'}` });
+         html = await fetchWithHttp(url);
+         const quickWc = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+         console.log(`[import] HTTP fetch: ${html.length} chars, ~${quickWc} words`);
+         if (quickWc < 300) {
+            console.log('[import] HTTP fetch too short, falling back to Puppeteer');
+            html = '';
+         }
+      } catch (e: any) {
+         console.log(`[import] HTTP fetch failed (${e?.message}), falling back to Puppeteer`);
+      }
+
+      // Fallback to Puppeteer for SPAs and sites requiring JS rendering
+      if (!html) {
+         console.log(`[import] Fetching with Puppeteer: ${url}`);
+         try {
+            html = await fetchWithPuppeteer(url);
+            console.log(`[import] Puppeteer fetched ${html.length} chars`);
+         } catch (fetchErr: any) {
+            return res.status(400).json({ error: `Could not fetch URL: ${fetchErr?.message || 'unknown'}` });
+         }
       }
 
       const $ = cheerio.load(html);
@@ -263,6 +256,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          }
       });
 
+      // Fallback: extract text from leaf <div> elements (e.g. sites using div.body-text instead of <p>)
+      if (contentParts.length <= 2) {
+         $body.find('div').each((_, el) => {
+            if (seen.has(el)) return;
+            // Skip container divs — only pick up leaf/near-leaf text divs
+            if ($(el).children('div, article, section, p').length > 0) return;
+            const text = $(el).text().replace(/\s+/g, ' ').trim();
+            const wc = text.split(/\s+/).filter(Boolean).length;
+            if (wc >= 8) {
+               $(el).find('*').each((__, child) => { seen.add(child); });
+               seen.add(el);
+               contentParts.push(`<p>${text}</p>`);
+            }
+         });
+      }
+
       console.log(`[import] Extracted ${contentParts.length} content parts, ${wordCount} words`);
 
       // Fallback: chunk plain text into paragraphs
@@ -365,6 +374,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             type: QueryTypes.INSERT,
          },
       );
+
+      // Auto-enrich keywords in background (fire-and-forget)
+      if (keywords.length > 0) {
+         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+         fetch(`${baseUrl}/api/articles/${articleId}/keywords/enrich`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+               keywords: keywords as string[],
+               targetKeyword: (keywords as string[])[0] || title,
+               plainText,
+            }),
+         }).catch(() => {}); // fire-and-forget
+      }
 
       return res.status(200).json({ articleId });
    } catch (error: any) {

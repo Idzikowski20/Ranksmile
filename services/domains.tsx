@@ -96,7 +96,7 @@ export function useAddDomain(onSuccess:Function) {
          toast(`${singleDomain ? newDomain[0].domain : `${newDomain.length} domains`} Added Successfully!`, { icon: '✔️' });
          onSuccess(false);
          if (singleDomain) {
-            router.push(`/domain/${newDomain[0].slug}`);
+            router.push(`/sites/${newDomain[0].slug}`);
          }
          queryClient.invalidateQueries(['domains']);
       },

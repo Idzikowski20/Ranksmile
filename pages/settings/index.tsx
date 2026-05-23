@@ -5,7 +5,7 @@ const SettingsIndex: NextPage = () => null;
 export const getServerSideProps: GetServerSideProps = async () => {
   return {
     redirect: {
-      destination: '/settings/general',
+      destination: '/settings/google_search_console',
       permanent: false,
     },
   };

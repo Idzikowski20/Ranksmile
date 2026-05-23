@@ -17,7 +17,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       },
     }));
    return (
-      <NeonAuthUIProvider authClient={authClient} redirectTo="/auth/sign-in" basePath="/auth">
+      <NeonAuthUIProvider authClient={authClient} redirectTo="/" basePath="/auth">
          <QueryClientProvider client={queryClient}>
             <Component {...pageProps} />
             <ReactQueryDevtools initialIsOpen={false} />

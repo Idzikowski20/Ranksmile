@@ -19,6 +19,11 @@ const nextConfig = {
       { source: '/content-editor/:path*', destination: '/articles/:path*' },
     ];
   },
+  async redirects() {
+    return [
+      { source: '/domain/:slug*', destination: '/sites/:slug*', permanent: true },
+    ];
+  },
   serverRuntimeConfig: {
     appURL: process.env.NEXT_PUBLIC_APP_URL || '',
   },

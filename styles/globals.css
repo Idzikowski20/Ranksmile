@@ -136,7 +136,7 @@ body {
 
 .app-shell {
    height: 100%;
-   min-height: 100vh;
+   min-height: 90vh;
    display: flex;
    flex-direction: column;
    background: var(--topbar-bg);
@@ -232,7 +232,8 @@ body {
 
 @media (min-width: 1024px) {
    .app-shell-body {
-      padding-bottom: 15px;
+      padding-right: 3px;
+      padding-bottom: 3px;
    }
 }
 
@@ -731,6 +732,24 @@ body {
    border-color: #E4E4E7 !important;
 }
 
+/* Dashboard Quick Start grid — 1 col on mobile, 2 on sm+ */
+@media (max-width: 639px) {
+   .dashboard-quickstart-grid {
+      grid-template-columns: repeat(1, 1fr) !important;
+   }
+}
+
+/* Quick start card hover */
+.quickstart-card:hover {
+   background: #F4F4F5 !important;
+   color: #783AFB !important;
+}
+
+/* Recently edited row hover */
+.recent-article-row:hover {
+   background: #FAFAFA;
+}
+
 /* Article list responsive columns */
 @media (min-width: 640px) {
    .article-word-count {
@@ -769,6 +788,11 @@ body {
 @keyframes growOut {
    0%   { opacity: 0; transform: scale(0.85); }
    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes skeletonPulse {
+   0%, 100% { opacity: 1; }
+   50%      { opacity: 0.4; }
 }
 
 @keyframes spin {
