@@ -1,6 +1,7 @@
-"""Stage 4: Semantic term extraction — mock, returns hardcoded data.
-Replaced by analyzers.semantic_terms in Phase 3."""
+"""Stage 4: Semantic term extraction via analyzers.semantic_terms."""
+import os
 from pipeline.contracts import AnalysisStage, StageContext
+from analyzers.semantic_terms import extract_semantic_terms
 
 
 class ExtractTermsStage(AnalysisStage):
@@ -8,12 +9,13 @@ class ExtractTermsStage(AnalysisStage):
     progress_weight = 0.20
 
     async def run(self, ctx: StageContext) -> dict:
-        await ctx.emit_progress(self, 50, "Extracting terms (mock)")
+        serp = ctx.get_state("scrape_serp") or {}
+        keyword = ctx.payload.get("keyword", "")
+        deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
+        competitor_texts = serp.get("_competitor_texts", [])
 
-        return {
-            "terms": [
-                {"term": "content marketing strategy", "target_count": 4, "type": "core"},
-                {"term": "keyword research tools", "target_count": 3, "type": "supporting"},
-                {"term": "SEO best practices", "target_count": 5, "type": "core"},
-            ]
-        }
+        await ctx.emit_progress(self, 20, f"Extracting semantic terms for: {keyword}")
+        terms = await extract_semantic_terms(keyword, competitor_texts, deepseek_key)
+        await ctx.emit_progress(self, 90, f"Extracted {len(terms)} terms")
+
+        return {"terms": terms}
