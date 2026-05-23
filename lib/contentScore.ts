@@ -26,6 +26,8 @@ export interface ScoreData {
    paragraphs_target?: number;
    paragraphs_min?: number;
    paragraphs_max?: number;
+   /** How many competitor pages were used to derive the targets (0 = local estimate) */
+   competitor_count?: number;
    /** People Also Ask questions fetched from Serper — used for FAQ coverage signal */
    paa_questions?: string[];
 }
@@ -128,12 +130,14 @@ function _externalLinks(html: string): number {
  * Title tag quality (max 7).
  * Checks <title> tag: keyword presence (+4) and optimal length 50-60 chars (+3, partial +1).
  * _kwPlacement already checks H1/H2 — this targets the <title> element specifically.
+ * Returns null when no <title> tag is present (e.g. article body HTML) so the slot
+ * is excluded from the denominator rather than permanently wasting 7 points.
  */
-function _titleQuality(html: string, keyword: string): number {
+function _titleQuality(html: string, keyword: string): number | null {
    const kw = keyword.toLowerCase().trim();
-   if (!kw) return 0;
+   if (!kw) return null;
    const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-   if (!match) return 0;
+   if (!match) return null; // no <title> → skip slot entirely
    const title = match[1].replace(/<[^>]+>/g, '').trim();
    let score = 0;
    if (title.toLowerCase().includes(kw)) score += 4;
@@ -146,12 +150,14 @@ function _titleQuality(html: string, keyword: string): number {
 /**
  * Meta description quality (max 5).
  * Keyword presence (+3) and optimal length 140-165 chars (+2, partial +1).
+ * Returns null when no <meta name="description"> tag is present so the slot
+ * is excluded from the denominator rather than permanently wasting 5 points.
  */
-function _metaDescQuality(html: string, keyword: string): number {
+function _metaDescQuality(html: string, keyword: string): number | null {
    const kw = keyword.toLowerCase().trim();
    const match = /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i.exec(html)
       || /<meta[^>]+content=["']([^"']*)[^>]+name=["']description["']/i.exec(html);
-   if (!match) return 0;
+   if (!match) return null; // no meta description → skip slot entirely
    const desc = match[1].trim();
    let score = 0;
    if (kw && desc.toLowerCase().includes(kw)) score += 3;
@@ -236,8 +242,10 @@ export function computeContentScore(
       add(_kwPlacement(html, keyword), 15);
       add(_readability(html), 10);
       add(_externalLinks(html), 5);
-      add(_titleQuality(html, keyword), 7);
-      add(_metaDescQuality(html, keyword), 5);
+      const titleScore = _titleQuality(html, keyword);
+      if (titleScore !== null) add(titleScore, 7);
+      const metaScore = _metaDescQuality(html, keyword);
+      if (metaScore !== null) add(metaScore, 5);
    }
 
    // ── HTML-only signals ──

@@ -13,6 +13,7 @@ interface KeywordItem {
   source?: string;
   opportunity_score?: number;
   frequency?: number;
+  avgMonthlySearches?: number | null;
 }
 
 interface Props {
@@ -153,9 +154,7 @@ const KeywordResearchSection: React.FC<Props> = ({
             {suggestedKeywords.map((kw, i) => (
               <div key={kw.keyword + i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: '#f3eeff', border: '1px solid #ddd6fe' }}>
                 <span style={{ fontSize: 12, color: '#18181b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
-                {(kw.ads_monthly_volume ?? kw.avgMonthlySearches) != null && (kw.ads_monthly_volume ?? kw.avgMonthlySearches) > 0 && (
-                  <span style={{ fontSize: 11, color: '#6d28d9', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>{(kw.ads_monthly_volume ?? (kw as any).avgMonthlySearches).toLocaleString()}/mo</span>
-                )}
+                {(() => { const vol = kw.ads_monthly_volume ?? kw.avgMonthlySearches; return vol != null && vol > 0 ? <span style={{ fontSize: 11, color: '#6d28d9', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>{vol.toLocaleString()}/mo</span> : null; })()}
                 <button
                   onClick={(e) => { e.stopPropagation(); onAcceptSuggestion?.(kw); }}
                   style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, border: 'none', background: '#783afb', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}

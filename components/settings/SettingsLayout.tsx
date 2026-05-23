@@ -76,6 +76,7 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     label: 'Integrations',
     items: [
       { slug: 'google_search_console', label: 'Search Console' },
+      { slug: 'google_ads', label: 'Google Ads' },
       { slug: 'wordpress', label: 'WordPress' },
       { slug: 'api', label: 'API' },
     ],

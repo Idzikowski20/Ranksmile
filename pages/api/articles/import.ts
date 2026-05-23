@@ -9,6 +9,7 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
 import { computeContentScore } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
+import { renderPage } from '../../../utils/spaScraper';
 
 async function fetchWithHttp(url: string): Promise<string> {
    const res = await fetch(url, {
@@ -25,45 +26,8 @@ async function fetchWithHttp(url: string): Promise<string> {
 }
 
 async function fetchWithPuppeteer(url: string): Promise<string> {
-   // eslint-disable-next-line @typescript-eslint/no-var-requires
-   const puppeteer = require('puppeteer-core');
-   // eslint-disable-next-line @typescript-eslint/no-var-requires
-   const chromium = require('@sparticuz/chromium-min');
-
-   let executablePath: string;
-   try {
-      // Try local Chrome/Chromium first (dev environment)
-      const { execSync } = require('child_process');
-      const candidates = [
-         'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-         'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-         '/usr/bin/google-chrome',
-         '/usr/bin/chromium-browser',
-         '/usr/bin/chromium',
-      ];
-      executablePath = candidates.find(p => {
-         try { require('fs').accessSync(p); return true; } catch { return false; }
-      }) || await chromium.executablePath();
-   } catch {
-      executablePath = await chromium.executablePath();
-   }
-
-   const browser = await puppeteer.launch({
-      executablePath,
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-   });
-
-   try {
-      const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-      // Wait for content to render
-      await page.waitForSelector('p, article, h1', { timeout: 8000 }).catch(() => {});
-      return await page.content();
-   } finally {
-      await browser.close();
-   }
+   const rendered = await renderPage(url, 30_000);
+   return rendered.html;
 }
 
 const STOP_WORDS = new Set([

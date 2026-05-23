@@ -8,12 +8,42 @@ Scrape'uje URL i zwraca pełny raport techniczny:
 - Image alt text audit
 - Issues list with severity and recommendations
 """
+import os
 import re
 import json
 from urllib.parse import urljoin, urlparse
 from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
+
+
+NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+
+
+async def _fetch_via_spa_fallback(url: str, html: str) -> str | None:
+    """If HTML looks like a SPA shell (< 300 visible words), retry via headless browser."""
+    soup = BeautifulSoup(html, "lxml")
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    text = soup.get_text(separator=" ", strip=True)
+    if len(text.split()) >= 300:
+        return None  # Content is fine
+
+    try:
+        async with httpx.AsyncClient(timeout=25) as client:
+            resp = await client.post(
+                f"{NEXTJS_URL}/api/render-page",
+                json={"url": url, "timeout": 15000},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("html"):
+                print(f"[site_analyzer] SPA fallback success for {url} ({len(html)} → {len(data['html'])} chars)")
+                return data["html"]
+    except Exception as exc:
+        print(f"[site_analyzer] SPA fallback failed for {url}: {exc}")
+
+    return None
 
 
 async def analyze_site(url: str) -> dict:
@@ -32,6 +62,11 @@ async def analyze_site(url: str) -> dict:
             response.raise_for_status()
             html = response.text
             final_url = str(response.url)
+
+            # SPA fallback: if content looks thin, retry with headless browser
+            rendered = await _fetch_via_spa_fallback(url, html)
+            if rendered:
+                html = rendered
     except Exception as e:
         print(f"[site_analyzer] Failed to fetch {url}: {e}")
         return _empty_context(url)

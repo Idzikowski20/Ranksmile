@@ -1,0 +1,116 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}{\f1 Consolas;}}
+{\colortbl;\red0\green0\blue0;\red24\green24\blue27;\red82\green82\blue92;\red120\green58\blue251;\red26\green178\blue94;}
+\deftab720
+\paperw11900\paperh16840\margl1440\margr1440\margt1440\margb1440
+
+\pard\sa200\qc{\f0\fs36\b SerpBear -- Design Documentation\par}
+\pard\sa200\qc{\f0\fs22 Google Ads API Integration\par}
+\pard\sa200\qc{\f0\fs18 Version 3.1.0 | May 2026\par}
+
+\pard\sa200\brdrb\brdrw15\brdrcf1\par
+
+\pard\sa200{\f0\fs28\b 1. Application Overview\par}
+
+\pard\sa160{\f0\fs20 SerpBear is an SEO content optimization platform designed for content teams and SEO marketers. It helps users create, optimize, and track search-engine-optimized content by combining data from multiple sources including Google Search Console, SERP analysis, and Google Ads Keyword Planner.\par}
+
+\pard\sa160{\f0\fs20 The application runs as a self-hosted or cloud-deployed Next.js web application with a Python sidecar for NLP processing. Users authenticate with their Google account and connect their own Google Search Console and Google Ads accounts to enrich their SEO data.\par}
+
+\pard\sa200{\f0\fs28\b 2. Google Ads API Usage\par}
+
+\pard\sa160{\f0\fs24\b 2.1 Scope of Integration\par}
+
+\pard\sa160{\f0\fs20 SerpBear uses the Google Ads API exclusively for the {\b Keyword Planner} service. The application calls two endpoints:\par}
+
+\pard\sa80{\f0\fs20 {\b a) GenerateKeywordIdeas} -- Retrieves keyword suggestions and their metrics (average monthly searches, competition level, CPC) based on a seed keyword or URL. Used in:\par}
+\pard\li720\sa80{\f0\fs20 - Article editor: enriching existing keywords with Ads volume/CPC/competition data\par}
+\pard\li720\sa80{\f0\fs20 - Keyword suggestion engine: finding new keyword opportunities for articles\par}
+\pard\li720\sa80{\f0\fs20 - Competitor gap detection: identifying keywords competitors rank for\par}
+\pard\li720\sa160{\f0\fs20 - Domain keyword research: bulk keyword analysis across tracked domains\par}
+
+\pard\sa80{\f0\fs20 {\b b) GenerateKeywordHistoricalMetrics} -- Retrieves historical monthly search volume for a list of keywords. Used for:\par}
+\pard\li720\sa160{\f0\fs20 - Batch volume updates for all tracked keywords across domains\par}
+
+\pard\sa160{\f0\fs24\b 2.2 Data Flow\par}
+
+\pard\sa120{\f0\fs20 1. User connects their Google Ads account via OAuth 2.0 in the application settings\par}
+\pard\sa120{\f0\fs20 2. Application stores only a refresh token (encrypted) in local storage; all other credentials (Client ID, Client Secret, Developer Token, Account ID) are read from server-side environment variables\par}
+\pard\sa120{\f0\fs20 3. When keyword enrichment is triggered (either manually or automatically after article creation), the server exchanges the refresh token for an access token\par}
+\pard\sa120{\f0\fs20 4. The server calls the Google Ads API with the access token and the user's Account ID\par}
+\pard\sa120{\f0\fs20 5. Results (monthly volume, CPC, competition level) are stored in the application database and displayed in the UI\par}
+\pard\sa120{\f0\fs20 6. Access tokens expire after 60 minutes; the refresh token is used to obtain new access tokens automatically\par}
+
+\pard\sa200{\f0\fs24\b 2.3 API Call Frequency\par}
+
+\pard\sa160{\f0\fs20 The application makes API calls on-demand at the following frequencies:\par}
+
+\pard\li360\sa80{\f0\fs20 {\b Article enrichment:} 1 call per new article (typically 5-20 per day per user)\par}
+\pard\li360\sa80{\f0\fs20 {\b Keyword suggestions:} 1-2 calls per suggestion request (on-demand, user-initiated)\par}
+\pard\li360\sa80{\f0\fs20 {\b Gap detection:} 1 call per domain per analysis session\par}
+\pard\li360\sa80{\f0\fs20 {\b Bulk volume updates:} 1 batch call per domain per week\par}
+\pard\li360\sa160{\f0\fs20 {\b Test connection:} 1 call during initial setup and troubleshooting\par}
+
+\pard\sa160{\f0\fs20 The application implements server-side caching (24-hour TTL) for keyword metrics to minimize redundant API calls.\par}
+
+\pard\sa200{\f0\fs28\b 3. Technical Architecture\par}
+
+\pard\sa160{\f0\fs20 {\b Stack:} Next.js (Pages Router), TypeScript, PostgreSQL/SQLite, Python sidecar (NLP), Google Ads API v23\par}
+
+\pard\sa160{\f0\fs20 {\b Authentication:} OAuth 2.0 with refresh token rotation. The refresh token is encrypted at rest using AES-256 (via Cryptr library) and stored in the application's settings file. Client ID and Client Secret are stored exclusively in server-side environment variables and are never exposed to the client.\par}
+
+\pard\sa160{\f0\fs20 {\b Key files:}\par}
+\pard\li360\sa80{\f1\fs18 utils/adwords.ts\f0\fs20 - Google Ads API client (credential management, keyword idea generation)\par}
+\pard\li360\sa80{\f1\fs18 pages/api/adwords.ts\f0\fs20 - OAuth callback handler, connection testing, disconnect endpoint\par}
+\pard\li360\sa80{\f1\fs18 pages/api/articles/[id]/keywords/enrich.ts\f0\fs20 - Keyword enrichment endpoint\par}
+\pard\li360\sa80{\f1\fs18 pages/api/articles/keywords/suggest.ts\f0\fs20 - Keyword suggestion endpoint\par}
+\pard\li360\sa80{\f1\fs18 pages/api/articles/[id]/keywords/gap.ts\f0\fs20 - Competitor keyword gap detection\par}
+\pard\li360\sa80{\f1\fs18 pages/api/volume.ts\f0\fs20 - Bulk keyword volume update endpoint\par}
+\pard\li360\sa160{\f1\fs18 components/settings/AdWordsSettings.tsx\f0\fs20 - Integration settings UI\par}
+
+\pard\sa200{\f0\fs28\b 4. User Interface\par}
+
+\pard\sa160{\f0\fs24\b 4.1 Integration Settings Page\par}
+
+\pard\sa160{\f0\fs20 The user connects their Google Ads account through the Settings / Integrations / Google Ads page. This interface shows:\par}
+\pard\li720\sa80{\f0\fs20 - Current connection status (connected / not connected)\par}
+\pard\li720\sa80{\f0\fs20 - Environment variable configuration status\par}
+\pard\li720\sa80{\f0\fs20 - Connect / Disconnect buttons with Google OAuth flow\par}
+\pard\li720\sa80{\f0\fs20 - Test Connection button to verify API access\par}
+\pard\li720\sa160{\f0\fs20 - Update Keywords Volume Data action button\par}
+
+\pard\sa160{\f0\fs24\b 4.2 Article Editor - Keyword Research Panel\par}
+
+\pard\sa160{\f0\fs20 In the article editor, the right sidebar contains a "Keyword Research" panel that displays:\par}
+\pard\li720\sa80{\f0\fs20 - Enriched keywords with Ads metrics (monthly volume, CPC, competition level)\par}
+\pard\li720\sa80{\f0\fs20 - Coverage status per keyword (covered / not covered in article text)\par}
+\pard\li720\sa80{\f0\fs20 - Opportunity score indicator for each keyword\par}
+\pard\li720\sa80{\f0\fs20 - Suggested keywords from Google Ads with accept/dismiss actions\par}
+\pard\li720\sa160{\f0\fs20 - Competitor gap keywords marked with badges\par}
+
+\pard\sa200{\f0\fs28\b 5. Compliance with Google Ads API Policies\par}
+
+\pard\sa160{\f0\fs20 SerpBear adheres to all Google Ads API Terms of Service and Required Minimum Functionality:\par}
+
+\pard\sa120{\f0\fs20 1. {\b No advertising automation:} The application does not create, modify, or manage Google Ads campaigns. It exclusively reads keyword data from the Keyword Planner service.\par}
+
+\pard\sa120{\f0\fs20 2. {\b User-owned data:} Each user connects their own Google Ads account via OAuth. The application does not aggregate or share data across users.\par}
+
+\pard\sa120{\f0\fs20 3. {\b Secure credential storage:} Client secrets are stored only in server-side environment variables. Refresh tokens are encrypted at rest. No credentials are exposed to the client-side code.\par}
+
+\pard\sa120{\f0\fs20 4. {\b Data transparency:} All keyword metrics shown to users are attributed to Google Ads. The application displays "Powered by Google Ads" in relevant UI sections.\par}
+
+\pard\sa120{\f0\fs20 5. {\b Rate limiting:} The application implements caching and batching to minimize API calls. Individual keyword lookups are batched into single API requests where possible.\par}
+
+\pard\sa120{\f0\fs20 6. {\b No unauthorized data use:} Google Ads keyword data is used exclusively for the stated purpose of SEO content optimization and is not resold, repackaged, or used for ad creation on other platforms.\par}
+
+\pard\sa120{\f0\fs20 7. {\b Refresh token handling:} Refresh tokens are stored with AES-256 encryption. The application does not share, transmit externally, or log refresh tokens.\par}
+
+\pard\sa200{\f0\fs28\b 6. Contact Information\par}
+
+\pard\sa160{\f0\fs20 For technical questions about this integration, please refer to the application documentation or contact the developer through the application's support channels.\par}
+
+\pard\sa200\brdrb\brdrw15\brdrcf1\par
+
+\pard\sa200{\f0\fs18 This document was automatically generated from the SerpBear codebase and design specifications.\par}
+
+}

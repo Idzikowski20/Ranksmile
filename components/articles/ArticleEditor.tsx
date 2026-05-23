@@ -355,25 +355,6 @@ const FeaturedImageBlock = ({
 
               {/* Action row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {/* Regenerate */}
-                <button
-                  type="button"
-                  onClick={() => handleAiGenerate(altText || keyword || '')}
-                  disabled={isGenerating}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '4px 8px', borderRadius: 5, border: 'none',
-                    background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)',
-                    fontSize: 12, cursor: isGenerating ? 'not-allowed' : 'pointer',
-                    fontFamily: 'var(--font-family-primary)',
-                  }}
-                >
-                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                  </svg>
-                  Regenerate
-                </button>
-
                 {/* Pixabay */}
                 <button
                   type="button"

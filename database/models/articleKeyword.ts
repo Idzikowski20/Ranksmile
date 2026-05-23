@@ -7,7 +7,7 @@ import { Table, Model, Column, DataType, PrimaryKey } from 'sequelize-typescript
 class ArticleKeyword extends Model {
   @PrimaryKey
   @Column({ type: DataType.INTEGER, allowNull: false, primaryKey: true, autoIncrement: true })
-  id!: number;
+  declare id: number;
 
   @Column({ type: DataType.INTEGER, allowNull: false })
   article_id!: number;

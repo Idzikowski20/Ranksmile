@@ -5,7 +5,7 @@ import React from 'react';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
-import { slugToDomain } from '../../../utils/domains';
+import { slugToDomain } from '../../../utils/slugToDomain';
 
 const TopicalMapPage: NextPage = () => {
    const router = useRouter();
