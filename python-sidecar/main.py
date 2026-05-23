@@ -254,6 +254,38 @@ async def ai_visibility_endpoint(body: dict):
     return await run_ai_visibility(keyword, own_domain, competitor_domains, article_content)
 
 
+class PipelineRequest(BaseModel):
+    jobId: str
+    payload: dict  # { url, keyword, language, tone, existing_articles }
+
+
+@app.post("/pipeline/deep-analysis")
+async def pipeline_deep_analysis(req: PipelineRequest):
+    """
+    Event-driven pipeline endpoint.
+    Called by TypeScript after INSERTing job into analysis_jobs.
+    Python runs the 5-stage pipeline, pushes progress via job-progress endpoint.
+    Returns {status, result} — TypeScript writes this to analysis_jobs.result.
+    """
+    from pipeline.runner import PipelineRunner
+
+    nextjs_url = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    print(f"[pipeline] Starting deep analysis for job {req.jobId}")
+
+    ctx = PipelineRunner.build_deep_analysis_ctx(
+        req.jobId, req.payload, nextjs_url
+    )
+    runner = PipelineRunner(PipelineRunner.build_deep_analysis_pipeline(), ctx)
+
+    try:
+        result = await runner.run()
+        print(f"[pipeline] Job {req.jobId} completed successfully")
+        return {"status": "done", "result": result}
+    except Exception as exc:
+        print(f"[pipeline] Job {req.jobId} failed: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 # ── Optimization Advisor ──────────────────────────────────────────────
 # Inspirowane multi-agent SEO pipeline: łączy audyt strony z danymi SERP
 # i generuje priorytetyzowaną listę rekomendacji.
