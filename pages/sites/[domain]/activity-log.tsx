@@ -6,7 +6,7 @@ import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
-import { slugToDomain } from '../../../utils/domains';
+import { slugToDomain } from '../../../utils/slugToDomain';
 
 function relativeTime(dateStr: string): string {
    const d = new Date(dateStr);

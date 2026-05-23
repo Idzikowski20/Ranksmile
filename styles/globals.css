@@ -732,6 +732,24 @@ body {
    border-color: #E4E4E7 !important;
 }
 
+/* Dashboard Quick Start grid — 1 col on mobile, 2 on sm+ */
+@media (max-width: 639px) {
+   .dashboard-quickstart-grid {
+      grid-template-columns: repeat(1, 1fr) !important;
+   }
+}
+
+/* Quick start card hover */
+.quickstart-card:hover {
+   background: #F4F4F5 !important;
+   color: #783AFB !important;
+}
+
+/* Recently edited row hover */
+.recent-article-row:hover {
+   background: #FAFAFA;
+}
+
 /* Article list responsive columns */
 @media (min-width: 640px) {
    .article-word-count {

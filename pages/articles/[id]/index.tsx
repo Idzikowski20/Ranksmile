@@ -7,7 +7,6 @@ import toast, { Toaster } from 'react-hot-toast';
 import { CheckmarkCircle01Icon } from 'hugeicons-react';
 import AppShell from '../../../components/common/AppShell';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
-import ResearchOutlinePanel from '../../../components/articles/ResearchOutlinePanel';
 import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
 import KeywordSuggestInput from '../../../components/articles/KeywordSuggestInput';
 import PixabayImageModal from '../../../components/articles/PixabayImageModal';
@@ -87,7 +86,6 @@ const ArticleEditorPage: NextPage = () => {
   const [showPixabay, setShowPixabay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
-  const [showResearchPanel, setShowResearchPanel] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [domainBaseUrl, setDomainBaseUrl] = useState('');
@@ -98,12 +96,11 @@ const ArticleEditorPage: NextPage = () => {
   const [autoOptimizeStatus, setAutoOptimizeStatus] = useState('Optimizing article…');
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [surfyAiActive, setSurfyAiActive] = useState(false);
-  const [researchAiActive, setResearchAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
   const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
-  const isAiActive = surfyAiActive || researchAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
+  const isAiActive = surfyAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -188,18 +185,13 @@ const ArticleEditorPage: NextPage = () => {
           }
           // Fetch other articles in the same domain for internal linking
           if (art.domain_id) {
-            // Also fetch domain to build full URLs
-            fetch(`/api/domains`)
-              .then((r) => r.json())
-              .then((dd) => {
+            Promise.all([
+              fetch(`/api/domains`).then((r) => r.json()),
+              fetch(`/api/articles?domainId=${art.domain_id}`).then((r) => r.json()),
+            ])
+              .then(([dd, d]) => {
                 const dom = (dd.domains || []).find((d: any) => d.ID === art.domain_id);
                 if (dom?.domain) setDomainBaseUrl(`https://${dom.domain}`);
-              })
-              .catch(() => {});
-
-            fetch(`/api/articles?domainId=${art.domain_id}`)
-              .then((r) => r.json())
-              .then((d) => {
                 const others = (d.articles || [])
                   .filter((a: any) => a.id !== art.id && a.status === 'published')
                   .map((a: any) => ({ id: a.id, title: a.title, url: a.meta_url || '' }));
@@ -208,7 +200,8 @@ const ArticleEditorPage: NextPage = () => {
               .catch(() => {});
           }
         }
-      })
+      }
+      )
       .catch(() => toast.error('Failed to load article'))
       .finally(() => setIsLoading(false));
   }, [id]);
@@ -337,17 +330,6 @@ const ArticleEditorPage: NextPage = () => {
     } finally {
       setIsRunningAiVisibility(false);
     }
-  };
-
-  const handleInsertOutline = (headings: Array<{ level: number; text: string }>) => {
-    const editor = editorRef.current?.getEditor();
-    if (!editor) return;
-    const html = headings
-      .map((h) => `<h${Math.min(h.level, 4)}>${h.text}</h${Math.min(h.level, 4)}>`)
-      .join('');
-    editor.chain().focus().insertContent(html).run();
-    setShowResearchPanel(false);
-    toast.success('Outline inserted');
   };
 
   const handleInsertLinks = (links: Array<{ anchorText: string; url: string }>) => {
@@ -640,10 +622,145 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   if (isLoading) {
+    const PANEL_W = 320;
+    const PANEL_GAP = 8;
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8f8f9' }}>
-        <p style={{ fontSize: 14, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>Loading article…</p>
-      </div>
+      <AppShell
+        domains={domains}
+        showAddModal={() => {}}
+        showSettings={() => {}}
+        showSidebar={false}
+        topbarTitle=""
+        contentClassName="article-editor-shell"
+      >
+        <style>{`
+          @keyframes editorSkeletonPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.45; }
+          }
+          .esk { background: #EBEBED; border-radius: 6px; animation: editorSkeletonPulse 1.6s ease-in-out infinite; }
+        `}</style>
+
+        {/* Same gray wrapper as the real editor */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, gap: 0, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
+          <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', gap: 0 }}>
+
+            {/* ── Left: editor card ── */}
+            <div style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginRight: PANEL_W + PANEL_GAP }}>
+
+              {/* Top action bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0, gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {[44, 32, 32, 32, 32].map((w, i) => (
+                    <div key={i} className="esk" style={{ width: w, height: 28, borderRadius: 8, animationDelay: `${i * 0.06}s` }} />
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {[60, 44].map((w, i) => (
+                    <div key={i} className="esk" style={{ width: w, height: 28, borderRadius: 7, animationDelay: `${(i + 5) * 0.06}s` }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Formatting toolbar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0 }}>
+                {[28, 28, 28, 1, 28, 28, 28, 28, 1, 52, 52, 52, 1, 28, 28].map((w, i) =>
+                  w === 1
+                    ? <div key={i} style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px', flexShrink: 0 }} />
+                    : <div key={i} className="esk" style={{ width: w, height: 24, borderRadius: 5, animationDelay: `${i * 0.04}s` }} />,
+                )}
+              </div>
+
+              {/* Editor body */}
+              <div style={{ flex: 1, padding: '40px 80px', overflowY: 'auto' }}>
+                {/* Featured image placeholder */}
+                <div className="esk" style={{ width: '100%', height: 220, borderRadius: 10, marginBottom: 32, animationDelay: '0.05s' }} />
+
+                {/* Title */}
+                <div className="esk" style={{ width: '72%', height: 36, borderRadius: 8, marginBottom: 10, animationDelay: '0.1s' }} />
+                <div className="esk" style={{ width: '48%', height: 36, borderRadius: 8, marginBottom: 36, animationDelay: '0.14s' }} />
+
+                {/* Paragraph 1 */}
+                {[100, 96, 88, 60].map((pct, i) => (
+                  <div key={`p1-${i}`} className="esk" style={{ width: `${pct}%`, height: 14, borderRadius: 6, marginBottom: 10, animationDelay: `${0.18 + i * 0.05}s` }} />
+                ))}
+                <div style={{ height: 24 }} />
+
+                {/* H2 heading */}
+                <div className="esk" style={{ width: '40%', height: 22, borderRadius: 7, marginBottom: 18, animationDelay: '0.4s' }} />
+
+                {/* Paragraph 2 */}
+                {[100, 94, 100, 82, 55].map((pct, i) => (
+                  <div key={`p2-${i}`} className="esk" style={{ width: `${pct}%`, height: 14, borderRadius: 6, marginBottom: 10, animationDelay: `${0.44 + i * 0.05}s` }} />
+                ))}
+                <div style={{ height: 24 }} />
+
+                {/* H2 heading 2 */}
+                <div className="esk" style={{ width: '35%', height: 22, borderRadius: 7, marginBottom: 18, animationDelay: '0.7s' }} />
+
+                {/* Paragraph 3 */}
+                {[100, 90, 100, 70].map((pct, i) => (
+                  <div key={`p3-${i}`} className="esk" style={{ width: `${pct}%`, height: 14, borderRadius: 6, marginBottom: 10, animationDelay: `${0.74 + i * 0.05}s` }} />
+                ))}
+              </div>
+            </div>
+
+            {/* ── Right: score panel ── */}
+            <div style={{ position: 'absolute', top: 0, right: 0, width: PANEL_W, bottom: 0, display: 'flex', flexDirection: 'column', gap: PANEL_GAP }}>
+              {/* Score card */}
+              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
+                {/* Panel header */}
+                <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="esk" style={{ width: 90, height: 14, animationDelay: '0.1s' }} />
+                </div>
+
+                {/* Gauge placeholder */}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 16px 0' }}>
+                  <div style={{ position: 'relative', width: 160, height: 96 }}>
+                    <svg viewBox="10 10 280 160" style={{ width: '100%', height: 'auto' }}>
+                      <path fill="transparent" stroke="#EBEBED" strokeWidth="30" strokeLinecap="round" d="M 270 150 A 120 120 0 0 0 30 150" />
+                    </svg>
+                    <div className="esk" style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 52, height: 40, borderRadius: 8 }} />
+                  </div>
+                </div>
+
+                {/* Avg / Top row */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 24, padding: '16px 16px 12px' }}>
+                  <div className="esk" style={{ width: 56, height: 12, animationDelay: '0.15s' }} />
+                  <div className="esk" style={{ width: 56, height: 12, animationDelay: '0.2s' }} />
+                </div>
+
+                {/* Metrics row */}
+                <div style={{ borderTop: '1px solid #f4f4f5', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 0 }}>
+                  {['Words', 'Headings', 'Paragraphs'].map((_, i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 && <div style={{ width: 1, background: '#e4e4e7', height: 36, flexShrink: 0 }} />}
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                        <div className="esk" style={{ width: 36, height: 10, animationDelay: `${0.1 + i * 0.05}s` }} />
+                        <div className="esk" style={{ width: 28, height: 14, animationDelay: `${0.15 + i * 0.05}s` }} />
+                        <div className="esk" style={{ width: 42, height: 10, animationDelay: `${0.2 + i * 0.05}s` }} />
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+
+                {/* Action rows */}
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} style={{ borderTop: '1px solid #f4f4f5', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="esk" style={{ width: 16, height: 12, borderRadius: 4, animationDelay: `${n * 0.07}s` }} />
+                      <div className="esk" style={{ width: 80 + n * 12, height: 13, animationDelay: `${n * 0.07 + 0.04}s` }} />
+                    </div>
+                    <div className="esk" style={{ width: 16, height: 16, borderRadius: 4, animationDelay: `${n * 0.07 + 0.08}s` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
@@ -961,7 +1078,7 @@ const ArticleEditorPage: NextPage = () => {
                 )}
 
 {/* Version History */}
-                <IconBtn onClick={() => { setShowResearchPanel(false); setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
+                <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
                   <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                     <path d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -984,11 +1101,11 @@ const ArticleEditorPage: NextPage = () => {
               </button>
             </div>
 
-            {/* Bottom card: keyword + content score OR research panel */}
+            {/* Bottom card: keyword + content score OR panel */}
             <div
               style={{
-                background: showResearchPanel ? '#fff' : '#fff',
-                border: showResearchPanel ? '1px solid #e4e4e7' : '1px solid #e4e4e7',
+                background: '#fff',
+                border: '1px solid #e4e4e7',
                 borderRadius: 12,
                 flex: 1,
                 minHeight: 0,
@@ -997,19 +1114,7 @@ const ArticleEditorPage: NextPage = () => {
                 overflow: 'hidden',
               }}
             >
-              {showResearchPanel ? (
-                <ResearchOutlinePanel
-                  keyword={article.target_keyword || ''}
-                  articleId={article.id}
-                  language={article.target_keyword ? 'pl' : 'en'}
-                  onClose={() => setShowResearchPanel(false)}
-                  onInsertOutline={handleInsertOutline}
-                  onAiActivity={setResearchAiActive}
-                  currentHeadings={editorHeadings.map((h) => ({ level: h.level, text: h.text }))}
-                  currentWordCount={wordCount}
-                  paaQuestions={scoreData.paa_questions}
-                />
-              ) : showInternalLinksPanel ? (
+              {showInternalLinksPanel ? (
                 <InternalLinksPanel
                   articleId={article.id}
                   keyword={article.target_keyword || ''}
@@ -1031,19 +1136,6 @@ const ArticleEditorPage: NextPage = () => {
                 />
               ) : (
                 <>
-                  {/* Target keyword (compact, pinned at top) */}
-                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#9f9fa9', letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: 'var(--font-family-primary)', marginBottom: 5 }}>
-                      Target Keyword
-                    </div>
-                    <KeywordSuggestInput
-                      keywords={article.target_keyword ? [article.target_keyword] : []}
-                      onAdd={(kw) => setArticle((prev) => prev ? { ...prev, target_keyword: kw } : prev)}
-                      onRemove={() => setArticle((prev) => prev ? { ...prev, target_keyword: '' } : prev)}
-                      placeholder="Set target keyword…"
-                    />
-                  </div>
-
                   {/* ContentScorePanel fills remaining height */}
                   <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
                     <ContentScorePanel
@@ -1054,14 +1146,11 @@ const ArticleEditorPage: NextPage = () => {
                       internalLinksCount={(editorHtml.match(/<a\s[^>]*href=/gi) || []).length}
                       html={editorHtml}
                       keyword={article?.target_keyword || ''}
-                      onResearchOutline={() => setShowResearchPanel(true)}
-                      onInternalLinks={() => setShowInternalLinksPanel(true)}
+                      onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimize()}
                       isAutoOptimizing={isAutoOptimizing}
-                      aiVisibilitySummary={aiVisibilitySummary}
-                      onRunAiVisibility={handleRunAiVisibility}
-                      isRunningAiVisibility={isRunningAiVisibility}
                       articleId={article.id}
+                      cachedOutlines={article.competitor_outlines_cache}
                     />
                   </div>
                 </>

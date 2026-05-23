@@ -48,8 +48,6 @@ const IntegrationSettings = ({ settings, settingsError, updateSettings, performU
                   settings={settings}
                   updateSettings={updateSettings}
                   settingsError={settingsError}
-                  performUpdate={performUpdate}
-                  closeSettings={closeSettings}
                />
             )}
          </div>

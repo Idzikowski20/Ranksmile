@@ -101,30 +101,29 @@ async def run_ai_visibility(
             "warning": "SERPER_API_KEY not configured; score uses article readiness only",
         }
 
-    for prompt in prompts:
+    async def _fetch_prompt(prompt: str) -> list[dict]:
         try:
             organic = await fetch_search_evidence(prompt, serper_key)
         except Exception as exc:
-            citations.append({
+            return [{
                 "prompt": prompt,
                 "answer": f"Search evidence failed: {exc}",
                 "answer_readiness_score": article_answer_score(article_content, prompt, keyword),
-            })
-            continue
+            }]
 
         readiness = article_answer_score(article_content, prompt, keyword)
         if not organic:
-            citations.append({
+            return [{
                 "prompt": prompt,
                 "answer": "",
                 "answer_readiness_score": readiness,
-            })
-            continue
+            }]
 
+        results = []
         for item in organic:
             url = item.get("link", "")
             domain = domain_from_url(url)
-            citations.append({
+            results.append({
                 "prompt": prompt,
                 "answer": item.get("snippet", ""),
                 "cited_url": url,
@@ -133,6 +132,12 @@ async def run_ai_visibility(
                 "is_competitor": domain in competitor_domain_set,
                 "answer_readiness_score": readiness,
             })
+        return results
+
+    import asyncio
+    per_prompt_results = await asyncio.gather(*(_fetch_prompt(p) for p in prompts))
+    for results in per_prompt_results:
+        citations.extend(results)
 
     prompts_cited = len({c["prompt"] for c in citations if c.get("is_own_domain")})
     competitor_citations = len([c for c in citations if c.get("is_competitor")])

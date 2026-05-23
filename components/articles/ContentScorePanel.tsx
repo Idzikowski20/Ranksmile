@@ -1,10 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../lib/contentScore';
-import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
 import { computeOpportunityScore } from '../../lib/keywordEnrichment';
-import AiSearchPanel from './AiSearchPanel';
 import ScoreGauge from './ScoreGauge';
 import KeywordResearchSection from './KeywordResearchSection';
+
+interface CompetitorHeading {
+  level: number;
+  text: string;
+}
+interface Competitor {
+  url: string;
+  domain: string;
+  title: string;
+  serp_title?: string;
+  word_count: number;
+  heading_count?: number;
+  serp_position?: number;
+  headings: CompetitorHeading[];
+}
 
 interface Props {
   plainText: string;
@@ -16,12 +29,9 @@ interface Props {
   keyword?: string;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
-  onResearchOutline?: () => void;
   onInternalLinks?: () => void;
-  aiVisibilitySummary?: AiVisibilitySummary | null;
-  onRunAiVisibility?: () => void;
-  isRunningAiVisibility?: boolean;
   articleId?: number;
+  cachedOutlines?: string | null;
 }
 
 /* ── Small circular progress ───────────────────────────────────────── */
@@ -43,11 +53,38 @@ const MetricCol = ({ label, current, range }: { label: string; current: number; 
   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
     <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
     <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b', fontFamily: 'var(--font-family-primary)', lineHeight: 1 }}>{current.toLocaleString()}</span>
-    <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>{range}</span>
+    <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>{range}</span>
   </div>
 );
 
-/* ── Action row ─────────────────────────────────────────────────────── */
+/* ── Collapsible section header ─────────────────────────────────────── */
+const SectionRow = ({ num, label, open, onToggle, badge }: {
+  num: number; label: string; open?: boolean; onToggle?: () => void; badge?: React.ReactNode;
+}) => (
+  <button
+    onClick={onToggle}
+    style={{
+      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 16px', background: 'transparent',
+      border: 'none', borderTop: '1px solid #f4f4f5', cursor: 'pointer',
+      transition: 'opacity 0.15s', fontFamily: 'var(--font-family-primary)',
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 13, fontWeight: 400, color: '#9f9fa9' }}>#{num}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>{label}</span>
+      {badge}
+    </div>
+    <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor"
+      style={{ color: '#9f9fa9', flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+      <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
+    </svg>
+  </button>
+);
+
+/* ── Action row (non-expandable) ────────────────────────────────────── */
 const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClick?: () => void }) => (
   <button
     onClick={onClick}
@@ -70,6 +107,90 @@ const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClic
   </button>
 );
 
+/* ── Competitor card (inline, read-only) ────────────────────────────── */
+const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  const domain = competitor.domain || (() => {
+    try { return new URL(competitor.url).hostname.replace(/^www\./, ''); } catch { return competitor.url; }
+  })();
+  const pos = competitor.serp_position;
+
+  return (
+    <div style={{ border: '1px solid #f4f4f5', borderRadius: 8, overflow: 'hidden', background: '#fafafa' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+          padding: '8px 10px', background: 'transparent', border: 'none', cursor: 'pointer', gap: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, flex: 1, minWidth: 0 }}>
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
+            alt="" width={14} height={14}
+            style={{ borderRadius: 2, marginTop: 2, flexShrink: 0 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 12, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {competitor.serp_title || competitor.title}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+              <span style={{ fontSize: 11, color: '#783afb', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
+              <span style={{ fontSize: 11, color: '#9f9fa9' }}>·</span>
+              <span style={{ fontSize: 11, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>
+                {competitor.word_count.toLocaleString()}w
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginTop: 1 }}>
+          {pos != null && (
+            <span style={{
+              fontSize: 10, fontWeight: 700,
+              color: pos <= 3 ? '#16a34a' : pos <= 7 ? '#d97706' : '#52525c',
+              background: pos <= 3 ? '#f0fdf4' : pos <= 7 ? '#fffbeb' : '#f4f4f5',
+              border: `1px solid ${pos <= 3 ? '#bbf7d0' : pos <= 7 ? '#fde68a' : '#e4e4e7'}`,
+              borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-family-primary)',
+            }}>#{pos}</span>
+          )}
+          <svg viewBox="0 0 20 20" width={13} height={13} fill="currentColor"
+            style={{ color: '#9f9fa9', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>
+            <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
+          </svg>
+        </div>
+      </button>
+
+      {open && (
+        <div style={{ borderTop: '1px solid #f4f4f5', padding: '6px 10px 8px' }}>
+          <a
+            href={competitor.url} target="_blank" rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontSize: 10, color: '#783afb', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
+          >
+            {competitor.url.replace(/^https?:\/\//, '').substring(0, 60)}{competitor.url.length > 66 ? '…' : ''}
+          </a>
+          {competitor.headings.map((h, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginLeft: (h.level - 1) * 8, marginBottom: 1 }}>
+              <span style={{ fontSize: 10, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', flexShrink: 0, width: 14, textAlign: 'right' }}>h{h.level}</span>
+              <span style={{
+                fontSize: 11, color: h.level === 1 ? '#18181b' : '#3f3f47',
+                fontFamily: 'var(--font-family-primary)', fontWeight: h.level === 1 ? 600 : 400,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4,
+              }} title={h.text}>{h.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ── Main panel ────────────────────────────────────────────────────── */
 const ContentScorePanel = ({
   plainText,
@@ -81,17 +202,16 @@ const ContentScorePanel = ({
   keyword,
   onAutoOptimize,
   isAutoOptimizing,
-  onResearchOutline,
   onInternalLinks,
-  aiVisibilitySummary,
-  onRunAiVisibility,
-  isRunningAiVisibility,
   articleId,
+  cachedOutlines,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
   const [nlpOpen, setNlpOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
+  const [competitorOpen, setCompetitorOpen] = useState(false);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false);
 
   // Keyword research state
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -131,7 +251,38 @@ const ContentScorePanel = ({
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
-  // Fetch keywords when panel opens
+  // Load competitors when section opens
+  useEffect(() => {
+    if (!competitorOpen) return;
+    if (competitors.length > 0) return; // already loaded
+
+    // Try cache first
+    if (cachedOutlines) {
+      try {
+        const parsed = JSON.parse(cachedOutlines);
+        const list: Competitor[] = Array.isArray(parsed) ? parsed : (parsed.competitors || []);
+        if (list.length > 0) { setCompetitors(list); return; }
+      } catch { /* fall through */ }
+    }
+
+    // Fetch from API
+    if (!keyword || !articleId) return;
+    setIsLoadingCompetitors(true);
+    fetch('/api/articles/competitor-outlines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword, language: 'pl', num: 5, articleId }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list: Competitor[] = Array.isArray(d) ? d : (d.competitors || []);
+        setCompetitors(list);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingCompetitors(false));
+  }, [competitorOpen, keyword, articleId, cachedOutlines]);
+
+  // Fetch keywords when NLP section opens
   useEffect(() => {
     if (!nlpOpen || !articleId) return;
     setIsLoadingKeywords(true);
@@ -253,17 +404,20 @@ const ContentScorePanel = ({
     }
   };
 
-  const wordsRange = scoreData ? `${(scoreData.words_min / 1000).toFixed(1)}K – ${(scoreData.words_max / 1000).toFixed(1)}K` : '–';
-  const headingsRange = scoreData ? `${scoreData.headings_min} – ${scoreData.headings_max}` : '–';
+  const hasCompetitorData = (scoreData?.competitor_count ?? 0) > 0;
+  const competitorLabel = hasCompetitorData ? ` avg` : '';
+  const wordsRange = scoreData
+    ? `${(scoreData.words_min / 1000).toFixed(1)}K – ${(scoreData.words_max / 1000).toFixed(1)}K${competitorLabel}`
+    : '–';
+  const headingsRange = scoreData
+    ? `${scoreData.headings_min} – ${scoreData.headings_max}${competitorLabel}`
+    : '–';
   const parasMin = scoreData?.paragraphs_min ?? Math.round((scoreData?.headings_min || 10) * 2.5);
   const parasMax = scoreData?.paragraphs_max ?? Math.round((scoreData?.headings_max || 20) * 3);
-  const parasRange = `${parasMin}+`;
+  const parasRange = `${parasMin} – ${parasMax}${competitorLabel}`;
 
   const avgScore = score;
   const topScore = Math.min(score + 3, 100);
-  const aiScore = computeAiSearchScore(aiVisibilitySummary);
-  const aiCovered = aiVisibilitySummary?.prompts_cited ?? 0;
-  const aiTotal = aiVisibilitySummary?.prompts_total ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
@@ -311,90 +465,86 @@ const ContentScorePanel = ({
         <MetricCol label="Paragraphs" current={paragraphCount} range={parasRange} />
       </div>
 
+      {/* ── Auto-Optimize button (pinned above sections) ── */}
+      <div style={{ padding: '0 16px 12px', borderTop: '1px solid #f4f4f5', paddingTop: 12 }}>
+        <button
+          onClick={isAutoOptimizing ? undefined : onAutoOptimize}
+          disabled={isAutoOptimizing}
+          style={{
+            width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
+            background: '#18181b', color: '#fff', border: 'none',
+            cursor: isAutoOptimizing ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-family-primary)',
+            transition: 'background 0.15s',
+            opacity: isAutoOptimizing ? 0.7 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+          onMouseEnter={(e) => { if (!isAutoOptimizing) e.currentTarget.style.background = '#630de3'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
+        >
+          {isAutoOptimizing ? (
+            <>
+              <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              Optimizing…
+            </>
+          ) : 'Auto-Optimize'}
+        </button>
+      </div>
+
       {/* ── Scrollable action area ── */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
         className="styled-scrollbar">
 
-        <ActionRow num={1} label="Research & Create Outline" onClick={onResearchOutline} />
-
-        {/* #2 Write & Optimize — expandable, shows NLP terms */}
+        {/* #1 Competitors — expandable */}
         <div>
-          <button
-            onClick={() => setNlpOpen((v) => !v)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 16px', background: 'transparent',
-              border: 'none', borderTop: '1px solid #f4f4f5', cursor: 'pointer',
-              fontFamily: 'var(--font-family-primary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 400, color: '#9f9fa9' }}>#2</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>Write & Optimize</span>
+          <SectionRow
+            num={1} label="Competitors" open={competitorOpen}
+            onToggle={() => setCompetitorOpen((v) => !v)}
+            badge={competitors.length > 0 ? (
+              <span style={{
+                fontSize: 10, color: '#9f9fa9', background: '#f4f4f5',
+                borderRadius: 20, padding: '1px 6px', fontFamily: 'var(--font-family-primary)',
+              }}>{competitors.length}</span>
+            ) : undefined}
+          />
+          {competitorOpen && (
+            <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {isLoadingCompetitors ? (
+                [1, 2, 3].map((i) => (
+                  <div key={i} style={{ border: '1px solid #f4f4f5', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8 }}>
+                    <div style={{ width: 14, height: 14, borderRadius: 2, background: '#ebebed', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ width: '65%', height: 11, borderRadius: 3, background: '#ebebed', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
+                      <div style={{ width: '40%', height: 9, borderRadius: 3, background: '#ebebed', marginTop: 5, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
+                    </div>
+                  </div>
+                ))
+              ) : competitors.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#9f9fa9', textAlign: 'center', padding: '10px 0', fontFamily: 'var(--font-family-primary)', fontStyle: 'italic' }}>
+                  No competitor data yet. Re-run deep analysis.
+                </p>
+              ) : (
+                competitors.map((comp, i) => (
+                  <CompetitorCard key={comp.url + i} competitor={comp} defaultOpen={i === 0} />
+                ))
+              )}
             </div>
-            <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor"
-              style={{ color: '#9f9fa9', flexShrink: 0, transform: nlpOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
-              <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-            </svg>
-          </button>
-
-          {/* SEO / AI Search mini cards — always visible */}
-          <div style={{ padding: '0 16px 12px', display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1, background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '12px 14px' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)', marginBottom: 6 }}>SEO</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? '#1ab25e' : '#d70028'} />
-                <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{coveredCount}/{terms.length}</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAiOpen((v) => !v)}
-              style={{ flex: 1, background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '12px 14px', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)', marginBottom: 6 }}>AI Search</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CircleProgress value={aiCovered} max={Math.max(aiTotal, 1)} color={aiScore >= 60 ? '#1ab25e' : '#efa00d'} />
-                <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{aiCovered}/{aiTotal}</span>
-              </div>
-            </button>
-          </div>
-
-          {/* Auto-Optimize — always visible */}
-          {aiOpen && (
-            <AiSearchPanel
-              summary={aiVisibilitySummary}
-              onRun={onRunAiVisibility}
-              running={isRunningAiVisibility}
-            />
           )}
+        </div>
 
-          <div style={{ padding: '0 16px 12px' }}>
-            <button
-              onClick={isAutoOptimizing ? undefined : onAutoOptimize}
-              disabled={isAutoOptimizing}
-              style={{
-                width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
-                background: '#18181b', color: '#fff', border: 'none',
-                cursor: isAutoOptimizing ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-family-primary)',
-                transition: 'background 0.15s',
-                opacity: isAutoOptimizing ? 0.7 : 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-              onMouseEnter={(e) => { if (!isAutoOptimizing) e.currentTarget.style.background = '#630de3'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
-            >
-              {isAutoOptimizing ? (
-                <>
-                  <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                  Optimizing…
-                </>
-              ) : 'Auto-Optimize'}
-            </button>
-          </div>
+        {/* #2 Keywords & Terms — expandable */}
+        <div>
+          <SectionRow num={2} label="Keywords & Terms" open={nlpOpen} onToggle={() => setNlpOpen((v) => !v)} />
 
           {nlpOpen && (
+            <>
+              {/* NLP coverage card — inside the section */}
+              <div style={{ padding: '0 16px 8px' }}>
+                <div style={{ background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? '#1ab25e' : '#d70028'} />
+                  <span style={{ fontSize: 12, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>NLP terms: {coveredCount}/{terms.length} covered</span>
+                </div>
+              </div>
             <KeywordResearchSection
               keywords={keywords}
               isLoading={isLoadingKeywords}
@@ -406,6 +556,7 @@ const ContentScorePanel = ({
               onToggleCoverage={handleToggleCoverage}
               gapKeywords={gapKeywords}
             />
+            </>
           )}
         </div>
 

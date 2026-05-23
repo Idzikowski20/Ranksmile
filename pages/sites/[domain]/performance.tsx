@@ -123,7 +123,7 @@ const MONTH_LABELS = [
 ];
 const DROPDOWN_SHADOW = '0px 18px 40px 0px rgba(17, 24, 39, 0.14), 0px 8px 18px 0px rgba(17, 24, 39, 0.09), 0px 2px 6px 0px rgba(17, 24, 39, 0.06)';
 
-import { slugToDomain } from '../../../utils/domains';
+import { slugToDomain } from '../../../utils/slugToDomain';
 
 function compactNumber(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;

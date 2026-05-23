@@ -14,6 +14,7 @@ import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { dedupeUsefulTerms } from '../../../lib/articleTerms';
 import { computeAiSearchScore, AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { renderPage } from '../../../utils/spaScraper';
 
 // Try plain HTTP fetch first (fast). Falls back to Puppeteer if the content
 // looks like a JS-rendered SPA (fewer than 200 words extracted from body).
@@ -33,42 +34,8 @@ async function fetchPlain(url: string): Promise<string> {
 }
 
 async function fetchWithPuppeteer(url: string): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const puppeteer = require('puppeteer-core');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const chromium = require('@sparticuz/chromium-min');
-
-  const candidates = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-  ];
-  let executablePath: string;
-  try {
-    executablePath = candidates.find((p: string) => {
-      try { require('fs').accessSync(p); return true; } catch { return false; }
-    }) || await chromium.executablePath();
-  } catch {
-    executablePath = await chromium.executablePath();
-  }
-
-  const browser = await puppeteer.launch({
-    executablePath,
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-  });
-
-  try {
-    const page = await browser.newPage();
-    await page.setUserAgent(FETCH_UA);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForSelector('p, article, h1', { timeout: 8000 }).catch(() => {});
-    return await page.content();
-  } finally {
-    await browser.close();
-  }
+  const rendered = await renderPage(url, 30_000);
+  return rendered.html;
 }
 
 // Smart fetch: plain HTTP first, Puppeteer if content looks JS-rendered
@@ -441,6 +408,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sse(res, 'progress', { step: 'serp', status: 'running' });
     let serpCompetitors: any[] = [];
     let serpPaaQuestions: string[] = [];
+    // Competitor-derived targets (null = no data, fall back to local estimates in Step 6)
+    let serpWordsTarget: number | null = null;
+    let serpWordsMin: number | null = null;
+    let serpWordsMax: number | null = null;
+    let serpHeadingsTarget: number | null = null;
+    let serpHeadingsMin: number | null = null;
+    let serpHeadingsMax: number | null = null;
+    let serpParagraphsTarget: number | null = null;
+    let serpParagraphsMin: number | null = null;
+    let serpParagraphsMax: number | null = null;
     try {
       const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
       const axios = require('axios');
@@ -450,6 +427,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }, { timeout: 30000 });
       serpCompetitors = Array.isArray(serpRes.data?.competitors) ? serpRes.data.competitors.slice(0, 5) : [];
       serpPaaQuestions = Array.isArray(serpRes.data?.paa_questions) ? serpRes.data.paa_questions : [];
+      // Capture competitor-derived structural targets
+      if (serpRes.data?.words_target) {
+        serpWordsTarget = serpRes.data.words_target;
+        serpWordsMin = serpRes.data.words_min ?? null;
+        serpWordsMax = serpRes.data.words_max ?? null;
+        serpHeadingsTarget = serpRes.data.headings_target ?? null;
+        serpHeadingsMin = serpRes.data.headings_min ?? null;
+        serpHeadingsMax = serpRes.data.headings_max ?? null;
+        serpParagraphsTarget = serpRes.data.paragraphs_target ?? null;
+        serpParagraphsMin = serpRes.data.paragraphs_min ?? null;
+        serpParagraphsMax = serpRes.data.paragraphs_max ?? null;
+      }
       if (serpRes.data?.terms?.length) {
         // Merge SERP terms into our NLP terms (avoiding duplicates)
         const existingTerms = new Set(allTerms.map((t) => t.term.toLowerCase()));
@@ -487,22 +476,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...t,
       current_count: countOccurrences(plainText, t.term),
     }));
-    const wordsTarget = Math.max(1000, Math.ceil(wordCount * 1.5));
-    const headingsTarget = Math.max(5, Math.ceil(headingTexts.length * 2.5));
-    const paragraphsTarget = Math.max(15, Math.ceil(paragraphCount * 2.5));
+    // Use competitor-derived targets when available; fall back to article-based estimates
+    const wordsTarget = serpWordsTarget ?? Math.max(1000, Math.ceil(wordCount * 1.5));
+    const headingsTarget = serpHeadingsTarget ?? Math.max(5, Math.ceil(headingTexts.length * 2.5));
+    const paragraphsTarget = serpParagraphsTarget ?? Math.max(15, Math.ceil(paragraphCount * 2.5));
     const scoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number } = {
       terms: usefulTerms,
       words_target: wordsTarget,
-      words_min: Math.max(600, Math.ceil(wordCount * 0.9)),
-      words_max: Math.max(2000, Math.ceil(wordCount * 2.5)),
+      words_min: serpWordsMin ?? Math.max(600, Math.ceil(wordCount * 0.9)),
+      words_max: serpWordsMax ?? Math.max(2000, Math.ceil(wordCount * 2.5)),
       headings_target: headingsTarget,
-      headings_min: Math.max(2, Math.ceil(headingTexts.length * 1.5)),
-      headings_max: Math.max(10, Math.ceil(headingsTarget * 1.5)),
+      headings_min: serpHeadingsMin ?? Math.max(2, Math.ceil(headingTexts.length * 1.5)),
+      headings_max: serpHeadingsMax ?? Math.max(10, Math.ceil(headingsTarget * 1.5)),
       paragraphs_target: paragraphsTarget,
-      paragraphs_min: Math.max(5, Math.ceil(paragraphCount * 1.5)),
-      paragraphs_max: Math.max(20, Math.ceil(paragraphsTarget * 1.5)),
+      paragraphs_min: serpParagraphsMin ?? Math.max(5, Math.ceil(paragraphCount * 1.5)),
+      paragraphs_max: serpParagraphsMax ?? Math.max(20, Math.ceil(paragraphsTarget * 1.5)),
       _heading_count: headingTexts.length,
       _paragraph_count: paragraphCount,
+      competitor_count: serpWordsTarget !== null ? serpCompetitors.length : 0,
       ...(serpPaaQuestions.length ? { paa_questions: serpPaaQuestions } : {}),
     };
     scoreData._computed_score = computeContentScore(

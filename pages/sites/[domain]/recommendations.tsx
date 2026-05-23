@@ -8,7 +8,7 @@ import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
 import { normalizeUrlForMatch, kwScore } from '../../../utils/gsc';
-import { slugToDomain } from '../../../utils/domains';
+import { slugToDomain } from '../../../utils/slugToDomain';
 
 function compactNum(n: number): string {
    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -920,6 +920,13 @@ const RecommendationsPage: NextPage = () => {
       });
    };
 
+   const handleRemoveSelected = async () => {
+      const ids = Array.from(selectedIds);
+      await Promise.all(ids.map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' }).catch(() => {})));
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries(['articles', slug]);
+   };
+
    const handleSaveKeyword = async (newKeyword: string) => {
       if (!kwModalRow) return;
       await fetch(`/api/articles/${kwModalRow.id}`, {
@@ -1309,7 +1316,7 @@ const RecommendationsPage: NextPage = () => {
             onChangeKeyword={(row) => { setPanelRow(null); setKwModalRow(row); }}
             analyzing={panelRow ? analyzingIds.has(panelRow.id) : false}
          />
-         {selectedIds.size > 0 && <SelectionBar count={selectedIds.size} onRemove={() => setSelectedIds(new Set())} onClear={() => setSelectedIds(new Set())} />}
+         {selectedIds.size > 0 && <SelectionBar count={selectedIds.size} onRemove={handleRemoveSelected} onClear={() => setSelectedIds(new Set())} />}
          {kwModalRow && (
             <ChangeKeywordModal
                article={{ id: kwModalRow.id, title: kwModalRow.title, url: kwModalRow.url, keyword: kwModalRow.keyword }}
