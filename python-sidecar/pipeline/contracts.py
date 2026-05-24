@@ -40,8 +40,8 @@ class StageContext:
             return
 
         try:
-            async with httpx.AsyncClient(timeout=5) as client:
-                await client.post(
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
                     f"{self._nextjs_url}/api/articles/job-progress",
                     headers={
                         "Content-Type": "application/json",
@@ -55,8 +55,10 @@ class StageContext:
                         "message": message,
                     },
                 )
+                if resp.status_code >= 400:
+                    print(f"[pipeline] progress update HTTP {resp.status_code}: {resp.text[:200]}")
         except Exception as exc:
-            print(f"[pipeline] progress update failed: {exc}")
+            print(f"[pipeline] progress update failed: {type(exc).__name__}: {exc}")
 
     async def mark_failed(self, error: str):
         """Store error in state. Caller (runner) propagates to DB via final response."""

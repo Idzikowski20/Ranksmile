@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 
 const IconBold = () => (
   <svg viewBox="0 0 256 256" width="20" height="20" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
@@ -471,6 +472,7 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy }: SurfyBubbleMenuP
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ display: 'none' });
   const [isActive, setIsActive] = useState({ bold: false, italic: false, underline: false, strike: false, link: false });
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
+  const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkHref, setLinkHref] = useState('');
@@ -788,6 +790,161 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy }: SurfyBubbleMenuP
       <ToolButton editor={editor} command="unsetAllMarks" isActive={false}>
         <IconClearFormatting />
       </ToolButton>
+
+      <Separator />
+
+      {/* Highlight color picker */}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <button
+          type="button"
+          onClick={() => setHighlightMenuOpen((open) => !open)}
+          title="Highlight color"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
+            background: highlightMenuOpen ? '#3F3F47' : 'transparent',
+            border: 'none', cursor: 'pointer',
+            color: editor.isActive('highlight') ? '#783AFB' : '#FFFFFF',
+            padding: 0,
+            transition: 'background-color 200ms ease-in-out',
+          }}
+          onMouseEnter={(e) => { if (!highlightMenuOpen) e.currentTarget.style.background = '#3F3F47'; }}
+          onMouseLeave={(e) => { if (!highlightMenuOpen) e.currentTarget.style.background = 'transparent'; }}
+        >
+          <svg viewBox="0 0 256 256" width={20} height={20} style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
+            <path fill="currentColor" d="M201.8 46.2A55.2 55.2 0 0 0 149 41.5a55.2 55.2 0 0 0-37.9 20.1L43.4 141.2a4 4 0 0 0-.5.6L35 160.5a16.3 16.3 0 0 0 20.3 20.3l18.9-7.9a4 4 0 0 0 .6-.4l80-79.9a56 56 0 0 0 .8-78.3ZM55.6 160.8l-9.6 22.1a.6.6 0 0 1-.2.2a.3.3 0 0 1-.1 0a.4.4 0 0 1-.3-.1a.3.3 0 0 1 0-.1a.6.6 0 0 0 .2-.1l22.1-9.6Zm100.1-77.9l-79.9 80l-9.7-9.7l79.9-79.9a40 40 0 0 1 56.6 56.5l-80.1 80.2l9.7 9.7l80.2-80.2a56 56 0 0 0-56.8-56.6Z" />
+          </svg>
+        </button>
+
+        {highlightMenuOpen && (
+          <div
+            role="menu"
+            aria-orientation="vertical"
+            data-state="open"
+            tabIndex={-1}
+            style={{
+              position: 'absolute',
+              bottom: 36,
+              left: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              minWidth: 220,
+              padding: '0.375rem',
+              background: '#18181B',
+              color: '#9F9FA9',
+              borderRadius: 8,
+              boxShadow: '0px 8px 16px 0px #181a220a, 0px 2px 8px 0px #181a2205, 0px 1px 2px 0px #181a220f',
+              zIndex: 150,
+              outline: 'none',
+              animation: 'surfyGrowOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              transformOrigin: '0 100%',
+              pointerEvents: 'auto',
+            }}
+          >
+            {HIGHLIGHT_COLORS.map((item) => {
+              const active = isHighlightActive(editor, item.color);
+
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  aria-selected={active}
+                  tabIndex={-1}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (item.color === null) {
+                      editor.chain().focus().unsetHighlight().run();
+                    } else {
+                      editor.chain().focus().toggleHighlight({ color: item.color }).run();
+                    }
+                    setHighlightMenuOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    width: '100%',
+                    minWidth: 220,
+                    padding: '0.5rem 0.75rem',
+                    border: 'none',
+                    borderRadius: 6,
+                    background: active ? '#2F2F34' : 'transparent',
+                    color: '#FFFFFF',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    fontFamily: 'var(--font-family-primary)',
+                    fontSize: 14,
+                    lineHeight: '20px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    textDecoration: 'none',
+                    outline: '2px solid transparent',
+                    outlineOffset: 2,
+                    transition: 'color 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#2F2F34' : 'transparent'; }}
+                >
+                  <HighlightSwatchIcon color={item.swatch} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+
+            <div
+              style={{
+                margin: '0.375rem -0.375rem',
+                minHeight: 1,
+                minWidth: 1,
+                alignSelf: 'stretch',
+                background: '#2F2F34',
+              }}
+            />
+
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                editor.chain().focus().unsetHighlight().run();
+                setHighlightMenuOpen(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                width: '100%',
+                minWidth: 220,
+                padding: '0.5rem 0.75rem',
+                border: 'none',
+                borderRadius: 6,
+                background: 'transparent',
+                color: '#D70028',
+                cursor: 'pointer',
+                userSelect: 'none',
+                fontFamily: 'var(--font-family-primary)',
+                fontSize: 14,
+                lineHeight: '20px',
+                fontWeight: 500,
+                textAlign: 'left',
+                textDecoration: 'none',
+                outline: '2px solid transparent',
+                outlineOffset: 2,
+                transition: 'color 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <svg viewBox="0 0 24 24" width={20} height={20} style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
+                <path fill="currentColor" fillRule="evenodd" d="M16.5 4.478v.227a49 49 0 0 1 3.878.512a.75.75 0 1 1-.256 1.478l-.209-.035l-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A49 49 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a53 53 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951m-6.136-1.452a51 51 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a50 50 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452m-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058z" clipRule="evenodd" />
+              </svg>
+              <span>Clear all highlights</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       <Separator />
 

@@ -1,7 +1,5 @@
-// POST /api/articles/job-progress
-// Called by Python sidecar during pipeline execution.
-// Updates analysis_jobs row with current progress.
-// Auth: accepts x-internal-token OR standard session cookie (verifyUser).
+// POST /api/articles/job-progress — Called by Python sidecar during pipeline execution.
+// GET  /api/articles/job-progress — Polled by frontend for per-step progress display.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
@@ -9,24 +7,59 @@ import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  await db.sync();
   await ensureArticlesTables();
 
   // Auth: internal token (Python sidecar) or session cookie (browser)
   const internalToken = req.headers['x-internal-token'];
-  if (internalToken && internalToken === process.env.INTERNAL_PIPELINE_TOKEN) {
-    // Authorized via internal token — skip verifyUser
-  } else {
+  const isInternal = internalToken && internalToken === process.env.INTERNAL_PIPELINE_TOKEN;
+
+  if (!isInternal) {
     const authorized = await verifyUser(req, res);
     if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   }
+
+  // ── GET: poll job state (frontend) ──────────────────────────────
+  if (req.method === 'GET') {
+    const jobId = req.query.jobId as string;
+    if (!jobId) return res.status(400).json({ error: 'jobId query param is required' });
+
+    try {
+      const rows = await db.query<{
+        status: string;
+        current_stage: string | null;
+        stage_progress: number | null;
+        total_progress: number | null;
+        progress_message: string | null;
+      }>(
+        `SELECT status, current_stage, stage_progress, total_progress, progress_message
+         FROM analysis_jobs WHERE id = ?`,
+        { replacements: [jobId], type: QueryTypes.SELECT },
+      );
+
+      if (!rows.length) return res.status(404).json({ error: 'job not found' });
+
+      const j = rows[0];
+      return res.status(200).json({
+        jobId,
+        status: j.status,
+        currentStage: j.current_stage,
+        stageProgress: j.stage_progress,
+        totalProgress: j.total_progress,
+        progressMessage: j.progress_message,
+      });
+    } catch (err: any) {
+      console.error('[job-progress] GET failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ── POST: update progress (Python sidecar) ──────────────────────
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { jobId, currentStage, stageProgress, totalProgress, message } = req.body;
   if (!jobId) return res.status(400).json({ error: 'jobId is required' });
 
   try {
-    // Verify job exists before updating (catch typos in jobId early)
     const jobRows = await db.query<{ id: string }>(
       `SELECT id FROM analysis_jobs WHERE id = ?`,
       { replacements: [jobId], type: QueryTypes.SELECT },

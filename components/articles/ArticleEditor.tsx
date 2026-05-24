@@ -6,7 +6,9 @@ import ImageExt from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
 import type { ScoreData } from '../../lib/contentScore';
+import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
 
@@ -65,12 +67,34 @@ const chipStyle: React.CSSProperties = {
 
 const Chip = ({ label }: { label: string }) => <div style={chipStyle}>{label}</div>;
 
+const MAX_SURFY_HISTORY = 20;
+
+const IconSurfy = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
+    <defs>
+      <linearGradient id="surfy-editor-grad" x1="2.01449e-7" y1="31.8993" x2="36.6637" y2="25.0444" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#FF4087"/>
+        <stop offset="1" stopColor="#FFC056"/>
+      </linearGradient>
+    </defs>
+    <path d="M3.07678 9.07672C3.07678 5.76301 5.76307 3.07672 9.07678 3.07672H22.9233C26.237 3.07672 28.9233 5.76301 28.9233 9.07672V22.9233C28.9233 26.237 26.237 28.9233 22.9233 28.9233H9.07678C5.76307 28.9233 3.07678 26.237 3.07678 22.9233V9.07672Z" fill="white"/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M8.49224 2C4.92508 2 2.07498 4.94359 2.07498 8.46154L2 23.5385C2 27.1282 4.92508 30 8.4209 30H23.4743C27.0415 30 30 27.0564 30 23.5385L29.9722 8.05139C29.7595 4.65552 26.9073 2 23.5457 2H8.49224ZM27.1802 8.29085C27.0905 6.36259 25.4884 4.8718 23.617 4.8718H8.4209C6.49463 4.8 4.85373 6.45128 4.85373 8.46154L4.84956 23.5385H4.85373C4.85373 25.5487 6.49463 27.1282 8.4209 27.1282H23.4743C25.472 27.1282 27.1463 25.4769 27.1463 23.5385L27.1802 8.29085Z" fill="url(#surfy-editor-grad)"/>
+    <g style={{ transformOrigin: '11px 14px', animation: 'surfy-blink 4s ease-in-out infinite' }}>
+      <path d="M9.84155 11.1844C9.84155 10.3709 9.84155 9.96409 10.0943 9.71135C10.347 9.45862 10.7538 9.45862 11.5673 9.45862H12.1013C12.9148 9.45862 13.3216 9.45862 13.5743 9.71135C13.8271 9.96409 13.8271 10.3709 13.8271 11.1844V16.602C13.8271 17.4155 13.8271 17.8223 13.5743 18.075C13.3216 18.3278 12.9148 18.3278 12.1013 18.3278H11.5673C10.7538 18.3278 10.347 18.3278 10.0943 18.075C9.84155 17.8223 9.84155 17.4155 9.84155 16.602V11.1844Z" fill="black"/>
+    </g>
+    <g style={{ transformOrigin: '20px 14px', animation: 'surfy-blink 4s ease-in-out 0.15s infinite' }}>
+      <path d="M18.1047 11.1844C18.1047 10.3709 18.1047 9.96409 18.3575 9.71135C18.6102 9.45862 19.017 9.45862 19.8305 9.45862H20.3645C21.178 9.45862 21.5848 9.45862 21.8375 9.71135C22.0902 9.96409 22.0902 10.3709 22.0902 11.1844V16.602C22.0902 17.4155 22.0902 17.8223 21.8375 18.075C21.5848 18.3278 21.178 18.3278 20.3645 18.3278H19.8305C19.017 18.3278 18.6102 18.3278 18.3575 18.075C18.1047 17.8223 18.1047 17.4155 18.1047 16.602V11.1844Z" fill="black"/>
+    </g>
+  </svg>
+);
+
 const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkInitialText, setLinkInitialText] = useState('');
   const [linkInitialHref, setLinkInitialHref] = useState('');
   const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
+  const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
 
   const openLinkModal = useCallback(() => {
     if (!editor) return;
@@ -207,6 +231,98 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5m10.5-11.25h.008v.008h-.008zm.375 0a.375.375 0 1 1-.75 0a.375.375 0 0 1 .75 0" /></svg>
         </button>
 
+        {/* Highlight color picker */}
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setHighlightMenuOpen((v) => !v)}
+            title="Highlight color"
+            style={{
+              ...btnStyle,
+              color: editor.isActive('highlight') ? '#630DE3' : '#18181B',
+              background: highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : '#F4F4F5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : 'transparent';
+            }}
+          >
+            <svg viewBox="0 0 256 256" width={18} height={18} style={{ display: 'inline-block', flexShrink: 0 }}>
+              <path fill="currentColor" d="M208 56v32a8 8 0 0 1-16 0V64h-56v128h24a8 8 0 0 1 0 16H96a8 8 0 0 1 0-16h24V64H64v24a8 8 0 0 1-16 0V56a8 8 0 0 1 8-8h144a8 8 0 0 1 8 8" />
+            </svg>
+          </button>
+          {highlightMenuOpen && (
+            <div
+              style={{
+                position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                marginTop: 6, background: '#fff', borderRadius: 8, padding: 4,
+                boxShadow: '0px 4px 16px 0px rgba(24,26,34,0.12), 0px 1px 4px 0px rgba(24,26,34,0.08)',
+                border: '1px solid #F4F4F5', zIndex: 200, minWidth: 172,
+                animation: 'growOut 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+            >
+              {HIGHLIGHT_COLORS.map((item) => {
+                const active = isHighlightActive(editor, item.color);
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (item.color === null) {
+                        editor.chain().focus().unsetHighlight().run();
+                      } else {
+                        editor.chain().focus().toggleHighlight({ color: item.color }).run();
+                      }
+                      setHighlightMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      width: '100%', padding: '4px 8px', borderRadius: 6,
+                      background: active ? '#F3EEFF' : 'transparent',
+                      border: 'none', cursor: 'pointer',
+                      color: '#18181B', fontSize: 13,
+                      fontFamily: 'var(--font-family-primary)',
+                      transition: 'background-color 120ms ease',
+                    }}
+                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#F4F4F5'; }}
+                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <HighlightSwatchIcon color={item.swatch} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+              <div style={{ height: 1, background: '#F4F4F5', margin: '2px 0' }} />
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().unsetHighlight().run();
+                  setHighlightMenuOpen(false);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', padding: '4px 8px', borderRadius: 6,
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  color: '#FF6F77', fontSize: 13,
+                  fontFamily: 'var(--font-family-primary)',
+                  transition: 'background-color 120ms ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#FEF2F2'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <svg viewBox="0 0 256 256" width={16} height={16} style={{ display: 'inline-block', flexShrink: 0 }}>
+                  <path fill="currentColor" d="M216 48H40a8 8 0 0 0 0 16h8v144a16 16 0 0 0 16 16h128a16 16 0 0 0 16-16V64h8a8 8 0 0 0 0-16m-32 160H72V64h112Zm-80-112v96a8 8 0 0 1-16 0V96a8 8 0 0 1 16 0m32 0v96a8 8 0 0 1-16 0V96a8 8 0 0 1 16 0" />
+                </svg>
+                Clear all highlights
+              </button>
+            </div>
+          )}
+        </div>
+
         <Sep />
 
         {/* Undo */}
@@ -238,28 +354,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
       >
-        <svg width="20" height="21" viewBox="0 0 19 20" fill="none" style={{ flexShrink: 0, padding: 1 }}>
-          <path d="M1.92383 5.67187C1.92383 3.60081 3.60276 1.92188 5.67383 1.92188H14.3279C16.399 1.92188 18.0779 3.60081 18.0779 5.67188V14.326C18.0779 16.397 16.399 18.076 14.3279 18.076H5.67383C3.60276 18.076 1.92383 16.397 1.92383 14.326V5.67187Z" fill="white" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#s_grad_1)" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#s_grad_2)" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#s_grad_3)" />
-          <path d="M6.15039 7.05909C6.15039 6.55062 6.15039 6.29639 6.30835 6.13843C6.46631 5.98047 6.72054 5.98047 7.22901 5.98047H7.56271C8.07118 5.98047 8.32541 5.98047 8.48337 6.13843C8.64133 6.29639 8.64133 6.55062 8.64133 7.05909V10.4451C8.64133 10.9535 8.64133 11.2078 8.48337 11.3657C8.32541 11.5237 8.07118 11.5237 7.56272 11.5237H7.22901C6.72054 11.5237 6.46631 11.5237 6.30835 11.3657C6.15039 11.2078 6.15039 10.9535 6.15039 10.4451V7.05909Z" fill="black" />
-          <path d="M11.3164 7.05909C11.3164 6.55062 11.3164 6.29639 11.4744 6.13843C11.6323 5.98047 11.8866 5.98047 12.395 5.98047H12.7287C13.2372 5.98047 13.4914 5.98047 13.6494 6.13843C13.8073 6.29639 13.8073 6.55062 13.8073 7.05909V10.4451C13.8073 10.9535 13.8073 11.2078 13.6494 11.3657C13.4914 11.5237 13.2372 11.5237 12.7287 11.5237H12.395C11.8866 11.5237 11.6323 11.5237 11.4744 11.3657C11.3164 11.2078 11.3164 10.9535 11.3164 10.4451V7.05909Z" fill="black" />
-          <defs>
-            <linearGradient id="s_grad_1" x1="1.25" y1="18.75" x2="21.3089" y2="15.0232" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#FF4087" />
-              <stop offset="1" stopColor="#FFC056" />
-            </linearGradient>
-            <linearGradient id="s_grad_2" x1="10" y1="10" x2="-1.24953" y2="15.9384" gradientUnits="userSpaceOnUse">
-              <stop offset="0.631405" stopColor="#FF6DE8" stopOpacity="0" />
-              <stop offset="1" stopColor="#DA6EA2" />
-            </linearGradient>
-            <linearGradient id="s_grad_3" x1="13.125" y1="7.5" x2="19.9999" y2="6.24946" gradientUnits="userSpaceOnUse">
-              <stop offset="0.640157" stopColor="#FFE43E" stopOpacity="0" />
-              <stop offset="1" stopColor="#FFE43E" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <IconSurfy size={20} />
         Ask Surfy
       </button>
       </div>
@@ -664,20 +759,35 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       return parts;
     };
 
+    const [surfyHistory, setSurfyHistory] = useState<Array<{ role: 'user' | 'assistant'; message: string; content?: string | null; action?: string }>>([]);
+
     const handleAskSurfy = () => {
       if (!editor) return;
-      if (surfyOpen) { setSurfyOpen(false); setSurfyResponse(null); return; }
-      setSurfySelection(null); // null = full article mode
+      if (surfyOpen) { setSurfyOpen(false); setSurfyResponse(null); setSurfyHistory([]); return; }
+      const { from, to, empty } = editor.state.selection;
+      if (!empty && from !== to) {
+        const text = editor.state.doc.textBetween(from, to, '\n');
+        setSurfySelection({ text, from, to });
+      } else {
+        setSurfySelection(null);
+      }
       setSurfyOpen(true);
       setSurfyResponse(null);
+      setSurfyHistory([]);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
     };
 
-    const handleSurfySubmit = async () => {
+  const handleSurfySubmit = async () => {
       const prompt = surfyPrompt.trim();
       if (!prompt || !editor) return;
       setSurfyLoading(true);
       setSurfyResponse(null);
+
+      setSurfyHistory((prev) => {
+        const next = [...prev, { role: 'user' as const, message: prompt }];
+        return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
+      });
+
       try {
         const htmlContent = editor.getHTML();
         const res = await fetch('/api/articles/ask-surfy', {
@@ -692,14 +802,24 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             scoreData: scoreData || null,
             internalArticles: internalArticles || [],
             keyword: articleKeyword || keyword || '',
+            history: surfyHistory,
           }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
-        setSurfyResponse({ message: data.message, content: data.content });
+        setSurfyResponse({ action: data.action, message: data.message, content: data.content });
+        setSurfyHistory((prev) => {
+          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.content, action: data.action }];
+          return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
+        });
         setSurfyPrompt('');
       } catch (err: any) {
-        setSurfyResponse({ message: 'Error: ' + err.message, content: null });
+        const errMsg = 'Error: ' + err.message;
+        setSurfyResponse({ message: errMsg, content: null });
+        setSurfyHistory((prev) => {
+          const next = [...prev, { role: 'assistant' as const, message: errMsg }];
+          return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
+        });
       } finally {
         setSurfyLoading(false);
       }
@@ -743,9 +863,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // Next.js (TipTap v3 detects window.next and forces immediatelyRender:false).
     // A plain ref lets getEditor() read the live value without stale-closure issues.
     const editorLiveRef = useRef<any>(null);
+    const surfyOpenRef = useRef(surfyOpen);
+    surfyOpenRef.current = surfyOpen;
 
     const calcAndEmit = useCallback((ed: any) => {
-      const html = ed.getHTML();
+      let html = ed.getHTML();
+      // Strip highlight marks when Surfy is open to prevent leaking into saved content
+      if (surfyOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
       const text = ed.getText();
       const words = text.split(/\s+/).filter(Boolean).length;
       const json = ed.getJSON();
@@ -776,6 +900,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
         Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
+        Highlight.configure({ multicolor: true }),
       ],
       content,
       immediatelyRender: false,
@@ -785,6 +910,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     // Keep the live ref in sync on every render
     editorLiveRef.current = editor;
+
+    useEffect(() => {
+      if (!editor) return;
+      if (surfyOpen && surfySelection) {
+        editor.chain().unsetHighlight().setTextSelection({ from: surfySelection.from, to: surfySelection.to }).setHighlight({ color: 'rgba(120, 58, 251, 0.15)' }).run();
+      } else if (editor.isActive('highlight')) {
+        editor.chain().unsetHighlight().run();
+      }
+    }, [surfyOpen, surfySelection]);
 
     // Expose handle via prop-based ref (React.forwardRef doesn't work through
     // Next.js dynamic() / loadable — the wrapper intercepts the ref prop and
@@ -796,6 +930,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         triggerSurfy: (prompt: string) => {
           setSurfyOpen(true);
           setSurfyResponse(null);
+          setSurfySelection(null);
+          setSurfyHistory([]);
           setSurfyPrompt(prompt);
           setTimeout(() => surfyInputRef.current?.focus(), 100);
         },
@@ -904,6 +1040,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 editor={editor}
                 onAskSurfy={(selection) => {
                   setSurfySelection(selection);
+                  setSurfyResponse(null);
+                  setSurfyHistory([]);
                   setSurfyOpen(true);
                 }}
               />
@@ -934,117 +1072,54 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
               }}
             >
-              {/* Input row — hidden when response exists */}
-              {!surfyResponse && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', paddingBottom: 0 }}>
-                  {/* Surfy logo */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="20" height="21" viewBox="0 0 19 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ padding: 1 }}>
-                      <path d="M1.92383 5.67187C1.92383 3.60081 3.60276 1.92188 5.67383 1.92188H14.3279C16.399 1.92188 18.0779 3.60081 18.0779 5.67188V14.326C18.0779 16.397 16.399 18.076 14.3279 18.076H5.67383C3.60276 18.076 1.92383 16.397 1.92383 14.326V5.67187Z" fill="white"/>
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#surfy-g0)"/>
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#surfy-g1)"/>
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#surfy-g2)"/>
-                      <path d="M6.15039 7.05909C6.15039 6.55062 6.15039 6.29639 6.30835 6.13843C6.46631 5.98047 6.72054 5.98047 7.22901 5.98047H7.56271C8.07118 5.98047 8.32541 5.98047 8.48337 6.13843C8.64133 6.29639 8.64133 6.55062 8.64133 7.05909V10.4451C8.64133 10.9535 8.64133 11.2078 8.48337 11.3657C8.32541 11.5237 8.07118 11.5237 7.56272 11.5237H7.22901C6.72054 11.5237 6.46631 11.5237 6.30835 11.3657C6.15039 11.2078 6.15039 10.9535 6.15039 10.4451V7.05909Z" fill="black"/>
-                      <path d="M11.3164 7.05909C11.3164 6.55062 11.3164 6.29639 11.4744 6.13843C11.6323 5.98047 11.8866 5.98047 12.395 5.98047H12.7287C13.2372 5.98047 13.4914 5.98047 13.6494 6.13843C13.8073 6.29639 13.8073 6.55062 13.8073 7.05909V10.4451C13.8073 10.9535 13.8073 11.2078 13.6494 11.3657C13.4914 11.5237 13.2372 11.5237 12.7287 11.5237H12.395C11.8866 11.5237 11.6323 11.5237 11.4744 11.3657C11.3164 11.2078 11.3164 10.9535 11.3164 10.4451V7.05909Z" fill="black"/>
-                      <defs>
-                        <linearGradient id="surfy-g0" x1="1.25" y1="18.75" x2="21.3089" y2="15.0232" gradientUnits="userSpaceOnUse">
-                          <stop stopColor="#FF4087"/>
-                          <stop offset="1" stopColor="#FFC056"/>
-                        </linearGradient>
-                        <linearGradient id="surfy-g1" x1="10" y1="10" x2="-1.24953" y2="15.9384" gradientUnits="userSpaceOnUse">
-                          <stop offset="0.631405" stopColor="#FF6DE8" stopOpacity="0"/>
-                          <stop offset="1" stopColor="#DA6EA2"/>
-                        </linearGradient>
-                        <linearGradient id="surfy-g2" x1="13.125" y1="7.5" x2="19.9999" y2="6.24946" gradientUnits="userSpaceOnUse">
-                          <stop offset="0.640157" stopColor="#FFE43E" stopOpacity="0"/>
-                          <stop offset="1" stopColor="#FFE43E"/>
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                  </div>
-
-                  {/* Textarea */}
-                  <div style={{ flex: 1 }}>
-                    <textarea
-                      ref={surfyInputRef}
-                      rows={1}
-                      value={surfyPrompt}
-                      onChange={(e) => setSurfyPrompt(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSurfySubmit();
-                        }
-                      }}
-                      placeholder="Ask Surfy to make it shorter"
-                      disabled={surfyLoading}
-                      style={{
-                        width: '100%',
-                        height: 24,
-                        maxHeight: 400,
-                        minHeight: 0,
-                        border: 'none',
-                        borderRadius: 0,
-                        background: 'transparent',
-                        outline: 'none',
-                        padding: 0,
-                        fontSize: 14,
-                        lineHeight: '24px',
-                        color: '#fff',
-                        fontFamily: 'var(--font-family-primary)',
-                        resize: 'none',
-                      }}
-                    />
-                  </div>
-
-                  {/* Send button */}
-                  <button
-                    type="button"
-                    onClick={handleSurfySubmit}
-                    disabled={!surfyPrompt.trim() || surfyLoading}
-                    aria-label="Send"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      width: 36, height: 36, borderRadius: 8,
-                      background: 'transparent', border: 'none',
-                      color: '#fff',
-                      cursor: surfyPrompt.trim() && !surfyLoading ? 'pointer' : 'not-allowed',
-                      opacity: surfyPrompt.trim() && !surfyLoading ? 1 : 0.4,
-                      padding: 0,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875zm0 0h7.5" />
-                    </svg>
-                  </button>
-
-                  {/* Audio/loading bars */}
-                  <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <div key={i} style={{ width: 4, height: 12, background: '#1AB25E', borderRadius: 1, opacity: surfyLoading ? 1 : 0 }} />
-                    ))}
-                  </div>
-
-                  {/* Close button */}
-                  <button
-                    type="button"
-                    onClick={() => { setSurfyOpen(false); setSurfyPrompt(''); setSurfyResponse(null); }}
-                    aria-label="Close"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start',
-                      width: 36, height: 36, borderRadius: 8,
-                      background: 'transparent', border: 'none',
-                      color: '#fff', cursor: 'pointer', padding: '0.375rem',
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+              {/* Conversation history — scrollable chat above input */}
+              {surfyHistory.length > 0 && (
+                <div style={{ padding: '0.5rem 0.5rem 0', maxHeight: 260, overflowY: 'auto' }} className="styled-scrollbar-dark">
+                  {surfyHistory.map((entry, i) => (
+                    <div key={i} style={{ marginBottom: i < surfyHistory.length - 1 ? 12 : 0 }}>
+                      {/* User message */}
+                      {entry.role === 'user' && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <div style={{
+                            maxWidth: '85%', padding: '8px 12px', borderRadius: 12,
+                            borderBottomRightRadius: 4,
+                            background: '#783afb',
+                            color: '#fff', fontSize: 13, lineHeight: '20px',
+                            fontFamily: 'var(--font-family-primary)',
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                          }}>
+                            {entry.message}
+                          </div>
+                        </div>
+                      )}
+                      {/* Assistant message */}
+                      {entry.role === 'assistant' && (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                            <IconSurfy size={16} />
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Surfy</span>
+                            {entry.action && entry.action !== 'analysis_only' && (
+                              <span style={{
+                                fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)',
+                                background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 9999,
+                              }}>
+                                {entry.action.replace(/_/g, ' ')}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{
+                            padding: '10px 12px', borderRadius: 8,
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid #221e28',
+                            fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)',
+                            fontFamily: 'var(--font-family-primary)',
+                          }}>
+                            {renderSurfyMessage(entry.message)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -1056,106 +1131,141 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               )}
 
-              {/* AI Response */}
+              {/* Action buttons for latest response */}
               {surfyResponse && !surfyLoading && (
-                <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {/* Response header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 0.25rem' }}>
-                    <svg width="20" height="21" viewBox="0 0 19 20" fill="none" style={{ flexShrink: 0 }}>
-                      <path d="M1.92383 5.67187C1.92383 3.60081 3.60276 1.92188 5.67383 1.92188H14.3279C16.399 1.92188 18.0779 3.60081 18.0779 5.67188V14.326C18.0779 16.397 16.399 18.076 14.3279 18.076H5.67383C3.60276 18.076 1.92383 16.397 1.92383 14.326V5.67187Z" fill="white" />
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#s_grad_1)" />
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#s_grad_2)" />
-                      <path fillRule="evenodd" clipRule="evenodd" d="M5.30765 1.25C3.07817 1.25 1.29686 3.08974 1.29686 5.28846L1.25 14.7115C1.25 16.9551 3.07817 18.75 5.26306 18.75H14.6715C16.9009 18.75 18.75 16.9103 18.75 14.7115L18.7326 5.03212C18.5997 2.9097 16.8171 1.25 14.7161 1.25H5.30765ZM16.9876 5.18178C16.9316 3.97662 15.9303 3.04487 14.7606 3.04487H5.26306C4.05914 3 3.03358 4.03205 3.03358 5.28846L3.03098 14.7115H3.03358C3.03358 15.9679 4.05914 16.9551 5.26306 16.9551H14.6715C15.92 16.9551 16.9664 15.9231 16.9664 14.7115L16.9876 5.18178Z" fill="url(#s_grad_3)" />
-                      <path d="M6.15039 7.05909C6.15039 6.55062 6.15039 6.29639 6.30835 6.13843C6.46631 5.98047 6.72054 5.98047 7.22901 5.98047H7.56271C8.07118 5.98047 8.32541 5.98047 8.48337 6.13843C8.64133 6.29639 8.64133 6.55062 8.64133 7.05909V10.4451C8.64133 10.9535 8.64133 11.2078 8.48337 11.3657C8.32541 11.5237 8.07118 11.5237 7.56272 11.5237H7.22901C6.72054 11.5237 6.46631 11.5237 6.30835 11.3657C6.15039 11.2078 6.15039 10.9535 6.15039 10.4451V7.05909Z" fill="black" />
-                      <path d="M11.3164 7.05909C11.3164 6.55062 11.3164 6.29639 11.4744 6.13843C11.6323 5.98047 11.8866 5.98047 12.395 5.98047H12.7287C13.2372 5.98047 13.4914 5.98047 13.6494 6.13843C13.8073 6.29639 13.8073 6.55062 13.8073 7.05909V10.4451C13.8073 10.9535 13.8073 11.2078 13.6494 11.3657C13.4914 11.5237 13.2372 11.5237 12.7287 11.5237H12.395C11.8866 11.5237 11.6323 11.5237 11.4744 11.3657C11.3164 11.2078 11.3164 10.9535 11.3164 10.4451V7.05909Z" fill="black" />
-                      <defs>
-                        <linearGradient id="s_grad_1" x1="1.25" y1="18.75" x2="21.3089" y2="15.0232" gradientUnits="userSpaceOnUse"><stop stopColor="#FF4087" /><stop offset="1" stopColor="#FFC056" /></linearGradient>
-                        <linearGradient id="s_grad_2" x1="10" y1="10" x2="-1.24953" y2="15.9384" gradientUnits="userSpaceOnUse"><stop offset="0.631405" stopColor="#FF6DE8" stopOpacity="0" /><stop offset="1" stopColor="#DA6EA2" /></linearGradient>
-                        <linearGradient id="s_grad_3" x1="13.125" y1="7.5" x2="19.9999" y2="6.24946" gradientUnits="userSpaceOnUse"><stop offset="0.640157" stopColor="#FFE43E" stopOpacity="0" /><stop offset="1" stopColor="#FFE43E" /></linearGradient>
-                      </defs>
-                    </svg>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)', lineHeight: '20px' }}>Surfy</span>
-                  </div>
-
-                  {/* Message body */}
-                  <div
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.25rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); setSurfyHistory([]); }}
                     style={{
-                      padding: '12px 14px',
-                      borderRadius: 8,
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid #221e28',
-                      maxHeight: 340,
-                      overflowY: 'auto',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '0.375rem 0.75rem', borderRadius: 6,
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500,
+                      fontFamily: 'var(--font-family-primary)',
                     }}
-                    className="styled-scrollbar-dark"
                   >
-                    {renderSurfyMessage(surfyResponse.message)}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', gap: '0.375rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => { setSurfyResponse(null); surfyInputRef.current?.focus(); }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          padding: '0.375rem 0.75rem', borderRadius: 6,
-                          background: '#18181b', border: 'none', cursor: 'pointer',
-                          color: '#fff', fontSize: 13, fontWeight: 500,
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        Ask again
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); }}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          padding: '0.375rem 0.75rem', borderRadius: 6,
-                          background: 'transparent', border: 'none', cursor: 'pointer',
-                          color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500,
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-
-                    {(surfyResponse.content || surfyResponse.action === 'delete_selection') && (
-                      <button
-                        type="button"
-                        onClick={handleSurfyApply}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '0.375rem 0.75rem', borderRadius: 6,
-                          background: '#783afb', border: 'none', cursor: 'pointer',
-                          color: '#fff', fontSize: 13, fontWeight: 600,
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
-                      >
-                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                        Apply changes
-                      </button>
-                    )}
-                  </div>
+                    Dismiss
+                  </button>
+                  {(surfyResponse.content || surfyResponse.action === 'delete_selection') && (
+                    <button
+                      type="button"
+                      onClick={handleSurfyApply}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '0.375rem 0.75rem', borderRadius: 6,
+                        background: '#783afb', border: 'none', cursor: 'pointer',
+                        color: '#fff', fontSize: 13, fontWeight: 600,
+                        fontFamily: 'var(--font-family-primary)',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
+                    >
+                      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                      Apply changes
+                    </button>
+                  )}
                 </div>
               )}
 
-              {/* Context chips row — only when no response yet */}
-              {!surfyResponse && !surfyLoading && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem 0.5rem 0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, lineHeight: '16px', color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Context:</span>
-                    <Chip label={surfySelection ? `Selected text (${surfySelection.text.length} chars)` : 'Full article'} />
-                    <Chip label={`Keyword: ${articleKeyword || keyword || 'N/A'}`} />
-                    <Chip label={`Score: ${scoreData ? `${(scoreData as any).computed_score || '?'}/100` : 'N/A'}`} />
-                  </div>
+              {/* Context chips row — always visible */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap', padding: '0.5rem 0.5rem', borderTop: '1px solid #221e28' }}>
+                <span style={{ fontSize: 12, lineHeight: '16px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)' }}>Context:</span>
+                <Chip label={surfySelection ? `Selected (${surfySelection.text.length}c)` : 'Full article'} />
+                <Chip label={articleKeyword || keyword || 'N/A'} />
+                <Chip label={`Score: ${scoreData ? `${(scoreData as any).computed_score || '?'}/100` : 'N/A'}`} />
+              </div>
+
+              {/* Input row — always visible */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', paddingTop: 0 }}>
+                {/* Surfy logo */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <IconSurfy size={20} />
                 </div>
-              )}
+
+                {/* Textarea */}
+                <div style={{ flex: 1 }}>
+                  <textarea
+                    ref={surfyInputRef}
+                    rows={1}
+                    value={surfyPrompt}
+                    onChange={(e) => setSurfyPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSurfySubmit();
+                      }
+                    }}
+                    placeholder="Ask Surfy..."
+                    disabled={surfyLoading}
+                    style={{
+                      width: '100%',
+                      height: 24,
+                      maxHeight: 400,
+                      minHeight: 0,
+                      border: 'none',
+                      borderRadius: 0,
+                      background: 'transparent',
+                      outline: 'none',
+                      padding: 0,
+                      fontSize: 14,
+                      lineHeight: '24px',
+                      color: '#fff',
+                      fontFamily: 'var(--font-family-primary)',
+                      resize: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Send button */}
+                <button
+                  type="button"
+                  onClick={handleSurfySubmit}
+                  disabled={!surfyPrompt.trim() || surfyLoading}
+                  aria-label="Send"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 36, height: 36, borderRadius: 8,
+                    background: 'transparent', border: 'none',
+                    color: '#fff',
+                    cursor: surfyPrompt.trim() && !surfyLoading ? 'pointer' : 'not-allowed',
+                    opacity: surfyPrompt.trim() && !surfyLoading ? 1 : 0.4,
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875zm0 0h7.5" />
+                  </svg>
+                </button>
+
+                {/* Audio/loading bars */}
+                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} style={{ width: 4, height: 12, background: '#1AB25E', borderRadius: 1, opacity: surfyLoading ? 1 : 0 }} />
+                  ))}
+                </div>
+
+                {/* Close button */}
+                <button
+                  type="button"
+                  onClick={() => { setSurfyOpen(false); setSurfyPrompt(''); setSurfyResponse(null); setSurfyHistory([]); }}
+                  aria-label="Close"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start',
+                    width: 36, height: 36, borderRadius: 8,
+                    background: 'transparent', border: 'none',
+                    color: '#fff', cursor: 'pointer', padding: '0.375rem',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -173,8 +173,11 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    const [switcherOpen, setSwitcherOpen] = useState(false);
    const switcherRef = useRef<HTMLDivElement>(null);
 
-   const isActive = (path: string) => router.asPath === path;
-   const isActivePrefix = (prefix: string) => router.asPath.startsWith(prefix);
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => { setMounted(true); }, []);
+
+   const isActive = (path: string) => mounted && router.asPath === path;
+   const isActivePrefix = (prefix: string) => mounted && router.asPath.startsWith(prefix);
 
    // Detect domain slug from current URL (e.g. /sites/[slug]/...)
    const urlSlugMatch = router.asPath.match(/^\/(?:domain|sites)\/([^/?#]+)/);
@@ -408,7 +411,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', paddingLeft: '8px', marginTop: 2 }}>
                      {DOMAIN_SUB_NAV.map((item) => {
                         const href = `/sites/${selectedDomainSlug}/${item.key}`;
-                        const active = router.asPath === href || router.asPath.startsWith(href + '?');
+                        const active = mounted && (router.asPath === href || router.asPath.startsWith(href + '?'));
                         return (
                            <Link key={item.key} href={href} passHref>
                               <a

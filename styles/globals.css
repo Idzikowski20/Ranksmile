@@ -991,3 +991,9 @@ body {
 .surfy-selection-highlight ::selection {
   background: rgba(120, 58, 251, 0.15);
 }
+
+/* Surfy selection highlight — override browser default mark styling */
+.surfy-selection-highlight mark {
+  color: inherit;
+  border-radius: 2px;
+}
