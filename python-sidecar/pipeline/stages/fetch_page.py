@@ -16,10 +16,10 @@ class FetchPageStage(AnalysisStage):
         if not url:
             raise ValueError("url is required in payload")
 
-        html = await self._fetch(url)
-        soup = BeautifulSoup(html, "lxml")
+        raw_html = await self._fetch(url)
+        soup = BeautifulSoup(raw_html, "lxml")
 
-        # Extract rich metadata for downstream stages (scorer, classifier)
+        # Extract rich metadata from original soup (before cleaning)
         title_tag = soup.find("title")
         h1_tag = soup.find("h1")
         desc_tag = soup.find("meta", attrs={"name": "description"})
@@ -28,31 +28,90 @@ class FetchPageStage(AnalysisStage):
         og_desc = soup.find("meta", property="og:description")
         og_image = soup.find("meta", property="og:image")
 
-        # Content stats (on cleaned soup — without scripts/nav etc.)
+        # Extract featured image: og:image first, then first large img in article
+        featured_image = og_image.get("content", "") if og_image else ""
+
+        # Remove non-content elements
         for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
             tag.decompose()
 
-        headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
-        paragraphs = [p for p in soup.find_all("p") if len(p.get_text(strip=True)) > 30]
-        imgs = soup.find_all("img")
-        imgs_without_alt = sum(1 for img in imgs if not img.get("alt", "").strip())
+        # ── Extract main article content ────────────────────────────
+        article = None
+        # 1. Try semantic + WordPress/theme content selectors (ordered by specificity)
+        content_selectors = [
+            "article",
+            "main",
+            "section.single-post-section",
+            ".post-content",
+            ".entry-content",
+            ".article-content",
+            ".content-area",
+            ".post-body",
+            ".site-content.post",
+            '[role="main"]',
+            "#content",
+            ".site-content",
+        ]
+        for selector in content_selectors:
+            article = soup.select_one(selector)
+            if article:
+                # Verify it has substantial content (not just post meta / empty container)
+                text_len = len(article.get_text(separator=" ", strip=True).split())
+                if text_len >= 100:
+                    break
+                article = None  # Too small, try next selector
+
+        if not article:
+            article = soup.find("body") or soup
+
+        def _img_real_src(img) -> str:
+            """Resolve real image URL — handles lazy loading (data-src, data-lazy-src)."""
+            return img.get("data-src") or img.get("data-lazy-src") or img.get("src") or ""
+
+        # Featured image fallback: first real img inside article
+        if not featured_image:
+            first_img = article.find("img")
+            if first_img:
+                featured_image = _img_real_src(first_img)
+
+        # Extract content images (skip base64 placeholders / SVG data URIs)
+        content_imgs = article.find_all("img")
+        img_urls = []
+        for img in content_imgs:
+            src = _img_real_src(img)
+            if src and not src.startswith("data:"):
+                img_urls.append({
+                    "src": src,
+                    "alt": img.get("alt", ""),
+                    "width": img.get("width", ""),
+                    "height": img.get("height", ""),
+                })
+
+        # Stats on cleaned article content
+        headings = article.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+        paragraphs = [p for p in article.find_all("p") if len(p.get_text(strip=True)) > 30]
+        imgs_without_alt = sum(1 for img in content_imgs if not img.get("alt", "").strip())
+
+        # Build clean content HTML from article content
+        content_html = str(article)
 
         return {
             "url": url,
-            "html": html,
+            "html": content_html,
+            "featured_image": featured_image,
+            "content_images": img_urls,
             "title": h1_tag.get_text(strip=True) if h1_tag else (title_tag.get_text(strip=True) if title_tag else url),
             "meta_title": title_tag.get_text(strip=True) if title_tag else "",
-            "meta_description": desc_tag.get("content", "") if desc_tag else "",
+            "meta_description": desc_tag.get("content", "") if desc_tag else (og_desc.get("content", "") if og_desc else ""),
             "canonical": canonical_tag.get("href", "") if canonical_tag else "",
             "og_title": og_title.get("content", "") if og_title else "",
             "og_description": og_desc.get("content", "") if og_desc else "",
             "og_image": og_image.get("content", "") if og_image else "",
             "heading_count": len(headings),
             "paragraph_count": len(paragraphs),
-            "image_count": len(imgs),
+            "image_count": len(content_imgs),
             "images_without_alt": imgs_without_alt,
-            # Basic issues detected during fetch
-            "issues": _detect_fetch_issues(title_tag, desc_tag, h1_tag, headings, imgs, imgs_without_alt),
+            "issues": _detect_fetch_issues(title_tag, desc_tag, h1_tag, headings, content_imgs, imgs_without_alt),
         }
 
     async def _fetch(self, url: str) -> str:
