@@ -980,3 +980,14 @@ body {
    flex-shrink: 0;
    line-height: 1;
 }
+
+/* ── Surfy AI animations ─────────────────────────────────────────── */
+
+@keyframes surfy-blink {
+  0%, 50%, 56%, 100% { transform: scaleY(1); }
+  53% { transform: scaleY(0.12); }
+}
+
+.surfy-selection-highlight ::selection {
+  background: rgba(120, 58, 251, 0.15);
+}

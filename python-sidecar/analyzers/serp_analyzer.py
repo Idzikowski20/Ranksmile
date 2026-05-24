@@ -12,6 +12,7 @@ import httpx
 import numpy as np
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
+from analyzers.semantic_terms import extract_semantic_terms
 
 
 # ── SPA fallback: use Next.js headless browser endpoint for JS-rendered pages ──
@@ -81,7 +82,7 @@ def domain_from_url(url: str) -> str:
         return ""
 
 
-async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10) -> dict:
+async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10, include_texts: bool = False) -> dict:
     serper_key = os.getenv("SERPER_API_KEY", "")
 
     if not serper_key:
@@ -97,10 +98,11 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     if not serp_texts:
         return _placeholder_score_data()
 
-    nlp_terms = _extract_nlp_terms(serp_texts, keyword)
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
+    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key)
     targets = _compute_targets(serp_texts, soups)
 
-    return {
+    result = {
         "terms": nlp_terms,
         "paa_questions": paa_questions,
         "competitors": [
@@ -114,6 +116,9 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
         ],
         **targets,
     }
+    if include_texts:
+        result["_competitor_texts"] = serp_texts
+    return result
 
 
 async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: str) -> list[dict]:
@@ -208,6 +213,9 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
 
 def _extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
     """
+    DEPRECATED: Replaced by analyzers.semantic_terms.extract_semantic_terms()
+    in analyze_serp(). Kept for backward compatibility.
+
     Extracts NLP terms from competitor pages using a two-pass approach:
     1. TF-IDF discovers candidate phrases (good at surfacing relevant multi-word terms)
     2. Actual term frequency sets target_count (reflects real competitor usage)

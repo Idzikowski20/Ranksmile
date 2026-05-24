@@ -4,7 +4,10 @@
       "Skill(systematic-debugging)",
       "Skill(systematic-debugging:*)",
       "Skill(frontend-design)",
-      "Skill(frontend-design:*)"
+      "Skill(frontend-design:*)",
+      "Bash(python -c ' *)",
+      "Bash(python -c \"from pipeline.contracts import StageContext, AnalysisStage; print\\('contracts OK'\\)\")",
+      "Bash(python -c \"from pipeline.runner import PipelineRunner; p = PipelineRunner.build_deep_analysis_pipeline\\(\\); print\\(f'{len\\(p\\)} stages OK'\\)\")"
     ]
   }
 }
