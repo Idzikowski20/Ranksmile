@@ -5,8 +5,10 @@ import StarterKit from '@tiptap/starter-kit';
 import ImageExt from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
 import type { ScoreData } from '../../lib/contentScore';
 import SurferImageNode from './SurferImageNode';
+import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
 
 export interface HeadingItem {
   level: number;
@@ -33,6 +35,8 @@ interface Props {
   reviewMode?: boolean;
   /** Fired with true when Surfy is processing, false when done */
   onAiActivity?: (active: boolean) => void;
+  /** Target keyword for Surfy scoring context */
+  articleKeyword?: string;
 }
 
 interface MenuBarProps {
@@ -48,8 +52,43 @@ const Sep = () => (
   </div>
 );
 
+const chipStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center',
+  borderRadius: '9999px',
+  border: '1px solid rgba(255,255,255,0.8)',
+  padding: '0.1875rem 0.75rem',
+  fontSize: 13, lineHeight: '16px',
+  color: 'rgba(255,255,255,0.8)',
+  fontFamily: 'var(--font-family-primary)',
+  cursor: 'default', userSelect: 'none',
+};
+
+const Chip = ({ label }: { label: string }) => <div style={chipStyle}>{label}</div>;
+
 const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkInitialText, setLinkInitialText] = useState('');
+  const [linkInitialHref, setLinkInitialHref] = useState('');
+  const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
+
+  const openLinkModal = useCallback(() => {
+    if (!editor) return;
+
+    const { from, to } = editor.state.selection;
+    setLinkRange({ from, to });
+    setLinkInitialText(editor.state.doc.textBetween(from, to, '\n'));
+    setLinkInitialHref(editor.getAttributes('link').href || '');
+    setLinkModalOpen(true);
+  }, [editor]);
+
+  const closeLinkModal = useCallback(() => {
+    setLinkModalOpen(false);
+    setLinkRange(null);
+    setLinkInitialText('');
+    setLinkInitialHref('');
+  }, []);
+
   if (!editor) return null;
 
   const canUndo = editor.can().undo();
@@ -64,20 +103,21 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0 12px',
-        height: 44,
-        background: '#fff',
-        flexShrink: 0,
-        borderBottom: 'none',
-        gap: 8,
-        overflow: 'hidden',
-      }}
-    >
+    <>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 12px',
+          height: 44,
+          background: '#fff',
+          flexShrink: 0,
+          borderBottom: 'none',
+          gap: 8,
+          overflow: 'hidden',
+        }}
+      >
       {/* Formatting */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
 
@@ -143,7 +183,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         <Sep />
 
         {/* Link */}
-        <button type="button" onClick={() => { const url = prompt('Paste link URL:'); if (url) editor.chain().focus().setLink({ href: url }).run(); }} title="Insert link" style={{ ...btnStyle, color: editor.isActive('link') ? '#630DE3' : '#18181B', background: editor.isActive('link') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('link') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('link') ? '#F3EEFF' : 'transparent'; }}>
+        <button type="button" onClick={openLinkModal} title="Insert link" style={{ ...btnStyle, color: editor.isActive('link') ? '#630DE3' : '#18181B', background: editor.isActive('link') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('link') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('link') ? '#F3EEFF' : 'transparent'; }}>
           <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M165.66 90.34a8 8 0 0 1 0 11.32l-64 64a8 8 0 0 1-11.32-11.32l64-64a8 8 0 0 1 11.32 0M215.6 40.4a56 56 0 0 0-79.2 0l-30.06 30.05a8 8 0 0 0 11.32 11.32l30.06-30a40 40 0 0 1 56.57 56.56l-30.07 30.06a8 8 0 0 0 11.31 11.32l30.07-30.11a56 56 0 0 0 0-79.2m-77.26 133.82l-30.06 30.06a40 40 0 1 1-56.56-56.57l30.05-30.05a8 8 0 0 0-11.32-11.32L40.4 136.4a56 56 0 0 0 79.2 79.2l30.06-30.07a8 8 0 0 0-11.32-11.31" /></svg>
         </button>
         {/* Image — file upload as block */}
@@ -222,7 +262,17 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         </svg>
         Ask Surfy
       </button>
-    </div>
+      </div>
+
+      <SurfyLinkModal
+        editor={editor}
+        open={linkModalOpen}
+        initialText={linkInitialText}
+        initialHref={linkInitialHref}
+        range={linkRange}
+        onClose={closeLinkModal}
+      />
+    </>
   );
 };
 
@@ -525,7 +575,7 @@ const TitleDescriptionBlock = ({
   );
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, onAiActivity }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, onAiActivity, articleKeyword }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -545,7 +595,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyOpen, setSurfyOpen] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
-    const [surfyResponse, setSurfyResponse] = useState<{ message: string; content: string | null } | null>(null);
+    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null } | null>(null);
+    const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -616,6 +667,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const handleAskSurfy = () => {
       if (!editor) return;
       if (surfyOpen) { setSurfyOpen(false); setSurfyResponse(null); return; }
+      setSurfySelection(null); // null = full article mode
       setSurfyOpen(true);
       setSurfyResponse(null);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
@@ -627,11 +679,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       setSurfyLoading(true);
       setSurfyResponse(null);
       try {
-        const content = editor.getHTML();
+        const htmlContent = editor.getHTML();
         const res = await fetch('/api/articles/ask-surfy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, content, context: ['article'], scoreData: scoreData || null, internalArticles: internalArticles || [] }),
+          body: JSON.stringify({
+            prompt,
+            content: htmlContent,
+            mode: surfySelection ? 'selection' : 'article',
+            selectedText: surfySelection?.text || null,
+            selectionRange: surfySelection ? { from: surfySelection.from, to: surfySelection.to } : null,
+            scoreData: scoreData || null,
+            internalArticles: internalArticles || [],
+            keyword: articleKeyword || keyword || '',
+          }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -645,11 +706,37 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const handleSurfyApply = () => {
-      if (!editor || !surfyResponse?.content) return;
-      editor.commands.setContent(surfyResponse.content);
+      if (!editor || !surfyResponse) return;
+      // For analysis-only, there's nothing to apply
+      if (!surfyResponse.content && surfyResponse.action !== 'delete_selection') return;
+
+      if (surfySelection) {
+        const action = surfyResponse.action || 'replace_selection';
+        switch (action) {
+          case 'delete_selection':
+            editor.chain().focus().deleteRange({ from: surfySelection.from, to: surfySelection.to }).run();
+            break;
+          case 'insert_after_selection':
+            editor.chain().focus().insertContentAt(surfySelection.to, surfyResponse.content || '').run();
+            break;
+          case 'replace_selection':
+          default:
+            editor.chain().focus().insertContentAt(
+              { from: surfySelection.from, to: surfySelection.to },
+              surfyResponse.content || ''
+            ).run();
+            break;
+        }
+      } else {
+        // Full article mode
+        if (surfyResponse.content) {
+          editor.commands.setContent(surfyResponse.content);
+        }
+      }
       setSurfyOpen(false);
-      setSurfyResponse(null);
       setSurfyPrompt('');
+      setSurfyResponse(null);
+      setSurfySelection(null);
     };
 
     // Always-current editor ref — useEditor returns null on first render in
@@ -684,12 +771,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       extensions: [
         // link: false — StarterKit v3 includes Link by default; disable it so
         // our explicit Link.configure() below is the only Link extension.
-        StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }),
+        StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: false }),
+        Underline,
         SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
         Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
       ],
       content,
+      immediatelyRender: false,
       onCreate({ editor: ed }) { calcAndEmit(ed); },
       onUpdate({ editor: ed }) { calcAndEmit(ed); },
     });
@@ -808,7 +897,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             />
           </div>
 
-          <EditorContent editor={editor} style={{ background: '#fff' }} />
+          <div className={surfySelection ? 'surfy-selection-highlight' : ''} style={{ position: 'relative' }}>
+            <EditorContent editor={editor} style={{ background: '#fff' }} />
+            {editor && (
+              <SurfyBubbleMenu
+                editor={editor}
+                onAskSurfy={(selection) => {
+                  setSurfySelection(selection);
+                  setSurfyOpen(true);
+                }}
+              />
+            )}
+          </div>
         </div>
 
         {/* Ask Surfy modal — centered at bottom */}
@@ -1023,7 +1123,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                       </button>
                     </div>
 
-                    {surfyResponse.content && (
+                    {(surfyResponse.content || surfyResponse.action === 'delete_selection') && (
                       <button
                         type="button"
                         onClick={handleSurfyApply}
@@ -1048,26 +1148,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               {/* Context chips row — only when no response yet */}
               {!surfyResponse && !surfyLoading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem 0.5rem 0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 13, lineHeight: '16px', color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Context:</span>
-                    {['This article', 'Guidelines', 'Facts', 'Competitors', 'Cursor position'].map((label) => (
-                      <div
-                        key={label}
-                        style={{
-                          display: 'flex', alignItems: 'center',
-                          borderRadius: '9999px',
-                          border: '1px solid rgba(255,255,255,0.8)',
-                          padding: '0.1875rem 0.75rem',
-                          fontSize: 13, lineHeight: '16px',
-                          color: 'rgba(255,255,255,0.8)',
-                          fontFamily: 'var(--font-family-primary)',
-                          cursor: 'default',
-                          userSelect: 'none',
-                        }}
-                      >
-                        {label}
-                      </div>
-                    ))}
+                    <Chip label={surfySelection ? `Selected text (${surfySelection.text.length} chars)` : 'Full article'} />
+                    <Chip label={`Keyword: ${articleKeyword || keyword || 'N/A'}`} />
+                    <Chip label={`Score: ${scoreData ? `${(scoreData as any).computed_score || '?'}/100` : 'N/A'}`} />
                   </div>
                 </div>
               )}

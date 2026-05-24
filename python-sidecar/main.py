@@ -3,20 +3,24 @@ SEO Autopilot — Python Sidecar (FastAPI)
 Uruchomienie: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 """
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from bs4 import BeautifulSoup
 
 from analyzers.site_analyzer import analyze_site
 from analyzers.serp_analyzer import analyze_serp, extract_competitor_outlines
 from analyzers.meta_generator import generate_meta
 from analyzers.image_generator import generate_article_image
 from analyzers.ai_visibility import run_ai_visibility
+from analyzers.content_classifier import classify
+from analyzers.ranking_scorer import predict_ranking
 from pipeline.article_pipeline import run_pipeline, suggest_internal_links
 
 app = FastAPI(
@@ -283,6 +287,128 @@ async def pipeline_deep_analysis(req: PipelineRequest):
         return {"status": "done", "result": result}
     except Exception as exc:
         print(f"[pipeline] Job {req.jobId} failed: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ── Score Content Endpoint ──────────────────────────────────────────
+
+def _extract_site_context_from_html(html: str, explicit_title: str = "", explicit_meta_description: str = "") -> dict:
+    soup = BeautifulSoup(html, "lxml")
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+        tag.decompose()
+    text = soup.get_text(separator=" ", strip=True)
+
+    title_tag = soup.find("title")
+    html_title = title_tag.get_text(strip=True) if title_tag else ""
+    title_text = explicit_title or html_title
+
+    desc_tag = soup.find("meta", attrs={"name": "description"})
+    html_desc = desc_tag.get("content", "")[:300] if desc_tag else ""
+    desc_text = explicit_meta_description or html_desc
+
+    og_title = soup.find("meta", property="og:title")
+    og_desc = soup.find("meta", property="og:description")
+    og_image = soup.find("meta", property="og:image")
+    canonical = soup.find("link", rel="canonical")
+
+    headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+    word_count = len(text.split())
+    paragraphs = [p for p in soup.find_all("p") if len(p.get_text(strip=True)) > 30]
+
+    return {
+        "meta": {
+            "title": title_text,
+            "title_length": len(title_text),
+            "description": desc_text,
+            "description_length": len(desc_text),
+            "og_title": og_title.get("content", "") if og_title else "",
+            "og_description": og_desc.get("content", "") if og_desc else "",
+            "og_image": og_image.get("content", "") if og_image else "",
+            "canonical": canonical.get("href", "") if canonical else "",
+        },
+        "content": {
+            "word_count": word_count,
+            "paragraph_count": len(paragraphs),
+            "text": text,
+        },
+        "headings": {"total": len(headings)},
+        "issues": [],
+    }
+
+
+def _compute_content_score(plain_text: str, word_count: int, heading_count: int, paragraph_count: int, score_data: dict) -> int:
+    words_target = score_data.get("words_target") or 2200
+    headings_target = score_data.get("headings_target") or 15
+    paragraphs_target = score_data.get("paragraphs_target") or 20
+
+    word_score = min(30, round((word_count / max(1, words_target)) * 30))
+    heading_score = min(15, round((heading_count / max(1, headings_target)) * 15))
+    para_score = min(15, round((paragraph_count / max(1, paragraphs_target)) * 15))
+
+    text = plain_text.lower()
+    terms = score_data.get("terms", [])
+    if terms:
+        covered = 0
+        for t in terms:
+            term = str(t.get("term", "")).lower()
+            target = max(1, int(t.get("target_count", 1)))
+            count = len(re.findall(r"\b" + re.escape(term) + r"\b", text))
+            if count >= max(1, round(target * 0.7)):
+                covered += 1
+        term_score = round((covered / len(terms)) * 40)
+    else:
+        term_score = 0
+
+    return min(100, word_score + heading_score + para_score + term_score)
+
+
+@app.post("/score-content")
+async def score_content_endpoint(body: dict, request: Request):
+    token = request.headers.get("x-internal-token", "")
+    expected = os.getenv("INTERNAL_PIPELINE_TOKEN", "")
+    if expected and token != expected:
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    html = body.get("html", "")
+    keyword = body.get("keyword", "")
+    score_data = body.get("score_data", {})
+    explicit_title = body.get("title", "")
+    explicit_meta_description = body.get("meta_description", "")
+
+    if not html:
+        raise HTTPException(status_code=400, detail="html is required")
+
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
+
+    try:
+        site_context = _extract_site_context_from_html(html, explicit_title, explicit_meta_description)
+
+        serp_data = {
+            "words_target": score_data.get("words_target") or 2200,
+            "headings_target": score_data.get("headings_target") or 15,
+            "paragraphs_target": score_data.get("paragraphs_target") or 20,
+        }
+
+        content_class = await classify(html)
+
+        wc = site_context["content"]["word_count"]
+        hc = site_context["headings"]["total"]
+        pc = site_context["content"]["paragraph_count"]
+        content_score = _compute_content_score(site_context["content"]["text"], wc, hc, pc, score_data)
+
+        result = await predict_ranking(
+            keyword=keyword,
+            content_score=content_score,
+            site_context=site_context,
+            serp_data=serp_data,
+            content_class=content_class,
+            deepseek_key=deepseek_key,
+        )
+
+        return result
+
+    except Exception as exc:
+        print(f"[score-content] Error: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 

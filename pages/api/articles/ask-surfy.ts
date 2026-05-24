@@ -1,22 +1,63 @@
 // POST /api/articles/ask-surfy
-// Analizuje lub edytuje treść artykułu przez DeepSeek API
+// Intelligent SEO content assistant — analyzes or edits article content via DeepSeek API.
+// Supports: selection mode (bubble menu), article mode (top toolbar), slash commands, and scoring.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import type { ScoreData } from '../../../lib/contentScore';
+import { countOccurrences } from '../../../lib/contentScore';
+import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
+import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
+import { scoreContent } from '../../../lib/seo/scoreContentClient';
 
 export const config = { api: { responseLimit: '10mb' } };
 
-function countOccurrences(text: string, term: string): number {
-  if (!text || !term) return 0;
-  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const matches = text.match(new RegExp(escaped, 'gi'));
-  return matches ? matches.length : 0;
+type SurfyAction =
+  | 'analysis_only'
+  | 'replace_selection'
+  | 'replace_article'
+  | 'insert_after_selection'
+  | 'delete_selection'
+  | 'optimize_selection'
+  | 'optimize_article';
+
+function detectSurfyAction(prompt: string, mode: 'selection' | 'article'): SurfyAction {
+  const p = prompt.toLowerCase();
+
+  if (/usuń|delete|remove|wywal/.test(p)) {
+    return mode === 'selection' ? 'delete_selection' : 'replace_article';
+  }
+
+  if (/dodaj|add|dopisz|insert/.test(p)) {
+    return mode === 'selection' ? 'insert_after_selection' : 'replace_article';
+  }
+
+  if (/sprawdź|check|score|oceń|analizuj/.test(p) && !/optymalizuj|optimize/.test(p)) {
+    return 'analysis_only';
+  }
+
+  if (/optymalizuj|optimize|seo|popraw/.test(p)) {
+    return mode === 'selection' ? 'optimize_selection' : 'optimize_article';
+  }
+
+  if (/przepisz|rewrite|napisz inaczej|edytuj|edit|zmień|change|rozwiń|expand|skróć|summarize/.test(p)) {
+    return mode === 'selection' ? 'replace_selection' : 'replace_article';
+  }
+
+  return 'analysis_only';
+}
+
+function shouldUseScoring(prompt: string, action: SurfyAction): boolean {
+  const p = prompt.toLowerCase();
+  return (
+    action === 'optimize_selection' ||
+    action === 'optimize_article' ||
+    /\b(score|seo|optymalizuj|optimize|ranking|x-algorithm|content score|oceń seo|sprawdź seo)\b/.test(p)
+  );
 }
 
 function buildScoreContext(scoreData: ScoreData, plainText: string, htmlContent: string): string {
   if (!scoreData?.terms?.length) return '';
 
-  // Compute current scores
   const wordCount = plainText.split(/\s+/).filter(Boolean).length;
   const headingCount = (htmlContent.match(/<h[1-3][^>]*>/gi) || []).length;
   const paragraphCount = (htmlContent.match(/<p[\s>]/gi) || []).length;
@@ -31,7 +72,6 @@ function buildScoreContext(scoreData: ScoreData, plainText: string, htmlContent:
     termsWeight = 35;
   }
 
-  // Per-term coverage
   const termLines: string[] = [];
   let coveredCount = 0;
   let missingCount = 0;
@@ -76,23 +116,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { prompt, content, context = [], scoreData, internalArticles = [] } = req.body;
+  const { prompt, content, mode = 'article', selectedText = null, selectionRange = null, scoreData, internalArticles = [], keyword = '', articleTitle = '', articleMetaDescription = '' } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
 
   try {
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
 
-    // Strip HTML to get plain text for score analysis
+    const action = detectSurfyAction(prompt, mode as 'selection' | 'article');
+
+    // ── Scoring awareness (only when needed) ───────────────────────
+    let scoringBlock = '';
+    if (shouldUseScoring(prompt, action) && keyword && process.env.DEEPSEEK_API_KEY) {
+      try {
+        const scoreResult = await scoreContent(
+          content as string,
+          keyword as string,
+          scoreData || {},
+          articleTitle || '',
+          articleMetaDescription || ''
+        );
+
+        if (scoreResult?.ranking_signals?.signals?.length) {
+          const weakSignals = [...scoreResult.ranking_signals.signals]
+            .sort((a: any, b: any) => a.score - b.score)
+            .slice(0, 3);
+
+          scoringBlock = `
+RANKING SCORE: ${scoreResult.ranking_score}/100
+
+WEAKEST SIGNALS:
+${weakSignals.map((s: any, i: number) =>
+  `${i + 1}. ${s.name}: ${s.score}/100 (${s.verdict}) — ${s.recommendation || 'needs improvement'}
+   HOW TO FIX: ${SIGNAL_TACTICS[s.name] || 'Improve this signal.'}`
+).join('\n\n')}
+
+${action === 'analysis_only'
+  ? 'Report these findings to the user. Do NOT modify the content.'
+  : 'Use these signals to guide your optimization. Focus on improving the weakest signals.'}`;
+        }
+      } catch (err: any) {
+        console.log('[ask-surfy] scoring failed (non-fatal):', err.message);
+      }
+    }
+
+    // ── Build system prompt ─────────────────────────────────────────
     const plainText = content.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
 
-    // Build score context if scoreData provided
     let extraContext = '';
     if (scoreData?.terms?.length) {
       extraContext += '\n\n' + buildScoreContext(scoreData, plainText, content);
     }
-
-    // Build internal linking context
     if (internalArticles.length > 0) {
       extraContext += '\n\nINTERNAL LINKING TARGETS (articles you can link to):';
       for (const a of internalArticles) {
@@ -101,43 +175,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       extraContext += '\n\nWhen editing the article, insert relevant internal links using <a href="URL">anchor text</a>. Link naturally where the topic connects to another article. Use descriptive anchor text matching the target article\'s topic. Do not force links where they don\'t fit.';
     }
 
-    const systemPrompt = `You are an expert SEO content editor and analyst. The user will send you an HTML article and ask a question or request edits.
+    const scopeBlock = mode === 'selection' && selectedText
+      ? `MODE: selection\nYou are editing ONLY the selected fragment below. Do NOT modify anything outside it.\n\nSELECTED TEXT:\n---\n${selectedText}\n---\n\nFULL ARTICLE (for context only, do NOT edit unless asked):\n${content}\n\nIMPORTANT: Return content = the replacement HTML for the selected fragment ONLY, not the full article.`
+      : `MODE: article\nYou may edit the full article if the user asks for changes.\n\nFULL ARTICLE:\n${content}`;
 
-YOUR RESPONSE MUST FOLLOW THIS FORMAT EXACTLY:
+    const actionUnderstandingBlock = `You are Surfy, an intelligent SEO content assistant with deep understanding of user intent.
 
----
-MESSAGE
-(your natural language response — analysis, suggestions, explanation, etc. Write in the same language the user used. Be concise and actionable.)
-MESSAGE_END
+RECOGNIZE THESE USER INTENTS from the prompt (the user may use Polish or English):
+- "Edytuj" / "Edit" / "Zmień" / "Change" → Modify the indicated text while keeping surrounding content intact
+- "Usuń" / "Delete" / "Remove" / "Wywal" → Remove the indicated text from the article
+- "Dodaj" / "Add" / "Dopisz" / "Insert" → Generate new content to add at the appropriate location
+- "Przepisz" / "Rewrite" / "Napisz inaczej" → Replace with a different version, same meaning
+- "Rozwiń" / "Expand" / "Rozbuduj" → Add more depth, examples, data to the existing text
+- "Skróć" / "Summarize" / "Shorten" → Reduce length while preserving key points
+- "Optymalizuj" / "Optimize" / "Popraw SEO" → Run SEO scoring analysis and suggest improvements
+- "Sprawdź" / "Check" / "Score" / "Oceń" → Analyze and report, do NOT modify the text
+- "Wyjaśnij" / "Explain" / "Co to" → Explain a concept, no text changes needed
+- Questions ("?" at end) → Answer the question about the content, do NOT modify text
+- General chat → Respond conversationally about the topic
 
-HTML
-(if and ONLY if the user requested changes to the article, provide the COMPLETE modified HTML here — the entire article, not just the changed part. If the user only asked a question without requesting edits, leave this section empty)
-HTML_END
----
+ACTION: ${action}
+${action === 'optimize_selection' || action === 'optimize_article'
+  ? 'You SHOULD evaluate ranking signals and suggest improvements. Include a "signals" array in your response.'
+  : action === 'analysis_only'
+  ? 'Analyze and report. Do NOT modify content. content field must be null.'
+  : `Expected output: content = ${mode === 'selection' ? 'replacement HTML for selected fragment' : 'full article HTML with changes applied'}`
+}
 
-CRITICAL RULES:
-- The MESSAGE section is ALWAYS required
-- The HTML section should ONLY contain content if the user explicitly asked for edits
-- When providing HTML: preserve ALL existing structure (headings, paragraphs, lists, links, images) — only modify what was requested
-- Do NOT wrap the HTML in markdown code blocks
-- Write the message in the user's language
+RESPONSE FORMAT:
+Return JSON with:
+{
+  "action": "${action}",
+  "message": "Your conversational response (always include, even when returning HTML)",
+  "content": "<HTML to apply>" | null
+}
 
-MESSAGE FORMATTING RULES:
-- Use numbered lists (1. 2. 3.) for structured feedback and suggestions
-- Use **bold** for key concepts, headings within points, and important terms (e.g. **SEO:**, **Struktura:**)
-- Use backtick code formatting for HTML tags, CSS properties, and technical terms (e.g. \`<h1>\`, \`font-size\`)
-- Separate distinct sections with a blank line
-- Keep paragraphs short (2-3 sentences max)
-- Be concise — prefer bullet-style points over long paragraphs
-- Start with a 1-sentence overall assessment, then break into numbered areas of improvement${extraContext}`;
+RULES:
+- If the user is asking a question or chatting, set content=null and just respond in message
+- In SELECTION mode: content = replacement HTML for selected fragment ONLY
+- In ARTICLE mode: content = full article HTML (only if user asked for changes)
+- For "delete_selection" action: content should be "" (empty string)
+- For "insert_after_selection" action: content is the new HTML to insert after the selection
+- NEVER change text the user didn't ask you to change
+- NEVER invent facts, statistics, author credentials, or sources`;
 
-    const userMessage = `Article HTML:
+    const systemPrompt = [
+      actionUnderstandingBlock,
+      scoringBlock,
+      extraContext,
+      scopeBlock,
+      ANTI_HALLUCINATION_RULES,
+    ].filter(Boolean).join('\n\n');
 
-${content}
-
----
-
-User: ${prompt}`;
+    const userMessage = mode === 'selection' && selectedText
+      ? `User prompt: ${prompt}\n\n${scopeBlock}`
+      : `Article HTML:\n\n${content}\n\n---\n\nUser: ${prompt}`;
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -164,21 +256,28 @@ User: ${prompt}`;
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content || '';
 
-    // Parse message and html sections
-    const msgMatch = raw.match(/MESSAGE\s*\n?([\s\S]*?)\n?MESSAGE_END/i);
-    const htmlMatch = raw.match(/HTML\s*\n?([\s\S]*?)\n?HTML_END/i);
+    // Parse response — try JSON first, fall back to MESSAGE/HTML format
+    let parsedAction = action;
+    let message = '';
+    let htmlContent: string | null = null;
 
-    const message = msgMatch?.[1]?.trim() || raw.trim();
-    let editedContent = htmlMatch?.[1]?.trim() || null;
-
-    // Clean up HTML — remove markdown code fences
-    if (editedContent) {
-      editedContent = editedContent.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
-      // If HTML section is empty or just whitespace, treat as no changes
-      if (!editedContent || editedContent.length < 10) editedContent = null;
+    try {
+      const parsed = JSON.parse(raw);
+      parsedAction = parsed.action || action;
+      message = parsed.message || '';
+      htmlContent = parsed.content || null;
+    } catch {
+      const msgMatch = raw.match(/MESSAGE\s*\n?([\s\S]*?)\n?MESSAGE_END/i);
+      const htmlMatch = raw.match(/HTML\s*\n?([\s\S]*?)\n?HTML_END/i);
+      message = msgMatch?.[1]?.trim() || raw.trim();
+      htmlContent = htmlMatch?.[1]?.trim() || null;
+      if (htmlContent) {
+        htmlContent = htmlContent.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
+        if (!htmlContent || htmlContent.length < 10) htmlContent = null;
+      }
     }
 
-    return res.status(200).json({ message, content: editedContent });
+    return res.status(200).json({ action: parsedAction, message, content: htmlContent });
   } catch (error: any) {
     console.error('[ask-surfy] error:', error);
     return res.status(500).json({ error: error?.message || 'Request failed' });
