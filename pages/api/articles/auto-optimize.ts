@@ -7,6 +7,9 @@ import verifyUser from '../../../utils/verifyUser';
 import type { ScoreData } from '../../../lib/contentScore';
 import { countOccurrences } from '../../../lib/contentScore';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
+import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
+import { scoreContent } from '../../../lib/seo/scoreContentClient';
 
 export const config = { api: { responseLimit: '10mb' } };
 
@@ -166,7 +169,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { content, scoreData, keyword, articleId, brandVoice, aiVisibilitySummary }:
+  const { content, scoreData, keyword, articleId, brandVoice, aiVisibilitySummary, articleTitle, articleMetaDescription }:
     {
       content: string;
       scoreData?: ScoreData;
@@ -179,6 +182,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         competitor_citations: number;
         citations: Array<{ prompt: string; cited_domain?: string; answer?: string }>;
       };
+      articleTitle?: string;
+      articleMetaDescription?: string;
     } = req.body;
   if (!content) return res.status(400).json({ error: 'content is required' });
 
@@ -249,6 +254,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     sse(res, 'progress', {
       message: `Found ${missingTerms.length} missing terms, ${lowTerms.length} underused — ready to fix`,
     });
+
+    // ── Step 1.5: Pre-score ranking signals ───────────────────────
+    let preScoreData: { ranking_score: number; ranking_signals: any } | null = null;
+    let signalImprovementBlock = '';
+    try {
+      sse(res, 'progress', { message: 'Analyzing ranking signals…' });
+      preScoreData = await scoreContent(
+        content,
+        keyword || '',
+        {
+          terms: scoreData?.terms || [],
+          words_target: scoreData?.words_target || 2200,
+          headings_target: scoreData?.headings_target || 15,
+          paragraphs_target: scoreData?.paragraphs_target || 20,
+        },
+        articleTitle || '',
+        articleMetaDescription || ''
+      );
+      if (preScoreData) {
+        console.log('[auto-optimize] pre-score:', preScoreData.ranking_score);
+
+        if (preScoreData?.ranking_signals?.signals?.length) {
+          const weakSignals = [...preScoreData.ranking_signals.signals]
+            .sort((a: any, b: any) => a.score - b.score)
+            .slice(0, 3);
+
+          signalImprovementBlock = `\n\nRANKING SCORE TARGET: 90-100/100 (current prediction: ${preScoreData.ranking_score}/100).\nFocus especially on improving these weak ranking signals:\n` +
+            weakSignals.map((s: any, i: number) =>
+              `${i + 1}. ${s.name} (current: ${s.score}/100, verdict: ${s.verdict}): ${s.recommendation || ''}\n   HOW TO FIX: ${SIGNAL_TACTICS[s.name] || 'Improve this signal.'}`
+            ).join('\n\n') +
+            `\n\nIMPORTANT: Your optimization MUST demonstrably improve these signals to reach the 90-100 target range.`;
+        }
+      }
+    } catch (err: any) {
+      console.log('[auto-optimize] pre-score failed (non-fatal):', err.message);
+    }
 
     // ── Step 2: Fetch competitor URLs ──────────────────────────────
     let competitorBlock = '';
@@ -334,9 +375,9 @@ STRICT RULES:
 - Do NOT change the meta title or meta description
 - Keep the human, expert tone — avoid AI-sounding filler phrases${protectedTermsBlock}
 
-${gapBlock}${competitorBlock}${aiSearchBlock}
+${gapBlock}${signalImprovementBlock}${competitorBlock}${aiSearchBlock}
 
-OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.${brandVoiceBlock}`;
+OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
 
     console.log('[auto-optimize] calling DeepSeek, content length:', content.length, 'systemPrompt length:', systemPrompt.length);
     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -391,7 +432,7 @@ RULES:
 - Do NOT shorten the article — you may expand thin paragraphs slightly
 - Do NOT change meta title/description${brandVoiceBlock}
 
-OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.`;
+OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.\n\n${ANTI_HALLUCINATION_RULES}`;
 
     const humanizeRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -461,7 +502,7 @@ Format output as ONLY an HTML block — no preamble:
   </div>
 </div>
 
-Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock}`;
+Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
 
               const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
                 method: 'POST',
@@ -502,14 +543,98 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
       }
     }
 
-    // ── Insert image placeholders after every 4th H2 heading ──────────────
+    // ── Phase 6: Post-score verification with retry loop ──────────
+    let postScore: number | null = null;
+    let postSignals: any = null;
+    let scoreDelta: number | null = null;
+    let attempts = 1;
+    const MAX_ATTEMPTS = 3;
+
+    while (attempts <= MAX_ATTEMPTS) {
+      try {
+        sse(res, 'progress', { message: `Verifying ranking score (attempt ${attempts}/${MAX_ATTEMPTS})…` });
+        const scoreResult = await scoreContent(optimized, keyword || '',
+          {
+            terms: scoreData?.terms || [],
+            words_target: scoreData?.words_target || 2200,
+            headings_target: scoreData?.headings_target || 15,
+            paragraphs_target: scoreData?.paragraphs_target || 20,
+          },
+          articleTitle || '',
+          articleMetaDescription || ''
+        );
+
+        if (scoreResult) {
+          postScore = scoreResult.ranking_score;
+          postSignals = scoreResult.ranking_signals;
+          if (preScoreData?.ranking_score != null) {
+            scoreDelta = postScore - preScoreData.ranking_score;
+          }
+          console.log('[auto-optimize] post-score:', postScore, 'delta:', scoreDelta, 'attempt:', attempts);
+
+          const sign = scoreDelta !== null ? (scoreDelta > 0 ? '+' : '') : '';
+          const targetMsg = postScore >= 90 ? ' TARGET 90-100 ACHIEVED!' : postScore >= 80 ? ' Close to target range' : '';
+          sse(res, 'progress', {
+            message: `Score: ${preScoreData?.ranking_score ?? '?'} → ${postScore} (${sign}${scoreDelta ?? '?'})${targetMsg}`,
+          });
+
+          if (postScore >= 90 || !postSignals?.signals?.length) break;
+
+          if (attempts < MAX_ATTEMPTS) {
+            const weakSignals = [...(postSignals?.signals || [])]
+              .sort((a: any, b: any) => a.score - b.score)
+              .slice(0, 2);
+
+            const patchPrompt = `The article scored ${postScore}/100 (target: 90-100). The weakest signals are:
+${weakSignals.map((s: any) => `${s.name}: ${s.score}/100 — ${s.recommendation || 'needs improvement'}`).join('\n')}
+
+Make TARGETED, MINIMAL improvements to fix ONLY these weaknesses. Do NOT rewrite the entire article.
+${ANTI_HALLUCINATION_RULES}
+
+Return the complete HTML with targeted fixes applied.`;
+
+            sse(res, 'progress', { message: `Targeted patch to improve ${weakSignals.map((s: any) => s.name).join(', ')}…` });
+
+            if (!process.env.DEEPSEEK_API_KEY) {
+              console.log('[auto-optimize] skipping targeted patch — missing DEEPSEEK_API_KEY');
+              break;
+            }
+            const patchRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: 'deepseek-chat',
+                max_tokens: 16384,
+                temperature: 0.2,
+                messages: [{ role: 'user', content: `ARTICLE:\n${optimized}\n\n${patchPrompt}` }],
+              }),
+            });
+
+            if (patchRes.ok) {
+              const patchData = await patchRes.json();
+              const raw = patchData.choices?.[0]?.message?.content || '';
+              const cleaned = raw.replace(/```html?\n?/g, '').replace(/```\n?/g, '').trim();
+              if (cleaned) optimized = cleaned;
+            }
+          }
+        }
+      } catch (err: any) {
+        console.log('[auto-optimize] post-score failed (non-fatal):', err.message);
+        break;
+      }
+      attempts++;
+    }
+
+    // ── Phase 7: Image Placeholders ───────────────────────────────
     const PLACEHOLDER_SRC = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='380'%3E%3Crect width='800' height='380' fill='%23f3f4f6'/%3E%3Ctext x='400' y='200' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='18'%3E%E2%8F%B3 Generating image...%3C/text%3E%3C/svg%3E";
     const pendingImages: Array<{ idx: number; prompt: string }> = [];
     let h2Counter = 0;
     const optimizedWithImages = optimized.replace(/<\/h2>/gi, (match: string, offset: number, str: string) => {
       h2Counter++;
       if (h2Counter % 4 !== 0) return match;
-      // Extract text of the h2 we just closed — look backwards for <h2...>
       const before = str.slice(0, offset);
       const openTag = before.lastIndexOf('<h2');
       const headingHtml = openTag >= 0 ? str.slice(openTag, offset) : '';
@@ -520,8 +645,33 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
       return `${match}${imgTag}`;
     });
 
+    // ── Phase 8: Save content + ranking score to article ──────────
+    if (articleId && postScore !== null) {
+      try {
+        const articleIdSql = await getArticleIdSql();
+        await db.query(
+          `UPDATE articles SET content = ?, ranking_score = ?, ranking_signals = ?::jsonb, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+          { replacements: [optimizedWithImages, postScore, JSON.stringify(postSignals), articleId] }
+        );
+        console.log('[auto-optimize] saved content + ranking_score to article:', postScore);
+      } catch (err: any) {
+        console.log('[auto-optimize] failed to save to article:', err.message);
+      }
+    }
+
     console.log('[auto-optimize] sending done event, pendingImages:', pendingImages.length);
-    sse(res, 'done', { content: optimizedWithImages, pendingImages });
+    sse(res, 'done', {
+      content: optimizedWithImages,
+      pendingImages,
+      ...(postScore !== null ? {
+        preScore: preScoreData?.ranking_score ?? null,
+        preSignals: preScoreData?.ranking_signals ?? null,
+        postScore,
+        postSignals,
+        scoreDelta,
+        attempts,
+      } : {}),
+    });
     console.log('[auto-optimize] done event sent');
   } catch (error: any) {
     console.error('[auto-optimize] caught error:', error?.message, error?.stack?.slice(0, 300));

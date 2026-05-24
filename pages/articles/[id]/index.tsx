@@ -546,6 +546,8 @@ const ArticleEditorPage: NextPage = () => {
           articleId: article?.id,
           brandVoice: domains.find((d) => d.ID === article?.domain_id)?.brand_voice ?? '',
           aiVisibilitySummary,
+          articleTitle: article?.title || '',
+          articleMetaDescription: article?.meta_description || '',
         }),
       });
       if (!res.ok || !res.body) throw new Error('Auto-optimize request failed');
@@ -584,14 +586,33 @@ const ArticleEditorPage: NextPage = () => {
           if (eventType === 'progress') {
             setAutoOptimizeStatus(payload.message ?? '');
           } else if (eventType === 'done') {
-            console.log('[auto-optimize] done event received, content length:', payload.content?.length, 'pendingImages:', payload.pendingImages?.length ?? 0);
-            // Set bar FIRST — before setContent which can throw
+            console.log('[auto-optimize] done, content:', payload.content?.length, 'postScore:', payload.postScore);
             setAutoOptimizeBar({ preHtml });
             setIsAutoOptimizing(false);
             try { editor.commands.setContent(payload.content); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
-            // Kick off background image generation for placeholders
             if (payload.pendingImages?.length && article?.target_keyword) {
-              generatePendingImages(payload.pendingImages, article.target_keyword);
+              await generatePendingImages(payload.pendingImages, article.target_keyword);
+              // Save final content with real image URLs to DB
+              const finalHtml = editor.getHTML();
+              const putId = article?.id || id;
+              if (putId) {
+                await fetch(`/api/articles/${putId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ content: finalHtml }),
+                }).catch(() => {});
+              }
+            }
+
+            // Score display
+            if (typeof payload.postScore === 'number') {
+              const delta = payload.scoreDelta as number;
+              const sign = delta > 0 ? '+' : '';
+              const icon = delta > 0 ? '▲' : delta < 0 ? '▼' : '—';
+              const target = payload.postScore >= 90 ? ' HIT 90+' : payload.attempts > 1 ? ` after ${payload.attempts} attempts` : '';
+              setAutoOptimizeStatus(
+                `Score: ${payload.postScore}/100 (${icon}${sign}${delta})${target}`
+              );
             }
             return;
           } else if (eventType === 'error') {
@@ -1014,6 +1035,7 @@ const ArticleEditorPage: NextPage = () => {
               internalArticles={internalArticles}
               reviewMode={!!linkBar}
               onAiActivity={setSurfyAiActive}
+              articleKeyword={article?.target_keyword || ''}
               onChange={handleEditorChange}
               onMetaTitleChange={handleMetaTitleChange}
               onMetaDescriptionChange={handleMetaDescriptionChange}
