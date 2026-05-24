@@ -163,6 +163,38 @@ export async function ensureArticlesTables() {
       )
    `);
 
+   // analysis_jobs — event-driven pipeline job queue
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS analysis_jobs (
+         id               TEXT PRIMARY KEY,
+         article_id       INTEGER NOT NULL,
+         job_type         TEXT NOT NULL DEFAULT 'deep_analysis',
+         status           TEXT NOT NULL DEFAULT 'queued',
+         current_stage    TEXT,
+         stage_progress   INTEGER DEFAULT 0,
+         total_progress   INTEGER DEFAULT 0,
+         progress_message TEXT,
+         payload          ${isPostgres ? 'JSONB' : 'TEXT'},
+         result           ${isPostgres ? 'JSONB' : 'TEXT'},
+         error            TEXT,
+         locked_at        TIMESTAMP,
+         locked_by        TEXT,
+         attempts         INTEGER DEFAULT 0,
+         max_attempts     INTEGER DEFAULT 3,
+         created_at       TIMESTAMP DEFAULT ${NOW_DEFAULT},
+         updated_at       TIMESTAMP DEFAULT ${NOW_DEFAULT}
+      )
+   `);
+
+   // New columns for AI ranking score
+   if (isPostgres) {
+      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
+      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals JSONB`); } catch {}
+   } else {
+      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
+      try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals TEXT`); } catch {}
+   }
+
    // Migrations dla SQLite (Postgres dostaje kolumny już w CREATE TABLE)
    if (!isPostgres) {
       try { await db.query(`ALTER TABLE articles ADD COLUMN featured_image TEXT`); } catch {}
@@ -181,6 +213,9 @@ export async function ensureArticlesTables() {
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_versions_article ON article_versions(article_id)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_keywords_article ON article_keywords(article_id)`); } catch {}
    try { await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_article_keywords_uid ON article_keywords(uid)`); } catch {}
+
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status)`); } catch {}
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_analysis_jobs_article ON analysis_jobs(article_id)`); } catch {}
 
    tablesChecked = true;
    console.log('[articles] Tables ready');
