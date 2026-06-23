@@ -628,6 +628,66 @@ Return the complete HTML with targeted fixes applied.`;
       attempts++;
     }
 
+    // ── Meta title & description optimization ─────────────────────
+    let suggestedMetaTitle = '';
+    let suggestedMetaDescription = '';
+
+    if (keyword) {
+      try {
+        sse(res, 'progress', { message: 'Optimizing meta title & description…' });
+
+        const titleMatch = content.match(/<title[^>]*>(.*?)<\/title>/i);
+        const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i);
+        const pageTitle = articleTitle || (titleMatch ? titleMatch[1] : '') || (h1Match ? h1Match[1] : '') || keyword;
+        const currentDesc = articleMetaDescription || '';
+
+        const metaPrompt = `Generate an SEO-optimized meta title and meta description for this article.
+
+Keyword: "${keyword}"
+Current title: "${pageTitle}"
+Current meta description: "${currentDesc}"
+
+Rules:
+- Title: 50-60 characters, include the keyword near the beginning, compelling and click-worthy
+- Description: 140-160 characters, summarize the article value proposition, include a call-to-action
+- Write in the SAME LANGUAGE as the article title
+
+Return ONLY a JSON object:
+{"title": "the optimized title", "description": "the optimized meta description"}`;
+
+        const metaRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            max_tokens: 500,
+            temperature: 0.3,
+            messages: [{ role: 'user', content: metaPrompt }],
+          }),
+        });
+
+        if (metaRes.ok) {
+          const metaData = await metaRes.json();
+          const raw = (metaData.choices?.[0]?.message?.content || '').trim();
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.title && parsed.title !== pageTitle) suggestedMetaTitle = parsed.title;
+            if (parsed.description && parsed.description !== currentDesc) suggestedMetaDescription = parsed.description;
+          } catch {
+            const tMatch = raw.match(/["']?title["']?\s*:\s*["']([^"']+)["']/i);
+            const dMatch = raw.match(/["']?description["']?\s*:\s*["']([^"']+)["']/i);
+            if (tMatch) suggestedMetaTitle = tMatch[1];
+            if (dMatch) suggestedMetaDescription = dMatch[1];
+          }
+          if (suggestedMetaTitle || suggestedMetaDescription) {
+            console.log('[auto-optimize] meta suggestions:', suggestedMetaTitle.slice(0, 60), '|', suggestedMetaDescription.slice(0, 60));
+          }
+        }
+      } catch (err: any) {
+        console.log('[auto-optimize] meta generation failed (non-fatal):', err.message);
+      }
+    }
+
     // ── Phase 7: Image Placeholders ───────────────────────────────
     const PLACEHOLDER_SRC = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='380'%3E%3Crect width='800' height='380' fill='%23f3f4f6'/%3E%3Ctext x='400' y='200' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='18'%3E%E2%8F%B3 Generating image...%3C/text%3E%3C/svg%3E";
     const pendingImages: Array<{ idx: number; prompt: string }> = [];
@@ -663,6 +723,8 @@ Return the complete HTML with targeted fixes applied.`;
     sse(res, 'done', {
       content: optimizedWithImages,
       pendingImages,
+      ...(suggestedMetaTitle ? { suggestedMetaTitle } : {}),
+      ...(suggestedMetaDescription ? { suggestedMetaDescription } : {}),
       ...(postScore !== null ? {
         preScore: preScoreData?.ranking_score ?? null,
         preSignals: preScoreData?.ranking_signals ?? null,
