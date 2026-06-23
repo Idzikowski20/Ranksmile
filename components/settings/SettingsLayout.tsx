@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import AppShell from '../common/AppShell';
 import Icon from '../common/Icon';
 import NotificationSettings from './NotificationSettings';
+import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
 import AdWordsSettings from './AdWordsSettings';
@@ -67,6 +68,7 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
   {
     label: 'Organization',
     items: [
+      { slug: 'general', label: 'General' },
       { slug: 'people', label: 'People' },
     ],
   },
@@ -103,7 +105,6 @@ type SettingsLayoutProps = {
 
 export const normalizeSettingsPage = (page?: string): SettingsPageSlug => {
   if (!page) return 'google_search_console';
-  if (page === 'general') return 'google_search_console';
   if (PAGE_ALIASES[page]) return PAGE_ALIASES[page];
   if (Object.prototype.hasOwnProperty.call(PAGE_TITLES, page)) {
     return page as SettingsPageSlug;
@@ -233,6 +234,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
           Loading settings...
         </div>
       );
+    }
+
+    if (currentPage === 'general') {
+      return <OrganizationGeneralSettings />;
     }
 
     if (currentPage === 'people') {
