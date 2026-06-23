@@ -135,7 +135,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     if (allSites.length === 0 && errors.length > 0) {
       console.log('[SITES API] All attempts failed:', errors.join(' | '));
-      return res.status(200).json({ sites: [], domainStats, error: 'Could not fetch sites from any GSC account. Check your Search Console integration.' });
+      const expired = errors.some((e) => /invalid_grant/i.test(e));
+      const error = expired
+        ? 'Your Google Search Console connection has expired. Go to Settings and reconnect your Google account.'
+        : 'Could not fetch sites from any GSC account. Check your Search Console integration.';
+      return res.status(200).json({ sites: [], domainStats, error });
     }
 
     return res.status(200).json({ sites: allSites, domainStats });
