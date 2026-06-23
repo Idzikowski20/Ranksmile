@@ -10,7 +10,7 @@ import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
 import AdWordsSettings from './AdWordsSettings';
-import PricingPlansSettings from './PricingPlansSettings';
+import SubscriptionSettings from './SubscriptionSettings';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -270,7 +270,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     }
 
     if (currentPage === 'billing_subscription') {
-      return <PricingPlansSettings />;
+      return <SubscriptionSettings />;
     }
 
     return (
