@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { AuditItem } from '../../pages/api/audit';
+import { scoreColor } from '../../lib/scoreColor';
 
 interface Props {
   items: AuditItem[];
@@ -28,12 +29,6 @@ const AuditTable: React.FC<Props> = ({ items, isLoading, onSelect, selectedId })
   const SortArrow = ({ col }: { col: SortKey }) => {
     if (sortBy !== col) return <span style={{ color: '#d4d4d8', marginLeft: 3 }}>↕</span>;
     return <span style={{ color: '#783afb', marginLeft: 3 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
-  };
-
-  const scoreColor = (score: number) => {
-    if (score >= 80) return '#22c55e';
-    if (score >= 50) return '#f97316';
-    return '#ef4444';
   };
 
   const formatNum = (n: number | null): string => {
