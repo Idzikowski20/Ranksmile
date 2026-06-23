@@ -6,7 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { Gauge, Checkbox, Toggle, SearchBar, Badge, SortableHeader } from '../../../components/ui';
+import { Gauge, Checkbox, Toggle, SearchBar, SortableHeader } from '../../../components/ui';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
