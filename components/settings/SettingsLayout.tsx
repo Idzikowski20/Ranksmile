@@ -16,6 +16,8 @@ import BillingDetailsSettings from './BillingDetailsSettings';
 import WordPressSettings from './WordPressSettings';
 import ApiSettings from './ApiSettings';
 import ProfileSettings from './ProfileSettings';
+import BrandKnowledgeSettings from './BrandKnowledgeSettings';
+import CustomVoicesSettings from './CustomVoicesSettings';
 import SidebarLaunchpad from './SidebarLaunchpad';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
@@ -23,6 +25,7 @@ import { useFetchDomains } from '../../services/domains';
 export type SettingsPageSlug =
   | 'general'
   | 'people'
+  | 'brand_knowledge'
   | 'google_search_console'
   | 'google_ads'
   | 'wordpress'
@@ -56,6 +59,7 @@ const PAGE_ALIASES: Record<string, SettingsPageSlug> = {
 const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   general: 'General',
   people: 'People',
+  brand_knowledge: 'Brand Knowledge',
   google_search_console: 'Search Console',
   google_ads: 'Google Ads',
   wordpress: 'WordPress',
@@ -72,6 +76,8 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 };
 
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
+  brand_knowledge: 'Manage what we know about your brand',
+  custom_voices: 'Manage Custom Voices to be used in Content Editor, Humanizer, and Surfer AI',
   billing_details: 'Manage your billing information',
   wordpress: 'Interact with your WordPress domains straight from Surfer',
   api: 'Scale your workflows with powerful API access',
@@ -84,6 +90,8 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     items: [
       { slug: 'general', label: 'General' },
       { slug: 'people', label: 'People' },
+      { slug: 'brand_knowledge', label: 'Brand Knowledge' },
+      { slug: 'custom_voices', label: 'Custom Voices' },
     ],
   },
   {
@@ -261,6 +269,14 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
     if (currentPage === 'people') {
       return <PeopleSettings />;
+    }
+
+    if (currentPage === 'brand_knowledge') {
+      return <BrandKnowledgeSettings />;
+    }
+
+    if (currentPage === 'custom_voices') {
+      return <CustomVoicesSettings />;
     }
 
     if (currentPage === 'notifications') {
