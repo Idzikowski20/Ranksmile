@@ -198,7 +198,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
   const settingsSidebar = (
     <aside className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
-      <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden">
+      <div className="styled-scrollbar-dark flex h-full flex-col overflow-y-auto overflow-x-hidden">
         <div className="sticky top-0 z-[100] bg-[#09090B] py-[24px]">
           <Link href="/dashboard" passHref>
             <a
@@ -228,7 +228,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
               return (
                 <Link key={item.slug} href={`/settings/${item.slug}`} passHref>
                   <a
-                    className={`flex items-center rounded-md px-4 py-3 text-[14px] font-normal no-underline transition-colors ${
+                    className={`flex items-center rounded-md py-3 text-[14px] font-normal no-underline transition-colors ${
                       isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
                     }`}
                   >
