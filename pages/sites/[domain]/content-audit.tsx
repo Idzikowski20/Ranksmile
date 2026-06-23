@@ -6,26 +6,12 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { Gauge, Checkbox, Toggle, SearchBar, Badge, SortableHeader } from '../../../components/ui';
+import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
-const ScoreRing = ({ score }: { score: number }) => {
-   const r = 14;
-   const circ = 2 * Math.PI * r;
-   const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626';
-   const fill = (score / 100) * circ;
-   return (
-      <svg width="36" height="36" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
-         <circle cx="18" cy="18" r={r} fill="none" stroke="#F4F4F5" strokeWidth="3" />
-         <circle cx="18" cy="18" r={r} fill="none" stroke={color} strokeWidth="3"
-            strokeDasharray={`${fill} ${circ - fill}`} strokeLinecap="round" transform="rotate(-90 18 18)" />
-         <text x="18" y="18" textAnchor="middle" dominantBaseline="central" fontSize="9" fontWeight="700" fill={color} fontFamily="var(--font-family-primary)">
-            {score}
-         </text>
-      </svg>
-   );
-};
-
+// 'review' is not a Badge-supported status — keep local for that case
 const StatusBadge = ({ status }: { status: string }) => {
    const map: Record<string, { bg: string; color: string; label: string }> = {
       published: { bg: '#F0FDF4', color: '#15803D', label: 'Published' },
@@ -56,9 +42,9 @@ const ContentAuditPage: NextPage = () => {
 
    const [search, setSearch] = useState('');
    const [showUrls, setShowUrls] = useState(false);
-   const [sortKey, setSortKey] = useState<SortKey>('content_score');
-   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
    const [selected, setSelected] = useState<Set<string | number>>(new Set());
+
+   const { sortKey, sortDir, handleSort } = useSortState<SortKey>('content_score');
 
    const { data: articlesData, isLoading } = useQuery(
       ['articles', activeDomain?.ID],
@@ -122,11 +108,6 @@ const ContentAuditPage: NextPage = () => {
       return out;
    }, [rows, search, sortKey, sortDir]);
 
-   const handleSort = (key: SortKey) => {
-      if (sortKey === key) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
-      else { setSortKey(key); setSortDir('desc'); }
-   };
-
    const toggleSelect = (id: string | number) => {
       setSelected((prev) => {
          const n = new Set(prev);
@@ -150,20 +131,6 @@ const ContentAuditPage: NextPage = () => {
       a.download = `content-audit-${domain}.csv`;
       a.click();
    };
-
-   const TH = ({ label, k, w = 108 }: { label: string; k: SortKey; w?: number }) => (
-      <div
-         style={{ padding: '10px 12px', borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: w, cursor: 'pointer', gap: 4 }}
-         onClick={() => handleSort(k)}
-      >
-         <span style={{ fontSize: 12, color: sortKey === k ? '#09090B' : '#71717B', fontWeight: sortKey === k ? 600 : 400, textDecoration: 'underline dotted', textUnderlineOffset: 3 }}>
-            {label}
-         </span>
-         <svg viewBox="0 0 20 20" width="13" height="13" fill="currentColor" style={{ color: sortKey === k ? '#09090B' : '#D4D4D8', flexShrink: 0 }}>
-            <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v10.638l3.96-4.158a.75.75 0 1 1 1.08 1.04l-5.25 5.5a.75.75 0 0 1-1.08 0l-5.25-5.5a.75.75 0 1 1 1.08-1.04l3.96 4.158V3.75A.75.75 0 0 1 10 3" clipRule="evenodd" />
-         </svg>
-      </div>
-   );
 
    const actions = (
       <>
@@ -205,20 +172,10 @@ const ContentAuditPage: NextPage = () => {
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                  <input type="checkbox" checked={showUrls} onChange={(e) => setShowUrls(e.target.checked)} style={{ accentColor: '#783AFB' }} />
+                  <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
                   Show URLs
                </label>
-               <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#9F9FA9' }}>
-                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" />
-                     </svg>
-                  </div>
-                  <input
-                     type="text" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)}
-                     style={{ width: 200, height: 32, paddingLeft: 28, paddingRight: 10, border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, color: '#09090B', background: '#fff', outline: 'none', fontFamily: 'var(--font-family-primary)' }}
-                  />
-               </div>
+               <SearchBar value={search} onChange={setSearch} placeholder="Search" width={200} />
             </div>
 
             {/* Table */}
@@ -227,17 +184,17 @@ const ContentAuditPage: NextPage = () => {
                <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
                   {/* Checkbox */}
                   <div style={{ padding: '10px 12px', borderRight: '1px solid #F4F4F5' }}>
-                     <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} style={{ accentColor: '#783AFB' }} />
+                     <Checkbox checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
                   </div>
                   <div style={{ padding: '10px 12px', flexGrow: 1, minWidth: 256, display: 'flex', gap: 8 }}>
                      <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>Page</span>
                      <span style={{ color: '#D4D4D8', fontSize: 12 }}>/</span>
                      <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>Main keyword</span>
                   </div>
-                  <TH label="Content Score" k="content_score" w={130} />
-                  <TH label="Position" k="position" />
-                  <TH label="Traffic" k="clicks" />
-                  <TH label="Impr." k="impressions" />
+                  <SortableHeader label="Content Score" sortKey="content_score" activeKey={sortKey} dir={sortDir} width={130} onSort={(k) => handleSort(k as SortKey)} />
+                  <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
+                  <SortableHeader label="Traffic" sortKey="clicks" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
+                  <SortableHeader label="Impr." sortKey="impressions" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
                </div>
 
                {isLoading ? (
@@ -260,7 +217,7 @@ const ContentAuditPage: NextPage = () => {
                         className="audit-row"
                      >
                         <div style={{ padding: '12px', borderRight: '1px solid #F4F4F5' }}>
-                           <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} style={{ accentColor: '#783AFB' }} />
+                           <Checkbox checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
                         </div>
                         <div style={{ padding: '12px', flexGrow: 1, minWidth: 256, display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden' }}>
                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -275,7 +232,7 @@ const ContentAuditPage: NextPage = () => {
                            {showUrls && row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
                         </div>
                         <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', width: 130, display: 'flex', justifyContent: 'flex-end' }}>
-                           <ScoreRing score={row.content_score} />
+                           <Gauge score={row.content_score} size="sm" />
                         </div>
                         <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
                            {row.position > 0 ? row.position.toFixed(1) : '—'}
