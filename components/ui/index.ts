@@ -1,4 +1,5 @@
 export { default as Gauge } from './Gauge';
+export { default as Button } from './Button';
 export { default as Checkbox } from './Checkbox';
 export { default as Toggle } from './Toggle';
 export { default as SearchBar } from './SearchBar';
