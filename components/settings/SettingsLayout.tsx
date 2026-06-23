@@ -14,6 +14,7 @@ import SubscriptionSettings from './SubscriptionSettings';
 import UsageSettings from './UsageSettings';
 import BillingDetailsSettings from './BillingDetailsSettings';
 import WordPressSettings from './WordPressSettings';
+import ApiSettings from './ApiSettings';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -71,6 +72,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
   billing_details: 'Manage your billing information',
   wordpress: 'Interact with your WordPress domains straight from Surfer',
+  api: 'Scale your workflows with powerful API access',
 };
 
 const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPageSlug; label: string }> }> = [
@@ -292,6 +294,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
     if (currentPage === 'wordpress') {
       return <WordPressSettings />;
+    }
+
+    if (currentPage === 'api') {
+      return <ApiSettings />;
     }
 
     return (
