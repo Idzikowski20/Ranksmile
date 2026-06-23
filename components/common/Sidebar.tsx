@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import SidebarLaunchpad from '../settings/SidebarLaunchpad';
 
 type SidebarProps = {
    domains?: DomainType[];
@@ -292,7 +293,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                background: 'var(--color-surface-strong)',
                borderRight: '1px solid var(--color-border-strong)',
                gap: '0.25rem',
-               padding: '0 0 16px 0',
+               padding: '0 0 88px 0',
             }}
             data-testid="sidebar"
          >
@@ -520,6 +521,8 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                </div>
             </div>
          </div>
+
+         <SidebarLaunchpad />
       </>
    );
 };

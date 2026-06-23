@@ -124,7 +124,7 @@ const SidebarLaunchpad = () => {
       <div
         data-launchpad="true"
         className="max-md:hidden"
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 60, padding: '0 6px 12px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
+        style={{ position: 'fixed', left: 0, bottom: 0, width: 220, zIndex: 60, padding: '0px 12px 12px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
       >
         <button
           type="button"
