@@ -13,6 +13,7 @@ import AdWordsSettings from './AdWordsSettings';
 import SubscriptionSettings from './SubscriptionSettings';
 import UsageSettings from './UsageSettings';
 import BillingDetailsSettings from './BillingDetailsSettings';
+import WordPressSettings from './WordPressSettings';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -69,6 +70,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
   billing_details: 'Manage your billing information',
+  wordpress: 'Interact with your WordPress domains straight from Surfer',
 };
 
 const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPageSlug; label: string }> }> = [
@@ -286,6 +288,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
     if (currentPage === 'billing_details') {
       return <BillingDetailsSettings />;
+    }
+
+    if (currentPage === 'wordpress') {
+      return <WordPressSettings />;
     }
 
     return (
