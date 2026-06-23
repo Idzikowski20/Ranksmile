@@ -10,6 +10,7 @@ import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
 import AdWordsSettings from './AdWordsSettings';
+import PricingPlansSettings from './PricingPlansSettings';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -266,6 +267,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
     if (currentPage === 'google_ads') {
       return <AdWordsSettings settings={settings} />;
+    }
+
+    if (currentPage === 'billing_subscription') {
+      return <PricingPlansSettings />;
     }
 
     return (
