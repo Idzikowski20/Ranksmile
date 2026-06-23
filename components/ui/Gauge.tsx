@@ -6,8 +6,6 @@ export type GaugeSize = 'sm' | 'md' | 'lg';
 interface GaugeProps {
   score: number;
   size?: GaugeSize;
-  animated?: boolean;
-  showLabel?: boolean;
 }
 
 const Ring = ({ score }: { score: number }) => {
