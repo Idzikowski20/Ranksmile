@@ -383,7 +383,6 @@ const ArticleEditorPage: NextPage = () => {
 
       // 3) Normalise dashes, NBSP and multi-whitespace, lowercase — using a per-character
       //    parallel array so we can map normalised positions back to original offsets.
-      //    Key difference from old code: NO .trim() per character (trim on single space -> "").
       const normCh = (ch: string) =>
         ch.replace(/[–—‐‑‒―]/g, '-')
           .replace(/[\s ]+/g, ' ')
@@ -486,7 +485,6 @@ const ArticleEditorPage: NextPage = () => {
           continue;
         }
 
-        // Get the LATEST editor HTML right before patching to avoid stale overwrites
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ed = (editorRef.current as any)?.getEditor?.();
         if (!ed) {
@@ -603,6 +601,10 @@ const ArticleEditorPage: NextPage = () => {
                 }).catch(() => {});
               }
             }
+
+            // Apply meta suggestions
+            if (payload.suggestedMetaTitle) handleMetaTitleChange(payload.suggestedMetaTitle);
+            if (payload.suggestedMetaDescription) handleMetaDescriptionChange(payload.suggestedMetaDescription);
 
             // Score display
             if (typeof payload.postScore === 'number') {

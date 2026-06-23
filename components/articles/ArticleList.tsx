@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Gauge from '../ui/Gauge';
 
 interface Article {
   id: number;
@@ -44,51 +45,7 @@ const timeAgo = (dateStr: string): { relative: string; full: string } => {
   return { relative, full };
 };
 
-// Returns the correct color for the score fill — matches SurferSEO color scheme
-function gaugeColor(score: number): string {
-  if (score >= 70) return '#22C55E'; // green
-  if (score >= 40) return '#F59E0B'; // amber
-  return '#EF4444';                  // red for low scores
-}
 
-// Inline SVG score gauge — semicircle from right (0%) to left (100%), counterclockwise
-// Arc math: point at fraction f is (150 - 120·cos(f·π), 150 - 120·sin(f·π))
-const ScoreGauge = ({ score }: { score: number | null }) => {
-  if (score === null) {
-    return (
-      <svg viewBox="0 0 300 175" style={{ width: '100%', height: 'auto', verticalAlign: 'middle' }}>
-        <path fill="transparent" stroke="#E4E4E7" strokeWidth="30" strokeLinecap="round"
-          d="M 270 150 A 120 120 0 0 0 30 150" style={{ pointerEvents: 'none' }} />
-      </svg>
-    );
-  }
-
-  const fraction = Math.max(0, Math.min(score, 100)) / 100;
-  // Point on the arc at the score's position
-  const sx = 150 - 120 * Math.cos(fraction * Math.PI);
-  const sy = 150 - 120 * Math.sin(fraction * Math.PI);
-  const color = gaugeColor(score);
-
-  return (
-    <svg viewBox="0 0 300 175" style={{ width: '100%', height: 'auto', verticalAlign: 'middle' }}>
-      {/* Background track */}
-      <path fill="transparent" stroke="#E4E4E7" strokeWidth="30" strokeLinecap="round"
-        d="M 270 149.99999999999997 A 120 120 0 0 0 30 150.00000000000003"
-        style={{ pointerEvents: 'none' }} />
-      {/* Score fill — from score point counterclockwise to left (30, 150) */}
-      {score > 0 && (
-        <path fill="transparent" stroke={color} strokeWidth="30" strokeLinecap="round"
-          d={`M ${sx.toFixed(4)} ${sy.toFixed(4)} A 120 120 0 0 0 30 150`}
-          style={{ pointerEvents: 'none' }} />
-      )}
-      {/* Score number */}
-      <text x="150" y="90" fill="#2F2F34" textAnchor="middle" dominantBaseline="text-before-edge"
-        style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '4.5rem', letterSpacing: '0.02em', cursor: 'default' }}>
-        {score}
-      </text>
-    </svg>
-  );
-};
 
 const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props) => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -331,7 +288,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
               <div style={{ width: 48 }}>
                 {/* Score gauge — visible by default, hidden on group hover */}
                 <div className="article-gauge-default">
-                  <ScoreGauge score={score} />
+                  <Gauge score={score ?? 0} size="sm" />
                 </div>
                 {/* Checkbox — hidden by default, shown on group hover */}
                 <div className="article-gauge-checkbox hidden">

@@ -77,6 +77,22 @@ export const buildOAuthClientFromAccount = (account: GscAccountRecord) => {
   return oauth2;
 };
 
+export type AccountTokenStatus = { valid: boolean; expired: boolean; reason?: string };
+
+// Verifies the stored refresh token by forcing an access-token refresh against Google.
+// `expired` is true ONLY for invalid_grant (token revoked/expired) — transient/network
+// errors leave `expired` false so we never show a false "reconnect needed".
+export const verifyAccountToken = async (account: GscAccountRecord): Promise<AccountTokenStatus> => {
+  try {
+    const oauthClient = buildOAuthClientFromAccount(account);
+    await oauthClient.getAccessToken();
+    return { valid: true, expired: false };
+  } catch (err: any) {
+    const detail = err?.response?.data?.error || err?.message || String(err);
+    return { valid: false, expired: /invalid_grant/i.test(detail), reason: detail };
+  }
+};
+
 export const refreshAccountProfileFromGoogle = async (account: GscAccountRecord) => {
   if (account.picture && account.email && account.google_sub) {
     return account;

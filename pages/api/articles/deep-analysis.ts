@@ -8,6 +8,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { computeContentScore } from '../../../lib/contentScore';
 
 function sse(res: NextApiResponse, event: string, data: any) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -46,7 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `UPDATE articles SET status = 'analyzing', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
       { replacements: [existingArticleId] },
     );
-    sse(res, 'created', { articleId });
   } else {
     try {
       let domainId: number;
@@ -93,6 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
        VALUES (?, ?, 'deep_analysis', 'queued', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       { replacements: [jobId, articleId, JSON.stringify(payload)] },
     );
+    sse(res, 'created', { articleId, jobId });
   } catch (err: any) {
     console.error('[deep-analysis] job insert failed:', err.message);
     sse(res, 'error', { step: 'save', message: 'Failed to create analysis job' });
@@ -207,12 +208,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const metaTitle = fetchPage.meta_title || '';
     const metaDescription = fetchPage.meta_description || '';
     const headingCount = fetchPage.heading_count ?? 0;
+    const paragraphCount = fetchPage.paragraph_count ?? 0;
     const imageIssueCount = fetchPage.images_without_alt ?? 0;
+
+    const pageContent = fetchPage.html || '';
+    const featuredImage = fetchPage.featured_image || '';
+
+    // Compute _computed_score so the gauge shows a value on load.
+    // Also store it in the content_score column so list and panel always match.
+    const plainText = pageContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+    (scoreData as any)._heading_count = headingCount;
+    (scoreData as any)._paragraph_count = paragraphCount;
+    const computedScore = computeContentScore(
+      plainText, wordCount, headingCount, scoreData, paragraphCount, undefined,
+      pageContent, keyword || '',
+    );
+    (scoreData as any)._computed_score = computedScore;
 
     const setClauses: string[] = [
       `title = COALESCE(NULLIF(?, ''), title)`,
       `meta_title = COALESCE(NULLIF(?, ''), meta_title)`,
       `meta_description = COALESCE(NULLIF(?, ''), meta_description)`,
+      `content = COALESCE(NULLIF(?, ''), content)`,
+      `featured_image = COALESCE(NULLIF(?, ''), featured_image)`,
       `word_count = ?`,
       `score_data = ?`,
       `content_score = COALESCE(?, content_score)`,
@@ -223,9 +242,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       articleTitle,
       metaTitle,
       metaDescription,
-      classify.word_count_estimate || 0,
+      pageContent,
+      featuredImage,
+      wordCount || classify.word_count_estimate || 0,
       JSON.stringify(scoreData),
-      ruleBase,
+      computedScore || ruleBase,
     ];
 
     if (rankingScore !== null) {

@@ -154,10 +154,20 @@ const IcoActivityLog = () => (
       <path d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
    </svg>
 );
+const IcoKeywordTracker = () => (
+   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+   </svg>
+);
 
 const DOMAIN_SUB_NAV = [
    { key: 'performance', label: 'Performance', icon: <IcoPerformance /> },
    { key: 'recommendations', label: 'Recommendations', icon: <IcoRecommendations /> },
+   { key: 'keyword-research', label: 'Keyword Research', icon: <IcoKeywordResearch /> },
+   { key: 'keyword-tracker', label: 'Keyword Tracker', icon: <IcoKeywordTracker /> },
    { key: 'content-audit', label: 'Content Audit', icon: <IcoContentAudit /> },
    { key: 'topical-map', label: 'Topical Map', icon: <IcoTopicalMap /> },
    { key: 'activity-log', label: 'Activity Log', icon: <IcoActivityLog /> },
@@ -173,8 +183,11 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    const [switcherOpen, setSwitcherOpen] = useState(false);
    const switcherRef = useRef<HTMLDivElement>(null);
 
-   const isActive = (path: string) => router.asPath === path;
-   const isActivePrefix = (prefix: string) => router.asPath.startsWith(prefix);
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => { setMounted(true); }, []);
+
+   const isActive = (path: string) => mounted && router.asPath === path;
+   const isActivePrefix = (prefix: string) => mounted && router.asPath.startsWith(prefix);
 
    // Detect domain slug from current URL (e.g. /sites/[slug]/...)
    const urlSlugMatch = router.asPath.match(/^\/(?:domain|sites)\/([^/?#]+)/);
@@ -298,7 +311,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
             </nav>
 
             {/* Domain section — always visible when domains exist */}
-            {(selectedDomainSlug || domains.length > 0) && (
+            {mounted && (selectedDomainSlug || domains.length > 0) && (
                <div style={{ padding: '4px 8px 0' }}>
                   {/* Domain switcher button */}
                   <div ref={switcherRef} style={{ position: 'relative' }}>
@@ -408,7 +421,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', paddingLeft: '8px', marginTop: 2 }}>
                      {DOMAIN_SUB_NAV.map((item) => {
                         const href = `/sites/${selectedDomainSlug}/${item.key}`;
-                        const active = router.asPath === href || router.asPath.startsWith(href + '?');
+                        const active = mounted && (router.asPath === href || router.asPath.startsWith(href + '?'));
                         return (
                            <Link key={item.key} href={href} passHref>
                               <a

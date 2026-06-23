@@ -6,6 +6,7 @@ import {
   deleteAccountForUser,
   getAccountsForUser,
   refreshAccountProfileFromGoogle,
+  verifyAccountToken,
 } from '../../../lib/gscAccounts';
 
 type GscAccountsResponse = {
@@ -22,6 +23,7 @@ const normalizeAccount = (account: any) => ({
   picture: account.picture || '',
   connectedAt: account.connected_at || '',
   scopes: account.scopes || '',
+  status: account.status || 'connected',
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<GscAccountsResponse>) {
@@ -39,7 +41,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   if (req.method === 'GET') {
     const accounts = await getAccountsForUser(userId);
     const hydratedAccounts = await Promise.all(
-      accounts.map(async (account) => refreshAccountProfileFromGoogle(account).catch(() => account)),
+      accounts.map(async (account) => {
+        const [profile, tokenStatus] = await Promise.all([
+          refreshAccountProfileFromGoogle(account).catch(() => account),
+          verifyAccountToken(account).catch(() => ({ valid: true, expired: false })),
+        ]);
+        return { ...profile, status: tokenStatus.expired ? 'expired' : 'connected' };
+      }),
     );
     return res.status(200).json({ accounts: hydratedAccounts.map(normalizeAccount) });
   }

@@ -5,6 +5,7 @@ import React, { useMemo } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import Badge from '../../../components/ui/Badge';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
@@ -20,11 +21,11 @@ function relativeTime(dateStr: string): string {
    return d.toLocaleDateString();
 }
 
-const EVENT_COLORS: Record<string, { bg: string; color: string; dot: string }> = {
-   published: { bg: '#F0FDF4', color: '#15803D', dot: '#16a34a' },
-   draft: { bg: '#F9FAFB', color: '#6B7280', dot: '#9CA3AF' },
-   updated: { bg: '#EFF6FF', color: '#1D4ED8', dot: '#3B82F6' },
-   created: { bg: '#FAF5FF', color: '#6D28D9', dot: '#783AFB' },
+const EVENT_DOT: Record<string, string> = {
+   published: '#16a34a',
+   draft: '#9CA3AF',
+   updated: '#3B82F6',
+   created: '#783AFB',
 };
 
 type LogEntry = {
@@ -135,7 +136,7 @@ const ActivityLogPage: NextPage = () => {
                ) : (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                      {events.map((event, i) => {
-                        const s = EVENT_COLORS[event.type] || EVENT_COLORS.created;
+                        const dotColor = EVENT_DOT[event.type] || EVENT_DOT.created;
                         return (
                            <div
                               key={event.id}
@@ -152,7 +153,7 @@ const ActivityLogPage: NextPage = () => {
                                        width: 10,
                                        height: 10,
                                        borderRadius: '50%',
-                                       background: s.dot,
+                                       background: dotColor,
                                        marginTop: 4,
                                        flexShrink: 0,
                                     }}
@@ -167,19 +168,9 @@ const ActivityLogPage: NextPage = () => {
                                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                                     <div style={{ flex: 1 }}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                          <span
-                                             style={{
-                                                padding: '1px 8px',
-                                                borderRadius: 20,
-                                                fontSize: 11,
-                                                fontWeight: 600,
-                                                background: s.bg,
-                                                color: s.color,
-                                                fontFamily: 'var(--font-family-primary)',
-                                             }}
-                                          >
+                                          <Badge variant="status" status={event.type}>
                                              {EVENT_LABELS[event.type]}
-                                          </span>
+                                          </Badge>
                                           <span
                                              style={{
                                                 fontSize: 13,

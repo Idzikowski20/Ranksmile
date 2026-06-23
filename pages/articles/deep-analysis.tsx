@@ -171,10 +171,23 @@ const DeepAnalysisPage: NextPage = () => {
     STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })),
   );
   const [articleId, setArticleId] = useState<number | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const startedRef = useRef(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastStageRef = useRef<string | null>(null);
+
+  // ── Stage → step mapping for progress polling ────────────────────
+  const STAGE_ORDER = ['fetch_page', 'scrape_serp', 'classify_content', 'extract_terms', 'score_ranking'] as const;
+  const STAGE_TO_STEPS: Record<string, string[]> = {
+    fetch_page: ['fetch', 'metadata', 'structure'],
+    scrape_serp: ['serp'],
+    classify_content: ['nlp'],
+    extract_terms: ['nlp'],
+    score_ranking: ['score'],
+  };
 
   useEffect(() => {
     if (!router.isReady || startedRef.current) return;
@@ -229,6 +242,7 @@ const DeepAnalysisPage: NextPage = () => {
               const data = JSON.parse(jsonStr);
               if (currentEvent === 'created') {
                 setArticleId(data.articleId);
+                if (data.jobId) setJobId(data.jobId);
               } else if (currentEvent === 'progress') {
                 setSteps((prev) =>
                   prev.map((s) =>
@@ -246,7 +260,7 @@ const DeepAnalysisPage: NextPage = () => {
                 setOverallError(data.message || 'Analysis failed');
               } else if (currentEvent === 'done') {
                 setArticleId(data.articleId);
-                setSteps((prev) => prev.map((s) => ({ ...s, status: s.status === 'pending' ? 'done' : s.status })));
+                setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as StepStatus })));
                 setAllDone(true);
               }
             } catch { /* skip parse errors from partial chunks */ }
@@ -277,6 +291,60 @@ const DeepAnalysisPage: NextPage = () => {
       startedRef.current = false;
     };
   }, [router.isReady, url, kwParam, country, device, retryCount]);
+
+  // ── Poll job progress for per-step status ────────────────────────
+  useEffect(() => {
+    if (!jobId || allDone || overallError) {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
+    }
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.status === 'failed') {
+          setOverallError(data.progressMessage || 'Analysis failed');
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          return;
+        }
+        if (data.status === 'done') {
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          return;
+        }
+
+        const stage = data.currentStage as string | undefined;
+        if (!stage || stage === lastStageRef.current) return;
+        lastStageRef.current = stage;
+
+        const stageIdx = STAGE_ORDER.indexOf(stage as any);
+        if (stageIdx === -1) return;
+
+        setSteps((prev) =>
+          prev.map((s) => {
+            for (let i = 0; i < stageIdx; i++) {
+              const completedStepKeys = STAGE_TO_STEPS[STAGE_ORDER[i]] || [];
+              if (completedStepKeys.includes(s.key) && s.status !== 'done') {
+                return { ...s, status: 'done' as StepStatus };
+              }
+            }
+            const currentStepKeys = STAGE_TO_STEPS[stage] || [];
+            if (currentStepKeys.includes(s.key) && s.status !== 'done') {
+              return { ...s, status: 'running' as StepStatus };
+            }
+            return s;
+          }),
+        );
+      } catch { /* network errors are non-fatal for polling */ }
+    };
+
+    pollRef.current = setInterval(poll, 1000);
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    };
+  }, [jobId, allDone, overallError]);
 
   // Redirect to editor once all done
   useEffect(() => {
@@ -484,6 +552,7 @@ const DeepAnalysisPage: NextPage = () => {
                         type="button"
                         onClick={() => {
                           setOverallError(null);
+                          setJobId(null);
                           setSteps(STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })));
                           startedRef.current = false;
                           setRetryCount((c) => c + 1);
