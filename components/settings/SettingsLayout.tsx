@@ -16,6 +16,7 @@ import BillingDetailsSettings from './BillingDetailsSettings';
 import WordPressSettings from './WordPressSettings';
 import ApiSettings from './ApiSettings';
 import ProfileSettings from './ProfileSettings';
+import SidebarLaunchpad from './SidebarLaunchpad';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -197,8 +198,8 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   };
 
   const settingsSidebar = (
-    <aside className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
-      <div className="styled-scrollbar-dark flex h-full flex-col overflow-y-auto overflow-x-hidden">
+    <aside className="relative flex h-full w-[220px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
+      <div className="styled-scrollbar-dark flex h-full flex-col overflow-y-auto overflow-x-hidden pb-[88px]">
         <div className="sticky top-0 z-[100] bg-[#09090B] py-[24px]">
           <Link href="/dashboard" passHref>
             <a
@@ -240,6 +241,8 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
           </div>
         ))}
       </div>
+
+      <SidebarLaunchpad />
     </aside>
   );
 
