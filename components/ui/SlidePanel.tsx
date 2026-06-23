@@ -73,8 +73,8 @@ type RecommRow = {
 function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
    row: RecommRow | null;
    onClose: () => void;
-   onRefresh?: (row: RecommRow, e: React.MouseEvent) => void;
-   onChangeKeyword?: (row: RecommRow) => void;
+   onRefresh?: (r: RecommRow, e: React.MouseEvent) => void;
+   onChangeKeyword?: (r: RecommRow) => void;
    analyzing?: boolean;
 }) {
    const router = useRouter();
@@ -98,7 +98,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
 
    // Animate gauge after the panel slide-in (starts ~120ms after visible)
    useEffect(() => {
-      if (!visible || !row) return;
+      if (!visible || !row) return undefined;
       const target = row.content_score || 0;
       const startDelay = setTimeout(() => {
          setReady(true);
@@ -114,7 +114,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
                return;
             }
-            const eased = 1 - Math.pow(1 - step / steps, 2.5);
+            const eased = 1 - (1 - step / steps) ** 2.5;
             setAnimScore(Math.round(target * eased));
          }, intervalMs);
       }, 140);
@@ -233,8 +233,13 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 14px 14px', marginTop: 2 }}>
                      <span style={{ fontSize: 10, color: '#D4D4D8', fontFamily: 'var(--font-family-primary)' }}>0</span>
-                     <span style={{ fontSize: 10, color: color, fontFamily: 'var(--font-family-primary)', fontWeight: 600, transition: 'color 200ms' }}>
-                        {targetScore > 0 ? (targetScore >= 66 ? 'Good' : targetScore >= 33 ? 'Fair' : 'Poor') : ''}
+                     <span style={{ fontSize: 10, color, fontFamily: 'var(--font-family-primary)', fontWeight: 600, transition: 'color 200ms' }}>
+                        {(() => {
+                           if (targetScore <= 0) return '';
+                           if (targetScore >= 66) return 'Good';
+                           if (targetScore >= 33) return 'Fair';
+                           return 'Poor';
+                        })()}
                      </span>
                      <span style={{ fontSize: 10, color: '#D4D4D8', fontFamily: 'var(--font-family-primary)' }}>100</span>
                   </div>
