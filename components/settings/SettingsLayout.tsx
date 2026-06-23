@@ -199,10 +199,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const settingsSidebar = (
     <aside className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
       <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden">
-        <div className="sticky top-0 z-[100] bg-[#09090B] px-[8px] py-[24px]">
+        <div className="sticky top-0 z-[100] bg-[#09090B] py-[24px]">
           <Link href="/dashboard" passHref>
             <a
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[14px]
+              className="flex w-full items-center gap-2 rounded-md py-1 text-[14px]
               font-normal text-white/70 no-underline transition-colors hover:text-white"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
