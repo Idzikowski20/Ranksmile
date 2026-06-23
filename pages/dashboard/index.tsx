@@ -8,6 +8,7 @@ import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
+import Gauge from '../../components/ui/Gauge';
 
 const Greeting = () => {
   const [hour, setHour] = useState<number | null>(null);
@@ -65,35 +66,6 @@ const CheckIcon = () => (
   </svg>
 );
 
-const ScoreGauge = ({ score }: { score: number }) => {
-  const r = 16;
-  const circumference = 2 * Math.PI * r;
-  const dashOffset = circumference * (1 - Math.min(Math.max(score, 0), 100) / 100);
-  const color = score >= 70 ? '#1AB25E' : score >= 40 ? '#F59E0B' : '#FF6F77';
-  return (
-    <svg width="44" height="44" viewBox="0 0 44 44" style={{ flexShrink: 0 }}>
-      <circle cx="22" cy="22" r={r} fill="none" stroke="#E4E4E7" strokeWidth="3.5" />
-      <circle
-        cx="22" cy="22" r={r} fill="none"
-        stroke={color} strokeWidth="3.5"
-        strokeDasharray={circumference}
-        strokeDashoffset={dashOffset}
-        strokeLinecap="round"
-        transform="rotate(-90 22 22)"
-      />
-      <text
-        x="22" y="26"
-        textAnchor="middle"
-        fontSize="10"
-        fontWeight="700"
-        fill="#18181B"
-        fontFamily="var(--font-family-primary)"
-      >
-        {score}
-      </text>
-    </svg>
-  );
-};
 
 const skeletonStyle: React.CSSProperties = {
   background: '#F4F4F5',
@@ -487,7 +459,7 @@ const DashboardPage: NextPage = () => {
                           }}
                           className="recent-article-row"
                         >
-                          <ScoreGauge score={article.content_score ?? 0} />
+                          <Gauge score={article.content_score ?? 0} size="sm" />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div
                               style={{
