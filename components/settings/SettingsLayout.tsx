@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import AppShell from '../common/AppShell';
 import Icon from '../common/Icon';
 import NotificationSettings from './NotificationSettings';
+import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
 import AdWordsSettings from './AdWordsSettings';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
@@ -63,6 +64,12 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 };
 
 const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPageSlug; label: string }> }> = [
+  {
+    label: 'Organization',
+    items: [
+      { slug: 'people', label: 'People' },
+    ],
+  },
   {
     label: 'Billing',
     items: [
@@ -229,6 +236,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     }
 
     if (currentPage === 'people') {
+      return <PeopleSettings />;
+    }
+
+    if (currentPage === 'notifications') {
       return (
         <NotificationSettings
           settings={settings}
@@ -259,7 +270,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     );
   };
 
-  const showUpdateButton = currentPage === 'people';
+  const showUpdateButton = currentPage === 'notifications';
 
   return (
     <AppShell
