@@ -145,7 +145,10 @@ body {
 .global-topbar {
    position: sticky;
    top: 0;
-   z-index: 100;
+   /* Above the sticky DomainSubLayout header (z-index 100) so the account-menu
+      popover isn't hidden behind the breadcrumb/actions; below mobile sheet
+      overlays (210) so a bottom sheet still covers the topbar on mobile. */
+   z-index: 180;
    min-height: var(--topbar-height);
    display: flex;
    align-items: center;
