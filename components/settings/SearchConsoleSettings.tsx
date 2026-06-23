@@ -97,6 +97,11 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                         alt="Google Avatar"
                         className="max-h-full max-w-full rounded-[50%] object-cover"
                         src={account.picture || 'https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png'}
+                        referrerPolicy="no-referrer"
+                        onError={(event) => {
+                          const fallback = 'https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png';
+                          if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback;
+                        }}
                       />
                     </div>
                     <div className="flex flex-col items-baseline">

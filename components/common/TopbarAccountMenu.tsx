@@ -12,6 +12,7 @@ const TopbarAccountMenu = () => {
    const router = useRouter();
    const [mounted, setMounted] = useState(false);
    const [open, setOpen] = useState(false);
+   const [imgError, setImgError] = useState(false);
    const [gscAccount, setGscAccount] = useState<GscAccountSummary | null>(null);
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
@@ -72,14 +73,13 @@ const TopbarAccountMenu = () => {
             onClick={() => setOpen((value) => !value)}
          >
             <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo" aria-hidden="true">
-               {accountPicture ? (
+               {accountPicture && !imgError ? (
                   <img
                      alt=""
                      src={accountPicture}
                      className="topbar-avatar-image"
-                     onError={(event) => {
-                        event.currentTarget.style.display = 'none';
-                     }}
+                     referrerPolicy="no-referrer"
+                     onError={() => setImgError(true)}
                   />
                ) : (
                   <span>{accountInitials}</span>
@@ -91,14 +91,13 @@ const TopbarAccountMenu = () => {
             <div className="topbar-account-menu" role="menu">
                <div className="topbar-account-row">
                   <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo" aria-hidden="true">
-                     {accountPicture ? (
+                     {accountPicture && !imgError ? (
                         <img
                            alt=""
                            src={accountPicture}
                            className="topbar-avatar-image"
-                           onError={(event) => {
-                              event.currentTarget.style.display = 'none';
-                           }}
+                           referrerPolicy="no-referrer"
+                           onError={() => setImgError(true)}
                         />
                      ) : (
                         <span>{accountInitials}</span>
