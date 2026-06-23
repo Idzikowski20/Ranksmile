@@ -137,11 +137,13 @@ const ContentAuditPage: NextPage = () => {
          <button
             type="button"
             onClick={exportCSV}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
             style={{
                display: 'inline-flex', alignItems: 'center', gap: 6,
-               padding: '6px 14px', borderRadius: 6, border: '1px solid #E4E4E7',
-               background: '#fff', fontSize: 13, fontWeight: 600, color: '#52525C',
-               cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
+               padding: '6px 16px', borderRadius: 6, border: 'none',
+               background: '#F4F4F5', fontSize: 14, fontWeight: 600, color: '#2F2F34',
+               cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s',
             }}
          >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
@@ -149,11 +151,13 @@ const ContentAuditPage: NextPage = () => {
          </button>
          <Link href={`/articles?domainId=${activeDomain?.ID}`} passHref>
             <a
+               onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+               onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '6px 14px', borderRadius: 6, border: 'none',
-                  background: '#09090B', fontSize: 13, fontWeight: 600, color: '#fff',
-                  cursor: 'pointer', textDecoration: 'none', fontFamily: 'var(--font-family-primary)',
+                  padding: '6px 16px', borderRadius: 6, border: 'none',
+                  background: '#2F2F34', fontSize: 14, fontWeight: 600, color: '#fff',
+                  cursor: 'pointer', textDecoration: 'none', fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s',
                }}
             >
                + Add Page
@@ -168,7 +172,7 @@ const ContentAuditPage: NextPage = () => {
             <title>Content Audit — {domain} — SerpBear</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" actions={actions}>
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" actions={actions} contentMaxWidth="100%">
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
