@@ -17,6 +17,7 @@ type GscAccount = {
   picture: string;
   connectedAt: string;
   scopes: string;
+  status?: 'connected' | 'expired';
 };
 
 const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
@@ -99,26 +100,48 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                       />
                     </div>
                     <div className="flex flex-col items-baseline">
-                      <div className="notranslate pr-md text-md truncate font-medium text-gray-140">
-                        {account.email || account.googleSub || 'Google Account'}
+                      <div className="flex items-center gap-sm pr-md">
+                        <span className="notranslate text-md truncate font-medium text-gray-140">
+                          {account.email || account.googleSub || 'Google Account'}
+                        </span>
+                        {account.status === 'expired' && (
+                          <span className="shrink-0 rounded-full bg-[#FFF1F2] px-[8px] py-[1px] text-[11px] font-semibold text-[#B91C1C]">
+                            Reconnect needed
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm text-gray-100" suppressHydrationWarning>
-                        {mounted ? formatTimeAgo(account.connectedAt) : ''}
+                        {mounted
+                          ? (account.status === 'expired'
+                            ? 'Connection expired — reconnect to restore Search Console data'
+                            : formatTimeAgo(account.connectedAt))
+                          : ''}
                       </span>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDisconnect(account.id)}
-                    disabled={disconnectingId === account.id}
-                    className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md rounded-none bg-transparent p-0 text-gray-140 hover:text-gray-120 active:text-gray-160 disabled:opacity-60"
-                  >
-                    <svg viewBox="0 0 20 20" width="1.2em" height="1.2em" className="inline-block shrink-0 align-sub text-inherit size-[20px]">
-                      <path fill="currentColor" d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
-                    </svg>
-                    <span>{disconnectingId === account.id ? 'Disconnecting' : 'Disconnect'}</span>
-                  </button>
+                  <div className="flex items-center gap-base">
+                    {account.status === 'expired' && (
+                      <button
+                        type="button"
+                        onClick={handleConnect}
+                        className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md rounded-none bg-transparent p-0 text-purple-base hover:text-purple-100"
+                      >
+                        Reconnect
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDisconnect(account.id)}
+                      disabled={disconnectingId === account.id}
+                      className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md rounded-none bg-transparent p-0 text-gray-140 hover:text-gray-120 active:text-gray-160 disabled:opacity-60"
+                    >
+                      <svg viewBox="0 0 20 20" width="1.2em" height="1.2em" className="inline-block shrink-0 align-sub text-inherit size-[20px]">
+                        <path fill="currentColor" d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
+                      </svg>
+                      <span>{disconnectingId === account.id ? 'Disconnecting' : 'Disconnect'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div role="separator" className="text-gray-20 min-h-[1px] min-w-[1px] self-stretch bg-gray-10" />
