@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { XIcon } from './icons';
+import { scoreColor } from '../../lib/scoreColor';
 
 // ── Inlined helpers from recommendations.tsx ──────────────────────────────────
 
@@ -38,8 +39,6 @@ function gaugeArcD(score: number): string {
    const largeArc = score > 50 ? 1 : 0;
    return `M ${p.x.toFixed(3)} ${p.y.toFixed(3)} A 120 120 0 ${largeArc} 0 30 150`;
 }
-
-const gaugeColor = (s: number) => (s >= 70 ? '#16a34a' : s >= 40 ? '#d97706' : '#dc2626');
 
 const ExternalLinkIcon = () => (
    <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -129,7 +128,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
    if (!row) return null;
 
    const targetScore = row.content_score || 0;
-   const color = gaugeColor(animScore);
+   const color = scoreColor(animScore);
 
    return (
       <>
@@ -235,7 +234,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 14px 14px', marginTop: 2 }}>
                      <span style={{ fontSize: 10, color: '#D4D4D8', fontFamily: 'var(--font-family-primary)' }}>0</span>
                      <span style={{ fontSize: 10, color: color, fontFamily: 'var(--font-family-primary)', fontWeight: 600, transition: 'color 200ms' }}>
-                        {targetScore > 0 ? (targetScore >= 70 ? 'Good' : targetScore >= 40 ? 'Fair' : 'Poor') : ''}
+                        {targetScore > 0 ? (targetScore >= 66 ? 'Good' : targetScore >= 33 ? 'Fair' : 'Poor') : ''}
                      </span>
                      <span style={{ fontSize: 10, color: '#D4D4D8', fontFamily: 'var(--font-family-primary)' }}>100</span>
                   </div>
