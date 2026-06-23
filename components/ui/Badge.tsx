@@ -12,7 +12,7 @@ const STATUS: Record<Status, { bg: string; color: string }> = {
 const Badge = ({ variant = 'status', status, children }: {
   variant?: 'status' | 'suggestion' | 'filter'; status?: Status; children: React.ReactNode;
 }) => {
-  const base: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-family-primary)' };
+  const base: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-family-primary)' };
   let skin: React.CSSProperties = {};
   if (variant === 'status' && status) skin = { background: STATUS[status].bg, color: STATUS[status].color };
   if (variant === 'suggestion') skin = { background: 'rgba(120,58,251,0.08)', color: '#783AFB', borderRadius: 9999 };
