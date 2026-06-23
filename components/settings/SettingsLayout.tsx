@@ -12,6 +12,7 @@ import SearchConsoleSettings from './SearchConsoleSettings';
 import AdWordsSettings from './AdWordsSettings';
 import SubscriptionSettings from './SubscriptionSettings';
 import UsageSettings from './UsageSettings';
+import BillingDetailsSettings from './BillingDetailsSettings';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -66,6 +67,10 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   masterclass: 'Masterclass',
 };
 
+const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
+  billing_details: 'Manage your billing information',
+};
+
 const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPageSlug; label: string }> }> = [
   {
     label: 'Organization',
@@ -118,6 +123,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const router = useRouter();
   const currentPage = normalizeSettingsPage(page);
   const pageTitle = PAGE_TITLES[currentPage] || 'Settings';
+  const pageSubtitle = PAGE_SUBTITLES[currentPage];
 
   const [settings, setSettings] = useState<SettingsType>({
     scraper_type: 'none',
@@ -278,6 +284,10 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
       return <UsageSettings />;
     }
 
+    if (currentPage === 'billing_details') {
+      return <BillingDetailsSettings />;
+    }
+
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-2">
         <span className="text-[14px] text-gray-100">Coming soon</span>
@@ -319,6 +329,9 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div className="gap-2xs flex flex-col">
                 <span className="text-base font-semibold text-gray-140">{pageTitle}</span>
+                {pageSubtitle && (
+                  <span className="text-[14px] font-normal text-gray-140">{pageSubtitle}</span>
+                )}
               </div>
 
               <div role="separator" className="text-gray-20 min-h-[1px] min-w-[1px] self-stretch bg-gray-10" />
