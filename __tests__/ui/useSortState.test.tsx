@@ -16,7 +16,7 @@ describe('useSortState', () => {
     expect(result.current.sortDir).toBe('desc');
   });
   it('nowy klucz ustawia desc', () => {
-    const { result } = renderHook(() => useSortState('clicks'));
+    const { result } = renderHook(() => useSortState<string>('clicks'));
     act(() => result.current.handleSort('clicks')); // -> asc
     act(() => result.current.handleSort('position'));
     expect(result.current.sortKey).toBe('position');
