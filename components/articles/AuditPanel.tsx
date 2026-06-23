@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useRouter } from 'next/router';
 import type { AuditItem } from '../../pages/api/audit';
-import { scoreToColor } from '../../lib/contentScore';
+import Gauge from '../ui/Gauge';
 
 interface Props {
   item: AuditItem | null;
@@ -10,81 +10,9 @@ interface Props {
   onClose: () => void;
 }
 
-const CIRCUMFERENCE = 2 * Math.PI * 34;
-
 const formatDate = (d: string | null) => {
   if (!d) return '—';
   try { return new Date(d).toLocaleString(); } catch { return d; }
-};
-
-const AnimatedGauge = ({ targetScore }: { targetScore: number }) => {
-  const [displayScore, setDisplayScore] = useState(0);
-  const [displayOffset, setDisplayOffset] = useState(2 * Math.PI * 34);
-  const stepRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    // Edge case: score is 0 — just show empty gauge
-    if (targetScore <= 0) {
-      setDisplayScore(0);
-      setDisplayOffset(CIRCUMFERENCE);
-      return;
-    }
-
-    const steps = targetScore;
-    const totalDuration = Math.max(800, steps * 28);
-    const intervalMs = totalDuration / steps;
-
-    stepRef.current = 0;
-    setDisplayScore(0);
-    setDisplayOffset(CIRCUMFERENCE);
-
-    timerRef.current = setInterval(() => {
-      stepRef.current += 1;
-      const s = stepRef.current;
-
-      if (s >= steps) {
-        setDisplayScore(targetScore);
-        setDisplayOffset(CIRCUMFERENCE - (targetScore / 100) * CIRCUMFERENCE);
-        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-        return;
-      }
-
-      // Smooth the arc by computing offset from current step
-      const progress = s / steps;
-      const eased = 1 - Math.pow(1 - progress, 2); // ease-out quad — gentle deceleration
-      const currentScore = Math.round(targetScore * eased);
-      setDisplayScore(currentScore);
-      setDisplayOffset(CIRCUMFERENCE - (currentScore / 100) * CIRCUMFERENCE);
-    }, intervalMs);
-
-    return () => {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    };
-  }, [targetScore]);
-
-  const currentColor = scoreToColor(displayScore);
-
-  return (
-    <svg width="100" height="100" viewBox="0 0 80 80" style={{ display: 'block', margin: '0 auto' }}>
-      <circle cx="40" cy="40" r="34" fill="none" stroke="#f4f4f5" strokeWidth="6" />
-      <circle
-        cx="40" cy="40" r="34" fill="none"
-        stroke={currentColor}
-        strokeWidth="6"
-        strokeDasharray={CIRCUMFERENCE}
-        strokeDashoffset={displayOffset}
-        transform="rotate(-90 40 40)"
-        strokeLinecap="round"
-      />
-      <text x="40" y="36" textAnchor="middle" fontSize="20" fontWeight="800" fill="#09090b">
-        {displayScore}
-      </text>
-      <text x="40" y="52" textAnchor="middle" fontSize="9" fill="#9f9fa9">
-        /100
-      </text>
-    </svg>
-  );
 };
 
 const AuditPanel: React.FC<Props> = ({ item, lastAnalysisAt, lastSCUpdate, onClose }) => {
@@ -140,7 +68,7 @@ const AuditPanel: React.FC<Props> = ({ item, lastAnalysisAt, lastSCUpdate, onClo
           <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
             Content Score
           </div>
-          <AnimatedGauge targetScore={score} />
+          <Gauge score={score} size="md" />
         </div>
 
         {/* CTA */}
