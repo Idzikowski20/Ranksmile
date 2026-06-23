@@ -447,6 +447,31 @@ body {
    font-size: 11px;
 }
 
+/* ─── Checkbox component (.rec-cb-*) ───────────────────────────────────── */
+.rec-cb-wrap { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.rec-cb-input {
+   appearance: none; -webkit-appearance: none;
+   width: 16px; height: 16px; margin: 0;
+   border-radius: 4px;
+   background: transparent;
+   box-shadow: 0 0 0 1px #D4D4D8, 0px 1px 2px rgba(26,29,40,0.06);
+   transition: background-color 0.25s, box-shadow 0.25s;
+   flex-shrink: 0; box-sizing: border-box; cursor: pointer;
+}
+.rec-cb-input:checked,
+.rec-cb-input:indeterminate {
+   background-color: #783AFB;
+   box-shadow: 0 0 0 1px #783AFB, 0px 1px 2px rgba(26,29,40,0.06);
+}
+.rec-cb-icon {
+   position: absolute; left: 50%; top: 50%;
+   transform: translate(-50%,-50%);
+   opacity: 0; transition: opacity 0.25s;
+   color: #fff; pointer-events: none;
+}
+.rec-cb-input:checked ~ .rec-cb-icon,
+.rec-cb-input:indeterminate ~ .rec-cb-icon { opacity: 1; }
+
 .ct-label.ct-vertical {
    font-size: 12px;
 }
