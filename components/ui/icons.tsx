@@ -29,11 +29,11 @@ export const XIcon = ({ size = 16 }: { size?: number }) => (
    </svg>
 );
 
-// ── Search icon (fallback — no inline SVG found in recommendations.tsx) ───────
+// ── Search icon ───────────────────────────────────────────────────────────────
+// Source: pages/sites/[domain]/recommendations.tsx search bar (~L1036) — verbatim path
 export const SearchIcon = ({ size = 16 }: { size?: number }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-    <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" />
   </svg>
 );
 
