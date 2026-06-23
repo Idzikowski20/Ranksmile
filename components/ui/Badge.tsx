@@ -4,9 +4,9 @@ type Status = 'published' | 'draft' | 'updated' | 'created';
 
 const STATUS: Record<Status, { bg: string; color: string }> = {
   published: { bg: '#F0FDF4', color: '#15803D' },
-  draft:     { bg: '#F9FAFB', color: '#6B7280' },
-  updated:   { bg: '#EFF6FF', color: '#1D4ED8' },
-  created:   { bg: '#FAF5FF', color: '#6D28D9' },
+  draft: { bg: '#F9FAFB', color: '#6B7280' },
+  updated: { bg: '#EFF6FF', color: '#1D4ED8' },
+  created: { bg: '#FAF5FF', color: '#6D28D9' },
 };
 
 const Badge = ({ variant = 'status', status, children }: {

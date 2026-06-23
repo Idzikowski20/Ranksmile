@@ -10,16 +10,21 @@ export const DeltaDown = () => (
 
 // ── Double ↑↓ sort arrow ──────────────────────────────────────────────────────
 // Source: pages/sites/[domain]/recommendations.tsx lines 81–90
-export const SortUpDown = ({ active, dir }: { active: boolean; dir: 'asc' | 'desc' | null }) => (
-   <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" style={{ flexShrink: 0, color: active ? '#09090B' : '#9F9FA9' }}>
-      {active && dir === 'asc'
-         ? <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v10.638l3.96-4.158a.75.75 0 1 1 1.08 1.04l-5.25 5.5a.75.75 0 0 1-1.08 0l-5.25-5.5a.75.75 0 1 1 1.08-1.04l3.96 4.158V3.75A.75.75 0 0 1 10 3" clipRule="evenodd" />
-         : active && dir === 'desc'
-            ? <path fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04L10.75 5.612V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" />
-            : <path fillRule="evenodd" d="M10.53 3.47a.75.75 0 0 0-1.06 0L6.22 6.72a.75.75 0 0 0 1.06 1.06L10 5.06l2.72 2.72a.75.75 0 1 0 1.06-1.06zm-4.31 9.81l3.25 3.25a.75.75 0 0 0 1.06 0l3.25-3.25a.75.75 0 1 0-1.06-1.06L10 14.94l-2.72-2.72a.75.75 0 0 0-1.06 1.06" clipRule="evenodd" />
-      }
-   </svg>
-);
+export const SortUpDown = ({ active, dir }: { active: boolean; dir: 'asc' | 'desc' | null }) => {
+   let iconPath: React.ReactNode;
+   if (active && dir === 'asc') {
+      iconPath = <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v10.638l3.96-4.158a.75.75 0 1 1 1.08 1.04l-5.25 5.5a.75.75 0 0 1-1.08 0l-5.25-5.5a.75.75 0 1 1 1.08-1.04l3.96 4.158V3.75A.75.75 0 0 1 10 3" clipRule="evenodd" />;
+   } else if (active && dir === 'desc') {
+      iconPath = <path fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04L10.75 5.612V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" />;
+   } else {
+      iconPath = <path fillRule="evenodd" d="M10.53 3.47a.75.75 0 0 0-1.06 0L6.22 6.72a.75.75 0 0 0 1.06 1.06L10 5.06l2.72 2.72a.75.75 0 1 0 1.06-1.06zm-4.31 9.81l3.25 3.25a.75.75 0 0 0 1.06 0l3.25-3.25a.75.75 0 1 0-1.06-1.06L10 14.94l-2.72-2.72a.75.75 0 0 0-1.06 1.06" clipRule="evenodd" />;
+   }
+   return (
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" style={{ flexShrink: 0, color: active ? '#09090B' : '#9F9FA9' }}>
+         {iconPath}
+      </svg>
+   );
+};
 
 // ── X icon ────────────────────────────────────────────────────────────────────
 // Source: pages/sites/[domain]/recommendations.tsx lines 160–164

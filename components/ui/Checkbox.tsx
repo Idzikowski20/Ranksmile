@@ -10,7 +10,11 @@ const Checkbox = ({ checked, indeterminate, onChange }: {
       className="rec-cb-input"
       checked={checked}
       readOnly
-      ref={(el) => { if (el) el.indeterminate = !!indeterminate; }}
+      ref={(el) => {
+          if (!el) return;
+          // eslint-disable-next-line no-param-reassign
+          el.indeterminate = !!indeterminate;
+        }}
     />
     <svg viewBox="0 0 20 20" width="12" height="12" className="rec-cb-icon" fill="currentColor">
       {indeterminate && !checked

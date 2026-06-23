@@ -10,7 +10,9 @@ interface GaugeProps {
 
 const Ring = ({ score }: { score: number }) => {
   const s = Math.max(0, Math.min(score, 100));
-  const r = 16, sw = 3.5, c = 2 * Math.PI * r;
+  const r = 16;
+  const sw = 3.5;
+  const c = 2 * Math.PI * r;
   const offset = c * (1 - s / 100);
   const col = scoreColor(s);
   return (
@@ -36,7 +38,7 @@ const Semicircle = ({ score, compact }: { score: number; compact: boolean }) => 
   useEffect(() => {
     const from = fromRef.current;
     const to = score;
-    if (from === to) return;
+    if (from === to) return undefined;
 
     const duration = from === 0 ? 2800 : 900;
 
@@ -46,7 +48,7 @@ const Semicircle = ({ score, compact }: { score: number; compact: boolean }) => 
     const animate = (ts: number) => {
       if (startTimeRef.current === null) startTimeRef.current = ts;
       const t = Math.min((ts - startTimeRef.current) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 5);
+      const eased = 1 - (1 - t) ** 5;
       setDisplayScore(Math.round(from + (to - from) * eased));
       if (t < 1) {
         animRef.current = requestAnimationFrame(animate);
@@ -60,7 +62,10 @@ const Semicircle = ({ score, compact }: { score: number; compact: boolean }) => 
     return () => { if (animRef.current !== null) { cancelAnimationFrame(animRef.current); animRef.current = null; } };
   }, [score]);
 
-  const cx = 250, cy = 190, r = 120, sw = 25;
+  const cx = 250;
+  const cy = 190;
+  const r = 120;
+  const sw = 25;
   const totalArc = Math.PI * r;
   const gap = 10;
   const capR = sw / 2;
@@ -76,9 +81,9 @@ const Semicircle = ({ score, compact }: { score: number; compact: boolean }) => 
   const ds = Math.max(0, Math.min(displayScore, 100));
   const dsArcPos = (ds / 100) * totalArc;
 
-  const redFillLen   = Math.max(0, Math.min(dsArcPos - capR, seg1Len));
+  const redFillLen = Math.max(0, Math.min(dsArcPos - capR, seg1Len));
   const yellowFillLen = dsArcPos > seg2Start ? Math.max(0, Math.min(dsArcPos - seg2Start, seg2Len)) : 0;
-  const greenFillLen  = dsArcPos > seg3Start ? Math.max(0, Math.min(dsArcPos - seg3Start, seg3Len)) : 0;
+  const greenFillLen = dsArcPos > seg3Start ? Math.max(0, Math.min(dsArcPos - seg3Start, seg3Len)) : 0;
 
   const fraction = ds / 100;
   const angleRad = -Math.PI + fraction * Math.PI;

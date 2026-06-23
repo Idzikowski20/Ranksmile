@@ -12,5 +12,7 @@ export function scoreBand(score: number): ScoreBand {
 
 export function scoreColor(score: number): string {
   const band = scoreBand(score);
-  return band === 'high' ? '#1ab25e' : band === 'mid' ? '#efa00d' : '#d70028';
+  if (band === 'high') return '#1ab25e';
+  if (band === 'mid') return '#efa00d';
+  return '#d70028';
 }
