@@ -215,7 +215,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
         {SIDEBAR_SECTIONS.map((section) => (
           <div key={section.label} className="flex w-full flex-col gap-[2px]">
-            <div className="px-[16px] pb-2 pt-4">
+            <div className="pb-2 pt-4">
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/35">
                 {section.label}
               </span>
@@ -226,7 +226,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
               return (
                 <Link key={item.slug} href={`/settings/${item.slug}`} passHref>
                   <a
-                    className={`mx-2 flex items-center rounded-md px-4 py-3 text-[14px] font-normal no-underline transition-colors ${
+                    className={`flex items-center rounded-md px-4 py-3 text-[14px] font-normal no-underline transition-colors ${
                       isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
                     }`}
                   >
