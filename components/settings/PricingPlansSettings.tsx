@@ -58,7 +58,9 @@ type CellValue = boolean | string | { deg: number; text: string };
 
 interface PlanCard {
   name: string;
-  price: string;
+  priceMonthly: number;
+  priceYearly: number;
+  save: number;
   recommended?: boolean;
   desc: string;
   cta: string;
@@ -70,7 +72,9 @@ interface PlanCard {
 const PLAN_CARDS: PlanCard[] = [
   {
     name: 'Standard',
-    price: '€119',
+    priceMonthly: 119,
+    priceYearly: 99,
+    save: 240,
     desc: 'Align your team with a unified workflow and start growing your visibility in AI search.',
     cta: 'Start with Standard',
     ctaStyle: 'gray',
@@ -88,7 +92,9 @@ const PLAN_CARDS: PlanCard[] = [
   },
   {
     name: 'Pro',
-    price: '€219',
+    priceMonthly: 219,
+    priceYearly: 182,
+    save: 444,
     recommended: true,
     desc: 'Secure your authority, fix technical conflicts, and manage AI perception at scale.',
     cta: 'Scale with Pro',
@@ -108,7 +114,9 @@ const PLAN_CARDS: PlanCard[] = [
   },
   {
     name: 'Peace of Mind',
-    price: '€359',
+    priceMonthly: 359,
+    priceYearly: 299,
+    save: 720,
     desc: 'Dominate the market with uncapped optimization, API access, and VIP support.',
     cta: 'Get Peace of Mind',
     ctaStyle: 'gray',
@@ -136,10 +144,10 @@ const DISCOVERY_FEATURES = [
 
 // All 4 plan column headers for the comparison table
 const TABLE_PLAN_HEADERS = [
-  { name: 'Discovery', price: '€59', cta: 'Try Discovery', ctaStyle: 'ghost' as const, recommended: false },
-  { name: 'Standard', price: '€119', cta: 'Start with Standard', ctaStyle: 'gray' as const, recommended: false },
-  { name: 'Pro', price: '€219', cta: 'Scale with Pro', ctaStyle: 'primary' as const, recommended: true },
-  { name: 'Peace of Mind', price: '€359', cta: 'Get Peace of Mind', ctaStyle: 'gray' as const, recommended: false },
+  { name: 'Discovery', priceMonthly: 59, priceYearly: 49, cta: 'Try Discovery', ctaStyle: 'ghost' as const, recommended: false },
+  { name: 'Standard', priceMonthly: 119, priceYearly: 99, cta: 'Start with Standard', ctaStyle: 'gray' as const, recommended: false },
+  { name: 'Pro', priceMonthly: 219, priceYearly: 182, cta: 'Scale with Pro', ctaStyle: 'primary' as const, recommended: true },
+  { name: 'Peace of Mind', priceMonthly: 359, priceYearly: 299, cta: 'Get Peace of Mind', ctaStyle: 'gray' as const, recommended: false },
 ];
 
 interface TableSection {
@@ -254,6 +262,235 @@ const FAQ_ITEMS = [
   { q: 'If I choose the annual plan, do I have to pay upfront for the entire year?', a: 'Yes, annual plans are billed upfront for the full year, which is how we are able to offer the discounted rate compared to monthly billing.' },
 ];
 
+// ─── Section icons (inline SVG, 20px, stroke) ─────────────────────────────────
+
+const IconStar = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+
+const IconFeather = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" />
+    <line x1="16" y1="8" x2="2" y2="22" />
+    <line x1="17.5" y1="15" x2="9" y2="15" />
+  </svg>
+);
+
+const IconRadio = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="2" />
+    <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14" />
+  </svg>
+);
+
+const IconSliders = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
+  </svg>
+);
+
+const IconClipboard = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+  </svg>
+);
+
+const IconUsers = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const IconLink = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const IconHeadphones = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+  </svg>
+);
+
+/** Map section title → icon component */
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  'Why choose?': <IconStar />,
+  'Create and Optimize Content': <IconFeather />,
+  'Track and Optimize Your AI Visibility': <IconRadio />,
+  'Customize AI Writing and Optimization': <IconSliders />,
+  'Plan, Track & Manage Your Content': <IconClipboard />,
+  'Collaborate and Scale Together': <IconUsers />,
+  'Work Seamlessly Across Platforms': <IconLink />,
+  'Support': <IconHeadphones />,
+};
+
+// ─── AI Model logos (inline SVG, 18px, bordered circle) ───────────────────────
+
+const ModelIcon = ({ name }: { name: string }) => {
+  // Simple distinct glyphs per model inside a tiny circle
+  const glyphs: Record<string, React.ReactNode> = {
+    ChatGPT: (
+      <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+        <circle cx="5" cy="5" r="3.5" stroke="#18181B" strokeWidth="1" />
+        <path d="M3 5h4M5 3v4" stroke="#18181B" strokeWidth="0.9" strokeLinecap="round" />
+      </svg>
+    ),
+    Perplexity: (
+      <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+        <path d="M5 1.5L8.5 5 5 8.5 1.5 5Z" stroke="#18181B" strokeWidth="0.9" strokeLinejoin="round" />
+      </svg>
+    ),
+    'AI Mode': (
+      <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+        <rect x="2" y="2" width="6" height="6" rx="1" stroke="#18181B" strokeWidth="0.9" />
+        <circle cx="5" cy="5" r="1.2" fill="#18181B" />
+      </svg>
+    ),
+    'AI Overviews': (
+      <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+        <path d="M5 1.5 C2.5 1.5 1.5 3 1.5 5 C1.5 7 2.5 8.5 5 8.5 C7.5 8.5 8.5 7 8.5 5 C8.5 3 7.5 1.5 5 1.5Z" stroke="#18181B" strokeWidth="0.9" />
+        <path d="M3 5 L5 3 L7 5" stroke="#18181B" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    Gemini: (
+      <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+        <path d="M5 1L5 9M1 5L9 5" stroke="#18181B" strokeWidth="0.9" strokeLinecap="round" />
+        <path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="#18181B" strokeWidth="0.6" strokeLinecap="round" />
+      </svg>
+    ),
+  };
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 18,
+        height: 18,
+        borderRadius: 9999,
+        border: '0.5px solid #E4E4E7',
+        flexShrink: 0,
+        background: '#fff',
+      }}
+    >
+      {glyphs[name] ?? (
+        <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+          <circle cx="5" cy="5" r="3" stroke="#18181B" strokeWidth="0.9" />
+        </svg>
+      )}
+    </span>
+  );
+};
+
+/** Returns true if a string value should be treated as "negative/zero" */
+const isNegativeString = (s: string) =>
+  s.startsWith('Track 0') || s.startsWith('No ') || s === '';
+
+// ─── Per-column cell renderer ─────────────────────────────────────────────────
+
+const AI_MODELS_STANDARD = ['ChatGPT'];
+const AI_MODELS_FULL = ['ChatGPT', 'Perplexity', 'AI Mode', 'AI Overviews', 'Gemini'];
+
+interface FeatureCellProps {
+  value: CellValue;
+  label: string;
+  isAiVisibilityRow?: boolean;
+}
+
+const FeatureCell = ({ value, label, isAiVisibilityRow }: FeatureCellProps) => {
+  const font: React.CSSProperties = { fontFamily: 'var(--font-family-primary)', fontSize: 13, lineHeight: '1.45' };
+
+  // Special case: Track AI Visibility row
+  if (isAiVisibilityRow) {
+    if (value === false) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><Cross /></span>
+          <span style={{ ...font, color: '#9F9FA9' }}>{label}</span>
+        </div>
+      );
+    }
+    // value is a string like 'ChatGPT' or 'ChatGPT, Perplexity, ...'
+    const models = typeof value === 'string'
+      ? (value === 'ChatGPT' ? AI_MODELS_STANDARD : AI_MODELS_FULL)
+      : AI_MODELS_FULL;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><Check color="#18181B" /></span>
+          <span style={{ ...font, color: '#18181B' }}>{label}</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 24 }}>
+          {models.map((m) => (
+            <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ModelIcon name={m} />
+              <span style={{ ...font, color: '#52525C' }}>{m}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // boolean true
+  if (value === true) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <span style={{ flexShrink: 0, marginTop: 1 }}><Check color="#18181B" /></span>
+        <span style={{ ...font, color: '#18181B' }}>{label}</span>
+      </div>
+    );
+  }
+
+  // boolean false
+  if (value === false) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <span style={{ flexShrink: 0, marginTop: 1 }}><Cross /></span>
+        <span style={{ ...font, color: '#9F9FA9' }}>{label}</span>
+      </div>
+    );
+  }
+
+  // string value
+  if (typeof value === 'string') {
+    const neg = isNegativeString(value);
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <span style={{ flexShrink: 0, marginTop: 1 }}>
+          {neg ? <Cross /> : <Check color="#18181B" />}
+        </span>
+        <span style={{ ...font, color: neg ? '#9F9FA9' : '#18181B' }}>{value}</span>
+      </div>
+    );
+  }
+
+  // { deg, text }
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+      <span style={{ flexShrink: 0, marginTop: 2 }}><Dot deg={value.deg} /></span>
+      <span style={{ ...font, color: '#52525C' }}>{value.text}</span>
+    </div>
+  );
+};
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const Separator = () => (
@@ -317,55 +554,49 @@ const CtaButton = ({ label, style: ctaStyle, fullWidth }: { label: string; style
   );
 };
 
-/** Static toggle pill (always off, purely decorative) */
-const TogglePill = () => (
-  <div
+/** Billing-period toggle pill */
+const TogglePill = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={on}
     style={{
       width: 32,
       height: 16,
       borderRadius: 9999,
-      background: '#E4E4E7',
+      background: on ? '#783AFB' : '#E4E4E7',
       position: 'relative',
       flexShrink: 0,
-      cursor: 'default',
+      cursor: 'pointer',
+      border: 'none',
+      padding: 0,
+      transition: 'background 150ms ease',
     }}
   >
     <div
       style={{
         position: 'absolute',
         top: 2,
-        left: 2,
+        left: on ? 18 : 2,
         width: 12,
         height: 12,
         borderRadius: 9999,
-        background: '#9F9FA9',
+        background: '#fff',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+        transition: 'left 150ms ease',
       }}
     />
-  </div>
+  </button>
 );
-
-/** Renders a single table cell value */
-const CellContent = ({ value }: { value: CellValue }) => {
-  if (value === true) return <Check color="#18181B" />;
-  if (value === false) return <Cross />;
-  if (typeof value === 'string') {
-    return <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '1.4' }}>{value}</span>;
-  }
-  // { deg, text }
-  return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <Dot deg={value.deg} />
-      <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>{value.text}</span>
-    </span>
-  );
-};
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const PricingPlansSettings = () => {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
 
   const toggleFaq = (i: number) => setFaqOpen((prev) => (prev === i ? null : i));
+  const toggleBilling = () => setBilling((prev) => (prev === 'yearly' ? 'monthly' : 'yearly'));
 
   return (
     <div
@@ -443,15 +674,29 @@ const PricingPlansSettings = () => {
             <div>
               <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B', display: 'block' }}>{plan.name}</span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
-                <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B' }}>{plan.price}</span>
+                <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B' }}>€{billing === 'yearly' ? plan.priceYearly : plan.priceMonthly}</span>
                 <span style={{ fontSize: 13, color: '#9F9FA9' }}>per month</span>
               </div>
             </div>
 
             {/* Billed yearly toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <TogglePill />
-              <span style={{ fontSize: 13, color: '#9F9FA9' }}>Billed yearly</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <TogglePill on={billing === 'yearly'} onClick={toggleBilling} />
+              <span style={{ fontSize: 13, color: '#52525C' }}>Billed yearly</span>
+              {billing === 'yearly' && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#1AB25E',
+                    background: 'rgba(26,178,94,0.1)',
+                    padding: '2px 8px',
+                    borderRadius: 9999,
+                  }}
+                >
+                  Save €{plan.save}
+                </span>
+              )}
             </div>
 
             {/* Description */}
@@ -518,7 +763,7 @@ const PricingPlansSettings = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 17, fontWeight: 600, color: '#18181B' }}>Discovery</span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B' }}>€59</span>
+                <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B' }}>€{billing === 'yearly' ? 49 : 59}</span>
                 <span style={{ fontSize: 13, color: '#9F9FA9' }}>per month</span>
               </div>
               <p style={{ fontSize: 13, color: '#52525C', lineHeight: '1.5', maxWidth: 380, margin: '6px 0 0 0' }}>
@@ -569,100 +814,142 @@ const PricingPlansSettings = () => {
           </span>
         </div>
 
-        <div style={{ overflowX: 'auto', border: '1px solid #E4E4E7', borderRadius: 12, background: '#fff' }}>
+        {/* Table wrapper — must be a real scrollable container for sticky to work */}
+        <div style={{ overflowX: 'auto', border: '1px solid #E4E4E7', borderRadius: 12, background: '#fff', position: 'relative' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 640 }}>
             <colgroup>
-              <col style={{ width: '28%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '18%' }} />
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '25%' }} />
             </colgroup>
 
-            {/* Sticky plan header row */}
+            {/* Sticky plan-header row — position:sticky top:0 z-index:30 */}
             <thead>
-              <tr style={{ borderBottom: '2px solid #E4E4E7', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
-                <th style={{ padding: '16px 16px', textAlign: 'left' }} />
+              <tr style={{ borderBottom: '2px solid #E4E4E7' }}>
                 {TABLE_PLAN_HEADERS.map((p) => (
-                  <th key={p.name} style={{ padding: '16px 12px', textAlign: 'center', verticalAlign: 'top' }}>
+                  <th
+                    key={p.name}
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 30,
+                      background: p.recommended
+                        ? 'linear-gradient(160deg,#F5F3FF 0%,#fff 70%)'
+                        : '#fff',
+                      padding: '0',
+                      textAlign: 'left',
+                      verticalAlign: 'top',
+                      borderBottom: '2px solid #E4E4E7',
+                    }}
+                  >
+                    {/* "Recommended" violet pill above the Pro column */}
                     {p.recommended && (
                       <div
                         style={{
                           background: '#783AFB',
                           color: '#fff',
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: 600,
-                          borderRadius: 9999,
-                          padding: '2px 8px',
-                          marginBottom: 4,
-                          display: 'inline-block',
+                          textAlign: 'center',
+                          padding: '4px 0',
+                          letterSpacing: '0.04em',
                         }}
                       >
                         Recommended
                       </div>
                     )}
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{p.name}</div>
-                    <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', marginBottom: 8 }}>{p.price}</div>
-                    <CtaButton label={p.cta} style={p.ctaStyle} fullWidth />
+                    <div style={{ padding: '16px 20px 20px 20px' }}>
+                      <div
+                        style={{
+                          fontSize: 17,
+                          fontWeight: 600,
+                          color: '#18181B',
+                          fontFamily: 'var(--font-family-primary)',
+                          marginBottom: 4,
+                        }}
+                      >
+                        {p.name}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 14 }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          €{billing === 'yearly' ? p.priceYearly : p.priceMonthly}
+                        </span>
+                        <span style={{ fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
+                          per month
+                        </span>
+                      </div>
+                      <CtaButton label={p.cta} style={p.ctaStyle} fullWidth />
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
 
             <tbody>
-              {SECTIONS.map((section) => (
-                <React.Fragment key={section.title}>
-                  {/* Section title row */}
-                  <tr style={{ borderTop: '1px solid #E4E4E7', borderBottom: '1px solid #E4E4E7', background: '#F4F4F5' }}>
-                    <td
-                      colSpan={5}
-                      style={{
-                        padding: '10px 16px',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: '#3F3F47',
-                        fontFamily: 'var(--font-family-primary)',
-                      }}
-                    >
-                      {section.title}
-                    </td>
-                  </tr>
-
-                  {/* Feature rows */}
-                  {section.rows.map((row, ri) => (
-                    <tr
-                      key={ri}
-                      style={{ borderBottom: '1px solid #F4F4F5' }}
-                    >
+              {SECTIONS.map((section) => {
+                const isWhyChoose = section.title === 'Why choose?';
+                const isAiVisibility = section.title === 'Track and Optimize Your AI Visibility';
+                return (
+                  <React.Fragment key={section.title}>
+                    {/* Sticky section-title row — top: 184px (plan header height), z-index: 20 */}
+                    <tr>
                       <td
+                        colSpan={4}
                         style={{
-                          padding: '12px 16px',
-                          fontSize: 13,
+                          position: 'sticky',
+                          top: 184,
+                          zIndex: 20,
+                          background: '#fff',
+                          padding: '12px 20px',
+                          borderTop: '1px solid #F4F4F5',
+                          borderBottom: '1px solid #F4F4F5',
+                          fontSize: 14,
+                          fontWeight: 500,
                           color: '#3F3F47',
                           fontFamily: 'var(--font-family-primary)',
-                          verticalAlign: 'middle',
                         }}
                       >
-                        {row.label}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#3F3F47' }}>
+                          {SECTION_ICONS[section.title] ?? <IconStar />}
+                          {section.title}
+                        </span>
                       </td>
-                      {row.cells.map((cell, ci) => (
-                        <td
-                          key={ci}
-                          style={{
-                            padding: '12px 12px',
-                            textAlign: 'center',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <CellContent value={cell} />
-                          </div>
-                        </td>
-                      ))}
                     </tr>
-                  ))}
-                </React.Fragment>
-              ))}
+
+                    {/* Feature rows — 4 cells each, no separate label column */}
+                    {section.rows.map((row, ri) => (
+                      <tr key={ri} style={{ borderBottom: '1px solid #F4F4F5' }}>
+                        {row.cells.map((cell, ci) => {
+                          const isAiVis = isAiVisibility && row.label === 'Track AI Visibility';
+                          return (
+                            <td
+                              key={ci}
+                              style={{
+                                padding: isWhyChoose ? '16px 20px' : '12px 20px',
+                                verticalAlign: isWhyChoose ? 'top' : 'middle',
+                                fontSize: 13,
+                                color: '#52525C',
+                                fontFamily: 'var(--font-family-primary)',
+                                lineHeight: '1.5',
+                              }}
+                            >
+                              {isWhyChoose ? (
+                                /* "Why choose?" cells: plain paragraph */
+                                <p style={{ margin: 0, fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '1.55' }}>
+                                  {typeof cell === 'string' ? cell : ''}
+                                </p>
+                              ) : (
+                                <FeatureCell value={cell} label={row.label} isAiVisibilityRow={isAiVis} />
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -682,18 +969,35 @@ const PricingPlansSettings = () => {
         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
           Rated 4.7 / 5 stars
         </span>
-        <div
-          style={{
-            marginLeft: 12,
-            padding: '6px 14px',
-            border: '1px solid #E4E4E7',
-            borderRadius: 8,
-            fontSize: 12,
-            color: '#9F9FA9',
-            fontFamily: 'var(--font-family-primary)',
-          }}
-        >
-          G2 Badges — High Performer
+        <div style={{ marginLeft: 12, display: 'flex', alignItems: 'center' }}>
+          {[
+            { i: 'JK', c: '#F4A4B0' },
+            { i: 'MR', c: '#F6C177' },
+            { i: 'AL', c: '#A4C8F0' },
+            { i: 'SP', c: '#B7E2C0' },
+            { i: 'TD', c: '#D4B7F0' },
+          ].map((a, idx) => (
+            <span
+              key={a.i}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 9999,
+                background: a.c,
+                color: '#fff',
+                fontSize: 11,
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #fff',
+                marginLeft: idx === 0 ? 0 : -8,
+                fontFamily: 'var(--font-family-primary)',
+              }}
+            >
+              {a.i}
+            </span>
+          ))}
         </div>
       </div>
 
