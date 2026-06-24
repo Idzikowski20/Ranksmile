@@ -778,6 +778,28 @@ body {
    background: #FAFAFA;
 }
 
+/* Dashboard Brand performance — stack on mobile, 2 cols on md+ */
+@media (min-width: 768px) {
+   .dashboard-perf-grid {
+      flex-direction: row !important;
+   }
+}
+
+/* Dashboard learn card hover */
+.dashboard-learn-card:hover {
+   transform: translateY(-2px);
+   box-shadow: 0px 8px 16px 0px rgba(24, 26, 34, 0.04), 0px 2px 8px 0px rgba(24, 26, 34, 0.02), 0px 1px 2px 0px rgba(24, 26, 34, 0.06);
+   border-color: #E4E4E7 !important;
+}
+
+/* Dashboard recommendation row hover */
+.dashboard-rec-row:hover span {
+   color: #000 !important;
+}
+.dashboard-rec-view:hover {
+   text-decoration: underline !important;
+}
+
 /* Article list responsive columns */
 @media (min-width: 640px) {
    .article-word-count {
