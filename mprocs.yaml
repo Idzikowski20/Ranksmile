@@ -1,8 +1,10 @@
 # Dev runner — `npm run dev` opens this multi-process TUI.
-# Switch panes with ↑/↓ (or j/k), scroll logs, restart with `r`, quit with `q`.
+# Switch panes with j/k (Next/Prev), s start, x stop, r restart, q quit.
+# Uses `cmd /C` instead of `shell:` so it doesn't depend on $SHELL
+# (which points at Git Bash here and breaks mprocs on Windows).
 procs:
   app:
-    shell: "npm run dev:next"
+    cmd: ["cmd", "/C", "npm run dev:next"]
   python-sidecar:
     cwd: "python-sidecar"
-    shell: "python -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload"
+    cmd: ["cmd", "/C", "python -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload"]
