@@ -226,6 +226,53 @@ body {
    gap: 8px;
 }
 
+/* ── Topbar responsive ──────────────────────────────────────────────
+   Search sits in normal flow (and shrinks) on mobile, and is absolutely
+   centered only on desktop where there's room. Below ~520px the old
+   absolute width calc went negative and collapsed the search. */
+.global-topbar-center {
+   position: static;
+   flex: 1 1 auto;
+   min-width: 0;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+@media (min-width: 768px) {
+   .global-topbar-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(250px, calc(100vw - 520px));
+      flex: 0 0 auto;
+   }
+}
+/* Workspace switcher: icon-only on mobile, full 224px on desktop */
+.workspace-switcher-btn { width: auto !important; }
+.workspace-switcher-name { display: none; }
+@media (min-width: 768px) {
+   .workspace-switcher-btn { width: 224px !important; }
+   .workspace-switcher-name { display: block; }
+}
+/* Ctrl+K hint hidden on mobile */
+.topbar-search-kbd { display: none !important; }
+@media (min-width: 768px) {
+   .topbar-search-kbd { display: inline-flex !important; }
+}
+/* Sides hug their content on mobile so the search fills the middle;
+   they share the row equally again on desktop. */
+.global-topbar-left,
+.global-topbar-actions {
+   flex: 0 0 auto;
+}
+@media (min-width: 768px) {
+   .global-topbar-left,
+   .global-topbar-actions {
+      flex: 1 1 0;
+   }
+}
+
 .app-shell-body {
    flex: 1;
    min-height: 0;

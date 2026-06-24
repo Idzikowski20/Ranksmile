@@ -123,7 +123,7 @@ const SidebarLaunchpad = () => {
       {/* Collapsed pill — pinned to sidebar bottom */}
       <div
         data-launchpad="true"
-        className="max-md:hidden"
+        className="max-lg:hidden"
         style={{ position: 'fixed', left: 0, bottom: 0, width: 220, zIndex: 60, padding: '0px 12px 12px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
       >
         <button
@@ -166,7 +166,7 @@ const SidebarLaunchpad = () => {
             style={{ position: 'fixed', inset: 0, zIndex: 65 }}
           />
           <div
-            className="max-md:hidden styled-scrollbar-dark"
+            className="max-lg:hidden styled-scrollbar-dark"
             style={{
               position: 'fixed',
               left: 12,
