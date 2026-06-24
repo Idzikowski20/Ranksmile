@@ -792,6 +792,11 @@ body {
    border-color: #E4E4E7 !important;
 }
 
+/* Workspace switcher dropdown row hover */
+.workspace-switcher-row:hover {
+   background: #F4F4F5 !important;
+}
+
 /* Dashboard recommendation row hover */
 .dashboard-rec-row:hover span {
    color: #000 !important;
