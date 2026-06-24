@@ -35,7 +35,7 @@ const AppShell = ({
                   showSettings={showSettings}
                />
             ))}
-            <main className={`app-content ${contentClassName}`}>
+            <main className={`app-content motion-page-enter ${contentClassName}`}>
                {children}
             </main>
          </div>
