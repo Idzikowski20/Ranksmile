@@ -410,7 +410,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                            alignItems: 'center',
                            gap: '0.5rem',
                            width: '100%',
-                           padding: '6px 8px',
+                           padding: '8px',
                            border: 'none',
                            background: 'rgba(255,255,255,0.07)',
                            cursor: 'pointer',
