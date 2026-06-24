@@ -32,7 +32,17 @@ const GlobalTopbar = (_props: Props) => (
 
       <div
          className="global-topbar-center"
-         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0, flex: '0 1 250px' }}
+         style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 'min(250px, calc(100vw - 520px))',
+            zIndex: 1,
+         }}
       >
          <TopbarSearch />
       </div>
