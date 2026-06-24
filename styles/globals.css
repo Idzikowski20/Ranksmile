@@ -916,6 +916,10 @@ body {
    text-decoration: underline !important;
 }
 
+/* Recommendations panel — editable main keyword (pencil shows on hover) */
+.rec-keyword-edit:hover .rec-keyword-pencil { opacity: 1 !important; }
+.rec-keyword-edit:hover .rec-keyword-text { text-decoration: underline; text-underline-offset: 2px; }
+
 /* Article list responsive columns */
 @media (min-width: 640px) {
    .article-word-count {
