@@ -412,7 +412,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                            width: '100%',
                            padding: '6px 8px',
                            border: 'none',
-                           background: switcherOpen ? 'rgba(255,255,255,0.07)' : 'transparent',
+                           background: 'rgba(255,255,255,0.07)',
                            cursor: 'pointer',
                            borderRadius: '0.5rem',
                            color: 'rgba(255,255,255,0.9)',
