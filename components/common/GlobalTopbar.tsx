@@ -30,20 +30,7 @@ const GlobalTopbar = (_props: Props) => (
          <WorkspaceSwitcher />
       </div>
 
-      <div
-         className="global-topbar-center"
-         style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 'min(250px, calc(100vw - 520px))',
-            zIndex: 1,
-         }}
-      >
+      <div className="global-topbar-center" style={{ zIndex: 1 }}>
          <TopbarSearch />
       </div>
 

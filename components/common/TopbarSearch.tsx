@@ -39,7 +39,7 @@ const TopbarSearch = () => (
       <SearchIcon />
       Search
     </span>
-    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 4, background: '#09090B', color: '#9F9FA9', fontSize: 14, lineHeight: '16px' }}>
+    <span className="topbar-search-kbd" style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 4, background: '#09090B', color: '#9F9FA9', fontSize: 14, lineHeight: '16px' }}>
       Ctrl+K
     </span>
   </button>

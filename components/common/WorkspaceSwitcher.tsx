@@ -75,6 +75,7 @@ const WorkspaceSwitcher = () => {
         onClick={() => setOpen((o) => !o)}
         onMouseEnter={() => setBtnHover(true)}
         onMouseLeave={() => setBtnHover(false)}
+        className="workspace-switcher-btn"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -91,7 +92,7 @@ const WorkspaceSwitcher = () => {
         }}
       >
         <HeartAvatar />
-        <span style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {current.name}
         </span>
         <ChevronUpDown />
