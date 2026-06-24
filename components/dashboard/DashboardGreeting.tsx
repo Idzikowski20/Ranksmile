@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Skeleton from './Skeleton';
 
 const font = 'var(--font-family-primary)';
 
@@ -19,10 +20,11 @@ interface Props {
   clicksTotal: number;
   deltaPct: number;
   hasData: boolean;
+  loading: boolean;
   clicksHref: string;
 }
 
-const DashboardGreeting = ({ clicksTotal, deltaPct, hasData, clicksHref }: Props) => {
+const DashboardGreeting = ({ clicksTotal, deltaPct, hasData, loading, clicksHref }: Props) => {
   const [hour, setHour] = useState<number | null>(null);
   useEffect(() => { setHour(new Date().getHours()); }, []);
 
@@ -35,7 +37,9 @@ const DashboardGreeting = ({ clicksTotal, deltaPct, hasData, clicksHref }: Props
       </div>
 
       <div style={{ textAlign: 'left', fontSize: 20, lineHeight: '28px', color: '#52525C', fontFamily: font }}>
-        {hasData ? (
+        {loading ? (
+          <Skeleton width="min(420px, 80%)" height={20} radius={6} style={{ margin: '4px 0' }} />
+        ) : hasData ? (
           <span>
             Your site received{' '}
             <strong style={{ color: '#000' }}>
