@@ -8,11 +8,40 @@ type GscAccountSummary = {
    email: string;
 };
 
+const font = 'var(--font-family-primary)';
+
+const CheckIcon = () => (
+   <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
+   </svg>
+);
+
+const MenuItem = ({ icon, label, onClick, href }: { icon?: React.ReactNode; label: string; onClick?: () => void; href?: string }) => {
+   const [hover, setHover] = useState(false);
+   const style: React.CSSProperties = {
+      display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box',
+      padding: '8px 12px', borderRadius: 6, cursor: 'pointer', color: '#2F2F34',
+      fontFamily: font, fontSize: 14, fontWeight: 500, textDecoration: 'none', textAlign: 'left',
+      background: hover ? '#F8F8F9' : 'transparent', border: 'none', transition: 'background 120ms ease',
+   };
+   const inner = (<>{icon}<span>{label}</span></>);
+   if (href) {
+      return (
+         <a href={href} role="menuitem" style={style} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{inner}</a>
+      );
+   }
+   return (
+      <button type="button" role="menuitem" style={style} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{inner}</button>
+   );
+};
+
 const TopbarAccountMenu = () => {
    const router = useRouter();
    const [mounted, setMounted] = useState(false);
    const [open, setOpen] = useState(false);
    const [imgError, setImgError] = useState(false);
+   const [profileHover, setProfileHover] = useState(false);
+   const [orgHover, setOrgHover] = useState(false);
    const [gscAccount, setGscAccount] = useState<GscAccountSummary | null>(null);
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
@@ -98,8 +127,15 @@ const TopbarAccountMenu = () => {
          </button>
 
          {open && (
-            <div className="topbar-account-menu" role="menu">
-               <div className="topbar-account-row">
+            <div className="topbar-account-menu" role="menu" style={{ width: 320, borderRadius: 12, padding: 4 }}>
+               {/* Account / email */}
+               <a
+                  href="/settings/profile"
+                  role="menuitem"
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 6, textDecoration: 'none', background: profileHover ? '#F8F8F9' : 'transparent', transition: 'background 120ms ease' }}
+                  onMouseEnter={() => setProfileHover(true)}
+                  onMouseLeave={() => setProfileHover(false)}
+               >
                   <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo" aria-hidden="true">
                      {accountPicture && !imgError ? (
                         <img
@@ -113,29 +149,41 @@ const TopbarAccountMenu = () => {
                         <span>{accountInitials}</span>
                      )}
                   </span>
-                  <div className="topbar-account-meta">
-                     <span className="topbar-account-email">{accountLabel}</span>
-                     <span className="topbar-account-subtext">{gscAccount?.email ? 'Google account connected' : 'Signed in with Neon Auth'}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                     <span style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accountLabel}</span>
                   </div>
+               </a>
+
+               <div style={{ height: 1, background: '#F4F4F5', margin: '4px -4px' }} />
+
+               <MenuItem icon={<Icon type="settings-alt" size={20} />} label="Settings" onClick={() => router.push('/settings')} />
+
+               <div style={{ padding: '12px 12px 4px', fontFamily: font, fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.02em', color: '#18181B' }}>
+                  Organization
                </div>
 
-               <button type="button" role="menuitem" className="topbar-account-item" onClick={() => router.push('/settings')}>
-                  <Icon type="settings-alt" size={20} />
-                  Settings
-               </button>
-
-               <button
-                  type="button"
+               <div
                   role="menuitem"
-                  className="topbar-account-item"
+                  aria-selected="true"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: font, fontSize: 14, fontWeight: 600, color: '#2F2F34', background: orgHover ? '#F8F8F9' : 'transparent', transition: 'background 120ms ease' }}
+                  onMouseEnter={() => setOrgHover(true)}
+                  onMouseLeave={() => setOrgHover(false)}
+               >
+                  <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0 }}>I</span>
+                  <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Idztech</span>
+                  <span style={{ marginLeft: 'auto', color: '#18181B', display: 'inline-flex' }}><CheckIcon /></span>
+               </div>
+
+               <div style={{ height: 1, background: '#F4F4F5', margin: '4px -4px' }} />
+
+               <MenuItem
+                  icon={<Icon type="logout" size={20} />}
+                  label="Log out"
                   onClick={async () => {
                      await authClient.signOut();
                      window.location.href = '/auth/sign-in';
                   }}
-               >
-                  <Icon type="logout" size={20} />
-                  Log out
-               </button>
+               />
             </div>
          )}
       </div>
