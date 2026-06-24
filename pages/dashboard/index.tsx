@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import { Toaster } from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
@@ -112,14 +111,6 @@ const DashboardPage: NextPage = () => {
             <LearnSection />
           </div>
         </div>
-
-        <Toaster
-          position="bottom-center"
-          containerClassName="react_toaster"
-          toastOptions={{
-            style: { background: '#fff', color: '#111827', border: '1px solid #e4e4e7', fontSize: 13, fontFamily: 'var(--font-family-primary)' },
-          }}
-        />
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />
