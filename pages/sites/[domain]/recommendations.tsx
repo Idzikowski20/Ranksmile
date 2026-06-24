@@ -541,17 +541,40 @@ const RecommendationsPage: NextPage = () => {
       const id = row.id;
       setAnalyzingIds((prev) => new Set(prev).add(id));
       try {
-         const body: any = { url: row.url, domainId: activeDomain!.ID };
+         const body: any = {
+            url: row.url,
+            domainId: activeDomain!.ID,
+            // Sidecar requires a keyword in the payload — send the page's main keyword.
+            keywords: row.keyword ? [row.keyword] : [],
+         };
          // If it's a real article (not site_context), pass articleId to reuse it
          if (typeof id === 'number' || (typeof id === 'string' && !String(id).startsWith('sc_'))) {
             body.articleId = id;
          }
-         await fetch('/api/articles/deep-analysis', {
+         const res = await fetch('/api/articles/deep-analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
          });
-         queryClient.invalidateQueries(['articles', slug]);
+         // This endpoint streams SSE and stays open until the sidecar finishes;
+         // fetch() resolves on the headers, so read the stream until the
+         // done/error event to keep the spinner up for the whole analysis.
+         if (res.body) {
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+               // eslint-disable-next-line no-await-in-loop
+               const { done, value } = await reader.read();
+               if (done) break;
+               buf += decoder.decode(value, { stream: true });
+               if (buf.includes('event: done') || buf.includes('event: error')) break;
+            }
+         }
+         // Wait for the refetch so the score + "Updated …" date are fresh before
+         // the spinner clears (the open panel re-syncs via the effect below).
+         await queryClient.invalidateQueries(['articles', slug]);
       } catch { /* ignore */ }
       setAnalyzingIds((prev) => {
          const next = new Set(prev);
@@ -577,6 +600,15 @@ const RecommendationsPage: NextPage = () => {
       // Refresh articles data
       queryClient.invalidateQueries(['articles', slug]);
    };
+
+   // Keep the open detail panel in sync after a re-analysis (refreshes score + date).
+   useEffect(() => {
+      if (!panelRow) return;
+      const fresh = rows.find((r) => String(r.id) === String(panelRow.id));
+      if (fresh && (fresh.content_score !== panelRow.content_score || fresh.updatedAt !== panelRow.updatedAt)) {
+         setPanelRow(fresh);
+      }
+   }, [rows, panelRow]);
 
    const activeFilterCount = countActiveFilters(filters);
 
