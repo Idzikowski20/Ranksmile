@@ -479,6 +479,17 @@ body {
    }
 }
 
+/* Fully hidden scrollbar — element still scrolls (wheel / trackpad). */
+.no-scrollbar {
+   scrollbar-width: none;
+   -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+   width: 0;
+   height: 0;
+   display: none;
+}
+
 .styled-scrollbar-dark {
    scrollbar-color: #2a2a2e transparent;
    scrollbar-width: thin;
