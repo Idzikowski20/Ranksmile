@@ -170,7 +170,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                            )}
                         </div>
                      </div>
-                     <div style={{ width: 210, margin: '0 auto' }}>
+                     <div style={{ width: 280, maxWidth: '100%', margin: '0 auto' }}>
                         <Gauge score={targetScore} size="md" />
                      </div>
                   </div>
