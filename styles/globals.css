@@ -969,6 +969,14 @@ body {
    display: none;
 }
 
+/* Hide the Get-started launchpad on mobile/tablet (it belongs to the
+   desktop sidebar). !important beats the pill's inline display:flex. */
+@media (max-width: 1023px) {
+   [data-launchpad="true"] {
+      display: none !important;
+   }
+}
+
 /* Push page content up so it's not behind the nav bar on mobile */
 @media (max-width: 1023px) {
    .app-shell {
