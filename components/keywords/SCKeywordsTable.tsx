@@ -1,6 +1,5 @@
 import { useRouter } from 'next/router';
 import React, { useState, useMemo } from 'react';
-import { Toaster } from 'react-hot-toast';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { useAddKeywords, useFetchKeywords } from '../../services/keywords';
 import { SCfilterKeywords, SCkeywordsByDevice, SCsortKeywords } from '../../utils/client/SCsortFilter';
@@ -242,7 +241,6 @@ const SCKeywordsTable = ({ domain, keywords = [], isLoading = true, isConsoleInt
                </div>
             </div>
          </div>
-         <Toaster position='bottom-center' containerClassName="react_toaster" />
       </div>
    );
  };

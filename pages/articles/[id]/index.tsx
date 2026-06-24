@@ -3,7 +3,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { CheckmarkCircle01Icon } from 'hugeicons-react';
 import AppShell from '../../../components/common/AppShell';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
@@ -1367,20 +1367,6 @@ const ArticleEditorPage: NextPage = () => {
             onClose={() => setShowPixabay(false)}
           />
         )}
-
-        <Toaster
-          position="bottom-center"
-          containerClassName="react_toaster"
-          toastOptions={{
-            style: {
-              background: '#fff',
-              color: '#111827',
-              border: '1px solid #e4e4e7',
-              fontSize: 13,
-              fontFamily: 'var(--font-family-primary)',
-            },
-          }}
-        />
 
         {/* ── AI glow overlay — last child so it renders above everything ── */}
         <div className={`ai-glow-ring${isAiActive ? ' active' : ''}`} />

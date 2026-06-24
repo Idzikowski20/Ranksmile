@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { Toaster } from 'react-hot-toast';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
@@ -387,7 +386,6 @@ const ImportPage: NextPage = () => {
           </div>
         </div>
       </div>
-      <Toaster position="bottom-center" containerClassName="react_toaster" />
     </DashboardLayout>
   );
 };

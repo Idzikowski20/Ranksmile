@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Toaster } from 'react-hot-toast';
 import AppShell from '../common/AppShell';
 import Icon from '../common/Icon';
 import NotificationSettings from './NotificationSettings';
@@ -409,7 +408,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
         </div>
       </div>
 
-      <Toaster position="bottom-center" containerClassName="react_toaster" />
     </AppShell>
   );
 };

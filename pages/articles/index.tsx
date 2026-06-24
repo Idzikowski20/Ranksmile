@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import ArticleList from '../../components/articles/ArticleList';
@@ -436,7 +436,6 @@ const ArticlesPage: NextPage = () => {
         <Settings closeSettings={() => setShowSettings(false)} />
       </CSSTransition>
 
-      <Toaster position="bottom-center" containerClassName="react_toaster" />
     </DashboardLayout>
   );
 };
