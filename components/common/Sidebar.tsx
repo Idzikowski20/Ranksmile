@@ -29,16 +29,6 @@ const IcoSites = () => (
    </svg>
 );
 
-const IcoAITracker = () => (
-   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-      <path d="M1.59859 11.7173C1.60137 11.1596 2.05425 10.7089 2.61196 10.7089C3.17174 10.7089 3.62548 11.1628 3.62533 11.7226L3.62386 17.0295C3.62769 18.4792 4.8088 19.6157 6.19523 19.6157H17.0338C18.472 19.6157 19.6775 18.4267 19.6775 17.031L19.702 6.05271C19.6374 4.66436 18.4839 3.59098 17.1365 3.59098H11.9389C11.3679 3.59098 10.905 3.12811 10.905 2.55713C10.905 1.98615 11.3679 1.52328 11.9389 1.52328H17.0851C19.5055 1.52328 21.5591 3.43526 21.7122 5.8803L21.7322 17.031C21.7322 19.564 19.6021 21.6834 17.0338 21.6834H6.19523C3.67823 21.6834 1.57217 19.6157 1.57217 17.031L1.59859 11.7173Z" fill="currentColor" />
-      <path d="M15.1376 7.50336C15.6347 7.50336 16.0376 7.9063 16.0376 8.40336V16.5034C16.0376 17.0004 15.6347 17.4034 15.1376 17.4034C14.6406 17.4034 14.2376 17.0004 14.2376 16.5034V8.40336C14.2376 7.9063 14.6406 7.50336 15.1376 7.50336Z" fill="currentColor" />
-      <path d="M11.5376 10.2034C12.0347 10.2034 12.4376 10.6063 12.4376 11.1034V16.5034C12.4376 17.0004 12.0347 17.4034 11.5376 17.4034C11.0406 17.4034 10.6376 17.0004 10.6376 16.5034V11.1034C10.6376 10.6063 11.0406 10.2034 11.5376 10.2034Z" fill="currentColor" />
-      <path d="M8.83765 13.8034C8.83765 13.3063 8.4347 12.9034 7.93765 12.9034C7.44059 12.9034 7.03765 13.3063 7.03765 13.8034V16.5034C7.03765 17.0004 7.44059 17.4034 7.93765 17.4034C8.4347 17.4034 8.83765 17.0004 8.83765 16.5034V13.8034Z" fill="currentColor" />
-      <path d="M7.03779 10.1756C7.41779 10.1756 7.74496 9.90742 7.81948 9.5348L8.00961 8.58413C8.07273 8.26856 8.3194 8.0219 8.63496 7.95878L9.58563 7.76865C9.95825 7.69413 10.2265 7.36696 10.2265 6.98696C10.2265 6.60697 9.95825 6.2798 9.58563 6.20527L8.63496 6.01514C8.3194 5.95203 8.07273 5.70536 8.00961 5.38979L7.81948 4.43912C7.74496 4.06651 7.41779 3.79829 7.03779 3.79829C6.6578 3.79829 6.33063 4.06651 6.25611 4.43912L6.06597 5.38979C6.00286 5.70536 5.75619 5.95203 5.44062 6.01514L4.48995 6.20527C4.11734 6.2798 3.84912 6.60697 3.84912 6.98696C3.84912 7.36696 4.11734 7.69413 4.48995 7.76865L5.44062 7.95878C5.75619 8.0219 6.00286 8.26856 6.06597 8.58413L6.25611 9.5348C6.33063 9.90742 6.6578 10.1756 7.03779 10.1756Z" fill="currentColor" />
-   </svg>
-);
-
 const IcoAudit = () => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
       <path d="M16 4C16.93 4 17.395 4 17.7765 4.10222C18.8117 4.37962 19.6204 5.18827 19.8978 6.22354C20 6.60504 20 7.07003 20 8V17.2C20 18.8802 20 19.7202 19.673 20.362C19.3854 20.9265 18.9265 21.3854 18.362 21.673C17.7202 22 16.8802 22 15.2 22H8.8C7.11984 22 6.27976 22 5.63803 21.673C5.07354 21.3854 4.6146 20.9265 4.32698 20.362C4 19.7202 4 18.8802 4 17.2V8C4 7.07003 4 6.60504 4.10222 6.22354C4.37962 5.18827 5.18827 4.37962 6.22354 4.10222C6.60504 4 7.07003 4 8 4M9 15L11 17L15.5 12.5M9.6 6H14.4C14.9601 6 15.2401 6 15.454 5.89101C15.6422 5.79513 15.7951 5.64215 15.891 5.45399C16 5.24008 16 4.96005 16 4.4V3.6C16 3.03995 16 2.75992 15.891 2.54601C15.7951 2.35785 15.6422 2.20487 15.454 2.10899C15.2401 2 14.9601 2 14.4 2H9.6C9.03995 2 8.75992 2 8.54601 2.10899C8.35785 2.20487 8.20487 2.35785 8.10899 2.54601C8 2.75992 8 3.03995 8 3.6V4.4C8 4.96005 8 5.24008 8.10899 5.45399C8.20487 5.64215 8.35785 5.79513 8.54601 5.89101C8.75992 6 9.03995 6 9.6 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -54,18 +44,6 @@ const IcoTopicResearch = () => (
 const IcoKeywordResearch = () => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
       <path d="M4 7C4 6.06812 4 5.60218 4.15224 5.23463C4.35523 4.74458 4.74458 4.35523 5.23463 4.15224C5.60218 4 6.06812 4 7 4H17C17.9319 4 18.3978 4 18.7654 4.15224C19.2554 4.35523 19.6448 4.74458 19.8478 5.23463C20 5.60218 20 6.06812 20 7M9 20H15M12 4V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-   </svg>
-);
-
-const IcoSERPAnalyzer = () => (
-   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-      <path d="M22 22L20.5 20.5M22 10H2M22 12V8.2C22 7.0799 22 6.51984 21.782 6.09202C21.5903 5.7157 21.2843 5.40974 20.908 5.21799C20.4802 5 19.9201 5 18.8 5H5.2C4.0799 5 3.51984 5 3.09202 5.21799C2.7157 5.40973 2.40973 5.71569 2.21799 6.09202C2 6.51984 2 7.0799 2 8.2V15.8C2 16.9201 2 17.4802 2.21799 17.908C2.40973 18.2843 2.71569 18.5903 3.09202 18.782C3.51984 19 4.0799 19 5.2 19H10.5M21.5 18C21.5 19.933 19.933 21.5 18 21.5C16.067 21.5 14.5 19.933 14.5 18C14.5 16.067 16.067 14.5 18 14.5C19.933 14.5 21.5 16.067 21.5 18Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-   </svg>
-);
-
-const IcoRankTracker = () => (
-   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-      <path d="M7.13515 11.189L3.3304 4.38052C2.89291 3.59765 2.67417 3.20621 2.71103 2.88573C2.7432 2.60611 2.8917 2.353 3.1201 2.18852C3.38188 2 3.83029 2 4.72711 2H6.96193C7.29523 2 7.46187 2 7.61135 2.04813C7.74362 2.09073 7.86556 2.16042 7.96939 2.25276C8.08674 2.35712 8.17132 2.5007 8.3405 2.78788L12.0001 9L15.6597 2.78788C15.8289 2.5007 15.9135 2.35712 16.0308 2.25276C16.1347 2.16042 16.2566 2.09073 16.3889 2.04813C16.5383 2 16.705 2 17.0383 2H19.2731C20.1699 2 20.6183 2 20.8801 2.18852C21.1085 2.353 21.257 2.60611 21.2892 2.88573C21.326 3.20621 21.1073 3.59765 20.6698 4.38052L16.8651 11.189M10.5001 14L12.0001 13V18M10.7501 18H13.2501M16.5963 10.9038C19.1347 13.4422 19.1347 17.5578 16.5963 20.0962C14.0579 22.6346 9.94232 22.6346 7.40391 20.0962C4.8655 17.5578 4.8655 13.4422 7.40391 10.9038C9.94231 8.3654 14.0579 8.3654 16.5963 10.9038Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
    </svg>
 );
 
@@ -155,23 +133,109 @@ const IcoActivityLog = () => (
       <path d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
    </svg>
 );
-const IcoKeywordTracker = () => (
-   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-      <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="2" />
-      <circle cx="12" cy="12" r="2" fill="currentColor" />
-      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+/* ── AI Visibility sub-nav icons (14px to match SEO group) ────────────── */
+const IcoOverview = () => (
+   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M3 12H21M12 3V21M7.8 3H16.2C17.8802 3 18.7202 3 19.362 3.32698C19.9265 3.6146 20.3854 4.07354 20.673 4.63803C21 5.27976 21 6.11984 21 7.8V16.2C21 17.8802 21 18.7202 20.673 19.362C20.3854 19.9265 19.9265 20.3854 19.362 20.673C18.7202 21 17.8802 21 16.2 21H7.8C6.11984 21 5.27976 21 4.63803 20.673C4.07354 20.3854 3.6146 19.9265 3.32698 19.362C3 18.7202 3 17.8802 3 16.2V7.8C3 6.11984 3 5.27976 3.32698 4.63803C3.6146 4.07354 4.07354 3.6146 4.63803 3.32698C5.27976 3 6.11984 3 7.8 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   </svg>
+);
+const IcoSources = () => (
+   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M12 2C14.5013 4.73835 15.9228 8.29203 16 12C15.9228 15.708 14.5013 19.2616 12 22M12 2C9.49872 4.73835 8.07725 8.29203 8 12C8.07725 15.708 9.49872 19.2616 12 22M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22M2.50002 9H21.5M2.5 15H21.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   </svg>
+);
+const IcoCompetitors = () => (
+   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M8 21V7C8 6.07003 8 5.60504 8.10222 5.22354C8.37962 4.18827 9.18827 3.37962 10.2235 3.10222C10.605 3 11.07 3 12 3C12.93 3 13.395 3 13.7765 3.10222C14.8117 3.37962 15.6204 4.18827 15.8978 5.22354C16 5.60504 16 6.07003 16 7V21M5.2 21H18.8C19.9201 21 20.4802 21 20.908 20.782C21.2843 20.5903 21.5903 20.2843 21.782 19.908C22 19.4802 22 18.9201 22 17.8V10.2C22 9.07989 22 8.51984 21.782 8.09202C21.5903 7.71569 21.2843 7.40973 20.908 7.21799C20.4802 7 19.9201 7 18.8 7H5.2C4.07989 7 3.51984 7 3.09202 7.21799C2.71569 7.40973 2.40973 7.71569 2.21799 8.09202C2 8.51984 2 9.07989 2 10.2V17.8C2 18.9201 2 19.4802 2.21799 19.908C2.40973 20.2843 2.71569 20.5903 3.09202 20.782C3.51984 21 4.0799 21 5.2 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   </svg>
+);
+const IcoPrompts = () => (
+   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M7 15L10 12L7 9M13 15H17M7.8 21H16.2C17.8802 21 18.7202 21 19.362 20.673C19.9265 20.3854 20.3854 19.9265 20.673 19.362C21 18.7202 21 17.8802 21 16.2V7.8C21 6.11984 21 5.27976 20.673 4.63803C20.3854 4.07354 19.9265 3.6146 19.362 3.32698C18.7202 3 17.8802 3 16.2 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V16.2C3 17.8802 3 18.7202 3.32698 19.362C3.6146 19.9265 4.07354 20.3854 4.63803 20.673C5.27976 21 6.11984 21 7.8 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   </svg>
+);
+const IcoFanout = () => (
+   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M21 21L16.65 16.65M11 6C13.7614 6 16 8.23858 16 11M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
    </svg>
 );
 
-const DOMAIN_SUB_NAV = [
+/* ── Reusable sub-nav item + collapsible group ────────────────────────── */
+const subNavStyle = (active: boolean): React.CSSProperties => ({
+   display: 'flex',
+   alignItems: 'center',
+   gap: '0.5rem',
+   padding: '5px 8px',
+   borderRadius: '0.375rem',
+   fontSize: '0.8125rem',
+   fontWeight: active ? 600 : 400,
+   textDecoration: 'none',
+   color: active ? '#ffffff' : 'rgba(255,255,255,0.55)',
+   background: active ? '#2F2F34' : 'transparent',
+   transition: 'color 120ms, background 120ms',
+});
+const subNavHoverIn = (e: React.MouseEvent<HTMLElement>, active: boolean) => {
+   if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }
+};
+const subNavHoverOut = (e: React.MouseEvent<HTMLElement>, active: boolean) => {
+   if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }
+};
+
+type SubNavItemProps = { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: string; mock?: boolean };
+const SubNavItem = ({ href, label, icon, active, badge, mock }: SubNavItemProps) => {
+   const inner = (
+      <>
+         {icon}
+         <span style={{ flexGrow: 1 }}>{label}</span>
+         {badge && (
+            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: '#71717b', border: '1px solid #3F3F47', borderRadius: 4, padding: '0 4px', lineHeight: '16px' }}>{badge}</span>
+         )}
+      </>
+   );
+   if (mock) {
+      return (
+         <a href="#" onClick={(e) => e.preventDefault()} style={subNavStyle(active)} onMouseEnter={(e) => subNavHoverIn(e, active)} onMouseLeave={(e) => subNavHoverOut(e, active)}>{inner}</a>
+      );
+   }
+   return (
+      <Link href={href} passHref>
+         <a style={subNavStyle(active)} onMouseEnter={(e) => subNavHoverIn(e, active)} onMouseLeave={(e) => subNavHoverOut(e, active)}>{inner}</a>
+      </Link>
+   );
+};
+
+const CollapsibleGroup = ({ label, open, onToggle, children }: { label: string; open: boolean; onToggle: () => void; children: React.ReactNode }) => (
+   <div>
+      <button
+         type="button"
+         onClick={onToggle}
+         style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', width: '100%', paddingLeft: '0.375rem', paddingTop: '0.5rem', paddingBottom: '0.5rem', fontSize: '0.8125rem', lineHeight: '1rem', fontWeight: 600, color: '#71717b', background: 'transparent', border: 'none', cursor: 'pointer', marginTop: '0.25rem' }}
+      >
+         {label}
+         <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0, marginLeft: 'auto', transition: 'transform 250ms ease', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+            <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
+         </svg>
+      </button>
+      <div style={{ overflow: 'hidden', maxHeight: open ? '500px' : '0', transition: 'max-height 200ms ease-out' }}>
+         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>{children}</div>
+      </div>
+   </div>
+);
+
+const SEO_SUB_NAV = [
    { key: 'performance', label: 'Performance', icon: <IcoPerformance /> },
    { key: 'recommendations', label: 'Recommendations', icon: <IcoRecommendations /> },
-   { key: 'keyword-research', label: 'Keyword Research', icon: <IcoKeywordResearch /> },
-   { key: 'keyword-tracker', label: 'Keyword Tracker', icon: <IcoKeywordTracker /> },
    { key: 'content-audit', label: 'Content Audit', icon: <IcoContentAudit /> },
    { key: 'topical-map', label: 'Topical Map', icon: <IcoTopicalMap /> },
    { key: 'activity-log', label: 'Activity Log', icon: <IcoActivityLog /> },
+];
+
+const AI_VIS_NAV: { label: string; icon: React.ReactNode; badge?: string }[] = [
+   { label: 'Overview', icon: <IcoOverview /> },
+   { label: 'Sources', icon: <IcoSources /> },
+   { label: 'Competitors', icon: <IcoCompetitors /> },
+   { label: 'Prompts', icon: <IcoPrompts /> },
+   { label: 'Fanout Queries', icon: <IcoFanout />, badge: 'Beta' },
 ];
 
 const LS_KEY = 'serpbear_selected_domain';
@@ -181,6 +245,8 @@ const LS_KEY = 'serpbear_selected_domain';
 const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: SidebarProps) => {
    const router = useRouter();
    const [toolsOpen, setToolsOpen] = useState(true);
+   const [seoOpen, setSeoOpen] = useState(true);
+   const [aiVisOpen, setAiVisOpen] = useState(true);
    const [switcherOpen, setSwitcherOpen] = useState(false);
    const switcherRef = useRef<HTMLDivElement>(null);
 
@@ -272,8 +338,6 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
       { href: '/dashboard', label: 'Audit', icon: <IcoAudit /> },
       { href: '/dashboard', label: 'Topic Research', icon: <IcoTopicResearch /> },
       { href: '/research', label: 'Keyword Research', icon: <IcoKeywordResearch /> },
-      { href: '/dashboard', label: 'SERP Analyzer', icon: <IcoSERPAnalyzer /> },
-      { href: '/research', label: 'Rank Tracker', icon: <IcoRankTracker /> },
       { href: '/content-editor', label: 'AI Humanizer', icon: <IcoAIHumanizer /> },
    ];
 
@@ -418,107 +482,31 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                      )}
                   </div>
 
-                  {/* Sub-nav items — always visible */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', paddingLeft: '8px', marginTop: 2 }}>
-                     {DOMAIN_SUB_NAV.map((item) => {
+                  {/* SEO group */}
+                  <CollapsibleGroup label="SEO" open={seoOpen} onToggle={() => setSeoOpen((v) => !v)}>
+                     {SEO_SUB_NAV.map((item) => {
                         const href = `/sites/${selectedDomainSlug}/${item.key}`;
                         const active = mounted && (router.asPath === href || router.asPath.startsWith(href + '?'));
-                        return (
-                           <Link key={item.key} href={href} passHref>
-                              <a
-                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    padding: '5px 8px',
-                                    borderRadius: '0.375rem',
-                                    fontSize: '0.8125rem',
-                                    fontWeight: active ? 600 : 400,
-                                    textDecoration: 'none',
-                                    color: active ? '#ffffff' : 'rgba(255,255,255,0.55)',
-                                    background: active ? '#2F2F34' : 'transparent',
-                                    transition: 'color 120ms, background 120ms',
-                                 }}
-                                 onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'; } }}
-                                 onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
-                              >
-                                 {item.icon}
-                                 <span>{item.label}</span>
-                              </a>
-                           </Link>
-                        );
+                        return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} />;
                      })}
-                  </div>
+                  </CollapsibleGroup>
+
+                  {/* AI Visibility group (mockup pages) */}
+                  <CollapsibleGroup label="AI Visibility" open={aiVisOpen} onToggle={() => setAiVisOpen((v) => !v)}>
+                     {AI_VIS_NAV.map((item) => (
+                        <SubNavItem key={item.label} href="#" label={item.label} icon={item.icon} active={false} badge={item.badge} mock />
+                     ))}
+                  </CollapsibleGroup>
                </div>
             )}
 
-            {/* AI Tracker */}
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem', padding: '0 8px' }}>
-               <NavItem
-                  href="/dashboard"
-                  label="AI Tracker"
-                  icon={<IcoAITracker />}
-                  active={false}
-               />
-            </nav>
-
-            {/* Tools collapsible section */}
+            {/* More tools collapsible section */}
             <div style={{ padding: '0 8px' }}>
-               <button
-                  type="button"
-                  onClick={() => setToolsOpen((v) => !v)}
-                  style={{
-                     display: 'flex',
-                     alignItems: 'center',
-                     gap: '0.25rem',
-                     paddingLeft: '0.375rem',
-                     paddingTop: '0.5rem',
-                     paddingBottom: '0.5rem',
-                     fontSize: '0.8125rem',
-                     lineHeight: '1rem',
-                     fontWeight: 600,
-                     color: '#71717b',
-                     background: 'transparent',
-                     border: 'none',
-                     cursor: 'pointer',
-                     marginTop: '0.25rem',
-                  }}
-               >
-                  Tools
-                  <svg
-                     viewBox="0 0 24 24"
-                     width="16"
-                     height="16"
-                     style={{
-                        flexShrink: 0,
-                        marginLeft: 'auto',
-                        transition: 'transform 250ms ease',
-                        transform: toolsOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                     }}
-                  >
-                     <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
-                  </svg>
-               </button>
-
-               <div
-                  style={{
-                     overflow: 'hidden',
-                     maxHeight: toolsOpen ? '500px' : '0',
-                     transition: 'max-height 200ms ease-out',
-                  }}
-               >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-                     {toolItems.map((item) => (
-                        <NavItem
-                           key={item.label}
-                           href={item.href}
-                           label={item.label}
-                           icon={item.icon}
-                           active={false}
-                        />
-                     ))}
-                  </div>
-               </div>
+               <CollapsibleGroup label="More tools" open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)}>
+                  {toolItems.map((item) => (
+                     <NavItem key={item.label} href={item.href} label={item.label} icon={item.icon} active={false} />
+                  ))}
+               </CollapsibleGroup>
             </div>
          </div>
 
