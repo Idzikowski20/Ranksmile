@@ -51,11 +51,64 @@
                rgba(47,48,55,0.05) 0px 24px 68px 0px, rgba(0,0,0,0.04) 0px 2px 3px 0px;
    --shadow-2: rgba(0,0,0,0.2) 0px -1px 0px 0px inset, rgba(255,255,255,0.25) 0px 1px 0px 0px inset;
 
-   /* Motion */
-   --motion-instant: 150ms;
-   --motion-fast: 200ms;
-   --motion-normal: 300ms;
-   --motion-slow: 500ms;
+   /* ── Motion design system (Uber Base) ─────────────────────────────
+      Timing scales with the moving element's size/distance: small/short
+      = fast, large = slow. Easing: ease-out to enter (decelerate),
+      ease-in to exit (accelerate), ease-in-out for elements that move
+      or persist on screen. Motion is functional, quick and subtle. */
+   --motion-instant: 100ms;   /* tiny state flips (toggle knob, checkbox) */
+   --motion-fast: 150ms;      /* micro-interactions: hover, press, color */
+   --motion-normal: 250ms;    /* default surfaces: dropdowns, popovers */
+   --motion-slow: 350ms;      /* large surfaces: modals, sheets, drawers */
+   --motion-slower: 500ms;    /* full-screen / emphasis */
+
+   --motion-ease-out: cubic-bezier(0.117, 0.517, 0.23, 0.998);   /* enter */
+   --motion-ease-in: cubic-bezier(0.755, 0.05, 0.855, 0.06);     /* exit */
+   --motion-ease-in-out: cubic-bezier(0.86, 0, 0.07, 1);         /* move */
+   --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);         /* general UI */
+}
+
+/* ── Motion: keyframes, utilities & global rules ───────────────────── */
+@keyframes motionFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motionScaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes motionSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes motionSlideInRight { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+
+.motion-fade-in { animation: motionFadeIn var(--motion-normal) var(--motion-ease-out) both; }
+.motion-scale-in { animation: motionScaleIn var(--motion-normal) var(--motion-ease-out) both; }
+.motion-slide-up { animation: motionSlideUp var(--motion-normal) var(--motion-ease-out) both; }
+.motion-slide-in-right { animation: motionSlideInRight var(--motion-normal) var(--motion-ease-out) both; }
+
+/* Page-level entrance — main content fades/slides in on navigation. */
+.motion-page-enter { animation: motionSlideUp var(--motion-normal) var(--motion-ease-out) both; }
+
+/* Smooth state changes for every interactive element that doesn't define
+   its own transition (hover, focus, press). Geometry props are excluded
+   so nothing animates its size/position unexpectedly. Inline/component
+   transitions still win over this baseline. */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+summary,
+label {
+   transition-property: color, background-color, border-color, box-shadow, opacity, fill, stroke;
+   transition-duration: var(--motion-fast);
+   transition-timing-function: var(--motion-ease-standard);
+}
+
+/* Accessibility: respect reduced-motion (Base "Motion"). */
+@media (prefers-reduced-motion: reduce) {
+   *,
+   *::before,
+   *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+   }
 }
 
 body {

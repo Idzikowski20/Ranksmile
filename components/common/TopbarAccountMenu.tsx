@@ -127,7 +127,7 @@ const TopbarAccountMenu = () => {
          </button>
 
          {open && (
-            <div className="topbar-account-menu" role="menu" style={{ width: 320, borderRadius: 12, padding: 4 }}>
+            <div className="topbar-account-menu motion-scale-in" role="menu" style={{ width: 320, borderRadius: 12, padding: 4, transformOrigin: 'top right' }}>
                {/* Account / email */}
                <a
                   href="/settings/profile"
