@@ -204,7 +204,31 @@ const SubNavItem = ({ href, label, icon, active, badge, mock }: SubNavItemProps)
    );
 };
 
-const CollapsibleGroup = ({ label, open, onToggle, children }: { label: string; open: boolean; onToggle: () => void; children: React.ReactNode }) => (
+const ChevronToggle = ({ open }: { open: boolean }) => (
+   <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0, marginLeft: 'auto', transition: 'transform 250ms ease', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+      <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
+   </svg>
+);
+
+/* Eye toggle — open eye when expanded, slashed eye when collapsed
+   (the password show/hide pattern). */
+const EyeToggle = ({ open }: { open: boolean }) => (
+   open ? (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 'auto' }}>
+         <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+         <circle cx="12" cy="12" r="3" />
+      </svg>
+   ) : (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 'auto' }}>
+         <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+         <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+         <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+         <path d="m2 2 20 20" />
+      </svg>
+   )
+);
+
+const CollapsibleGroup = ({ label, open, onToggle, children, toggleIcon = 'chevron' }: { label: string; open: boolean; onToggle: () => void; children: React.ReactNode; toggleIcon?: 'eye' | 'chevron' }) => (
    <div>
       <button
          type="button"
@@ -212,9 +236,7 @@ const CollapsibleGroup = ({ label, open, onToggle, children }: { label: string; 
          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', width: '100%', paddingLeft: '0.375rem', paddingTop: '0.5rem', paddingBottom: '0.5rem', fontSize: '0.8125rem', lineHeight: '1rem', fontWeight: 600, color: '#71717b', background: 'transparent', border: 'none', cursor: 'pointer', marginTop: '0.25rem' }}
       >
          {label}
-         <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0, marginLeft: 'auto', transition: 'transform 250ms ease', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-            <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
-         </svg>
+         {toggleIcon === 'eye' ? <EyeToggle open={open} /> : <ChevronToggle open={open} />}
       </button>
       <div style={{ overflow: 'hidden', maxHeight: open ? '500px' : '0', transition: 'max-height 200ms ease-out' }}>
          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>{children}</div>
@@ -483,7 +505,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                   </div>
 
                   {/* SEO group */}
-                  <CollapsibleGroup label="SEO" open={seoOpen} onToggle={() => setSeoOpen((v) => !v)}>
+                  <CollapsibleGroup label="SEO" open={seoOpen} onToggle={() => setSeoOpen((v) => !v)} toggleIcon="eye">
                      {SEO_SUB_NAV.map((item) => {
                         const href = `/sites/${selectedDomainSlug}/${item.key}`;
                         const active = mounted && (router.asPath === href || router.asPath.startsWith(href + '?'));
@@ -492,7 +514,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                   </CollapsibleGroup>
 
                   {/* AI Visibility group (mockup pages) */}
-                  <CollapsibleGroup label="AI Visibility" open={aiVisOpen} onToggle={() => setAiVisOpen((v) => !v)}>
+                  <CollapsibleGroup label="AI Visibility" open={aiVisOpen} onToggle={() => setAiVisOpen((v) => !v)} toggleIcon="eye">
                      {AI_VIS_NAV.map((item) => (
                         <SubNavItem key={item.label} href="#" label={item.label} icon={item.icon} active={false} badge={item.badge} mock />
                      ))}
