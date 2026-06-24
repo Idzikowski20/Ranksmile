@@ -72,18 +72,28 @@ const TopbarAccountMenu = () => {
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
          >
-            <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo" aria-hidden="true">
-               {accountPicture && !imgError ? (
-                  <img
-                     alt=""
-                     src={accountPicture}
-                     className="topbar-avatar-image"
-                     referrerPolicy="no-referrer"
-                     onError={() => setImgError(true)}
-                  />
-               ) : (
-                  <span>{accountInitials}</span>
-               )}
+            <span
+               aria-hidden="true"
+               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: '#18181B', borderRadius: 9999 }}
+            >
+               <span
+                  style={{ width: 20, height: 20, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, textTransform: 'uppercase' }}
+               >
+                  I
+               </span>
+               <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo">
+                  {accountPicture && !imgError ? (
+                     <img
+                        alt=""
+                        src={accountPicture}
+                        className="topbar-avatar-image"
+                        referrerPolicy="no-referrer"
+                        onError={() => setImgError(true)}
+                     />
+                  ) : (
+                     <span>{accountInitials}</span>
+                  )}
+               </span>
             </span>
          </button>
 
