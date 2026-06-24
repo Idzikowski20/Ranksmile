@@ -26,13 +26,13 @@ const DashboardPage: NextPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
 
-  const { data: sitesData } = useQuery('dashboardSites', async () => {
+  const { data: sitesData, isLoading: sitesLoading } = useQuery('dashboardSites', async () => {
     const res = await fetch('/api/sites');
     if (!res.ok) return { domainStats: {} };
     return res.json();
   }, { retry: false });
 
-  const { data: articlesData } = useQuery('dashboardArticles', async () => {
+  const { data: articlesData, isLoading: articlesLoading } = useQuery('dashboardArticles', async () => {
     const res = await fetch('/api/articles');
     if (!res.ok) return { articles: [] };
     return res.json();
@@ -91,7 +91,7 @@ const DashboardPage: NextPage = () => {
 
         <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
           <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
-            <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} clicksHref={clicksHref} />
+            <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
             <GetStartedCard />
             <BrandPerformance
               total={clicksTotal}
@@ -100,12 +100,14 @@ const DashboardPage: NextPage = () => {
               startLabel={startLabel}
               endLabel={endLabel}
               clicksHref={clicksHref}
+              loading={sitesLoading}
             />
             <RecommendationsSection
               items={recommendations.slice(0, 3)}
               total={recommendations.length}
               faviconDomain={primaryDomain?.domain || ''}
               viewHref={recommendationsHref}
+              loading={articlesLoading}
             />
             <LearnSection />
           </div>

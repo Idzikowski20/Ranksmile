@@ -1,5 +1,6 @@
 import React from 'react';
 import SectionHeader from './SectionHeader';
+import Skeleton from './Skeleton';
 
 const font = 'var(--font-family-primary)';
 
@@ -39,7 +40,18 @@ interface Props {
   total: number;
   faviconDomain: string;
   viewHref: string;
+  loading: boolean;
 }
+
+const RowSkeleton = () => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <Skeleton width={16} height={16} radius={4} />
+    <Skeleton width={64} height={13} />
+    <Skeleton width={16} height={16} radius={4} />
+    <Skeleton width="45%" height={14} style={{ flex: 1 }} />
+    <Skeleton width={36} height={13} />
+  </div>
+);
 
 const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain: string }) => (
   <a
@@ -62,7 +74,19 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
   </a>
 );
 
-const RecommendationsSection = ({ items, total, faviconDomain, viewHref }: Props) => {
+const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading }: Props) => {
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <SectionHeader icon={<BoltIcon />} label="Recommendations" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #F4F4F5', borderRadius: 16 }}>
+          <RowSkeleton />
+          <RowSkeleton />
+          <Skeleton width={150} height={13} />
+        </div>
+      </div>
+    );
+  }
   if (items.length === 0) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

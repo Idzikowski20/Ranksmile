@@ -1,5 +1,6 @@
 import React from 'react';
 import SectionHeader from './SectionHeader';
+import Skeleton from './Skeleton';
 
 const font = 'var(--font-family-primary)';
 
@@ -115,6 +116,20 @@ const AiVisibilityCard = () => (
   </div>
 );
 
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+
+const CardSkeleton = () => (
+  <div style={{ border: '1px solid #E4E4E7', background: '#fff', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 188 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 8px 0' }}>
+        <Skeleton width={72} height={12} />
+        <Skeleton width={120} height={22} />
+      </div>
+      <Skeleton width="100%" height={90} radius={8} style={{ marginTop: 'auto' }} />
+    </div>
+  </div>
+);
+
 // ─── Section ──────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -124,14 +139,24 @@ interface Props {
   startLabel: string;
   endLabel: string;
   clicksHref: string;
+  loading: boolean;
 }
 
-const BrandPerformance = ({ total, deltaPct, points, startLabel, endLabel, clicksHref }: Props) => (
+const BrandPerformance = ({ total, deltaPct, points, startLabel, endLabel, clicksHref, loading }: Props) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
     <SectionHeader icon={<PerfIcon />} label="Brand performance" />
     <div className="dashboard-perf-grid" style={{ display: 'flex', width: '100%', gap: 16, flexDirection: 'column' }}>
-      <ClicksCard total={total} deltaPct={deltaPct} points={points} startLabel={startLabel} endLabel={endLabel} href={clicksHref} />
-      <AiVisibilityCard />
+      {loading ? (
+        <>
+          <CardSkeleton />
+          <CardSkeleton />
+        </>
+      ) : (
+        <>
+          <ClicksCard total={total} deltaPct={deltaPct} points={points} startLabel={startLabel} endLabel={endLabel} href={clicksHref} />
+          <AiVisibilityCard />
+        </>
+      )}
     </div>
   </div>
 );
