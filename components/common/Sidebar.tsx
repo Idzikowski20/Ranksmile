@@ -351,7 +351,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
          ` }} />
 
          <div
-            className="hidden lg:flex flex-col flex-shrink-0 overflow-y-auto overflow-x-hidden"
+            className="styled-scrollbar-dark hidden lg:flex flex-col flex-shrink-0 overflow-y-auto overflow-x-hidden"
             style={{
                width: 224,
                background: 'var(--color-surface-strong)',
