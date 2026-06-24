@@ -3,7 +3,8 @@
   "version": "3.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "mprocs",
+    "dev:next": "next dev",
     "build": "next build",
     "start": "next start",
     "cron": "node cron.js",
@@ -88,6 +89,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
+    "mprocs": "^0.9.6",
     "msw": "^2.12.10",
     "next-router-mock": "^0.9.10",
     "postcss": "^8.5.6",
