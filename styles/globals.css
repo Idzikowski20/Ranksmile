@@ -921,42 +921,52 @@ body {
    z-index: 200;
    height: var(--mobile-nav-height);
    display: flex;
-   align-items: stretch;
-   background: var(--mobile-nav-bg);
+   align-items: center;
+   gap: 2px;
+   background: #09090b;
    border-top: 1px solid var(--mobile-nav-border);
-   padding: 0 4px;
-   padding-bottom: env(safe-area-inset-bottom, 0px);
+   padding: 6px 8px;
+   padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-nav-item {
    flex: 1;
    display: flex;
-   flex-direction: column;
    align-items: center;
    justify-content: center;
-   gap: 4px;
-   padding: 8px 4px;
+   min-width: 0;
    border: none;
    background: transparent;
-   color: var(--mobile-nav-muted);
-   border-radius: 10px;
    cursor: pointer;
    text-decoration: none;
-   transition: background var(--motion-fast), color var(--motion-fast);
    -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-nav-item--active {
-   background: var(--mobile-nav-active-bg);
-   color: var(--mobile-nav-active-color);
+.mobile-nav-item-inner {
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   padding: 8px 18px;
+   border-radius: 10px;
+   transition: background var(--motion-fast);
 }
 
+.mobile-nav-item svg {
+   color: #9f9fa9;
+   transition: color var(--motion-fast);
+}
+
+.mobile-nav-item--active .mobile-nav-item-inner {
+   background: #2f2f34;
+}
+
+.mobile-nav-item--active svg {
+   color: #ffffff;
+}
+
+/* Icon-only bottom nav — labels hidden */
 .mobile-nav-label {
-   font-size: 10px;
-   font-weight: 500;
-   letter-spacing: 0.01em;
-   line-height: 1;
-   color: inherit;
+   display: none;
 }
 
 /* Push page content up so it's not behind the nav bar on mobile */
