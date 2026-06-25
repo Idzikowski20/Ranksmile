@@ -52,6 +52,7 @@ describe('ensureTenancyTables', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS workspaces');
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS organization_members');
     expect(sql).toContain('ALTER TABLE domain ADD COLUMN workspace_id');
+    expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_org_owner');
     expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_org_members_unique');
   });
 });
@@ -111,10 +112,18 @@ export async function ensureTenancyTables(): Promise<void> {
    // domain.workspace_id — tenancy scope key. Harmless failure if it already exists.
    try { await db.query('ALTER TABLE domain ADD COLUMN workspace_id INTEGER'); } catch { /* exists */ }
 
+   // UNIQUE on owner_user_id enforces one org per owner (① invariant) AND serves as
+   // the lookup index — it is the serialization point that prevents the provisioning
+   // race (two concurrent first-requests can't both INSERT an org for the same user).
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_org_owner ON organizations(owner_user_id)'); } catch { /* noop */ }
    try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_org_members_unique ON organization_members(org_id, user_id)'); } catch { /* noop */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_workspaces_org ON workspaces(org_id)'); } catch { /* noop */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_org_members_user ON organization_members(user_id)'); } catch { /* noop */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_domain_workspace ON domain(workspace_id)'); } catch { /* noop */ }
+
+   if (!process.env.TENANCY_OWNER_USER_ID) {
+      console.warn('[tenancy] TENANCY_OWNER_USER_ID is unset — legacy (NULL workspace) domains stay hidden until claimed.');
+   }
 
    tablesChecked = true;
 }
@@ -180,20 +189,21 @@ The core. `getAccessibleWorkspaceIds` calls `ensureUserTenancy` so provisioning 
 // __tests__/lib/tenancy.test.ts
 jest.mock('../../database/database', () => ({
   __esModule: true,
-  default: { query: jest.fn() },
+  default: { query: jest.fn(), transaction: jest.fn(async (cb: any) => cb('TX')) },
 }));
 jest.mock('../../lib/ensureTenancyTables', () => ({
   ensureTenancyTables: jest.fn().mockResolvedValue(undefined),
 }));
 
 import db from '../../database/database';
-import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId } from '../../lib/tenancy';
+import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId, assertArticleAccess } from '../../lib/tenancy';
 
 const mockQuery = db.query as jest.Mock;
+const mockTx = (db as any).transaction as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];
 
 describe('ensureUserTenancy', () => {
-  beforeEach(() => mockQuery.mockReset());
+  beforeEach(() => { mockQuery.mockReset(); mockTx.mockClear(); });
 
   it('returns existing org/workspace without creating anything when a membership exists', async () => {
     mockQuery
@@ -208,31 +218,48 @@ describe('ensureUserTenancy', () => {
   it('provisions org, workspace, owner membership and claims the user own domains', async () => {
     mockQuery
       .mockResolvedValueOnce(rows([]))                   // SELECT membership -> none
-      .mockResolvedValueOnce(rows([]))                   // INSERT organizations
-      .mockResolvedValueOnce(rows([{ id: 3 }]))          // SELECT org back
-      .mockResolvedValueOnce(rows([]))                   // INSERT workspaces
-      .mockResolvedValueOnce(rows([{ id: 9 }]))          // SELECT workspace back (claim)
-      .mockResolvedValueOnce(rows([]))                   // INSERT membership
-      .mockResolvedValueOnce(rows([]))                   // UPDATE domain (claim own)
-      .mockResolvedValueOnce(rows([{ id: 9 }]));         // SELECT default workspace (return)
+      .mockResolvedValueOnce(rows([]))                   // [tx] INSERT organizations
+      .mockResolvedValueOnce(rows([{ id: 3 }]))          // [tx] SELECT org back
+      .mockResolvedValueOnce(rows([]))                   // [tx] INSERT workspaces
+      .mockResolvedValueOnce(rows([]))                   // [tx] INSERT membership
+      .mockResolvedValueOnce(rows([{ id: 9 }]))          // [tx] SELECT workspace back (claim)
+      .mockResolvedValueOnce(rows([]))                   // [tx] UPDATE domain (claim own)
+      .mockResolvedValueOnce(rows([{ org_id: 3 }]))      // re-read membership (authoritative)
+      .mockResolvedValueOnce(rows([{ id: 9 }]));         // SELECT default workspace
     const res = await ensureUserTenancy('user-b');
     expect(res).toEqual({ orgId: 3, defaultWorkspaceId: 9 });
+    expect(mockTx).toHaveBeenCalledTimes(1);
     const calls = mockQuery.mock.calls.map((c) => String(c[0]));
-    expect(calls.some((s) => s.includes('INSERT INTO organizations'))).toBe(true);
+    const idx = (sub: string) => calls.findIndex((s) => s.includes(sub));
+    // Assert the actual SQL + ordering, so a later reorder of the inserts fails the test.
+    expect(idx('INSERT INTO organizations')).toBeGreaterThanOrEqual(0);
+    expect(idx('INSERT INTO organizations')).toBeLessThan(idx('INSERT INTO workspaces'));
+    expect(idx('INSERT INTO workspaces')).toBeLessThan(idx('INSERT INTO organization_members'));
     expect(calls.some((s) => s.includes('UPDATE domain SET workspace_id') && s.includes('"userId" = ?'))).toBe(true);
+  });
+
+  it('falls back to the winner org when the provisioning insert conflicts (race)', async () => {
+    mockTx.mockImplementationOnce(async () => { throw new Error('UNIQUE constraint failed: organizations.owner_user_id'); });
+    mockQuery
+      .mockResolvedValueOnce(rows([]))                   // SELECT membership -> none
+      .mockResolvedValueOnce(rows([{ org_id: 42 }]))     // re-read membership -> winner exists
+      .mockResolvedValueOnce(rows([{ id: 77 }]));        // SELECT default workspace
+    const res = await ensureUserTenancy('user-race');
+    expect(res).toEqual({ orgId: 42, defaultWorkspaceId: 77 });
   });
 
   it('claims legacy (userId NULL) domains only for the configured owner', async () => {
     process.env.TENANCY_OWNER_USER_ID = 'owner-1';
     mockQuery
       .mockResolvedValueOnce(rows([]))                   // membership none
-      .mockResolvedValueOnce(rows([]))                   // INSERT org
-      .mockResolvedValueOnce(rows([{ id: 1 }]))          // org back
-      .mockResolvedValueOnce(rows([]))                   // INSERT workspace
-      .mockResolvedValueOnce(rows([{ id: 2 }]))          // workspace back
-      .mockResolvedValueOnce(rows([]))                   // INSERT membership
-      .mockResolvedValueOnce(rows([]))                   // UPDATE own domains
-      .mockResolvedValueOnce(rows([]))                   // UPDATE legacy domains
+      .mockResolvedValueOnce(rows([]))                   // [tx] INSERT org
+      .mockResolvedValueOnce(rows([{ id: 1 }]))          // [tx] org back
+      .mockResolvedValueOnce(rows([]))                   // [tx] INSERT workspace
+      .mockResolvedValueOnce(rows([]))                   // [tx] INSERT membership
+      .mockResolvedValueOnce(rows([{ id: 2 }]))          // [tx] workspace back
+      .mockResolvedValueOnce(rows([]))                   // [tx] UPDATE own domains
+      .mockResolvedValueOnce(rows([]))                   // [tx] UPDATE legacy domains
+      .mockResolvedValueOnce(rows([{ org_id: 1 }]))      // re-read membership
       .mockResolvedValueOnce(rows([{ id: 2 }]));         // SELECT default ws
     await ensureUserTenancy('owner-1');
     const calls = mockQuery.mock.calls.map((c) => String(c[0]));
@@ -276,6 +303,35 @@ describe('getActiveWorkspaceId', () => {
     const req = { cookies: { active_workspace: '999' } } as any;
     expect(await getActiveWorkspaceId(req, 'user-e')).toBe(4);
   });
+  it('ignores a non-positive / non-integer cookie value and uses the default', async () => {
+    mockQuery
+      .mockResolvedValueOnce(rows([{ org_id: 1 }]))      // ensureUserTenancy membership
+      .mockResolvedValueOnce(rows([{ id: 4 }]));         // default ws
+    const req = { cookies: { active_workspace: '-1' } } as any;
+    expect(await getActiveWorkspaceId(req, 'user-f')).toBe(4);
+  });
+});
+
+describe('assertArticleAccess', () => {
+  beforeEach(() => mockQuery.mockReset());
+  it('returns false for a falsy user without querying', async () => {
+    expect(await assertArticleAccess('', 1)).toBe(false);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+  it('returns true when the article workspace is accessible', async () => {
+    mockQuery
+      .mockResolvedValueOnce(rows([{ org_id: 1 }]))      // ensureUserTenancy membership
+      .mockResolvedValueOnce(rows([{ id: 2 }]))          // default ws
+      .mockResolvedValueOnce(rows([{ ok: 1 }]));         // join hit
+    expect(await assertArticleAccess('u1', 123)).toBe(true);
+  });
+  it('returns false when the join finds no accessible article', async () => {
+    mockQuery
+      .mockResolvedValueOnce(rows([{ org_id: 1 }]))      // ensureUserTenancy membership
+      .mockResolvedValueOnce(rows([{ id: 2 }]))          // default ws
+      .mockResolvedValueOnce(rows([]));                  // join miss
+    expect(await assertArticleAccess('u1', 999)).toBe(false);
+  });
 });
 ```
 
@@ -298,41 +354,48 @@ async function select(sql: string, replacements: any[]): Promise<Row[]> {
    return rows;
 }
 
+const MEMBERSHIP_SQL = "SELECT org_id FROM organization_members WHERE user_id = ? AND status = 'active' ORDER BY id ASC LIMIT 1";
+
 /**
  * Idempotently provisions exactly one organization, one "Default" workspace and one
  * "owner" membership for the user, then claims their domains into that workspace.
+ *
+ * Concurrency-safe: the create runs inside a transaction, and the UNIQUE index on
+ * organizations(owner_user_id) serializes concurrent first-requests — the loser's
+ * INSERT throws, its transaction rolls back, and it re-reads the winner's org.
  * Returns the user's org id and default workspace id.
  */
 export async function ensureUserTenancy(userId: string): Promise<{ orgId: number; defaultWorkspaceId: number }> {
    if (!userId) throw new Error('ensureUserTenancy requires a non-empty userId');
    await ensureTenancyTables();
 
-   const members = await select(
-      "SELECT org_id FROM organization_members WHERE user_id = ? AND status = 'active' ORDER BY id ASC LIMIT 1",
-      [userId],
-   );
+   const existing = await select(MEMBERSHIP_SQL, [userId]);
+   let orgId: number | undefined = existing.length ? Number(existing[0].org_id) : undefined;
 
-   let orgId: number;
-   if (members.length) {
-      orgId = Number(members[0].org_id);
-   } else {
-      await db.query('INSERT INTO organizations (owner_user_id, name) VALUES (?, ?)', { replacements: [userId, 'My organization'] });
-      const orgs = await select('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', [userId]);
-      orgId = Number(orgs[0].id);
-
-      await db.query("INSERT INTO workspaces (org_id, name) VALUES (?, 'Default')", { replacements: [orgId] });
-      await db.query("INSERT INTO organization_members (org_id, user_id, role, status) VALUES (?, ?, 'owner', 'active')", { replacements: [orgId, userId] });
-
-      const ws0 = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id ASC LIMIT 1', [orgId]);
-      const wsId = Number(ws0[0].id);
-
-      // Claim this user's existing domains (camelCase column → must be quoted).
-      await db.query('UPDATE domain SET workspace_id = ? WHERE "userId" = ? AND workspace_id IS NULL', { replacements: [wsId, userId] });
-
-      // Owner-only: absorb legacy (pre-tenancy, userId NULL) domains.
-      if (userId === process.env.TENANCY_OWNER_USER_ID) {
-         await db.query('UPDATE domain SET workspace_id = ? WHERE "userId" IS NULL AND workspace_id IS NULL', { replacements: [wsId] });
+   if (orgId === undefined) {
+      try {
+         await db.transaction(async (t: unknown) => {
+            const opt = (replacements: any[]) => ({ replacements, transaction: t });
+            await db.query('INSERT INTO organizations (owner_user_id, name) VALUES (?, ?)', opt([userId, 'My organization']));
+            const [orgs] = await db.query('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', opt([userId])) as [Row[], unknown];
+            const newOrgId = Number(orgs[0].id);
+            await db.query("INSERT INTO workspaces (org_id, name) VALUES (?, 'Default')", opt([newOrgId]));
+            await db.query("INSERT INTO organization_members (org_id, user_id, role, status) VALUES (?, ?, 'owner', 'active')", opt([newOrgId, userId]));
+            const [ws0] = await db.query('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id ASC LIMIT 1', opt([newOrgId])) as [Row[], unknown];
+            const wsId = Number(ws0[0].id);
+            // Claim this user's existing domains (camelCase column → must be quoted).
+            await db.query('UPDATE domain SET workspace_id = ? WHERE "userId" = ? AND workspace_id IS NULL', opt([wsId, userId]));
+            // Owner-only: absorb legacy (pre-tenancy, userId NULL) domains.
+            if (userId === process.env.TENANCY_OWNER_USER_ID) {
+               await db.query('UPDATE domain SET workspace_id = ? WHERE "userId" IS NULL AND workspace_id IS NULL', opt([wsId]));
+            }
+         });
+      } catch {
+         // A concurrent request won the UNIQUE(owner_user_id) race — re-read the winner below.
       }
+      const after = await select(MEMBERSHIP_SQL, [userId]);
+      if (!after.length) throw new Error('tenancy provisioning failed');
+      orgId = Number(after[0].org_id);
    }
 
    const ws = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id ASC LIMIT 1', [orgId]);
@@ -356,12 +419,31 @@ export async function getActiveWorkspaceId(req: NextApiRequest, userId: string):
    const raw = req.cookies?.active_workspace;
    if (raw) {
       const id = Number(raw);
-      if (Number.isFinite(id)) {
+      if (Number.isInteger(id) && id > 0) {
          const accessible = await getAccessibleWorkspaceIds(userId);
          if (accessible.includes(id)) return id;
       }
    }
    return defaultWorkspaceId;
+}
+
+/**
+ * True if the article's domain belongs to a workspace the user can access. Guards
+ * article-by-id routes, which otherwise expose data by raw id regardless of tenant.
+ * Provisions first so the user's freshly-claimed domains are visible to the join.
+ */
+export async function assertArticleAccess(userId: string | null | undefined, articleId: number): Promise<boolean> {
+   if (!userId || !Number.isInteger(articleId)) return false;
+   await ensureUserTenancy(userId);
+   const rows = await select(
+      `SELECT 1 AS ok FROM articles a
+          JOIN domain d ON d."ID" = a.domain_id
+          JOIN workspaces w ON w.id = d.workspace_id
+          JOIN organization_members m ON m.org_id = w.org_id
+        WHERE a.id = ? AND m.user_id = ? AND m.status = 'active' LIMIT 1`,
+      [articleId, userId],
+   );
+   return rows.length > 0;
 }
 ```
 
@@ -412,27 +494,31 @@ describe('verifyDomainOwnership (workspace-scoped)', () => {
 
   it('returns null when the domain does not exist', async () => {
     accessible.mockResolvedValue([5]);
-    findOne.mockResolvedValue(null);
+    findOne.mockResolvedValueOnce(null)   // workspace-filtered lookup misses
+           .mockResolvedValueOnce(null);  // existence check misses
     expect(await verifyDomainOwnership('x.com', 'u1')).toBeNull();
   });
 
-  it('returns false when the domain workspace is not accessible', async () => {
+  it('returns false when the domain exists but its workspace is not accessible', async () => {
     accessible.mockResolvedValue([5]);
-    findOne.mockResolvedValue({ workspace_id: 99 });
+    findOne.mockResolvedValueOnce(null)        // filtered lookup misses
+           .mockResolvedValueOnce({ ID: 1 });  // existence check hits
     expect(await verifyDomainOwnership('x.com', 'u1')).toBe(false);
   });
 
-  it('returns false for an unassigned (null workspace) domain', async () => {
-    accessible.mockResolvedValue([5]);
-    findOne.mockResolvedValue({ workspace_id: null });
-    expect(await verifyDomainOwnership('x.com', 'u1')).toBe(false);
-  });
-
-  it('returns the domain when its workspace is accessible', async () => {
+  it('returns the domain when its workspace is accessible (single query)', async () => {
     accessible.mockResolvedValue([5, 6]);
-    const rec = { workspace_id: 6 };
-    findOne.mockResolvedValue(rec);
+    const rec = { ID: 1, workspace_id: 6 };
+    findOne.mockResolvedValueOnce(rec);
     expect(await verifyDomainOwnership('x.com', 'u1')).toBe(rec);
+    expect(findOne).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries the accessible workspace ids in the query WHERE clause', async () => {
+    accessible.mockResolvedValue([6]);
+    findOne.mockResolvedValueOnce({ ID: 1 });
+    await verifyDomainOwnership('x.com', 'u1');
+    expect(JSON.stringify(findOne.mock.calls[0][0].where)).toContain('6');
   });
 });
 ```
@@ -447,23 +533,25 @@ Expected: FAIL — current helper checks `userId`, so the "not accessible" case 
 Replace the entire contents of `utils/verifyDomainOwnership.ts` with:
 
 ```ts
+import { Op } from 'sequelize';
 import Domain from '../database/models/domain';
 import { getAccessibleWorkspaceIds } from '../lib/tenancy';
 
 /**
- * Workspace-scoped access check. Returns the domain if its workspace is accessible
- * to the user, null if the domain doesn't exist, false if access is denied.
+ * Workspace-scoped access check. Authorization lives in the query WHERE clause (a
+ * single point), so a row the user may not see is never loaded. Returns the domain
+ * if its workspace is accessible, null if it doesn't exist, false if it exists but
+ * is denied. The second (existence) query only runs on the deny/not-found path.
  */
 export async function verifyDomainOwnership(
    domainName: string,
    userId: string | null,
 ): Promise<Domain | null | false> {
    const wsIds = await getAccessibleWorkspaceIds(userId);
-   const domainRecord = await Domain.findOne({ where: { domain: domainName } });
-   if (!domainRecord) return null;
-   const ws = (domainRecord as unknown as { workspace_id: number | null }).workspace_id;
-   if (ws == null || !wsIds.includes(Number(ws))) return false;
-   return domainRecord;
+   const owned = await Domain.findOne({ where: { domain: domainName, workspace_id: { [Op.in]: wsIds } } });
+   if (owned) return owned;
+   const exists = await Domain.findOne({ where: { domain: domainName }, attributes: ['ID'] });
+   return exists ? false : null;
 }
 
 /** Same as `verifyDomainOwnership`, but looks the domain up by slug. */
@@ -472,11 +560,10 @@ export async function verifyDomainOwnershipBySlug(
    userId: string | null,
 ): Promise<Domain | null | false> {
    const wsIds = await getAccessibleWorkspaceIds(userId);
-   const domainRecord = await Domain.findOne({ where: { slug } });
-   if (!domainRecord) return null;
-   const ws = (domainRecord as unknown as { workspace_id: number | null }).workspace_id;
-   if (ws == null || !wsIds.includes(Number(ws))) return false;
-   return domainRecord;
+   const owned = await Domain.findOne({ where: { slug, workspace_id: { [Op.in]: wsIds } } });
+   if (owned) return owned;
+   const exists = await Domain.findOne({ where: { slug }, attributes: ['ID'] });
+   return exists ? false : null;
 }
 ```
 
@@ -753,20 +840,25 @@ with an ownership-checked lookup:
       const foundDomain: Domain | null = ownership;
 ```
 
-- [ ] **Step 3: `pages/api/domains/configure.ts`** — stamp `workspace_id` on create and guard existing. Add the import (near line 7):
+- [ ] **Step 3: `pages/api/domains/configure.ts`** — stamp `workspace_id` on create and reject **adopting** an existing domain you don't own (including unassigned/legacy `workspace_id IS NULL` — that's the owner's migration job, not arbitrary adoption). Add the import (near line 7):
 ```ts
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 ```
-Resolve the active workspace before the `findOrCreate` (after `const domainTrimmed = ...`, ~line 23):
+Resolve the active workspace before the `findOrCreate` (after `const slug = ...`, ~line 27):
 ```ts
       const workspaceId = userId ? await getActiveWorkspaceId(req, userId) : null;
 ```
-Add `workspace_id: workspaceId,` to the `defaults` object of `findOrCreate` (alongside `userId: userId || null,`, ~line 38). Then, immediately after `const [domain] = await Domain.findOrCreate({...})`, guard a pre-existing domain owned by another workspace:
+Add `workspace_id: workspaceId,` to the `defaults` object of `findOrCreate` (alongside `userId: userId || null,`). Capture the `created` flag and guard a **pre-existing** domain — a freshly created one is fine; an existing `NULL`-workspace or other-workspace domain is rejected. Change `const [domain] = await Domain.findOrCreate({...})` to:
 ```ts
-      const existingWs = (domain as unknown as { workspace_id: number | null }).workspace_id;
-      const wsIds = await getAccessibleWorkspaceIds(userId);
-      if (existingWs != null && !wsIds.includes(Number(existingWs))) {
-         return res.status(403).json({ error: 'Access denied.' });
+      const [domain, created] = await Domain.findOrCreate({
+         // ...unchanged where/defaults (now including workspace_id)...
+      });
+      if (!created) {
+         const existingWs = (domain as unknown as { workspace_id: number | null }).workspace_id;
+         const wsIds = await getAccessibleWorkspaceIds(userId);
+         if (existingWs == null || !wsIds.includes(Number(existingWs))) {
+            return res.status(403).json({ error: 'Access denied.' });
+         }
       }
 ```
 
@@ -787,7 +879,104 @@ git commit -m "feat(tenancy): scope sites/insight/configure routes by workspace"
 
 ---
 
-### Task 8: Bootstrap + owner env + final verification
+### Task 8: Harden article-by-id and keyword-mutation routes
+
+Article and keyword routes that operate purely by **id** (not by domain) currently let any authenticated user read/mutate another tenant's data by guessing an id. Guard them with the already-tested `assertArticleAccess` (articles) and `verifyDomainOwnership` (keywords). This is a uniform sweep — the guard logic itself is unit-tested in Task 3; this task applies it and adds one representative route test.
+
+**Files:**
+- Modify: every handler under `pages/api/articles/[id]/` (e.g. `index.ts`, `generate.ts`, `comments.ts`, `comments-stream.ts`, `share-link.ts`, `debug-export.ts`, `wizard-state.ts`, `versions.ts`)
+- Modify: `pages/api/keywords.ts` (PUT and DELETE branches)
+- Test: `__tests__/api/article-id-guard.test.ts`
+
+- [ ] **Step 1: Enumerate the article-by-id routes**
+
+Run: `ls pages/api/articles/[id]`
+Expected: a list of `*.ts` handlers. Every one of them must get the guard in Step 2.
+
+- [ ] **Step 2: Add the tenant guard to each article-by-id handler**
+
+In each `pages/api/articles/[id]/*.ts`, add the imports (depth is four levels up from this folder):
+
+```ts
+import { getCurrentUserId } from '../../../../utils/getUser';
+import { assertArticleAccess } from '../../../../lib/tenancy';
+```
+
+At the very start of the handler body (before any DB read/write, after any existing auth/method check), insert:
+
+```ts
+   const userId = await getCurrentUserId(req, res);
+   const articleId = parseInt((req.query.id ?? req.query.articleId) as string, 10);
+   if (!(await assertArticleAccess(userId, articleId))) {
+      return res.status(403).json({ error: 'Access denied.' });
+   }
+```
+
+(If the handler already resolves `userId`, reuse it instead of redeclaring. The public read-only share routes under `pages/api/share/` and `/drafts/s/<token>` are token-gated, not session-gated — do **not** add this guard there.)
+
+- [ ] **Step 3: Guard keyword mutations in `pages/api/keywords.ts`**
+
+Both the PUT and DELETE branches already load the first target keyword (`Keyword.findOne({ where: { ID: ... } })`). Add the import near the other imports:
+
+```ts
+import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
+```
+
+Immediately after `firstKeyword` is loaded in each branch, insert:
+
+```ts
+      if (firstKeyword) {
+         const owns = await verifyDomainOwnership(firstKeyword.domain, userId);
+         if (owns === false || owns === null) return res.status(403).json({ error: 'Access denied.' });
+      }
+```
+
+(① has single-member orgs, so a batch's keywords share the caller's accessible domains; guarding the batch's first keyword's domain is sufficient. Cross-domain batches are a ④ concern.)
+
+- [ ] **Step 4: Write the representative route test**
+
+Pick the GET route `pages/api/articles/[id]/index.ts`. Mock the guard and assert a denied request gets 403.
+
+```ts
+// __tests__/api/article-id-guard.test.ts
+jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('intruder') }));
+jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
+jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
+
+import handler from '../../pages/api/articles/[id]/index';
+
+const makeRes = () => {
+  const res: any = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  res.setHeader = jest.fn();
+  return res;
+};
+
+it('denies access to an article the caller cannot reach', async () => {
+  const res = makeRes();
+  await handler({ method: 'GET', query: { id: '123' }, cookies: {} } as any, res);
+  expect(res.status).toHaveBeenCalledWith(403);
+});
+```
+
+- [ ] **Step 5: Run the test + typecheck**
+
+Run: `npx jest __tests__/api/article-id-guard.test.ts --ci`
+Expected: PASS (the guard short-circuits to 403 before any data is returned).
+Then: `npx tsc --noEmit` → clean.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add pages/api/articles/[id] pages/api/keywords.ts __tests__/api/article-id-guard.test.ts
+git commit -m "feat(tenancy): guard article-by-id and keyword-mutation routes"
+```
+
+---
+
+### Task 9: Bootstrap + owner env + final verification
 
 Ensure the tenancy tables exist early, document the owner env, and run the full suite + graph update.
 
@@ -806,12 +995,12 @@ TENANCY_OWNER_USER_ID=
 
 - [ ] **Step 2: Confirm provisioning runs on first scoped access**
 
-No code needed: `getAccessibleWorkspaceIds` (Task 3) calls `ensureUserTenancy`, which calls `ensureTenancyTables`. Every scoped route (Tasks 4-7) goes through one of these, so the tables, the `domain.workspace_id` column, the org/workspace/membership rows, and the domain claim are all created on the user's first domain/article request. Verify by reading `lib/tenancy.ts` and confirming `getAccessibleWorkspaceIds` → `ensureUserTenancy` → `ensureTenancyTables` is the call chain.
+No code needed: `getAccessibleWorkspaceIds` and `assertArticleAccess` (Task 3) call `ensureUserTenancy`, which calls `ensureTenancyTables`. Every scoped route (Tasks 4-8) goes through one of these, so the tables, the `domain.workspace_id` column, the org/workspace/membership rows, and the domain claim are all created on the user's first domain/article request. Verify by reading `lib/tenancy.ts` and confirming `getAccessibleWorkspaceIds` → `ensureUserTenancy` → `ensureTenancyTables` is the call chain.
 
 - [ ] **Step 3: Run the full test suite**
 
 Run: `npx jest --ci`
-Expected: all suites pass (the four new tenancy suites + the pre-existing tests).
+Expected: all suites pass (the new tenancy suites — ensureTenancyTables, tenancy, verifyDomainOwnership, domains-scope, articles-scope, article-id-guard — plus the pre-existing tests).
 
 - [ ] **Step 4: Typecheck + graph update**
 
@@ -836,17 +1025,23 @@ git commit -m "chore(tenancy): document TENANCY_OWNER_USER_ID owner env"
 - New tables + `domain.workspace_id` → Tasks 1, 2. ✅
 - `ensureUserTenancy` (provision + own-domain claim + owner legacy claim) → Task 3. ✅
 - `getAccessibleWorkspaceIds` / `getActiveWorkspaceId` (cookie validation + fallback) → Task 3. ✅
-- Full isolation (Variant A), no shared legacy → Task 4 (`ws == null || !accessible → false`) + Tasks 5-7. ✅
-- Enforcement across domain/article routes → Task 4 (domain/keywords/audit/goal via helper) + Task 5 (domains) + Task 6 (articles) + Task 7 (sites/insight/configure). ✅
+- Full isolation (Variant A), no shared legacy → Task 4 (filtered query) + Tasks 5-8. ✅
+- Enforcement across domain/article routes → Task 4 (domain/keywords/audit/goal via helper) + Task 5 (domains) + Task 6 (articles list) + Task 7 (sites/insight/configure) + Task 8 (article-by-id + keyword mutations). ✅
 - GSC stays per-user in ① → no GSC route touched. ✅
-- Owner env `TENANCY_OWNER_USER_ID` → Task 8. ✅
-- Dialect-agnostic, no `ON CONFLICT` → Task 3 uses select-then-insert. ✅
-- Tests: idempotency, owner-claim, cookie rejection, cross-workspace denial → Tasks 1,3,4,5,6. ✅
+- Owner env `TENANCY_OWNER_USER_ID` → Task 9. ✅
+- Dialect-agnostic, no `ON CONFLICT` → Task 3 uses transaction + select-then-insert. ✅
+- Tests: idempotency, provisioning race, owner-claim, cookie rejection, cross-workspace denial, article-by-id denial → Tasks 1,3,4,5,6,8. ✅
 
-**Placeholder scan:** No TBD/TODO; every code step shows complete code; no "add validation" hand-waving. ✅
+**Review fixes folded in (pre-implementation):**
+1. **Provisioning race** → Task 3 wraps the create in `db.transaction`; Task 1 adds `UNIQUE(organizations.owner_user_id)` as the serialization point; the loser rolls back and re-reads the winner (test: "falls back to the winner org … (race)").
+2. **Ordering not asserted** → Task 3 test now asserts the actual SQL and that `organizations` → `workspaces` → `organization_members` inserts run in order.
+3. **Single authorization point** → Task 4 pushes `workspace_id IN (…)` into the query `WHERE` (the unauthorized row is never loaded), keeping 404-vs-403 via a cheap existence check only on the miss path.
+4. **Legacy-hidden-when-owner-unset** → intended (Variant A); Task 1 now logs a one-time warning when `TENANCY_OWNER_USER_ID` is unset.
+5. **configure.ts adoption hole** → Task 7 guards on the `created` flag and rejects existing `NULL`/foreign-workspace domains.
+6. **article-by-id / keyword-mutation gap** → now Task 8 (`assertArticleAccess` + `verifyDomainOwnership`).
+7. **Missing owner index** → Task 1's `UNIQUE(owner_user_id)` doubles as the lookup index.
+8. **Cookie validation** → Task 3 uses `Number.isInteger(id) && id > 0`.
 
-**Type/name consistency:** `getAccessibleWorkspaceIds`, `getActiveWorkspaceId`, `ensureUserTenancy`, `ensureTenancyTables`, `getUserDomainIds`, `workspace_id`, `active_workspace` cookie, `TENANCY_OWNER_USER_ID` — used identically across all tasks. ✅
+**Placeholder scan:** No TBD/TODO; every code step shows complete code. Task 8 is an explicit uniform sweep (concrete transformation + discovery command + representative test), not hand-waving. ✅
 
-**Known scope notes:**
-- Article per-id routes (`pages/api/articles/[id]/*`) read by `article_id`; their domain (and thus workspace) is the article's `domain_id`. In ① the list route (Task 6) is the tenancy gate for the editor's article set; per-id hardening (join article→domain→workspace) is a follow-up if a stricter direct-id guard is wanted. Flagged here rather than silently skipped.
-- `keywords.ts` POST/PUT/DELETE operate by keyword ID; they inherit the domain ownership check already present via `verifyDomainOwnership` on the GET path. Direct keyword-id mutation guards are out of scope for ① (single-member orgs make cross-access impossible until ④ adds co-members).
+**Type/name consistency:** `ensureUserTenancy`, `getAccessibleWorkspaceIds`, `getActiveWorkspaceId`, `assertArticleAccess`, `ensureTenancyTables`, `getUserDomainIds`, `workspace_id`, `active_workspace`, `TENANCY_OWNER_USER_ID` — used identically across all tasks. ✅
