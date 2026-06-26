@@ -84,3 +84,48 @@ export async function uploadImageFromUrl(
       return null;
    }
 }
+
+/** Parses a `data:image/<type>;base64,<data>` URL into a buffer + content type. Null if invalid/not an image. */
+export function parseDataUrl(dataUrl: string): { buffer: Buffer; contentType: string } | null {
+   const m = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl || '');
+   if (!m) return null;
+   const contentType = m[1].trim().toLowerCase();
+   if (!ALLOWED_MIME.includes(contentType)) return null;
+   try {
+      return { buffer: Buffer.from(m[2], 'base64'), contentType };
+   } catch {
+      return null;
+   }
+}
+
+/** Uploads an in-memory image buffer to R2 under `keyPrefix/`. Returns the public URL or null. */
+export async function uploadImageBuffer(
+   buffer: Buffer,
+   contentType: string,
+   filename: string,
+   keyPrefix = 'uploads',
+): Promise<string | null> {
+   const bucket = process.env.R2_BUCKET_NAME;
+   const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/$/, '');
+   if (!bucket || !publicUrl) {
+      console.warn('[R2] R2_BUCKET_NAME or R2_PUBLIC_URL not set — skipping upload');
+      return null;
+   }
+   const baseType = contentType.split(';')[0].trim().toLowerCase();
+   if (!ALLOWED_MIME.includes(baseType)) { console.warn(`[R2] not an allowed image: ${baseType}`); return null; }
+   if (buffer.byteLength > MAX_BYTES) { console.warn(`[R2] image too large: ${buffer.byteLength} bytes`); return null; }
+   try {
+      const ext = baseType.split('/')[1].replace('jpeg', 'jpg');
+      const random = Math.random().toString(36).slice(2, 8);
+      const key = `${keyPrefix}/${filename}-${random}.${ext}`;
+      const client = getClient();
+      await client.send(new PutObjectCommand({
+         Bucket: bucket, Key: key, Body: buffer, ContentType: baseType,
+         CacheControl: 'public, max-age=31536000',
+      }));
+      return `${publicUrl}/${key}`;
+   } catch (err: any) {
+      console.error('[R2] buffer upload error:', err?.message);
+      return null;
+   }
+}
