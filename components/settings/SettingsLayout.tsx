@@ -225,7 +225,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
         {SIDEBAR_SECTIONS.map((section) => (
           <div key={section.label} className="flex w-full flex-col gap-[2px]">
-            <div className="pb-2 pt-4">
+            <div className="pb-2 pt-4 pl-1">
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/35">
                 {section.label}
               </span>
@@ -236,7 +236,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
               return (
                 <Link key={item.slug} href={`/settings/${item.slug}`} passHref>
                   <a
-                    className={`flex items-center rounded-md py-3 text-[14px] font-normal no-underline transition-colors ${
+                    className={`flex items-center rounded-md py-3 pl-1 text-[14px] font-normal no-underline transition-colors ${
                       isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
                     }`}
                   >
@@ -344,7 +344,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
       sidebar={settingsSidebar}
     >
       <Head>
-        <title>{pageTitle} — SerpBear</title>
+        <title>{`${pageTitle} — SerpBear`}</title>
       </Head>
 
       <div className="relative flex-1 overflow-auto rounded-xl bg-white-base text-gray-140 [color-scheme:light] styled-scrollbar">
@@ -357,8 +357,13 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
         >
           <div
             style={{
-              maxWidth: 880,
+              // billing_subscription (plan comparison) uses the full main width
+              // with a comfortable side gutter; other settings pages stay at the
+              // readable 880px column.
+              maxWidth: currentPage === 'billing_subscription' ? '100%' : 880,
               margin: '0 auto',
+              paddingLeft: currentPage === 'billing_subscription' ? 32 : 0,
+              paddingRight: currentPage === 'billing_subscription' ? 32 : 0,
               display: 'flex',
               flexDirection: 'column',
               gap: 48,
