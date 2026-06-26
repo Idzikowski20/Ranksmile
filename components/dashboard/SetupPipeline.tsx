@@ -81,17 +81,7 @@ const SetupPipeline: React.FC<Props> = ({ stages, stagePercent, status, error, o
    const isFailed = status === 'failed';
 
    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 16px' }}>
-         <div
-            style={{
-               border: '1px solid #F4F4F5',
-               borderRadius: 12,
-               background: '#fff',
-               padding: 24,
-               maxWidth: 520,
-               width: '100%',
-            }}
-         >
+      <div style={{ width: '100%' }}>
             <p style={{
                fontSize: 15,
                fontWeight: 700,
@@ -150,7 +140,6 @@ const SetupPipeline: React.FC<Props> = ({ stages, stagePercent, status, error, o
                   </button>
                </div>
             )}
-         </div>
       </div>
    );
 };

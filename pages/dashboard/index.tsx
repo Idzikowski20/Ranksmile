@@ -122,39 +122,40 @@ const DashboardPage: NextPage = () => {
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        {pipelineActive ? (
-          <SetupPipeline
-            stages={setup.stages}
-            stagePercent={setup.stagePercent}
-            status={setup.status}
-            error={setup.error}
-            onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
-          />
-        ) : (
-          <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
-            <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
-              <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
-              <GetStartedCard />
-              <BrandPerformance
-                total={clicksTotal}
-                deltaPct={deltaPct}
-                points={points}
-                startLabel={startLabel}
-                endLabel={endLabel}
-                clicksHref={clicksHref}
-                loading={sitesLoading}
-              />
-              <RecommendationsSection
-                items={recommendations.slice(0, 3)}
-                total={recommendations.length}
-                faviconDomain={primaryDomain?.domain || ''}
-                viewHref={recommendationsHref}
-                loading={articlesLoading}
-              />
-              <LearnSection />
-            </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
+          <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
+            <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
+            <GetStartedCard />
+            <BrandPerformance
+              total={clicksTotal}
+              deltaPct={deltaPct}
+              points={points}
+              startLabel={startLabel}
+              endLabel={endLabel}
+              clicksHref={clicksHref}
+              loading={sitesLoading}
+            />
+            {/* The domain pipeline renders INSIDE the Recommendations section (its output
+                IS the recommendations) — never a takeover of the whole dashboard. */}
+            <RecommendationsSection
+              items={recommendations.slice(0, 3)}
+              total={recommendations.length}
+              faviconDomain={primaryDomain?.domain || ''}
+              viewHref={recommendationsHref}
+              loading={articlesLoading}
+              pipeline={pipelineActive && setup ? (
+                <SetupPipeline
+                  stages={setup.stages}
+                  stagePercent={setup.stagePercent}
+                  status={setup.status}
+                  error={setup.error}
+                  onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
+                />
+              ) : undefined}
+            />
+            <LearnSection />
           </div>
-        )}
+        </div>
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />

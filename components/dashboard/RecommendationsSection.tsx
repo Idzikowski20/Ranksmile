@@ -41,6 +41,8 @@ interface Props {
   faviconDomain: string;
   viewHref: string;
   loading: boolean;
+  /** When set (domain pipeline running), shown inside the card instead of the rows. */
+  pipeline?: React.ReactNode;
 }
 
 const RowSkeleton = () => (
@@ -74,7 +76,18 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
   </a>
 );
 
-const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading }: Props) => {
+const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading, pipeline }: Props) => {
+  // While the domain pipeline runs, the section shows its progress in place of the rows.
+  if (pipeline) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <SectionHeader icon={<BoltIcon />} label="Recommendations" />
+        <div style={{ padding: 24, border: '1px solid #F4F4F5', borderRadius: 16 }}>
+          {pipeline}
+        </div>
+      </div>
+    );
+  }
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
