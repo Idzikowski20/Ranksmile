@@ -47,16 +47,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         totalProgress: j.total_progress,
         progressMessage: j.progress_message,
       });
-    } catch (err: any) {
-      console.error('[job-progress] GET failed:', err.message);
-      return res.status(500).json({ error: err.message });
+    } catch (err) {
+      const msg = (err instanceof Error ? err.message : String(err));
+      console.error('[job-progress] GET failed:', msg);
+      return res.status(500).json({ error: msg });
     }
   }
 
   // ── POST: update progress (Python sidecar) ──────────────────────
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { jobId, currentStage, stageProgress, totalProgress, message } = req.body;
+  const { jobId, currentStage, stageProgress, totalProgress, message, status, result } = req.body;
   if (!jobId) return res.status(400).json({ error: 'jobId is required' });
 
   try {
@@ -66,6 +67,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
     if (!jobRows.length) {
       return res.status(404).json({ error: 'job not found' });
+    }
+
+    if (status === 'done' || status === 'failed') {
+      // terminal callback
+      const jrows = await db.query<{ job_type: string; domain_id: number | null }>(
+        `SELECT job_type, domain_id FROM analysis_jobs WHERE id = ?`,
+        { replacements: [jobId], type: QueryTypes.SELECT },
+      );
+      const jt = jrows[0]?.job_type;
+      const domainId = jrows[0]?.domain_id;
+      if (status === 'done' && jt === 'domain_setup' && domainId) {
+        const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
+        await materializeDomainSetup(Number(domainId), result || {});
+      }
+      await db.query(
+        `UPDATE analysis_jobs SET status = ?, result = COALESCE(?, result), error = ?, total_progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        { replacements: [status, result ? JSON.stringify(result) : null, status === 'failed' ? (message || 'failed') : null, status === 'done' ? 100 : null, jobId] },
+      );
+      return res.status(200).json({ ok: true });
     }
 
     await db.query(
@@ -80,8 +100,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { replacements: [currentStage || null, stageProgress ?? null, totalProgress ?? null, message || null, jobId] },
     );
     res.status(200).json({ ok: true });
-  } catch (err: any) {
-    console.error('[job-progress] update failed:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (err) {
+    const msg = (err instanceof Error ? err.message : String(err));
+    console.error('[job-progress] update failed:', msg);
+    res.status(500).json({ error: msg });
   }
 }

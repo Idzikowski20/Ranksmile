@@ -12,9 +12,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (!brandName || !brandName.trim()) return res.status(400).json({ error: 'brandName required' });
    try {
       await finishWorkspaceSetup(userId, wsId, brandName, brandKnowledge || '');
-      return res.status(200).json({ ok: true });
-   } catch (e: any) {
-      if (e?.message === 'WORKSPACE_NOT_FOUND') return res.status(404).json({ error: 'Workspace not found' });
+   } catch (e) {
+      if ((e as { message?: string }).message === 'WORKSPACE_NOT_FOUND') return res.status(404).json({ error: 'Workspace not found' });
       throw e;
    }
+   // resolve the workspace's domain, then enqueue + kick the setup pipeline (best-effort)
+   try {
+      const { default: db } = await import('../../../../database/database');
+      const { QueryTypes } = await import('sequelize');
+      const drows = await db.query<{ id: number }>(
+         `SELECT "ID" as id FROM domain WHERE workspace_id = ? LIMIT 1`,
+         { replacements: [wsId], type: QueryTypes.SELECT },
+      );
+      const domainId = drows[0]?.id;
+      if (domainId) {
+         const { enqueueDomainSetup, kickDomainSetup } = await import('../../../../lib/domainPipeline');
+         const jobId = await enqueueDomainSetup(Number(domainId));
+         void kickDomainSetup(jobId);
+      }
+   } catch { /* pipeline kickoff is best-effort; dashboard fallback covers it */ }
+   return res.status(200).json({ ok: true });
 }
