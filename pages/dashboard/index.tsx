@@ -92,14 +92,14 @@ const DashboardPage: NextPage = () => {
   const settingsHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
 
   // Domain-level recommendations produced by the setup pipeline (the scan output).
-  const { data: domainRecsData } = useQuery(
+  const { data: domainRecsData, isLoading: domainRecsLoading } = useQuery(
     ['domainRecs', activeDomainSlug],
     () => fetchJson(`/api/domains/${activeDomainSlug}/recommendations`, { recommendations: [] as DomainRec[] }),
     { enabled: !!activeDomainSlug, retry: false },
   );
 
   // Whether the domain has a blog path configured — drives the empty-state message.
-  const { data: blogPathsData } = useQuery(
+  const { data: blogPathsData, isLoading: blogPathsLoading } = useQuery(
     ['blogPaths', activeDomainSlug],
     () => fetchJson(`/api/domains/blog-paths?slug=${activeDomainSlug}`, { blogPaths: [] as string[] }),
     { enabled: !!activeDomainSlug, retry: false },
@@ -107,7 +107,7 @@ const DashboardPage: NextPage = () => {
   const hasBlogPath = (blogPathsData?.blogPaths?.length ?? 0) > 0;
 
   // ── Pipeline polling ──
-  const { data: setup } = useSetupStatus(activeDomainSlug);
+  const { data: setup, isLoading: setupLoading } = useSetupStatus(activeDomainSlug);
   const runSetup = useRunSetup();
 
   // Fallback kick: if no job exists yet for this domain, trigger one — but ONCE per
@@ -134,6 +134,16 @@ const DashboardPage: NextPage = () => {
   }, [setup?.status]);
 
   const pipelineActive = setup && (setup.status === 'queued' || setup.status === 'running' || setup.status === 'failed');
+
+  // Until the pipeline's state is KNOWN, don't flash the empty "set blog path" prompt.
+  // Pending = the status query is still loading, or a job is about to be kicked ('none').
+  const pipelinePending = !!activeDomainSlug && (setupLoading || setup?.status === 'none');
+  // The Recommendations card stays in its skeleton until everything that feeds it has
+  // settled: articles, the domain recs/blog-path queries, and the pipeline status. This
+  // also covers the brief refetch right after the pipeline flips to 'done'.
+  const recommendationsLoading = articlesLoading
+    || pipelinePending
+    || (!!activeDomainSlug && (domainRecsLoading || blogPathsLoading));
 
   // ── Recommendations: the domain pipeline's scan output (pages requiring optimization).
   //    Falls back to analyzed articles with a content score when the scan produced none. ──
@@ -215,7 +225,7 @@ const DashboardPage: NextPage = () => {
               total={recommendations.length}
               faviconDomain={primaryDomain?.domain || ''}
               viewHref={recommendationsHref}
-              loading={articlesLoading}
+              loading={recommendationsLoading}
               coverage={setup?.auditCounts}
               hasBlogPath={hasBlogPath}
               settingsHref={settingsHref}
