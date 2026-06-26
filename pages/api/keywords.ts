@@ -180,6 +180,12 @@ const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
    const { sticky, tags } = req.body;
 
    try {
+      const firstKeyword = await Keyword.findOne({ where: { ID: keywordIDs[0] } });
+      if (firstKeyword) {
+         const owns = await verifyDomainOwnership(firstKeyword.domain, userId ?? null);
+         if (owns === false || owns === null) return res.status(403).json({ error: 'Access denied.' });
+      }
+
       let keywords: KeywordType[] = [];
       if (sticky !== undefined) {
          await Keyword.update({ sticky }, { where: { ID: { [Op.in]: keywordIDs } } });

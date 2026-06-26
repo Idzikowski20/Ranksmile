@@ -5,6 +5,8 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articleSql';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import { assertArticleAccess } from '../../../../lib/tenancy';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -15,6 +17,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const { id } = req.query;
    if (!id || Array.isArray(id)) return res.status(400).json({ error: 'Valid id required' });
 
+   const userId = await getCurrentUserId(req, res);
+   const articleId = parseInt((req.query.id ?? req.query.articleId) as string, 10);
+   if (!(await assertArticleAccess(userId, articleId))) {
+      return res.status(403).json({ error: 'Access denied.' });
+   }
+
    if (req.method === 'GET') return getVersions(id, res);
    if (req.method === 'POST') return restoreVersion(id, req, res);
    return res.status(405).json({ error: 'Method not allowed' });
@@ -23,14 +31,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getVersions(id: string, res: NextApiResponse) {
    try {
       const [rows] = await db.query(
-         `SELECT id, article_id, version_type, created_at,
+         `SELECT id, article_id, version_type, created_at, score_data,
                  LENGTH(content) AS content_length
           FROM article_versions
           WHERE article_id = ?
           ORDER BY created_at DESC`,
          { replacements: [id] },
       );
-      return res.status(200).json({ versions: rows });
+      // Expose each version's content score (stored in score_data._computed_score) without
+      // shipping the full score_data blob to the client.
+      const versions = (rows as any[]).map((r) => {
+         let score: number | null = null;
+         if (r.score_data) {
+            try {
+               const sd = typeof r.score_data === 'string' ? JSON.parse(r.score_data) : r.score_data;
+               if (typeof sd?._computed_score === 'number') score = sd._computed_score;
+            } catch { /* ignore malformed score_data */ }
+         }
+         const { score_data, ...rest } = r;
+         return { ...rest, score };
+      });
+      return res.status(200).json({ versions });
    } catch (error: any) {
       return res.status(500).json({ error: error?.message || 'DB error' });
    }

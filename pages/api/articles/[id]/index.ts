@@ -6,6 +6,8 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articleSql';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import { assertArticleAccess } from '../../../../lib/tenancy';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -17,6 +19,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const { id } = req.query;
    if (!id || Array.isArray(id)) return res.status(400).json({ error: 'Valid id required' });
+
+   const userId = await getCurrentUserId(req, res);
+   const articleId = parseInt((req.query.id ?? req.query.articleId) as string, 10);
+   if (!(await assertArticleAccess(userId, articleId))) {
+      return res.status(403).json({ error: 'Access denied.' });
+   }
 
    if (req.method === 'GET') return getArticle(id, res);
    if (req.method === 'PUT') return updateArticle(id, req, res);
