@@ -66,26 +66,43 @@ class RecommendationsStage(AnalysisStage):
         topics: list[dict] = ctx.get_state("topics") or []
         competitors: list[dict] = ctx.get_state("competitors") or []
         brand_knowledge: str = ctx.payload.get("brandKnowledge", "")
+        audits: list[dict] = ctx.get_state("page_audits") or []
 
-        await ctx.emit_progress(self, 30, "Generating content recommendations")
+        from pipeline.stages.domain.triage_scorer import OPTIMIZE_THRESHOLD
 
-        recs: list[dict] | None = None
+        # 1. Optimize recs: audited posts under the threshold, worst-first (immutable snapshot).
+        weak = sorted(
+            [a for a in audits if a.get("fetch_status") == "OK" and a.get("score") is not None
+             and a["score"] < OPTIMIZE_THRESHOLD],
+            key=lambda a: a["score"],
+        )
+        recs: list[dict] = []
+        for a in weak[:20]:
+            recs.append({
+                "title": a.get("title") or a.get("path") or a["url"],
+                "rationale": f"Content score {a['score']}/100 — below {OPTIMIZE_THRESHOLD}. Improve depth, headings, and meta.",
+                "priority": "high" if a["score"] < 50 else "medium",
+                "type": "optimize",
+                "url": a["url"],
+                "score": a["score"],
+            })
+
+        # 2. Create recs: existing LLM content ideas from topics + competitors.
+        await ctx.emit_progress(self, 60, "Generating content ideas")
+        ideas = None
         try:
-            recs = await _llm_recommendations(topics, competitors, brand_knowledge)
-        except Exception as exc:
+            ideas = await _llm_recommendations(topics, competitors, brand_knowledge)
+        except Exception as exc:  # noqa: BLE001
             print(f"[recommendations] LLM call failed: {exc}")
-
-        if recs is None:
-            # Retry once on parse failure or exception
-            try:
-                recs = await _llm_recommendations(topics, competitors, brand_knowledge)
-            except Exception as exc:
-                print(f"[recommendations] LLM retry failed: {exc}")
-                recs = []
-
-        if not isinstance(recs, list):
-            recs = []
+        for idea in (ideas or [])[:5]:
+            recs.append({
+                "title": idea.get("title", ""),
+                "rationale": idea.get("rationale", ""),
+                "priority": idea.get("priority", "medium"),
+                "type": "create",
+                "topic_index": idea.get("topic_index"),
+            })
 
         ctx.set_state("recommendations", recs)
-        await ctx.emit_progress(self, 100, f"Recommendations ready: {len(recs)} items")
+        await ctx.emit_progress(self, 100, f"{len(recs)} recommendations")
         return {"recommendations": recs}

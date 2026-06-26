@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import GlobalTopbar from '../components/common/GlobalTopbar';
+import BlogPathsField from '../components/domains/BlogPathsField';
 
 // ─── Shared button classes (Surfer canonical, from invite/[token].tsx) ────────
 const btnBase =
@@ -210,6 +211,9 @@ const SetupPage: NextPage = () => {
    const [location, setLocation] = useState<SetupLocation | null>(null);
    const [locOpen, setLocOpen] = useState(false);
    const [locFilter, setLocFilter] = useState('');
+   // blog paths (detected after a domain is chosen, editable before configure)
+   const [blogPaths, setBlogPaths] = useState<string[]>([]);
+   const [blogDetecting, setBlogDetecting] = useState(false);
 
    // Step 2
    const [brandName, setBrandName] = useState('');
@@ -253,6 +257,24 @@ const SetupPage: NextPage = () => {
       return () => document.removeEventListener('mousedown', handler);
    }, [comboOpen, locOpen]);
 
+   // ── Detect where the blog lives (sitemap clustering) once a domain is chosen. ──
+   const detectBlogPaths = async (domainName: string) => {
+      setBlogDetecting(true);
+      try {
+         const r = await fetch('/api/domains/detect-blog-paths', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain: domainName }),
+         });
+         const data = r.ok ? await r.json() : { blogPaths: [] };
+         setBlogPaths(Array.isArray(data.blogPaths) ? data.blogPaths : []);
+      } catch {
+         setBlogPaths([]);
+      } finally {
+         setBlogDetecting(false);
+      }
+   };
+
    // ── Choose a domain — records the selection but does NOT submit; the
    //    location/language step + Continue does (so the language is picked first). ──
    const chooseDomain = (displayValue: string) => {
@@ -263,6 +285,8 @@ const SetupPage: NextPage = () => {
       setUrlMode(false);
       setComboOpen(false);
       setStep1Error('');
+      setBlogPaths([]);
+      void detectBlogPaths(d);
    };
    const handleSiteSelect = (siteUrl: string) => chooseDomain(siteUrl);
    const handleUrlSubmit = () => { if (urlInput.trim()) chooseDomain(urlInput.trim()); };
@@ -285,6 +309,15 @@ const SetupPage: NextPage = () => {
             }),
          });
          if (res.ok) {
+            const cfg = await res.json().catch(() => ({}));
+            const configuredSlug = cfg?.domainSlug as string | undefined;
+            if (blogPaths.length > 0 && configuredSlug) {
+               await fetch('/api/domains/blog-paths', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ slug: configuredSlug, blogPaths }),
+               }).catch(() => { /* non-fatal — paths can be edited later in domain settings */ });
+            }
             setStep(2);
             setLoadingBrand(true);
             fetch('/api/brand-knowledge', {
@@ -563,6 +596,21 @@ const SetupPage: NextPage = () => {
                                              ))}
                                        </div>
                                     </div>
+                                 )}
+                              </div>
+
+                              {/* Where does your blog live? */}
+                              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                 <label style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                                    Where does your blog live?
+                                 </label>
+                                 <span style={{ fontSize: 12, color: '#52525C' }}>We audit posts under these paths.</span>
+                                 {blogDetecting ? (
+                                    <span className="gap-sm flex items-center" style={{ fontSize: 13, color: '#71717B' }}>
+                                       <Spinner /> Detecting your blog…
+                                    </span>
+                                 ) : (
+                                    <BlogPathsField value={blogPaths} onChange={setBlogPaths} />
                                  )}
                               </div>
 

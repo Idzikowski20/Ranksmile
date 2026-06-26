@@ -1,11 +1,12 @@
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../common/Icon';
 import Modal from '../common/Modal';
 import { useDeleteDomain, useFetchDomain, useUpdateDomain } from '../../services/domains';
 import InputField from '../common/InputField';
 import SelectField, { SelectionOption } from '../common/SelectField';
 import ToggleField from '../common/ToggleField';
+import BlogPathsField from './BlogPathsField';
 
 type DomainSettingsProps = {
    domain:DomainType|false,
@@ -19,7 +20,10 @@ type DomainSettingsError = {
 
 const DomainSettings = ({ domain, closeModal }: DomainSettingsProps) => {
    const router = useRouter();
-   const [currentTab, setCurrentTab] = useState<'notification'|'searchconsole'|'scraping'|'brandvoice'>('scraping');
+   const [currentTab, setCurrentTab] = useState<'notification'|'searchconsole'|'scraping'|'brandvoice'|'blogpaths'>('scraping');
+   const [blogPaths, setBlogPaths] = useState<string[]>([]);
+   const [savingBlogPaths, setSavingBlogPaths] = useState<boolean>(false);
+   const domainSlug = domain && domain.slug ? domain.slug : '';
    const [showRemoveDomain, setShowRemoveDomain] = useState<boolean>(false);
    const [settingsError, setSettingsError] = useState<DomainSettingsError>({ type: '', msg: '' });
    const [domainSettings, setDomainSettings] = useState<DomainSettings>(() => ({
@@ -43,6 +47,33 @@ const DomainSettings = ({ domain, closeModal }: DomainSettingsProps) => {
       const currentSearchConsoleSettings = domainObj.search_console && JSON.parse(domainObj.search_console);
       setDomainSettings({ ...domainSettings, search_console: currentSearchConsoleSettings || domainSettings.search_console });
    });
+
+   // Load the domain's blog paths on mount / slug change.
+   useEffect(() => {
+      if (!domainSlug) return;
+      fetch(`/api/domains/blog-paths?slug=${encodeURIComponent(domainSlug)}`)
+         .then((r) => (r.ok ? r.json() : { blogPaths: [] }))
+         .then((d) => setBlogPaths(Array.isArray(d.blogPaths) ? d.blogPaths : []))
+         .catch(() => setBlogPaths([]));
+   }, [domainSlug]);
+
+   const saveBlogPaths = async () => {
+      if (!domainSlug || savingBlogPaths) return;
+      setSavingBlogPaths(true);
+      try {
+         const r = await fetch('/api/domains/blog-paths', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: domainSlug, blogPaths }),
+         });
+         const d = r.ok ? await r.json() : null;
+         if (d && Array.isArray(d.blogPaths)) setBlogPaths(d.blogPaths);
+      } catch {
+         // non-fatal — leave current state, user can retry
+      } finally {
+         setSavingBlogPaths(false);
+      }
+   };
 
    const updateDomain = () => {
       let error: DomainSettingsError | null = null;
@@ -102,6 +133,11 @@ const DomainSettings = ({ domain, closeModal }: DomainSettingsProps) => {
                      className={`${tabStyle} ${currentTab === 'brandvoice' ? ' bg-white text-blue-600 border-slate-200' : 'border-transparent'}`}
                      onClick={() => setCurrentTab('brandvoice')}>
                         ✍️ Brand Voice
+                     </li>
+                     <li
+                     className={`${tabStyle} ${currentTab === 'blogpaths' ? ' bg-white text-blue-600 border-slate-200' : 'border-transparent'}`}
+                     onClick={() => setCurrentTab('blogpaths')}>
+                        📝 Blog Paths
                      </li>
                   </ul>
                </div>
@@ -304,6 +340,29 @@ const DomainSettings = ({ domain, closeModal }: DomainSettingsProps) => {
                         <p className='text-xs text-gray-400 text-right mt-1'>
                            {(domainSettings.brand_voice || '').length} / 2000
                         </p>
+                     </div>
+                  )}
+                  {currentTab === 'blogpaths' && (
+                     <div className="mb-4">
+                        <label
+                           className='mb-1 font-semibold inline-block text-sm'
+                           style={{ color: '#18181B', fontFamily: 'var(--font-family-primary)' }}
+                        >
+                           Blog Paths
+                        </label>
+                        <p className='text-xs mb-3' style={{ color: '#52525C' }}>
+                           Posts under these paths are audited for content quality. Add a path and press Enter.
+                        </p>
+                        <BlogPathsField value={blogPaths} onChange={setBlogPaths} />
+                        <div className="mt-4">
+                           <button
+                              type="button"
+                              className={`text-sm font-semibold py-2 px-5 rounded cursor-pointer bg-blue-700 text-white ${savingBlogPaths ? 'cursor-not-allowed opacity-70' : ''}`}
+                              onClick={() => !savingBlogPaths && saveBlogPaths()}
+                           >
+                              {savingBlogPaths && <Icon type='loading' />} Save Blog Paths
+                           </button>
+                        </div>
                      </div>
                   )}
                </div>
