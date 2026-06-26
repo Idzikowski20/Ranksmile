@@ -225,6 +225,16 @@ const SetupPage: NextPage = () => {
    const comboRef = useRef<HTMLDivElement>(null);
    const locRef = useRef<HTMLDivElement>(null);
    const brandNameRef = useRef<HTMLInputElement>(null);
+   const brandKnowledgeRef = useRef<HTMLTextAreaElement>(null);
+
+   // Auto-grow the brand-details textarea to fit its content, so the page scrolls
+   // instead of the textarea (no nested scrollbar).
+   useEffect(() => {
+      const el = brandKnowledgeRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+   }, [brandKnowledge, loadingBrand]);
 
    // ── Fetch GSC sites on mount ───────────────────────────────────────────
    useEffect(() => {
@@ -673,9 +683,11 @@ const SetupPage: NextPage = () => {
    // ─────────────────────────────────────────────────────────────────────
    return (
       <SetupShell title="Set up Brand Knowledge · SerpBear">
-         <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl [color-scheme:light] bg-white-base">
-            <div data-scroll-element="true" className="flex-1 overflow-auto px-base sm:px-lg">
-               <div className="gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem', paddingBottom: '2rem' }}>
+         <div
+            data-scroll-element="true"
+            className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
+         >
+               <div className="gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
                   <div className="gap-2xl flex w-full flex-col justify-center">
                      <StepDots step={2} />
                      <div className="gap-md flex w-full flex-col justify-center">
@@ -736,11 +748,12 @@ const SetupPage: NextPage = () => {
                            <div className="gap-sm flex w-full flex-col">
                               <div className="border-gray-20 flex w-full flex-col overflow-hidden rounded-lg border">
                                  <textarea
+                                    ref={brandKnowledgeRef}
                                     value={brandKnowledge}
                                     onChange={(e) => setBrandKnowledge(e.target.value)}
                                     placeholder="Describe your business, target audience, key products/services, competitors, tone of voice…"
-                                    className="w-full outline-none resize-y bg-white-base text-md"
-                                    style={{ minHeight: 220, padding: '0.75rem 1rem', fontFamily: 'var(--font-family-primary)', border: 'none' }}
+                                    className="w-full outline-none resize-none bg-white-base text-md"
+                                    style={{ minHeight: 220, overflow: 'hidden', padding: '0.75rem 1rem', fontFamily: 'var(--font-family-primary)', border: 'none' }}
                                  />
                               </div>
                            </div>
@@ -751,39 +764,34 @@ const SetupPage: NextPage = () => {
                      {step2Error && (
                         <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>{step2Error}</span>
                      )}
+
+                     {/* Buttons in the card flow (like step 1) — scroll the page down to reach them. */}
+                     <div className="flex w-full items-center" style={{ gap: 16 }}>
+                        <button
+                           type="button"
+                           className={btnLink}
+                           onClick={() => router.push('/')}
+                        >
+                           Cancel
+                        </button>
+                        <button
+                           type="submit"
+                           disabled={submitting}
+                           className={btnPrimary}
+                        >
+                           {(submitting || loadingBrand) ? (
+                              <>
+                                 <Spinner color="#ffffff" />
+                                 <span>Get started</span>
+                              </>
+                           ) : (
+                              'Get started'
+                           )}
+                        </button>
+                     </div>
                   </form>
                </div>
             </div>
-
-            {/* Footer pinned inside the card — always visible, white stays within the rounded
-                card, so the dark shell remains visible below it (matching step 1's bottom). */}
-            <div className="shrink-0 px-base sm:px-lg pt-md pb-md sm:pb-lg bg-white-base">
-               <div className="mx-auto flex w-full items-center max-w-screen-sm" style={{ gap: 16 }}>
-                  <button
-                     type="button"
-                     className={btnLink}
-                     onClick={() => router.push('/')}
-                  >
-                     Cancel
-                  </button>
-                  <button
-                     type="submit"
-                     form="setup-brand-kit-form"
-                     disabled={submitting}
-                     className={btnPrimary}
-                  >
-                     {(submitting || loadingBrand) ? (
-                        <>
-                           <Spinner color="#ffffff" />
-                           <span>Get started</span>
-                        </>
-                     ) : (
-                        'Get started'
-                     )}
-                  </button>
-               </div>
-            </div>
-         </div>
          </SetupShell>
    );
 };
