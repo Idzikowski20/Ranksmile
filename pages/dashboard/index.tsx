@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { CSSTransition } from 'react-transition-group';
@@ -71,9 +71,14 @@ const DashboardPage: NextPage = () => {
   const { data: setup } = useSetupStatus(activeDomainId);
   const runSetup = useRunSetup();
 
-  // Fallback kick: if no job exists yet for this domain, trigger one
+  // Fallback kick: if no job exists yet for this domain, trigger one — but ONCE per
+  // domain. The ref latch + isLoading guard stop a refetch (window focus, the done
+  // invalidation, an enqueue race) from re-reading 'none' and spamming run-setup.
+  const kickedRef = useRef<number | null>(null);
   useEffect(() => {
-    if (setup && setup.status === 'none' && activeDomainId) {
+    if (setup && setup.status === 'none' && activeDomainId
+        && kickedRef.current !== activeDomainId && !runSetup.isLoading) {
+      kickedRef.current = activeDomainId;
       runSetup.mutate(activeDomainId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

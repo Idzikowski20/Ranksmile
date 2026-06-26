@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
 
 export type StageState = 'pending' | 'running' | 'done';
 export type SetupStatus = {
@@ -28,7 +28,11 @@ export function useSetupStatus(domainId: number | null | undefined) {
 }
 
 export function useRunSetup() {
-   return useMutation((domainId: number) =>
-      fetch(`/api/domains/${domainId}/run-setup`, { method: 'POST' }).then((r) => r.json()),
+   const qc = useQueryClient();
+   return useMutation(
+      (domainId: number) => fetch(`/api/domains/${domainId}/run-setup`, { method: 'POST' }).then((r) => r.json()),
+      // Refetch setup-status right after kicking so the fallback effect sees 'queued'
+      // (not stale 'none') and stops firing — prevents a run-setup retry storm.
+      { onSuccess: (_d, domainId) => qc.invalidateQueries(['setup-status', domainId]) },
    );
 }

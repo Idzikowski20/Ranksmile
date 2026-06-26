@@ -79,7 +79,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const domainId = jrows[0]?.domain_id;
       if (status === 'done' && jt === 'domain_setup' && domainId) {
         const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
-        await materializeDomainSetup(Number(domainId), result || {});
+        try {
+          await materializeDomainSetup(Number(domainId), result || {});
+        } catch (e) {
+          // Materialization (delete+insert tx) failed — DON'T leave the job 'running'
+          // (Retry only re-claims queued/failed/stale-running, so a stuck 'running' job
+          // would be dead for the 10-min staleness window). Mark it failed so Retry works now.
+          const msg = e instanceof Error ? e.message : String(e);
+          await db.query(
+            `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            { replacements: [`materialize failed: ${msg}`, jobId] },
+          );
+          return res.status(500).json({ error: 'materialization failed' });
+        }
       }
       await db.query(
         `UPDATE analysis_jobs SET status = ?, result = COALESCE(?, result), error = ?, total_progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
