@@ -181,12 +181,12 @@ const RecommendationsPage: NextPage = () => {
    const { data: strategyData, isLoading: strategyLoading } = useQuery(
       ['domain-recommendations', activeDomainId],
       async () => {
-         const r = await fetch(`/api/domains/${activeDomainId}/recommendations`);
+         const r = await fetch(`/api/domains/${slug}/recommendations`);
          return r.json() as Promise<{ recommendations: Array<{ id: number; title: string; rationale: string | null; priority: string | null; type: string | null }> }>;
       },
       { enabled: !!activeDomainId, staleTime: 60_000 },
    );
-   const { data: setupStatus } = useSetupStatus(activeDomainId);
+   const { data: setupStatus } = useSetupStatus(slug);
 
    const [tab, setTab] = useState<'optimize' | 'ideas' | 'technical' | 'strategy'>('optimize');
    const [search, setSearch] = useState('');

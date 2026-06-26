@@ -63,26 +63,26 @@ const DashboardPage: NextPage = () => {
 
   const domains: DomainType[] = domainsData?.domains || [];
   const primaryDomain = domains[0];
-  const activeDomainId: number | null = primaryDomain?.ID ?? null;
+  const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
   const clicksHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
   const recommendationsHref = primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites';
 
   // ── Pipeline polling ──
-  const { data: setup } = useSetupStatus(activeDomainId);
+  const { data: setup } = useSetupStatus(activeDomainSlug);
   const runSetup = useRunSetup();
 
   // Fallback kick: if no job exists yet for this domain, trigger one — but ONCE per
   // domain. The ref latch + isLoading guard stop a refetch (window focus, the done
   // invalidation, an enqueue race) from re-reading 'none' and spamming run-setup.
-  const kickedRef = useRef<number | null>(null);
+  const kickedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (setup && setup.status === 'none' && activeDomainId
-        && kickedRef.current !== activeDomainId && !runSetup.isLoading) {
-      kickedRef.current = activeDomainId;
-      runSetup.mutate(activeDomainId);
+    if (setup && setup.status === 'none' && activeDomainSlug
+        && kickedRef.current !== activeDomainSlug && !runSetup.isLoading) {
+      kickedRef.current = activeDomainSlug;
+      runSetup.mutate(activeDomainSlug);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setup?.status, activeDomainId]);
+  }, [setup?.status, activeDomainSlug]);
 
   // On transition to done, refresh the dashboard data queries
   useEffect(() => {
@@ -128,7 +128,7 @@ const DashboardPage: NextPage = () => {
             stagePercent={setup.stagePercent}
             status={setup.status}
             error={setup.error}
-            onRetry={() => { if (activeDomainId) runSetup.mutate(activeDomainId); }}
+            onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
           />
         ) : (
           <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
