@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   usePeople, useInviteMember, useChangeRole, useRemoveMember, useRevokeInvitation,
@@ -31,15 +31,55 @@ const Avatar = ({ initial }: { initial: string }) => (
 
 const Separator = () => <div role="separator" style={{ minHeight: 1, minWidth: 1, alignSelf: 'stretch', background: '#F4F4F5' }} />;
 
-const Chevron = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#71717A' }}>
-    <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+const CheckMark = () => (
+  <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, color: '#18181B' }}>
+    <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
   </svg>
 );
 
-const selectStyle: React.CSSProperties = {
-  appearance: 'none', width: '100%', height: 40, border: '1px solid #D4D4D8', borderRadius: 8, padding: '0 32px 0 12px',
-  fontSize: 14, color: '#18181B', background: '#FFFFFF', fontFamily: font, cursor: 'pointer', outline: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+/** Surfer-style role dropdown (custom popover, not a native select). `compact` = inline pill for table rows. */
+const RoleSelect = ({ value, options, onChange, compact }: {
+  value: string; options: readonly string[]; onChange: (v: string) => void; compact?: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: 'relative', width: compact ? 'auto' : '100%', display: compact ? 'inline-block' : 'block' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: compact ? 'auto' : '100%', minWidth: compact ? 108 : undefined, height: compact ? 32 : 40, border: '1px solid #D4D4D8', borderRadius: 8, padding: compact ? '0 8px 0 12px' : '0 10px 0 12px', fontSize: compact ? 13 : 14, color: '#18181B', background: '#FFFFFF', fontFamily: font, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', outline: 'none' }}
+      >
+        <span>{cap(value)}</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#71717A', flexShrink: 0, transition: 'transform 150ms ease', transform: open ? 'rotate(180deg)' : 'none' }}>
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '110%', left: 0, minWidth: compact ? 140 : '100%', background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, padding: 4, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
+          {options.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => { onChange(o); setOpen(false); }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: compact ? 13 : 14, fontWeight: o === value ? 600 : 500, color: '#2F2F34', fontFamily: font }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span>{cap(o)}</span>
+              {o === value && <CheckMark />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 /** Compact checkbox dropdown for picking workspaces (the per-Member access list). */
@@ -153,14 +193,8 @@ const PeopleSettings = () => {
 
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 200 }}>
-                <label htmlFor="invite-role" style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Role</label>
-                <div style={{ position: 'relative' }}>
-                  <select id="invite-role" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'member' | 'admin')} style={selectStyle}>
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <Chevron />
-                </div>
+                <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Role</label>
+                <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
@@ -175,11 +209,11 @@ const PeopleSettings = () => {
                 className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100"
                 style={{ flexShrink: 0, height: 40, whiteSpace: 'nowrap', opacity: invite.isLoading ? 0.7 : 1 }}
               >
+                <span>{invite.isLoading ? 'Sending…' : 'Send invite'}</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                   <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M6 12h7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span>Send invite</span>
               </button>
             </div>
           </div>
@@ -221,16 +255,12 @@ const PeopleSettings = () => {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       {editable ? (
-                        <div style={{ position: 'relative', maxWidth: 130 }}>
-                          <select
-                            value={m.role}
-                            onChange={(e) => changeRole.mutate({ id: m.id, role: e.target.value }, { onSuccess: onOk('Role updated'), onError })}
-                            style={{ ...selectStyle, height: 34, fontSize: 13, padding: '0 28px 0 10px' }}
-                          >
-                            {ROLES.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
-                          </select>
-                          <Chevron />
-                        </div>
+                        <RoleSelect
+                          value={m.role}
+                          options={ROLES}
+                          compact
+                          onChange={(v) => changeRole.mutate({ id: m.id, role: v }, { onSuccess: onOk('Role updated'), onError })}
+                        />
                       ) : (
                         <span style={{ fontSize: 14, color: '#52525C', fontFamily: font }}>{cap(m.role)}</span>
                       )}
