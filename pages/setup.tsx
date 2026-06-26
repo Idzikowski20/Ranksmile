@@ -1,8 +1,9 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
+import GlobalTopbar from '../components/common/GlobalTopbar';
 
 // ─── Shared button classes (Surfer canonical, from invite/[token].tsx) ────────
 const btnBase =
@@ -84,6 +85,34 @@ function StepDots({ step }: { step: 1 | 2 }) {
       </div>
    );
 }
+
+// ─── App brand mark for the topbar (no workspace switcher on the creator) ──────
+const SetupLogo = () => (
+   <a href="/" aria-label="Home" style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 7, background: '#783AFB', flexShrink: 0 }}>
+         <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+         </svg>
+      </span>
+   </a>
+);
+
+// Standalone creator chrome: dark GlobalTopbar (brand mark, no switcher / no sidebar)
+// above the white wizard body.
+const SetupShell = ({ title, children }: { title: string; children: ReactNode }) => (
+   <>
+      <Head>
+         <title>{title}</title>
+         <meta name="robots" content="noindex" />
+      </Head>
+      <div className="relative flex flex-col overflow-hidden" style={{ minHeight: '100dvh' }}>
+         <GlobalTopbar breadcrumb={<SetupLogo />} />
+         <div className="p-sm flex flex-1 flex-col overflow-hidden">
+            {children}
+         </div>
+      </div>
+   </>
+);
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 const SetupPage: NextPage = () => {
@@ -252,16 +281,11 @@ const SetupPage: NextPage = () => {
    // ─────────────────────────────────────────────────────────────────────
    if (step === 1) {
       return (
-         <>
-            <Head>
-               <title>Create a new workspace · SerpBear</title>
-               <meta name="robots" content="noindex" />
-            </Head>
-            <div className="p-sm relative flex flex-col overflow-hidden" style={{ minHeight: '100vh' }}>
-               <div
-                  data-scroll-element="true"
-                  className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
-               >
+         <SetupShell title="Create a new workspace · SerpBear">
+            <div
+               data-scroll-element="true"
+               className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
+            >
                   <div className="pb-md mx-auto flex w-full flex-col items-center justify-center self-center gap-lg" style={{ maxWidth: 400, paddingTop: '3rem' }}>
                      <div className="gap-2xl flex w-full flex-col justify-center">
                         <StepDots step={1} />
@@ -419,8 +443,7 @@ const SetupPage: NextPage = () => {
                      </form>
                   </div>
                </div>
-            </div>
-         </>
+         </SetupShell>
       );
    }
 
@@ -428,16 +451,11 @@ const SetupPage: NextPage = () => {
    // STEP 2 — Set up Brand Knowledge
    // ─────────────────────────────────────────────────────────────────────
    return (
-      <>
-         <Head>
-            <title>Set up Brand Knowledge · SerpBear</title>
-            <meta name="robots" content="noindex" />
-         </Head>
-         <div className="p-sm relative flex flex-col overflow-hidden" style={{ minHeight: '100vh' }}>
-            <div
-               data-scroll-element="true"
-               className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
-            >
+      <SetupShell title="Set up Brand Knowledge · SerpBear">
+         <div
+            data-scroll-element="true"
+            className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
+         >
                <div className="pb-md gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem' }}>
                   <div className="gap-2xl flex w-full flex-col justify-center">
                      <StepDots step={2} />
@@ -539,8 +557,7 @@ const SetupPage: NextPage = () => {
                   </div>
                </div>
             </div>
-         </div>
-      </>
+         </SetupShell>
    );
 };
 
