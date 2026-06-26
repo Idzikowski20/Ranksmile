@@ -9,15 +9,17 @@ export type SetupStatus = {
    error: string | null;
 };
 
-export function useSetupStatus(domainId: number | null | undefined) {
+// Domains are addressed by slug across the app (the `pages/api/domains/[slug]` +
+// `sites/[domain]` convention); the endpoints resolve slug → domain id internally.
+export function useSetupStatus(slug: string | null | undefined) {
    return useQuery<SetupStatus>(
-      ['setup-status', domainId],
+      ['setup-status', slug],
       async () => {
-         const r = await fetch(`/api/domains/${domainId}/setup-status`);
+         const r = await fetch(`/api/domains/${slug}/setup-status`);
          return r.json();
       },
       {
-         enabled: !!domainId,
+         enabled: !!slug,
          refetchInterval: (data) => (
             data?.status === 'running' ? 2000
             : data?.status === 'queued' ? 5000
@@ -30,9 +32,9 @@ export function useSetupStatus(domainId: number | null | undefined) {
 export function useRunSetup() {
    const qc = useQueryClient();
    return useMutation(
-      (domainId: number) => fetch(`/api/domains/${domainId}/run-setup`, { method: 'POST' }).then((r) => r.json()),
+      (slug: string) => fetch(`/api/domains/${slug}/run-setup`, { method: 'POST' }).then((r) => r.json()),
       // Refetch setup-status right after kicking so the fallback effect sees 'queued'
       // (not stale 'none') and stops firing — prevents a run-setup retry storm.
-      { onSuccess: (_d, domainId) => qc.invalidateQueries(['setup-status', domainId]) },
+      { onSuccess: (_d, slug) => qc.invalidateQueries(['setup-status', slug]) },
    );
 }

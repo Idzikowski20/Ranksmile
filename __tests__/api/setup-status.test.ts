@@ -1,10 +1,6 @@
+jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('u1') }));
-jest.mock('../../lib/tenancy', () => ({ getAccessibleWorkspaceIds: jest.fn().mockResolvedValue([5]) }));
-jest.mock('../../database/database', () => ({
-   __esModule: true,
-   default: { query: jest.fn() },
-}));
-jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT', UPDATE: 'UPDATE' } }));
+jest.mock('../../utils/verifyDomainOwnership', () => ({ verifyDomainOwnershipBySlug: jest.fn().mockResolvedValue({ ID: 42 }) }));
 jest.mock('../../lib/domainPipeline', () => ({
    getSetupStatus: jest.fn().mockResolvedValue({
       status: 'running',
@@ -15,13 +11,10 @@ jest.mock('../../lib/domainPipeline', () => ({
    }),
 }));
 
-import { getCurrentUserId } from '../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
-import db from '../../database/database';
+import verifyUser from '../../utils/verifyUser';
+import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
 import { getSetupStatus } from '../../lib/domainPipeline';
-import handler from '../../pages/api/domains/[id]/setup-status';
-
-const mockQuery = db.query as jest.Mock;
+import handler from '../../pages/api/domains/[slug]/setup-status';
 
 const makeRes = () => {
    const r: Record<string, jest.Mock> = {};
@@ -30,48 +23,46 @@ const makeRes = () => {
    r.setHeader = jest.fn();
    return r;
 };
+const req = (method: string) => ({ method, cookies: {}, query: { slug: 'example-com' } } as never);
 
 beforeEach(() => {
    jest.clearAllMocks();
-   (getCurrentUserId as jest.Mock).mockResolvedValue('u1');
-   (getAccessibleWorkspaceIds as jest.Mock).mockResolvedValue([5]);
-   // domain row with workspace_id = 5 (accessible)
-   mockQuery.mockResolvedValue([{ workspace_id: 5 }]);
+   (verifyUser as jest.Mock).mockResolvedValue('authorized');
+   (verifyDomainOwnershipBySlug as jest.Mock).mockResolvedValue({ ID: 42 });
 });
 
-describe('GET /api/domains/[id]/setup-status', () => {
+describe('GET /api/domains/[slug]/setup-status', () => {
    it('returns 401 when not authenticated', async () => {
-      (getCurrentUserId as jest.Mock).mockResolvedValue(null);
+      (verifyUser as jest.Mock).mockResolvedValue('not authorized');
       const res = makeRes();
-      await handler({ method: 'GET', cookies: {}, query: { id: '42' } } as never, res as never);
+      await handler(req('GET'), res as never);
       expect(res.status).toHaveBeenCalledWith(401);
    });
 
    it('returns 405 for non-GET methods', async () => {
       const res = makeRes();
-      await handler({ method: 'POST', cookies: {}, query: { id: '42' } } as never, res as never);
+      await handler(req('POST'), res as never);
       expect(res.status).toHaveBeenCalledWith(405);
       expect(res.setHeader).toHaveBeenCalledWith('Allow', 'GET');
    });
 
-   it('returns 404 when domain workspace is not accessible', async () => {
-      // domain belongs to workspace_id = 99, not in accessible list [5]
-      mockQuery.mockResolvedValue([{ workspace_id: 99 }]);
+   it('returns 403 when the domain is not accessible', async () => {
+      (verifyDomainOwnershipBySlug as jest.Mock).mockResolvedValue(false);
       const res = makeRes();
-      await handler({ method: 'GET', cookies: {}, query: { id: '42' } } as never, res as never);
+      await handler(req('GET'), res as never);
+      expect(res.status).toHaveBeenCalledWith(403);
+   });
+
+   it('returns 404 when the domain is not found', async () => {
+      (verifyDomainOwnershipBySlug as jest.Mock).mockResolvedValue(null);
+      const res = makeRes();
+      await handler(req('GET'), res as never);
       expect(res.status).toHaveBeenCalledWith(404);
    });
 
-   it('returns 404 when domain row not found', async () => {
-      mockQuery.mockResolvedValue([]);
+   it('returns 200 with the status object for an accessible domain', async () => {
       const res = makeRes();
-      await handler({ method: 'GET', cookies: {}, query: { id: '42' } } as never, res as never);
-      expect(res.status).toHaveBeenCalledWith(404);
-   });
-
-   it('returns 200 with status object for accessible domain', async () => {
-      const res = makeRes();
-      await handler({ method: 'GET', cookies: {}, query: { id: '42' } } as never, res as never);
+      await handler(req('GET'), res as never);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(getSetupStatus).toHaveBeenCalledWith(42);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'running', currentStage: 'gsc' }));

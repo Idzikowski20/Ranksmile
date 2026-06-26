@@ -23,12 +23,12 @@ const TopicalMapPage: NextPage = () => {
    const { data: topicsData, isLoading: topicsLoading } = useQuery(
       ['domain-topics', activeDomainId],
       async () => {
-         const r = await fetch(`/api/domains/${activeDomainId}/topics`);
+         const r = await fetch(`/api/domains/${slug}/topics`);
          return r.json() as Promise<{ topics: Array<{ id: number; title: string; summary: string | null }> }>;
       },
       { enabled: !!activeDomainId, staleTime: 60_000 },
    );
-   const { data: setupStatus } = useSetupStatus(activeDomainId);
+   const { data: setupStatus } = useSetupStatus(slug);
 
    const isAnalyzing = setupStatus?.status === 'running' || setupStatus?.status === 'queued';
    const topics = topicsData?.topics ?? [];
