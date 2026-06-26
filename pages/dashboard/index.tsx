@@ -109,8 +109,10 @@ const DashboardPage: NextPage = () => {
 
   const recentlyEdited: RecentlyEditedItem[] = useMemo(() => {
     type ArticleRow = { id: number | string; title: string; content_score: number; target_keyword: string | null; updated_at: string | null; created_at: string | null; source?: string };
+    // Only real articles — exclude site_context rows AND skeleton drafts whose title is
+    // still the raw page URL (configure seeds those before analysis fills a real title).
     const arts: ArticleRow[] = (articlesData?.articles ?? []).filter(
-      (a: ArticleRow) => a.source !== 'site_context' && a.title,
+      (a: ArticleRow) => a.source !== 'site_context' && a.title && !/^https?:\/\//i.test(a.title),
     );
     return arts
       .slice()
@@ -159,7 +161,7 @@ const DashboardPage: NextPage = () => {
               clicksHref={clicksHref}
               loading={sitesLoading}
             />
-            <RecentlyEdited items={recentlyEdited} />
+            <RecentlyEdited items={recentlyEdited} loading={articlesLoading} />
             {/* The domain pipeline renders INSIDE the Recommendations section (its output
                 IS the recommendations) — never a takeover of the whole dashboard. */}
             <RecommendationsSection
