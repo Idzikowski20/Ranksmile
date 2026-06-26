@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useWorkspaces, useRenameWorkspace, useDeleteWorkspace, Workspace } from '../../services/workspaces';
-import { SETUP_LOCATIONS } from '../../lib/setupLocations';
+import { useWorkspaceSettings, useUpdateWorkspaceLogo } from '../../services/workspaceSettings';
 
 const font = 'var(--font-family-primary)';
 
@@ -21,25 +21,12 @@ const cleanDomain = (raw: string): string => raw
   .trim()
   .toLowerCase();
 
-/**
- * Derive a (country, language) label for a domain. The app stores the picked
- * language per page in `site_context.language`, not on the domain or workspace,
- * so there is no client-side endpoint that returns it. We degrade gracefully by
- * matching the domain's ccTLD (e.g. ".pl") against SETUP_LOCATIONS' `cc`, which
- * gives both a flag and a sensible country/language. Falls back to nothing when
- * the TLD isn't a recognised country code (e.g. ".com").
- */
-const resolveLocation = (domain: string): { country: string; language: string; cc: string } | null => {
-  const tld = cleanDomain(domain).split('.').pop() || '';
-  if (!tld) return null;
-  const match = SETUP_LOCATIONS.find((l) => l.cc === tld);
-  return match ? { country: match.country, language: match.language, cc: match.cc } : null;
-};
-
 const WorkspaceGeneralSettings = () => {
   const { data: wsData } = useWorkspaces();
+  const { data: settings } = useWorkspaceSettings();
   const renameWorkspace = useRenameWorkspace();
   const deleteWorkspace = useDeleteWorkspace();
+  const updateLogo = useUpdateWorkspaceLogo();
 
   const current: Workspace | null = useMemo(() => {
     const list = wsData?.workspaces || [];
@@ -81,22 +68,31 @@ const WorkspaceGeneralSettings = () => {
 
   const domain = current?.domain ? cleanDomain(current.domain) : '';
   const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
-  const location = current?.domain ? resolveLocation(current.domain) : null;
+  const storedLogo = settings?.logoUrl || null;
+  // The persisted logo (when set) takes priority; otherwise fall back to the favicon.
+  const displayLogo = pendingLogo || storedLogo;
+  const country = settings?.country || null;
+  const language = settings?.language || null;
+  const locationCc = settings?.cc || null;
   const initial = (current?.name || '').charAt(0).toUpperCase() || '?';
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!current) return;
     const trimmed = name.trim();
     if (!trimmed) { toast.error('Enter a workspace name'); return; }
     setSaving(true);
-    renameWorkspace.mutate(
-      { id: current.id, name: trimmed },
-      {
-        onSuccess: () => { toast.success('Saved'); },
-        onError: (e: unknown) => { toast.error(e instanceof Error ? e.message : 'Failed to save'); },
-        onSettled: () => { setSaving(false); },
-      },
-    );
+    try {
+      await renameWorkspace.mutateAsync({ id: current.id, name: trimmed });
+      if (pendingLogo) {
+        await updateLogo.mutateAsync(pendingLogo);
+        setPendingLogo(null);
+      }
+      toast.success('Saved');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemove = () => {
@@ -130,7 +126,7 @@ const WorkspaceGeneralSettings = () => {
               height: 64,
               borderRadius: 8,
               // purple fill only behind the initial fallback; a real logo/favicon fills the box
-              background: pendingLogo || (faviconUrl && !faviconError) ? 'transparent' : 'rgba(120,58,251,0.10)',
+              background: displayLogo || (faviconUrl && !faviconError) ? 'transparent' : 'rgba(120,58,251,0.10)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -138,8 +134,8 @@ const WorkspaceGeneralSettings = () => {
               overflow: 'hidden',
             }}
           >
-            {pendingLogo ? (
-              <img src={pendingLogo} alt="Workspace logo preview" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
+            {displayLogo ? (
+              <img src={displayLogo} alt="Workspace logo" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
             ) : faviconUrl && !faviconError ? (
               <img src={faviconUrl} alt="Workspace favicon" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} onError={() => setFaviconError(true)} />
             ) : (
@@ -200,8 +196,8 @@ const WorkspaceGeneralSettings = () => {
           </div>
         </div>
 
-        {/* Local preview only — persisting a workspace logo has no backend yet, so the
-            chosen file is shown but not saved. */}
+        {/* Picked file is previewed immediately; the data URL is persisted on Save
+            (useUpdateWorkspaceLogo → R2 → domain.logo_url), alongside the name. */}
         <input
           ref={fileRef}
           type="file"
@@ -312,15 +308,17 @@ const WorkspaceGeneralSettings = () => {
       {/* Location and language */}
       <div className="flex w-full flex-col gap-sm">
         <span style={labelStyle}>Location and language</span>
-        {location ? (
+        {country || language ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img
-              src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${location.cc}.svg`}
-              alt=""
-              style={{ width: 20, height: 15, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
-            />
+            {locationCc && (
+              <img
+                src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${locationCc}.svg`}
+                alt=""
+                style={{ width: 20, height: 15, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
+              />
+            )}
             <span style={{ fontSize: 14, color: '#52525C', fontFamily: font }}>
-              {location.country} / {location.language}
+              {[country, language].filter(Boolean).join(' / ')}
             </span>
           </div>
         ) : (
