@@ -31,9 +31,32 @@ const Chevron = () => (
 export interface RecommendationItem {
   id: string | number;
   title: string;
-  score: number; // 0-100 content score
   href: string;
+  score?: number; // 0-100 content score (analyzed articles)
+  priority?: string; // 'high' | 'medium' | 'low' (domain pipeline scan output)
 }
+
+const PRIORITY_STYLE: Record<string, { color: string; bg: string; label: string }> = {
+  high: { color: '#FF6F77', bg: 'rgba(255,111,119,0.1)', label: 'High' },
+  medium: { color: '#D97706', bg: '#FFF7ED', label: 'Medium' },
+  low: { color: '#71717B', bg: '#F4F4F5', label: 'Low' },
+};
+
+const PriorityPill = ({ priority }: { priority: string }) => {
+  const s = PRIORITY_STYLE[priority] ?? PRIORITY_STYLE.low;
+  return (
+    <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: s.color, background: s.bg, borderRadius: 9999, padding: '2px 8px', lineHeight: '16px', fontFamily: font }}>
+      {s.label}
+    </span>
+  );
+};
+
+const CheckCircle = () => (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="11" fill="#1AB25E" fillOpacity="0.1" />
+    <path d="M8 12.5L10.5 15L16 9" stroke="#1AB25E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 interface Props {
   items: RecommendationItem[];
@@ -69,10 +92,14 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
     <span style={{ minWidth: 0, flex: 1, fontSize: 14, fontWeight: 500, color: '#52525C', fontFamily: font, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
       {item.title}
     </span>
-    <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: '#9F9FA9' }}>
-      <Star />
-      <span style={{ fontSize: 13, fontFamily: font }}>{(item.score / 10).toFixed(1)}</span>
-    </span>
+    {item.priority ? (
+      <PriorityPill priority={item.priority} />
+    ) : (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: '#9F9FA9' }}>
+        <Star />
+        <span style={{ fontSize: 13, fontFamily: font }}>{((item.score ?? 0) / 10).toFixed(1)}</span>
+      </span>
+    )}
   </a>
 );
 
@@ -100,7 +127,20 @@ const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading
       </div>
     );
   }
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <SectionHeader icon={<BoltIcon />} label="Recommendations" />
+        <div style={{ padding: '40px 24px', border: '1px solid #E4E4E7', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
+          <CheckCircle />
+          <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: font }}>Your domain looks healthy</span>
+          <span style={{ fontSize: 14, color: '#52525C', maxWidth: 420, lineHeight: 1.5, fontFamily: font }}>
+            The scan finished and found no pages that need optimization right now. As your content changes, new opportunities will show up here.
+          </span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SectionHeader icon={<BoltIcon />} label="Recommendations" />
