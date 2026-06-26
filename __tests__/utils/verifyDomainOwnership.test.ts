@@ -1,3 +1,8 @@
+// Local sequelize mock — the helper imports { Op } at runtime, which pulls real
+// sequelize (ESM uuid dep) and crashes Jest. String-keyed Op also lets
+// JSON.stringify serialise the WHERE clause for the assertion below. Kept local
+// (not a root __mocks__/ auto-mock) so it can't affect unrelated suites.
+jest.mock('sequelize', () => ({ Op: { in: 'Op.in', notIn: 'Op.notIn' } }));
 jest.mock('../../database/models/domain', () => ({
   __esModule: true,
   default: { findOne: jest.fn() },
