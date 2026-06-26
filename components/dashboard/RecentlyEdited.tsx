@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Gauge from '../ui/Gauge';
+import Skeleton from './Skeleton';
 import { authClient } from '../../lib/auth/client';
 
 export interface RecentlyEditedItem {
@@ -13,6 +14,7 @@ export interface RecentlyEditedItem {
 
 interface Props {
   items: RecentlyEditedItem[];
+  loading?: boolean;
 }
 
 const ClockIcon = () => (
@@ -112,7 +114,47 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
   );
 };
 
-const RecentlyEdited = ({ items }: Props) => {
+const CardSkeleton = () => (
+  <div className="border-gray-10 gap-lg p-base flex flex-col rounded-2xl border border-solid">
+    <div className="flex items-center justify-between">
+      <Skeleton width={20} height={20} radius={4} />
+      <Skeleton width={36} height={36} radius={9999} />
+    </div>
+    <div className="flex flex-col" style={{ gap: 8 }}>
+      <Skeleton width="90%" height={14} />
+      <Skeleton width="55%" height={12} />
+    </div>
+    <div className="mt-auto flex items-center" style={{ gap: 8 }}>
+      <Skeleton width={24} height={24} radius={9999} />
+      <Skeleton width={64} height={12} />
+    </div>
+  </div>
+);
+
+const EmptyState = () => (
+  <div
+    className="border-gray-10 rounded-2xl border border-solid"
+    style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}
+  >
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 12, background: '#F4F4F5', color: '#9F9FA9' }}>
+      <DocIcon />
+    </span>
+    <span className="text-md font-semibold" style={{ color: '#18181B' }}>No content yet</span>
+    <span className="text-sm" style={{ color: '#52525C', maxWidth: 380, lineHeight: 1.5 }}>
+      Articles you create or edit will show up here. Open the Content Editor to start writing.
+    </span>
+    <a
+      href="/articles"
+      style={{ marginTop: 4, padding: '8px 16px', borderRadius: 8, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', transition: 'background 150ms ease' }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+    >
+      Open Content Editor
+    </a>
+  </div>
+);
+
+const RecentlyEdited = ({ items, loading }: Props) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -120,23 +162,29 @@ const RecentlyEdited = ({ items }: Props) => {
   const name = mounted ? (session?.data?.user?.name ?? session?.data?.user?.email ?? '') : '';
   const userInitial = name ? name.charAt(0).toLowerCase() : '?';
 
-  if (items.length === 0) return null;
-
   return (
     <div className="gap-base flex flex-col">
       {/* Section header */}
       <div className="flex items-center justify-between">
-        <div className="gap-sm text-gray-80 flex items-center" style={{ color: 'var(--gray-base)' }}>
+        <div className="gap-sm flex items-center" style={{ color: 'var(--gray-base)' }}>
           <ClockIcon />
           <span className="text-md font-semibold">Recently edited</span>
         </div>
       </div>
-      {/* Responsive grid: 1 col → 2 col (sm) → 4 col (lg) */}
-      <div className="gap-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item) => (
-          <Card key={item.id} item={item} userInitial={userInitial} />
-        ))}
-      </div>
+      {/* eslint-disable-next-line no-nested-ternary */}
+      {loading ? (
+        <div className="gap-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => <CardSkeleton key={i} />)}
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="gap-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((item) => (
+            <Card key={item.id} item={item} userInitial={userInitial} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
