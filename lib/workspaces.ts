@@ -51,6 +51,14 @@ export async function markWorkspaceReady(userId: string, wsId: number, name: str
    await db.query("UPDATE workspaces SET name = ?, status = 'ready' WHERE id = ? AND org_id = ?", { replacements: [clean, wsId, orgId] });
 }
 
+/** Persists brand knowledge onto the workspace's domain and flips the workspace to 'ready'. */
+export async function finishWorkspaceSetup(userId: string, wsId: number, brandName: string, brandKnowledge: string): Promise<void> {
+   const { orgId } = await ensureUserTenancy(userId);
+   await assertInOrg(orgId, wsId);
+   await db.query('UPDATE domain SET brand_knowledge = ? WHERE workspace_id = ?', { replacements: [brandKnowledge || '', wsId] });
+   await markWorkspaceReady(userId, wsId, brandName);
+}
+
 export async function createWorkspace(userId: string, name: string): Promise<Workspace> {
    const { orgId } = await ensureUserTenancy(userId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';

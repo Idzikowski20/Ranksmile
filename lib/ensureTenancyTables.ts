@@ -72,6 +72,7 @@ export async function ensureTenancyTables(): Promise<void> {
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_invitations_org ON invitations(org_id)'); } catch { /* noop */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email)'); } catch { /* noop */ }
    try { await db.query("ALTER TABLE workspaces ADD COLUMN status TEXT DEFAULT 'ready'"); } catch { /* exists */ }
+   try { await db.query('ALTER TABLE domain ADD COLUMN brand_knowledge TEXT'); } catch { /* exists */ }
 
    if (!process.env.TENANCY_OWNER_USER_ID) {
       console.warn('[tenancy] TENANCY_OWNER_USER_ID is unset — legacy (NULL workspace) domains stay hidden until claimed.');

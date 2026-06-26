@@ -2,7 +2,7 @@ jest.mock('../../database/database', () => ({ __esModule: true, default: { query
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
 
 import db from '../../database/database';
-import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace, createSetupWorkspace, markWorkspaceReady } from '../../lib/workspaces';
+import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace, createSetupWorkspace, markWorkspaceReady, finishWorkspaceSetup } from '../../lib/workspaces';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];
@@ -88,5 +88,22 @@ describe('workspaces helpers', () => {
       .mockResolvedValueOnce(rows([]));            // UPDATE
     await markWorkspaceReady('u1', 7, 'My Workspace');
     expect(String(mockQuery.mock.calls[1][0])).toContain("status = 'ready'");
+  });
+
+  it('finishWorkspaceSetup updates brand_knowledge and marks workspace ready', async () => {
+    // Query sequence:
+    // 1. assertInOrg SELECT (from finishWorkspaceSetup's own assertInOrg call)
+    // 2. UPDATE domain SET brand_knowledge
+    // 3. assertInOrg SELECT (from markWorkspaceReady's assertInOrg call)
+    // 4. UPDATE workspaces SET name + status = 'ready'
+    mockQuery
+      .mockResolvedValueOnce(rows([{ id: 7 }]))   // assertInOrg SELECT
+      .mockResolvedValueOnce(rows([]))             // UPDATE domain
+      .mockResolvedValueOnce(rows([{ id: 7 }]))   // assertInOrg SELECT (inside markWorkspaceReady)
+      .mockResolvedValueOnce(rows([]));            // UPDATE workspaces
+    await finishWorkspaceSetup('u1', 7, 'Acme', 'We sell widgets');
+    const sqls = mockQuery.mock.calls.map((c: any[]) => String(c[0]));
+    expect(sqls.some((s) => s.includes('UPDATE domain SET brand_knowledge'))).toBe(true);
+    expect(sqls.some((s) => s.includes("status = 'ready'"))).toBe(true);
   });
 });
