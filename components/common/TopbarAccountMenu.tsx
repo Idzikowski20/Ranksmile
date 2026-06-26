@@ -3,11 +3,7 @@ import { useRouter } from 'next/router';
 import Icon from './Icon';
 import { authClient } from '../../lib/auth/client';
 import { useOrganization } from '../../services/organization';
-
-type GscAccountSummary = {
-   picture: string;
-   email: string;
-};
+import { useGscAccount } from '../../services/gscAccount';
 
 const font = 'var(--font-family-primary)';
 
@@ -53,9 +49,9 @@ const TopbarAccountMenu = () => {
    const [imgError, setImgError] = useState(false);
    const [profileHover, setProfileHover] = useState(false);
    const [orgHover, setOrgHover] = useState(false);
-   const [gscAccount, setGscAccount] = useState<GscAccountSummary | null>(null);
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
+   const { data: gscAccount } = useGscAccount();
    const { data: org } = useOrganization();
    const orgName = org?.name || 'Organization';
    const orgInitial = (org?.name || '').charAt(0).toUpperCase() || 'O';
@@ -78,32 +74,6 @@ const TopbarAccountMenu = () => {
       };
       document.addEventListener('mousedown', onPointerDown);
       return () => document.removeEventListener('mousedown', onPointerDown);
-   }, [mounted]);
-
-   useEffect(() => {
-      if (!mounted) return undefined;
-      let alive = true;
-      const loadGoogleAccount = async () => {
-         try {
-            const response = await fetch('/api/gsc/accounts', { credentials: 'include' });
-            if (!response.ok) return;
-            const data = await response.json();
-            const firstAccount = data?.accounts?.[0];
-            if (alive && firstAccount) {
-               setGscAccount({
-                  picture: firstAccount.picture || '',
-                  email: firstAccount.email || '',
-               });
-            }
-         } catch {
-            // fall back to Neon Auth initials
-         }
-      };
-
-      loadGoogleAccount();
-      return () => {
-         alive = false;
-      };
    }, [mounted]);
 
    return (
