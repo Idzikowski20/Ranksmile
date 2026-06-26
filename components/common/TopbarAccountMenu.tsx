@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Icon from './Icon';
 import { authClient } from '../../lib/auth/client';
+import { useOrganization } from '../../services/organization';
 
 type GscAccountSummary = {
    picture: string;
@@ -9,6 +10,16 @@ type GscAccountSummary = {
 };
 
 const font = 'var(--font-family-primary)';
+
+/** Organization avatar: the uploaded logo, or the first letter of its name. */
+const OrgBadge = ({ size, logo, initial }: { size: number; logo: string; initial: string }) => (
+   <span
+      aria-hidden="true"
+      style={{ width: size, height: size, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, overflow: 'hidden', textTransform: 'uppercase' }}
+   >
+      {logo ? <img alt="" src={logo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} /> : initial}
+   </span>
+);
 
 const CheckIcon = () => (
    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -45,6 +56,10 @@ const TopbarAccountMenu = () => {
    const [gscAccount, setGscAccount] = useState<GscAccountSummary | null>(null);
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
+   const { data: org } = useOrganization();
+   const orgName = org?.name || 'Organization';
+   const orgInitial = (org?.name || '').charAt(0).toUpperCase() || 'O';
+   const orgLogo = org?.logoUrl || '';
    const email = mounted ? (session?.data?.user?.email ?? '') : '';
    const name = mounted ? (session?.data?.user?.name ?? email) : '';
    const initials = name ? name.charAt(0).toUpperCase() : '?';
@@ -105,11 +120,7 @@ const TopbarAccountMenu = () => {
                aria-hidden="true"
                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: '#18181B', borderRadius: 9999 }}
             >
-               <span
-                  style={{ width: 20, height: 20, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, textTransform: 'uppercase' }}
-               >
-                  I
-               </span>
+               <OrgBadge size={20} logo={orgLogo} initial={orgInitial} />
                <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo">
                   {accountPicture && !imgError ? (
                      <img
@@ -169,8 +180,8 @@ const TopbarAccountMenu = () => {
                   onMouseEnter={() => setOrgHover(true)}
                   onMouseLeave={() => setOrgHover(false)}
                >
-                  <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0 }}>I</span>
-                  <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Idztech</span>
+                  <OrgBadge size={24} logo={orgLogo} initial={orgInitial} />
+                  <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{orgName}</span>
                   <span style={{ marginLeft: 'auto', color: '#18181B', display: 'inline-flex' }}><CheckIcon /></span>
                </div>
 
