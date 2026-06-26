@@ -62,6 +62,19 @@ const ChevronDown = ({ open }: { open: boolean }) => (
    </span>
 );
 
+// ─── Site favicon (background-image avoids the <img> lint rule) ────────────────
+const SiteFavicon = ({ domain }: { domain: string }) => (
+   <span
+      aria-hidden="true"
+      style={{
+         width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+         backgroundColor: '#f4f4f5',
+         backgroundImage: `url(https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32)`,
+         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+      }}
+   />
+);
+
 // ─── Filled check (GSC benefit bullets) ───────────────────────────────────────
 const CheckCircle = () => (
    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 9999, background: '#18181b', flexShrink: 0 }}>
@@ -160,6 +173,7 @@ const SetupPage: NextPage = () => {
    // Step 1
    const [gscSites, setGscSites] = useState<{ siteUrl: string }[]>([]);
    const [gscLoaded, setGscLoaded] = useState(false);
+   const [siteFilter, setSiteFilter] = useState('');
    const [selectedSite, setSelectedSite] = useState('');
    const [comboOpen, setComboOpen] = useState(false);
    const [urlMode, setUrlMode] = useState(false);
@@ -341,7 +355,7 @@ const SetupPage: NextPage = () => {
                                           <GoogleIcon />
                                           <span className="min-w-0 flex-1 truncate">
                                              {selectedSite ? (
-                                                <span className="flex-1 truncate text-gray-base">{selectedSite}</span>
+                                                <span className="flex-1 truncate text-gray-base">{normalizeDomain(selectedSite)}</span>
                                              ) : (
                                                 <span className="text-gray-60 flex-1 truncate">Select site</span>
                                              )}
@@ -353,18 +367,46 @@ const SetupPage: NextPage = () => {
                                        {comboOpen && (
                                           <div
                                              className="border-gray-20 bg-white-base mt-xs rounded-lg border"
-                                             style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, maxHeight: 240, overflowY: 'auto' }}
+                                             style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, overflow: 'hidden' }}
                                           >
-                                             {gscSites.map((site) => (
-                                                <button
-                                                   key={site.siteUrl}
-                                                   type="button"
-                                                   className="flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
-                                                   onClick={() => handleSiteSelect(site.siteUrl)}
-                                                >
-                                                   {site.siteUrl}
-                                                </button>
-                                             ))}
+                                             <div className="p-xs">
+                                                <input
+                                                   type="text"
+                                                   autoFocus
+                                                   value={siteFilter}
+                                                   onChange={(e) => setSiteFilter(e.target.value)}
+                                                   placeholder="Search sites"
+                                                   className="border-gray-40 bg-white-base text-md h-[36px] w-full rounded-lg border px-md outline-none focus:border-purple-40"
+                                                   style={{ fontFamily: 'var(--font-family-primary)' }}
+                                                />
+                                             </div>
+                                             <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                                                {gscSites
+                                                   .filter((site) => normalizeDomain(site.siteUrl).toLowerCase().includes(siteFilter.trim().toLowerCase()))
+                                                   .map((site) => {
+                                                      const dom = normalizeDomain(site.siteUrl);
+                                                      return (
+                                                         <button
+                                                            key={site.siteUrl}
+                                                            type="button"
+                                                            className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
+                                                            onClick={() => handleSiteSelect(site.siteUrl)}
+                                                         >
+                                                            <SiteFavicon domain={dom} />
+                                                            <span className="min-w-0 flex-1 truncate text-gray-base">{dom}</span>
+                                                         </button>
+                                                      );
+                                                   })}
+                                             </div>
+                                             <button
+                                                type="button"
+                                                onClick={connectGsc}
+                                                className="border-gray-20 gap-sm flex w-full items-center border-t px-md py-sm text-left text-md font-medium hover:bg-gray-10"
+                                                style={{ color: '#18181b' }}
+                                             >
+                                                <GoogleIcon />
+                                                <span>Add another Search Console account</span>
+                                             </button>
                                           </div>
                                        )}
                                     </>
