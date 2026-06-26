@@ -5,6 +5,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
+import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
@@ -25,12 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    return res.status(405).json({ error: 'Method not allowed' });
 }
 
-/** Pobiera ID domen należących do danego usera (lub legacy null). */
-async function getUserDomainIds(userId: string | null): Promise<number[]> {
-   const whereClause = userId
-      ? { [Op.or]: [{ userId }, { userId: null }] }
-      : {};
-   const domains = await Domain.findAll({ where: whereClause, attributes: ['ID'] });
+/** Domain IDs in the user's accessible workspaces. */
+export async function getUserDomainIds(userId: string | null): Promise<number[]> {
+   const wsIds = await getAccessibleWorkspaceIds(userId);
+   const domains = await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } }, attributes: ['ID'] });
    return domains.map((d) => d.ID);
 }
 
