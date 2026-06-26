@@ -4,6 +4,8 @@ import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '.
 
 const font = 'var(--font-family-primary)';
 
+const capFirst = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   <span
     aria-hidden="true"
@@ -120,8 +122,8 @@ const WorkspaceSwitcher = () => {
         }}
       >
         <WorkspaceAvatar domain={current?.domain} />
-        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'var(--font-family-primary)', fontSize: 16, fontWeight: 400, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-          {current?.name ?? 'Workspace'}
+        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'var(--font-family-primary)', fontSize: 16, color: '#fff', fontFeatureSettings: '"cv01" on, "cv02" on, "cv05" on, "cv08" on, "cv09" on, "cv10" on', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          {current?.name ? capFirst(current.name) : 'Workspace'}
         </span>
         <ChevronUpDown />
       </button>
