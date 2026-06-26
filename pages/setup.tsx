@@ -756,10 +756,11 @@ const SetupPage: NextPage = () => {
                   </form>
                </div>
 
-               {/* Fixed footer — pinned to the viewport bottom, white gradient masks content under it */}
-               <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, pointerEvents: 'none' }}>
+               {/* Fixed footer — pinned to the bottom of the white card (inset by the shell's p-sm),
+                   so the white gradient/bar never bleeds over the dark shell. */}
+               <div style={{ position: 'fixed', left: '0.5rem', right: '0.5rem', bottom: '0.5rem', zIndex: 40, pointerEvents: 'none' }}>
                   <div style={{ height: 40, background: 'linear-gradient(to top, #ffffff 45%, rgba(255,255,255,0))' }} />
-                  <div className="px-base sm:px-lg pb-md sm:pb-lg bg-white-base" style={{ pointerEvents: 'auto' }}>
+                  <div className="px-base sm:px-lg pb-md sm:pb-lg bg-white-base" style={{ pointerEvents: 'auto', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
                      <div className="mx-auto flex w-full items-center max-w-screen-sm" style={{ gap: 16 }}>
                         <button
                            type="button"
