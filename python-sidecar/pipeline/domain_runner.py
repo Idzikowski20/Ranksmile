@@ -97,10 +97,11 @@ async def run_domain_setup(job_id: str, payload: dict, nextjs_url: str) -> None:
             await ctx.emit_progress(stage, 0, f"{stage.name} started")
 
             timeout = TIMEOUTS.get(stage.name, 300)
-            stage_result = await asyncio.wait_for(stage.run(ctx), timeout=timeout)
-
-            if stage_result:
-                ctx.set_state(stage.name, stage_result)
+            # Each stage writes its own state (set_state("keywords"/"topics"/…)). The runner
+            # must NOT mirror the result under stage.name — stage.name equals the state key,
+            # so it would overwrite the list with the {key: list} result dict and break the
+            # next stage (and the final assembly below).
+            await asyncio.wait_for(stage.run(ctx), timeout=timeout)
 
             ctx.total_progress += stage.progress_weight * 100
             await ctx.emit_progress(stage, 100, f"{stage.name} done")
