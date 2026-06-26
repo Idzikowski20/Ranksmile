@@ -104,10 +104,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     return res.redirect(302, `/settings/google_search_console?gsc_connected=1`);
   } catch (err) {
-    // Surface the real Google error (invalid_client / redirect_uri_mismatch / invalid_grant…)
-    // so the cause is visible in the URL, not just a generic message.
-    const detail = err instanceof Error ? err.message : String(err);
-    console.error('[GSC OAuth] Token exchange failed:', detail);
+    // The try also covers the DB write, so a Sequelize "Validation error" lands here too.
+    // Dig out the specific field / constraint / underlying Google error.
+    const e = err as {
+      name?: string;
+      message?: string;
+      errors?: Array<{ message?: string; path?: string; value?: unknown }>;
+      parent?: { message?: string };
+      response?: { data?: { error?: string; error_description?: string } };
+    };
+    const fieldMsgs = Array.isArray(e.errors) ? e.errors.map((x) => x.message || x.path).filter(Boolean).join('; ') : '';
+    const googleErr = e.response?.data?.error_description || e.response?.data?.error;
+    const detail = fieldMsgs || googleErr || e.parent?.message || e.message || String(err);
+    console.error('[GSC OAuth] connect failed:', e.name || 'Error', '|', detail);
     return res.redirect(302, `/settings/google_search_console?gsc_error=${encodeURIComponent(detail)}`);
   }
 }
