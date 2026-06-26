@@ -11,6 +11,7 @@ import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
 import GetStartedCard from '../../components/dashboard/GetStartedCard';
 import BrandPerformance from '../../components/dashboard/BrandPerformance';
 import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
+import RecentlyEdited, { RecentlyEditedItem } from '../../components/dashboard/RecentlyEdited';
 import LearnSection from '../../components/dashboard/LearnSection';
 import SetupPipeline from '../../components/dashboard/SetupPipeline';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
@@ -106,6 +107,29 @@ const DashboardPage: NextPage = () => {
       .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
   }, [articlesData, recommendationsHref]);
 
+  const recentlyEdited: RecentlyEditedItem[] = useMemo(() => {
+    type ArticleRow = { id: number | string; title: string; content_score: number; target_keyword: string | null; updated_at: string | null; created_at: string | null; source?: string };
+    const arts: ArticleRow[] = (articlesData?.articles ?? []).filter(
+      (a: ArticleRow) => a.source !== 'site_context' && a.title,
+    );
+    return arts
+      .slice()
+      .sort((a, b) => {
+        const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+        const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+        return bTime - aTime;
+      })
+      .slice(0, 8)
+      .map((a) => ({
+        id: a.id,
+        title: a.title,
+        keywords: a.target_keyword || '',
+        score: a.content_score || 0,
+        updatedAt: a.updated_at || a.created_at || '',
+        href: `/articles/${a.id}`,
+      }));
+  }, [articlesData]);
+
   const startLabel = formatShortDate(clickSeries[0]?.date || '');
   const endLabel = formatShortDate(clickSeries[clickSeries.length - 1]?.date || '');
 
@@ -135,6 +159,7 @@ const DashboardPage: NextPage = () => {
               clicksHref={clicksHref}
               loading={sitesLoading}
             />
+            <RecentlyEdited items={recentlyEdited} />
             {/* The domain pipeline renders INSIDE the Recommendations section (its output
                 IS the recommendations) — never a takeover of the whole dashboard. */}
             <RecommendationsSection
