@@ -4,6 +4,8 @@ import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
 import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/adwords';
 import { computeRelevanceScore, checkCoverage } from '../../../../../lib/keywordEnrichment';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import { assertArticleAccess } from '../../../../../lib/tenancy';
 
 const isPostgres = !!process.env.DATABASE_URL;
 
@@ -13,6 +15,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const userId = await getCurrentUserId(req, res);
+  const articleId = parseInt(req.query.id as string, 10);
+  if (!(await assertArticleAccess(userId, articleId))) {
+    return res.status(403).json({ error: 'Access denied.' });
+  }
 
   const { id } = req.query;
   const { keywords, targetKeyword, plainText, country = 'US' } = req.body;

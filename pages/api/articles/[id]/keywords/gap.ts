@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../../database/database';
 import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
+import { getCurrentUserId } from '../../../../../utils/getUser';
+import { assertArticleAccess } from '../../../../../lib/tenancy';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -9,6 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  const userId = await getCurrentUserId(req, res);
+  const articleId = parseInt(req.query.id as string, 10);
+  if (!(await assertArticleAccess(userId, articleId))) {
+    return res.status(403).json({ error: 'Access denied.' });
+  }
 
   const { id } = req.query;
 
