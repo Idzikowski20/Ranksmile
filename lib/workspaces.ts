@@ -10,7 +10,7 @@ async function select(sql: string, replacements: any[]): Promise<Row[]> {
 }
 
 /** Throws WORKSPACE_NOT_FOUND if the workspace doesn't belong to the user's org. */
-async function assertInOrg(orgId: number, wsId: number): Promise<void> {
+export async function assertInOrg(orgId: number, wsId: number): Promise<void> {
    const found = await select('SELECT id FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
    if (!found.length) throw new Error('WORKSPACE_NOT_FOUND');
 }
