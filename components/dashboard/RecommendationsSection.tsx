@@ -28,13 +28,17 @@ const Chevron = () => (
   </svg>
 );
 
-export interface RecommendationItem {
+interface RecommendationBase {
   id: string | number;
   title: string;
   href: string;
-  score?: number; // 0-100 content score (analyzed articles)
-  priority?: string; // 'high' | 'medium' | 'low' (domain pipeline scan output)
 }
+// A recommendation carries EXACTLY ONE measure: a content score (analyzed articles)
+// or a priority (domain pipeline scan output). The union stops mixed shapes at compile time
+// and lets `'priority' in item` narrow which one a Row is rendering.
+export type RecommendationItem =
+  | (RecommendationBase & { score: number })
+  | (RecommendationBase & { priority: string });
 
 const PRIORITY_STYLE: Record<string, { color: string; bg: string; label: string }> = {
   high: { color: '#FF6F77', bg: 'rgba(255,111,119,0.1)', label: 'High' },
@@ -92,12 +96,12 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
     <span style={{ minWidth: 0, flex: 1, fontSize: 14, fontWeight: 500, color: '#52525C', fontFamily: font, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
       {item.title}
     </span>
-    {item.priority ? (
+    {'priority' in item ? (
       <PriorityPill priority={item.priority} />
     ) : (
       <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: '#9F9FA9' }}>
         <Star />
-        <span style={{ fontSize: 13, fontFamily: font }}>{((item.score ?? 0) / 10).toFixed(1)}</span>
+        <span style={{ fontSize: 13, fontFamily: font }}>{(item.score / 10).toFixed(1)}</span>
       </span>
     )}
   </a>

@@ -23,23 +23,37 @@ const formatShortDate = (dateStr: string): string => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
+/** Fetch JSON, returning a typed fallback on any non-2xx response. */
+async function fetchJson<T>(url: string, fallback: T): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) return fallback;
+  return res.json();
+}
+
+interface DashboardArticle {
+  id: number | string;
+  title: string;
+  content_score: number;
+  target_keyword?: string | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+  source?: string;
+}
+interface DomainRec { id: number; title: string; priority: string | null }
+
 const DashboardPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains({} as any);
   const queryClient = useQueryClient();
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
 
-  const { data: sitesData, isLoading: sitesLoading } = useQuery('dashboardSites', async () => {
-    const res = await fetch('/api/sites');
-    if (!res.ok) return { domainStats: {} };
-    return res.json();
-  }, { retry: false });
+  const { data: sitesData, isLoading: sitesLoading } = useQuery(
+    'dashboardSites', () => fetchJson('/api/sites', { domainStats: {} as Record<string, unknown> }), { retry: false },
+  );
 
-  const { data: articlesData, isLoading: articlesLoading } = useQuery('dashboardArticles', async () => {
-    const res = await fetch('/api/articles');
-    if (!res.ok) return { articles: [] };
-    return res.json();
-  });
+  const { data: articlesData, isLoading: articlesLoading } = useQuery(
+    'dashboardArticles', () => fetchJson('/api/articles', { articles: [] as DashboardArticle[] }),
+  );
 
   // ── Clicks: aggregate GSC daily clicks across all domains ──
   const clickSeries = useMemo(() => {
@@ -71,11 +85,7 @@ const DashboardPage: NextPage = () => {
   // Domain-level recommendations produced by the setup pipeline (the scan output).
   const { data: domainRecsData } = useQuery(
     ['domainRecs', activeDomainSlug],
-    async () => {
-      const res = await fetch(`/api/domains/${activeDomainSlug}/recommendations`);
-      if (!res.ok) return { recommendations: [] };
-      return res.json();
-    },
+    () => fetchJson(`/api/domains/${activeDomainSlug}/recommendations`, { recommendations: [] as DomainRec[] }),
     { enabled: !!activeDomainSlug, retry: false },
   );
 
@@ -111,26 +121,21 @@ const DashboardPage: NextPage = () => {
   // ── Recommendations: the domain pipeline's scan output (pages requiring optimization).
   //    Falls back to analyzed articles with a content score when the scan produced none. ──
   const recommendations: RecommendationItem[] = useMemo(() => {
-    type DomainRec = { id: number; title: string; priority: string | null };
-    const domainRecs: DomainRec[] = domainRecsData?.recommendations ?? [];
+    const domainRecs = domainRecsData?.recommendations ?? [];
     if (domainRecs.length > 0) {
       return domainRecs.map((r) => ({ id: r.id, title: r.title, priority: r.priority || 'low', href: recommendationsHref }));
     }
-    type ArticleRow = { id: number; title: string; content_score: number; source: string };
-    const arts: ArticleRow[] = (articlesData?.articles ?? []).filter(
-      (a: ArticleRow) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0,
-    );
-    return arts
+    return (articlesData?.articles ?? [])
+      .filter((a) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0)
       .sort((a, b) => (b.content_score || 0) - (a.content_score || 0))
       .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
   }, [domainRecsData, articlesData, recommendationsHref]);
 
   const recentlyEdited: RecentlyEditedItem[] = useMemo(() => {
-    type ArticleRow = { id: number | string; title: string; content_score: number; target_keyword: string | null; updated_at: string | null; created_at: string | null; source?: string };
     // Only real articles — exclude site_context rows AND skeleton drafts whose title is
     // still the raw page URL (configure seeds those before analysis fills a real title).
-    const arts: ArticleRow[] = (articlesData?.articles ?? []).filter(
-      (a: ArticleRow) => a.source !== 'site_context' && a.title && !/^https?:\/\//i.test(a.title),
+    const arts = (articlesData?.articles ?? []).filter(
+      (a) => a.source !== 'site_context' && a.title && !/^https?:\/\//i.test(a.title),
     );
     return arts
       .slice()
