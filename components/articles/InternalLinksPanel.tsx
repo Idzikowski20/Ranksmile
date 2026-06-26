@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import type { LinkSuggestion } from '../../pages/api/articles/suggest-internal-links';
 
 export interface InsertResult {
@@ -19,6 +19,8 @@ interface Props {
   keyword: string;
   plainText: string;
   domainBaseUrl: string;
+  /** GSC-connected domains the user can pick as the link source */
+  domains?: DomainType[];
   onClose: () => void;
   /** Called with suggestions to insert; returns per-URL results */
   onInsertLinks: (links: Array<{ anchorText: string; url: string }>) => InsertResult[];
@@ -54,7 +56,7 @@ const Spinner = () => (
 );
 
 const InternalLinksPanel: React.FC<Props> = ({
-  articleId, keyword, plainText, domainBaseUrl, onClose, onInsertLinks, onAiActivity,
+  articleId, keyword, plainText, domainBaseUrl, domains, onClose, onInsertLinks, onAiActivity,
   articleKeywords, internalArticles,
 }) => {
   const storageKey = `internal-links-${articleId}`;
@@ -79,6 +81,31 @@ const InternalLinksPanel: React.FC<Props> = ({
   const [isRecommending, setIsRecommending] = useState(false);
   const [cachedSuggestions, setCachedSuggestions] = useState<LinkSuggestion[] | null>(null);
   const [sharedKeywordCounts, setSharedKeywordCounts] = useState<Record<string, number>>({});
+
+  // ── GSC-domain dropdown (pick the link source instead of typing a URL) ──
+  const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
+  const [siteSearch, setSiteSearch] = useState('');
+  const siteDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const hostOf = (u: string) => {
+    if (!u) return '';
+    try { return new URL(u).hostname.replace(/^www\./, ''); }
+    catch { return u.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, ''); }
+  };
+  const selectedHost = hostOf(siteUrl);
+  const articleHost = hostOf(domainBaseUrl);
+
+  const siteOptions = (domains || []).map((d) => d.domain).filter(Boolean);
+  const filteredSites = siteOptions.filter((d) => d.toLowerCase().includes(siteSearch.trim().toLowerCase()));
+
+  useEffect(() => {
+    if (!siteDropdownOpen) return undefined;
+    const onDown = (e: MouseEvent) => {
+      if (siteDropdownRef.current && !siteDropdownRef.current.contains(e.target as Node)) setSiteDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [siteDropdownOpen]);
 
   // Compute shared keyword counts when insertion is done
   useEffect(() => {
@@ -284,24 +311,87 @@ const InternalLinksPanel: React.FC<Props> = ({
         {/* ── IDLE ── */}
         {(phase === 'idle') && (
           <div style={{ padding: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#52525c', marginBottom: 8 }}>
               Site to add links from
             </div>
 
-            {/* URL input row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid #e4e4e7', borderRadius: 8, background: '#fafafa' }}>
-              {/* Link icon */}
-              <svg viewBox="0 0 20 20" width={14} height={14} fill="none" stroke="#783afb" strokeWidth={1.8} strokeLinecap="round" style={{ flexShrink: 0 }}>
-                <path d="M8.293 11.707a5.5 5.5 0 0 0 7.778 0l2-2a5.5 5.5 0 0 0-7.778-7.778l-1.11 1.11" />
-                <path d="M11.707 8.293a5.5 5.5 0 0 0-7.778 0l-2 2a5.5 5.5 0 0 0 7.778 7.778l1.11-1.11" />
-              </svg>
-              <input
-                value={siteUrl}
-                onChange={(e) => setSiteUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleRequestLinks(); }}
-                placeholder="https://yoursite.com/category/"
-                style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 13, color: '#09090b', outline: 'none', fontFamily: 'var(--font-family-primary)' }}
-              />
+            {/* Site dropdown — pick a GSC-connected domain as the link source */}
+            <div ref={siteDropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setSiteDropdownOpen((v) => !v)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: '1px solid #e4e4e7', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+              >
+                {selectedHost && (
+                  <img alt="" src={`https://www.google.com/s2/favicons?domain=${selectedHost}&sz=32`} style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                )}
+                <span style={{ flex: 1, textAlign: 'left', fontSize: 13, color: selectedHost ? '#09090b' : '#9f9fa9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedHost || 'Select a site'}
+                </span>
+                <svg viewBox="0 0 24 24" width={16} height={16} style={{ flexShrink: 0, color: '#71717b', transition: 'transform 150ms ease', transform: siteDropdownOpen ? 'rotate(180deg)' : 'none' }}>
+                  <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+
+              {siteDropdownOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 50, background: '#fff', borderRadius: 8, boxShadow: '0px 8px 24px rgba(24,26,34,0.12), 0px 1px 2px rgba(24,26,34,0.06)', border: '1px solid #f4f4f5', overflow: 'hidden', animation: 'growOut 0.15s ease' }}>
+                  <div style={{ padding: '8px 8px 6px' }}>
+                    <input
+                      autoFocus
+                      value={siteSearch}
+                      onChange={(e) => setSiteSearch(e.target.value)}
+                      placeholder="Search sites"
+                      style={{ width: '100%', boxSizing: 'border-box', height: 34, padding: '0 10px', border: '1px solid #e4e4e7', borderRadius: 8, fontSize: 13, color: '#09090b', outline: 'none', fontFamily: 'var(--font-family-primary)' }}
+                    />
+                  </div>
+                  <div style={{ maxHeight: 240, overflowY: 'auto', padding: '0 4px 4px' }} className="styled-scrollbar">
+                    {filteredSites.length === 0 ? (
+                      <div style={{ padding: 12, fontSize: 13, color: '#9f9fa9', textAlign: 'center', fontFamily: 'var(--font-family-primary)' }}>
+                        {siteOptions.length === 0 ? 'No GSC domains connected.' : 'No sites found.'}
+                      </div>
+                    ) : filteredSites.map((d) => {
+                      const isSel = selectedHost === d.replace(/^www\./, '');
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => { setSiteUrl(`https://${d}/`); setSiteDropdownOpen(false); setSiteSearch(''); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: isSel ? '#f4f4f5' : 'transparent', borderRadius: 6, cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-family-primary)' }}
+                          onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = '#f8f8f9'; }}
+                          onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <img alt="" src={`https://www.google.com/s2/favicons?domain=${d}&sz=32`} style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0 }} />
+                          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 13, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d}</span>
+                            <span style={{ fontSize: 10, color: '#71717b', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 1 }}>Domain property</span>
+                            {d.replace(/^www\./, '') === articleHost && (
+                              <span style={{ fontSize: 11, color: '#71717b', marginTop: 1 }}>Semantic links available</span>
+                            )}
+                          </span>
+                          {isSel && (
+                            <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor" style={{ flexShrink: 0, color: '#18181b' }}>
+                              <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ height: 1, background: '#e4e4e7', margin: '4px 0' }} />
+                  <div style={{ padding: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => { window.location.href = '/api/gsc/connect'; }}
+                      style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 600, color: '#52525c', textAlign: 'left' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      Add another Search Console account
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -311,7 +401,7 @@ const InternalLinksPanel: React.FC<Props> = ({
             )}
 
             <p style={{ fontSize: 12, color: '#9f9fa9', marginTop: 12, lineHeight: '18px' }}>
-              Paste a page URL — we&apos;ll scan all links on it and suggest where to add them in your article.
+              Pick a site — we&apos;ll scan its pages and suggest where to add internal links in your article.
             </p>
           </div>
         )}

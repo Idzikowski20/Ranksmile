@@ -1633,7 +1633,7 @@ const PerformancePage: NextPage = () => {
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head>
-        <title>Performance - {domain} - SerpBear</title>
+        <title>{`Performance - ${domain} - SerpBear`}</title>
       </Head>
 
       <DomainSubLayout domain={domain} slug={slug || ''} section="Performance" actions={feedbackAction} contentMaxWidth="unset">

@@ -145,7 +145,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 4, alignSelf: 'flex-start', maxWidth: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: font, fontSize: 14, color: '#18181B' }}
                      >
                         <span className="rec-keyword-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword || 'Set keyword'}</span>
-                        <span className="rec-keyword-pencil" style={{ display: 'inline-flex', color: '#18181B', opacity: 0, transition: 'opacity 150ms ease' }}><PencilIcon /></span>
+                        <span className="rec-keyword-pencil" style={{ display: 'inline-flex', color: '#18181B', opacity: 1, transition: 'opacity 150ms ease' }}><PencilIcon /></span>
                      </button>
                   </div>
 

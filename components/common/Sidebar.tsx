@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useQuery } from 'react-query';
 import SidebarLaunchpad from '../settings/SidebarLaunchpad';
 
 type SidebarProps = {
@@ -181,12 +182,24 @@ const subNavHoverOut = (e: React.MouseEvent<HTMLElement>, active: boolean) => {
    if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }
 };
 
-type SubNavItemProps = { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: string; mock?: boolean };
-const SubNavItem = ({ href, label, icon, active, badge, mock }: SubNavItemProps) => {
+const IcoFlame = () => (
+   <svg viewBox="0 0 20 20" width="16" height="16" style={{ flexShrink: 0, color: '#FB5D5D' }} aria-hidden="true">
+      <path fill="currentColor" fillRule="evenodd" d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12" clipRule="evenodd" />
+   </svg>
+);
+
+type SubNavItemProps = { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: string; count?: number; mock?: boolean };
+const SubNavItem = ({ href, label, icon, active, badge, count, mock }: SubNavItemProps) => {
    const inner = (
       <>
          {icon}
          <span style={{ flexGrow: 1 }}>{label}</span>
+         {count != null && count > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+               <IcoFlame />
+               <span style={{ fontSize: 12, fontWeight: 600, color: active ? '#fff' : 'rgba(255,255,255,0.6)' }}>{count}</span>
+            </span>
+         )}
          {badge && (
             <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: '#71717b', border: '1px solid #3F3F47', borderRadius: 4, padding: '0 4px', lineHeight: '16px' }}>{badge}</span>
          )}
@@ -322,6 +335,20 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    const selectedDomain = selectedDomainSlug
       ? domains.find((d) => d.slug === selectedDomainSlug) ?? null
       : null;
+
+   // Recommendations counter — articles for the selected domain that need optimization (score < 70).
+   const { data: recArticlesData } = useQuery(
+      ['articles', selectedDomain?.ID],
+      async () => {
+         const res = await fetch(`/api/articles?domainId=${selectedDomain!.ID}`);
+         return res.json();
+      },
+      { enabled: !!selectedDomain?.ID, staleTime: 60 * 1000 },
+   );
+   const recommendationCount = useMemo(() => {
+      const articles: any[] = recArticlesData?.articles || [];
+      return articles.filter((a) => (a.content_score || 0) < 70).length;
+   }, [recArticlesData]);
 
    const handleSelectDomain = (slug: string) => {
       setSelectedDomainSlug(slug);
@@ -509,7 +536,8 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                      {SEO_SUB_NAV.map((item) => {
                         const href = `/sites/${selectedDomainSlug}/${item.key}`;
                         const active = mounted && (router.asPath === href || router.asPath.startsWith(href + '?'));
-                        return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} />;
+                        const count = item.key === 'recommendations' ? recommendationCount : undefined;
+                        return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} count={count} />;
                      })}
                   </CollapsibleGroup>
 

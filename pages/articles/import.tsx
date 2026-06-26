@@ -14,16 +14,12 @@ const COUNTRIES: Record<string, { name: string; flag: string }> = {
   FR: { name: 'France', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/fr.svg' },
 };
 
-const DEVICES = ['Desktop', 'Mobile'] as const;
-
 const ImportPage: NextPage = () => {
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [keywords, setKeywords] = useState<string[]>([]);
-  const [country, setCountry] = useState('US');
-  const [device, setDevice] = useState<string>('Desktop');
+  const [country, setCountry] = useState('PL');
   const [showCountryMenu, setShowCountryMenu] = useState(false);
-  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
   const { data: domainsData } = useFetchDomains(router);
   const domains: DomainType[] = domainsData?.domains || [];
 
@@ -44,7 +40,6 @@ const ImportPage: NextPage = () => {
       url: url.trim(),
       keywords: keywords.join(','),
       country,
-      device,
     });
     router.push(`/articles/deep-analysis?${params.toString()}`);
   };
@@ -265,7 +260,7 @@ const ImportPage: NextPage = () => {
                       <div style={{ position: 'relative' }}>
                         <button
                           type="button"
-                          onClick={() => { setShowCountryMenu(!showCountryMenu); setShowDeviceMenu(false); }}
+                          onClick={() => setShowCountryMenu(!showCountryMenu)}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             background: 'transparent', border: 'none', cursor: 'pointer',
@@ -307,53 +302,6 @@ const ImportPage: NextPage = () => {
                         )}
                       </div>
 
-                      <span style={{ fontSize: 14, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
-                        on
-                      </span>
-
-                      {/* Device selector */}
-                      <div style={{ position: 'relative' }}>
-                        <button
-                          type="button"
-                          onClick={() => { setShowDeviceMenu(!showDeviceMenu); setShowCountryMenu(false); }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 4,
-                            background: 'transparent', border: 'none', cursor: 'pointer',
-                            padding: 0, fontSize: 14, fontWeight: 600, color: '#3F3F47',
-                            fontFamily: 'var(--font-family-primary)',
-                          }}
-                        >
-                          {device}
-                          <svg viewBox="0 0 20 20" width="20" height="20" style={{ color: '#9F9FA9' }}>
-                            <path fill="currentColor" fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        {showDeviceMenu && (
-                          <div
-                            style={{
-                              position: 'absolute', top: '100%', left: 0, marginTop: 4,
-                              background: '#fff', border: '1px solid #E4E4E7',
-                              borderRadius: 8, boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
-                              zIndex: 10, overflow: 'hidden',
-                            }}
-                          >
-                            {DEVICES.map((d) => (
-                              <button
-                                key={d} type="button"
-                                onClick={() => { setDevice(d); setShowDeviceMenu(false); }}
-                                style={{
-                                  width: '100%', display: 'flex', alignItems: 'center',
-                                  padding: '8px 12px', background: d === device ? '#F4F4F5' : 'transparent',
-                                  border: 'none', cursor: 'pointer', fontSize: 14, color: '#09090B',
-                                  fontFamily: 'var(--font-family-primary)', textAlign: 'left',
-                                }}
-                              >
-                                {d}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </div>

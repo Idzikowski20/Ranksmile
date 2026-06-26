@@ -48,7 +48,7 @@ const DiscoverPage: NextPage = () => {
       <AppShell domains={theDomains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
          {activDomain && activDomain.domain
          && <Head>
-               <title>{`${activDomain.domain} - Keyword Ideas` } </title>
+               <title>{`${activDomain.domain} - Keyword Ideas`}</title>
             </Head>
          }
          <div className="flex w-full">

@@ -2,11 +2,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../utils/adwords';
+import { getKeywordSuggestions as getDfsKeywordSuggestions } from '../../../lib/seo/keywordData';
 
 type Suggestion = {
    keyword: string;
    volume?: number;
-   competitionIndex?: number;
+   competitionIndex?: number; // 0–100, drives the difficulty bars in the UI
+   intent?: string;           // informational | commercial | transactional | navigational
+   cpc?: number;
+};
+
+/** Map an ISO country to the DataForSEO search language. */
+const langForCountry = (c: string): string => {
+   const map: Record<string, string> = { PL: 'pl', DE: 'de', FR: 'fr', ES: 'es', IT: 'it', NL: 'nl', PT: 'pt' };
+   return map[c.toUpperCase()] || 'en';
 };
 
 type Response = {
@@ -45,6 +54,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             }));
             return res.status(200).json({ suggestions, hasVolumeData: true });
          }
+      }
+   } catch {
+      // fall through to DataForSEO
+   }
+
+   // DataForSEO (paid, cached 30d) — volume + difficulty for the typed phrase and
+   // its keyword family. No-ops to empty when DATAFORSEO_* env is unset.
+   try {
+      const c = typeof country === 'string' ? country : 'US';
+      const { keywords } = await getDfsKeywordSuggestions({
+         seed: q.trim(),
+         country: c,
+         languageCode: langForCountry(c),
+         limit: 10,
+      });
+      if (keywords.length > 0) {
+         const suggestions: Suggestion[] = keywords.slice(0, 10).map((k) => ({
+            keyword: k.keyword,
+            volume: k.search_volume ?? undefined,
+            competitionIndex: k.keyword_difficulty ?? undefined,
+            intent: k.search_intent ?? undefined,
+            cpc: k.cpc ?? undefined,
+         }));
+         return res.status(200).json({ suggestions, hasVolumeData: true });
       }
    } catch {
       // fall through to Google Suggest

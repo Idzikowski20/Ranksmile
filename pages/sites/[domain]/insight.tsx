@@ -52,7 +52,7 @@ const InsightPage: NextPage = () => {
       <AppShell domains={theDomains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
          {activDomain && activDomain.domain
          && <Head>
-               <title>{`${activDomain.domain} - SerpBear` } </title>
+               <title>{`${activDomain.domain} - SerpBear`}</title>
             </Head>
          }
          <div className="flex w-full">

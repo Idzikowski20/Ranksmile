@@ -2,7 +2,7 @@ import React from 'react';
 import { SearchIcon } from './icons';
 
 const SearchBar = ({ value, onChange, placeholder = 'Search', width = 250 }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; width?: number;
+  value: string; onChange: (v: string) => void; placeholder?: string; width?: number | string;
 }) => (
   <div style={{ position: 'relative', width }}>
     <div style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#3F3F47', pointerEvents: 'none', display: 'flex' }}>

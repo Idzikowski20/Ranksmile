@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
+import { Checkbox, SearchBar } from '../../components/ui';
 import { useFetchDomains } from '../../services/domains';
 
 // ─── Location list ────────────────────────────────────────────────────────────
@@ -209,7 +210,7 @@ const ConfigureSite: NextPage = () => {
    return (
       <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head>
-            <title>Configure {domain} — SerpBear</title>
+            <title>{`Configure ${domain} — SerpBear`}</title>
          </Head>
 
          <div style={{ flex: 1, overflow: 'auto', background: '#fff', padding: '0 16px 48px' }} className="styled-scrollbar">
@@ -352,8 +353,8 @@ const ConfigureSite: NextPage = () => {
                   <p style={{ fontSize: 14, color: '#EF4444', margin: 0, fontFamily: 'var(--font-family-primary)' }}>{error}</p>
                )}
 
-               {/* ─── Cancel / Finish — shown only after pages confirmed ─── */}
-               {confirmedPages.length > 0 && (
+               {/* ─── Cancel / Finish / Skip — shown once a location is selected ─── */}
+               {selectedLocation && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
                      <Link href="/sites" passHref>
                         <a style={{
@@ -382,7 +383,7 @@ const ConfigureSite: NextPage = () => {
                            transition: 'background 0.15s',
                         }}
                      >
-                        {submitting ? 'Configuring…' : 'Finish'}
+                        {submitting ? 'Configuring…' : confirmedPages.length > 0 ? 'Finish' : 'Skip for now'}
                      </button>
                   </div>
                )}
@@ -397,11 +398,12 @@ const ConfigureSite: NextPage = () => {
 
                {/* Panel */}
                <div style={{
-                  position: 'fixed', top: 8, right: 8, bottom: 8,
-                  width: 800, maxWidth: 'calc(100vw - 16px)',
-                  background: '#fff', borderRadius: 12,
+                  position: 'fixed', top: 0, right: 0, bottom: 0,
+                  width: 720, maxWidth: 'calc(100vw - 32px)',
+                  background: '#fff', borderRadius: '16px 0 0 16px',
+                  boxShadow: '0px 24px 64px rgba(0,0,0,0.2)',
                   zIndex: 51, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                  animation: 'slideInRight 0.22s ease',
+                  animation: 'slideInRight 0.24s cubic-bezier(0.16,1,0.3,1)',
                }}>
 
                   {/* Panel Header */}
@@ -412,8 +414,8 @@ const ConfigureSite: NextPage = () => {
                            <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
                               {selectedPages.length} / {allGscPages.length} available
                            </span>
-                           <div style={{ width: 80, height: 4, borderRadius: 4, background: '#F4F4F5', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', background: '#EAB308', borderRadius: 4, width: `${allGscPages.length > 0 ? (selectedPages.length / allGscPages.length) * 100 : 0}%`, transition: 'width 0.2s' }} />
+                           <div style={{ width: 44, height: 10, padding: 2, border: '1px solid #E4E4E7', borderRadius: 9999, background: '#fff', overflow: 'hidden', display: 'flex' }}>
+                              <div style={{ height: '100%', background: '#1AB25E', borderRadius: 9999, width: `${allGscPages.length > 0 ? Math.round((selectedPages.length / allGscPages.length) * 100) : 0}%`, transition: 'width 0.2s' }} />
                            </div>
                         </div>
                      )}
@@ -429,30 +431,16 @@ const ConfigureSite: NextPage = () => {
                      <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)', flexGrow: 1 }}>
                         {gscLoading ? 'Loading pages…' : `Found ${allGscPages.length} pages`}
                      </span>
-                     <div style={{ position: 'relative' }}>
-                        <div style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#9F9FA9' }}>
-                           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" />
-                           </svg>
-                        </div>
-                        <input
-                           type="text"
-                           placeholder="Search pages"
-                           value={modalSearch}
-                           onChange={(e) => setModalSearch(e.target.value)}
-                           style={{ width: 220, height: 32, paddingLeft: 30, paddingRight: 10, border: '1px solid #E4E4E7', borderRadius: 6, fontSize: 13, color: '#09090B', background: '#fff', outline: 'none', fontFamily: 'var(--font-family-primary)' }}
-                        />
-                     </div>
+                     <SearchBar value={modalSearch} onChange={setModalSearch} placeholder="Search pages" width={240} />
                   </div>
 
                   {/* Table header */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '10px 24px', borderBottom: '1px solid #F4F4F5', background: '#FAFAFA', flexShrink: 0 }}>
                      <div style={{ width: 32, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                        <input
-                           type="checkbox"
+                        <Checkbox
                            checked={allFilteredSelected && filteredGscPages.length > 0}
+                           indeterminate={!allFilteredSelected && filteredGscPages.some((p) => selectedPages.includes(p.url))}
                            onChange={handleModalSelectAll}
-                           style={{ accentColor: '#783AFB', cursor: 'pointer', width: 15, height: 15 }}
                         />
                      </div>
                      {/* URL column header — sortable */}
@@ -507,14 +495,8 @@ const ConfigureSite: NextPage = () => {
                                     transition: 'background 0.1s',
                                  }}
                               >
-                                 <div style={{ width: 32, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                                    <input
-                                       type="checkbox"
-                                       checked={checked}
-                                       onChange={() => handleModalTogglePage(page.url)}
-                                       onClick={(e) => e.stopPropagation()}
-                                       style={{ accentColor: '#783AFB', cursor: 'pointer', width: 15, height: 15 }}
-                                    />
+                                 <div style={{ width: 32, flexShrink: 0, display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox checked={checked} onChange={() => handleModalTogglePage(page.url)} />
                                  </div>
                                  <div style={{ flex: 1, fontSize: 13, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 16 }}>
                                     {page.url}

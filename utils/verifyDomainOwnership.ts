@@ -30,3 +30,30 @@ export async function verifyDomainOwnershipBySlug(
    const exists = await Domain.findOne({ where: { slug }, attributes: ['ID'] });
    return exists ? false : null;
 }
+
+/** Same as `verifyDomainOwnership`, but looks the domain up by primary id. */
+export async function verifyDomainOwnershipById(
+   domainId: number,
+   userId: string | null,
+): Promise<Domain | null | false> {
+   const wsIds = await getAccessibleWorkspaceIds(userId);
+   const owned = await Domain.findOne({ where: { ID: domainId, workspace_id: { [Op.in]: wsIds } } });
+   if (owned) return owned;
+   const exists = await Domain.findOne({ where: { ID: domainId }, attributes: ['ID'] });
+   return exists ? false : null;
+}
+
+/**
+ * The id of the caller's lowest-numbered accessible domain, or null if they can
+ * reach none. Used to pick a default home for new-content articles created without
+ * an explicit domainId, so the fallback can never land in another tenant's domain.
+ */
+export async function firstAccessibleDomainId(userId: string | null): Promise<number | null> {
+   const wsIds = await getAccessibleWorkspaceIds(userId);
+   const domain = await Domain.findOne({
+      where: { workspace_id: { [Op.in]: wsIds } },
+      attributes: ['ID'],
+      order: [['ID', 'ASC']],
+   });
+   return domain ? domain.ID : null;
+}

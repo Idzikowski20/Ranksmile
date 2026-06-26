@@ -4,7 +4,16 @@ interface Suggestion {
    keyword: string;
    volume?: number;
    competitionIndex?: number;
+   intent?: string;
+   cpc?: number;
 }
+
+const INTENT: Record<string, { label: string; bg: string; color: string }> = {
+   informational: { label: 'Info', bg: '#EAF2FE', color: '#2563EB' },
+   commercial: { label: 'Comm', bg: '#F3EEFF', color: '#783AFB' },
+   transactional: { label: 'Trans', bg: '#E4F5EA', color: '#1AB25E' },
+   navigational: { label: 'Nav', bg: '#F4F4F5', color: '#52525C' },
+};
 
 interface Props {
    keywords: string[];
@@ -34,12 +43,15 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    const containerRef = useRef<HTMLDivElement>(null);
    const inputRef = useRef<HTMLInputElement>(null);
+   const reqSeqRef = useRef(0); // ignore out-of-order (stale) responses
 
    const fetchSuggestions = useCallback(async (q: string) => {
+      const seq = ++reqSeqRef.current;
       try {
          const res = await fetch(`/api/articles/keyword-suggest?q=${encodeURIComponent(q)}&country=${country}`);
-         if (!res.ok) return;
+         if (seq !== reqSeqRef.current || !res.ok) return; // a newer query superseded this one
          const data = await res.json();
+         if (seq !== reqSeqRef.current) return;
          setSuggestions(data.suggestions || []);
          setHasVolumeData(data.hasVolumeData || false);
          setIsOpen(true);
@@ -256,6 +268,11 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      >
                         {s.keyword}
                      </span>
+                     {s.intent && INTENT[s.intent] && (
+                        <span title={`Search intent: ${s.intent}`} style={{ flexShrink: 0, marginRight: 6, padding: '2px 7px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: INTENT[s.intent].bg, color: INTENT[s.intent].color, fontFamily: 'var(--font-family-primary)' }}>
+                           {INTENT[s.intent].label}
+                        </span>
+                     )}
                      {hasVolumeData && (
                         <>
                            {/* Difficulty bar */}

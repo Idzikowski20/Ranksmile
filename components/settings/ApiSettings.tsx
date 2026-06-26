@@ -90,7 +90,7 @@ const UpgradeButton = () => {
   return (
     <button
       type="button"
-      onClick={() => toast.success('Upgrade to Peace of Mind — coming soon!')}
+      onClick={() => toast.success('Upgrade to Scale — coming soon!')}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -110,7 +110,7 @@ const UpgradeButton = () => {
         whiteSpace: 'nowrap',
       }}
     >
-      Upgrade to Peace of Mind
+      Upgrade to Scale
     </button>
   );
 };

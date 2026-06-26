@@ -7,6 +7,7 @@ interface Version {
   version_type: string;
   content_length: number;
   created_at: string;
+  score: number | null;
 }
 
 interface Props {
@@ -21,6 +22,7 @@ const versionTypeLabel = (type: string): string => {
   switch (type) {
     case 'manual_save': return 'Manual save';
     case 'pre_auto_optimize': return 'Before auto-optimize';
+    case 'auto_optimize': return 'Auto-optimized';
     case 'pre_restore': return 'Before restore';
     default: return type;
   }
@@ -44,10 +46,9 @@ const formatTime = (iso: string): { date: string; relative: string } => {
   return { date: dateStr, relative };
 };
 
-const VersionHistoryPanel = ({ articleId, currentWordCount, currentScore, onClose, onRestore }: Props) => {
+const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Props) => {
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showDiff, setShowDiff] = useState(false);
   const [restoringId, setRestoringId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -112,95 +113,6 @@ const VersionHistoryPanel = ({ articleId, currentWordCount, currentScore, onClos
           </button>
         </div>
 
-        {/* Score gauge + word count + diff toggle */}
-        <div style={{ display: 'flex', flexDirection: 'row', gap: 4 }}>
-          {/* Gauge card */}
-          <div
-            style={{
-              background: '#F8F8F9',
-              padding: 12,
-              borderRadius: 6,
-              display: 'flex',
-              flexDirection: 'row',
-              width: '100%',
-              gap: 8,
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ width: 60 }}>
-                <ScoreGauge score={currentScore} compact />
-              </div>
-              <span style={{ marginTop: 'auto', marginBottom: 'auto', marginLeft: 'auto', fontSize: 16, lineHeight: '1.5rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>
-                {currentWordCount} words
-              </span>
-            </div>
-          </div>
-
-          {/* Diff toggle card */}
-          <div
-            style={{
-              background: '#F8F8F9',
-              padding: 12,
-              borderRadius: 6,
-              display: 'flex',
-              flexDirection: 'row',
-              gap: 8,
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <svg viewBox="0 0 20 20" width={20} height={20} style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-                <path fill="currentColor" d="M5.127 3.502L5.25 3.5h9.5q.062 0 .123.002A2.25 2.25 0 0 0 12.75 2h-5.5a2.25 2.25 0 0 0-2.123 1.502M1 10.25A2.25 2.25 0 0 1 3.25 8h13.5A2.25 2.25 0 0 1 19 10.25v5.5A2.25 2.25 0 0 1 16.75 18H3.25A2.25 2.25 0 0 1 1 15.75zM3.25 6.5l-.123.002A2.25 2.25 0 0 1 5.25 5h9.5c.98 0 1.814.627 2.123 1.502L16.75 6.5z" />
-              </svg>
-              <span style={{ fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>Diff</span>
-              {/* Toggle switch */}
-              <label
-                style={{
-                  display: 'flex', alignItems: 'center', cursor: 'pointer',
-                  fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)',
-                  fontWeight: 500, color: '#18181B',
-                  position: 'relative',
-                }}
-              >
-                <input
-                  role="switch"
-                  type="checkbox"
-                  checked={showDiff}
-                  onChange={(e) => setShowDiff(e.target.checked)}
-                  style={{
-                    margin: 0,
-                    borderRadius: 32,
-                    transition: 'background-color 0.25s',
-                    background: showDiff ? '#783AFB' : '#9F9FA9',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    pointerEvents: 'none',
-                    boxSizing: 'border-box',
-                    width: 24,
-                    height: 12,
-                    flexShrink: 0,
-                    display: 'grid',
-                    alignItems: 'center',
-                    position: 'relative',
-                  }}
-                />
-                <span
-                  style={{
-                    position: 'absolute',
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    transform: showDiff ? 'translateX(12px)' : 'translateX(0)',
-                    transition: 'transform 0.25s, background-color 0.25s, border-color 0.25s',
-                    boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.04), 0px 2px 8px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.06)',
-                    pointerEvents: 'none',
-                  }}
-                />
-              </label>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ── Bottom section: version list ────────────────── */}
@@ -234,8 +146,9 @@ const VersionHistoryPanel = ({ articleId, currentWordCount, currentScore, onClos
                 <span style={{ fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>Current Version</span>
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 14, lineHeight: '1.25rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>You</div>
+              <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={currentScore} size={52} /></div>
             </div>
           </div>
         </div>
@@ -309,10 +222,13 @@ const VersionHistoryPanel = ({ articleId, currentWordCount, currentScore, onClos
                         </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, paddingBottom: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 6, paddingBottom: 6 }}>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, lineHeight: '1rem', fontFamily: 'var(--font-family-primary)', color: '#18181B' }}>
                         {versionTypeLabel(v.version_type)}
                       </span>
+                      {v.score != null && (
+                        <div className="vh-ring" style={{ flexShrink: 0, display: 'flex' }}><ScoreGauge score={v.score} size={52} /></div>
+                      )}
                     </div>
                   </div>
                 </div>

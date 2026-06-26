@@ -107,7 +107,7 @@ const ActivityLogPage: NextPage = () => {
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head>
-            <title>Activity Log — {domain} — SerpBear</title>
+            <title>{`Activity Log — ${domain} — SerpBear`}</title>
          </Head>
 
          <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log">

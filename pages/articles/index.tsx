@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { CSSTransition } from 'react-transition-group';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import ArticleList from '../../components/articles/ArticleList';
-import GenerateModal from '../../components/articles/GenerateModal';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
 import { useFetchDomains } from '../../services/domains';
@@ -29,8 +28,6 @@ const SORT_OPTIONS = [
 const ArticlesPage: NextPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [selectedDomainId, setSelectedDomainId] = useState<number | undefined>(undefined);
@@ -47,51 +44,6 @@ const ArticlesPage: NextPage = () => {
     () => fetchArticles(selectedDomainId),
     { refetchOnWindowFocus: false },
   );
-
-  const handleGenerate = async (domainId: number, keywords: string[], language: string) => {
-    setIsGenerating(true);
-    let firstArticleId: number | null = null;
-    let successCount = 0;
-    let failCount = 0;
-
-    try {
-      for (const keyword of keywords) {
-        try {
-          const res = await fetch('/api/articles/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domainId, keyword, language }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            failCount++;
-            continue;
-          }
-          successCount++;
-          if (!firstArticleId && data.articleId) {
-            firstArticleId = data.articleId;
-          }
-        } catch {
-          failCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        toast.success(`${successCount} article${successCount !== 1 ? 's' : ''} generated${failCount > 0 ? `, ${failCount} failed` : ''}`);
-        setShowGenerateModal(false);
-        queryClient.invalidateQueries(['articles']);
-        if (firstArticleId) {
-          router.push(`/articles/${firstArticleId}`);
-        }
-      } else {
-        toast.error('Failed to generate any articles');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Generation failed');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const handleDelete = async (id: number) => {
     try {
@@ -229,7 +181,7 @@ const ArticlesPage: NextPage = () => {
                   <div style={{ display: 'flex', alignItems: 'stretch', gap: 1 }}>
                     <button
                       type="button"
-                      onClick={() => setShowGenerateModal(true)}
+                      onClick={() => router.push('/articles/new')}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -256,7 +208,7 @@ const ArticlesPage: NextPage = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowGenerateModal(true)}
+                      onClick={() => router.push('/articles/new')}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -415,15 +367,6 @@ const ArticlesPage: NextPage = () => {
           </div>
         </div>
       </div>
-
-      {showGenerateModal && (
-        <GenerateModal
-          domains={domains.map((d) => ({ ID: d.ID, domain: d.domain }))}
-          onGenerate={handleGenerate}
-          onClose={() => setShowGenerateModal(false)}
-          isGenerating={isGenerating}
-        />
-      )}
 
       {showAddDomain && (
         <AddDomain

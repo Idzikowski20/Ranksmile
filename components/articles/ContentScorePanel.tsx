@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../lib/contentScore';
+import { motion } from 'motion/react';
+import Confetti from './Confetti';
+import { ScoreData, NlpTerm, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../lib/contentScore';
 import { computeOpportunityScore } from '../../lib/keywordEnrichment';
-import ScoreGauge from './ScoreGauge';
+import { useArticleKeywords } from '../../services/articleKeywords';
 import KeywordResearchSection from './KeywordResearchSection';
+import WriteOptimizePanel from './WriteOptimizePanel';
+import PublishExportPanel from './PublishExportPanel';
+import PrePublishPanel from './PrePublishPanel';
+import ScoreTrio from './ScoreTrio';
+import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
 
 interface CompetitorHeading {
   level: number;
@@ -27,11 +34,33 @@ interface Props {
   internalLinksCount?: number;
   html?: string;
   keyword?: string;
+  highlightTerms?: boolean;
+  onHighlightTermsChange?: (on: boolean) => void;
+  initialPlagiarism?: any;
+  initialAiReadability?: any;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
   onInternalLinks?: () => void;
   articleId?: number;
   cachedOutlines?: string | null;
+  /** Stored content_score — shown when there are no competitor terms to compute a live score. */
+  fallbackScore?: number;
+  /** Publish or Export panel */
+  title?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  onMetaTitleChange?: (v: string) => void;
+  onMetaDescriptionChange?: (v: string) => void;
+  featuredImage?: { url: string; alt: string } | null;
+  onFeaturedImageChange?: (img: { url: string; alt: string } | null) => void;
+  isDone?: boolean;
+  onMarkDone?: () => void;
+  /** Pre-Publish Review panel */
+  aiVisibilitySummary?: AiVisibilitySummary | null;
+  isRunningAiVisibility?: boolean;
+  onRunAiVisibility?: () => void;
+  /** Shared/preview mode — disables every mutating action. */
+  readOnly?: boolean;
 }
 
 /* ── Small circular progress ───────────────────────────────────────── */
@@ -48,12 +77,14 @@ const CircleProgress = ({ value, max, color }: { value: number; max: number; col
   );
 };
 
-/* ── Metric column ─────────────────────────────────────────────────── */
-const MetricCol = ({ label, current, range }: { label: string; current: number; range: string }) => (
-  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-    <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
-    <span style={{ fontSize: 14, fontWeight: 600, color: '#09090b', fontFamily: 'var(--font-family-primary)', lineHeight: 1 }}>{current.toLocaleString()}</span>
-    <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>{range}</span>
+/* ── Bottom structure metric (Surfer-style: label over value + range) ── */
+const MetricBottom = ({ label, value, range }: { label: string; value: number; range: string }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2 }}>
+    <span style={{ fontSize: 11, fontWeight: 400, lineHeight: '14px', color: '#3f3f47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
+    <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+      <span style={{ fontSize: 11, fontWeight: 600, lineHeight: '14px', color: '#000', fontFamily: 'var(--font-family-primary)' }}>{value.toLocaleString()}</span>
+      <span style={{ fontSize: 11, fontWeight: 400, lineHeight: '14px', color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>{range}</span>
+    </span>
   </div>
 );
 
@@ -85,17 +116,19 @@ const SectionRow = ({ num, label, open, onToggle, badge }: {
 );
 
 /* ── Action row (non-expandable) ────────────────────────────────────── */
-const ActionRow = ({ num, label, onClick }: { num: number; label: string; onClick?: () => void }) => (
+const ActionRow = ({ num, label, onClick, disabled }: { num: number; label: string; onClick?: () => void; disabled?: boolean }) => (
   <button
-    onClick={onClick}
+    onClick={disabled ? undefined : onClick}
+    disabled={disabled}
     style={{
       width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '14px 16px', background: 'transparent',
-      border: 'none', borderTop: '1px solid #f4f4f5', cursor: 'pointer',
+      border: 'none', borderTop: '1px solid #f4f4f5', cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.45 : 1,
       transition: 'opacity 0.15s', fontFamily: 'var(--font-family-primary)',
     }}
-    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.opacity = '0.7'; }}
+    onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.opacity = '1'; }}
   >
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ fontSize: 13, fontWeight: 400, color: '#9f9fa9' }}>#{num}</span>
@@ -205,17 +238,43 @@ const ContentScorePanel = ({
   onInternalLinks,
   articleId,
   cachedOutlines,
+  fallbackScore,
+  title,
+  metaTitle,
+  metaDescription,
+  onMetaTitleChange,
+  onMetaDescriptionChange,
+  featuredImage,
+  onFeaturedImageChange,
+  isDone,
+  onMarkDone,
+  aiVisibilitySummary,
+  isRunningAiVisibility,
+  onRunAiVisibility,
+  readOnly,
+  highlightTerms,
+  onHighlightTermsChange,
+  initialPlagiarism,
+  initialAiReadability,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
+  const [celebrateKey, setCelebrateKey] = useState(0);
+  const wasOptimizingRef = useRef(false);
+  // Fire confetti when an auto-optimize run finishes (true → false).
+  useEffect(() => {
+    if (wasOptimizingRef.current && !isAutoOptimizing) setCelebrateKey((k) => k + 1);
+    wasOptimizingRef.current = !!isAutoOptimizing;
+  }, [isAutoOptimizing]);
+  const [view, setView] = useState<'main' | 'write' | 'publish' | 'prepublish'>('main');
   const [nlpOpen, setNlpOpen] = useState(false);
+  const [missingOpen, setMissingOpen] = useState(false);
   const [competitorOpen, setCompetitorOpen] = useState(false);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false);
 
   // Keyword research state
   const [keywords, setKeywords] = useState<any[]>([]);
-  const [isLoadingKeywords, setIsLoadingKeywords] = useState(false);
   const [suggestedKeywords, setSuggestedKeywords] = useState<any[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [gapKeywords, setGapKeywords] = useState<any[]>([]);
@@ -236,7 +295,12 @@ const ContentScorePanel = ({
   }, [plainText, scoreData]);
 
   useEffect(() => {
-    if (!scoreData?.terms) return;
+    // No analysis data at all → show the stored score. Otherwise compute live — structural signals
+    // are scored even when competitor terms are absent, so the gauge updates as you edit.
+    if (!scoreData) {
+      setScore(fallbackScore ?? 0);
+      return undefined;
+    }
     if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     scoreTimerRef.current = setTimeout(() => {
       scoreTimerRef.current = null;
@@ -247,7 +311,7 @@ const ContentScorePanel = ({
     return () => {
       if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     };
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords]);
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
@@ -282,28 +346,23 @@ const ContentScorePanel = ({
       .finally(() => setIsLoadingCompetitors(false));
   }, [competitorOpen, keyword, articleId, cachedOutlines]);
 
-  // Fetch keywords when NLP section opens
+  // Article keywords — shared/deduped fetch, loaded when the NLP section opens
+  // (or already warm from the editor's breadcrumb fetch). Seeded into local
+  // state because it's mutated afterwards (enrich / suggest / toggle covered).
+  const { data: keywordRows, isFetching: isLoadingKeywords } = useArticleKeywords(articleId, nlpOpen);
   useEffect(() => {
-    if (!nlpOpen || !articleId) return;
-    setIsLoadingKeywords(true);
-    fetch(`/api/articles/${articleId}/keywords`)
-      .then(r => r.json())
-      .then(d => {
-        const kws = (d.keywords || []).map((k: any) => ({
-          ...k,
-          is_covered: !!k.is_covered,
-          opportunity_score: computeOpportunityScore({
-            gsc_position: k.gsc_position,
-            ads_monthly_volume: k.ads_monthly_volume,
-            ads_competition: k.ads_competition,
-            is_covered: !!k.is_covered,
-          }),
-        }));
-        setKeywords(kws);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoadingKeywords(false));
-  }, [nlpOpen, articleId]);
+    if (!keywordRows) return;
+    setKeywords(keywordRows.map((k) => ({
+      ...k,
+      is_covered: !!k.is_covered,
+      opportunity_score: computeOpportunityScore({
+        gsc_position: k.gsc_position ?? null,
+        ads_monthly_volume: k.ads_monthly_volume ?? null,
+        ads_competition: k.ads_competition ?? null,
+        is_covered: !!k.is_covered,
+      }),
+    })));
+  }, [keywordRows]);
 
   // Auto-enrich on first load if no keywords have ads_monthly_volume
   useEffect(() => {
@@ -404,26 +463,95 @@ const ContentScorePanel = ({
     }
   };
 
-  const hasCompetitorData = (scoreData?.competitor_count ?? 0) > 0;
-  const competitorLabel = hasCompetitorData ? ` avg` : '';
-  const wordsRange = scoreData
-    ? `${(scoreData.words_min / 1000).toFixed(1)}K – ${(scoreData.words_max / 1000).toFixed(1)}K${competitorLabel}`
-    : '–';
-  const headingsRange = scoreData
-    ? `${scoreData.headings_min} – ${scoreData.headings_max}${competitorLabel}`
-    : '–';
   const parasMin = scoreData?.paragraphs_min ?? Math.round((scoreData?.headings_min || 10) * 2.5);
-  const parasMax = scoreData?.paragraphs_max ?? Math.round((scoreData?.headings_max || 20) * 3);
-  const parasRange = `${parasMin} – ${parasMax}${competitorLabel}`;
+  const wordsRange = scoreData ? `${(scoreData.words_min / 1000).toFixed(1)}K-${(scoreData.words_max / 1000).toFixed(1)}K` : '–';
+  const headingsRange = scoreData ? `${scoreData.headings_min}-${scoreData.headings_max}` : '–';
+  const parasRange = scoreData ? `${parasMin}+` : '–';
 
-  const avgScore = score;
-  const topScore = Math.min(score + 3, 100);
+  // Per-slot gaps — what's still costing points, biggest opportunities first.
+  const scoreGaps = useMemo(() => {
+    if (!scoreData) return [];
+    const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
+    const kwCov = keywords.map((k: any) => ({ keyword: k.keyword, is_covered: k.is_covered }));
+    const { slots } = computeContentScoreBreakdown(plainText, wordCount, headingCount, scoreData, paraCount, html, keyword, kwCov);
+    return slots
+      .filter((s) => s.missingPoints > 0)
+      .sort((a, b) => b.missingPoints - a.missingPoints);
+  }, [plainText, wordCount, headingCount, scoreData, html, keyword, keywords]);
+
+  if (view === 'write') {
+    return (
+      <WriteOptimizePanel
+        terms={terms}
+        wordCount={wordCount}
+        headingCount={headingCount}
+        paragraphCount={paragraphCount}
+        wordsRange={wordsRange}
+        headingsRange={headingsRange}
+        parasRange={parasRange}
+        aiSummary={aiVisibilitySummary}
+        seo={score}
+        ai={aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0}
+        hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
+        onAutoOptimize={onAutoOptimize}
+        isAutoOptimizing={isAutoOptimizing}
+        readOnly={readOnly}
+        onBack={() => setView('main')}
+        highlightTerms={highlightTerms}
+        onHighlightTermsChange={onHighlightTermsChange}
+      />
+    );
+  }
+
+  if (view === 'publish') {
+    return (
+      <PublishExportPanel
+        score={score}
+        html={html || ''}
+        plainText={plainText}
+        title={title || ''}
+        metaTitle={metaTitle || ''}
+        metaDescription={metaDescription || ''}
+        onMetaTitleChange={onMetaTitleChange || (() => {})}
+        onMetaDescriptionChange={onMetaDescriptionChange || (() => {})}
+        keyword={keyword || ''}
+        featuredImage={featuredImage || null}
+        onFeaturedImageChange={onFeaturedImageChange}
+        isDone={!!isDone}
+        onMarkDone={() => { onMarkDone?.(); }}
+        readOnly={readOnly}
+        onBack={() => setView('main')}
+      />
+    );
+  }
+
+  if (view === 'prepublish') {
+    return (
+      <PrePublishPanel
+        score={score}
+        plainText={plainText}
+        articleId={articleId}
+        aiSummary={aiVisibilitySummary}
+        isAnalyzingAi={!!isRunningAiVisibility}
+        onAnalyzeAi={() => { onRunAiVisibility?.(); }}
+        readOnly={readOnly}
+        onBack={() => setView('main')}
+        initialPlagiarism={initialPlagiarism}
+        initialAiReadability={initialAiReadability}
+      />
+    );
+  }
+
+  // SEO (= content score) on the left, AI Search on the right; center = blend.
+  const hasAi = !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
+  const aiScore = hasAi ? computeAiSearchScore(aiVisibilitySummary) : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* ── Score header ── */}
+      {/* ── Score header + gauge + Avg/Top (one tour target) ── */}
+      <div data-tour="content-score">
       <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)' }}>
           Content Score
@@ -433,60 +561,44 @@ const ContentScorePanel = ({
         </div>
       </div>
 
-      {/* ── Gauge ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px' }}>
-        <ScoreGauge score={score} />
+      {/* ── SEO · Content Score · AI Search gauges ── */}
+      <ScoreTrio seo={score} ai={aiScore} hasAi={hasAi} />
+
       </div>
 
-      {/* ── Avg / Top ── */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 24, padding: '0 16px 12px', marginTop: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>
-          Avg
-          <svg viewBox="0 0 256 256" width={12} height={12} fill="currentColor">
-            <path d="M224 128a8 8 0 0 1-8 8H40a8 8 0 0 1 0-16h176a8 8 0 0 1 8 8m-101.66-26.34a8 8 0 0 0 11.32 0l32-32a8 8 0 0 0-11.32-11.32L136 76.69V16a8 8 0 0 0-16 0v60.69l-18.34-18.35a8 8 0 0 0-11.32 11.32Zm11.32 52.68a8 8 0 0 0-11.32 0l-32 32a8 8 0 0 0 11.32 11.32L120 179.31V240a8 8 0 0 0 16 0v-60.69l18.34 18.35a8 8 0 0 0 11.32-11.32Z" />
-          </svg>
-          <span style={{ color: '#18181b', fontWeight: 600 }}>{avgScore}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>
-          Top
-          <svg viewBox="0 0 256 256" width={12} height={12} fill="currentColor">
-            <path d="M205.66 138.34a8 8 0 0 1-11.32 11.32L136 91.31V224a8 8 0 0 1-16 0V91.31l-58.34 58.35a8 8 0 0 1-11.32-11.32l72-72a8 8 0 0 1 11.32 0ZM216 32H40a8 8 0 0 0 0 16h176a8 8 0 0 0 0-16" />
-          </svg>
-          <span style={{ color: '#18181b', fontWeight: 600 }}>{topScore}</span>
-        </div>
-      </div>
-
-      {/* ── Structure metrics ── */}
-      <div style={{ borderTop: '1px solid #f4f4f5', padding: '12px 16px', display: 'flex', alignItems: 'center' }}>
-        <MetricCol label="Words" current={wordCount} range={wordsRange} />
-        <div style={{ width: 1, background: '#e4e4e7', height: 36, flexShrink: 0 }} />
-        <MetricCol label="Headings" current={headingCount} range={headingsRange} />
-        <div style={{ width: 1, background: '#e4e4e7', height: 36, flexShrink: 0 }} />
-        <MetricCol label="Paragraphs" current={paragraphCount} range={parasRange} />
-      </div>
+      <Confetti runKey={celebrateKey} />
 
       {/* ── Auto-Optimize button (pinned above sections) ── */}
-      <div style={{ padding: '0 16px 12px', borderTop: '1px solid #f4f4f5', paddingTop: 12 }}>
+      <div data-tour="auto-optimize" style={{ padding: '0 16px 12px', borderTop: '1px solid #f4f4f5', paddingTop: 12 }}>
         <button
-          onClick={isAutoOptimizing ? undefined : onAutoOptimize}
-          disabled={isAutoOptimizing}
+          onClick={(isAutoOptimizing || readOnly) ? undefined : onAutoOptimize}
+          disabled={isAutoOptimizing || readOnly}
           style={{
+            position: 'relative', overflow: 'hidden',
             width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
             background: '#18181b', color: '#fff', border: 'none',
-            cursor: isAutoOptimizing ? 'not-allowed' : 'pointer',
+            cursor: (isAutoOptimizing || readOnly) ? 'not-allowed' : 'pointer',
             fontFamily: 'var(--font-family-primary)',
             transition: 'background 0.15s',
-            opacity: isAutoOptimizing ? 0.7 : 1,
+            opacity: readOnly ? 0.5 : 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
-          onMouseEnter={(e) => { if (!isAutoOptimizing) e.currentTarget.style.background = '#630de3'; }}
+          onMouseEnter={(e) => { if (!isAutoOptimizing && !readOnly) e.currentTarget.style.background = '#630de3'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
         >
+          {/* Shimmer sweep while optimizing */}
+          {isAutoOptimizing && (
+            <motion.span aria-hidden
+              initial={{ x: '-120%' }} animate={{ x: '120%' }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'absolute', top: 0, bottom: 0, width: '60%', background: 'linear-gradient(90deg, transparent, rgba(120,58,251,0.45), transparent)', pointerEvents: 'none' }} />
+          )}
           {isAutoOptimizing ? (
-            <>
-              <div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            <motion.span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, position: 'relative' }}
+              animate={{ opacity: [0.7, 1, 0.7] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}>
+              <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
               Optimizing…
-            </>
+            </motion.span>
           ) : 'Auto-Optimize'}
         </button>
       </div>
@@ -495,10 +607,45 @@ const ContentScorePanel = ({
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
         className="styled-scrollbar">
 
-        {/* #1 Competitors — expandable */}
-        <div>
+        {/* ── What's missing to improve the score ── */}
+        {scoreGaps.length > 0 && (
+          <div data-tour="whats-missing">
+            <button
+              type="button" onClick={() => setMissingOpen((v) => !v)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 16px', background: 'transparent', border: 'none', borderTop: '1px solid #f4f4f5', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'opacity 0.15s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 400, color: '#9f9fa9' }}>#1</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>What&apos;s missing</span>
+              </div>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: '#9f9fa9' }}>+{Math.min(100 - score, scoreGaps.reduce((s, g) => s + g.missingPoints, 0))} pts available</span>
+                <svg viewBox="0 0 20 20" width={16} height={16} fill="currentColor" style={{ color: '#9f9fa9', flexShrink: 0, transform: missingOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
+                </svg>
+              </span>
+            </button>
+            {missingOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 16px 12px' }}>
+                {scoreGaps.map((g) => (
+                  <div key={g.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ flexShrink: 0, minWidth: 34, textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#000', background: 'rgb(224 241 227)', borderRadius: 6, padding: '2px 4px', fontFamily: 'var(--font-family-primary)' }}>+{g.missingPoints}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{g.label}</span>
+                      <span style={{ fontSize: 12, color: '#71717b', fontFamily: 'var(--font-family-primary)' }}> — {g.hint}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* #2 Competitors — expandable */}
+        <div data-tour="competitors">
           <SectionRow
-            num={1} label="Competitors" open={competitorOpen}
+            num={2} label="Competitors" open={competitorOpen}
             onToggle={() => setCompetitorOpen((v) => !v)}
             badge={competitors.length > 0 ? (
               <span style={{
@@ -532,9 +679,9 @@ const ContentScorePanel = ({
           )}
         </div>
 
-        {/* #2 Keywords & Terms — expandable */}
-        <div>
-          <SectionRow num={2} label="Keywords & Terms" open={nlpOpen} onToggle={() => setNlpOpen((v) => !v)} />
+        {/* #3 Keywords & Terms — opens the Write & Optimize view */}
+        <div data-tour="keywords">
+          <SectionRow num={3} label="Write & Optimize" open={false} onToggle={() => setView('write')} />
 
           {nlpOpen && (
             <>
@@ -560,9 +707,16 @@ const ContentScorePanel = ({
           )}
         </div>
 
-        <ActionRow num={3} label="Internal Links" onClick={onInternalLinks} />
-        <ActionRow num={4} label="Pre-Publish Review" />
-        <ActionRow num={5} label="Publish or Export" />
+        <div data-tour="internal-links"><ActionRow num={4} label="Internal Links" onClick={onInternalLinks} disabled={readOnly} /></div>
+        <div data-tour="pre-publish"><ActionRow num={5} label="Pre-Publish Review" onClick={() => setView('prepublish')} /></div>
+        <div data-tour="publish-export"><ActionRow num={6} label="Publish or Export" onClick={() => setView('publish')} /></div>
+      </div>
+
+      {/* ── Structure metrics (pinned footer, Surfer-style) ── */}
+      <div data-tour="metrics" style={{ borderTop: '1px solid #f4f4f5', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <MetricBottom label="Words" value={wordCount} range={wordsRange} />
+        <MetricBottom label="Headings" value={headingCount} range={headingsRange} />
+        <MetricBottom label="Paragraphs" value={paragraphCount} range={parasRange} />
       </div>
     </div>
   );

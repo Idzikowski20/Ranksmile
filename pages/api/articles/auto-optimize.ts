@@ -7,11 +7,37 @@ import verifyUser from '../../../utils/verifyUser';
 import type { ScoreData } from '../../../lib/contentScore';
 import { countOccurrences } from '../../../lib/contentScore';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
+import { enrichTerms, getAiSearchInfo } from '../../../lib/seo/keywordData';
+import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
+
+const COUNTRY_FOR_LANG: Record<string, string> = { pl: 'PL', en: 'US', de: 'DE', fr: 'FR', es: 'ES', it: 'IT', nl: 'NL', pt: 'PT' };
 import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
 import { scoreContent } from '../../../lib/seo/scoreContentClient';
 
 export const config = { api: { responseLimit: '10mb' } };
+
+// Strip LLM meta-chatter that occasionally leaks into the article body:
+// a leading "Here is the complete HTML article…" preamble and placeholder
+// bylines like "Author: [Editor: insert author name…]".
+const LLM_PREAMBLE_RE = /(here'?s?\s+(?:is\s+)?the\s+(?:complete|optimized|updated|full|following)\s+(?:html|article|version|content)\b|below\s+is\s+the\s+(?:optimized|updated|complete)\s+(?:html|article)|no\s+other\s+content\s+has\s+been\s+(?:rewritten|fabricated|changed|altered)|minimal\s+fixes\s+(?:applied|were\s+applied)|the\s+complete\s+html\s+article\s+with|i'?ve\s+(?:applied|made)\s+(?:the\s+)?(?:targeted|minimal|requested)\s+(?:fixes|changes|edits))/i;
+const LLM_PLACEHOLDER_RE = /\[(?:editor|insert|author\s+name|update\s+date|date)[^\]]*\]/i;
+
+const stripLlmArtifacts = (html: string): string => {
+   let out = html;
+   // Drop whole paragraphs/headings that are preamble or contain editor placeholders.
+   out = out.replace(/<(p|h[1-6]|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/gi, (m, _tag, inner) => {
+      const text = String(inner).replace(/<[^>]+>/g, ' ');
+      return (LLM_PREAMBLE_RE.test(text) || LLM_PLACEHOLDER_RE.test(text)) ? '' : m;
+   });
+   // Remove any leading prose before the first remaining tag.
+   out = out.replace(/^[^<]*(?=<)/, '');
+   // Remove any stray inline bracket placeholders left behind.
+   out = out.replace(/\[(?:editor|insert)[^\]]*\]/gi, '');
+   return out.replace(/\n{3,}/g, '\n\n').trim();
+};
 
 // ── SSE helper ─────────────────────────────────────────────────────────
 function sse(res: NextApiResponse, event: string, data: object) {
@@ -169,7 +195,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { content, scoreData, keyword, articleId, brandVoice, aiVisibilitySummary, articleTitle, articleMetaDescription }:
+  const { content, scoreData, keyword, articleId, brandVoice, aiVisibilitySummary, articleTitle, articleMetaDescription, gaps: clientScoreGaps }:
     {
       content: string;
       scoreData?: ScoreData;
@@ -180,12 +206,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         prompts_total: number;
         prompts_cited: number;
         competitor_citations: number;
-        citations: Array<{ prompt: string; cited_domain?: string; answer?: string }>;
+        citations: Array<{ prompt: string; cited_domain?: string; answer?: string; is_own_domain?: boolean }>;
       };
       articleTitle?: string;
       articleMetaDescription?: string;
+      gaps?: Array<{ label: string; points: number; hint: string }>;
     } = req.body;
   if (!content) return res.status(400).json({ error: 'content is required' });
+
+  // Only this article's owner may optimize-and-persist it. articleId is optional —
+  // when absent the handler never touches a stored row, so there is nothing to guard.
+  if (articleId !== undefined) {
+    const userId = await getCurrentUserId(req, res);
+    if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+  }
+
+  // Protect existing <img> tags from the LLM passes (models routinely drop or mangle them).
+  // Swap each for a short token the model keeps verbatim, then restore the originals at the end.
+  const preservedImages: string[] = [];
+  const imagesProtected = content.replace(/<img\b[^>]*>/gi, (tag) => {
+    const i = preservedImages.length;
+    preservedImages.push(tag);
+    return `@@KEEPIMG${i}@@`;
+  });
+  const hadImages = preservedImages.length > 0;
+  const IMG_TOKEN_RULE = hadImages
+    ? "\n- Preserve every @@KEEPIMGn@@ placeholder token EXACTLY as written (e.g. @@KEEPIMG0@@) — never remove, reorder, translate, or alter them; they mark the user's existing images."
+    : '';
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
@@ -245,15 +294,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? `CONTENT GAPS TO FIX:\n${gaps.map((g, i) => `${i + 1}. ${g}`).join('\n\n')}`
       : 'Article is already well-optimized. Improve NLP term density and expand thin sections.';
     const aiSearchBlock = aiVisibilitySummary?.citations?.length
-      ? `\n\nAI SEARCH VISIBILITY GAPS:\n${aiVisibilitySummary.citations
-        .slice(0, 10)
-        .map((c, i) => `${i + 1}. Prompt: "${c.prompt}" | cited: ${c.cited_domain || 'none'} | answer snippet: "${(c.answer || '').slice(0, 180)}"`)
-        .join('\n')}\nUse these gaps to add answer-ready sections, definitions, FAQs, and source-worthy statements.`
+      ? `\n\nAI SEARCH — QUESTIONS THAT DRIVE LLM CITATIONS (answer these to appear in AI search):\n${aiVisibilitySummary.citations
+        .slice(0, 12)
+        .map((c, i) => `${i + 1}. "${c.prompt}" | currently cited: ${c.cited_domain || 'none'}${c.is_own_domain ? ' (us ✓)' : ''} | competitor answer: "${(c.answer || '').slice(0, 180)}"`)
+        .join('\n')}\n\nFor EACH question above that we do NOT already answer, add a concise, directly-quotable answer (1–3 sentences) immediately under the most relevant heading: definition-first, factual, self-contained, so an LLM can lift it as a citation. Prefer specifics (numbers, named entities, steps) over vague phrasing. Where natural, add an FAQ section using these questions verbatim as H3s with crisp answers.`
       : '';
 
     sse(res, 'progress', {
       message: `Found ${missingTerms.length} missing terms, ${lowTerms.length} underused — ready to fix`,
     });
+
+    if (aiSearchBlock) {
+      const uncovered = Math.max(0, (aiVisibilitySummary?.prompts_total ?? 0) - (aiVisibilitySummary?.prompts_cited ?? 0));
+      sse(res, 'progress', {
+        message: uncovered > 0
+          ? `Answering ${uncovered} AI-search question${uncovered > 1 ? 's' : ''} to earn LLM citations…`
+          : 'Reinforcing answer-ready facts for AI search…',
+      });
+    }
 
     // ── Step 1.5: Pre-score ranking signals ───────────────────────
     let preScoreData: { ranking_score: number; ranking_signals: any } | null = null;
@@ -357,6 +415,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? `\n- USE THESE NLP TERMS VERBATIM — do not paraphrase, inflect, or substitute synonyms for: ${protectedTerms.map((t) => `"${t}"`).join(', ')}`
       : '';
 
+    // Score gaps from the editor's "What's missing" view — the exact slots still losing points.
+    const scoreGapsBlock = Array.isArray(clientScoreGaps) && clientScoreGaps.length
+      ? `\n\nPRIORITY SCORE FIXES — the article is currently losing these points; you MUST address every one of them in this pass:\n${clientScoreGaps.map((g) => `- [+${g.points} pts] ${g.label}: ${g.hint}`).join('\n')}`
+      : '';
+
     const systemPrompt = `You are an expert SEO content optimizer, similar to Surfer SEO's Auto-Optimize feature.
 
 Your task: improve the provided HTML article to increase its content score by addressing the specific gaps listed below. Preserve the article's ORIGINAL MEANING, LANGUAGE, TONE and STRUCTURE.
@@ -369,13 +432,13 @@ STRICT RULES:
 - When adding headings: use H3 inside existing H2 sections only
 - Ensure the target keyword "${keyword || ''}" appears verbatim in at least one H2 heading
 - Keep each paragraph between 40–80 words; split any paragraph that exceeds 100 words
-- If the article has no bullet or numbered list with ≥3 items, add one where appropriate
+- Include at least ONE real HTML list: a <ul> or <ol> containing 3 OR MORE <li> items. Never fake a list with inline separators (e.g. "A | B | C", dashes, or bullets inside a <p>) — it must be actual <ul>/<ol><li> markup
 - Add 2–3 external links to authoritative sources (Wikipedia, industry associations, .gov/.edu) as inline citations — use <a href="URL" target="_blank" rel="noopener noreferrer">anchor text</a>
 - Do NOT add image tags — leave image placement to the user
 - Do NOT change the meta title or meta description
-- Keep the human, expert tone — avoid AI-sounding filler phrases${protectedTermsBlock}
+- Keep the human, expert tone — avoid AI-sounding filler phrases${protectedTermsBlock}${IMG_TOKEN_RULE}
 
-${gapBlock}${signalImprovementBlock}${competitorBlock}${aiSearchBlock}
+${gapBlock}${scoreGapsBlock}${signalImprovementBlock}${competitorBlock}${aiSearchBlock}
 
 OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
 
@@ -389,7 +452,7 @@ OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, 
         temperature: 0.3,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Optimize this article:\n\n${content}` },
+          { role: 'user', content: `Optimize this article:\n\n${imagesProtected}` },
         ],
       }),
     });
@@ -406,6 +469,7 @@ OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, 
     console.log('[auto-optimize] DeepSeek finish_reason:', aiData.choices?.[0]?.finish_reason, 'usage:', JSON.stringify(aiData.usage));
     let optimized = (aiData.choices?.[0]?.message?.content || '').trim();
     optimized = optimized.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    optimized = stripLlmArtifacts(optimized);
     console.log('[auto-optimize] optimized content length:', optimized.length);
 
     if (!optimized || optimized.length < 50) {
@@ -428,7 +492,7 @@ RULES:
 - Remove AI-sounding filler phrases ("It's worth noting that", "In today's world", "Furthermore", "In conclusion", "Delve into")
 - Vary sentence length — mix short punchy sentences with longer ones
 - Add concrete specifics where generic phrases exist
-- Keep every NLP keyword that was injected — do NOT remove them${humanizeProtectedBlock}
+- Keep every NLP keyword that was injected — do NOT remove them${humanizeProtectedBlock}${IMG_TOKEN_RULE}
 - Do NOT shorten the article — you may expand thin paragraphs slightly
 - Do NOT change meta title/description${brandVoiceBlock}
 
@@ -450,8 +514,8 @@ OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, 
 
     if (humanizeRes.ok) {
       const humanizeData = await humanizeRes.json();
-      const humanized = (humanizeData.choices?.[0]?.message?.content || '').trim()
-        .replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+      const humanized = stripLlmArtifacts((humanizeData.choices?.[0]?.message?.content || '').trim()
+        .replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim());
       if (humanized && humanized.length > 50) {
         console.log('[auto-optimize] humanizer OK, content length:', humanized.length);
         optimized = humanized;
@@ -463,83 +527,122 @@ OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, 
     }
 
     // ── Phase 3: FAQ / People Also Ask ───────────────────────────────────
+    // Questions the finished FAQ actually contains, in the article's language — returned to the
+    // editor and persisted so the score credits the FAQ regardless of the stored PAA language.
+    let resolvedPaaQuestions: string[] = [];
+
+    // Pull the <h3> question texts out of an FAQ section already present in the HTML.
+    const extractFaqQuestions = (htmlStr: string): string[] => {
+      const h2s: Array<{ index: number; end: number; text: string }> = [];
+      const h2Re = /<h2\b[^>]*>([\s\S]*?)<\/h2>/gi;
+      let mm: RegExpExecArray | null;
+      // eslint-disable-next-line no-cond-assign
+      while ((mm = h2Re.exec(htmlStr))) {
+        h2s.push({ index: mm.index, end: mm.index + mm[0].length, text: mm[1].replace(/<[^>]+>/g, '').trim() });
+      }
+      const faqIdx = h2s.findIndex((h) => /faq|najczęściej zadawane|frequently asked/i.test(h.text));
+      if (faqIdx === -1) return [];
+      const sectionEnd = faqIdx + 1 < h2s.length ? h2s[faqIdx + 1].index : htmlStr.length;
+      const section = htmlStr.slice(h2s[faqIdx].end, sectionEnd);
+      return [...section.matchAll(/<h3\b[^>]*>([\s\S]*?)<\/h3>/gi)]
+        .map((x) => x[1].replace(/<[^>]+>/g, '').trim())
+        .filter(Boolean)
+        .slice(0, 8);
+    };
+
     if (keyword) {
-      sse(res, 'progress', { message: 'Fetching People Also Ask…' });
+      // If the article already has an FAQ (prior run or source content), reuse it — never append a
+      // second — and credit its questions toward the score.
+      const existingFaq = extractFaqQuestions(optimized);
+      if (existingFaq.length) {
+        resolvedPaaQuestions = existingFaq;
+        console.log('[auto-optimize] reusing existing FAQ —', existingFaq.length, 'questions; skipping generation');
+      } else {
+        let paaQuestions: string[] = Array.isArray(scoreData?.paa_questions)
+          ? scoreData!.paa_questions.filter(Boolean).slice(0, 6)
+          : [];
 
-      const serperKey = process.env.SERPER_API_KEY;
-      let faqHtml = '';
+        if (!paaQuestions.length && process.env.SERPER_API_KEY) {
+          sse(res, 'progress', { message: 'Fetching People Also Ask…' });
+          try {
+            const serperRes = await fetch('https://google.serper.dev/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-API-KEY': process.env.SERPER_API_KEY },
+              body: JSON.stringify({ q: keyword, gl: 'pl', hl: 'pl', num: 10 }),
+            });
+            if (serperRes.ok) {
+              const serperData = await serperRes.json();
+              paaQuestions = (serperData.peopleAlsoAsk || [])
+                .slice(0, 5)
+                .map((item: any) => item.question as string)
+                .filter(Boolean);
+            } else {
+              console.log('[auto-optimize] Serper PAA failed HTTP', serperRes.status);
+            }
+          } catch (faqErr: any) {
+            console.log('[auto-optimize] Serper PAA error (non-fatal):', faqErr?.message);
+          }
+        }
 
-      if (serperKey) {
-        try {
-          const serperRes = await fetch('https://google.serper.dev/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-KEY': serperKey },
-            body: JSON.stringify({ q: keyword, gl: 'pl', hl: 'pl', num: 10 }),
-          });
+        console.log('[auto-optimize] PAA questions:', paaQuestions.length, paaQuestions.slice(0, 3));
 
-          if (serperRes.ok) {
-            const serperData = await serperRes.json();
-            const paaQuestions: string[] = (serperData.peopleAlsoAsk || [])
-              .slice(0, 5)
-              .map((item: any) => item.question as string)
-              .filter(Boolean);
+        if (paaQuestions.length) {
+          sse(res, 'progress', { message: `Writing answers to ${paaQuestions.length} FAQ questions…` });
 
-            console.log('[auto-optimize] PAA questions:', paaQuestions.length, paaQuestions.slice(0, 3));
-
-            if (paaQuestions.length) {
-              sse(res, 'progress', { message: `Writing answers to ${paaQuestions.length} FAQ questions…` });
-
-              const faqSystemPrompt = `You are an SEO content writer writing FAQ answers for a web article.
-Write concise but complete answers (2-4 sentences each) for each question.
-Answer in the SAME LANGUAGE as the questions.
-Format output as ONLY an HTML block — no preamble:
+          const faqSystemPrompt = `You are an SEO content writer adding ONE FAQ section to a web article.
+Write a concise, complete answer (2-4 sentences) for EACH question provided.
+RULES:
+- Detect the article's language from the keyword and content, and write the ENTIRE FAQ (questions AND answers) in THAT language
+- If a question is in a different language, TRANSLATE it naturally into the article's language and use the translation as the <h3> — keep its original meaning
+- Naturally repeat the key words from each question inside its answer so the topic is unmistakably covered
+- Answer EVERY question in the list — do not skip any
+Format output as ONLY this HTML block — no preamble:
 
 <h2>FAQ</h2>
 <div class="faq-section">
   <div class="faq-item">
-    <h3>[Question 1]</h3>
-    <p>[Answer 1]</p>
+    <h3>[question in the article's language]</h3>
+    <p>[answer]</p>
   </div>
 </div>
 
 Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
 
-              const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                body: JSON.stringify({
-                  model: 'deepseek-chat',
-                  max_tokens: 4000,
-                  temperature: 0.4,
-                  messages: [
-                    { role: 'system', content: faqSystemPrompt },
-                    { role: 'user', content: `Article keyword: "${keyword}"\n\nQuestions:\n${paaQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}` },
-                  ],
-                }),
-              });
-
-              if (faqRes.ok) {
-                const faqData = await faqRes.json();
-                faqHtml = (faqData.choices?.[0]?.message?.content || '').trim()
-                  .replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-                console.log('[auto-optimize] FAQ generated, length:', faqHtml.length);
-              } else {
-                console.log('[auto-optimize] FAQ DeepSeek failed HTTP', faqRes.status);
-              }
+          let faqHtml = '';
+          try {
+            const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: 'deepseek-chat',
+                max_tokens: 4000,
+                temperature: 0.4,
+                messages: [
+                  { role: 'system', content: faqSystemPrompt },
+                  { role: 'user', content: `Article keyword: "${keyword}"\n\nQuestions (answer each in the article's language):\n${paaQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}` },
+                ],
+              }),
+            });
+            if (faqRes.ok) {
+              const faqData = await faqRes.json();
+              faqHtml = (faqData.choices?.[0]?.message?.content || '').trim()
+                .replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+              console.log('[auto-optimize] FAQ generated, length:', faqHtml.length);
+            } else {
+              console.log('[auto-optimize] FAQ DeepSeek failed HTTP', faqRes.status);
             }
-          } else {
-            console.log('[auto-optimize] Serper PAA failed HTTP', serperRes.status);
+          } catch (faqErr: any) {
+            console.log('[auto-optimize] FAQ phase error (non-fatal):', faqErr?.message);
           }
-        } catch (faqErr: any) {
-          console.log('[auto-optimize] FAQ phase error (non-fatal):', faqErr?.message);
-        }
-      } else {
-        console.log('[auto-optimize] No SERPER_API_KEY — skipping FAQ phase');
-      }
 
-      if (faqHtml) {
-        optimized = optimized.trimEnd() + '\n\n' + faqHtml;
-        console.log('[auto-optimize] FAQ block appended, total length:', optimized.length);
+          if (faqHtml) {
+            optimized = optimized.trimEnd() + '\n\n' + faqHtml;
+            resolvedPaaQuestions = extractFaqQuestions(faqHtml);
+            console.log('[auto-optimize] FAQ appended;', resolvedPaaQuestions.length, 'questions resolved');
+          }
+        } else {
+          console.log('[auto-optimize] No PAA questions (stored or Serper) — skipping FAQ phase');
+        }
       }
     }
 
@@ -688,11 +791,27 @@ Return ONLY a JSON object:
       }
     }
 
+    // ── Restore the user's original images (and re-append any the model dropped) ──
+    if (hadImages) {
+      const usedImg = new Set<number>();
+      optimized = optimized.replace(/@@KEEPIMG(\d+)@@/g, (_m: string, i: string) => {
+        usedImg.add(Number(i));
+        return preservedImages[Number(i)] ?? '';
+      });
+      const droppedImgs = preservedImages.filter((_, i) => !usedImg.has(i));
+      if (droppedImgs.length) {
+        console.log('[auto-optimize] re-appending', droppedImgs.length, 'image(s) the model dropped');
+        optimized = optimized.trimEnd() + '\n' + droppedImgs.join('\n');
+      }
+    }
+
     // ── Phase 7: Image Placeholders ───────────────────────────────
+    // Only inject AI placeholder images when the article has none of its own — never replace the
+    // user's existing images with generated ones.
     const PLACEHOLDER_SRC = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='380'%3E%3Crect width='800' height='380' fill='%23f3f4f6'/%3E%3Ctext x='400' y='200' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='18'%3E%E2%8F%B3 Generating image...%3C/text%3E%3C/svg%3E";
     const pendingImages: Array<{ idx: number; prompt: string }> = [];
     let h2Counter = 0;
-    const optimizedWithImages = optimized.replace(/<\/h2>/gi, (match: string, offset: number, str: string) => {
+    const optimizedWithImages = hadImages ? optimized : optimized.replace(/<\/h2>/gi, (match: string, offset: number, str: string) => {
       h2Counter++;
       if (h2Counter % 4 !== 0) return match;
       const before = str.slice(0, offset);
@@ -719,10 +838,76 @@ Return ONLY a JSON object:
       }
     }
 
+    // Persist the FAQ's resolved (article-language) questions so the saved/listed score credits the FAQ.
+    if (articleId && resolvedPaaQuestions.length && scoreData) {
+      try {
+        const articleIdSql = await getArticleIdSql();
+        await db.query(
+          `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify({ ...scoreData, paa_questions: resolvedPaaQuestions }), articleId] },
+        );
+      } catch (err: any) {
+        console.log('[auto-optimize] failed to persist resolved PAA questions:', err.message);
+      }
+    }
+
+    // ── Phase 9: Refresh entity list + AI Search from DataForSEO ───
+    // The user expects auto-optimize to grow a thin keyword list and re-check the
+    // AI-search questions against the new content. Best-effort; no-op without DataForSEO.
+    let refreshedTerms: Array<{ term: string; target_count: number }> | undefined;
+    let refreshedAiSummary: any;
+    if (articleId && keyword) {
+      try {
+        const articleIdSql = await getArticleIdSql();
+        const [rows] = await db.query(
+          `SELECT a.language, d.domain FROM articles a LEFT JOIN domain d ON d."ID" = a.domain_id WHERE a.${articleIdSql} = ? LIMIT 1`,
+          { replacements: [articleId] },
+        );
+        const meta = (rows as any[])[0] || {};
+        const lang = meta.language || 'pl';
+        const country = COUNTRY_FOR_LANG[lang] || 'US';
+        const optimizedText = optimizedWithImages.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+
+        // Grow the entity list if it's thin.
+        const existingTerms = (scoreData?.terms || []) as Array<{ term: string; target_count: number }>;
+        if (existingTerms.length < 60) {
+          sse(res, 'progress', { message: 'Pulling more keywords from DataForSEO…' });
+          const { terms: extra } = await enrichTerms({ keyword, country, languageCode: lang, limit: 90 });
+          if (extra.length) {
+            const seen = new Set(existingTerms.map((t) => (t.term || '').toLowerCase()));
+            const merged = [...existingTerms];
+            for (const t of extra) {
+              if (merged.length >= 100) break;
+              if (!seen.has(t.term.toLowerCase())) { merged.push(t); seen.add(t.term.toLowerCase()); }
+            }
+            refreshedTerms = merged.map((t) => ({ ...t, current_count: countOccurrences(optimizedText, t.term) } as any));
+            await db.query(`UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`, {
+              replacements: [JSON.stringify({ ...scoreData, terms: refreshedTerms }), articleId],
+            }).catch(() => {});
+          }
+        }
+
+        // Re-evaluate AI Search questions against the freshly optimized content.
+        sse(res, 'progress', { message: 'Re-checking AI-search coverage…' });
+        let ownDomain = '';
+        try { ownDomain = meta.domain ? new URL(`https://${meta.domain}`).hostname.replace(/^www\./, '') : ''; } catch { /* ignore */ }
+        const aiSummary = await getAiSearchInfo({ keyword, articleText: optimizedText, ownDomain, country, languageCode: lang });
+        if (aiSummary && aiSummary.citations.length) {
+          await persistAiVisibilityRun(articleId, keyword, aiSummary);
+          refreshedAiSummary = aiSummary;
+        }
+      } catch (err: any) {
+        console.log('[auto-optimize] DataForSEO refresh failed (non-fatal):', err?.message);
+      }
+    }
+
     console.log('[auto-optimize] sending done event, pendingImages:', pendingImages.length);
     sse(res, 'done', {
       content: optimizedWithImages,
       pendingImages,
+      ...(refreshedTerms ? { updatedTerms: refreshedTerms } : {}),
+      ...(refreshedAiSummary ? { aiSummary: refreshedAiSummary } : {}),
+      ...(resolvedPaaQuestions.length ? { paaQuestions: resolvedPaaQuestions } : {}),
       ...(suggestedMetaTitle ? { suggestedMetaTitle } : {}),
       ...(suggestedMetaDescription ? { suggestedMetaDescription } : {}),
       ...(postScore !== null ? {
