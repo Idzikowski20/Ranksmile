@@ -1,7 +1,7 @@
 import db from '../database/database';
 import { ensureUserTenancy } from './tenancy';
 
-export type Workspace = { id: number; name: string };
+export type Workspace = { id: number; name: string; domain?: string | null };
 type Row = Record<string, any>;
 
 async function select(sql: string, replacements: any[]): Promise<Row[]> {
@@ -10,15 +10,19 @@ async function select(sql: string, replacements: any[]): Promise<Row[]> {
 }
 
 /** Throws WORKSPACE_NOT_FOUND if the workspace doesn't belong to the user's org. */
-async function assertInOrg(orgId: number, wsId: number): Promise<void> {
+export async function assertInOrg(orgId: number, wsId: number): Promise<void> {
    const found = await select('SELECT id FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
    if (!found.length) throw new Error('WORKSPACE_NOT_FOUND');
 }
 
 export async function listWorkspaces(userId: string): Promise<Workspace[]> {
    const { orgId } = await ensureUserTenancy(userId);
-   const rows = await select("SELECT id, name FROM workspaces WHERE org_id = ? AND status = 'ready' ORDER BY id ASC", [orgId]);
-   return rows.map((r) => ({ id: Number(r.id), name: String(r.name ?? '') }));
+   const rows = await select(
+      `SELECT w.id, w.name, (SELECT d.domain FROM domain d WHERE d.workspace_id = w.id LIMIT 1) AS domain
+       FROM workspaces w WHERE w.org_id = ? AND w.status = 'ready' ORDER BY w.id ASC`,
+      [orgId],
+   );
+   return rows.map((r) => ({ id: Number(r.id), name: String(r.name ?? ''), domain: r.domain ? String(r.domain) : null }));
 }
 
 /**

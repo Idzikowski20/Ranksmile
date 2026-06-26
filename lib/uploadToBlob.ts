@@ -85,14 +85,19 @@ export async function uploadImageFromUrl(
    }
 }
 
-/** Parses a `data:image/<type>;base64,<data>` URL into a buffer + content type. Null if invalid/not an image. */
+/** Parses a `data:image/<type>;base64,<data>` URL into a buffer + content type. Null if invalid/not an image.
+ *  String-sliced rather than regex-matched: a greedy `(.+)$` over a multi-MB base64 payload
+ *  overflows V8's regex stack. */
 export function parseDataUrl(dataUrl: string): { buffer: Buffer; contentType: string } | null {
-   const m = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl || '');
-   if (!m) return null;
-   const contentType = m[1].trim().toLowerCase();
+   if (!dataUrl || !dataUrl.startsWith('data:')) return null;
+   const comma = dataUrl.indexOf(',');
+   if (comma === -1) return null;
+   const header = dataUrl.slice(5, comma); // between "data:" and the comma, e.g. "image/gif;base64"
+   if (!header.toLowerCase().includes(';base64')) return null; // only base64 data URLs supported
+   const contentType = header.split(';')[0].trim().toLowerCase();
    if (!ALLOWED_MIME.includes(contentType)) return null;
    try {
-      return { buffer: Buffer.from(m[2], 'base64'), contentType };
+      return { buffer: Buffer.from(dataUrl.slice(comma + 1), 'base64'), contentType };
    } catch {
       return null;
    }
