@@ -111,6 +111,16 @@ label {
    }
 }
 
+*,
+*::before,
+*::after {
+   box-sizing: border-box;
+   font-family: var(--font-family-primary);
+   font-variant-numeric: slashed-zero tabular-nums;
+   /* -webkit-font-feature-settings: "cv01" on, "cv02" on, "cv05" on, "cv08" on, "cv09" on, "cv10" on; */
+   font-feature-settings: "cv01" on, "cv02" on, "cv05" on, "cv08" on, "cv09" on, "cv10" on;
+}
+
 body {
    background-color: var(--color-surface-strong);
    font-family: var(--font-family-primary);
