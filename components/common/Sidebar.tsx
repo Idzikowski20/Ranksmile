@@ -363,6 +363,8 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    // Active-state helpers using asPath suffix matching
    const isActiveSuffix = (suffix: string) => mounted && router.asPath.includes(suffix);
    const isActiveDashboard = () => mounted && router.asPath.endsWith('/dashboard');
+   // Recommendations active state is read in 4 spots below — compute the suffix once.
+   const recommendationsActive = isActiveSuffix(`/sites/${activeSlug}/recommendations`);
 
    return (
       <>
@@ -420,11 +422,11 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                               fontWeight: 500,
                               textDecoration: 'none',
                               width: '100%',
-                              color: isActiveSuffix(`/sites/${activeSlug}/recommendations`) ? '#ffffff' : 'rgba(255,255,255,0.7)',
+                              color: recommendationsActive ? '#ffffff' : 'rgba(255,255,255,0.7)',
                               transition: 'color 150ms ease',
                            }}
                            className="sidebar-nav-item"
-                           data-active={isActiveSuffix(`/sites/${activeSlug}/recommendations`)}
+                           data-active={recommendationsActive}
                         >
                            <span
                               aria-hidden="true"
@@ -434,7 +436,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                                  zIndex: -1,
                                  borderRadius: '0.5rem',
                                  background: '#2F2F34',
-                                 opacity: isActiveSuffix(`/sites/${activeSlug}/recommendations`) ? 1 : 0,
+                                 opacity: recommendationsActive ? 1 : 0,
                                  transition: 'opacity 150ms ease',
                               }}
                               className="sidebar-nav-bg"
@@ -444,7 +446,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                            {recommendationCount > 0 && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                                  <IcoFlame />
-                                 <span style={{ fontSize: 12, fontWeight: 600, color: isActiveSuffix(`/sites/${activeSlug}/recommendations`) ? '#fff' : 'rgba(255,255,255,0.6)' }}>{recommendationCount}</span>
+                                 <span style={{ fontSize: 12, fontWeight: 600, color: recommendationsActive ? '#fff' : 'rgba(255,255,255,0.6)' }}>{recommendationCount}</span>
                               </span>
                            )}
                         </a>
