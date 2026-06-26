@@ -4,7 +4,6 @@ import { renameWorkspace, deleteWorkspace } from '../../../lib/workspaces';
 
 const ERR_STATUS: Record<string, number> = {
    WORKSPACE_NOT_FOUND: 404,
-   WORKSPACE_LAST: 409,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
