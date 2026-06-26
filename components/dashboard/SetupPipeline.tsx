@@ -25,16 +25,14 @@ function CheckIcon() {
 function SpinnerIcon({ percent }: { percent: number }) {
    return (
       <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, flexShrink: 0, position: 'relative' }}>
-         <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}
-         >
-            <circle cx="8" cy="8" r="6.5" stroke="#E4E4E7" strokeWidth="1.5" />
-            <path d="M8 1.5A6.5 6.5 0 0 1 14.5 8" stroke="#783AFB" strokeWidth="1.5" strokeLinecap="round" />
-         </svg>
+         <span
+            aria-hidden="true"
+            style={{
+               display: 'inline-block', width: 16, height: 16, flexShrink: 0,
+               border: '2px solid #E4E4E7', borderTopColor: '#783AFB', borderRadius: '9999px',
+               animation: 'spin 0.7s linear infinite',
+            }}
+         />
          {percent > 0 && (
             <span style={{
                position: 'absolute',
