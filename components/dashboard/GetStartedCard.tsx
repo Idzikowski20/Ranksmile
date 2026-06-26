@@ -52,7 +52,7 @@ const GetStartedCard = () => (
         padding: '16px 24px',
         borderRadius: 16,
         border: '1px solid #F4F4F5',
-        background: '#fff',
+        background: 'transparent',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: 1 }}>
