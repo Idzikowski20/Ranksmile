@@ -103,8 +103,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.redirect(302, `${redirect}?gsc_connected=1`);
     }
     return res.redirect(302, `/settings/google_search_console?gsc_connected=1`);
-  } catch (err: any) {
-    console.error('[GSC OAuth] Token exchange failed:', err?.message || err);
-    return res.redirect(302, `/settings/google_search_console?gsc_error=${encodeURIComponent('Token exchange failed')}`);
+  } catch (err) {
+    // Surface the real Google error (invalid_client / redirect_uri_mismatch / invalid_grant…)
+    // so the cause is visible in the URL, not just a generic message.
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('[GSC OAuth] Token exchange failed:', detail);
+    return res.redirect(302, `/settings/google_search_console?gsc_error=${encodeURIComponent(detail)}`);
   }
 }
