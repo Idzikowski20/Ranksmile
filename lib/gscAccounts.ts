@@ -1,6 +1,34 @@
 import Cryptr from 'cryptr';
 import { auth } from '@googleapis/searchconsole';
+import db from '../database/database';
 import GscAccount from '../database/models/gscAccount';
+
+let gscIndexesFixed = false;
+/**
+ * Legacy DBs put a UNIQUE on `google_sub` ALONE, which blocks the same Google
+ * account from being connected by different app users — wrong for multi-tenancy.
+ * The model intends a composite UNIQUE (userId, google_sub); realign existing DBs.
+ * Idempotent + best-effort (a fresh DB already gets the composite from the model).
+ */
+const ensureGscAccountIndexes = async (): Promise<void> => {
+  if (gscIndexesFixed) return;
+  // `gsc_account_google_sub_key` is a UNIQUE CONSTRAINT (needs DROP CONSTRAINT),
+  // `gsc_account_user_google` a plain unique INDEX — try both forms for each, idempotently.
+  const drops = [
+    'ALTER TABLE gsc_account DROP CONSTRAINT IF EXISTS gsc_account_google_sub_key',
+    'DROP INDEX IF EXISTS gsc_account_google_sub_key',
+    'DROP INDEX IF EXISTS gsc_account_user_google',
+  ];
+  for (const sql of drops) {
+    try { await db.query(sql); } catch { /* not present / unsupported dialect */ }
+  }
+  try {
+    await db.query('CREATE UNIQUE INDEX IF NOT EXISTS gsc_account_user_google ON gsc_account ("userId", google_sub)');
+  } catch (e) {
+    console.warn('[gsc] composite index realign skipped:', e instanceof Error ? e.message : String(e));
+  }
+  gscIndexesFixed = true;
+};
 
 export type GscAccountRecord = {
   ID: number;
@@ -37,6 +65,7 @@ export const upsertAccountForUser = async (params: {
   scopes?: string;
 }) => {
   const { userId, googleSub, email, picture = '', refreshToken, scopes = '' } = params;
+  await ensureGscAccountIndexes();
   const encrypted = encryptToken(refreshToken);
   const [record, created] = await GscAccount.findOrCreate({
     where: { userId, google_sub: googleSub },
