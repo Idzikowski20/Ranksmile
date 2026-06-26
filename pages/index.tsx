@@ -8,9 +8,18 @@ const Home: NextPage = () => {
    const router = useRouter();
    useEffect(() => {
       if (!router) return;
-      let dest: string | null = null;
-      try { dest = localStorage.getItem('post_login_redirect'); if (dest) localStorage.removeItem('post_login_redirect'); } catch { /* ignore */ }
-      router.replace(dest || '/dashboard');
+      let stashed: string | null = null;
+      try { stashed = localStorage.getItem('post_login_redirect'); if (stashed) localStorage.removeItem('post_login_redirect'); } catch { /* ignore */ }
+      if (stashed) { router.replace(stashed); return; }
+      (async () => {
+         try {
+            const res = await fetch('/api/workspaces');
+            const d = await res.json().catch(() => ({}));
+            const first = (d.workspaces || [])[0];
+            if (first?.id) { router.replace(`/workspace/${first.id}/dashboard`); return; }
+         } catch { /* fall through */ }
+         router.replace('/onboarding');
+      })();
    }, [router]);
 
   return (
