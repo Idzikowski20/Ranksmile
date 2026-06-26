@@ -8,7 +8,7 @@ export function useOrganization() {
       const res = await fetch('/api/organization');
       const d = await res.json().catch(() => ({}));
       return { name: d.name ?? null, logoUrl: d.logoUrl ?? null };
-   }, { staleTime: 60_000 });
+   }, { staleTime: 300_000, cacheTime: 600_000, refetchOnWindowFocus: false });
 }
 
 export function useUpdateOrganization() {

@@ -7,7 +7,7 @@ export function useWorkspaces() {
       const res = await fetch('/api/workspaces');
       const d = await res.json().catch(() => ({}));
       return { workspaces: d.workspaces || [], activeId: d.activeId ?? null };
-   }, { staleTime: 60_000 });
+   }, { staleTime: 300_000, cacheTime: 600_000, refetchOnWindowFocus: false });
 }
 
 async function jsonFetch(url: string, method: string, body?: unknown) {
