@@ -24,6 +24,32 @@ const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   </span>
 );
 
+/** Strips protocol, path and the GSC `sc-domain:` prefix to a bare hostname. */
+function cleanDomain(domain?: string | null): string {
+  return (domain || '')
+    .replace(/^sc-domain:/i, '')
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .trim();
+}
+
+/** Workspace icon: the domain's favicon, falling back to the heart glyph. */
+const WorkspaceAvatar = ({ domain, size = 24 }: { domain?: string | null; size?: number }) => {
+  const [err, setErr] = useState(false);
+  const host = cleanDomain(domain);
+  if (!host || err) return <HeartAvatar size={size} />;
+  return (
+    <img
+      alt=""
+      width={size}
+      height={size}
+      src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`}
+      onError={() => setErr(true)}
+      style={{ width: size, height: size, borderRadius: 6, flexShrink: 0, objectFit: 'cover', background: '#fff' }}
+    />
+  );
+};
+
 const ChevronUpDown = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#9F9FA9' }}>
     <path d="M7 15L12 20L17 15M7 9L12 4L17 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -108,7 +134,7 @@ const WorkspaceSwitcher = () => {
           fontFamily: font,
         }}
       >
-        <HeartAvatar />
+        <WorkspaceAvatar domain={current?.domain} />
         <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {current?.name ?? 'Workspace'}
         </span>
@@ -162,7 +188,7 @@ const WorkspaceSwitcher = () => {
                     textAlign: 'left',
                   }}
                 >
-                  <HeartAvatar size={24} />
+                  <WorkspaceAvatar domain={w.domain} size={24} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, color: '#18181B', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                     {w.name}
                   </span>
