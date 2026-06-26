@@ -153,9 +153,9 @@ const SetupShell = ({ title, children }: { title: string; children: ReactNode })
          <title>{title}</title>
          <meta name="robots" content="noindex" />
       </Head>
-      <div className="relative flex flex-col overflow-hidden" style={{ minHeight: '100dvh' }}>
+      <div className="relative flex flex-col" style={{ minHeight: '100dvh' }}>
          <GlobalTopbar breadcrumb={<SetupLogo />} />
-         <div className="p-sm flex flex-1 flex-col overflow-hidden">
+         <div className="p-sm" style={{ flex: 1 }}>
             {children}
          </div>
       </div>
@@ -343,7 +343,7 @@ const SetupPage: NextPage = () => {
          <SetupShell title="Create a new workspace · SerpBear">
             <div
                data-scroll-element="true"
-               className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
+               className="relative rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
             >
                   <div className="pb-md mx-auto flex w-full flex-col items-center justify-center self-center gap-lg" style={{ maxWidth: 400, paddingTop: '3rem' }}>
                      <div className="gap-2xl flex w-full flex-col justify-center">
@@ -623,7 +623,7 @@ const SetupPage: NextPage = () => {
             data-scroll-element="true"
             className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
          >
-               <div className="pb-md gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem' }}>
+               <div className="gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem', paddingBottom: 140 }}>
                   <div className="gap-2xl flex w-full flex-col justify-center">
                      <StepDots step={2} />
                      <div className="gap-md flex w-full flex-col justify-center">
@@ -702,9 +702,9 @@ const SetupPage: NextPage = () => {
                   </form>
                </div>
 
-               {/* Floating footer — a white gradient masks content scrolling under it */}
-               <div className="sticky bottom-0 -mx-base" style={{ pointerEvents: 'none' }}>
-                  <div style={{ height: 36, background: 'linear-gradient(to top, #ffffff 45%, rgba(255,255,255,0))' }} />
+               {/* Fixed footer — pinned to the viewport bottom, white gradient masks content under it */}
+               <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, pointerEvents: 'none' }}>
+                  <div style={{ height: 40, background: 'linear-gradient(to top, #ffffff 45%, rgba(255,255,255,0))' }} />
                   <div className="px-base sm:px-lg pb-md sm:pb-lg bg-white-base" style={{ pointerEvents: 'auto' }}>
                      <div className="mx-auto flex w-full items-center max-w-screen-sm" style={{ gap: 16 }}>
                         <button
