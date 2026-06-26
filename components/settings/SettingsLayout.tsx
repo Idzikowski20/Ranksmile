@@ -17,6 +17,8 @@ import ApiSettings from './ApiSettings';
 import ProfileSettings from './ProfileSettings';
 import BrandKnowledgeSettings from './BrandKnowledgeSettings';
 import CustomVoicesSettings from './CustomVoicesSettings';
+import WorkspaceGeneralSettings from './WorkspaceGeneralSettings';
+import WorkspaceMembersSettings from './WorkspaceMembersSettings';
 import SidebarLaunchpad from './SidebarLaunchpad';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
@@ -34,6 +36,7 @@ export type SettingsPageSlug =
   | 'billing_invoices'
   | 'billing_details'
   | 'members'
+  | 'workspace_general'
   | 'custom_voices'
   | 'profile'
   | 'notifications'
@@ -68,6 +71,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   billing_invoices: 'Invoices',
   billing_details: 'Billing details',
   members: 'Members',
+  workspace_general: 'General',
   custom_voices: 'Custom Voices',
   profile: 'Profile',
   notifications: 'Notifications',
@@ -89,8 +93,6 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     items: [
       { slug: 'general', label: 'General' },
       { slug: 'people', label: 'People' },
-      { slug: 'brand_knowledge', label: 'Brand Knowledge' },
-      { slug: 'custom_voices', label: 'Custom Voices' },
     ],
   },
   {
@@ -109,6 +111,15 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
       { slug: 'google_ads', label: 'Google Ads' },
       { slug: 'wordpress', label: 'WordPress' },
       { slug: 'api', label: 'API' },
+    ],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { slug: 'workspace_general', label: 'General' },
+      { slug: 'members', label: 'Members' },
+      { slug: 'brand_knowledge', label: 'Brand Knowledge' },
+      { slug: 'custom_voices', label: 'Custom Voices' },
     ],
   },
   {
@@ -268,6 +279,14 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
     if (currentPage === 'people') {
       return <PeopleSettings />;
+    }
+
+    if (currentPage === 'workspace_general') {
+      return <WorkspaceGeneralSettings />;
+    }
+
+    if (currentPage === 'members') {
+      return <WorkspaceMembersSettings />;
     }
 
     if (currentPage === 'brand_knowledge') {
