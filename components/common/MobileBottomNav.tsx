@@ -68,7 +68,8 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
          {/* Fixed bottom bar */}
          <nav className="mobile-bottom-nav lg:hidden" aria-label="Mobile navigation">
             {primaryItems.map(({ href, label, icon, active }) => (
-               <Link href={href} passHref key={href}>
+               // key by label (unique) — href can collide on '/sites' when no domain exists yet
+               <Link href={href} passHref key={label}>
                   <a
                      className={`mobile-nav-item${active ? ' mobile-nav-item--active' : ''}`}
                      aria-label={label}
