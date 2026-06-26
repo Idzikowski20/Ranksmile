@@ -21,7 +21,8 @@ const parseIds = (json: string | null): number[] => {
 
 const thStyle: React.CSSProperties = { padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: '#71717A', fontFamily: font };
 const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 14, color: '#52525C', fontFamily: font };
-const tableShell: React.CSSProperties = { width: '100%', border: '1px solid #F4F4F5', borderRadius: 12, background: '#FFFFFF', overflow: 'hidden' };
+// overflow visible (not hidden) so a Role dropdown in the last row isn't clipped by the card.
+const tableShell: React.CSSProperties = { width: '100%', border: '1px solid #F4F4F5', borderRadius: 12, background: '#FFFFFF', overflow: 'visible' };
 
 const Avatar = ({ initial }: { initial: string }) => (
   <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
@@ -87,10 +88,17 @@ const WorkspacePicker = ({ workspaces, selected, onChange, disabled }: {
   workspaces: Workspace[]; selected: number[]; onChange: (ids: number[]) => void; disabled?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
   const label = disabled ? 'All workspaces' : selected.length ? `${selected.length} workspace${selected.length > 1 ? 's' : ''}` : 'Select workspaces';
   const toggle = (id: number) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
         type="button"
         disabled={disabled}
@@ -103,19 +111,35 @@ const WorkspacePicker = ({ workspaces, selected, onChange, disabled }: {
           </svg>
           {label}
         </span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#71717A', flexShrink: 0 }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#71717A', flexShrink: 0, transition: 'transform 150ms ease', transform: open && !disabled ? 'rotate(180deg)' : 'none' }}>
           <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
       {open && !disabled && (
-        <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, maxHeight: 220, overflowY: 'auto', animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
-          {workspaces.length === 0 && <div style={{ padding: '10px 14px', fontSize: 13, color: '#71717A', fontFamily: font }}>No workspaces</div>}
-          {workspaces.map((w) => (
-            <label key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, color: '#18181B', fontFamily: font, cursor: 'pointer' }}>
-              <input type="checkbox" checked={selected.includes(w.id)} onChange={() => toggle(w.id)} />
-              {w.name}
-            </label>
-          ))}
+        <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, maxHeight: 220, overflowY: 'auto', padding: 4, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
+          {workspaces.length === 0 && <div style={{ padding: '10px 12px', fontSize: 13, color: '#71717A', fontFamily: font }}>No workspaces</div>}
+          {workspaces.map((w) => {
+            const checked = selected.includes(w.id);
+            return (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => toggle(w.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: '#18181B', fontFamily: font }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: checked ? '1px solid #783AFB' : '1px solid #D4D4D8', background: checked ? '#783AFB' : '#FFFFFF', transition: 'background 120ms ease, border-color 120ms ease' }}>
+                  {checked && (
+                    <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <path d="M5 10.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                {w.name}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
