@@ -68,6 +68,17 @@ const DashboardPage: NextPage = () => {
   const clicksHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
   const recommendationsHref = primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites';
 
+  // Domain-level recommendations produced by the setup pipeline (the scan output).
+  const { data: domainRecsData } = useQuery(
+    ['domainRecs', activeDomainSlug],
+    async () => {
+      const res = await fetch(`/api/domains/${activeDomainSlug}/recommendations`);
+      if (!res.ok) return { recommendations: [] };
+      return res.json();
+    },
+    { enabled: !!activeDomainSlug, retry: false },
+  );
+
   // ── Pipeline polling ──
   const { data: setup } = useSetupStatus(activeDomainSlug);
   const runSetup = useRunSetup();
@@ -90,14 +101,21 @@ const DashboardPage: NextPage = () => {
     if (setup?.status === 'done') {
       queryClient.invalidateQueries('dashboardArticles');
       queryClient.invalidateQueries('dashboardSites');
+      queryClient.invalidateQueries(['domainRecs', activeDomainSlug]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setup?.status]);
 
   const pipelineActive = setup && (setup.status === 'queued' || setup.status === 'running' || setup.status === 'failed');
 
-  // ── Recommendations: analyzed articles (pulls from the recommendations data) ──
+  // ── Recommendations: the domain pipeline's scan output (pages requiring optimization).
+  //    Falls back to analyzed articles with a content score when the scan produced none. ──
   const recommendations: RecommendationItem[] = useMemo(() => {
+    type DomainRec = { id: number; title: string; priority: string | null };
+    const domainRecs: DomainRec[] = domainRecsData?.recommendations ?? [];
+    if (domainRecs.length > 0) {
+      return domainRecs.map((r) => ({ id: r.id, title: r.title, priority: r.priority || 'low', href: recommendationsHref }));
+    }
     type ArticleRow = { id: number; title: string; content_score: number; source: string };
     const arts: ArticleRow[] = (articlesData?.articles ?? []).filter(
       (a: ArticleRow) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0,
@@ -105,7 +123,7 @@ const DashboardPage: NextPage = () => {
     return arts
       .sort((a, b) => (b.content_score || 0) - (a.content_score || 0))
       .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
-  }, [articlesData, recommendationsHref]);
+  }, [domainRecsData, articlesData, recommendationsHref]);
 
   const recentlyEdited: RecentlyEditedItem[] = useMemo(() => {
     type ArticleRow = { id: number | string; title: string; content_score: number; target_keyword: string | null; updated_at: string | null; created_at: string | null; source?: string };
