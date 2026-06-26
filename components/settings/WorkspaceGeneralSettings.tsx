@@ -129,7 +129,8 @@ const WorkspaceGeneralSettings = () => {
               width: 64,
               height: 64,
               borderRadius: 8,
-              background: 'rgba(120,58,251,0.10)',
+              // purple fill only behind the initial fallback; a real logo/favicon fills the box
+              background: pendingLogo || (faviconUrl && !faviconError) ? 'transparent' : 'rgba(120,58,251,0.10)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -140,7 +141,7 @@ const WorkspaceGeneralSettings = () => {
             {pendingLogo ? (
               <img src={pendingLogo} alt="Workspace logo preview" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
             ) : faviconUrl && !faviconError ? (
-              <img src={faviconUrl} alt="Workspace favicon" style={{ width: 32, height: 32, objectFit: 'contain' }} onError={() => setFaviconError(true)} />
+              <img src={faviconUrl} alt="Workspace favicon" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} onError={() => setFaviconError(true)} />
             ) : (
               <span style={{ fontSize: 20, fontWeight: 600, color: '#783AFB', textTransform: 'uppercase', fontFamily: font, userSelect: 'none' }}>
                 {initial}
