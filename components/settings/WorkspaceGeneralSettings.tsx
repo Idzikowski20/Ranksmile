@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useWorkspaces, useRenameWorkspace, useDeleteWorkspace, Workspace } from '../../services/workspaces';
 import { useWorkspaceSettings, useUpdateWorkspaceLogo } from '../../services/workspaceSettings';
+import ConfirmModal from '../common/ConfirmModal';
 
 const font = 'var(--font-family-primary)';
 
@@ -38,6 +39,7 @@ const WorkspaceGeneralSettings = () => {
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [gscAccount, setGscAccount] = useState<GscAccount | null>(null);
   const [faviconError, setFaviconError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
@@ -95,13 +97,16 @@ const WorkspaceGeneralSettings = () => {
     }
   };
 
-  const handleRemove = () => {
+  const doRemove = () => {
     if (!current) return;
-    if (!window.confirm(`Remove the workspace "${current.name}"? This cannot be undone.`)) return;
     setRemoving(true);
     deleteWorkspace.mutate(current.id, {
       onSuccess: () => { if (typeof window !== 'undefined') window.location.href = '/'; },
-      onError: (e: unknown) => { toast.error(e instanceof Error ? e.message : 'Failed to remove workspace'); setRemoving(false); },
+      onError: (e: unknown) => {
+        toast.error(e instanceof Error ? e.message : 'Failed to remove workspace');
+        setRemoving(false);
+        setConfirmOpen(false);
+      },
     });
   };
 
@@ -334,7 +339,7 @@ const WorkspaceGeneralSettings = () => {
         <div>
           <button
             type="button"
-            onClick={handleRemove}
+            onClick={() => setConfirmOpen(true)}
             disabled={removing || !current}
             style={{
               display: 'inline-flex',
@@ -366,6 +371,18 @@ const WorkspaceGeneralSettings = () => {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        destructive
+        title={current ? `Remove "${current.name}"?` : 'Remove workspace?'}
+        message="This permanently deletes the workspace and all of its data — keywords, articles and audits. This cannot be undone."
+        confirmText="Delete"
+        confirmLabel="Remove Workspace"
+        loading={removing}
+        onConfirm={doRemove}
+        onClose={() => { if (!removing) setConfirmOpen(false); }}
+      />
     </div>
   );
 };
