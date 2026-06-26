@@ -44,24 +44,24 @@ async function migrateDomainsToWorkspaces(orgId: number, userId: string, isOwner
    );
    for (const s of shared) {
       const wsId = Number(s.ws);
-      const domains = await select('SELECT id, domain FROM domain WHERE workspace_id = ? ORDER BY id ASC', [wsId]);
+      const domains = await select('SELECT "ID" AS id, domain FROM domain WHERE workspace_id = ? ORDER BY "ID" ASC', [wsId]);
       await db.query('UPDATE workspaces SET name = ? WHERE id = ?', { replacements: [domains[0].domain, wsId] });
       for (let i = 1; i < domains.length; i += 1) {
          const newWs = await createWorkspace(orgId, domains[i].domain);
-         await db.query('UPDATE domain SET workspace_id = ? WHERE id = ?', { replacements: [newWs, domains[i].id] });
+         await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', { replacements: [newWs, domains[i].id] });
       }
    }
    const ownerLegacy = isOwner ? ' OR "userId" IS NULL' : '';
    const orphans = await select(
-      `SELECT id, domain FROM domain
+      `SELECT "ID" AS id, domain FROM domain
         WHERE ("userId" = ?${ownerLegacy})
           AND (workspace_id IS NULL OR workspace_id NOT IN (SELECT id FROM workspaces WHERE org_id = ?))
-        ORDER BY id ASC`,
+        ORDER BY "ID" ASC`,
       [userId, orgId],
    );
    for (const d of orphans) {
       const newWs = await createWorkspace(orgId, d.domain);
-      await db.query('UPDATE domain SET workspace_id = ? WHERE id = ?', { replacements: [newWs, d.id] });
+      await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', { replacements: [newWs, d.id] });
    }
 }
 

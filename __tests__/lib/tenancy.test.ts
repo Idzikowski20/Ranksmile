@@ -40,6 +40,9 @@ describe('ensureUserTenancy', () => {
     expect(calls.some((s) => s.includes('INSERT INTO workspaces'))).toBe(true);
     expect(calls.some((s) => s.includes('UPDATE workspaces SET name'))).toBe(true);
     expect(calls.some((s) => s.includes('UPDATE domain SET workspace_id'))).toBe(true);
+    // Domain PK is "ID" (quoted) on Postgres — migrate must not use bare lowercase `id`.
+    expect(calls.some((s) => s.includes('FROM domain') && s.includes('"ID"'))).toBe(true);
+    expect(calls.some((s) => s.includes('UPDATE domain SET workspace_id = ? WHERE "ID" = ?'))).toBe(true);
   });
 });
 
