@@ -10,6 +10,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articleSql';
 import { readContentSettings } from '../../../../lib/contentSettings';
+import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 
@@ -65,10 +66,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       id: a.id, title: a.title, url: `https://${domainName}/${(a.meta_url || '').replace(/^\//, '')}`,
     }));
 
-    // 4. Resolve shared content settings — Brand Knowledge + selected voice tone.
+    // 4. Resolve content settings — Brand Knowledge (global) + per-domain voice tone.
     const cs = await readContentSettings();
     const brandKnowledge = cs.brandKnowledge || '';
-    const selectedVoice = voiceId && voiceId !== 'serp' ? cs.voices.find((v) => v.id === voiceId) : undefined;
+    const domainVoices = await getDomainVoices(article.domain_id);
+    const selectedVoice = voiceId && voiceId !== 'serp' ? domainVoices.find((v) => v.id === voiceId) : undefined;
     const voiceTone = selectedVoice?.description || '';
 
     // 5. Call the sidecar with all wizard + brand context.
