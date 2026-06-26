@@ -52,6 +52,26 @@ export async function ensureTenancyTables(): Promise<void> {
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_org_members_user ON organization_members(user_id)'); } catch { /* noop */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_domain_workspace ON domain(workspace_id)'); } catch { /* noop */ }
 
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS invitations (
+         id            ${PK},
+         org_id        INTEGER NOT NULL,
+         email         TEXT NOT NULL,
+         role          TEXT NOT NULL DEFAULT 'member',
+         workspace_ids TEXT,
+         token         TEXT NOT NULL,
+         status        TEXT NOT NULL DEFAULT 'pending',
+         invited_by    TEXT,
+         expires_at    TIMESTAMP,
+         created_at    TIMESTAMP DEFAULT ${NOW}
+      )
+   `);
+   // Per-workspace member access (JSON array of workspace ids; NULL = all workspaces in the org).
+   try { await db.query('ALTER TABLE organization_members ADD COLUMN workspace_ids TEXT'); } catch { /* exists */ }
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token)'); } catch { /* noop */ }
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_invitations_org ON invitations(org_id)'); } catch { /* noop */ }
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email)'); } catch { /* noop */ }
+
    if (!process.env.TENANCY_OWNER_USER_ID) {
       console.warn('[tenancy] TENANCY_OWNER_USER_ID is unset — legacy (NULL workspace) domains stay hidden until claimed.');
    }
