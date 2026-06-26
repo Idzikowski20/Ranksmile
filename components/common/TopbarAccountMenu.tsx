@@ -88,7 +88,7 @@ const TopbarAccountMenu = () => {
          >
             <span
                aria-hidden="true"
-               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: '#2F2F34', borderRadius: 9999, transition: 'background 150ms ease' }}
+               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: 'rgb(24, 24, 27)', borderRadius: 9999, transition: 'background 150ms ease' }}
             >
                <OrgBadge size={20} logo={orgLogo} initial={orgInitial} />
                <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo">
