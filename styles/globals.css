@@ -1194,3 +1194,14 @@ body {
   color: inherit;
   border-radius: 2px;
 }
+
+/* Surfer loader — sweeping mask band rotates around the logo square. */
+@keyframes surferLoaderSweep { to { transform: rotate(360deg); } }
+.surfer-loader-sweep {
+   transform-box: view-box;
+   transform-origin: center;
+   animation: surferLoaderSweep 1.1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+   .surfer-loader-sweep { animation: none; }
+}

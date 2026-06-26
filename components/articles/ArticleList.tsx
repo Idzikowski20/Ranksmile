@@ -93,8 +93,37 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
 
   if (isLoading) {
     return (
-      <div className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
-        Loading articles...
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }} aria-busy="true" aria-label="Loading articles">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={`article-skel-${i}`}
+            style={{
+              height: 133,
+              display: 'flex',
+              alignItems: 'center',
+              border: '1px solid #E4E4E7',
+              borderRadius: 12,
+              gap: 12,
+              animation: 'skeletonPulse 1.5s ease-in-out infinite',
+              animationDelay: `${i * 0.08}s`,
+            }}
+          >
+            {/* Left: score gauge placeholder */}
+            <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingLeft: 24 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F0F0F4' }} />
+            </div>
+            {/* Title + meta */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ width: '45%', height: 16, borderRadius: 6, background: '#F0F0F4' }} />
+              <div style={{ width: '28%', height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+            </div>
+            {/* Right: status/date placeholders */}
+            <div style={{ paddingRight: 24, display: 'flex', gap: 16, flexShrink: 0 }}>
+              <div style={{ width: 60, height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+              <div style={{ width: 40, height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
