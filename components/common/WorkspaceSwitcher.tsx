@@ -70,8 +70,7 @@ const PlusIcon = () => (
   </svg>
 );
 
-function friendly(code: string | undefined): string {
-  if (code === 'WORKSPACE_LAST') return 'You must keep at least one workspace.';
+function friendly(_code?: string): string {
   return 'Something went wrong.';
 }
 

@@ -49,11 +49,13 @@ describe('workspaces helpers', () => {
     expect(sqls.some((s) => s.includes('DELETE FROM workspaces'))).toBe(true);
   });
 
-  it('deleteWorkspace blocks deleting the last workspace', async () => {
+  it('deleteWorkspace removes even the last workspace (caller then routes to the creator)', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 9 }]))    // ownership
-      .mockResolvedValueOnce(rows([{ n: 1 }]));    // only one workspace -> block
-    await expect(deleteWorkspace('u1', 9)).rejects.toThrow('WORKSPACE_LAST');
+      .mockResolvedValueOnce(rows([{ id: 9 }]))                    // assertInOrg ownership
+      .mockResolvedValueOnce(rows([{ id: 7, domain: 'only.pl' }])); // the workspace's domain
+    await expect(deleteWorkspace('u1', 9)).resolves.toBeUndefined();
+    const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
+    expect(sqls.some((s) => s.includes('DELETE FROM workspaces'))).toBe(true);
   });
 
   it('createSetupWorkspace inserts a setup workspace and returns its id when none exists', async () => {

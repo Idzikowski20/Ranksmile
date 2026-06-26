@@ -84,13 +84,12 @@ export async function renameWorkspace(userId: string, wsId: number, name: string
 
 /**
  * Removes a workspace and — since workspace == domain — its domain(s) and their data
- * (keywords, articles, site_context). Throws WORKSPACE_LAST when it's the only workspace.
+ * (keywords, articles, site_context). The LAST workspace CAN be deleted; the caller then
+ * lands on `/`, which routes a 0-workspace owner into the new-workspace creator.
  */
 export async function deleteWorkspace(userId: string, wsId: number): Promise<void> {
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
-   const [{ n: wsCount }] = await select('SELECT COUNT(*) AS n FROM workspaces WHERE org_id = ?', [orgId]) as Array<{ n: number }>;
-   if (Number(wsCount) <= 1) throw new Error('WORKSPACE_LAST');
 
    const domains = await select('SELECT "ID" AS id, domain FROM domain WHERE workspace_id = ?', [wsId]) as Array<{ id: number; domain: string }>;
    await db.transaction(async (tx: import('sequelize').Transaction) => {
