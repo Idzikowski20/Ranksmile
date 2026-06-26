@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import SidebarLaunchpad from '../settings/SidebarLaunchpad';
+import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { useWorkspaces } from '../../services/workspaces';
 
 type SidebarProps = {
    domains?: DomainType[];
@@ -259,10 +261,8 @@ const CollapsibleGroup = ({ label, open, onToggle, children, toggleIcon = 'chevr
 
 const SEO_SUB_NAV = [
    { key: 'performance', label: 'Performance', icon: <IcoPerformance /> },
-   { key: 'recommendations', label: 'Recommendations', icon: <IcoRecommendations /> },
    { key: 'content-audit', label: 'Content Audit', icon: <IcoContentAudit /> },
    { key: 'topical-map', label: 'Topical Map', icon: <IcoTopicalMap /> },
-   { key: 'activity-log', label: 'Activity Log', icon: <IcoActivityLog /> },
 ];
 
 const AI_VIS_NAV: { label: string; icon: React.ReactNode; badge?: string }[] = [
@@ -282,17 +282,22 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    const [toolsOpen, setToolsOpen] = useState(true);
    const [seoOpen, setSeoOpen] = useState(true);
    const [aiVisOpen, setAiVisOpen] = useState(true);
-   const [switcherOpen, setSwitcherOpen] = useState(false);
-   const switcherRef = useRef<HTMLDivElement>(null);
 
    const [mounted, setMounted] = useState(false);
    useEffect(() => { setMounted(true); }, []);
 
-   const isActive = (path: string) => mounted && router.asPath === path;
-   const isActivePrefix = (prefix: string) => mounted && router.asPath.startsWith(prefix);
+   // Workspace data
+   const { data: wsData } = useWorkspaces();
+   const workspaces = wsData?.workspaces || [];
+
+   // Active workspace id — SSR-safe: the URL is only read after mount (router.asPath
+   // differs server vs client under the /workspace rewrite, which would mismatch hrefs).
+   const activeId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+   const activeWorkspace = workspaces.find((w) => w.id === activeId) ?? workspaces[0] ?? null;
+   const activeName = activeWorkspace?.name ?? null; // the workspace's domain name (e.g. "idztech.pl")
 
    // Detect domain slug from current URL (e.g. /sites/[slug]/...)
-   const urlSlugMatch = router.asPath.match(/^\/(?:domain|sites)\/([^/?#]+)/);
+   const urlSlugMatch = router.asPath.match(/^(?:\/workspace\/\d+)?\/(?:domain|sites)\/([^/?#]+)/);
    const urlSlug = urlSlugMatch ? urlSlugMatch[1] : null;
 
    // selectedDomainSlug — initialized from localStorage, synced from URL when on a domain page
@@ -320,20 +325,17 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
       }
    }, [domains, selectedDomainSlug]);
 
-   // Close popover on outside click
-   useEffect(() => {
-      if (!switcherOpen) return;
-      const handler = (e: MouseEvent) => {
-         if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
-            setSwitcherOpen(false);
-         }
-      };
-      document.addEventListener('mousedown', handler);
-      return () => document.removeEventListener('mousedown', handler);
-   }, [switcherOpen]);
+   // Resolve activeSlug: match active workspace's domain name against the domains prop
+   const activeSlug = useMemo(() => {
+      if (activeName) {
+         const match = domains.find((d) => d.domain === activeName);
+         if (match) return match.slug;
+      }
+      return selectedDomainSlug;
+   }, [activeName, domains, selectedDomainSlug]);
 
-   const selectedDomain = selectedDomainSlug
-      ? domains.find((d) => d.slug === selectedDomainSlug) ?? null
+   const selectedDomain = activeSlug
+      ? domains.find((d) => d.slug === activeSlug) ?? null
       : null;
 
    // Recommendations counter — articles for the selected domain that need optimization (score < 70).
@@ -350,45 +352,16 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
       return articles.filter((a) => (a.content_score || 0) < 70).length;
    }, [recArticlesData]);
 
-   const handleSelectDomain = (slug: string) => {
-      setSelectedDomainSlug(slug);
-      localStorage.setItem(LS_KEY, slug);
-      setSwitcherOpen(false);
-
-      // If currently on a domain sub-page, navigate to the same section on the new domain
-      const subPageMatch = router.asPath.match(/^\/(?:domain|sites)\/[^/?#]+\/([^/?#]+)/);
-      if (subPageMatch) {
-         router.push(`/sites/${slug}/${subPageMatch[1]}`);
-      }
-   };
-
-   const topItems = [
-      {
-         href: '/dashboard',
-         label: 'Dashboard',
-         icon: <IcoDashboard />,
-         active: isActive('/dashboard'),
-      },
-      {
-         href: '/articles',
-         label: 'Content Editor',
-         icon: <IcoContentEditor />,
-         active: isActivePrefix('/articles'),
-      },
-      {
-         href: '/sites',
-         label: 'Sites',
-         icon: <IcoSites />,
-         active: isActive('/sites'),
-      },
-   ];
-
    const toolItems = [
-      { href: '/dashboard', label: 'Audit', icon: <IcoAudit /> },
-      { href: '/dashboard', label: 'Topic Research', icon: <IcoTopicResearch /> },
-      { href: '/research', label: 'Keyword Research', icon: <IcoKeywordResearch /> },
-      { href: '/content-editor', label: 'AI Humanizer', icon: <IcoAIHumanizer /> },
+      { href: workspaceHref(activeId, '/dashboard'), label: 'Audit', icon: <IcoAudit /> },
+      { href: workspaceHref(activeId, '/dashboard'), label: 'Topic Research', icon: <IcoTopicResearch /> },
+      { href: workspaceHref(activeId, '/research'), label: 'Keyword Research', icon: <IcoKeywordResearch /> },
+      { href: workspaceHref(activeId, '/content-editor'), label: 'AI Humanizer', icon: <IcoAIHumanizer /> },
    ];
+
+   // Active-state helpers using asPath suffix matching
+   const isActiveSuffix = (suffix: string) => mounted && router.asPath.includes(suffix);
+   const isActiveDashboard = () => mounted && router.asPath.endsWith('/dashboard');
 
    return (
       <>
@@ -410,134 +383,100 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
             }}
             data-testid="sidebar"
          >
-            {/* Top nav items */}
+
+            {/* Top nav items: Dashboard, Recommendations, Activity Log, Content Editor */}
             <nav
                style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.125rem',
-                  padding: '8px 8px 0',
+                  padding: '4px 8px 0',
                }}
             >
-               {topItems.map((item) => (
-                  <NavItem key={item.href} {...item} />
-               ))}
+               <NavItem
+                  href={workspaceHref(activeId, '/dashboard')}
+                  label="Dashboard"
+                  icon={<IcoDashboard />}
+                  active={isActiveDashboard()}
+               />
+               {activeSlug && (
+                  <>
+                     {/* Recommendations — top-level with flame badge */}
+                     <Link href={workspaceHref(activeId, `/sites/${activeSlug}/recommendations`)} passHref>
+                        <a
+                           aria-label="Recommendations"
+                           style={{
+                              position: 'relative',
+                              zIndex: 1,
+                              display: 'flex',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.875rem',
+                              lineHeight: '1.25rem',
+                              fontWeight: 500,
+                              textDecoration: 'none',
+                              width: '100%',
+                              color: isActiveSuffix(`/sites/${activeSlug}/recommendations`) ? '#ffffff' : 'rgba(255,255,255,0.7)',
+                              transition: 'color 150ms ease',
+                           }}
+                           className="sidebar-nav-item"
+                           data-active={isActiveSuffix(`/sites/${activeSlug}/recommendations`)}
+                        >
+                           <span
+                              aria-hidden="true"
+                              style={{
+                                 position: 'absolute',
+                                 inset: 0,
+                                 zIndex: -1,
+                                 borderRadius: '0.5rem',
+                                 background: '#2F2F34',
+                                 opacity: isActiveSuffix(`/sites/${activeSlug}/recommendations`) ? 1 : 0,
+                                 transition: 'opacity 150ms ease',
+                              }}
+                              className="sidebar-nav-bg"
+                           />
+                           <IcoRecommendations />
+                           <span style={{ flexGrow: 1 }}>Recommendations</span>
+                           {recommendationCount > 0 && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                 <IcoFlame />
+                                 <span style={{ fontSize: 12, fontWeight: 600, color: isActiveSuffix(`/sites/${activeSlug}/recommendations`) ? '#fff' : 'rgba(255,255,255,0.6)' }}>{recommendationCount}</span>
+                              </span>
+                           )}
+                        </a>
+                     </Link>
+                     {/* Activity Log — top-level */}
+                     <NavItem
+                        href={workspaceHref(activeId, `/sites/${activeSlug}/activity-log`)}
+                        label="Activity Log"
+                        icon={<IcoActivityLog />}
+                        active={isActiveSuffix(`/sites/${activeSlug}/activity-log`)}
+                     />
+                  </>
+               )}
+               <NavItem
+                  href={workspaceHref(activeId, '/articles')}
+                  label="Content Editor"
+                  icon={<IcoContentEditor />}
+                  active={isActiveSuffix('/articles')}
+               />
             </nav>
 
-            {/* Domain section — always visible when domains exist */}
-            {mounted && (selectedDomainSlug || domains.length > 0) && (
+            {/* Domain section — SEO + AI Visibility groups */}
+            {mounted && activeSlug && (
                <div style={{ padding: '4px 8px 0' }}>
-                  {/* Domain switcher button */}
-                  <div ref={switcherRef} style={{ position: 'relative' }}>
-                     <button
-                        type="button"
-                        onClick={() => setSwitcherOpen((v) => !v)}
-                        style={{
-                           display: 'flex',
-                           alignItems: 'center',
-                           gap: '0.5rem',
-                           width: '100%',
-                           padding: '8px',
-                           border: 'none',
-                           background: 'rgba(255,255,255,0.07)',
-                           cursor: 'pointer',
-                           borderRadius: '0.5rem',
-                           color: 'rgba(255,255,255,0.9)',
-                           transition: 'background 150ms',
-                        }}
-                        className="domain-switcher-row"
-                     >
-                        {/* Favicon */}
-                        <img
-                           alt=""
-                           style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0 }}
-                           src={`https://www.google.com/s2/favicons?domain=${selectedDomain?.domain || (selectedDomainSlug || '').replace(/_/g, '-').replace(/-/g, '.')}&sz=32`}
-                        />
-                        {/* Domain name */}
-                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, flexGrow: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                           {selectedDomain?.domain || selectedDomainSlug}
-                        </span>
-                        {/* Chevron — rotates when open */}
-                        <svg
-                           viewBox="0 0 24 24" width="14" height="14"
-                           style={{ flexShrink: 0, color: 'rgba(255,255,255,0.4)', transition: 'transform 200ms', transform: switcherOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        >
-                           <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" />
-                        </svg>
-                     </button>
-
-                     {/* Domain switcher popover */}
-                     {switcherOpen && (
-                        <div
-                           style={{
-                              position: 'absolute',
-                              top: 'calc(100% + 4px)',
-                              left: 0,
-                              right: 0,
-                              zIndex: 200,
-                              background: '#1C1C20',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: 10,
-                              boxShadow: '0px 16px 40px rgba(0,0,0,0.5)',
-                              overflow: 'hidden',
-                              animation: 'growOut 0.15s cubic-bezier(0.16,1,0.3,1)',
-                              transformOrigin: 'top center',
-                           }}
-                        >
-                           {domains.length === 0 ? (
-                              <div style={{ padding: '10px 12px', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-family-primary)' }}>
-                                 No domains added yet
-                              </div>
-                           ) : domains.map((d) => {
-                              const isSelected = d.slug === selectedDomainSlug;
-                              return (
-                                 <button
-                                    key={d.slug}
-                                    type="button"
-                                    onClick={() => handleSelectDomain(d.slug)}
-                                    style={{
-                                       display: 'flex',
-                                       alignItems: 'center',
-                                       gap: 8,
-                                       width: '100%',
-                                       padding: '8px 12px',
-                                       border: 'none',
-                                       background: isSelected ? 'rgba(255,255,255,0.08)' : 'transparent',
-                                       cursor: 'pointer',
-                                       color: isSelected ? '#fff' : 'rgba(255,255,255,0.7)',
-                                       fontSize: 13,
-                                       fontWeight: isSelected ? 600 : 400,
-                                       fontFamily: 'var(--font-family-primary)',
-                                       textAlign: 'left',
-                                       transition: 'background 100ms',
-                                    }}
-                                    className="domain-switcher-row"
-                                 >
-                                    <img
-                                       alt=""
-                                       style={{ width: 14, height: 14, borderRadius: 2, flexShrink: 0 }}
-                                       src={`https://www.google.com/s2/favicons?domain=${d.domain}&sz=32`}
-                                    />
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{d.domain}</span>
-                                    {isSelected && (
-                                       <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" style={{ flexShrink: 0, color: '#783AFB' }}>
-                                          <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-                                       </svg>
-                                    )}
-                                 </button>
-                              );
-                           })}
-                        </div>
-                     )}
-                  </div>
-
-                  {/* SEO group */}
+                  {/* SEO group: Performance, Content Audit, Topical Map */}
                   <CollapsibleGroup label="SEO" open={seoOpen} onToggle={() => setSeoOpen((v) => !v)} toggleIcon="eye">
                      {SEO_SUB_NAV.map((item) => {
-                        const href = `/sites/${selectedDomainSlug}/${item.key}`;
-                        const active = mounted && (router.asPath === href || router.asPath.startsWith(href + '?'));
-                        const count = item.key === 'recommendations' ? recommendationCount : undefined;
-                        return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} count={count} />;
+                        const seoPath = item.key === 'performance'
+                           ? `/sites/${activeSlug}`
+                           : `/sites/${activeSlug}/${item.key}`;
+                        const href = workspaceHref(activeId, seoPath);
+                        const active = mounted && isActiveSuffix(seoPath);
+                        return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} />;
                      })}
                   </CollapsibleGroup>
 
