@@ -74,19 +74,26 @@ const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMEN
 const JSON_T = isPostgres ? 'JSONB' : 'TEXT';
 const NOW = 'CURRENT_TIMESTAMP';
 
+/** Log non-"already exists" failures instead of a blanket catch{} that masks real errors
+ * (permission denied / offline / syntax) as success. Mirrors lib/ensureTenancyTables.ts. */
+function ignoreExisting(label: string, e: unknown): void {
+   const m = String((e as any)?.message ?? e ?? '');
+   if (!/exist|duplicate|already/i.test(m)) console.warn(`[pipeline] ${label} failed:`, m);
+}
+
 /** Domain-pipeline tables + analysis_jobs columns for domain-level jobs. */
 export async function ensurePipelineTables(): Promise<void> {
    if (checked) return;
    await ensureArticlesTables(); // analysis_jobs must already exist
 
    // analysis_jobs is now a shared job table — nullable article_id, generic domain_id + metadata.
-   try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN domain_id INTEGER'); } catch { /* exists */ }
-   try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN metadata ${JSON_T}`); } catch { /* exists */ }
+   try { await db.query('ALTER TABLE analysis_jobs ADD COLUMN domain_id INTEGER'); } catch (e) { ignoreExisting('add analysis_jobs.domain_id', e); }
+   try { await db.query(`ALTER TABLE analysis_jobs ADD COLUMN metadata ${JSON_T}`); } catch (e) { ignoreExisting('add analysis_jobs.metadata', e); }
    // article_id was NOT NULL; new domain jobs leave it null. SQLite can't drop NOT NULL in place,
    // but INSERTs that omit it fail only if a NOT NULL constraint is enforced — domain INSERTs supply
    // article_id = NULL explicitly; on Postgres drop the constraint, on SQLite it's tolerated for new rows
    // created via our code path (we always pass NULL). Best-effort drop on Postgres:
-   if (isPostgres) { try { await db.query('ALTER TABLE analysis_jobs ALTER COLUMN article_id DROP NOT NULL'); } catch { /* ok */ } }
+   if (isPostgres) { try { await db.query('ALTER TABLE analysis_jobs ALTER COLUMN article_id DROP NOT NULL'); } catch (e) { ignoreExisting('drop article_id NOT NULL', e); } }
 
    await db.query(`CREATE TABLE IF NOT EXISTS domain_gsc_pages (
       id ${PK}, domain_id INTEGER NOT NULL, url TEXT NOT NULL,
@@ -106,9 +113,9 @@ export async function ensurePipelineTables(): Promise<void> {
       rationale TEXT, priority TEXT, type TEXT, created_at TIMESTAMP DEFAULT ${NOW})`);
 
    for (const t of ['domain_gsc_pages','domain_keywords','domain_topics','domain_competitors','domain_recommendations']) {
-      try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch { /* ok */ }
+      try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch (e) { ignoreExisting(`idx_${t}_domain`, e); }
    }
-   try { await db.query('CREATE INDEX IF NOT EXISTS idx_jobs_domain_type ON analysis_jobs(domain_id, job_type)'); } catch { /* ok */ }
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_jobs_domain_type ON analysis_jobs(domain_id, job_type)'); } catch (e) { ignoreExisting('idx_jobs_domain_type', e); }
 
    checked = true;
 }
@@ -154,19 +161,24 @@ describe('deriveStages', () => {
 });
 
 describe('enqueueDomainSetup', () => {
-  it('does not create a second job when one already exists', async () => {
-    mockQuery.mockResolvedValueOnce(sel([{ id: 'job_x', status: 'running' }])); // existing lookup
+  it('reuses the deterministic job id and skips INSERT when the job already exists', async () => {
+    mockQuery.mockResolvedValueOnce(sel([{ id: 'dsetup_99' }])); // lookup by id → found
     const id = await enqueueDomainSetup(99);
-    expect(id).toBe('job_x');
-    // only the lookup ran — no INSERT
+    expect(id).toBe('dsetup_99');
     expect(mockQuery.mock.calls.every((c: any[]) => !String(c[0]).includes('INSERT INTO analysis_jobs'))).toBe(true);
   });
-  it('inserts a queued job when none exists', async () => {
-    mockQuery.mockResolvedValueOnce(sel([]));   // lookup → none
-    mockQuery.mockResolvedValueOnce([[], {}]);  // INSERT
+  it('inserts a queued job under the deterministic id when none exists', async () => {
+    mockQuery.mockResolvedValueOnce(sel([])); // lookup → none
+    mockQuery.mockResolvedValueOnce([[], {}]); // INSERT
     const id = await enqueueDomainSetup(99);
-    expect(id).toMatch(/^dsetup_99_/);
+    expect(id).toBe('dsetup_99');
     expect(String(mockQuery.mock.calls[1][0])).toContain('INSERT INTO analysis_jobs');
+  });
+  it('swallows a PK-collision INSERT (concurrent enqueue) and still returns the id', async () => {
+    mockQuery.mockResolvedValueOnce(sel([]));               // lookup → none
+    mockQuery.mockRejectedValueOnce(new Error('UNIQUE constraint failed: analysis_jobs.id')); // INSERT loses race
+    const id = await enqueueDomainSetup(99);
+    expect(id).toBe('dsetup_99');
   });
 });
 
@@ -236,18 +248,25 @@ async function selectRows<T = any>(sql: string, repl: any[]): Promise<T[]> {
    return db.query<T>(sql, { replacements: repl, type: QueryTypes.SELECT });
 }
 
-/** Idempotent: returns the existing live/done job id, else inserts a queued one. */
+/**
+ * Idempotent + race-safe. The job id is DETERMINISTIC (`dsetup_<domainId>`), so two
+ * concurrent enqueues collide on the PRIMARY KEY — the loser's INSERT throws, is caught,
+ * and re-reads the winner's row. (One-shot per domain; a future manual re-run would
+ * replace this row — out of scope here.) This is the analogue of the foundation's
+ * UNIQUE-serialized provisioning: never two jobs for the same domain.
+ */
 export async function enqueueDomainSetup(domainId: number): Promise<string> {
    await ensurePipelineTables();
-   const existing = await selectRows<{ id: string; status: string }>(
-      `SELECT id, status FROM analysis_jobs WHERE domain_id = ? AND job_type = 'domain_setup'
-       AND status IN ('queued','running','done') ORDER BY created_at DESC LIMIT 1`, [domainId]);
-   if (existing.length) return existing[0].id;
-   const jobId = `dsetup_${domainId}_${Date.now()}`;
-   await db.query(
-      `INSERT INTO analysis_jobs (id, article_id, domain_id, job_type, status, created_at, updated_at)
-       VALUES (?, NULL, ?, 'domain_setup', 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      { replacements: [jobId, domainId] });
+   const jobId = `dsetup_${domainId}`;
+   const existing = await selectRows<{ id: string }>(
+      `SELECT id FROM analysis_jobs WHERE id = ?`, [jobId]);
+   if (existing.length) return jobId; // already enqueued (queued/running/done) — reuse
+   try {
+      await db.query(
+         `INSERT INTO analysis_jobs (id, article_id, domain_id, job_type, status, created_at, updated_at)
+          VALUES (?, NULL, ?, 'domain_setup', 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+         { replacements: [jobId, domainId] });
+   } catch { /* PK collision with a concurrent enqueue — the winner's row is already there */ }
    return jobId;
 }
 
@@ -587,3 +606,10 @@ Dispatch a final code-reviewer over the whole P3c diff (opus): focus on (1) the 
 - Materialize single point on done → T2 Step 9. ✅
 - recommendations + topical-map minimal wiring → T4 Steps 4–5. ✅
 - Out of scope (per-stage reveal, manual re-analyze, rich topical-map) → not in any task. ✅
+
+## Hardening applied (from the tenancy-foundation review, same risk classes)
+- **Enqueue race** (SELECT-then-INSERT → two jobs): T2 `enqueueDomainSetup` uses a DETERMINISTIC id `dsetup_<domainId>` so concurrent enqueues collide on the PRIMARY KEY → loser caught + re-read. One job per domain, guaranteed. (analogue of the foundation UNIQUE-serialized provisioning).
+- **Broad `catch {}`**: T1 `ensurePipelineTables` uses `ignoreExisting(label, e)` — logs non-"already exists" errors instead of masking permission/offline/syntax failures (analogue of foundation #5).
+- **Dedup of materialized rows**: handled by the delete-first transaction in `materializeDomainSetup` (T2), not by per-table UNIQUEs — a re-run replaces rather than accumulates.
+- **FKs deliberately omitted** on `domain_*` (same reasoning as the foundation: dialect-agnostic raw SQL + SQLite FK-off); integrity held by the delete-first materialize + app-level access checks.
+- **Empty-IN**: no SQL `IN (<array>)` with a possibly-empty array in T2/T4 (access checks use JS `.includes`, materialize/status use scalar `domain_id = ?`).
