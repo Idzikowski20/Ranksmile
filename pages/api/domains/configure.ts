@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
    const userId = await getCurrentUserId(req, res);
-   const { domain: domainName, language = 'pl', pages = [] } = req.body;
+   const { domain: domainName, language = 'pl', country = null, languageName = null, pages = [] } = req.body;
 
    if (!domainName) return res.status(400).json({ error: 'domain is required' });
 
@@ -51,6 +51,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const domainId = domain.ID;
+
+      // Persist the picked location on the workspace's domain (country/language NAMES,
+      // e.g. 'Poland' / 'Polish') so Workspace settings can show the real values.
+      if (country || languageName) {
+         try {
+            await db.query('UPDATE domain SET country = ?, language = ? WHERE "ID" = ?', {
+               replacements: [country || null, languageName || null, domainId],
+            });
+         } catch {
+            // non-fatal — location is a display nicety, not required for setup
+         }
+      }
 
       // Create site_context entries + skeleton articles for each page
       const pagesToInsert: string[] = pages.length > 0

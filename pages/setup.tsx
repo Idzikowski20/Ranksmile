@@ -276,7 +276,13 @@ const SetupPage: NextPage = () => {
          const res = await fetch('/api/domains/configure', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain, language: location.code }),
+            body: JSON.stringify({
+               domain,
+               language: location.code,
+               country: location.country,
+               languageName: location.language,
+               cc: location.cc,
+            }),
          });
          if (res.ok) {
             setStep(2);
