@@ -70,6 +70,11 @@ class RecommendationsStage(AnalysisStage):
 
         from pipeline.stages.domain.triage_scorer import OPTIMIZE_THRESHOLD
 
+        # Evidence at the stage boundary: shows whether the upstream chain
+        # (keywords → topics → competitors, blog audit) actually fed this stage.
+        print(f"[recommendations] inputs: topics={len(topics)} competitors={len(competitors)} "
+              f"audits={len(audits)} brand_knowledge={'yes' if brand_knowledge.strip() else 'no'}")
+
         # 1. Optimize recs: audited posts under the threshold, worst-first (immutable snapshot).
         weak = sorted(
             [a for a in audits if a.get("fetch_status") == "OK" and a.get("score") is not None
@@ -94,6 +99,7 @@ class RecommendationsStage(AnalysisStage):
             ideas = await _llm_recommendations(topics, competitors, brand_knowledge)
         except Exception as exc:  # noqa: BLE001
             print(f"[recommendations] LLM call failed: {exc}")
+        print(f"[recommendations] optimize={len(recs)} create(LLM ideas)={len(ideas or [])}")
         for idea in (ideas or [])[:5]:
             recs.append({
                 "title": idea.get("title", ""),
