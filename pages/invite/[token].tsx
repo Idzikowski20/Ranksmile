@@ -65,13 +65,19 @@ export default function InvitePage() {
 
    const [accepting, setAccepting] = useState(false);
 
+   // ── Send to sign-in, remembering where to return afterwards ───────────
+   const goToSignIn = () => {
+      try { if (token) localStorage.setItem('post_login_redirect', `/invite/${token}`); } catch { /* ignore */ }
+      window.location.href = '/auth/sign-in';
+   };
+
    // ── Redirect to sign-in if not authenticated ──────────────────────────
    React.useEffect(() => {
       // session is still loading (null) — wait
       if (session === null && session !== undefined) return;
       // session resolved to no user → redirect
       if (session !== null && !isLoggedIn) {
-         window.location.href = '/auth/sign-in';
+         goToSignIn();
       }
    }, [session, isLoggedIn]);
 
@@ -94,7 +100,7 @@ export default function InvitePage() {
    // ── Sign-out helper ────────────────────────────────────────────────────
    const handleSignOut = async () => {
       await authClient.signOut();
-      window.location.href = '/auth/sign-in';
+      goToSignIn();
    };
 
    // ── Accept invitation ──────────────────────────────────────────────────
@@ -125,7 +131,7 @@ export default function InvitePage() {
    if (!isLoggedIn) {
       // Trigger redirect imperatively in case effect hasn't fired yet
       if (typeof window !== 'undefined') {
-         window.location.href = '/auth/sign-in';
+         goToSignIn();
       }
       return (
          <PageShell>

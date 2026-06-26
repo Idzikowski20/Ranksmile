@@ -2,12 +2,15 @@ import type { NextPage } from 'next';
 import { useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Icon from '../components/common/Icon';
+import AppLoading from '../components/common/AppLoading';
 
 const Home: NextPage = () => {
    const router = useRouter();
    useEffect(() => {
-      if (router) router.push('/dashboard');
+      if (!router) return;
+      let dest: string | null = null;
+      try { dest = localStorage.getItem('post_login_redirect'); if (dest) localStorage.removeItem('post_login_redirect'); } catch { /* ignore */ }
+      router.replace(dest || '/dashboard');
    }, [router]);
 
   return (
@@ -18,8 +21,8 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main role={'main'} className='main flex items-center justify-center w-full h-screen'>
-        <Icon type='loading' size={36} color="#999" />
+      <main role={'main'}>
+        <AppLoading />
       </main>
     </div>
   );
