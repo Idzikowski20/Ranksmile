@@ -2,7 +2,7 @@ jest.mock('../../database/database', () => ({ __esModule: true, default: { query
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
 
 import db from '../../database/database';
-import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace } from '../../lib/workspaces';
+import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace, createSetupWorkspace, markWorkspaceReady } from '../../lib/workspaces';
 
 const mockQuery = db.query as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];
@@ -14,6 +14,7 @@ describe('workspaces helpers', () => {
     mockQuery.mockResolvedValueOnce(rows([{ id: 9, name: 'Default' }, { id: 10, name: 'Blog' }]));
     expect(await listWorkspaces('u1')).toEqual([{ id: 9, name: 'Default' }, { id: 10, name: 'Blog' }]);
     expect(String(mockQuery.mock.calls[0][0])).toContain('FROM workspaces WHERE org_id = ?');
+    expect(String(mockQuery.mock.calls[0][0])).toContain("status = 'ready'");
   });
 
   it('createWorkspace inserts under the org and returns the new row', async () => {
@@ -60,5 +61,23 @@ describe('workspaces helpers', () => {
       .mockResolvedValueOnce(rows([]));            // DELETE
     await deleteWorkspace('u1', 10);
     expect(String(mockQuery.mock.calls[3][0])).toContain('DELETE FROM workspaces');
+  });
+
+  it('createSetupWorkspace inserts a setup workspace and returns its id', async () => {
+    mockQuery
+      .mockResolvedValueOnce(rows([]))              // INSERT
+      .mockResolvedValueOnce(rows([{ id: 7 }]));   // SELECT back
+    const id = await createSetupWorkspace('u1');
+    expect(id).toBe(7);
+    expect(String(mockQuery.mock.calls[0][0])).toContain('setup');
+    expect(String(mockQuery.mock.calls[0][0])).toContain('INSERT INTO workspaces');
+  });
+
+  it('markWorkspaceReady issues an UPDATE setting status = ready', async () => {
+    mockQuery
+      .mockResolvedValueOnce(rows([{ id: 7 }]))   // ownership SELECT
+      .mockResolvedValueOnce(rows([]));            // UPDATE
+    await markWorkspaceReady('u1', 7, 'My Workspace');
+    expect(String(mockQuery.mock.calls[1][0])).toContain("status = 'ready'");
   });
 });

@@ -17,8 +17,32 @@ async function assertInOrg(orgId: number, wsId: number): Promise<void> {
 
 export async function listWorkspaces(userId: string): Promise<Workspace[]> {
    const { orgId } = await ensureUserTenancy(userId);
-   const rows = await select('SELECT id, name FROM workspaces WHERE org_id = ? ORDER BY id ASC', [orgId]);
+   const rows = await select("SELECT id, name FROM workspaces WHERE org_id = ? AND status = 'ready' ORDER BY id ASC", [orgId]);
    return rows.map((r) => ({ id: Number(r.id), name: String(r.name ?? '') }));
+}
+
+/** Creates an empty workspace in the 'setup' state and returns its id. */
+export async function createSetupWorkspace(userId: string): Promise<number> {
+   const { orgId } = await ensureUserTenancy(userId);
+   await db.query("INSERT INTO workspaces (org_id, name, status) VALUES (?, '', 'setup')", { replacements: [orgId] });
+   const back = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id DESC LIMIT 1', [orgId]);
+   return Number(back[0].id);
+}
+
+/** Returns a workspace (any status) if it belongs to the caller's org, else null. */
+export async function getWorkspace(userId: string, wsId: number): Promise<(Workspace & { status: string }) | null> {
+   const { orgId } = await ensureUserTenancy(userId);
+   const rows = await select('SELECT id, name, status FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
+   if (!rows.length) return null;
+   return { id: Number(rows[0].id), name: String(rows[0].name ?? ''), status: String(rows[0].status ?? 'ready') };
+}
+
+/** Names a setup workspace and flips it to 'ready'. */
+export async function markWorkspaceReady(userId: string, wsId: number, name: string): Promise<void> {
+   const { orgId } = await ensureUserTenancy(userId);
+   await assertInOrg(orgId, wsId);
+   const clean = (name || '').trim().slice(0, 60) || 'Untitled';
+   await db.query("UPDATE workspaces SET name = ?, status = 'ready' WHERE id = ? AND org_id = ?", { replacements: [clean, wsId, orgId] });
 }
 
 export async function createWorkspace(userId: string, name: string): Promise<Workspace> {
