@@ -17,10 +17,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const recommendations = await db.query<{
       id: number; domain_id: number; topic_id: number | null;
-      title: string; rationale: string | null; priority: string | null; type: string | null; created_at: string;
+      title: string; rationale: string | null; priority: string | null; type: string | null;
+      url: string | null; score: number | null; word_count: number | null; created_at: string;
    }>(
-      `SELECT * FROM domain_recommendations WHERE domain_id = ?
-       ORDER BY CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, id`,
+      // LEFT JOIN page_audits to carry word_count onto optimize recs (matched by url);
+      // create recs have no url so the join yields NULL, which the UI tolerates.
+      `SELECT dr.id, dr.domain_id, dr.topic_id, dr.title, dr.rationale, dr.priority, dr.type,
+              dr.url, dr.score, pa.word_count, dr.created_at
+       FROM domain_recommendations dr
+       LEFT JOIN page_audits pa ON pa.domain_id = dr.domain_id AND pa.url = dr.url
+       WHERE dr.domain_id = ?
+       ORDER BY CASE dr.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, dr.id`,
       { replacements: [domainId], type: QueryTypes.SELECT },
    );
    return res.status(200).json({ recommendations });
