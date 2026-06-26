@@ -82,6 +82,10 @@ class Domain extends Model {
    // Traffic goal JSON: { percentage, period, startDate, baseClicks }
    @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
    traffic_goal!: string | null;
+
+   // Blog-path segments (JSON array string, e.g. ["blog","poradnik"]) for blog-audit (P3d)
+   @Column({ type: DataType.TEXT, allowNull: true })
+   blog_paths!: string | null;
 }
 
 export default Domain;
