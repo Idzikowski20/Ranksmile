@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
+import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import GlobalTopbar from '../components/common/GlobalTopbar';
 
 // ─── Shared button classes (Surfer canonical, from invite/[token].tsx) ────────
@@ -71,6 +72,18 @@ const SiteFavicon = ({ domain }: { domain: string }) => (
          backgroundColor: '#f4f4f5',
          backgroundImage: `url(https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32)`,
          backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+      }}
+   />
+);
+
+// ─── Spinner (loading states) ──────────────────────────────────────────────────
+const Spinner = ({ size = 16, color = '#9F9FA9' }: { size?: number; color?: string }) => (
+   <span
+      aria-hidden="true"
+      style={{
+         display: 'inline-block', width: size, height: size, flexShrink: 0,
+         border: `2px solid ${color}`, borderTopColor: 'transparent', borderRadius: 9999,
+         animation: 'spin 0.7s linear infinite',
       }}
    />
 );
@@ -180,6 +193,10 @@ const SetupPage: NextPage = () => {
    const [urlInput, setUrlInput] = useState('');
    const [configuring, setConfiguring] = useState(false);
    const [step1Error, setStep1Error] = useState('');
+   // location + language (shown after a domain is chosen)
+   const [location, setLocation] = useState<SetupLocation | null>(null);
+   const [locOpen, setLocOpen] = useState(false);
+   const [locFilter, setLocFilter] = useState('');
 
    // Step 2
    const [brandName, setBrandName] = useState('');
@@ -189,6 +206,7 @@ const SetupPage: NextPage = () => {
    const [step2Error, setStep2Error] = useState('');
 
    const comboRef = useRef<HTMLDivElement>(null);
+   const locRef = useRef<HTMLDivElement>(null);
    const brandNameRef = useRef<HTMLInputElement>(null);
 
    // ── Fetch GSC sites on mount ───────────────────────────────────────────
@@ -210,38 +228,50 @@ const SetupPage: NextPage = () => {
       }
    };
 
-   // ── Close combo on outside click ───────────────────────────────────────
+   // ── Close the open dropdown on outside click ───────────────────────────
    useEffect(() => {
-      if (!comboOpen) return;
+      if (!comboOpen && !locOpen) return undefined;
       const handler = (e: MouseEvent) => {
-         if (comboRef.current && !comboRef.current.contains(e.target as Node)) {
-            setComboOpen(false);
-         }
+         const t = e.target as Node;
+         if (comboOpen && comboRef.current && !comboRef.current.contains(t)) setComboOpen(false);
+         if (locOpen && locRef.current && !locRef.current.contains(t)) setLocOpen(false);
       };
       document.addEventListener('mousedown', handler);
       return () => document.removeEventListener('mousedown', handler);
-   }, [comboOpen]);
+   }, [comboOpen, locOpen]);
 
-   // ── Submit domain (step 1 → step 2) ───────────────────────────────────
-   const submitDomain = async (d: string) => {
+   // ── Choose a domain — records the selection but does NOT submit; the
+   //    location/language step + Continue does (so the language is picked first). ──
+   const chooseDomain = (displayValue: string) => {
+      const d = normalizeDomain(displayValue);
       if (!d) return;
+      setSelectedSite(displayValue);
+      setDomain(d);
+      setUrlMode(false);
+      setComboOpen(false);
+      setStep1Error('');
+   };
+   const handleSiteSelect = (siteUrl: string) => chooseDomain(siteUrl);
+   const handleUrlSubmit = () => { if (urlInput.trim()) chooseDomain(urlInput.trim()); };
+
+   // ── Configure the chosen domain (with the chosen language) + go to step 2 ──
+   const submitChosen = async () => {
+      if (!domain || !location || configuring) return;
       setStep1Error('');
       setConfiguring(true);
       try {
          const res = await fetch('/api/domains/configure', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain: d }),
+            body: JSON.stringify({ domain, language: location.code }),
          });
          if (res.ok) {
-            setDomain(d);
             setStep(2);
-            // Prefill brand knowledge
             setLoadingBrand(true);
             fetch('/api/brand-knowledge', {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ url: d }),
+               body: JSON.stringify({ url: domain }),
             })
                .then((r) => r.json())
                .then((data) => {
@@ -259,21 +289,6 @@ const SetupPage: NextPage = () => {
       } finally {
          setConfiguring(false);
       }
-   };
-
-   // ── Handle GSC site selection ──────────────────────────────────────────
-   const handleSiteSelect = (siteUrl: string) => {
-      setSelectedSite(siteUrl);
-      setComboOpen(false);
-      const d = normalizeDomain(siteUrl);
-      void submitDomain(d);
-   };
-
-   // ── Handle URL submit ──────────────────────────────────────────────────
-   const handleUrlSubmit = () => {
-      const d = normalizeDomain(urlInput);
-      if (!d) return;
-      void submitDomain(d);
    };
 
    // ── Finish (step 2 submit) ─────────────────────────────────────────────
@@ -333,7 +348,22 @@ const SetupPage: NextPage = () => {
                      <form className="gap-lg flex w-full flex-col" onSubmit={(e) => e.preventDefault()}>
                         <div className="gap-md flex w-full flex-col">
                            <div className="flex w-full flex-col" ref={comboRef}>
-                              {!urlMode ? (
+                              {/* eslint-disable-next-line no-nested-ternary */}
+                              {domain ? (
+                                 <>
+                                    <div className="text-md pb-xs font-medium text-gray-100">Select Search Console site</div>
+                                    <button
+                                       type="button"
+                                       onClick={() => { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }}
+                                       className="border-gray-40 bg-white-base gap-sm px-md text-md flex h-[40px] w-full cursor-pointer items-center rounded-lg border border-solid text-left font-sans hover:border-gray-60"
+                                       style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                                    >
+                                       <SiteFavicon domain={domain} />
+                                       <span className="min-w-0 flex-1 truncate text-gray-base">{domain}</span>
+                                       <div className="ml-auto flex items-center"><ChevronDown open={false} /></div>
+                                    </button>
+                                 </>
+                              ) : !urlMode ? (
                                  // eslint-disable-next-line no-nested-ternary
                                  !gscLoaded ? (
                                     <div className="border-gray-40 bg-white-base flex h-[40px] w-full items-center rounded-lg border px-md" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
@@ -457,29 +487,81 @@ const SetupPage: NextPage = () => {
                            <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>{step1Error}</span>
                         )}
 
-                        {/* "or" divider */}
-                        {!urlMode && (
-                           <div className="text-gray-60 flex w-full items-center justify-center">
-                              <div className="flex w-full items-center">
-                                 <div role="separator" className="bg-gray-20 min-h-[1px] min-w-[1px] self-stretch w-full" />
+                        {/* eslint-disable-next-line no-nested-ternary */}
+                        {domain ? (
+                           <>
+                              {/* Location & language */}
+                              <div className="flex w-full flex-col" ref={locRef}>
+                                 <div className="text-md pb-xs font-medium text-gray-100">Select location and language</div>
+                                 <button
+                                    type="button"
+                                    aria-expanded={locOpen}
+                                    onClick={() => setLocOpen((o) => !o)}
+                                    className="border-gray-40 bg-white-base gap-sm px-md text-md flex h-[40px] w-full cursor-pointer items-center rounded-lg border border-solid text-left font-sans hover:border-gray-60"
+                                    style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                                 >
+                                    <span className="min-w-0 flex-1 truncate">
+                                       {location ? (
+                                          <span className="text-gray-base"><span style={{ marginRight: 8 }}>{location.flag}</span>{location.country} - {location.language}</span>
+                                       ) : (
+                                          <span className="text-gray-60">Select location</span>
+                                       )}
+                                    </span>
+                                    <div className="ml-auto flex items-center"><ChevronDown open={locOpen} /></div>
+                                 </button>
+                                 {locOpen && (
+                                    <div
+                                       className="border-gray-20 bg-white-base mt-xs rounded-lg border"
+                                       style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, overflow: 'hidden' }}
+                                    >
+                                       <div className="p-xs">
+                                          <input
+                                             type="text"
+                                             autoFocus
+                                             value={locFilter}
+                                             onChange={(e) => setLocFilter(e.target.value)}
+                                             placeholder="Search locations"
+                                             className="border-gray-40 bg-white-base text-md h-[36px] w-full rounded-lg border px-md outline-none focus:border-purple-40"
+                                             style={{ fontFamily: 'var(--font-family-primary)' }}
+                                          />
+                                       </div>
+                                       <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                                          {SETUP_LOCATIONS
+                                             .filter((l) => `${l.country} ${l.language}`.toLowerCase().includes(locFilter.trim().toLowerCase()))
+                                             .map((l) => (
+                                                <button
+                                                   key={`${l.country}-${l.language}-${l.code}`}
+                                                   type="button"
+                                                   className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
+                                                   onClick={() => { setLocation(l); setLocOpen(false); setLocFilter(''); }}
+                                                >
+                                                   <span style={{ fontSize: 18, lineHeight: 1 }}>{l.flag}</span>
+                                                   <span className="text-gray-base">{l.country} - {l.language}</span>
+                                                </button>
+                                             ))}
+                                       </div>
+                                    </div>
+                                 )}
                               </div>
-                              <div className="px-base inline-block">or</div>
-                              <div className="flex w-full items-center">
-                                 <div role="separator" className="bg-gray-20 min-h-[1px] min-w-[1px] self-stretch w-full" />
-                              </div>
-                           </div>
-                        )}
 
-                        {/* Action button */}
-                        {urlMode ? (
+                              <button
+                                 type="button"
+                                 className={btnPrimary}
+                                 disabled={!location || configuring}
+                                 onClick={submitChosen}
+                              >
+                                 {configuring ? 'Setting up…' : 'Continue'}
+                              </button>
+                           </>
+                        ) : urlMode ? (
                            <div className="gap-sm flex flex-col">
                               <button
                                  type="button"
                                  className={btnPrimary}
-                                 disabled={configuring || !urlInput.trim()}
+                                 disabled={!urlInput.trim()}
                                  onClick={handleUrlSubmit}
                               >
-                                 {configuring ? 'Configuring…' : 'Continue'}
+                                 Continue
                               </button>
                               <button
                                  type="button"
@@ -490,14 +572,24 @@ const SetupPage: NextPage = () => {
                               </button>
                            </div>
                         ) : (
-                           <button
-                              type="button"
-                              disabled={configuring}
-                              className={btnSecondary + ' w-full justify-center'}
-                              onClick={() => { setUrlMode(true); setStep1Error(''); }}
-                           >
-                              {configuring ? 'Configuring…' : 'Start with URL'}
-                           </button>
+                           <>
+                              <div className="text-gray-60 flex w-full items-center justify-center">
+                                 <div className="flex w-full items-center">
+                                    <div role="separator" className="bg-gray-20 min-h-[1px] min-w-[1px] self-stretch w-full" />
+                                 </div>
+                                 <div className="px-base inline-block">or</div>
+                                 <div className="flex w-full items-center">
+                                    <div role="separator" className="bg-gray-20 min-h-[1px] min-w-[1px] self-stretch w-full" />
+                                 </div>
+                              </div>
+                              <button
+                                 type="button"
+                                 className={btnSecondary + ' w-full justify-center'}
+                                 onClick={() => { setUrlMode(true); setStep1Error(''); }}
+                              >
+                                 Start with URL
+                              </button>
+                           </>
                         )}
                      </form>
                   </div>
@@ -537,22 +629,27 @@ const SetupPage: NextPage = () => {
                            <span className="text-base font-semibold" style={{ color: '#000' }}>Brand name</span>
                            <span style={{ color: '#71717a' }}>What is your brand called?</span>
                         </div>
-                        <div className="flex w-full flex-col">
-                           <div className="relative flex grow items-center">
-                              <input
-                                 ref={brandNameRef}
-                                 id="brand-name-input"
-                                 type="text"
-                                 name="name"
-                                 value={brandName}
-                                 onChange={(e) => setBrandName(e.target.value)}
-                                 disabled={loadingBrand}
-                                 placeholder={loadingBrand ? 'Analyzing your site…' : 'Your brand name'}
-                                 className="border-gray-40 text-md h-[40px] w-full rounded-lg border px-md outline-none focus:border-gray-60 disabled:bg-gray-10 disabled:cursor-not-allowed"
-                                 style={{ fontFamily: 'var(--font-family-primary)' }}
-                              />
+                        {loadingBrand ? (
+                           <div className="gap-sm text-md flex items-center" style={{ color: '#71717a' }}>
+                              <Spinner /> Fetching your brand name…
                            </div>
-                        </div>
+                        ) : (
+                           <div className="flex w-full flex-col">
+                              <div className="relative flex grow items-center">
+                                 <input
+                                    ref={brandNameRef}
+                                    id="brand-name-input"
+                                    type="text"
+                                    name="name"
+                                    value={brandName}
+                                    onChange={(e) => setBrandName(e.target.value)}
+                                    placeholder="Your brand name"
+                                    className="border-gray-40 text-md h-[40px] w-full rounded-lg border px-md outline-none focus:border-gray-60"
+                                    style={{ fontFamily: 'var(--font-family-primary)' }}
+                                 />
+                              </div>
+                           </div>
+                        )}
                      </div>
 
                      {/* Brand details card */}
@@ -563,23 +660,23 @@ const SetupPage: NextPage = () => {
                               Tell us more about your business, so we have enough context to prepare personalized recommendations and generate relevant content.
                            </span>
                         </div>
-                        <div className="gap-sm flex w-full flex-col">
-                           <div className="border-gray-20 flex w-full flex-col overflow-hidden rounded-lg border">
-                              <textarea
-                                 value={brandKnowledge}
-                                 onChange={(e) => setBrandKnowledge(e.target.value)}
-                                 disabled={loadingBrand}
-                                 placeholder={loadingBrand ? 'Analyzing your site…' : 'Describe your business, target audience, key products/services, competitors, tone of voice…'}
-                                 className="w-full outline-none resize-y bg-white-base text-md"
-                                 style={{
-                                    minHeight: 220,
-                                    padding: '0.75rem 1rem',
-                                    fontFamily: 'var(--font-family-primary)',
-                                    border: 'none',
-                                 }}
-                              />
+                        {loadingBrand ? (
+                           <div className="gap-sm text-md flex items-center" style={{ color: '#71717a' }}>
+                              <Spinner /> Digging into your business model…
                            </div>
-                        </div>
+                        ) : (
+                           <div className="gap-sm flex w-full flex-col">
+                              <div className="border-gray-20 flex w-full flex-col overflow-hidden rounded-lg border">
+                                 <textarea
+                                    value={brandKnowledge}
+                                    onChange={(e) => setBrandKnowledge(e.target.value)}
+                                    placeholder="Describe your business, target audience, key products/services, competitors, tone of voice…"
+                                    className="w-full outline-none resize-y bg-white-base text-md"
+                                    style={{ minHeight: 220, padding: '0.75rem 1rem', fontFamily: 'var(--font-family-primary)', border: 'none' }}
+                                 />
+                              </div>
+                           </div>
+                        )}
                      </div>
 
                      {/* Step 2 error */}
@@ -589,30 +686,34 @@ const SetupPage: NextPage = () => {
                   </form>
                </div>
 
-               {/* Sticky footer */}
-               <div
-                  className="py-md sm:py-lg bg-white-base sticky bottom-0 border-gray-20 -mx-base border-t"
-                  style={{ backdropFilter: 'blur(1px)', WebkitBackdropFilter: 'blur(1px)' }}
-               >
-                  <div className="mx-auto my-0 flex w-full justify-center sm:justify-end max-w-screen-sm" style={{ gap: '0.75rem' }}>
-                     <button
-                        type="button"
-                        aria-disabled="false"
-                        className={btnLink}
-                        onClick={() => router.push('/')}
-                     >
-                        Cancel
-                     </button>
-                     <button
-                        type="submit"
-                        aria-disabled={submitting || loadingBrand}
-                        form="setup-brand-kit-form"
-                        disabled={submitting || loadingBrand}
-                        className={btnPrimary}
-                        style={{ maxWidth: 200 }}
-                     >
-                        {submitting ? 'Setting up…' : 'Get started'}
-                     </button>
+               {/* Floating footer — a white gradient masks content scrolling under it */}
+               <div className="sticky bottom-0 -mx-base" style={{ pointerEvents: 'none' }}>
+                  <div style={{ height: 36, background: 'linear-gradient(to top, #ffffff 45%, rgba(255,255,255,0))' }} />
+                  <div className="px-base sm:px-lg pb-md sm:pb-lg bg-white-base" style={{ pointerEvents: 'auto' }}>
+                     <div className="mx-auto flex w-full items-center max-w-screen-sm" style={{ gap: 16 }}>
+                        <button
+                           type="button"
+                           className={btnLink}
+                           onClick={() => router.push('/')}
+                        >
+                           Cancel
+                        </button>
+                        <button
+                           type="submit"
+                           form="setup-brand-kit-form"
+                           disabled={submitting}
+                           className={btnPrimary}
+                        >
+                           {(submitting || loadingBrand) ? (
+                              <>
+                                 <Spinner color="#ffffff" />
+                                 <span>Get started</span>
+                              </>
+                           ) : (
+                              'Get started'
+                           )}
+                        </button>
+                     </div>
                   </div>
                </div>
             </div>
