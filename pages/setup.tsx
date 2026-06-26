@@ -154,7 +154,7 @@ const SetupShell = ({ title, children }: { title: string; children: ReactNode })
          <title>{title}</title>
          <meta name="robots" content="noindex" />
       </Head>
-      <div className="relative flex flex-col" style={{ minHeight: '100dvh' }}>
+      <div className="relative flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
          <GlobalTopbar breadcrumb={<SetupLogo />} />
          <div className="p-sm flex flex-col" style={{ flex: 1, minHeight: 0 }}>
             {children}
