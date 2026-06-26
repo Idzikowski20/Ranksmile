@@ -186,7 +186,7 @@ body {
 }
 
 :root {
-   --topbar-height: 58px;
+   --topbar-height: 48px;
    --topbar-bg: #09090b;
    --topbar-panel: #18181b;
    --topbar-muted: #9f9fa9;
