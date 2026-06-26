@@ -6,6 +6,7 @@ import TopbarInbox from './TopbarInbox';
 
 type Props = {
    title?: string;
+   breadcrumb?: React.ReactNode;
 };
 
 const HelpButton = () => (
@@ -24,10 +25,10 @@ const HelpButton = () => (
    </a>
 );
 
-const GlobalTopbar = (_props: Props) => (
+const GlobalTopbar = ({ breadcrumb }: Props) => (
    <header className="global-topbar">
       <div className="global-topbar-left">
-         <WorkspaceSwitcher />
+         {breadcrumb ?? <WorkspaceSwitcher />}
       </div>
 
       <div className="global-topbar-center" style={{ zIndex: 1 }}>

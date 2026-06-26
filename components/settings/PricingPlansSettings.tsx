@@ -12,12 +12,6 @@ const Check = ({ color = '#18181B' }: { color?: string }) => (
   </svg>
 );
 
-const Cross = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#9F9FA9' }}>
-    <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
-
 const StarFilled = () => (
   <svg width="18" height="18" viewBox="0 0 20 20" fill="#FACC15" aria-hidden="true">
     <path d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382z" />
@@ -71,83 +65,86 @@ interface PlanCard {
 
 const PLAN_CARDS: PlanCard[] = [
   {
-    name: 'Standard',
-    priceMonthly: 119,
-    priceYearly: 99,
-    save: 240,
-    desc: 'Align your team with a unified workflow and start growing your visibility in AI search.',
-    cta: 'Start with Standard',
-    ctaStyle: 'gray',
-    features: [
-      'Create and Optimize 30 Documents',
-      'Track AI Visibility',
-      'Track 25 AI Prompts, refreshed weekly',
-      'Integrations',
-      '1-click Content Optimization',
-      'Brand Knowledge',
-      'External Collaboration Links',
-      'Plagiarism Check',
-      'Rank Drop Detection',
-    ],
-  },
-  {
-    name: 'Pro',
-    priceMonthly: 219,
-    priceYearly: 182,
-    save: 444,
+    name: 'Growth',
+    priceMonthly: 59,
+    priceYearly: 49,
+    save: 120,
     recommended: true,
-    desc: 'Secure your authority, fix technical conflicts, and manage AI perception at scale.',
-    cta: 'Scale with Pro',
+    desc: 'Win the AI citation and close your content gaps — daily visibility tracking, coverage gaps, and competitor keyword research.',
+    cta: 'Start with Growth',
     ctaStyle: 'primary',
-    featuresHeader: 'Everything in Standard, plus:',
+    featuresHeader: 'Everything in Starter, plus:',
     features: [
       'Create and Optimize 30 Documents',
-      'Track AI Visibility',
       'Track 50 AI Prompts, refreshed daily',
-      'Integrations',
+      'AI Visibility across 4 engines',
       '5 Brand Spaces',
-      '1-click Internal Linking',
+      'Keyword Research — 200 / month',
+      'Competitor Keyword Gap — 25 / month',
       'Content Ideas & Coverage Gap',
+      '1-click Internal Linking',
       'Templates & Custom Voices',
       'Cannibalization Report',
     ],
   },
   {
-    name: 'Peace of Mind',
-    priceMonthly: 359,
-    priceYearly: 299,
-    save: 720,
-    desc: 'Dominate the market with uncapped optimization, API access, and VIP support.',
-    cta: 'Get Peace of Mind',
+    name: 'Scale',
+    priceMonthly: 119,
+    priceYearly: 99,
+    save: 240,
+    desc: 'Scale optimization across brands with advanced SERP analysis, API access, and higher limits.',
+    cta: 'Scale up',
     ctaStyle: 'gray',
-    featuresHeader: 'Everything in Pro, plus:',
+    featuresHeader: 'Everything in Growth, plus:',
+    features: [
+      'Create and Optimize 100 Documents',
+      'Track 100 AI Prompts (all 5 engines)',
+      '15 Brand Spaces',
+      'Keyword Research — 500 / month',
+      'Competitor Keyword Gap — 60 / month',
+      'Advanced SERP Analysis',
+      'Topical Map',
+      'API Access',
+      'Priority Support',
+    ],
+  },
+  {
+    name: 'Agency',
+    priceMonthly: 249,
+    priceYearly: 207,
+    save: 504,
+    desc: 'Run many brands and clients with uncapped optimization, white-label, and full API access.',
+    cta: 'Get Agency',
+    ctaStyle: 'gray',
+    featuresHeader: 'Everything in Scale, plus:',
     features: [
       'Unlimited* Documents',
-      'Track AI Visibility',
-      'Track 100 AI Prompts, refreshed daily',
-      'Integrations',
+      'Track 250 AI Prompts, refreshed daily',
       'Unlimited* Brand Spaces',
-      'Advanced SERP Analysis',
+      'Keyword Research — 2,000 / month',
+      'Competitor Keyword Gap — 250 / month',
+      'White-label & full API Access',
       'Personalized Onboarding',
-      'Dedicated Customer Success Manager',
-      'API Access',
+      'Dedicated Success Manager',
     ],
   },
 ];
 
-const DISCOVERY_FEATURES = [
+const STARTER_FEATURES = [
   'Create and Optimize 10 Documents',
-  'Audit & Monitor <10 Pages',
-  'AI SEO Optimization Guidelines',
-  'AI Writing Assistant (Surfy)',
+  'Track 15 AI Prompts (ChatGPT, Gemini), weekly',
+  'Keyword Research — 50 / month',
+  'Visible Keywords & Rank-Drop Alerts (Search Console)',
+  '1 Brand Space',
+  'Content Score & AI Writing Assistant',
 ];
 
 // All 4 plan column headers for the comparison table
 const TABLE_PLAN_HEADERS = [
-  { name: 'Discovery', priceMonthly: 59, priceYearly: 49, cta: 'Try Discovery', ctaStyle: 'ghost' as const, recommended: false },
-  { name: 'Standard', priceMonthly: 119, priceYearly: 99, cta: 'Start with Standard', ctaStyle: 'gray' as const, recommended: false },
-  { name: 'Pro', priceMonthly: 219, priceYearly: 182, cta: 'Scale with Pro', ctaStyle: 'primary' as const, recommended: true },
-  { name: 'Peace of Mind', priceMonthly: 359, priceYearly: 299, cta: 'Get Peace of Mind', ctaStyle: 'gray' as const, recommended: false },
+  { name: 'Starter', priceMonthly: 29, priceYearly: 24, cta: 'Start with Starter', ctaStyle: 'ghost' as const, recommended: false },
+  { name: 'Growth', priceMonthly: 59, priceYearly: 49, cta: 'Start with Growth', ctaStyle: 'primary' as const, recommended: true },
+  { name: 'Scale', priceMonthly: 119, priceYearly: 99, cta: 'Scale up', ctaStyle: 'gray' as const, recommended: false },
+  { name: 'Agency', priceMonthly: 249, priceYearly: 207, cta: 'Get Agency', ctaStyle: 'gray' as const, recommended: false },
 ];
 
 interface TableSection {
@@ -162,10 +159,10 @@ const SECTIONS: TableSection[] = [
       {
         label: '',
         cells: [
-          'Cover the basics. Create the foundational content you need to get started with Surfer and establish a baseline presence.',
-          'Stop flying blind. Finally see if your brand is the answer in ChatGPT, and optimize your content to win the citation.',
-          'Master the semantic web. Identify cannibalization, manage multiple brands, and get daily updates on how AI models perceive your authority.',
-          "Future-proof your scale. Unlimited optimization and API access give you the power to control your brand's narrative across the web.",
+          'Get started. Draft and optimize content and see your first AI-search visibility signals — without breaking the budget.',
+          'Win the citation. Track your brand across AI engines daily, close content coverage gaps, and research what competitors rank for.',
+          'Scale across brands. Advanced SERP analysis, API access, and higher limits to manage content at volume.',
+          'For agencies. Uncapped optimization, white-label, and full API access to run many clients from one place.',
         ],
       },
     ],
@@ -174,52 +171,53 @@ const SECTIONS: TableSection[] = [
     title: 'Create and Optimize Content',
     rows: [
       { label: 'AI SEO Optimization Guidelines', cells: [true, true, true, true] },
-      { label: 'AI Writing Assistant (Surfy)', cells: [true, true, true, true] },
+      { label: 'AI Writing Assistant', cells: [true, true, true, true] },
       { label: 'Content Score', cells: [true, true, true, true] },
       { label: 'AI Detector & Humanizer', cells: [true, true, true, true] },
-      { label: 'Documents', cells: [{ deg: 90, text: '10 Documents' }, { deg: 180, text: '30 Documents' }, { deg: 180, text: '30 Documents' }, { deg: 360, text: 'Unlimited* Documents' }] },
-      { label: 'Plagiarism Check', cells: [false, true, true, true] },
+      { label: 'Documents', cells: [{ deg: 60, text: '10 Documents' }, { deg: 120, text: '30 Documents' }, { deg: 240, text: '100 Documents' }, { deg: 360, text: 'Unlimited* Documents' }] },
       { label: '1-click Content Optimization', cells: [false, true, true, true] },
-      { label: '1-click Internal Linking', cells: [false, false, true, true] },
+      { label: '1-click Internal Linking', cells: [false, true, true, true] },
+      { label: 'Plagiarism Check', cells: [false, true, true, true] },
     ],
   },
   {
     title: 'Track and Optimize Your AI Visibility',
     rows: [
-      { label: 'Track AI Visibility', cells: [false, 'ChatGPT', 'ChatGPT, Perplexity, AI Mode, AI Overviews, Gemini', 'ChatGPT, Perplexity, AI Mode, AI Overviews, Gemini'] },
-      { label: 'AI Prompts', cells: ['Track 0 AI Prompts', 'Track 25 AI Prompts (ChatGPT)', 'Track 50 AI Prompts (all models)', 'Track 100 AI Prompts (all models)'] },
-      { label: 'Prompt refresh', cells: ['No prompt refresh', 'Weekly prompt refresh', 'Daily prompt refresh', 'Daily prompt refresh'] },
-      { label: 'Mention Gap and Brand Sentiments', cells: [false, false, true, true] },
+      { label: 'Track AI Visibility', cells: ['ChatGPT, Gemini', 'ChatGPT, Perplexity, Gemini, AI Overviews', 'ChatGPT, Perplexity, AI Mode, AI Overviews, Gemini', 'ChatGPT, Perplexity, AI Mode, AI Overviews, Gemini'] },
+      { label: 'AI Prompts', cells: ['Track 15 AI Prompts', 'Track 50 AI Prompts', 'Track 100 AI Prompts', 'Track 250 AI Prompts'] },
+      { label: 'Prompt refresh', cells: ['Weekly prompt refresh', 'Daily prompt refresh', 'Daily prompt refresh', 'Daily prompt refresh'] },
+      { label: 'Mention Gap and Brand Sentiment', cells: [false, true, true, true] },
     ],
   },
   {
     title: 'Customize AI Writing and Optimization',
     rows: [
-      { label: 'Brand Knowledge', cells: [false, true, true, true] },
-      { label: 'Custom Voices', cells: [false, false, true, true] },
-      { label: 'Custom Templates', cells: [false, false, '10 Custom Templates', 'Unlimited* Custom Templates'] },
+      { label: 'Brand Knowledge', cells: [true, true, true, true] },
+      { label: 'Custom Voices', cells: [false, true, true, true] },
+      { label: 'Custom Templates', cells: [false, '10 Custom Templates', 'Unlimited* Custom Templates', 'Unlimited* Custom Templates'] },
     ],
   },
   {
     title: 'Plan, Track & Manage Your Content',
     rows: [
-      { label: 'Brand Workspaces', cells: [{ deg: 90, text: 'Manage 1 Brand Workspace' }, { deg: 90, text: 'Manage 1 Brand Workspace' }, { deg: 180, text: 'Manage 5 Brand Workspaces' }, { deg: 360, text: 'Unlimited* Brand Workspaces' }] },
-      { label: 'Pages', cells: ['Track 10 Pages', 'Track 50 Pages', 'Track 200 Pages', 'Track 500 Pages'] },
+      { label: 'Brand Workspaces', cells: [{ deg: 90, text: 'Manage 1 Brand Workspace' }, { deg: 180, text: 'Manage 5 Brand Workspaces' }, { deg: 270, text: 'Manage 15 Brand Workspaces' }, { deg: 360, text: 'Unlimited* Brand Workspaces' }] },
+      { label: 'Keyword Research', cells: ['50 / month', '200 / month', '500 / month', '2,000 / month'] },
+      { label: 'Competitor Keyword Gap', cells: ['5 / month', '25 / month', '60 / month', '250 / month'] },
+      { label: 'Rank Tracking (external keywords)', cells: ['50 (weekly)', '150 (daily)', '500 (daily)', '2,000 (daily)'] },
+      { label: 'Visible Keywords (Search Console)', cells: [true, true, true, true] },
+      { label: 'Cannibalization Report', cells: [true, true, true, true] },
+      { label: 'Rank Drop Alerts', cells: [true, true, true, true] },
       { label: 'Content Audit', cells: [true, true, true, true] },
-      { label: 'Keyword Research', cells: [false, true, true, true] },
-      { label: 'Rank Drop Alerts', cells: [false, true, true, true] },
-      { label: 'Topical Map', cells: [false, false, true, true] },
-      { label: 'Cannibalization Report', cells: [false, false, true, true] },
-      { label: 'Audit', cells: [false, false, true, true] },
-      { label: 'SERP Analyzer', cells: [false, false, false, true] },
+      { label: 'Topical Map', cells: [false, true, true, true] },
+      { label: 'SERP Analyzer', cells: [false, false, true, true] },
     ],
   },
   {
     title: 'Collaborate and Scale Together',
     rows: [
-      { label: 'Team Seats', cells: [{ deg: 90, text: '1 Team Seat' }, { deg: 180, text: '3 Team Seats' }, { deg: 270, text: '5 Team Seats' }, { deg: 360, text: '10 Team Seats' }] },
-      { label: 'Content Version History', cells: ['1 Day', '1 Week', '1 Month', '6 Months'] },
-      { label: 'Activity Log', cells: ['1 Week', '1 Month', '1 Year', '16 Months'] },
+      { label: 'Team Seats', cells: [{ deg: 90, text: '1 Team Seat' }, { deg: 180, text: '3 Team Seats' }, { deg: 270, text: '10 Team Seats' }, { deg: 360, text: 'Unlimited* Team Seats' }] },
+      { label: 'Content Version History', cells: ['1 Week', '1 Month', '6 Months', '12 Months'] },
+      { label: 'Activity Log', cells: ['1 Month', '6 Months', '12 Months', '16 Months'] },
       { label: 'Live Collaboration', cells: [false, true, true, true] },
       { label: 'Comments', cells: [false, true, true, true] },
       { label: 'Folders', cells: [false, true, true, true] },
@@ -229,9 +227,9 @@ const SECTIONS: TableSection[] = [
   {
     title: 'Work Seamlessly Across Platforms',
     rows: [
-      { label: 'Integrations', cells: [false, 'WordPress, Google Docs', 'WordPress, Google Docs, Contentful', 'WordPress, Google Docs, Contentful, Zapier'] },
-      { label: 'Data Export', cells: [false, false, true, true] },
-      { label: 'API Access', cells: [false, false, false, true] },
+      { label: 'Integrations', cells: ['WordPress', 'WordPress, Google Docs', 'WordPress, Google Docs, Zapier', 'WordPress, Google Docs, Zapier, White-label'] },
+      { label: 'Data Export (CSV)', cells: [true, true, true, true] },
+      { label: 'API Access', cells: [false, false, true, true] },
     ],
   },
   {
@@ -239,12 +237,10 @@ const SECTIONS: TableSection[] = [
     rows: [
       { label: 'Google Sign-In', cells: [true, true, true, true] },
       { label: 'Knowledge Base', cells: [true, true, true, true] },
-      { label: 'Customer Support (24h, Mon–Fri)', cells: [true, true, true, true] },
-      { label: 'Surfer Academy', cells: [true, true, true, true] },
-      { label: 'Content Optimization Masterclass', cells: [true, true, true, true] },
-      { label: 'AI Search Optimization Masterclass', cells: [true, true, true, true] },
+      { label: 'Email Support', cells: [true, true, true, true] },
+      { label: 'Priority Support', cells: [false, false, true, true] },
       { label: 'Personalized Onboarding', cells: [false, false, true, true] },
-      { label: 'Dedicated Customer Success Manager', cells: [false, false, false, true] },
+      { label: 'Dedicated Success Manager', cells: [false, false, false, true] },
     ],
   },
 ];
@@ -253,11 +249,10 @@ const FAQ_ITEMS = [
   { q: 'How does the 7-day trial work?', a: 'You get full access to all features in the chosen plan for 7 days, no credit card required. Cancel anytime before the trial ends to avoid being charged.' },
   { q: 'What payment methods do you accept?', a: 'We accept all major credit and debit cards (Visa, Mastercard, Amex) as well as PayPal and bank transfers for annual plans.' },
   { q: 'Can I upgrade or downgrade my account after purchase?', a: 'Yes, you can change your plan at any time from the billing settings. Upgrades take effect immediately; downgrades apply at the next billing cycle.' },
-  { q: 'How does Surfer work?', a: 'Surfer analyzes top-ranking pages for your target keywords and provides data-driven recommendations to help you create and optimize content that ranks.' },
-  { q: 'What languages does Surfer support?', a: 'Surfer supports over 170 languages for content analysis and optimization, making it suitable for global SEO strategies.' },
-  { q: 'What is NLP?', a: 'Natural Language Processing (NLP) is a branch of AI that helps computers understand human language. Surfer uses NLP to identify semantically relevant terms for your content.' },
-  { q: 'Who uses Surfer?', a: 'Surfer is used by SEO specialists, content marketers, agencies, and businesses of all sizes — from solo bloggers to enterprise teams.' },
-  { q: 'Will my unused credits be carried over to the next billing cycle?', a: 'Credits reset at the start of each billing cycle and do not carry over. We recommend using them throughout the month for best results.' },
+  { q: 'Where does the keyword and visibility data come from?', a: 'We combine first-party Google Search Console data (for your own pages), live SERP analysis, and a keyword database for search volume, difficulty, and competitor research — so the numbers are accurate without you connecting a Google Ads account.' },
+  { q: 'What languages do you support?', a: 'Content analysis and optimization work across all major languages, including Polish, English, German, French, Spanish, and more.' },
+  { q: 'How do AI Visibility prompts work?', a: 'We periodically query AI engines (ChatGPT, Gemini, Perplexity, and Google AI surfaces) with your tracked prompts and report whether and how your brand is mentioned, so you can optimize to win the citation.' },
+  { q: 'What happens if I reach a monthly limit?', a: 'Usage limits (documents, AI prompts, keyword research, competitor gaps) reset at the start of each billing cycle. If you need more, you can add an overage pack or upgrade to a higher plan at any time.' },
   { q: 'What is your cancellation policy?', a: 'You can cancel your subscription at any time. Your access continues until the end of the current billing period, after which it will not renew.' },
   { q: 'If I choose the annual plan, do I have to pay upfront for the entire year?', a: 'Yes, annual plans are billed upfront for the full year, which is how we are able to offer the discounted rate compared to monthly billing.' },
 ];
@@ -405,87 +400,54 @@ const isNegativeString = (s: string) =>
 
 // ─── Per-column cell renderer ─────────────────────────────────────────────────
 
-const AI_MODELS_STANDARD = ['ChatGPT'];
 const AI_MODELS_FULL = ['ChatGPT', 'Perplexity', 'AI Mode', 'AI Overviews', 'Gemini'];
 
 interface FeatureCellProps {
   value: CellValue;
-  label: string;
   isAiVisibilityRow?: boolean;
 }
 
-const FeatureCell = ({ value, label, isAiVisibilityRow }: FeatureCellProps) => {
-  const font: React.CSSProperties = { fontFamily: 'var(--font-family-primary)', fontSize: 13, lineHeight: '1.45' };
+/** Light muted ✕ for "not included" cells */
+const MutedCross = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#D4D4D8' }}>
+    <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
 
-  // Special case: Track AI Visibility row
+/** Renders only the VALUE for one plan column — the feature label lives in the left column. */
+const FeatureCell = ({ value, isAiVisibilityRow }: FeatureCellProps) => {
+  const font: React.CSSProperties = { fontFamily: 'var(--font-family-primary)', fontSize: 13, lineHeight: '1.45', color: '#3F3F47' };
+
+  // Track AI Visibility row → list the engines (icons), no repeated label
   if (isAiVisibilityRow) {
-    if (value === false) {
-      return (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-          <span style={{ flexShrink: 0, marginTop: 1 }}><Cross /></span>
-          <span style={{ ...font, color: '#9F9FA9' }}>{label}</span>
-        </div>
-      );
-    }
-    // value is a string like 'ChatGPT' or 'ChatGPT, Perplexity, ...'
+    if (value === false) return <MutedCross />;
     const models = typeof value === 'string'
-      ? (value === 'ChatGPT' ? AI_MODELS_STANDARD : AI_MODELS_FULL)
+      ? value.split(',').map((m) => m.trim()).filter(Boolean)
       : AI_MODELS_FULL;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-          <span style={{ flexShrink: 0, marginTop: 1 }}><Check color="#18181B" /></span>
-          <span style={{ ...font, color: '#18181B' }}>{label}</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 24 }}>
-          {models.map((m) => (
-            <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ModelIcon name={m} />
-              <span style={{ ...font, color: '#52525C' }}>{m}</span>
-            </div>
-          ))}
-        </div>
+        {models.map((m) => (
+          <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ModelIcon name={m} />
+            <span style={{ ...font, color: '#52525C' }}>{m}</span>
+          </div>
+        ))}
       </div>
     );
   }
 
-  // boolean true
-  if (value === true) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-        <span style={{ flexShrink: 0, marginTop: 1 }}><Check color="#18181B" /></span>
-        <span style={{ ...font, color: '#18181B' }}>{label}</span>
-      </div>
-    );
-  }
+  if (value === true) return <Check color="#783AFB" />;
+  if (value === false) return <MutedCross />;
 
-  // boolean false
-  if (value === false) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-        <span style={{ flexShrink: 0, marginTop: 1 }}><Cross /></span>
-        <span style={{ ...font, color: '#9F9FA9' }}>{label}</span>
-      </div>
-    );
-  }
-
-  // string value
   if (typeof value === 'string') {
-    const neg = isNegativeString(value);
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-        <span style={{ flexShrink: 0, marginTop: 1 }}>
-          {neg ? <Cross /> : <Check color="#18181B" />}
-        </span>
-        <span style={{ ...font, color: neg ? '#9F9FA9' : '#18181B' }}>{value}</span>
-      </div>
-    );
+    if (isNegativeString(value)) return <MutedCross />;
+    return <span style={font}>{value}</span>;
   }
 
-  // { deg, text }
+  // { deg, text } — tiered metric with a progress dot
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-      <span style={{ flexShrink: 0, marginTop: 2 }}><Dot deg={value.deg} /></span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ flexShrink: 0 }}><Dot deg={value.deg} /></span>
       <span style={{ ...font, color: '#52525C' }}>{value.text}</span>
     </div>
   );
@@ -591,7 +553,7 @@ const TogglePill = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const PricingPlansSettings = () => {
+const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
 
@@ -602,7 +564,6 @@ const PricingPlansSettings = () => {
     <div
       style={{
         width: '100%',
-        maxWidth: 1080,
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
@@ -617,16 +578,29 @@ const PricingPlansSettings = () => {
             <span style={{ fontSize: 20, fontWeight: 600, color: '#18181B', display: 'block' }}>Pricing &amp; Plans</span>
             <span style={{ fontSize: 14, color: '#9F9FA9', display: 'block', marginTop: 2 }}>For every stage of your journey.</span>
           </div>
-          <span style={{ fontSize: 14, color: '#52525C', whiteSpace: 'nowrap', paddingTop: 4, flexShrink: 0 }}>
-            Need more?{' '}
-            <a
-              href="#"
-              style={{ color: '#18181B', textDecoration: 'underline', fontWeight: 500 }}
-              onClick={(e) => { e.preventDefault(); toast('Contact our sales team!'); }}
-            >
-              Contact Sales
-            </a>
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 2 }}>
+            {onSkip && (
+              <button
+                type="button"
+                onClick={onSkip}
+                style={{ fontFamily: 'var(--font-family-primary)', fontSize: 14, fontWeight: 500, color: '#52525C', background: '#fff', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease, border-color 150ms ease' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
+              >
+                Skip for now
+              </button>
+            )}
+            <span style={{ fontSize: 14, color: '#52525C', whiteSpace: 'nowrap' }}>
+              Need more?{' '}
+              <a
+                href="#"
+                style={{ color: '#18181B', textDecoration: 'underline', fontWeight: 500 }}
+                onClick={(e) => { e.preventDefault(); toast('Contact our sales team!'); }}
+              >
+                Contact Sales
+              </a>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -741,7 +715,7 @@ const PricingPlansSettings = () => {
                   textAlign: 'center',
                 }}
               >
-                Most teams choose Pro
+                Most teams choose Growth
               </div>
             )}
           </div>
@@ -754,24 +728,24 @@ const PricingPlansSettings = () => {
           <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Not sure yet?</span>
           <span style={{ fontSize: 15, color: '#9F9FA9' }}>Start smaller</span>
           <span style={{ marginLeft: 'auto', fontSize: 13, color: '#52525C', maxWidth: 360, textAlign: 'right' }}>
-            Choose Discovery to test Surfer. Upgrade anytime as your needs grow.
+            Choose Starter to get going. Upgrade anytime as your needs grow.
           </span>
         </div>
 
         <div style={{ border: '1px solid #E4E4E7', borderRadius: 12, padding: '24px', background: '#fff' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 17, fontWeight: 600, color: '#18181B' }}>Discovery</span>
+              <span style={{ fontSize: 17, fontWeight: 600, color: '#18181B' }}>Starter</span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B' }}>€{billing === 'yearly' ? 49 : 59}</span>
+                <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B' }}>€{billing === 'yearly' ? 24 : 29}</span>
                 <span style={{ fontSize: 13, color: '#9F9FA9' }}>per month</span>
               </div>
               <p style={{ fontSize: 13, color: '#52525C', lineHeight: '1.5', maxWidth: 380, margin: '6px 0 0 0' }}>
-                Draft and optimize content to establish a baseline presence in Google and AI search results.
+                Draft and optimize content and start tracking your visibility in Google and AI search results.
               </p>
             </div>
             <div style={{ paddingTop: 4, flexShrink: 0 }}>
-              <CtaButton label="Try Discovery" style="ghost" />
+              <CtaButton label="Start with Starter" style="ghost" />
             </div>
           </div>
 
@@ -787,7 +761,7 @@ const PricingPlansSettings = () => {
               gap: '8px 24px',
             }}
           >
-            {DISCOVERY_FEATURES.map((f) => (
+            {STARTER_FEATURES.map((f) => (
               <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <span style={{ marginTop: 1, flexShrink: 0 }}><Check /></span>
                 <span style={{ fontSize: 13, color: '#3F3F47', lineHeight: '1.45' }}>{f}</span>
@@ -814,19 +788,38 @@ const PricingPlansSettings = () => {
           </span>
         </div>
 
-        {/* Table wrapper — must be a real scrollable container for sticky to work */}
-        <div style={{ overflowX: 'auto', border: '1px solid #E4E4E7', borderRadius: 12, background: '#fff', position: 'relative' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 640 }}>
+        {/* Table — sticky header + sticky left label column. borderCollapse:separate
+            keeps sticky borders reliable across browsers. */}
+        <div style={{ overflowX: 'auto', border: '1px solid #E4E4E7', borderRadius: 12, background: '#fff' }} className="styled-scrollbar">
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: 760 }}>
             <colgroup>
-              <col style={{ width: '25%' }} />
-              <col style={{ width: '25%' }} />
-              <col style={{ width: '25%' }} />
-              <col style={{ width: '25%' }} />
+              <col style={{ width: '28%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '18%' }} />
             </colgroup>
 
-            {/* Sticky plan-header row — position:sticky top:0 z-index:30 */}
+            {/* Sticky plan-header row */}
             <thead>
-              <tr style={{ borderBottom: '2px solid #E4E4E7' }}>
+              <tr>
+                {/* Top-left corner — "Features", sticky on both axes */}
+                <th
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    left: 0,
+                    zIndex: 40,
+                    background: '#fff',
+                    textAlign: 'left',
+                    verticalAlign: 'bottom',
+                    padding: '0 20px 16px 20px',
+                    borderBottom: '1px solid #E4E4E7',
+                    borderRight: '1px solid #F4F4F5',
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Features</span>
+                </th>
                 {TABLE_PLAN_HEADERS.map((p) => (
                   <th
                     key={p.name}
@@ -834,16 +827,13 @@ const PricingPlansSettings = () => {
                       position: 'sticky',
                       top: 0,
                       zIndex: 30,
-                      background: p.recommended
-                        ? 'linear-gradient(160deg,#F5F3FF 0%,#fff 70%)'
-                        : '#fff',
-                      padding: '0',
+                      background: '#fff',
+                      padding: 0,
                       textAlign: 'left',
-                      verticalAlign: 'top',
-                      borderBottom: '2px solid #E4E4E7',
+                      verticalAlign: 'bottom',
+                      borderBottom: '1px solid #E4E4E7',
                     }}
                   >
-                    {/* "Recommended" violet pill above the Pro column */}
                     {p.recommended && (
                       <div
                         style={{
@@ -859,25 +849,15 @@ const PricingPlansSettings = () => {
                         Recommended
                       </div>
                     )}
-                    <div style={{ padding: '16px 20px 20px 20px' }}>
-                      <div
-                        style={{
-                          fontSize: 17,
-                          fontWeight: 600,
-                          color: '#18181B',
-                          fontFamily: 'var(--font-family-primary)',
-                          marginBottom: 4,
-                        }}
-                      >
+                    <div style={{ padding: p.recommended ? '12px 16px 14px' : '14px 16px' }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', marginBottom: 2 }}>
                         {p.name}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 14 }}>
-                        <span style={{ fontSize: 15, fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 12 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                           €{billing === 'yearly' ? p.priceYearly : p.priceMonthly}
                         </span>
-                        <span style={{ fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-                          per month
-                        </span>
+                        <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>/mo</span>
                       </div>
                       <CtaButton label={p.cta} style={p.ctaStyle} fullWidth />
                     </div>
@@ -892,55 +872,74 @@ const PricingPlansSettings = () => {
                 const isAiVisibility = section.title === 'Track and Optimize Your AI Visibility';
                 return (
                   <React.Fragment key={section.title}>
-                    {/* Sticky section-title row — top: 184px (plan header height), z-index: 20 */}
-                    <tr>
-                      <td
-                        colSpan={4}
-                        style={{
-                          position: 'sticky',
-                          top: 184,
-                          zIndex: 20,
-                          background: '#fff',
-                          padding: '12px 20px',
-                          borderTop: '1px solid #F4F4F5',
-                          borderBottom: '1px solid #F4F4F5',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: '#3F3F47',
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#3F3F47' }}>
-                          {SECTION_ICONS[section.title] ?? <IconStar />}
-                          {section.title}
-                        </span>
-                      </td>
-                    </tr>
+                    {/* Section group header (skipped for the intro "Why choose?" row) */}
+                    {!isWhyChoose && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          style={{
+                            background: '#FAFAFA',
+                            padding: '10px 20px',
+                            borderTop: '1px solid #F4F4F5',
+                            borderBottom: '1px solid #F4F4F5',
+                          }}
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                            {SECTION_ICONS[section.title] ?? <IconStar />}
+                            {section.title}
+                          </span>
+                        </td>
+                      </tr>
+                    )}
 
-                    {/* Feature rows — 4 cells each, no separate label column */}
                     {section.rows.map((row, ri) => (
-                      <tr key={ri} style={{ borderBottom: '1px solid #F4F4F5' }}>
+                      <tr key={ri}>
+                        {/* Left label column — sticky on horizontal scroll */}
+                        <td
+                          style={{
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 10,
+                            background: '#fff',
+                            padding: isWhyChoose ? '14px 20px' : '11px 20px',
+                            verticalAlign: isWhyChoose ? 'top' : 'middle',
+                            borderBottom: '1px solid #F4F4F5',
+                            borderRight: '1px solid #F4F4F5',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: isWhyChoose ? 11 : 13,
+                              fontWeight: isWhyChoose ? 600 : 500,
+                              color: isWhyChoose ? '#9F9FA9' : '#18181B',
+                              fontFamily: 'var(--font-family-primary)',
+                              textTransform: isWhyChoose ? 'uppercase' : 'none',
+                              letterSpacing: isWhyChoose ? '0.05em' : '0',
+                              lineHeight: '1.4',
+                            }}
+                          >
+                            {isWhyChoose ? 'Why choose?' : row.label}
+                          </span>
+                        </td>
+
+                        {/* Value cells */}
                         {row.cells.map((cell, ci) => {
                           const isAiVis = isAiVisibility && row.label === 'Track AI Visibility';
                           return (
                             <td
                               key={ci}
                               style={{
-                                padding: isWhyChoose ? '16px 20px' : '12px 20px',
+                                padding: isWhyChoose ? '14px 16px' : '11px 16px',
                                 verticalAlign: isWhyChoose ? 'top' : 'middle',
-                                fontSize: 13,
-                                color: '#52525C',
-                                fontFamily: 'var(--font-family-primary)',
-                                lineHeight: '1.5',
+                                borderBottom: '1px solid #F4F4F5',
                               }}
                             >
                               {isWhyChoose ? (
-                                /* "Why choose?" cells: plain paragraph */
-                                <p style={{ margin: 0, fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '1.55' }}>
+                                <p style={{ margin: 0, fontSize: 12.5, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '1.5' }}>
                                   {typeof cell === 'string' ? cell : ''}
                                 </p>
                               ) : (
-                                <FeatureCell value={cell} label={row.label} isAiVisibilityRow={isAiVis} />
+                                <FeatureCell value={cell} isAiVisibilityRow={isAiVis} />
                               )}
                             </td>
                           );

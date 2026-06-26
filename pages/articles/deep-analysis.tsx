@@ -163,7 +163,7 @@ const StepRow = ({ step }: { step: StepState }) => {
 /* ── Main page ──────────────────────────────────────────────────────── */
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
-  const { url, keywords: kwParam, country, device } = router.query;
+  const { url, keywords: kwParam, country, domainId: domainIdParam } = router.query;
   const { data: domainsData } = useFetchDomains(router);
   const domains: DomainType[] = domainsData?.domains || [];
 
@@ -194,9 +194,12 @@ const DeepAnalysisPage: NextPage = () => {
     const urlStr = (url as string || '').trim();
     const kwStr = (kwParam as string || '');
     const keywords = kwStr ? kwStr.split(',').filter(Boolean) : [];
+    const domainIdStr = (domainIdParam as string || '').trim();
 
-    if (!urlStr) {
-      setOverallError('No URL provided.');
+    // Two entry modes: import (has a URL) or new content (keyword + domainId, no URL).
+    const isKeywordMode = !urlStr && keywords.length > 0 && !!domainIdStr;
+    if (!urlStr && !isKeywordMode) {
+      setOverallError('No URL or keyword provided.');
       return;
     }
 
@@ -208,12 +211,11 @@ const DeepAnalysisPage: NextPage = () => {
         const res = await fetch('/api/articles/deep-analysis', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: urlStr,
-            keywords,
-            country: country || 'US',
-            device: device || 'Desktop',
-          }),
+          body: JSON.stringify(
+            isKeywordMode
+              ? { keywords, country: country || 'PL', domainId: Number(domainIdStr) }
+              : { url: urlStr, keywords, country: country || 'PL' },
+          ),
           signal: controller.signal,
         });
 
@@ -290,7 +292,7 @@ const DeepAnalysisPage: NextPage = () => {
       controller.abort();
       startedRef.current = false;
     };
-  }, [router.isReady, url, kwParam, country, device, retryCount]);
+  }, [router.isReady, url, kwParam, country, domainIdParam, retryCount]);
 
   // ── Poll job progress for per-step status ────────────────────────
   useEffect(() => {
@@ -346,11 +348,11 @@ const DeepAnalysisPage: NextPage = () => {
     };
   }, [jobId, allDone, overallError]);
 
-  // Redirect to editor once all done
+  // Once analysis is done, go to the content-type selection step (not straight to the editor).
   useEffect(() => {
     if (allDone && articleId) {
       const t = setTimeout(() => {
-        router.replace(`/articles/${articleId}`);
+        router.replace(`/articles/content-type?articleId=${articleId}`);
       }, 600);
       return () => clearTimeout(t);
     }

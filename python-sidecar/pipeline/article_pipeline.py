@@ -51,6 +51,19 @@ async def _chat(prompt: str, max_tokens: int = 4000) -> str:
     return ""
 
 
+# Maps the wizard content-type to a structural directive for the prompt.
+CONTENT_TYPE_GUIDE = {
+    "blog": "artykuł blogowy (long-form), wyczerpująco omawiający temat",
+    "landing": "strona landing page — przekonująca, sekcje korzyści, social proof, wyraźne CTA",
+    "comparison": "artykuł porównawczy — zestawienia/sekcje porównujące opcje, plusy i minusy",
+    "listicle": "artykuł w formie listy (listicle) — ponumerowane, konkretne punkty",
+    "product": "strona produktowa e-commerce — opis, cechy, korzyści, specyfikacja, CTA",
+    "category": "strona kategorii e-commerce — przegląd kategorii, podkategorie, przewodnik zakupowy",
+    "service": "strona usługowa (local business) — opis usługi, proces, obszar działania, CTA",
+    "llm": "treść pod LLM/AI Search — jasne definicje, sekcja FAQ, struktura łatwa do cytowania",
+}
+
+
 async def run_pipeline(
     site_context: dict,
     serp_data: dict,
@@ -58,9 +71,33 @@ async def run_pipeline(
     language: str = "pl",
     tone: str = "professional",
     target_words: int = 2200,
+    content_type: str = "blog",
+    instructions: str = "",
+    external_links: bool = True,
+    brand_knowledge: str = "",
+    voice_tone: str = "",
 ) -> str:
     top_terms = [t["term"] for t in serp_data.get("terms", [])[:25]]
     terms_str = ", ".join(top_terms) if top_terms else "brak danych NLP"
+
+    type_guide = CONTENT_TYPE_GUIDE.get(content_type, CONTENT_TYPE_GUIDE["blog"])
+    instr_block = (
+        f"\n\nDODATKOWE INSTRUKCJE UŻYTKOWNIKA (wysoki priorytet — zastosuj je):\n{instructions.strip()}"
+        if instructions.strip() else ""
+    )
+    ext_req = (
+        '- Wpleć 2-4 linki zewnętrzne <a href="..."> do wiarygodnych, autorytatywnych źródeł'
+        if external_links else "- Nie dodawaj linków zewnętrznych"
+    )
+    brand_block = (
+        f"\n\nWIEDZA O MARCE (użyj jako kontekst, nie kopiuj dosłownie):\n{brand_knowledge.strip()}"
+        if brand_knowledge.strip() else ""
+    )
+    # Custom voice reference text overrides the generic tone.
+    tone_directive = (
+        f"Ton i styl: naśladuj poniższy wzorzec głosu marki —\n{voice_tone.strip()[:1500]}"
+        if voice_tone.strip() else f"Ton: {tone}"
+    )
 
     site_info = (
         f"Strona: {site_context.get('url', '')}\n"
@@ -71,12 +108,14 @@ async def run_pipeline(
     # === Faza 1: Outline ===
     outline = await _chat(f"""Stwórz szczegółowy outline artykułu SEO na keyword: "{keyword}"
 
+Typ treści: {type_guide}
+
 Kontekst strony:
 {site_info}
 
 NLP Terms do pokrycia: {terms_str}
 Target: ~{target_words} słów, {serp_data.get('headings_target', 15)} nagłówków H2/H3.
-Język: {language}
+Język: {language}{brand_block}{instr_block}
 
 Format:
 ## H2 tytuł
@@ -86,20 +125,23 @@ Format:
     article_html = await _chat(f"""Na podstawie poniższego outline stwórz PEŁNY artykuł SEO w HTML.
 
 Keyword: "{keyword}"
-Język: {language}, Ton: {tone}, Target słów: {target_words}
+Typ treści: {type_guide}
+Język: {language}, Target słów: {target_words}
+{tone_directive}
 
 Outline:
 {outline}
 
-NLP Terms (wpleć naturalnie): {terms_str}
+NLP Terms (wpleć naturalnie): {terms_str}{brand_block}{instr_block}
 
 WYMAGANIA:
 - Zacznij od <h1> z keyword w tytule
 - Użyj H2 i H3 zgodnie z outline
 - Pisz treść bogatą w informacje i konkretne przykłady
 - Paragrafy 3-5 zdań, listy <ul>/<ol> gdzie sensowne
+{ext_req}
 - Zakończ podsumowaniem
-- TYLKO HTML (h1,h2,h3,p,ul,ol,strong,em) — bez <html>,<body>,<head>""", max_tokens=8000)
+- TYLKO HTML (h1,h2,h3,p,ul,ol,strong,em,a) — bez <html>,<body>,<head>""", max_tokens=8000)
 
     # === Faza 3: SEO Review ===
     final_html = await _chat(f"""Zreviewuj i popraw artykuł SEO dla keyword "{keyword}":
@@ -121,6 +163,42 @@ Zwróć POPRAWIONY HTML (tylko HTML, bez komentarzy):
         final_html = final_html[:-3]
 
     return final_html.strip()
+
+
+async def generate_brand_knowledge(url: str, title: str, description: str, page_text: str) -> dict:
+    """Scrape-based Brand Knowledge draft: analyse a company page and produce the
+    structured Brand Knowledge fields, in the page's language."""
+    prompt = f"""Przeanalizuj treść strony firmy i wygeneruj zwięzłą "Brand Knowledge".
+
+URL: {url}
+Tytuł: {title}
+Opis: {description}
+
+Treść strony (fragment):
+{page_text[:6000]}
+
+Zwróć WYŁĄCZNIE JSON (bez markdown), pisany w języku strony:
+{{
+  "brand_name": "krótka nazwa marki/firmy",
+  "brand_knowledge": "Business Type\\n<...>\\n\\nIndustry\\n<...>\\n\\nProducts/Services description\\n<...>\\n\\nCustomer profile\\n<...>\\n\\nCompetitors\\n<...>\\n\\nTopics to cover\\n<...>"
+}}
+Bądź konkretny i oparty na treści strony."""
+    raw = (await _chat(prompt, max_tokens=1500)).strip()
+    for p in ("```json", "```"):
+        if raw.startswith(p):
+            raw = raw[len(p):]
+    if raw.endswith("```"):
+        raw = raw[:-3]
+    raw = raw.strip()
+    try:
+        match = re.search(r"\{[\s\S]*\}", raw)
+        data = json.loads(match.group(0) if match else raw)
+        return {
+            "brand_name": str(data.get("brand_name", "")),
+            "brand_knowledge": str(data.get("brand_knowledge", "")),
+        }
+    except Exception:
+        return {"brand_name": "", "brand_knowledge": raw}
 
 
 async def suggest_internal_links(

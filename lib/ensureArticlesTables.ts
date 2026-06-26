@@ -10,7 +10,6 @@ let tablesChecked = false;
 const isPostgres = !!process.env.DATABASE_URL;
 
 /** Typ kolumny serial/autoincrement zależny od dialektu */
-const SERIAL = isPostgres ? 'SERIAL' : 'INTEGER';
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 /** Aktualny timestamp */
 const NOW_DEFAULT = 'CURRENT_TIMESTAMP';
@@ -42,6 +41,7 @@ export async function ensureArticlesTables() {
          content          TEXT,
          status           TEXT DEFAULT 'draft',
          target_keyword   TEXT,
+         language         TEXT DEFAULT 'pl',
          meta_title       TEXT,
          meta_description TEXT,
          meta_url         TEXT,
@@ -86,6 +86,19 @@ export async function ensureArticlesTables() {
          entities_json TEXT,
          terms_json    TEXT,
          created_at    TIMESTAMP DEFAULT ${NOW_DEFAULT}
+      )
+   `);
+
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS article_comments (
+         id          TEXT PRIMARY KEY,
+         article_id  INTEGER NOT NULL,
+         quote       TEXT,
+         body        TEXT,
+         images_json TEXT,
+         author      TEXT,
+         color       TEXT,
+         created_at  TIMESTAMP DEFAULT ${NOW_DEFAULT}
       )
    `);
 
@@ -163,6 +176,17 @@ export async function ensureArticlesTables() {
       )
    `);
 
+   // user_onboarding — per-user onboarding survey state (gates app access)
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS user_onboarding (
+         user_id    TEXT PRIMARY KEY,
+         completed  INTEGER DEFAULT 0,
+         answers    TEXT,
+         created_at TIMESTAMP DEFAULT ${NOW_DEFAULT},
+         updated_at TIMESTAMP DEFAULT ${NOW_DEFAULT}
+      )
+   `);
+
    // analysis_jobs — event-driven pipeline job queue
    await db.query(`
       CREATE TABLE IF NOT EXISTS analysis_jobs (
@@ -194,6 +218,35 @@ export async function ensureArticlesTables() {
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals TEXT`); } catch {}
    }
+
+   // Wizard language (used by generation to write in the analysed language)
+   try { await db.query(`ALTER TABLE articles ADD COLUMN language TEXT DEFAULT 'pl'`); } catch {}
+
+   // Opaque share token for the public read-only /drafts/s/<token> preview.
+   try { await db.query(`ALTER TABLE articles ADD COLUMN share_token TEXT`); } catch {}
+
+   // Ranking content gathered at the deep-analysis step (Google Search + AI-cited
+   // sources) — shown in the New-Content wizard "Ranking content" panel.
+   try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_sources TEXT`); } catch {}
+
+   // Saved New-Content wizard progress (step + selections) so an unfinished draft
+   // can be resumed from the Content Editor. Cleared once generation starts.
+   try { await db.query(`ALTER TABLE articles ADD COLUMN wizard_state TEXT`); } catch {}
+
+   // Cached Plagiarism Check result so it survives reloads (avoids re-scanning).
+   try { await db.query(`ALTER TABLE articles ADD COLUMN plagiarism_json TEXT`); } catch {}
+
+   // Cached AI Readability rubric result (10-criteria LLM assessment).
+   try { await db.query(`ALTER TABLE articles ADD COLUMN ai_readability_json TEXT`); } catch {}
+
+   // Threaded comments: replies (parent_id), resolved threads, edit timestamp.
+   try { await db.query(`ALTER TABLE article_comments ADD COLUMN parent_id TEXT`); } catch {}
+   try { await db.query(`ALTER TABLE article_comments ADD COLUMN resolved INTEGER DEFAULT 0`); } catch {}
+   try { await db.query(`ALTER TABLE article_comments ADD COLUMN updated_at TIMESTAMP`); } catch {}
+   try { await db.query(`ALTER TABLE article_comments ADD COLUMN reactions_json TEXT`); } catch {}
+   try { await db.query(`ALTER TABLE article_comments ADD COLUMN avatar_url TEXT`); } catch {}
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_comments_article ON article_comments(article_id)`); } catch {}
+   try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_comments_parent ON article_comments(parent_id)`); } catch {}
 
    // Migrations dla SQLite (Postgres dostaje kolumny już w CREATE TABLE)
    if (!isPostgres) {

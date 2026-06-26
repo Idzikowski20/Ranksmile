@@ -1,19 +1,26 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
-import { CheckmarkCircle01Icon } from 'hugeicons-react';
 import AppShell from '../../../components/common/AppShell';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
 import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
 import KeywordSuggestInput from '../../../components/articles/KeywordSuggestInput';
 import PixabayImageModal from '../../../components/articles/PixabayImageModal';
 import VersionHistoryPanel from '../../../components/articles/VersionHistoryPanel';
+import CustomizationPanelModal from '../../../components/articles/CustomizationPanelModal';
+import EditorOnboarding from '../../../components/articles/EditorOnboarding';
+import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
+import EditorLoading from '../../../components/articles/EditorLoading';
+import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
-import { ScoreData, countOccurrences, computeContentScore } from '../../../lib/contentScore';
+import { useContentSettings } from '../../../services/contentSettings';
+import { useArticleKeywords } from '../../../services/articleKeywords';
+import { ScoreData, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import dynamic from 'next/dynamic';
 
@@ -32,23 +39,28 @@ interface Article {
   meta_url: string;
   schema_json: string;
   score_data: string;
+  content_score?: number;
   word_count: number;
   featured_image: string | null;
   publish_target: string | null;
   publish_url: string | null;
   competitor_outlines_cache: string | null;
   ai_visibility_summary?: AiVisibilitySummary | null;
+  language?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /* ── Icon button used in the top action bar ──────────────────────── */
 const IconBtn = ({
-  children, onClick, disabled, title, danger,
+  children, onClick, disabled, title, danger, active,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   title?: string;
   danger?: boolean;
+  active?: boolean;
 }) => (
   <button
     onClick={onClick}
@@ -57,9 +69,9 @@ const IconBtn = ({
     style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       width: 32, height: 32, borderRadius: 8, border: 'none',
-      background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer',
+      background: active ? '#f4f4f5' : 'transparent', cursor: disabled ? 'not-allowed' : 'pointer',
       opacity: disabled ? 0.4 : 1,
-      color: danger ? '#dc2626' : '#3f3f47',
+      color: danger ? '#dc2626' : (active ? '#18181b' : '#3f3f47'),
       padding: 0, transition: 'color 0.15s, background 0.15s',
       fontFamily: 'var(--font-family-primary)',
     }}
@@ -69,6 +81,285 @@ const IconBtn = ({
     {children}
   </button>
 );
+
+/* ── Surfer-style action-bar icons (20px) ─────────────────────────── */
+const sIco = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+const IcoDoneFilled = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path fillRule="evenodd" clipRule="evenodd" fill="currentColor" d="M12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM17.2071 9.70711C17.5976 9.31658 17.5976 8.68342 17.2071 8.29289C16.8166 7.90237 16.1834 7.90237 15.7929 8.29289L10.5 13.5858L8.20711 11.2929C7.81658 10.9024 7.18342 10.9024 6.79289 11.2929C6.40237 11.6834 6.40237 12.3166 6.79289 12.7071L9.79289 15.7071C10.1834 16.0976 10.8166 16.0976 11.2071 15.7071L17.2071 9.70711Z" /></svg>);
+const IcoDoneOutline = () => (<svg width={20} height={20} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" {...sIco} /><path {...sIco} d="M8.4 12.3l2.4 2.4 4.8-5.4" /></svg>);
+const IcoClock = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {...sIco} d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" /></svg>);
+const IcoVoice = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {...sIco} d="M3 10L3 14M7.5 11V13M12 6V18M16.5 3V21M21 10V14" /></svg>);
+const IcoGear = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {...sIco} d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" /><path {...sIco} d="M18.7273 14.7273C18.6063 15.0015 18.5702 15.3056 18.6236 15.6005C18.6771 15.8954 18.8177 16.1676 19.0273 16.3818L19.0818 16.4364C19.2509 16.6052 19.385 16.8057 19.4765 17.0265C19.568 17.2472 19.6151 17.4838 19.6151 17.7227C19.6151 17.9617 19.568 18.1983 19.4765 18.419C19.385 18.6397 19.2509 18.8402 19.0818 19.0091C18.913 19.1781 18.7124 19.3122 18.4917 19.4037C18.271 19.4952 18.0344 19.5423 17.7955 19.5423C17.5565 19.5423 17.3199 19.4952 17.0992 19.4037C16.8785 19.3122 16.678 19.1781 16.5091 19.0091L16.4545 18.9545C16.2403 18.745 15.9682 18.6044 15.6733 18.5509C15.3784 18.4974 15.0742 18.5335 14.8 18.6545C14.5311 18.7698 14.3018 18.9611 14.1403 19.205C13.9788 19.4489 13.8921 19.7347 13.8909 20.0273V20.1818C13.8909 20.664 13.6994 21.1265 13.3584 21.4675C13.0174 21.8084 12.5549 22 12.0727 22C11.5905 22 11.1281 21.8084 10.7871 21.4675C10.4461 21.1265 10.2545 20.664 10.2545 20.1818V20.1C10.2475 19.7991 10.1501 19.5073 9.97501 19.2625C9.79991 19.0176 9.55521 18.8312 9.27273 18.7273C8.99853 18.6063 8.69437 18.5702 8.39947 18.6236C8.10456 18.6771 7.83244 18.8177 7.61818 19.0273L7.56364 19.0818C7.39478 19.2509 7.19425 19.385 6.97353 19.4765C6.7528 19.568 6.51621 19.6151 6.27727 19.6151C6.03834 19.6151 5.80174 19.568 5.58102 19.4765C5.36029 19.385 5.15977 19.2509 4.99091 19.0818C4.82186 18.913 4.68775 18.7124 4.59626 18.4917C4.50476 18.271 4.45766 18.0344 4.45766 17.7955C4.45766 17.5565 4.50476 17.3199 4.59626 17.0992C4.68775 16.8785 4.82186 16.678 4.99091 16.5091L5.04545 16.4545C5.25503 16.2403 5.39562 15.9682 5.4491 15.6733C5.50257 15.3784 5.46647 15.0742 5.34545 14.8C5.23022 14.5311 5.03887 14.3018 4.79497 14.1403C4.55107 13.9788 4.26526 13.8921 3.97273 13.8909H3.81818C3.33597 13.8909 2.87351 13.6994 2.53253 13.3584C2.19156 13.0174 2 12.5549 2 12.0727C2 11.5905 2.19156 11.1281 2.53253 10.7871C2.87351 10.4461 3.33597 10.2545 3.81818 10.2545H3.9C4.2009 10.2475 4.49273 10.1501 4.73754 9.97501C4.98236 9.79991 5.16883 9.55521 5.27273 9.27273C5.39374 8.99853 5.42984 8.69437 5.37637 8.39947C5.3229 8.10456 5.18231 7.83244 4.97273 7.61818L4.91818 7.56364C4.74913 7.39478 4.61503 7.19425 4.52353 6.97353C4.43203 6.7528 4.38493 6.51621 4.38493 6.27727C4.38493 6.03834 4.43203 5.80174 4.52353 5.58102C4.61503 5.36029 4.74913 5.15977 4.91818 4.99091C5.08704 4.82186 5.28757 4.68775 5.50829 4.59626C5.72901 4.50476 5.96561 4.45766 6.20455 4.45766C6.44348 4.45766 6.68008 4.50476 6.9008 4.59626C7.12152 4.68775 7.32205 4.82186 7.49091 4.99091L7.54545 5.04545C7.75971 5.25503 8.03183 5.39562 8.32674 5.4491C8.62164 5.50257 8.9258 5.46647 9.2 5.34545H9.27273C9.54161 5.23022 9.77093 5.03887 9.93245 4.79497C10.094 4.55107 10.1807 4.26526 10.1818 3.97273V3.81818C10.1818 3.33597 10.3734 2.87351 10.7144 2.53253C11.0553 2.19156 11.5178 2 12 2C12.4822 2 12.9447 2.19156 13.2856 2.53253C13.6266 2.87351 13.8182 3.33597 13.8182 3.81818V3.9C13.8193 4.19253 13.906 4.47834 14.0676 4.72224C14.2291 4.96614 14.4584 5.15749 14.7273 5.27273C15.0015 5.39374 15.3056 5.42984 15.6005 5.37637C15.8954 5.3229 16.1676 5.18231 16.3818 4.97273L16.4364 4.91818C16.6052 4.74913 16.8057 4.61503 17.0265 4.52353C17.2472 4.43203 17.4838 4.38493 17.7227 4.38493C17.9617 4.38493 18.1983 4.43203 18.419 4.52353C18.6397 4.61503 18.8402 4.74913 19.0091 4.91818C19.1781 5.08704 19.3122 5.28757 19.4037 5.50829C19.4952 5.72901 19.5423 5.96561 19.5423 6.20455C19.5423 6.44348 19.4952 6.68008 19.4037 6.9008C19.3122 7.12152 19.1781 7.32205 19.0091 7.49091L18.9545 7.54545C18.745 7.75971 18.6044 8.03183 18.5509 8.32674C18.4974 8.62164 18.5335 8.9258 18.6545 9.2V9.27273C18.7698 9.54161 18.9611 9.77093 19.205 9.93245C19.4489 10.094 19.7347 10.1807 20.0273 10.1818H20.1818C20.664 10.1818 21.1265 10.3734 21.4675 10.7144C21.8084 11.0553 22 11.5178 22 12C22 12.4822 21.8084 12.9447 21.4675 13.2856C21.1265 13.6266 20.664 13.8182 20.1818 13.8182H20.1C19.8075 13.8193 19.5217 13.906 19.2778 14.0676C19.0339 14.2291 18.8425 14.4584 18.7273 14.7273Z" /></svg>);
+const IcoPanel = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path {...sIco} d="M15 3V21M7.8 3H16.2C17.8802 3 18.7202 3 19.362 3.32698C19.9265 3.6146 20.3854 4.07354 20.673 4.63803C21 5.27976 21 6.11984 21 7.8V16.2C21 17.8802 21 18.7202 20.673 19.362C20.3854 19.9265 19.9265 20.3854 19.362 20.673C18.7202 21 17.8802 21 16.2 21H7.8C6.11984 21 5.27976 21 4.63803 20.673C4.07354 20.3854 3.6146 19.9265 3.32698 19.362C3 18.7202 3 17.8802 3 16.2V7.8C3 6.11984 3 5.27976 3.32698 4.63803C3.6146 4.07354 4.07354 3.6146 4.63803 3.32698C5.27976 3 6.11984 3 7.8 3Z" /></svg>);
+const IcoDots = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M10 12C10 10.8954 10.8954 10 12 10C13.1046 10 14 10.8954 14 12C14 13.1046 13.1046 14 12 14C10.8954 14 10 13.1046 10 12Z" /><path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M17 12C17 10.8954 17.8954 10 19 10C20.1046 10 21 10.8954 21 12C21 13.1046 20.1046 14 19 14C17.8954 14 17 13.1046 17 12Z" /><path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M3 12C3 10.8954 3.89543 10 5 10C6.10457 10 7 10.8954 7 12C7 13.1046 6.10457 14 5 14C3.89543 14 3 13.1046 3 12Z" /></svg>);
+const IcoChevronR = () => (<svg width={18} height={18} viewBox="0 0 24 24"><path {...sIco} d="m9 18l6-6l-6-6" /></svg>);
+
+/* Menu row used by the ⋯ actions menu */
+const MenuRow = ({ icon, label, sub, chevron, onClick }: { icon: React.ReactNode; label: string; sub?: string; chevron?: boolean; onClick?: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '8px 14px',
+      border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
+      fontFamily: 'var(--font-family-primary)', color: '#18181B',
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+  >
+    <span style={{ color: '#18181B', display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
+    <span style={{ flex: 1, minWidth: 0 }}>
+      <span style={{ display: 'block', fontSize: 15, fontWeight: 500, lineHeight: '20px' }}>{label}</span>
+      {sub && <span style={{ display: 'block', fontSize: 12, color: '#71717b', lineHeight: '16px' }}>{sub}</span>}
+    </span>
+    {chevron && <span style={{ color: '#71717b', display: 'inline-flex', flexShrink: 0 }}><IcoChevronR /></span>}
+  </button>
+);
+
+/* Voice picker popover (Search voices / SERP based / Custom voices / Add Custom Voice) */
+const Check18 = () => (<svg viewBox="0 0 20 20" width={18} height={18} style={{ marginLeft: 'auto' }}><path fill="#18181B" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>);
+
+const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
+  const router = useRouter();
+  const [voices, setVoices] = useState<{ id: string; name: string; description: string; isDefault: boolean }[]>([]);
+  const [selected, setSelected] = useState('serp');
+  const [q, setQ] = useState('');
+
+  const { data: contentSettings } = useContentSettings();
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!contentSettings || seeded.current) return;
+    seeded.current = true;
+    setVoices(contentSettings.voices as { id: string; name: string; description: string; isDefault: boolean }[]);
+    const def = contentSettings.voices.find((v) => v.isDefault);
+    if (def) setSelected(def.id);
+  }, [contentSettings]);
+
+  const ql = q.trim().toLowerCase();
+  const filtered = ql ? voices.filter((v) => v.name.toLowerCase().includes(ql)) : voices;
+  const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 15, fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)', textAlign: 'left' };
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        background: '#fff', borderRadius: 12, padding: '8px 0', minWidth: 280, maxWidth: 320,
+        boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
+        animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', fontFamily: 'var(--font-family-primary)', ...style,
+      }}
+    >
+      <div style={{ padding: '4px 12px 8px' }}>
+        <input
+          placeholder="Search voices" value={q} onChange={(e) => setQ(e.target.value)} onClick={(e) => e.stopPropagation()}
+          style={{ width: '100%', height: 40, padding: '0 12px', boxSizing: 'border-box', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#18181B' }}
+        />
+      </div>
+
+      <div style={{ maxHeight: 240, overflowY: 'auto' }} className="styled-scrollbar">
+        <div style={{ padding: '6px 16px 4px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#9f9fa9', letterSpacing: '0.04em' }}>Built-in voices</div>
+        <button type="button" onClick={() => setSelected('serp')} style={rowStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          <span style={{ flex: 1 }}>SERP based</span>
+          {selected === 'serp' && <Check18 />}
+        </button>
+        {filtered.map((v) => (
+          <button key={v.id} type="button" onClick={() => setSelected(v.id)} style={rowStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}</span>
+            {selected === v.id && <Check18 />}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ height: 1, background: '#f4f4f5', margin: '4px 0' }} />
+      <button type="button" onClick={() => router.push('/settings/custom_voices')} style={rowStyle}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <svg viewBox="0 0 24 24" width={18} height={18}><path d="M12 5v14M5 12h14" stroke="#18181B" strokeWidth={2} strokeLinecap="round" /></svg>
+        Add Custom Voice
+      </button>
+    </div>
+  );
+};
+
+/* Share popover (edit link + comment link, like Surfer) */
+const IcoReset = () => (
+  <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3.5 9a8.5 8.5 0 0 1 14.4-3.1L21 9M21 5v4h-4M20.5 15a8.5 8.5 0 0 1-14.4 3.1L3 15M3 19v-4h4" /></svg>
+);
+
+
+const ShareLinkBlock = ({ desc, link, onReset, copyLabel, loading }: { desc: React.ReactNode; link: string; onReset: () => void; copyLabel: string; loading?: boolean }) => {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    if (loading) return;
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopied(true);
+      toast.success('Link copied');
+      setTimeout(() => setCopied(false), 1600);
+    }).catch(() => toast.error('Copy failed'));
+  };
+  return (
+    <div style={{ paddingBottom: 4 }}>
+      <style>{`@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }`}</style>
+      <div style={{ fontSize: 14, color: '#3f3f47', lineHeight: '20px', paddingBottom: 10 }}>{desc}</div>
+      <div style={{ background: '#f8f8f9', padding: '9px 14px', borderRadius: 8, minHeight: 38, display: 'flex', alignItems: 'center' }}>
+        {loading ? (
+          <span style={{ display: 'block', width: '70%', height: 14, borderRadius: 6, background: 'linear-gradient(90deg, #ececef 0px, #f6f6f8 80px, #ececef 160px)', backgroundSize: '200px 100%', animation: 'shimmer 1.1s linear infinite' }} />
+        ) : (
+          <a href={link} title={link} rel="noreferrer noopener" target="_blank"
+            style={{ display: 'block', width: '100%', fontSize: 14, color: '#52525c', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {link.replace(/^https?:\/\//, '')}
+          </a>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14 }}>
+        <button type="button" onClick={onReset} disabled={loading}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', padding: 0, cursor: loading ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, color: '#e5484d', opacity: loading ? 0.5 : 1, fontFamily: 'var(--font-family-primary)' }}>
+          <IcoReset /> Reset link
+        </button>
+        <button type="button" onClick={copy} disabled={loading}
+          style={{ padding: '7px 16px', borderRadius: 6, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600, color: '#fff', background: copied ? '#1ab25e' : '#18181b', opacity: loading ? 0.5 : 1, fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s' }}
+          onMouseEnter={(e) => { if (!copied && !loading) e.currentTarget.style.background = '#783afb'; }}
+          onMouseLeave={(e) => { if (!copied) e.currentTarget.style.background = '#18181b'; }}>
+          {copied ? 'Copied' : copyLabel}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClose: () => void; style?: React.CSSProperties }) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const [token, setToken] = useState('');
+
+  useEffect(() => {
+    fetch(`/api/articles/${articleId}/share-link`).then((r) => r.json()).then((d) => { if (d.token) setToken(d.token); }).catch(() => {});
+  }, [articleId]);
+
+  const resetLink = async () => {
+    try {
+      const r = await fetch(`/api/articles/${articleId}/share-link`, { method: 'POST' });
+      const d = await r.json();
+      if (d.token) { setToken(d.token); toast.success('Comment link reset'); }
+    } catch { toast.error('Could not reset link'); }
+  };
+
+  // Read-only preview/comment link — opens the shared draft view via opaque token.
+  const commentLink = token ? `${origin}/drafts/s/${token}` : `${origin}/drafts/s/…`;
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        background: '#fff', borderRadius: 12, padding: 20, width: 360, maxWidth: 'calc(100vw - 24px)',
+        boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
+        animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', fontFamily: 'var(--font-family-primary)', ...style,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 16 }}>
+        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Share Content Editor</span>
+        <button type="button" aria-label="Close" onClick={onClose}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#52525c', display: 'inline-flex', lineHeight: 1 }}>
+          <svg viewBox="0 0 24 24" width={20} height={20}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <ShareLinkBlock
+        desc={<>Anyone with this link can <span style={{ fontWeight: 600, color: '#18181B' }}>view</span> and <span style={{ fontWeight: 600, color: '#18181B' }}>comment,</span> for an unlimited time</>}
+        link={commentLink} copyLabel="Copy comment link" onReset={resetLink}
+      />
+    </div>
+  );
+};
+
+/* ── Content Editor breadcrumb (replaces workspace switcher in the topbar) ── */
+const BC_COUNTRY: Record<string, { name: string; cc: string }> = {
+  pl: { name: 'Poland', cc: 'pl' }, en: { name: 'United States', cc: 'us' }, de: { name: 'Germany', cc: 'de' },
+  fr: { name: 'France', cc: 'fr' }, es: { name: 'Spain', cc: 'es' }, it: { name: 'Italy', cc: 'it' },
+  nl: { name: 'Netherlands', cc: 'nl' }, pt: { name: 'Portugal', cc: 'pt' },
+};
+
+const bcFmtDate = (iso?: string): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ' at');
+};
+
+const BcChevron = () => (
+  <svg viewBox="0 0 24 24" width={20} height={20} style={{ flexShrink: 0, color: '#3F3F47' }}>
+    <path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M8.293 5.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L13.586 12 8.293 6.707a1 1 0 0 1 0-1.414" />
+  </svg>
+);
+
+const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifiedAt }: {
+  domain: string; title: string; keywords: string[]; language?: string; createdAt?: string; modifiedAt?: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const loc = BC_COUNTRY[(language || 'pl').toLowerCase()] || BC_COUNTRY.en;
+  const kwList = keywords.length ? keywords : [];
+  const f = 'var(--font-family-primary)';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, paddingLeft: 8 }}>
+      <Link href="/dashboard" style={{ display: 'inline-flex', flexShrink: 0 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8 }}>
+          <img alt="" width={20} height={20} style={{ borderRadius: 4 }} src={`https://www.google.com/s2/favicons?domain=${domain || 'serpbear'}&sz=32`} />
+        </span>
+      </Link>
+      <BcChevron />
+      <Link href="/articles" style={{ color: '#9F9FA9', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: f, fontSize: 14 }}>Content Editor</Link>
+      <BcChevron />
+      <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, position: 'relative' }}>
+        <span style={{ display: 'block', color: '#fff', fontWeight: 600, fontFamily: f, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, maxWidth: 'min(460px, 34vw)' }}>{title || 'Untitled'}</span>
+        <button type="button" aria-label="Article info" onClick={() => setOpen((v) => !v)}
+          style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#9F9FA9', display: 'inline-flex', flexShrink: 0 }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#9F9FA9'; }}>
+          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" /></svg>
+        </button>
+
+        {open && (
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 200, width: 300, maxWidth: 'calc(100vw - 24px)', background: '#fff', borderRadius: 12, padding: '12px 16px', boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: f, animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                <span style={{ fontSize: 13, color: '#52525C' }}>Keywords{kwList.length ? ` (${kwList.length})` : ''}</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', wordBreak: 'break-word' }}>{kwList.length ? kwList.join(', ') : '—'}</span>
+              </div>
+              {kwList.length > 0 && (
+                <button type="button" aria-label="Copy keywords" onClick={() => { navigator.clipboard?.writeText(kwList.join(', ')); toast.success('Keywords copied'); }}
+                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#3F3F47', display: 'inline-flex', flexShrink: 0 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#18181B'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3F3F47'; }}>
+                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}><path d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" /></svg>
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 13, color: '#52525C' }}>Location</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500, color: '#18181B' }}>
+                <img alt="" width={18} height={13} style={{ borderRadius: 2 }} src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${loc.cc}.svg`} />
+                {loc.name}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 13, color: '#52525C' }}>Last Modified</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{bcFmtDate(modifiedAt)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 13, color: '#52525C' }}>Created</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{bcFmtDate(createdAt)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const ArticleEditorPage: NextPage = () => {
   const router = useRouter();
@@ -80,14 +371,42 @@ const ArticleEditorPage: NextPage = () => {
 
   const editorRef = useRef<any>(null);
   const pixabayCallbackRef = useRef<((img: { url: string; alt: string }) => void) | null>(null);
+  const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedSig = useRef<string | null>(null);
+  const lastVersionAt = useRef(0);
   const [article, setArticle] = useState<Article | null>(null);
+  const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [autoSaveState, setAutoSaveState] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [showPixabay, setShowPixabay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [actionsMenu, setActionsMenu] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commentThreads, setCommentThreads] = useState<Thread[]>([]);
+  const [commentsVersion, setCommentsVersion] = useState(0);
+  // Comment identity = signed-in user + Google/GSC profile photo (same source as the topbar).
+  const session = authClient.useSession?.();
+  const [gscPicture, setGscPicture] = useState('');
+  useEffect(() => {
+    fetch('/api/gsc/accounts', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { const a = d?.accounts?.[0]; if (a?.picture) setGscPicture(a.picture); })
+      .catch(() => {});
+  }, []);
+  const commentAuthor: CommentAuthor = useMemo(() => ({
+    name: session?.data?.user?.name || session?.data?.user?.email || 'You',
+    color: '#783AFB',
+    avatar: gscPicture || undefined,
+  }), [session?.data?.user?.name, session?.data?.user?.email, gscPicture]);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const voiceRef = useRef<HTMLDivElement>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
   const [domainBaseUrl, setDomainBaseUrl] = useState('');
   const [linkBar, setLinkBar] = useState<{ count: number; preLinkHtml: string; positions: number[] } | null>(null);
   const [linkNavIdx, setLinkNavIdx] = useState(0);
@@ -100,6 +419,7 @@ const ArticleEditorPage: NextPage = () => {
   const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
+  const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
   const isAiActive = surfyAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
 
   const [editorHtml, setEditorHtml] = useState('');
@@ -120,14 +440,32 @@ const ArticleEditorPage: NextPage = () => {
     headings_max: 20,
   });
 
-  // Fetch article keywords when internal links panel opens
+  // Article keywords — one shared/deduped fetch feeds both the breadcrumb info
+  // popover and the internal-links panel.
+  const { data: keywordRows } = useArticleKeywords(id);
   useEffect(() => {
-    if (!showInternalLinksPanel || !id) return;
-    fetch(`/api/articles/${id}/keywords`)
+    if (!keywordRows) return;
+    setArticleKeywords(keywordRows.map((k) => k.keyword));
+    setBreadcrumbKeywords(keywordRows.map((k) => k.keyword).filter(Boolean));
+  }, [keywordRows]);
+
+  // Comment count for the toolbar badge (shared comments left via the share link).
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/articles/${id}/comments`)
       .then(r => r.json())
-      .then(d => setArticleKeywords((d.keywords || []).map((k: any) => k.keyword)))
+      .then(d => setCommentThreads(d.threads || []))
       .catch(() => {});
-  }, [showInternalLinksPanel, id]);
+  }, [id, commentsVersion]);
+
+  // Live comment sync: a reviewer's note on the shared link shows up here over SSE.
+  useEffect(() => {
+    if (!id) return undefined;
+    const es = new EventSource(`/api/articles/${id}/comments-stream`);
+    es.onmessage = () => setCommentsVersion(v => v + 1);
+    es.onerror = () => { /* EventSource auto-reconnects */ };
+    return () => es.close();
+  }, [id]);
 
   // Listen for Pixabay open events dispatched from TipTap image node toolbar
   useEffect(() => {
@@ -146,6 +484,15 @@ const ArticleEditorPage: NextPage = () => {
     fetch(`/api/articles/${id}`)
       .then((r) => r.json())
       .then((data) => {
+        // Unfinished New-Content wizard (draft has saved state, no body yet) → resume.
+        if (data.article?.wizard_state && !(data.article.content || '').trim()) {
+          try {
+            const ws = JSON.parse(data.article.wizard_state);
+            const step = ['content-type', 'context', 'writing-mode'].includes(ws.step) ? ws.step : 'content-type';
+            router.replace(`/articles/${step}?articleId=${id}`);
+            return;
+          } catch { /* fall through to the normal editor */ }
+        }
         if (data.article) {
           const art = data.article;
           setArticle(art);
@@ -206,6 +553,18 @@ const ArticleEditorPage: NextPage = () => {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!actionsMenu && !voiceOpen && !shareOpen) return undefined;
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (voiceOpen && voiceRef.current && !voiceRef.current.contains(t)) setVoiceOpen(false);
+      if (shareOpen && shareRef.current && !shareRef.current.contains(t)) setShareOpen(false);
+      if (actionsMenu && actionsRef.current && !actionsRef.current.contains(t)) { setActionsMenu(false); setVoiceOpen(false); }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [actionsMenu, voiceOpen, shareOpen]);
+
   const handleEditorChange = useCallback(
     (html: string, text: string, words: number, headings: number, paragraphs: number) => {
       setEditorHtml(html);
@@ -239,61 +598,93 @@ const ArticleEditorPage: NextPage = () => {
     toast.success('Version restored');
   };
 
-  const handleSave = async () => {
-    if (!id) return;
-    setIsSaving(true);
+  // ── Shared persistence used by both auto-save and programmatic saves ──
+  const doSave = async (versionType?: string) => {
+    if (!id) return false;
+    // Update current_count for each term + store computed score so list view stays in sync
+    const updatedTerms = scoreData.terms.map((t) => ({
+      ...t,
+      current_count: countOccurrences(plainText, t.term),
+    }));
+    const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number } = {
+      ...scoreData,
+      terms: updatedTerms,
+      _heading_count: headingCount,
+      _paragraph_count: paragraphCount,
+      _computed_score: computeContentScore(
+        plainText, wordCount, headingCount,
+        { ...scoreData, terms: updatedTerms },
+        paragraphCount,
+        (editorHtml.match(/<a\s[^>]*href=/gi) || []).length,
+        editorHtml,
+        article?.target_keyword || '',
+      ),
+    };
+
+    // Persist internal links panel state from localStorage
+    let internalLinksCache: object | undefined;
     try {
-      // Update current_count for each term + store computed score so list view stays in sync
-      const updatedTerms = scoreData.terms.map((t) => ({
-        ...t,
-        current_count: countOccurrences(plainText, t.term),
-      }));
-      const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number } = {
-        ...scoreData,
-        terms: updatedTerms,
-        _heading_count: headingCount,
-        _paragraph_count: paragraphCount,
-        _computed_score: computeContentScore(
-          plainText, wordCount, headingCount,
-          { ...scoreData, terms: updatedTerms },
-          paragraphCount,
-          (editorHtml.match(/<a\s[^>]*href=/gi) || []).length,
-          editorHtml,
-          article?.target_keyword || '',
-        ),
-      };
+      const raw = localStorage.getItem(`internal-links-${id}`);
+      if (raw) internalLinksCache = JSON.parse(raw);
+    } catch { /* ignore */ }
 
-      // Persist internal links panel state from localStorage
-      let internalLinksCache: object | undefined;
-      try {
-        const raw = localStorage.getItem(`internal-links-${id}`);
-        if (raw) internalLinksCache = JSON.parse(raw);
-      } catch { /* ignore */ }
+    const res = await fetch(`/api/articles/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: editorHtml,
+        word_count: wordCount,
+        score_data: updatedScoreData,
+        featured_image: featuredImage?.url ?? null,
+        target_keyword: article?.target_keyword,
+        meta_title: article?.meta_title,
+        meta_description: article?.meta_description,
+        meta_url: article?.meta_url,
+        ...(versionType ? { version_type: versionType } : {}),
+        ...(internalLinksCache ? { internal_links_cache: internalLinksCache } : {}),
+      }),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    return true;
+  };
 
-      const res = await fetch(`/api/articles/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: editorHtml,
-          word_count: wordCount,
-          score_data: updatedScoreData,
-          featured_image: featuredImage?.url ?? null,
-          target_keyword: article?.target_keyword,
-          meta_title: article?.meta_title,
-          meta_description: article?.meta_description,
-          meta_url: article?.meta_url,
-          version_type: 'manual_save',
-          ...(internalLinksCache ? { internal_links_cache: internalLinksCache } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error('Save failed');
-      toast.success('Saved');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setIsSaving(false);
+  // ── Auto-save: persist silently after edits settle. A version snapshot is
+  // created at most once every 2 min of editing so Version History stays useful
+  // without flooding it on every keystroke. ──
+  const autoSave = async (sig: string) => {
+    try {
+      setAutoSaveState('saving');
+      const wantVersion = Date.now() - lastVersionAt.current > 120000;
+      await doSave(wantVersion ? 'manual_save' : undefined);
+      if (wantVersion) lastVersionAt.current = Date.now();
+      lastSavedSig.current = sig;
+      setAutoSaveState('saved');
+    } catch {
+      setAutoSaveState('unsaved');
+      toast.error('Auto-save failed — retrying on next change');
     }
   };
+
+  // Debounced auto-save: fires ~1s after the last edit to content / meta / image.
+  useEffect(() => {
+    if (isLoading || !article) return undefined;
+    const sig = JSON.stringify({
+      h: editorHtml,
+      t: article.meta_title ?? '',
+      d: article.meta_description ?? '',
+      k: article.target_keyword ?? '',
+      u: article.meta_url ?? '',
+      img: featuredImage?.url ?? null,
+    });
+    // Record the loaded state as the baseline without saving it.
+    if (lastSavedSig.current === null) { lastSavedSig.current = sig; return undefined; }
+    if (sig === lastSavedSig.current || isAutoOptimizing) return undefined;
+    setAutoSaveState('unsaved');
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    autoTimer.current = setTimeout(() => { void autoSave(sig); }, 1000);
+    return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing]);
 
   const handleAcceptReject = async (action: 'accept' | 'reject') => {
     if (!id) return;
@@ -522,6 +913,12 @@ const ArticleEditorPage: NextPage = () => {
     setIsAutoOptimizing(true);
     setAutoOptimizeStatus('Starting…');
     try {
+      const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+      const preParaCount = preText.split(/\n\n+/).filter((p: string) => p.trim().length > 0).length;
+      const preScore = scoreData
+        ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '')
+        : 0;
+
       if (!fromHtml && id) {
         await fetch(`/api/articles/${id}`, {
           method: 'PUT',
@@ -529,11 +926,21 @@ const ArticleEditorPage: NextPage = () => {
           body: JSON.stringify({
             content: preHtml,
             word_count: wordCount,
-            score_data: scoreData,
+            // Stamp the snapshot's score so it shows a gauge in Version History.
+            score_data: { ...scoreData, _computed_score: preScore },
             version_type: 'pre_auto_optimize',
           }),
         }).catch(() => {});
       }
+      // Current score gaps ("What's missing") — so a repeat run targets exactly what's still short.
+      const scoreGaps = scoreData
+        ? computeContentScoreBreakdown(preText, wordCount, headingCount, scoreData, preParaCount, preHtml, article?.target_keyword)
+          .slots
+          .filter((s) => s.missingPoints > 0)
+          .sort((a, b) => b.missingPoints - a.missingPoints)
+          .map((s) => ({ label: s.label, points: s.missingPoints, hint: s.hint }))
+        : [];
+
       const res = await fetch('/api/articles/auto-optimize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -546,6 +953,7 @@ const ArticleEditorPage: NextPage = () => {
           aiVisibilitySummary,
           articleTitle: article?.title || '',
           articleMetaDescription: article?.meta_description || '',
+          gaps: scoreGaps,
         }),
       });
       if (!res.ok || !res.body) throw new Error('Auto-optimize request failed');
@@ -558,11 +966,7 @@ const ArticleEditorPage: NextPage = () => {
 
       while (true) {
         const { done, value } = await reader.read();
-        console.log('[auto-optimize] reader.read() done=', done, 'bytes=', value?.length ?? 0);
-        if (done) {
-          console.log('[auto-optimize] stream ended, total events processed:', eventCount, 'leftover buffer:', buffer.slice(0, 200));
-          break;
-        }
+        if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
         // Process complete SSE messages (separated by \n\n)
@@ -575,7 +979,6 @@ const ArticleEditorPage: NextPage = () => {
           const eventLine = part.match(/^event: (\w+)/m);
           const dataLine = part.match(/^data: (.+)/ms); // added 's' flag so . matches newlines as fallback
           const eventType = eventLine?.[1] ?? 'message';
-          console.log('[auto-optimize] SSE event:', eventType, 'dataLine present:', !!dataLine, 'part length:', part.length);
           if (!dataLine) continue;
 
           let payload: any;
@@ -584,7 +987,6 @@ const ArticleEditorPage: NextPage = () => {
           if (eventType === 'progress') {
             setAutoOptimizeStatus(payload.message ?? '');
           } else if (eventType === 'done') {
-            console.log('[auto-optimize] done, content:', payload.content?.length, 'postScore:', payload.postScore);
             setAutoOptimizeBar({ preHtml });
             setIsAutoOptimizing(false);
             try { editor.commands.setContent(payload.content); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
@@ -600,6 +1002,20 @@ const ArticleEditorPage: NextPage = () => {
                   body: JSON.stringify({ content: finalHtml }),
                 }).catch(() => {});
               }
+            }
+
+            // Sync the FAQ questions the optimizer resolved (in the article's language) so the live
+            // score credits the FAQ section.
+            if (Array.isArray(payload.paaQuestions) && payload.paaQuestions.length) {
+              setScoreData((prev) => ({ ...prev, paa_questions: payload.paaQuestions }));
+            }
+
+            // Apply the DataForSEO refresh: grown keyword list + re-checked AI Search coverage.
+            if (Array.isArray(payload.updatedTerms) && payload.updatedTerms.length) {
+              setScoreData((prev) => ({ ...prev, terms: payload.updatedTerms }));
+            }
+            if (payload.aiSummary) {
+              setAiVisibilitySummary(payload.aiSummary);
             }
 
             // Apply meta suggestions
@@ -622,12 +1038,10 @@ const ArticleEditorPage: NextPage = () => {
           }
         }
       }
-      console.log('[auto-optimize] loop exited without done event');
     } catch (err: any) {
-      console.error('[auto-optimize] catch block:', err);
+      console.error('[auto-optimize] failed:', err);
       toast.error(err.message);
     } finally {
-      console.log('[auto-optimize] finally block, setting isAutoOptimizing=false');
       setIsAutoOptimizing(false);
     }
   };
@@ -645,8 +1059,6 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   if (isLoading) {
-    const PANEL_W = 320;
-    const PANEL_GAP = 8;
     return (
       <AppShell
         domains={domains}
@@ -656,131 +1068,10 @@ const ArticleEditorPage: NextPage = () => {
         topbarTitle=""
         contentClassName="article-editor-shell"
       >
-        <style>{`
-          @keyframes editorSkeletonPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.45; }
-          }
-          .esk { background: #EBEBED; border-radius: 6px; animation: editorSkeletonPulse 1.6s ease-in-out infinite; }
-        `}</style>
-
-        {/* Same gray wrapper as the real editor */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, gap: 0, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
-          <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', gap: 0 }}>
-
-            {/* ── Left: editor card ── */}
-            <div style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginRight: PANEL_W + PANEL_GAP }}>
-
-              {/* Top action bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0, gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {[44, 32, 32, 32, 32].map((w, i) => (
-                    <div key={i} className="esk" style={{ width: w, height: 28, borderRadius: 8, animationDelay: `${i * 0.06}s` }} />
-                  ))}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {[60, 44].map((w, i) => (
-                    <div key={i} className="esk" style={{ width: w, height: 28, borderRadius: 7, animationDelay: `${(i + 5) * 0.06}s` }} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Formatting toolbar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 16px', borderBottom: '1px solid #f4f4f5', flexShrink: 0 }}>
-                {[28, 28, 28, 1, 28, 28, 28, 28, 1, 52, 52, 52, 1, 28, 28].map((w, i) =>
-                  w === 1
-                    ? <div key={i} style={{ width: 1, height: 18, background: '#e4e4e7', margin: '0 2px', flexShrink: 0 }} />
-                    : <div key={i} className="esk" style={{ width: w, height: 24, borderRadius: 5, animationDelay: `${i * 0.04}s` }} />,
-                )}
-              </div>
-
-              {/* Editor body */}
-              <div style={{ flex: 1, padding: '40px 80px', overflowY: 'auto' }}>
-                {/* Featured image placeholder */}
-                <div className="esk" style={{ width: '100%', height: 220, borderRadius: 10, marginBottom: 32, animationDelay: '0.05s' }} />
-
-                {/* Title */}
-                <div className="esk" style={{ width: '72%', height: 36, borderRadius: 8, marginBottom: 10, animationDelay: '0.1s' }} />
-                <div className="esk" style={{ width: '48%', height: 36, borderRadius: 8, marginBottom: 36, animationDelay: '0.14s' }} />
-
-                {/* Paragraph 1 */}
-                {[100, 96, 88, 60].map((pct, i) => (
-                  <div key={`p1-${i}`} className="esk" style={{ width: `${pct}%`, height: 14, borderRadius: 6, marginBottom: 10, animationDelay: `${0.18 + i * 0.05}s` }} />
-                ))}
-                <div style={{ height: 24 }} />
-
-                {/* H2 heading */}
-                <div className="esk" style={{ width: '40%', height: 22, borderRadius: 7, marginBottom: 18, animationDelay: '0.4s' }} />
-
-                {/* Paragraph 2 */}
-                {[100, 94, 100, 82, 55].map((pct, i) => (
-                  <div key={`p2-${i}`} className="esk" style={{ width: `${pct}%`, height: 14, borderRadius: 6, marginBottom: 10, animationDelay: `${0.44 + i * 0.05}s` }} />
-                ))}
-                <div style={{ height: 24 }} />
-
-                {/* H2 heading 2 */}
-                <div className="esk" style={{ width: '35%', height: 22, borderRadius: 7, marginBottom: 18, animationDelay: '0.7s' }} />
-
-                {/* Paragraph 3 */}
-                {[100, 90, 100, 70].map((pct, i) => (
-                  <div key={`p3-${i}`} className="esk" style={{ width: `${pct}%`, height: 14, borderRadius: 6, marginBottom: 10, animationDelay: `${0.74 + i * 0.05}s` }} />
-                ))}
-              </div>
-            </div>
-
-            {/* ── Right: score panel ── */}
-            <div style={{ position: 'absolute', top: 0, right: 0, width: PANEL_W, bottom: 0, display: 'flex', flexDirection: 'column', gap: PANEL_GAP }}>
-              {/* Score card */}
-              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-
-                {/* Panel header */}
-                <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="esk" style={{ width: 90, height: 14, animationDelay: '0.1s' }} />
-                </div>
-
-                {/* Gauge placeholder */}
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 16px 0' }}>
-                  <div style={{ position: 'relative', width: 160, height: 96 }}>
-                    <svg viewBox="10 10 280 160" style={{ width: '100%', height: 'auto' }}>
-                      <path fill="transparent" stroke="#EBEBED" strokeWidth="30" strokeLinecap="round" d="M 270 150 A 120 120 0 0 0 30 150" />
-                    </svg>
-                    <div className="esk" style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 52, height: 40, borderRadius: 8 }} />
-                  </div>
-                </div>
-
-                {/* Avg / Top row */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 24, padding: '16px 16px 12px' }}>
-                  <div className="esk" style={{ width: 56, height: 12, animationDelay: '0.15s' }} />
-                  <div className="esk" style={{ width: 56, height: 12, animationDelay: '0.2s' }} />
-                </div>
-
-                {/* Metrics row */}
-                <div style={{ borderTop: '1px solid #f4f4f5', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 0 }}>
-                  {['Words', 'Headings', 'Paragraphs'].map((_, i) => (
-                    <React.Fragment key={i}>
-                      {i > 0 && <div style={{ width: 1, background: '#e4e4e7', height: 36, flexShrink: 0 }} />}
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                        <div className="esk" style={{ width: 36, height: 10, animationDelay: `${0.1 + i * 0.05}s` }} />
-                        <div className="esk" style={{ width: 28, height: 14, animationDelay: `${0.15 + i * 0.05}s` }} />
-                        <div className="esk" style={{ width: 42, height: 10, animationDelay: `${0.2 + i * 0.05}s` }} />
-                      </div>
-                    </React.Fragment>
-                  ))}
-                </div>
-
-                {/* Action rows */}
-                {[1, 2, 3, 4].map((n) => (
-                  <div key={n} style={{ borderTop: '1px solid #f4f4f5', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div className="esk" style={{ width: 16, height: 12, borderRadius: 4, animationDelay: `${n * 0.07}s` }} />
-                      <div className="esk" style={{ width: 80 + n * 12, height: 13, animationDelay: `${n * 0.07 + 0.04}s` }} />
-                    </div>
-                    <div className="esk" style={{ width: 16, height: 16, borderRadius: 4, animationDelay: `${n * 0.07 + 0.08}s` }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
+        {/* Surfer-style loading screen inside the editor gray wrapper */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', overflow: 'hidden' }}>
+            <EditorLoading />
           </div>
         </div>
       </AppShell>
@@ -797,7 +1088,7 @@ const ArticleEditorPage: NextPage = () => {
   }
 
   const PANEL_W = 320;
-  const PANEL_GAP = 8; // gap-2xs = 0.25rem × 4 = ~8px in practice
+  const PANEL_GAP = 4; // 0.25rem
 
   return (
     <AppShell
@@ -806,6 +1097,16 @@ const ArticleEditorPage: NextPage = () => {
       showSettings={() => setShowSettings(true)}
       showSidebar={false}
       topbarTitle={article.target_keyword || article.title}
+      breadcrumb={(
+        <EditorBreadcrumb
+          domain={domains.find((d) => d.ID === article.domain_id)?.domain || ''}
+          title={article.target_keyword || article.title}
+          keywords={breadcrumbKeywords.length ? breadcrumbKeywords : (article.target_keyword ? [article.target_keyword] : [])}
+          language={article.language}
+          createdAt={article.created_at}
+          modifiedAt={article.updated_at}
+        />
+      )}
       contentClassName="article-editor-shell"
     >
       <style>{`
@@ -991,16 +1292,16 @@ const ArticleEditorPage: NextPage = () => {
           display: 'flex',
           flexDirection: 'column',
           background: '#f4f4f5',
-          padding: 8,
+          padding: 4,
           gap: 0,
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: 12,
+          borderRadius: 0,
         }}
       >
 
         <Head>
-          <title>{article.title || 'Editor'} – SerpBear</title>
+          <title>{`${article.meta_title || article.title || 'Editor'} – SerpBear`}</title>
           {article.schema_json && (() => {
             try {
               const schema = JSON.parse(article.schema_json);
@@ -1011,6 +1312,27 @@ const ArticleEditorPage: NextPage = () => {
 
         {/* ── Main content row ─────────────────────────────────────── */}
         <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
+
+          {/* ── Auto-save status (floating, bottom-left) — only while saving/unsaved ── */}
+          {autoSaveState !== 'saved' && (
+          <div
+            title={autoSaveState === 'saving' ? 'Saving…' : 'Unsaved changes'}
+            style={{
+              position: 'absolute', bottom: 12, left: 12, zIndex: 80,
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.92)', border: '1px solid #ececef', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
+              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: '#71717a',
+              fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
+            }}
+          >
+            {autoSaveState === 'saving' ? (
+              <div style={{ width: 13, height: 13, border: '2px solid #e4e4e7', borderTopColor: '#783afb', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            ) : (
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+            )}
+            {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
+          </div>
+          )}
 
           {/* ── Editor card (white rounded, padding-right for panel) ── */}
           <div
@@ -1024,7 +1346,8 @@ const ArticleEditorPage: NextPage = () => {
               flexDirection: 'column',
               overflow: 'hidden',
               // Reserve space for the right panel so editor content is never hidden behind it
-              marginRight: PANEL_W + PANEL_GAP,
+              marginRight: panelCollapsed ? 0 : PANEL_W + PANEL_GAP,
+              transition: 'margin-right 0.2s ease',
             }}
           >
             <ArticleEditor
@@ -1036,6 +1359,7 @@ const ArticleEditorPage: NextPage = () => {
               scoreData={scoreData}
               internalArticles={internalArticles}
               reviewMode={!!linkBar}
+              highlightTerms={highlightTerms}
               onAiActivity={setSurfyAiActive}
               articleKeyword={article?.target_keyword || ''}
               onChange={handleEditorChange}
@@ -1044,11 +1368,112 @@ const ArticleEditorPage: NextPage = () => {
               initialFeaturedImage={featuredImage}
               onFeaturedImageChange={setFeaturedImage}
               onHeadingsChange={setEditorHeadings}
+              threads={commentThreads}
+              commentAuthor={commentAuthor}
+              commentArticleId={String(article.id)}
+              onCommentsChanged={() => setCommentsVersion((v) => v + 1)}
+              onCreateComment={async (quote, draft) => {
+                // Optimistic: show a pending pin instantly, reconcile after the POST.
+                const tmp = `tmp_${Math.random().toString(36).slice(2, 10)}`;
+                setCommentThreads((prev) => [...prev, { id: tmp, parentId: null, quote, text: draft.text, images: draft.images, author: commentAuthor.name, color: commentAuthor.color, avatar: commentAuthor.avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null, replies: [], pending: true }]);
+                try {
+                  const r = await fetch(`/api/articles/${id}/comments`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quote, text: draft.text, images: draft.images, author: commentAuthor.name, color: commentAuthor.color, avatar: commentAuthor.avatar || '' }),
+                  });
+                  const d = await r.json();
+                  setCommentsVersion((v) => v + 1);
+                  return d.comment?.id as string | undefined;
+                } catch { setCommentThreads((prev) => prev.filter((t) => t.id !== tmp)); return undefined; }
+              }}
             />
           </div>
 
+          {/* ── Compact actions bar (shown when the side panel is hidden) ── */}
+          <AnimatePresence>
+          {panelCollapsed && (
+            <motion.div
+              key="collapsedbar"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, delay: 0.12 }}
+              style={{
+                position: 'absolute', top: 14, right: 12, zIndex: 95, display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              <div ref={actionsRef} style={{ position: 'relative', display: 'inline-flex' }}>
+                <IconBtn onClick={() => { setActionsMenu((o) => !o); setVoiceOpen(false); }} title="More"><IcoDots /></IconBtn>
+                {actionsMenu && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, minWidth: 244,
+                    background: '#fff', borderRadius: 12, padding: '6px 0',
+                    boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
+                    animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
+                  }}>
+                    <MenuRow
+                      icon={article.status === 'accepted' ? <IcoDoneFilled /> : <IcoDoneOutline />}
+                      label={article.status === 'accepted' ? 'Unmark as done' : 'Mark as done'}
+                      onClick={() => { handleAcceptReject(article.status === 'accepted' ? 'reject' : 'accept'); setActionsMenu(false); }}
+                    />
+                    <MenuRow icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowInternalLinksPanel(false); setShowHistory(true); setActionsMenu(false); }} />
+                    <MenuRow icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
+                    {process.env.NODE_ENV !== 'production' && (
+                      <MenuRow
+                        icon={(
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: '#52525C' }}>
+                            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                        label="Dev: export debug JSON"
+                        onClick={async () => {
+                          setActionsMenu(false);
+                          try {
+                            const r = await fetch(`/api/articles/${id}/debug-export`);
+                            if (!r.ok) return;
+                            const blob = await r.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = `article-${id}-debug.json`;
+                            document.body.appendChild(a); a.click(); a.remove();
+                            URL.revokeObjectURL(url);
+                          } catch { /* ignore */ }
+                        }}
+                      />
+                    )}
+                    <div style={{ position: 'relative' }}>
+                      <MenuRow icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
+                      {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 0, right: 'calc(100% + 8px)' }} />}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <IconBtn onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
+              <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
+                <button
+                  onClick={() => { setShareOpen((v) => !v); setVoiceOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 14px', borderRadius: 6,
+                    border: 'none', background: shareOpen ? '#783afb' : '#18181b', color: '#fff', fontSize: 13, fontWeight: 600,
+                    fontFamily: 'var(--font-family-primary)', cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = shareOpen ? '#783afb' : '#18181b'; }}
+                >Share</button>
+                {shareOpen && <SharePopover articleId={String(id)} onClose={() => setShareOpen(false)} style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200 }} />}
+              </div>
+            </motion.div>
+          )}
+          </AnimatePresence>
+
           {/* ── Right panel (absolute, two cards stacked) ─────────── */}
-          <div
+          <AnimatePresence>
+          {!panelCollapsed && (
+          <motion.div
+            key="rightpanel"
+            initial={{ x: PANEL_W + 24, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: PANEL_W + 24, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 40, mass: 0.9 }}
             style={{
               position: 'absolute',
               top: 0, right: 0, bottom: 0,
@@ -1074,55 +1499,63 @@ const ArticleEditorPage: NextPage = () => {
             >
               {/* Left: action icon buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* Save */}
-                <IconBtn onClick={handleSave} disabled={isSaving} title={isSaving ? 'Saving…' : 'Save'}>
-                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4z" />
-                    <path d="M17 21v-8H7v8M7 3v5h8" />
-                  </svg>
-                </IconBtn>
-
-                {/* Accepted status icon */}
-                {article.status === 'accepted' && (
-                  <span
-                    title="Accepted"
-                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, color: '#16a34a', flexShrink: 0 }}
+                {/* Mark / unmark as done */}
+                <span data-tour="done" style={{ display: 'inline-flex' }}>
+                  <IconBtn
+                    onClick={() => handleAcceptReject(article.status === 'accepted' ? 'reject' : 'accept')}
+                    title={article.status === 'accepted' ? 'Unmark as done' : 'Mark as done'}
                   >
-                    <svg viewBox="0 0 24 24" width={18} height={18}>
-                      <path fill="currentColor" fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75s-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12m13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094z" clipRule="evenodd" />
-                    </svg>
-                  </span>
-                )}
-
-                {/* Accept */}
-                {article.status !== 'published' && article.status !== 'accepted' && (
-                  <IconBtn onClick={() => handleAcceptReject('accept')} title="Accept article">
-                    <CheckmarkCircle01Icon size={18} />
+                    <span style={{ color: article.status === 'accepted' ? '#18181b' : '#3f3f47', display: 'inline-flex' }}>
+                      {article.status === 'accepted' ? <IcoDoneFilled /> : <IcoDoneOutline />}
+                    </span>
                   </IconBtn>
-                )}
+                </span>
 
-{/* Version History */}
-                <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
-                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                    <path d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </IconBtn>
+                {/* Version History */}
+                <span data-tour="version" style={{ display: 'inline-flex' }}>
+                  <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
+                    <IcoClock />
+                  </IconBtn>
+                </span>
+
+                {/* Voice */}
+                <div ref={voiceRef} data-tour="voice" style={{ position: 'relative', display: 'inline-flex' }}>
+                  <IconBtn onClick={() => setVoiceOpen((v) => !v)} title="Voice">
+                    <IcoVoice />
+                  </IconBtn>
+                  {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
+                </div>
+
+                {/* Settings (customization panel) */}
+                <span data-tour="settings" style={{ display: 'inline-flex' }}>
+                  <IconBtn onClick={() => setShowCustomization(true)} title="Settings"><IcoGear /></IconBtn>
+                </span>
               </div>
 
-              {/* Right: Share button */}
-              <button
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  padding: '6px 14px', borderRadius: 6, border: 'none',
-                  background: '#18181b', color: '#fff',
-                  fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)',
-                  cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#2a2a2d'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
-              >
-                Share
-              </button>
+              {/* Right: panel toggle + Share */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span data-tour="hide-panel" style={{ display: 'inline-flex' }}>
+                  <IconBtn onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
+                </span>
+                <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
+                  <button
+                    data-tour="share"
+                    onClick={() => { setShareOpen((v) => !v); setVoiceOpen(false); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                      padding: '6px 14px', borderRadius: 6, border: 'none',
+                      background: shareOpen ? '#783afb' : '#18181b', color: '#fff',
+                      fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)',
+                      cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = shareOpen ? '#783afb' : '#18181b'; }}
+                  >
+                    Share
+                  </button>
+                  {shareOpen && <SharePopover articleId={String(id)} onClose={() => setShareOpen(false)} style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200 }} />}
+                </div>
+              </div>
             </div>
 
             {/* Bottom card: keyword + content score OR panel */}
@@ -1144,6 +1577,7 @@ const ArticleEditorPage: NextPage = () => {
                   keyword={article.target_keyword || ''}
                   plainText={plainText}
                   domainBaseUrl={domainBaseUrl}
+                  domains={domains}
                   onClose={() => setShowInternalLinksPanel(false)}
                   onInsertLinks={handleInsertLinks}
                   onAiActivity={setLinksAiActive}
@@ -1175,12 +1609,31 @@ const ArticleEditorPage: NextPage = () => {
                       isAutoOptimizing={isAutoOptimizing}
                       articleId={article.id}
                       cachedOutlines={article.competitor_outlines_cache}
+                      fallbackScore={article.content_score}
+                      title={article.title || ''}
+                      metaTitle={article.meta_title || ''}
+                      metaDescription={article.meta_description || ''}
+                      onMetaTitleChange={handleMetaTitleChange}
+                      onMetaDescriptionChange={handleMetaDescriptionChange}
+                      highlightTerms={highlightTerms}
+                      onHighlightTermsChange={setHighlightTerms}
+                      initialPlagiarism={(() => { try { const v = (article as any).plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; } })()}
+                      initialAiReadability={(() => { try { const v = (article as any).ai_readability_json; return v ? JSON.parse(v) : null; } catch { return null; } })()}
+                      featuredImage={featuredImage}
+                      onFeaturedImageChange={setFeaturedImage}
+                      isDone={article.status === 'accepted'}
+                      onMarkDone={() => handleAcceptReject('accept')}
+                      aiVisibilitySummary={aiVisibilitySummary}
+                      isRunningAiVisibility={isRunningAiVisibility}
+                      onRunAiVisibility={handleRunAiVisibility}
                     />
                   </div>
                 </>
               )}
             </div>
-          </div>
+          </motion.div>
+          )}
+          </AnimatePresence>
         </div>
 
         {/* ── Auto-optimize loading indicator ──────────────────────── */}
@@ -1256,14 +1709,32 @@ const ArticleEditorPage: NextPage = () => {
               Retry
             </button>
 
-            {/* Discard */}
+            {/* Discard — revert the editor to the pre-optimize state, recompute the
+                score, and persist the revert so the DB matches what's shown. */}
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                const preHtml = autoOptimizeBar.preHtml;
                 const editor = (editorRef.current as any)?.getEditor?.();
-                if (editor) editor.commands.setContent(autoOptimizeBar.preHtml);
+                if (editor) editor.commands.setContent(preHtml); // reverts editor + recomputes the panel score via onChange
                 setAutoOptimizeBar(null);
                 setPendingImageCount(0);
+                if (!id) return;
+                const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+                const preWords = preText ? preText.split(/\s+/).length : 0;
+                const preHeadings = (preHtml.match(/<h[1-6][\s>]/gi) || []).length;
+                const preParas = (preHtml.match(/<p[\s>]/gi) || []).length;
+                const preScore = scoreData
+                  ? computeContentScore(preText, preWords, preHeadings, scoreData, preParas, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '')
+                  : 0;
+                try {
+                  setAutoSaveState('saving');
+                  await fetch(`/api/articles/${id}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: preHtml, word_count: preWords, score_data: { ...scoreData, _computed_score: preScore } }),
+                  });
+                  setAutoSaveState('saved');
+                } catch { setAutoSaveState('unsaved'); }
               }}
               style={{ fontSize: 13, fontWeight: 500, color: '#71717a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 10px', borderRadius: 6, transition: 'color 0.15s' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
@@ -1272,10 +1743,23 @@ const ArticleEditorPage: NextPage = () => {
               Discard
             </button>
 
-            {/* Accept */}
+            {/* Accept — snapshot the optimized content as a new version */}
             <button
               type="button"
-              onClick={() => { setAutoOptimizeBar(null); setPendingImageCount(0); }}
+              onClick={async () => {
+                setAutoOptimizeBar(null);
+                setPendingImageCount(0);
+                try {
+                  setAutoSaveState('saving');
+                  await doSave('auto_optimize');
+                  lastVersionAt.current = Date.now();
+                  setAutoSaveState('saved');
+                  toast.success('Changes accepted — version saved');
+                } catch {
+                  setAutoSaveState('unsaved');
+                  toast.error('Could not save version');
+                }
+              }}
               style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#16a34a', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'background 0.15s', flexShrink: 0 }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#15803d'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = '#16a34a'; }}
@@ -1367,6 +1851,16 @@ const ArticleEditorPage: NextPage = () => {
             onClose={() => setShowPixabay(false)}
           />
         )}
+
+        {/* Content Editor customization panel */}
+        <CustomizationPanelModal
+          open={showCustomization}
+          keyword={article?.target_keyword || ''}
+          onClose={() => setShowCustomization(false)}
+        />
+
+        {/* First-visit onboarding coachmark (Ask Surfy + Content Score) */}
+        <EditorOnboarding />
 
         {/* ── AI glow overlay — last child so it renders above everything ── */}
         <div className={`ai-glow-ring${isAiActive ? ' active' : ''}`} />

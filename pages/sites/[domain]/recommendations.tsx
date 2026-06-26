@@ -10,8 +10,9 @@ import { useFetchDomains } from '../../../services/domains';
 import { normalizeUrlForMatch, kwScore } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader } from '../../../components/ui';
-import { DeltaDown, XIcon, SortUpDown } from '../../../components/ui/icons';
+import { DeltaDown, SortUpDown } from '../../../components/ui/icons';
 import { useSortState } from '../../../lib/useSortState';
+import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
 function compactNum(n: number): string {
    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -59,190 +60,6 @@ const PanelIcon = () => (
    </svg>
 );
 
-// ── Change Main Keyword Modal ─────────────────────────────────────────────────
-type GscKeyword = { keyword: string; position: number; clicks: number; impressions: number };
-
-function ChangeKeywordModal({ article, allKeywords, onClose, onSave }: {
-   article: { id: string | number; title: string; url: string; keyword: string };
-   allKeywords: GscKeyword[];
-   onClose: () => void;
-   onSave: (keyword: string) => Promise<void>;
-}) {
-   const [search, setSearch] = useState('');
-   const [selected, setSelected] = useState(article.keyword);
-   const [saving, setSaving] = useState(false);
-   const [suggestions, setSuggestions] = useState<Array<{ keyword: string; volume?: number }>>([]);
-   const [suggestLoading, setSuggestLoading] = useState(false);
-
-   // Fetch Google Suggest / Ads keyword ideas for the current keyword
-   useEffect(() => {
-      if (!article.keyword) return;
-      setSuggestLoading(true);
-      fetch(`/api/articles/keyword-suggest?q=${encodeURIComponent(article.keyword)}`)
-         .then((r) => r.json())
-         .then((d) => setSuggestions((d.suggestions || []).slice(0, 8)))
-         .catch(() => {})
-         .finally(() => setSuggestLoading(false));
-   }, [article.keyword]);
-
-   const filtered = useMemo(() => {
-      const q = search.trim().toLowerCase();
-      if (!q) return allKeywords;
-      return allKeywords.filter((k) => k.keyword.toLowerCase().includes(q));
-   }, [allKeywords, search]);
-
-   // If search term is new (not in list), show it as "add new" option
-   const searchIsNew = search.trim() && !allKeywords.some((k) => k.keyword.toLowerCase() === search.trim().toLowerCase());
-
-   const handleSave = async () => {
-      if (!selected) return;
-      setSaving(true);
-      await onSave(selected);
-      setSaving(false);
-      onClose();
-   };
-
-   return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
-         <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, width: 680, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', boxShadow: '0px 24px 64px rgba(0,0,0,0.2)', animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'center' }}
-         >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 16px' }}>
-               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>Change main keyword</h2>
-               <button type="button" onClick={onClose} style={{ display: 'inline-flex', padding: 6, borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', color: '#52525C', cursor: 'pointer' }}>
-                  <XIcon size={16} />
-               </button>
-            </div>
-
-            {/* Description */}
-            <div style={{ padding: '0 24px 16px' }}>
-               <p style={{ margin: 0, fontSize: 14, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', lineHeight: '20px' }}>
-                  Select a keyword you are targeting with this page:{' '}
-                  <strong style={{ color: '#09090B' }}>{article.title}</strong>
-                  {article.url && <span style={{ color: '#9F9FA9' }}> ({article.url})</span>}
-               </p>
-            </div>
-
-            {/* Search */}
-            <div style={{ padding: '0 24px 12px' }}>
-               <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9F9FA9', display: 'flex' }}>
-                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" />
-                     </svg>
-                  </div>
-                  <input
-                     type="text"
-                     placeholder="Search or add new"
-                     value={search}
-                     onChange={(e) => setSearch(e.target.value)}
-                     style={{ width: '100%', height: 40, paddingLeft: 38, paddingRight: 12, border: '1px solid #D4D4D8', borderRadius: 8, fontSize: 14, color: '#09090B', background: '#fff', outline: 'none', fontFamily: 'var(--font-family-primary)', boxShadow: '0px 1px 2px rgba(26,29,40,0.06)' }}
-                     autoFocus
-                  />
-               </div>
-            </div>
-
-            {/* Keyword table */}
-            <div style={{ flex: 1, overflowY: 'auto', margin: '0 24px', border: '1px solid #F4F4F5', borderRadius: 8 }}>
-               {/* Table header */}
-               <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4F4F5', padding: '8px 16px', background: '#FAFAFA' }}>
-                  <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Keyword</div>
-                  <div style={{ width: 80, textAlign: 'right', fontSize: 12, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Position</div>
-                  <div style={{ width: 80, textAlign: 'right', fontSize: 12, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Clicks</div>
-                  <div style={{ width: 64, textAlign: 'right', fontSize: 12, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Impr.</div>
-               </div>
-               {/* Suggested keywords — only visible when not searching */}
-               {!search.trim() && (suggestions.length > 0 || suggestLoading) && (
-                  <>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px 4px', background: '#FAFAFA', borderBottom: '1px solid #F4F4F5' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#71717B', fontFamily: 'var(--font-family-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggested</span>
-                        {suggestLoading && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>loading…</span>}
-                     </div>
-                     {suggestions.map((s) => (
-                        <div
-                           key={`sug_${s.keyword}`}
-                           onClick={() => { setSelected(s.keyword); }}
-                           style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: selected === s.keyword ? 'rgba(120,58,251,0.04)' : '#fff' }}
-                           className="kw-row"
-                        >
-                           <input type="radio" checked={selected === s.keyword} readOnly style={{ accentColor: '#783AFB', width: 16, height: 16, flexShrink: 0 }} />
-                           <span style={{ flex: 1, fontSize: 13, fontWeight: selected === s.keyword ? 600 : 400, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.keyword}</span>
-                           {s.volume && <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>{compactNum(s.volume)}/mo</span>}
-                           <span style={{ padding: '1px 6px', borderRadius: 9999, background: 'rgba(120,58,251,0.08)', color: '#783AFB', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-family-primary)', flexShrink: 0 }}>suggest</span>
-                        </div>
-                     ))}
-                  </>
-               )}
-
-               {/* Add new keyword option */}
-               {searchIsNew && (
-                  <div
-                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: selected === search.trim() ? 'rgba(120,58,251,0.04)' : '#fff' }}
-                     onClick={() => setSelected(search.trim())}
-                  >
-                     <input type="radio" checked={selected === search.trim()} readOnly style={{ accentColor: '#783AFB', width: 16, height: 16, flexShrink: 0 }} />
-                     <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#783AFB', fontFamily: 'var(--font-family-primary)' }}>
-                        Add &quot;{search.trim()}&quot;
-                     </span>
-                  </div>
-               )}
-               {/* Keyword rows */}
-               {filtered.length === 0 && !searchIsNew ? (
-                  <div style={{ padding: '24px 16px', textAlign: 'center', fontSize: 13, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-                     No keywords found for this domain.
-                  </div>
-               ) : filtered.map((kw) => (
-                  <div
-                     key={kw.keyword}
-                     onClick={() => setSelected(kw.keyword)}
-                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: selected === kw.keyword ? 'rgba(120,58,251,0.04)' : '#fff', transition: 'background 100ms' }}
-                     className="kw-row"
-                  >
-                     <input type="radio" checked={selected === kw.keyword} readOnly style={{ accentColor: '#783AFB', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
-                     <span style={{ flex: 1, fontSize: 13, fontWeight: selected === kw.keyword ? 600 : 400, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {kw.keyword}
-                     </span>
-                     <span style={{ width: 80, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                        {kw.position > 0 ? kw.position.toFixed(1) : '—'}
-                     </span>
-                     <span style={{ width: 80, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                        {kw.clicks > 0 ? compactNum(kw.clicks) : '0'}
-                     </span>
-                     <span style={{ width: 64, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                        {kw.impressions > 0 ? compactNum(kw.impressions) : '0'}
-                     </span>
-                  </div>
-               ))}
-            </div>
-
-            {/* Warning */}
-            <div style={{ margin: '16px 24px 0', padding: '12px 14px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, display: 'flex', gap: 10 }}>
-               <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>⚠</span>
-               <div style={{ fontSize: 13, color: '#92400E', fontFamily: 'var(--font-family-primary)', lineHeight: '18px' }}>
-                  <strong>Important:</strong> changing the keyword will replace your Content Editor with a new one.<br />
-                  - This page might no longer be recommended. You can still find it in the Content Audit view.<br />
-                  - Your previous document remains accessible on the Content Editors list.
-               </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, padding: 24 }}>
-               <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: 'pointer' }}>Cancel</button>
-               <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!selected || selected === article.keyword || saving}
-                  style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: selected && selected !== article.keyword ? '#09090B' : '#F4F4F5', color: selected && selected !== article.keyword ? '#fff' : '#9F9FA9', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: selected && selected !== article.keyword ? 'pointer' : 'default', transition: 'background 150ms ease' }}
-               >
-                  {saving ? 'Saving…' : 'Save'}
-               </button>
-            </div>
-         </div>
-      </div>
-   );
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type SortKey = 'content_score' | 'position' | 'clicks' | 'impressions';
@@ -614,7 +431,7 @@ const RecommendationsPage: NextPage = () => {
 
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-         <Head><title>Recommendations — {domain} — SerpBear</title></Head>
+         <Head><title>{`Recommendations — ${domain} — SerpBear`}</title></Head>
 
          <DomainSubLayout domain={domain} slug={slug || ''} section="Recommendations" contentMaxWidth="100%">
             {/* ── Controls row ─────────────────────────────────────────────── */}
@@ -828,12 +645,12 @@ const RecommendationsPage: NextPage = () => {
                                        className="kw-btn"
                                        title="Change main keyword"
                                        onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }}
-                                       style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 12, color: '#52525C', maxWidth: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                       style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 12, color: '#52525C', maxWidth: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                                     >
                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent', textDecorationStyle: 'dotted', textUnderlineOffset: 3, transition: 'text-decoration-color 150ms' }} className="kw-btn-text">
                                           {row.keyword || 'Set keyword'}
                                        </span>
-                                       <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, opacity: 0, transition: 'opacity 150ms', color: '#9F9FA9' }} className="kw-btn-icon">
+                                       <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, opacity: 1, transition: 'opacity 150ms', color: '#9F9FA9' }} className="kw-btn-icon">
                                           <g><path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" /></g>
                                        </svg>
                                     </button>

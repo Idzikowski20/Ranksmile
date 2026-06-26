@@ -6,7 +6,7 @@ from analyzers.ranking_scorer import predict_ranking
 
 class ScoreRankingStage(AnalysisStage):
     name = "score_ranking"
-    progress_weight = 0.25
+    progress_weight = 0.15
 
     async def run(self, ctx: StageContext) -> dict:
         keyword = ctx.payload.get("keyword", "")

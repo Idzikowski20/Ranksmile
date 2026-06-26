@@ -31,7 +31,7 @@ const KeywordResearchPage: NextPage = () => {
 
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-         <Head><title>Keyword Research — {domain} — SerpBear</title></Head>
+         <Head><title>{`Keyword Research — ${domain} — SerpBear`}</title></Head>
 
          <DomainSubLayout domain={domain} slug={slug || ''} section="Keyword Research" contentMaxWidth="100%">
             <KeywordResearchPanel

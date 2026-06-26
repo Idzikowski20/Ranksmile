@@ -18,7 +18,7 @@ const TopicalMapPage: NextPage = () => {
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head>
-            <title>Topical Map — {domain} — SerpBear</title>
+            <title>{`Topical Map — ${domain} — SerpBear`}</title>
          </Head>
 
          <DomainSubLayout domain={domain} slug={slug || ''} section="Topical Map">

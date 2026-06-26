@@ -86,20 +86,26 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     serper_key = os.getenv("SERPER_API_KEY", "")
 
     if not serper_key:
-        print("[serp_analyzer] No SERPER_API_KEY - using placeholder data")
-        return _placeholder_score_data()
+        print("[serp_analyzer] No SERPER_API_KEY - using keyword seed data")
+        return _placeholder_score_data(keyword)
 
     serp_results, paa_questions = await _fetch_serp_results(keyword, language, num_results, serper_key)
     serp_urls = [r["link"] for r in serp_results]
     if not serp_urls:
-        return _placeholder_score_data()
+        return _placeholder_score_data(keyword)
 
     serp_texts, soups = await _scrape_pages(serp_urls)
     if not serp_texts:
-        return _placeholder_score_data()
+        return _placeholder_score_data(keyword)
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
     nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key)
+    # If extraction came back thin, seed from the keyword (language-correct) so we
+    # never ship an empty/irrelevant entity list. DataForSEO enrichment (Node side)
+    # layers real keyword data on top when the list is weak.
+    if len(nlp_terms) < 3:
+        existing = {t["term"] for t in nlp_terms}
+        nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
     targets = _compute_targets(serp_texts, soups)
 
     result = {
@@ -112,7 +118,7 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
                 "title": result.get("title", ""),
                 "snippet": result.get("snippet", ""),
             }
-            for result in serp_results[:5]
+            for result in serp_results[:10]
         ],
         **targets,
     }
@@ -319,13 +325,40 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
     }
 
 
-def _placeholder_score_data() -> dict:
+# Polish/EN stopwords kept short — only what we need to drop junk single tokens
+_SEED_STOPWORDS = {
+    "the", "and", "for", "with", "you", "your", "jak", "czy", "oraz", "dla",
+    "lub", "ale", "nie", "tak", "co", "to", "na", "do", "od", "po", "za", "we", "ze",
+}
+
+
+def _keyword_seed_terms(keyword: str) -> list[dict]:
+    """Build a language-correct fallback term set from the keyword itself.
+
+    Never invents foreign-language terms — derives everything from the user's own
+    keyword, so a Polish article gets Polish entities, not English placeholders.
+    """
+    kw = (keyword or "").strip()
+    if not kw:
+        return []
+    terms = [{"term": kw.lower(), "target_count": 4}]
+    for token in kw.lower().split():
+        token = re.sub(r"[^\wąćęłńóśźż]+", "", token)
+        if len(token) >= 4 and token not in _SEED_STOPWORDS and token != kw.lower():
+            terms.append({"term": token, "target_count": 2})
+    # dedupe, cap
+    seen: set[str] = set()
+    out: list[dict] = []
+    for t in terms:
+        if t["term"] not in seen:
+            seen.add(t["term"])
+            out.append(t)
+    return out[:6]
+
+
+def _placeholder_score_data(keyword: str = "") -> dict:
     return {
-        "terms": [
-            {"term": "content marketing", "target_count": 5},
-            {"term": "keyword research", "target_count": 4},
-            {"term": "on page seo", "target_count": 3},
-        ],
+        "terms": _keyword_seed_terms(keyword),
         "words_min": 1500,
         "words_max": 3000,
         "words_target": 2200,

@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../../utils/getUser';
+import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -11,13 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { slug } = req.query;
   const checkKeyword = req.query.keyword as string | undefined;
 
-  // Get domain ID from slug (or domain name)
-  let [domains] = await db.query(`SELECT "ID" FROM domain WHERE slug = ?`, { replacements: [slug] });
-  if (!(domains as any[])[0]) {
-    [domains] = await db.query(`SELECT "ID" FROM domain WHERE domain = ?`, { replacements: [slug] });
-  }
-  const domain = (domains as any[])[0];
-  if (!domain) return res.status(404).json({ error: 'Domain not found' });
+  // Workspace-scoped domain lookup — denies a domain the caller can't access by raw slug.
+  const userId = await getCurrentUserId(req, res);
+  const ownership = await verifyDomainOwnershipBySlug(slug as string, userId);
+  if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+  if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
+  const domain = ownership as { ID: number };
 
   let sql = `
     SELECT ak.keyword, ak.article_id, a.title, COUNT(*) OVER (PARTITION BY ak.keyword) as article_count

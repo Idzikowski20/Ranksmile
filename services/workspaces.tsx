@@ -28,10 +28,13 @@ export function useDeleteWorkspace() {
    const qc = useQueryClient();
    return useMutation((id: number) => jsonFetch(`/api/workspaces/${id}`, 'DELETE'), { onSuccess: () => qc.invalidateQueries('workspaces') });
 }
-/** Switches the active workspace, then hard-reloads so server-side scoping re-runs. */
+/**
+ * Switches the active workspace by navigating to its dashboard. The
+ * `/workspace/<id>/...` URL is the source of truth; `WorkspaceCookieSync` (in
+ * _app) mirrors it into the `active_workspace` cookie so server scoping matches.
+ */
 export function useSetActiveWorkspace() {
    return useMutation(async (id: number) => {
-      await jsonFetch('/api/workspaces/active', 'POST', { id });
-      if (typeof window !== 'undefined') window.location.reload();
+      if (typeof window !== 'undefined') window.location.href = `/workspace/${id}/dashboard`;
    });
 }

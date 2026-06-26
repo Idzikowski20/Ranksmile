@@ -111,7 +111,14 @@ const BlockFormatIcon = ({ icon }: { icon: keyof typeof BLOCK_ICON_PATHS }) => (
 interface SurfyBubbleMenuProps {
   editor: Editor;
   onAskSurfy: (selection: { text: string; from: number; to: number }) => void;
+  onAddComment?: (selection: { text: string; from: number; to: number }) => void;
 }
+
+const IconComment = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
+    <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" d="M7 8.5h10M7 12h7M21 12a8.5 8.5 0 0 1-12.4 7.55L3 21l1.45-5.6A8.5 8.5 0 1 1 21 12Z" />
+  </svg>
+);
 
 function ToolButton({ editor, command, isActive, onClick, children }: {
   editor: Editor; command?: string; isActive: boolean; onClick?: () => void; children: React.ReactNode;
@@ -467,7 +474,7 @@ export function SurfyLinkModal({
   );
 }
 
-export default function SurfyBubbleMenu({ editor, onAskSurfy }: SurfyBubbleMenuProps) {
+export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: SurfyBubbleMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ display: 'none' });
   const [isActive, setIsActive] = useState({ bold: false, italic: false, underline: false, strike: false, link: false });
@@ -589,6 +596,12 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy }: SurfyBubbleMenuP
     const text = editor.state.doc.textBetween(from, to, '\n');
     onAskSurfy({ text, from, to });
   }, [editor, onAskSurfy]);
+
+  const handleAddComment = useCallback(() => {
+    const { from, to } = editor.state.selection;
+    const text = editor.state.doc.textBetween(from, to, '\n');
+    onAddComment?.({ text, from, to });
+  }, [editor, onAddComment]);
 
   const openLinkModal = useCallback(() => {
     const { from, to } = editor.state.selection;
@@ -947,6 +960,15 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy }: SurfyBubbleMenuP
       </div>
 
       <Separator />
+
+      {onAddComment && (
+        <>
+          <ToolButton editor={editor} isActive={false} onClick={handleAddComment}>
+            <IconComment />
+          </ToolButton>
+          <Separator />
+        </>
+      )}
 
       <button
         type="button"

@@ -19,9 +19,11 @@ from analyzers.serp_analyzer import analyze_serp, extract_competitor_outlines
 from analyzers.meta_generator import generate_meta
 from analyzers.image_generator import generate_article_image
 from analyzers.ai_visibility import run_ai_visibility
+from analyzers.ai_readability import run_ai_readability
 from analyzers.content_classifier import classify
 from analyzers.ranking_scorer import predict_ranking
-from pipeline.article_pipeline import run_pipeline, suggest_internal_links
+from analyzers.plagiarism import run_plagiarism
+from pipeline.article_pipeline import run_pipeline, suggest_internal_links, generate_brand_knowledge
 
 app = FastAPI(
     title="SEO Autopilot Sidecar",
@@ -50,6 +52,14 @@ class GenerateRequest(BaseModel):
     language: str = "pl"
     tone: str = "professional"
     existing_articles: list[ArticleRef] = []  # artykuły na tej samej domenie do internal linkingu
+    # Wizard params (Select content type → Context & instructions → Writing mode)
+    content_type: str = "blog"
+    instructions: str = ""
+    internal_links: bool = True
+    external_links: bool = True
+    review_outline: bool = False
+    brand_knowledge: str = ""   # shared Brand Knowledge (context for the model)
+    voice_tone: str = ""        # selected Custom Voice reference text — drives tone/style
 
 
 class GenerateResponse(BaseModel):
@@ -105,18 +115,23 @@ async def generate_article(req: GenerateRequest):
         language=req.language,
         tone=req.tone or site_context.get("tone", "professional"),
         target_words=serp_data.get("words_target", 2200),
+        content_type=req.content_type,
+        instructions=req.instructions,
+        external_links=req.external_links,
+        brand_knowledge=req.brand_knowledge,
+        voice_tone=req.voice_tone,
     )
 
     # 4. Meta dane
     print(f"[generate] Generating meta...")
     meta = generate_meta(article_html, req.keyword, req.language)
 
-    # 5. Internal links
+    # 5. Internal links (skip when disabled in the wizard)
     links = await suggest_internal_links(
         article_html=article_html,
         site_url=req.url,
         existing_articles=[a.model_dump() for a in req.existing_articles],
-    )
+    ) if req.internal_links else []
 
     import datetime as dt
 
@@ -219,6 +234,38 @@ async def analyze_site_endpoint(body: dict):
     return await analyze_site(url)
 
 
+@app.post("/brand-knowledge")
+async def brand_knowledge_endpoint(body: dict):
+    """Scrape a company URL and let AI draft the Brand Knowledge fields."""
+    url = body.get("url", "")
+    if not url:
+        raise HTTPException(status_code=400, detail="url is required")
+    if not os.getenv("DEEPSEEK_API_KEY", ""):
+        raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured")
+    print(f"[brand-knowledge] Analyzing {url}")
+    site = await analyze_site(url)
+    meta = site.get("meta", {}) or {}
+    content = site.get("content", {}) or {}
+    return await generate_brand_knowledge(
+        url,
+        meta.get("title", "") or site.get("title", ""),
+        meta.get("description", ""),
+        content.get("text", ""),
+    )
+
+
+@app.post("/plagiarism")
+async def plagiarism_endpoint(body: dict):
+    """Exact-phrase plagiarism scan against the web via serper.dev."""
+    text = body.get("text", "")
+    own_domain = body.get("domain", "")
+    lang = body.get("language", "pl")
+    if not text or not text.strip():
+        raise HTTPException(status_code=400, detail="text is required")
+    print(f"[plagiarism] Scanning {len(text)} chars (own={own_domain})")
+    return await run_plagiarism(text, own_domain, lang)
+
+
 @app.post("/analyze-serp")
 async def analyze_serp_endpoint(body: dict):
     """Pomocniczy endpoint — tylko analiza SERP."""
@@ -256,6 +303,14 @@ async def ai_visibility_endpoint(body: dict):
     if not keyword:
         raise HTTPException(status_code=400, detail="keyword is required")
     return await run_ai_visibility(keyword, own_domain, competitor_domains, article_content)
+
+
+@app.post("/ai-readability")
+async def ai_readability_endpoint(body: dict):
+    """LLM rubric: how well the article is structured for AI/readers (10 criteria)."""
+    article_content = body.get("article_content", "")
+    keyword = body.get("keyword", "")
+    return await run_ai_readability(article_content, keyword)
 
 
 class PipelineRequest(BaseModel):

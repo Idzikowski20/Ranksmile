@@ -5,6 +5,8 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -18,6 +20,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const { articleId, action } = req.body; // action: 'accept' | 'reject'
    if (!articleId) return res.status(400).json({ error: 'articleId is required' });
+
+   const userId = await getCurrentUserId(req, res);
+   if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      return res.status(403).json({ error: 'Access denied.' });
+   }
 
    const newStatus = action === 'reject' ? 'rejected' : 'accepted';
 

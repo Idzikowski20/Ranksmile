@@ -32,11 +32,89 @@ export interface ScoreData {
    paa_questions?: string[];
 }
 
+const PL_DIACRITICS: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' };
+function normalizePl(s: string): string {
+   return (s || '').toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => PL_DIACRITICS[c] || c);
+}
+function tokenize(s: string): string[] {
+   return normalizePl(s).match(/[a-z0-9]+/g) || [];
+}
+/**
+ * Two words "match" when they share a long common prefix — tolerates Polish
+ * inflection (pozycjonowanie ≈ pozycjonować, strony ≈ stronę ≈ stron, wyszukiwania
+ * ≈ wyszukiwarce) without a full stemmer.
+ */
+function wordMatch(a: string, b: string): boolean {
+   if (a === b) return true;
+   const n = Math.min(a.length, b.length);
+   let i = 0;
+   while (i < n && a[i] === b[i]) i += 1;
+   return i >= 4 && i >= n - 3;
+}
+
+/**
+ * Count occurrences of a (possibly multi-word) term, matching each word by shared
+ * prefix so inflected forms count too. "pozycjonowanie strony" matches
+ * "Pozycjonowanie Strony", "pozycjonować stronę", "pozycjonowania stron", etc.
+ */
 export function countOccurrences(text: string, term: string): number {
-   if (!text || !term) return 0;
-   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-   const matches = text.match(new RegExp(escaped, 'gi'));
-   return matches ? matches.length : 0;
+   const T = tokenize(text);
+   const Q = tokenize(term);
+   if (!T.length || !Q.length) return 0;
+   let count = 0;
+   for (let i = 0; i + Q.length <= T.length; i += 1) {
+      let ok = true;
+      for (let j = 0; j < Q.length; j += 1) {
+         if (!wordMatch(T[i + j], Q[j])) { ok = false; break; }
+      }
+      if (ok) count += 1;
+   }
+   return count;
+}
+
+/**
+ * For a single text node, return each term's match ranges (char offsets into
+ * `text`) using the same inflection-tolerant matching as countOccurrences. Tokenizes
+ * the text once for all terms — used by the editor's term-highlight decorations.
+ * normalizePl is length-preserving, so indices map straight back onto `text`.
+ */
+export function findTermRangesBatch(text: string, terms: string[]): Array<{ term: string; ranges: Array<[number, number]> }> {
+   if (!text || !terms.length) return [];
+   const norm = normalizePl(text);
+   const toks: Array<{ w: string; start: number; end: number }> = [];
+   const re = /[a-z0-9]+/g;
+   let m: RegExpExecArray | null = re.exec(norm);
+   while (m !== null) { toks.push({ w: m[0], start: m.index, end: m.index + m[0].length }); m = re.exec(norm); }
+   if (!toks.length) return terms.map((term) => ({ term, ranges: [] }));
+   return terms.map((term) => {
+      const Q = tokenize(term);
+      const ranges: Array<[number, number]> = [];
+      if (Q.length) {
+         for (let i = 0; i + Q.length <= toks.length; i += 1) {
+            let ok = true;
+            for (let j = 0; j < Q.length; j += 1) { if (!wordMatch(toks[i + j].w, Q[j])) { ok = false; break; } }
+            if (ok) ranges.push([toks[i].start, toks[i + Q.length - 1].end]);
+         }
+      }
+      return { term, ranges };
+   });
+}
+
+/** Coverage status of a term vs. its target — shared by the panel chips and the editor highlight. */
+export type Coverage = 'red' | 'yellow' | 'green';
+export function termCoverage(t: { current_count?: number; target_count: number }): Coverage {
+   const cur = t.current_count ?? 0;
+   if (cur === 0) return 'red';
+   if (cur < t.target_count) return 'yellow';
+   return 'green';
+}
+/** Human usage hint shown in the term tooltip (panel + editor highlight). */
+export function termUsageHint(t: { current_count?: number; target_count: number }): string {
+   const cur = t.current_count ?? 0;
+   const tgt = Math.max(t.target_count, 1);
+   if (cur >= tgt) return "Good job. You're in optimal range.";
+   if (cur === 0) return tgt > 1 ? `Use ${tgt} times. Currently used 0 times.` : 'Use at least once. Currently used 0 times.';
+   return `Use ${tgt} time${tgt !== 1 ? 's' : ''}. Currently used ${cur} time${cur !== 1 ? 's' : ''}.`;
 }
 
 // ── Signal helpers ────────────────────────────────────────────────────────────
@@ -47,20 +125,37 @@ export function countOccurrences(text: string, term: string): number {
  *   +5  keyword found in at least one H2
  *   +4  keyword found in first 100 words
  */
+const KW_STOP = new Set(['jak', 'co', 'czy', 'ile', 'gdzie', 'kiedy', 'w', 'we', 'i', 'na', 'do', 'z', 'ze', 'za', 'o', 'po', 'u', 'the', 'a', 'of', 'to', 'in', 'for', 'and', 'or']);
+/** Meaningful keyword tokens — drops stopwords/short glue words. */
+function keywordTokens(keyword: string): string[] {
+   return tokenize(keyword).filter((t) => t.length >= 3 && !KW_STOP.has(t));
+}
+/**
+ * Enough meaningful keyword tokens appear (inflection-tolerant) in the section.
+ * Requires a majority (≥60%, min 2) rather than all, so a section can carry the
+ * topic ("pozycjonowanie strony") without every secondary token ("google").
+ */
+function allTokensPresent(sectionText: string, kwToks: string[]): boolean {
+   if (!kwToks.length) return false;
+   const T = tokenize(sectionText);
+   const required = Math.min(kwToks.length, Math.max(2, Math.ceil(kwToks.length * 0.6)));
+   let hits = 0;
+   for (const q of kwToks) { if (T.some((t) => wordMatch(t, q))) hits += 1; }
+   return hits >= required;
+}
 function _kwPlacement(html: string, keyword: string): number {
-   const kw = keyword.toLowerCase().trim();
-   if (!kw) return 0;
+   const kwToks = keywordTokens(keyword);
+   if (!kwToks.length) return 0;
    let score = 0;
 
    const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
-   if (h1 && h1[1].replace(/<[^>]+>/g, '').toLowerCase().includes(kw)) score += 6;
+   if (h1 && allTokensPresent(h1[1].replace(/<[^>]+>/g, ' '), kwToks)) score += 6;
 
    const h2s = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
-   if (h2s.some(m => m[1].replace(/<[^>]+>/g, '').toLowerCase().includes(kw))) score += 5;
+   if (h2s.some((m) => allTokensPresent(m[1].replace(/<[^>]+>/g, ' '), kwToks))) score += 5;
 
-   const first100 = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-      .split(/\s+/).slice(0, 100).join(' ').toLowerCase();
-   if (first100.includes(kw)) score += 4;
+   const first100 = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).slice(0, 100).join(' ');
+   if (allTokensPresent(first100, kwToks)) score += 4;
 
    return score; // max 15
 }
@@ -200,6 +295,83 @@ function _listUsage(html: string): number {
 
 // ── Main scoring function ─────────────────────────────────────────────────────
 
+export type ScoreSlot = { key: string; label: string; earned: number; max: number; hint: string };
+
+// Single source of truth for every scoring slot — both computeContentScore (sum) and
+// computeContentScoreBreakdown (per-slot gaps) read from this so they can never diverge.
+function collectScoreSlots(
+   plainText: string,
+   wordCount: number,
+   headingCount: number,
+   scoreData: ScoreData,
+   paragraphCount?: number,
+   html?: string,
+   keyword?: string,
+   keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
+): ScoreSlot[] {
+   const slots: ScoreSlot[] = [];
+   if (!scoreData) return slots;
+
+   const push = (key: string, label: string, score: number, max: number, hint: string) => {
+      slots.push({ key, label, earned: Math.min(Math.max(score, 0), max), max, hint });
+   };
+
+   // ── Core structural signals — scored even without competitor terms, so the gauge tracks edits ──
+   const wordsTarget = Math.max(scoreData.words_target || 0, 1);
+   const headingsTarget = Math.max(scoreData.headings_target || 0, 1);
+   push('words', 'Word count', Math.min(wordCount / wordsTarget, 1) * 20, 20,
+      `Expand the article toward ~${scoreData.words_target || wordsTarget} words`);
+   push('headings', 'Headings', Math.min(headingCount / headingsTarget, 1) * 10, 10,
+      `Add headings toward ~${scoreData.headings_target || headingsTarget} (use H3 inside H2 sections)`);
+
+   // ── NLP terms (only when competitor terms were extracted) ──
+   if (scoreData.terms?.length) {
+      const totalWeight = scoreData.terms.reduce((s, t) => s + Math.max(t.target_count, 1), 0);
+      const termsRatio = scoreData.terms.reduce((s, t) => {
+         const actual = countOccurrences(plainText, t.term);
+         return s + Math.min(actual / Math.max(t.target_count, 1), 1) * Math.max(t.target_count, 1);
+      }, 0) / Math.max(totalWeight, 1);
+      push('terms', 'NLP terms', termsRatio * 25, 25, 'Use the suggested terms at their target counts (see Keywords & Terms)');
+   }
+
+   if (scoreData.paragraphs_target && paragraphCount !== undefined) {
+      push('paragraphs', 'Paragraphs', Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 5, 5,
+         `Aim for ~${scoreData.paragraphs_target} paragraphs`);
+   }
+
+   // ── HTML + keyword signals ──
+   if (html && keyword) {
+      push('kwPlacement', 'Keyword placement', _kwPlacement(html, keyword), 15,
+         `Put "${keyword}" in the H1, at least one H2, and the first 100 words`);
+      push('readability', 'Readability', _readability(html), 10, 'Keep paragraphs ~40–100 words');
+      push('externalLinks', 'External links', _externalLinks(html), 5, 'Cite 3–7 authoritative external sources');
+      const titleScore = _titleQuality(html, keyword);
+      if (titleScore !== null) push('title', 'Title tag', titleScore, 7, `Include "${keyword}" in a 50–60 char title`);
+      const metaScore = _metaDescQuality(html, keyword);
+      if (metaScore !== null) push('meta', 'Meta description', metaScore, 5, `Include "${keyword}" in a 140–165 char meta description`);
+   }
+
+   // ── HTML-only signals ──
+   if (html) {
+      const imgScore = _imageAltCoverage(html);
+      if (imgScore !== null) push('imageAlt', 'Image alt text', imgScore, 4, 'Add descriptive alt text to every image');
+      push('lists', 'Lists', _listUsage(html), 3, 'Add a bullet or numbered list with 3+ items');
+   }
+
+   // ── FAQ coverage ──
+   if (html && scoreData.paa_questions?.length) {
+      push('faq', 'FAQ coverage', _faqCoverage(html, scoreData.paa_questions), 10, 'Answer the People-Also-Ask questions in the content');
+   }
+
+   // ── Keyword coverage ──
+   if (keywordCoverage !== undefined && keywordCoverage.length > 0) {
+      const coveredCount = keywordCoverage.filter((k) => k.is_covered).length;
+      push('kwCoverage', 'Keyword coverage', (coveredCount / keywordCoverage.length) * 10, 10, 'Cover the remaining target keywords');
+   }
+
+   return slots;
+}
+
 export function computeContentScore(
    plainText: string,
    wordCount: number,
@@ -211,62 +383,11 @@ export function computeContentScore(
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
 ): number {
-   if (!scoreData?.terms?.length) return 0;
+   const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage);
+   if (!slots.length) return 0;
 
-   // Slot accumulator: earned / possible, normalised to 100 at the end
-   let earned = 0;
-   let possible = 0;
-
-   const add = (score: number, max: number) => {
-      earned += Math.min(Math.max(score, 0), max);
-      possible += max;
-   };
-
-   // ── Core signals (always present) ──
-   add(Math.min(wordCount / Math.max(scoreData.words_target, 1), 1) * 20, 20);
-   add(Math.min(headingCount / Math.max(scoreData.headings_target, 1), 1) * 10, 10);
-
-   const totalWeight = scoreData.terms.reduce((s, t) => s + Math.max(t.target_count, 1), 0);
-   const termsRatio = scoreData.terms.reduce((s, t) => {
-      const actual = countOccurrences(plainText, t.term);
-      return s + Math.min(actual / Math.max(t.target_count, 1), 1) * Math.max(t.target_count, 1);
-   }, 0) / Math.max(totalWeight, 1);
-   add(termsRatio * 25, 25);
-
-   if (scoreData.paragraphs_target && paragraphCount !== undefined) {
-      add(Math.min(paragraphCount / Math.max(scoreData.paragraphs_target, 1), 1) * 5, 5);
-   }
-
-   // ── HTML + keyword signals ──
-   if (html && keyword) {
-      add(_kwPlacement(html, keyword), 15);
-      add(_readability(html), 10);
-      add(_externalLinks(html), 5);
-      const titleScore = _titleQuality(html, keyword);
-      if (titleScore !== null) add(titleScore, 7);
-      const metaScore = _metaDescQuality(html, keyword);
-      if (metaScore !== null) add(metaScore, 5);
-   }
-
-   // ── HTML-only signals ──
-   if (html) {
-      const imgScore = _imageAltCoverage(html);
-      if (imgScore !== null) add(imgScore, 4);
-      add(_listUsage(html), 3);
-   }
-
-   // ── FAQ coverage ──
-   if (html && scoreData.paa_questions?.length) {
-      add(_faqCoverage(html, scoreData.paa_questions), 10);
-   }
-
-   // ── Keyword coverage ──
-   if (keywordCoverage !== undefined && keywordCoverage.length > 0) {
-      const coveredCount = keywordCoverage.filter((k) => k.is_covered).length;
-      add((coveredCount / keywordCoverage.length) * 10, 10);
-   }
-
-   // Normalise to 100
+   const earned = slots.reduce((s, x) => s + x.earned, 0);
+   const possible = slots.reduce((s, x) => s + x.max, 0);
    const raw = possible > 0 ? (earned / possible) * 100 : 0;
 
    // Internal links small bonus (max +3, within the 100 cap)
@@ -276,6 +397,29 @@ export function computeContentScore(
    }
 
    return Math.min(100, Math.round(raw + bonus));
+}
+
+/**
+ * Per-slot breakdown for the editor's "What's missing" view. `missingPoints` is each slot's
+ * share of the final 0–100 score still available (max − earned, normalised by total possible).
+ */
+export function computeContentScoreBreakdown(
+   plainText: string,
+   wordCount: number,
+   headingCount: number,
+   scoreData: ScoreData,
+   paragraphCount?: number,
+   html?: string,
+   keyword?: string,
+   keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
+): { slots: Array<ScoreSlot & { missingPoints: number }>; totalPossible: number } {
+   const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage);
+   const totalPossible = slots.reduce((s, x) => s + x.max, 0);
+   const scale = totalPossible > 0 ? 100 / totalPossible : 0;
+   return {
+      totalPossible,
+      slots: slots.map((s) => ({ ...s, missingPoints: Math.round((s.max - s.earned) * scale) })),
+   };
 }
 
 export function scoreToColor(score: number): string {

@@ -47,6 +47,7 @@ class PipelineRunner:
         from pipeline.stages.classify_content import ClassifyContentStage
         from pipeline.stages.extract_terms import ExtractTermsStage
         from pipeline.stages.score_ranking import ScoreRankingStage
+        from pipeline.stages.ai_search import AiSearchStage
 
         return [
             FetchPageStage(),
@@ -54,4 +55,5 @@ class PipelineRunner:
             ClassifyContentStage(),
             ExtractTermsStage(),
             ScoreRankingStage(),
+            AiSearchStage(),
         ]

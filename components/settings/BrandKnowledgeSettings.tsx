@@ -1,196 +1,151 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 
 const font = 'var(--font-family-primary)';
 
-const KNOWLEDGE: { h: string; body: string }[] = [
-  { h: 'Business Type', body: 'Ecommerce / Agencja usług internetowych (B2B)' },
-  { h: 'Industry', body: 'Technologie cyfrowe / Usługi internetowe / Marketing cyfrowy' },
-  {
-    h: 'Products/Services description',
-    body: 'Tworzenie nowoczesnych stron internetowych, sklepów internetowych, aplikacji webowych oraz skuteczne pozycjonowanie SEO. Kompleksowa obsługa firm – od projektu po rozwój i optymalizację. (Oferta obejmuje projektowanie, wdrażanie i utrzymanie rozwiązań cyfrowych dla biznesu) dokładnie: "Nowoczesne strony internetowe, sklepy internetowe, aplikacje webowe i skuteczne pozycjonowanie SEO. Kompleksowa obsługa firm – od projektu po rozwój i optymalizację."',
-  },
-  {
-    h: 'Customer profile',
-    body: 'Firmy małe i średnie, które potrzebują profesjonalnej strony lub sklepu internetowego oraz chcą zwiększyć widoczność online przez SEO – szczególnie przedsiębiorcy, usługodawcy i handlowcy, którzy chcą rozwijać lub przenieść swój biznes do internetu',
-  },
-  {
-    h: 'Competitors',
-    body: 'Agencje SEO, firmy tworzące strony internetowe, sklepy online; przykładowo: Pixtech, iziCMS, agencja marketingowa cyfrowa lokalna',
-  },
-  {
-    h: 'Topics to cover',
-    body: 'strony internetowe, sklepy internetowe, aplikacje webowe, pozycjonowanie SEO, optymalizacja serwisów, rozwój i utrzymanie stron',
-  },
-];
+const PLACEHOLDER = `Business Type
+…
 
-// ─── Ribbon icons (Phosphor, 256 viewBox) ─────────────────────────────────────
+Industry
+…
 
-const IconBold = () => (
-  <svg viewBox="0 0 256 256" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M170.5 115.7A44 44 0 0 0 140 40H64a7.9 7.9 0 0 0-8 8v152a8 8 0 0 0 8 8h88a48 48 0 0 0 18.5-92.3ZM72 56h68a28 28 0 0 1 0 56H72Zm80 136H72v-64h80a32 32 0 0 1 0 64Z" /></svg>
-);
-const IconItalic = () => (
-  <svg viewBox="0 0 256 256" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M200 56a8 8 0 0 1-8 8h-34.23L115.1 192H144a8 8 0 0 1 0 16H64a8 8 0 0 1 0-16h34.23L140.9 64H112a8 8 0 0 1 0-16h80a8 8 0 0 1 8 8" /></svg>
-);
-const IconList = () => (
-  <svg viewBox="0 0 256 256" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
-);
-const Chevron = () => (
-  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" /></svg>
-);
+Products/Services description
+…
 
-const RibbonBtn = ({ children, chip }: { children: React.ReactNode; chip?: boolean }) => {
+Customer profile
+…
+
+Competitors
+…
+
+Topics to cover
+…`;
+
+const BrandKnowledgeSettings = () => {
+  const [brandName, setBrandName] = useState('');
+  const [knowledge, setKnowledge] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
   const [hover, setHover] = useState(false);
+  const [mode, setMode] = useState<'auto' | 'manual'>('auto');
+  const [url, setUrl] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const { data: contentSettings } = useContentSettings();
+  const updateContentSettings = useUpdateContentSettings();
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!contentSettings || seeded.current) return;
+    seeded.current = true;
+    setBrandName(contentSettings.brandName || '');
+    setKnowledge(contentSettings.brandKnowledge || '');
+  }, [contentSettings]);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await updateContentSettings.mutateAsync({ brandName, brandKnowledge: knowledge });
+      toast.success('Brand Knowledge saved');
+    } catch { toast.error('Failed to save'); } finally { setSaving(false); }
+  };
+
+  const analyze = async () => {
+    if (!url.trim()) return;
+    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    setAnalyzing(true);
+    try {
+      const r = await fetch('/api/brand-knowledge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: normalized }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Analysis failed');
+      if (d.brandName) setBrandName(d.brandName);
+      setKnowledge(d.brandKnowledge || '');
+      toast.success('Brand knowledge drafted — review & save');
+    } catch (e: any) { toast.error(e?.message || 'Analysis failed'); } finally { setAnalyzing(false); }
+  };
+
+  const fieldBorder = (key: string) => (focused === key ? '#AA93FD' : '#E4E4E7');
+
   return (
-    <button
-      type="button"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        height: 28,
-        minWidth: 28,
-        padding: chip ? '0 6px' : 0,
-        justifyContent: 'center',
-        border: 'none',
-        borderRadius: 4,
-        cursor: 'pointer',
-        color: '#18181B',
-        background: chip ? (hover ? '#F4F4F5' : '#F8F8F9') : (hover ? '#F4F4F5' : 'transparent'),
-        transition: 'background 200ms ease',
-      }}
-    >
-      {children}
-    </button>
-  );
-};
-
-const Divider = () => (
-  <span style={{ display: 'flex', alignItems: 'center', padding: '0 4px' }}>
-    <span style={{ width: 1, height: 20, background: '#E4E4E7' }} />
-  </span>
-);
-
-// ─── Brand name input ─────────────────────────────────────────────────────────
-
-const BrandNameInput = () => {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      type="text"
-      name="name"
-      defaultValue="IDZTECH"
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={{
-        width: 256,
-        maxWidth: '100%',
-        boxSizing: 'border-box',
-        height: 36,
-        padding: '0 12px',
-        fontFamily: font,
-        fontSize: 13,
-        color: '#18181B',
-        borderRadius: 8,
-        border: `1px solid ${focused ? '#AA93FD' : '#E4E4E7'}`,
-        boxShadow: focused ? '0 0 0 3px rgba(120,58,251,0.1)' : '0px 1px 2px 0px rgba(26,29,40,0.06)',
-        outline: 'none',
-      }}
-    />
-  );
-};
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
-const BrandKnowledgeSettings = () => (
-  <form
-    onSubmit={(e) => { e.preventDefault(); toast.success('Brand Knowledge saved'); }}
-    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 16, width: '100%', fontFamily: font }}
-  >
-    {/* Brand name */}
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', paddingBottom: 6 }}>Brand name</label>
-      <BrandNameInput />
-    </div>
-
-    {/* Knowledge editor */}
-    <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Knowledge</label>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '55vh', width: '100%', overflow: 'hidden', borderRadius: 8, border: '1px solid #E4E4E7' }}>
-        {/* Ribbon */}
-        <div style={{ background: '#fff', padding: '16px 24px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <RibbonBtn chip>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#630DE3' }}>Aa</span>
-              <span style={{ color: '#18181B', display: 'inline-flex' }}><Chevron /></span>
-            </RibbonBtn>
-            <Divider />
-            <RibbonBtn><IconBold /></RibbonBtn>
-            <RibbonBtn><IconItalic /></RibbonBtn>
-            <Divider />
-            <RibbonBtn>
-              <IconList />
-              <Chevron />
-            </RibbonBtn>
-          </div>
-        </div>
-
-        {/* Editable content */}
-        <div style={{ display: 'flex', width: '100%', overflow: 'auto', background: '#fff' }}>
-          <div style={{ width: '100%', padding: '0 16px' }}>
-            <div
-              contentEditable
-              suppressContentEditableWarning
-              role="textbox"
-              translate="no"
-              style={{ outline: 'none', margin: '16px 0 0', padding: '0 12px 12px', fontSize: 16, lineHeight: 1.75, color: '#18181B', minHeight: 200 }}
+    <form onSubmit={save} noValidate style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 16, width: '100%', fontFamily: font }}>
+      {/* Mode: auto from website vs manual */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+        <div style={{ display: 'inline-flex', background: '#F4F4F5', borderRadius: 8, padding: 3, width: 'fit-content' }}>
+          {([['auto', 'Auto from website'], ['manual', 'Write manually']] as const).map(([m, lbl]) => (
+            <button
+              key={m} type="button" onClick={() => setMode(m)}
+              style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: font, fontSize: 13, fontWeight: 600, background: mode === m ? '#fff' : 'transparent', color: mode === m ? '#18181B' : '#52525C', boxShadow: mode === m ? '0 1px 2px rgba(0,0,0,0.08)' : 'none', transition: 'background 0.15s' }}
             >
-              {KNOWLEDGE.map((s) => (
-                <React.Fragment key={s.h}>
-                  <p style={{ margin: '0 0 16px' }}><strong>{s.h}</strong></p>
-                  <p style={{ margin: '0 0 16px' }}>{s.body}</p>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
+              {lbl}
+            </button>
+          ))}
         </div>
+        {mode === 'auto' && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', width: '100%' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Website URL</label>
+              <input
+                type="text" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://twojafirma.pl"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!analyzing) analyze(); } }}
+                onFocus={() => setFocused('url')} onBlur={() => setFocused(null)}
+                style={{ width: '100%', boxSizing: 'border-box', height: 40, padding: '0 12px', fontFamily: font, fontSize: 14, color: '#18181B', borderRadius: 8, border: `1px solid ${fieldBorder('url')}`, boxShadow: focused === 'url' ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none', outline: 'none' }}
+              />
+            </div>
+            <button
+              type="button" disabled={analyzing || !url.trim()} onClick={analyze}
+              style={{ height: 40, padding: '0 18px', borderRadius: 8, border: 'none', cursor: analyzing || !url.trim() ? 'not-allowed' : 'pointer', fontFamily: font, fontSize: 14, fontWeight: 600, color: '#fff', background: '#18181B', opacity: analyzing || !url.trim() ? 0.6 : 1, whiteSpace: 'nowrap' }}
+            >
+              {analyzing ? 'Analyzing…' : 'Analyze'}
+            </button>
+          </div>
+        )}
+        <span style={{ fontSize: 13, color: '#52525C' }}>
+          {mode === 'auto'
+            ? 'We scrape the page and let AI draft your brand knowledge — then review & edit below.'
+            : 'Fill in the fields below manually.'}
+        </span>
       </div>
-    </div>
 
-    {/* Save */}
-    <SaveButton />
-  </form>
-);
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', paddingBottom: 6 }}>Brand name</label>
+        <input
+          type="text"
+          value={brandName}
+          onChange={(e) => setBrandName(e.target.value)}
+          onFocus={() => setFocused('name')}
+          onBlur={() => setFocused(null)}
+          placeholder="e.g. IDZTECH"
+          style={{ width: 256, maxWidth: '100%', boxSizing: 'border-box', height: 36, padding: '0 12px', fontFamily: font, fontSize: 13, color: '#18181B', borderRadius: 8, border: `1px solid ${fieldBorder('name')}`, boxShadow: focused === 'name' ? '0 0 0 3px rgba(120,58,251,0.1)' : '0px 1px 2px 0px rgba(26,29,40,0.06)', outline: 'none' }}
+        />
+      </div>
 
-const SaveButton = () => {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      type="submit"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 12,
-        width: 'fit-content',
-        padding: '8px 24px',
-        borderRadius: 8,
-        border: 'none',
-        cursor: 'pointer',
-        fontFamily: font,
-        fontSize: 16,
-        fontWeight: 600,
-        color: '#fff',
-        background: hover ? '#783AFB' : '#18181B',
-        transition: 'background 150ms ease',
-      }}
-    >
-      Save
-    </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+        <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Knowledge</label>
+        <textarea
+          value={knowledge}
+          onChange={(e) => setKnowledge(e.target.value)}
+          onFocus={() => setFocused('knowledge')}
+          onBlur={() => setFocused(null)}
+          placeholder={PLACEHOLDER}
+          rows={16}
+          style={{ width: '100%', boxSizing: 'border-box', padding: '14px 16px', fontFamily: font, fontSize: 15, lineHeight: 1.7, color: '#18181B', borderRadius: 8, border: `1px solid ${fieldBorder('knowledge')}`, boxShadow: focused === 'knowledge' ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none', outline: 'none', resize: 'vertical' }}
+        />
+        <span style={{ fontSize: 13, color: '#52525C' }}>
+          Used as context across the Content Editor and New Content generation.
+        </span>
+      </div>
+
+      <button
+        type="submit"
+        disabled={saving}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4, width: 'fit-content', padding: '8px 24px', borderRadius: 8, border: 'none', cursor: saving ? 'default' : 'pointer', fontFamily: font, fontSize: 16, fontWeight: 600, color: '#fff', background: hover ? '#783AFB' : '#18181B', opacity: saving ? 0.6 : 1, transition: 'background 150ms ease' }}
+      >
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+    </form>
   );
 };
 

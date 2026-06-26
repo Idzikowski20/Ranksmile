@@ -11,6 +11,12 @@ import type { ScoreData } from '../../lib/contentScore';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
+import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
+import { TermHighlight } from './termHighlightExtension';
+import { TIP_BUBBLE_BASE } from './tipBubble';
+import CommentComposer, { DraftComment } from './comments/CommentComposer';
+import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
+import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 
 export interface HeadingItem {
   level: number;
@@ -35,10 +41,24 @@ interface Props {
   editorRef?: React.MutableRefObject<any>;
   /** When true, inserted links are highlighted purple for review */
   reviewMode?: boolean;
+  /** Highlight NLP entity terms inline (Write & Optimize). */
+  highlightTerms?: boolean;
   /** Fired with true when Surfy is processing, false when done */
   onAiActivity?: (active: boolean) => void;
   /** Target keyword for Surfy scoring context */
   articleKeyword?: string;
+  /** Comment anchors to highlight inline (view-only ProseMirror decorations). */
+  comments?: CommentAnchor[];
+  /** Full comment threads for the in-editor pins + bubbles overlay. */
+  threads?: Thread[];
+  /** Current viewer identity used when replying/reacting/creating. */
+  commentAuthor?: CommentAuthor;
+  /** Article id for the comments API (overlay/bubble calls). */
+  commentArticleId?: string;
+  /** Bump source — called after any comment mutation so the page refetches. */
+  onCommentsChanged?: () => void;
+  /** Create a comment anchored to the selected quote; resolves to the new id. */
+  onCreateComment?: (quote: string, draft: { text: string; images: string[] }) => Promise<string | undefined> | void;
 }
 
 interface MenuBarProps {
@@ -143,7 +163,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         }}
       >
       {/* Formatting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+      <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
 
         {/* Headings */}
         {([1, 2, 3] as const).map((lvl) => {
@@ -227,7 +247,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
             e.target.value = '';
           }}
         />
-        <button type="button" onClick={() => fileInputRef.current?.click()} title="Insert image" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <button type="button" data-tour="media" onClick={() => fileInputRef.current?.click()} title="Insert image" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5m10.5-11.25h.008v.008h-.008zm.375 0a.375.375 0 1 1-.75 0a.375.375 0 0 1 .75 0" /></svg>
         </button>
 
@@ -339,6 +359,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
       {/* Right: Ask Surfy */}
       <button
         type="button"
+        data-tour="ask-surfy"
         onClick={onAskSurfy}
         title="Ask Surfy — edit with AI"
         style={{
@@ -670,11 +691,25 @@ const TitleDescriptionBlock = ({
   );
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, onAiActivity, articleKeyword }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
     onHeadingsChangeRef.current = onHeadingsChange;
+    // Refs so the (once-built) decoration plugin always reads the latest comments/handler.
+    const commentAnchors: CommentAnchor[] = comments || (threads ? threads.map((t) => ({ id: t.id, quote: t.quote })) : []);
+    const commentsRef = useRef<CommentAnchor[]>(commentAnchors);
+    commentsRef.current = commentAnchors;
+    // Live refs for the term-highlight decorations (read inside the PM plugin).
+    const termsRef = useRef<any[]>([]);
+    termsRef.current = (scoreData?.terms as any[]) || [];
+    const highlightTermsRef = useRef<boolean>(highlightTerms ?? true);
+    highlightTermsRef.current = highlightTerms ?? true;
+    const editorWrapRef = useRef<HTMLDivElement>(null);
+    const [linkTip, setLinkTip] = useState<{ text: string; top: number; left: number } | null>(null);
+    const [openCommentId, setOpenCommentId] = useState<string | null>(null);
+    const openCommentRef = useRef<(id: string) => void>(() => {});
+    openCommentRef.current = (id: string) => setOpenCommentId(id);
 
     const [featuredImage, setFeaturedImage] = useState<{ url: string; alt: string } | null>(initialFeaturedImage ?? null);
 
@@ -692,6 +727,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyLoading, setSurfyLoading] = useState(false);
     const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null } | null>(null);
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
+    // In-editor "Add comment" composer, anchored below the selection (viewport coords).
+    const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
+    // Keep the commented range highlighted while the composer is open (decoration).
+    const draftRangeRef = useRef<{ from: number; to: number } | null>(null);
+    draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -901,11 +941,22 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
         Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
         Highlight.configure({ multicolor: true }),
+        CommentHighlight.configure({
+          getComments: () => commentsRef.current,
+          onCommentClick: (id) => openCommentRef.current(id),
+          getDraftRange: () => draftRangeRef.current,
+        }),
+        TermHighlight.configure({
+          getTerms: () => termsRef.current,
+          getEnabled: () => highlightTermsRef.current,
+        }),
       ],
       content,
       immediatelyRender: false,
       onCreate({ editor: ed }) { calcAndEmit(ed); },
-      onUpdate({ editor: ed }) { calcAndEmit(ed); },
+      // Only recompute on real content changes — skips selection/decoration-refresh
+      // transactions (e.g. the no-op tx we dispatch to repaint comment highlights).
+      onUpdate({ editor: ed, transaction }) { if (transaction.docChanged) calcAndEmit(ed); },
     });
 
     // Keep the live ref in sync on every render
@@ -945,6 +996,23 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         editor.commands.setContent(content, { emitUpdate: false });
       }
     }, [content, editor]);
+
+    // Repaint comment decorations when the comment list changes (no-op tx forces
+    // the decorations prop to re-run, reading the latest commentsRef).
+    useEffect(() => {
+      if (editor) editor.view.dispatch(editor.state.tr);
+    }, [comments, threads, commentDraft, editor]);
+
+    // Repaint term highlights on toggle (to show or clear them). When disabled the
+    // plugin renders nothing, so no whole-doc term scan happens.
+    useEffect(() => {
+      if (editor) editor.view.dispatch(editor.state.tr);
+    }, [highlightTerms, editor]);
+    // While enabled, repaint as coverage changes; skipped entirely when off so the
+    // findTermRangesBatch pass doesn't run on every save.
+    useEffect(() => {
+      if (editor && highlightTerms) editor.view.dispatch(editor.state.tr);
+    }, [scoreData?.terms, highlightTerms, editor]);
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: '#fff', position: 'relative' }}>
@@ -1005,36 +1073,47 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
           .art-editor-scroll[data-review="true"] .ProseMirror a:hover { background: #6d28d9; color: #fff !important; }
           .art-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid #e4e4e7; margin: 22px 0; }
+          .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: #783AFB; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(120,58,251,0.08); cursor: pointer; }
+          .art-editor-scroll .ProseMirror .comment-mark-draft { background: rgba(120,58,251,0.22); }
         `}</style>
 
         {/* Toolbar */}
         <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} />
 
-        {/* Scrollable editor */}
+        {/* Scrollable editor — Title/Description + Featured image now live in the
+            "Publish or Export" panel, so the editor shows the article body only. */}
         <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'}>
-          {/* Title + Description card */}
-          <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 64px 0' }}>
-            <TitleDescriptionBlock
-              metaTitle={metaTitle}
-              metaDescription={metaDescription}
-              onMetaTitleChange={onMetaTitleChange}
-              onMetaDescriptionChange={onMetaDescriptionChange}
-            />
-          </div>
-
-          {/* Featured Image block */}
-          <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 64px' }}>
-            <FeaturedImageBlock
-              imageUrl={featuredImage?.url}
-              imageAlt={featuredImage?.alt}
-              keyword={keyword}
-              onImageChange={(img) => updateFeaturedImage(img)}
-              onImageRemove={() => updateFeaturedImage(null)}
-            />
-          </div>
-
-          <div className={surfySelection ? 'surfy-selection-highlight' : ''} style={{ position: 'relative' }}>
+          <div
+            ref={editorWrapRef}
+            className={surfySelection ? 'surfy-selection-highlight' : ''}
+            style={{ position: 'relative', paddingTop: 24 }}
+            onMouseOver={(e) => {
+              const el = e.target as HTMLElement;
+              // Term highlight takes priority over an enclosing link.
+              const term = el.closest?.('.term-hl') as HTMLElement | null;
+              const a = el.closest?.('a[href]') as HTMLAnchorElement | null;
+              const target = term || a;
+              if (target && editorWrapRef.current?.contains(target)) {
+                const text = term ? (term.getAttribute('data-term-tip') || '') : (a?.getAttribute('href') || '');
+                if (text) {
+                  const r = target.getBoundingClientRect();
+                  setLinkTip({ text, top: r.top, left: r.left + r.width / 2 });
+                }
+              }
+            }}
+            onMouseOut={(e) => {
+              const el = e.target as HTMLElement;
+              const target = (el.closest?.('.term-hl') || el.closest?.('a[href]')) as HTMLElement | null;
+              const to = e.relatedTarget as Node | null;
+              if (target && (!to || !target.contains(to))) setLinkTip(null);
+            }}
+          >
             <EditorContent editor={editor} style={{ background: '#fff' }} />
+            {linkTip && (
+              <div style={{ ...TIP_BUBBLE_BASE, top: linkTip.top - 8, left: linkTip.left, transform: 'translate(-50%, -100%)', maxWidth: 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {linkTip.text}
+              </div>
+            )}
             {editor && (
               <SurfyBubbleMenu
                 editor={editor}
@@ -1044,7 +1123,50 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   setSurfyHistory([]);
                   setSurfyOpen(true);
                 }}
+                onAddComment={onCreateComment ? (selection) => {
+                  if (!selection.text.trim()) return;
+                  const wrap = editorWrapRef.current;
+                  if (!wrap) return;
+                  const wRect = wrap.getBoundingClientRect();
+                  const end = editor.view.coordsAtPos(selection.to);
+                  const start = editor.view.coordsAtPos(selection.from);
+                  setCommentDraft({ quote: selection.text, from: selection.from, to: selection.to, top: end.bottom - wRect.top + 8, left: (start.left + end.right) / 2 - wRect.left });
+                } : undefined}
               />
+            )}
+
+            {/* Margin pins + thread bubbles, anchored to the comment decorations */}
+            {editor && threads && commentAuthor && commentArticleId && (
+              <EditorCommentsOverlay
+                editor={editor}
+                wrapperRef={editorWrapRef}
+                threads={threads}
+                author={commentAuthor}
+                articleId={commentArticleId}
+                onChanged={() => onCommentsChanged?.()}
+                openId={openCommentId}
+                onOpenChange={setOpenCommentId}
+              />
+            )}
+
+            {/* In-editor comment composer (dark bubble) anchored to the selection */}
+            {commentDraft && (
+              <div style={{ position: 'absolute', top: commentDraft.top, left: commentDraft.left, transform: 'translateX(-50%)', zIndex: 250, width: 320, maxWidth: 'min(74vw, 360px)' }}>
+                <CommentComposer
+                  authorName={commentAuthor?.name || 'You'}
+                  authorColor={commentAuthor?.color || '#783AFB'}
+                  authorAvatar={commentAuthor?.avatar}
+                  autoFocus
+                  onSubmit={async (draft: DraftComment) => {
+                    const quote = commentDraft.quote;
+                    setCommentDraft(null);
+                    editor?.commands.setTextSelection(editor.state.selection.to);
+                    const id = await onCreateComment?.(quote, { text: draft.text, images: draft.images });
+                    if (id) setOpenCommentId(id);
+                  }}
+                  onCancel={() => setCommentDraft(null)}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -1173,7 +1295,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 <span style={{ fontSize: 12, lineHeight: '16px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)' }}>Context:</span>
                 <Chip label={surfySelection ? `Selected (${surfySelection.text.length}c)` : 'Full article'} />
                 <Chip label={articleKeyword || keyword || 'N/A'} />
-                <Chip label={`Score: ${scoreData ? `${(scoreData as any).computed_score || '?'}/100` : 'N/A'}`} />
+                <Chip label={`Score: ${scoreData ? `${(scoreData as any)._computed_score || '?'}/100` : 'N/A'}`} />
               </div>
 
               {/* Input row — always visible */}

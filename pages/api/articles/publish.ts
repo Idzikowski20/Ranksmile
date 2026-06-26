@@ -6,6 +6,8 @@ import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { publishToWordPress, publishToNextJs } from '../../../lib/wordpressPublish';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -21,6 +23,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (!articleId || !target) {
       return res.status(400).json({ error: 'articleId and target are required' });
+   }
+
+   const userId = await getCurrentUserId(req, res);
+   if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      return res.status(403).json({ error: 'Access denied.' });
    }
 
    try {

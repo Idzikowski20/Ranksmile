@@ -11,6 +11,8 @@ type AppShellProps = {
    showSidebar?: boolean;
    sidebar?: React.ReactNode;
    topbarTitle?: string;
+   /** Replaces the workspace switcher in the topbar's left slot (e.g. editor breadcrumb). */
+   breadcrumb?: React.ReactNode;
    contentClassName?: string;
 };
 
@@ -22,11 +24,12 @@ const AppShell = ({
    showSidebar = true,
    sidebar,
    topbarTitle,
+   breadcrumb,
    contentClassName = '',
 }: AppShellProps) => {
    return (
       <div className="app-shell">
-         <GlobalTopbar title={topbarTitle} />
+         <GlobalTopbar title={topbarTitle} breadcrumb={breadcrumb} />
          <div className="app-shell-body">
             {sidebar ?? (showSidebar && (
                <Sidebar
