@@ -20,6 +20,17 @@ export function useCreateWorkspace() {
    const qc = useQueryClient();
    return useMutation((name: string) => jsonFetch('/api/workspaces', 'POST', { name }), { onSuccess: () => qc.invalidateQueries('workspaces') });
 }
+/**
+ * Creates (or resumes) an empty setup-state workspace and returns its id. The
+ * caller navigates to `/workspace/<id>/setup` to run the creator wizard, which
+ * attaches the domain + brand knowledge and flips the workspace to `ready`.
+ */
+export function useCreateSetupWorkspace() {
+   return useMutation(async () => {
+      const d = await jsonFetch('/api/workspaces/setup', 'POST');
+      return d.id as number;
+   });
+}
 export function useRenameWorkspace() {
    const qc = useQueryClient();
    return useMutation(({ id, name }: { id: number; name: string }) => jsonFetch(`/api/workspaces/${id}`, 'PATCH', { name }), { onSuccess: () => qc.invalidateQueries('workspaces') });
