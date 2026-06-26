@@ -39,8 +39,8 @@ export async function acceptInvitation(sessionUserId: string, sessionEmail: stri
    if (!sessionEmail || sessionEmail.trim().toLowerCase() !== inv.email) throw new Error('INVITE_EMAIL_MISMATCH');
    const existing = await select('SELECT id FROM organization_members WHERE org_id = ? AND user_id = ? LIMIT 1', [inv.org_id, sessionUserId]);
    if (!existing.length) {
-      await db.query("INSERT INTO organization_members (org_id, user_id, role, status, workspace_ids) VALUES (?, ?, ?, 'active', ?)",
-         { replacements: [inv.org_id, sessionUserId, inv.role, inv.workspace_ids] });
+      await db.query("INSERT INTO organization_members (org_id, user_id, email, role, status, workspace_ids) VALUES (?, ?, ?, ?, 'active', ?)",
+         { replacements: [inv.org_id, sessionUserId, inv.email, inv.role, inv.workspace_ids] });
    }
    await db.query("UPDATE invitations SET status = 'accepted' WHERE id = ?", { replacements: [inv.id] });
 }

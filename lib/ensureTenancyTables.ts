@@ -85,6 +85,7 @@ export async function ensureTenancyTables(): Promise<void> {
    `);
    // Per-workspace member access (JSON array of workspace ids; NULL = all workspaces in the org).
    try { await db.query('ALTER TABLE organization_members ADD COLUMN workspace_ids TEXT'); } catch (e) { ignoreExisting('add organization_members.workspace_ids', e); }
+   try { await db.query('ALTER TABLE organization_members ADD COLUMN email TEXT'); } catch (e) { ignoreExisting('add organization_members.email', e); }
    try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token)'); } catch (e) { ignoreExisting('idx_invitations_token', e); }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_invitations_org ON invitations(org_id)'); } catch (e) { ignoreExisting('idx_invitations_org', e); }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email)'); } catch (e) { ignoreExisting('idx_invitations_email', e); }
