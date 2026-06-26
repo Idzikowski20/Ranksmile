@@ -12,9 +12,20 @@ async function select(sql: string, replacements: any[]): Promise<Row[]> {
 
 const MEMBERSHIP_SQL = "SELECT org_id, role, workspace_ids FROM organization_members WHERE user_id = ? AND status = 'active' ORDER BY id ASC LIMIT 1";
 
+// Short-lived memo of the provisioning+migration result, so the several helper
+// calls in one request (verifyDomainOwnership → getDomains → articles → …) don't
+// each re-run the membership read + migrate scans. Disabled under test so the
+// existing per-call mocked-DB sequences stay deterministic.
+const TENANCY_CACHE_MS = 5000;
+const cacheEnabled = process.env.NODE_ENV !== 'test';
+const tenancyCache = new Map<string, { orgId: number; ts: number }>();
+
+/** Inserts a workspace and returns its id; tolerant of the UNIQUE(org_id,name) race (re-reads by name). */
 async function createWorkspace(orgId: number, name: string): Promise<number> {
-   await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', { replacements: [orgId, name] });
-   const back = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id DESC LIMIT 1', [orgId]);
+   try {
+      await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', { replacements: [orgId, name] });
+   } catch { /* possible UNIQUE(org_id,name) race — fall through and re-read the winner */ }
+   const back = await select('SELECT id FROM workspaces WHERE org_id = ? AND name = ? ORDER BY id DESC LIMIT 1', [orgId, name]);
    return Number(back[0].id);
 }
 
@@ -57,6 +68,10 @@ async function migrateDomainsToWorkspaces(orgId: number, userId: string, isOwner
 /** Provisions the caller's org + owner membership (no default workspace), then migrates domains→workspaces. */
 export async function ensureUserTenancy(userId: string): Promise<{ orgId: number }> {
    if (!userId) throw new Error('ensureUserTenancy requires a non-empty userId');
+   if (cacheEnabled) {
+      const c = tenancyCache.get(userId);
+      if (c && Date.now() - c.ts < TENANCY_CACHE_MS) return { orgId: c.orgId };
+   }
    await ensureTenancyTables();
 
    let member = await select(MEMBERSHIP_SQL, [userId]);
@@ -75,6 +90,7 @@ export async function ensureUserTenancy(userId: string): Promise<{ orgId: number
    }
    const orgId = Number(member[0].org_id);
    await migrateDomainsToWorkspaces(orgId, userId, member[0].role === 'owner');
+   if (cacheEnabled) tenancyCache.set(userId, { orgId, ts: Date.now() });
    return { orgId };
 }
 

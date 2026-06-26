@@ -23,5 +23,8 @@ describe('ensureTenancyTables', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS invitations');
     expect(sql).toContain('ALTER TABLE organization_members ADD COLUMN workspace_ids');
     expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_invitations_token');
+    // hardening: workspace name uniqueness + member (user_id,status) lookup index
+    expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_workspaces_org_name ON workspaces(org_id, name)');
+    expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_org_members_user_status ON organization_members(user_id, status)');
   });
 });
