@@ -30,8 +30,10 @@ export async function createSetupWorkspace(userId: string): Promise<number> {
    const { orgId } = await ensureUserTenancy(userId);
    const existing = await select("SELECT id FROM workspaces WHERE org_id = ? AND status = 'setup' ORDER BY id DESC LIMIT 1", [orgId]);
    if (existing.length) return Number(existing[0].id);
-   await db.query("INSERT INTO workspaces (org_id, name, status) VALUES (?, '', 'setup')", { replacements: [orgId] });
-   const back = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id DESC LIMIT 1', [orgId]);
+   try {
+      await db.query("INSERT INTO workspaces (org_id, name, status) VALUES (?, '', 'setup')", { replacements: [orgId] });
+   } catch { /* UNIQUE(org_id,'') race with a concurrent setup-create — re-read the winner below */ }
+   const back = await select("SELECT id FROM workspaces WHERE org_id = ? AND status = 'setup' ORDER BY id DESC LIMIT 1", [orgId]);
    return Number(back[0].id);
 }
 
@@ -62,8 +64,10 @@ export async function finishWorkspaceSetup(userId: string, wsId: number, brandNa
 export async function createWorkspace(userId: string, name: string): Promise<Workspace> {
    const { orgId } = await ensureUserTenancy(userId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
-   await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', { replacements: [orgId, clean] });
-   const back = await select('SELECT id, name FROM workspaces WHERE org_id = ? ORDER BY id DESC LIMIT 1', [orgId]);
+   try {
+      await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', { replacements: [orgId, clean] });
+   } catch { /* UNIQUE(org_id,name) race — re-read the winner below */ }
+   const back = await select('SELECT id, name FROM workspaces WHERE org_id = ? AND name = ? ORDER BY id DESC LIMIT 1', [orgId, clean]);
    return { id: Number(back[0].id), name: String(back[0].name) };
 }
 
