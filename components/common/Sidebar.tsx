@@ -300,13 +300,14 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    const urlSlugMatch = router.asPath.match(/^(?:\/workspace\/\d+)?\/(?:domain|sites)\/([^/?#]+)/);
    const urlSlug = urlSlugMatch ? urlSlugMatch[1] : null;
 
-   // selectedDomainSlug — initialized from localStorage, synced from URL when on a domain page
-   const [selectedDomainSlug, setSelectedDomainSlug] = useState<string | null>(() => {
-      if (typeof window !== 'undefined') {
-         return localStorage.getItem(LS_KEY) || null;
-      }
-      return null;
-   });
+   // selectedDomainSlug — synced from URL/localStorage. MUST start null: reading
+   // localStorage in the useState initializer makes the first client render differ from
+   // the server (which has none) → it flows into activeSlug → a Link href mismatch.
+   const [selectedDomainSlug, setSelectedDomainSlug] = useState<string | null>(null);
+   useEffect(() => {
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) setSelectedDomainSlug((cur) => cur ?? stored);
+   }, []);
 
    // When the URL points to a specific domain, sync it as selected + persist
    useEffect(() => {
