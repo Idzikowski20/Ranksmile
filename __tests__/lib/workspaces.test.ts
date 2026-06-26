@@ -63,14 +63,23 @@ describe('workspaces helpers', () => {
     expect(String(mockQuery.mock.calls[3][0])).toContain('DELETE FROM workspaces');
   });
 
-  it('createSetupWorkspace inserts a setup workspace and returns its id', async () => {
+  it('createSetupWorkspace inserts a setup workspace and returns its id when none exists', async () => {
     mockQuery
+      .mockResolvedValueOnce(rows([]))              // existing-setup SELECT → none
       .mockResolvedValueOnce(rows([]))              // INSERT
       .mockResolvedValueOnce(rows([{ id: 7 }]));   // SELECT back
     const id = await createSetupWorkspace('u1');
     expect(id).toBe(7);
-    expect(String(mockQuery.mock.calls[0][0])).toContain('setup');
-    expect(String(mockQuery.mock.calls[0][0])).toContain('INSERT INTO workspaces');
+    expect(String(mockQuery.mock.calls[1][0])).toContain('INSERT INTO workspaces');
+    expect(String(mockQuery.mock.calls[1][0])).toContain('setup');
+  });
+
+  it('createSetupWorkspace reuses an existing in-progress setup workspace', async () => {
+    mockQuery.mockResolvedValueOnce(rows([{ id: 4 }])); // existing-setup SELECT → found
+    const id = await createSetupWorkspace('u1');
+    expect(id).toBe(4);
+    expect(mockQuery).toHaveBeenCalledTimes(1);          // no INSERT issued
+    expect(String(mockQuery.mock.calls[0][0])).toContain("status = 'setup'");
   });
 
   it('markWorkspaceReady issues an UPDATE setting status = ready', async () => {
