@@ -103,61 +103,57 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
   </a>
 );
 
+// Single source of truth for the section frame — header + bordered box. Per-state
+// padding/layout is passed via boxStyle; the border lives here so it can't drift.
+const SECTION_BOX: React.CSSProperties = { border: '1px solid #E4E4E7', borderRadius: 16 };
+const colStack: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 16 };
+
+const SectionShell = ({ boxStyle, children }: { boxStyle?: React.CSSProperties; children: React.ReactNode }) => (
+  <div style={colStack}>
+    <SectionHeader icon={<BoltIcon />} label="Recommendations" />
+    <div style={{ ...SECTION_BOX, ...boxStyle }}>{children}</div>
+  </div>
+);
+
 const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading, pipeline }: Props) => {
   // While the domain pipeline runs, the section shows its progress in place of the rows.
   if (pipeline) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-        <div style={{ padding: 24, border: '1px solid #E4E4E7', borderRadius: 16 }}>
-          {pipeline}
-        </div>
-      </div>
-    );
+    return <SectionShell boxStyle={{ padding: 24 }}>{pipeline}</SectionShell>;
   }
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #E4E4E7', borderRadius: 16 }}>
-          <RowSkeleton />
-          <RowSkeleton />
-          <Skeleton width={150} height={13} />
-        </div>
-      </div>
+      <SectionShell boxStyle={{ ...colStack, padding: 24 }}>
+        <RowSkeleton />
+        <RowSkeleton />
+        <Skeleton width={150} height={13} />
+      </SectionShell>
     );
   }
   if (items.length === 0) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-        <div style={{ padding: '40px 24px', border: '1px solid #E4E4E7', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
-          <CheckCircle />
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: font }}>Your domain looks healthy</span>
-          <span style={{ fontSize: 14, color: '#52525C', maxWidth: 420, lineHeight: 1.5, fontFamily: font }}>
-            The scan finished and found no pages that need optimization right now. As your content changes, new opportunities will show up here.
-          </span>
-        </div>
-      </div>
+      <SectionShell boxStyle={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
+        <CheckCircle />
+        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: font }}>Your domain looks healthy</span>
+        <span style={{ fontSize: 14, color: '#52525C', maxWidth: 420, lineHeight: 1.5, fontFamily: font }}>
+          The scan finished and found no pages that need optimization right now. As your content changes, new opportunities will show up here.
+        </span>
+      </SectionShell>
     );
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #E4E4E7', borderRadius: 16 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {items.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
-        </div>
-        <a
-          href={viewHref}
-          className="dashboard-rec-view"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: '#52525C', textDecoration: 'none', fontFamily: font }}
-        >
-          <span>View {total} {total === 1 ? 'Recommendation' : 'Recommendations'}</span>
-          <Chevron />
-        </a>
+    <SectionShell boxStyle={{ ...colStack, padding: 24 }}>
+      <div style={colStack}>
+        {items.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
       </div>
-    </div>
+      <a
+        href={viewHref}
+        className="dashboard-rec-view"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: '#52525C', textDecoration: 'none', fontFamily: font }}
+      >
+        <span>View {total} {total === 1 ? 'Recommendation' : 'Recommendations'}</span>
+        <Chevron />
+      </a>
+    </SectionShell>
   );
 };
 
