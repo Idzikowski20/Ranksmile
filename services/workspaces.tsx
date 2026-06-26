@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-export type Workspace = { id: number; name: string };
+export type Workspace = { id: number; name: string; domain?: string | null };
 
 export function useWorkspaces() {
    return useQuery<{ workspaces: Workspace[]; activeId: number | null }>('workspaces', async () => {
