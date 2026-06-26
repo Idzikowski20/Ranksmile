@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { QueryTypes, type Transaction } from 'sequelize';
 import db from '../database/database';
 import { ensurePipelineTables } from './ensurePipelineTables';
@@ -45,11 +46,19 @@ export async function enqueueDomainSetup(domainId: number): Promise<string> {
       `SELECT id FROM analysis_jobs WHERE id = ?`, [jobId]);
    if (existing.length) return jobId; // already enqueued (queued/running/done) — reuse
    try {
+      // article_id = 0 sentinel: analysis_jobs.article_id is NOT NULL on SQLite (the
+      // dev fallback) and can't be dropped there; domain jobs are keyed by domain_id +
+      // job_type, never by article_id, so a 0 sentinel is harmless on both dialects.
       await db.query(
          `INSERT INTO analysis_jobs (id, article_id, domain_id, job_type, status, created_at, updated_at)
-          VALUES (?, NULL, ?, 'domain_setup', 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          VALUES (?, 0, ?, 'domain_setup', 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
          { replacements: [jobId, domainId] });
-   } catch { /* PK collision with a concurrent enqueue — the winner's row is already there */ }
+   } catch (e) {
+      // A PK/unique collision means a concurrent enqueue already inserted the winner — fine.
+      // Anything else (permission, connection, schema) is a real failure — surface it, don't mask.
+      const m = e instanceof Error ? e.message : String(e);
+      if (!/unique|duplicate|primary key/i.test(m)) throw e;
+   }
    return jobId;
 }
 
@@ -155,7 +164,7 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string
 
 /** Fire-and-forget runner. Claims, runs GSC, calls sidecar; sidecar finishes via job-progress 'done'. */
 export async function kickDomainSetup(jobId: string): Promise<void> {
-   const token = `nextjs_${process.pid || 'x'}_${Date.now()}`;
+   const token = `nextjs_${process.pid || 'x'}_${randomUUID()}`;
    if (!(await claimJob(jobId, token))) return; // someone else owns it / exhausted
    const jrows = await selectRows<{ domain_id: number; payload: string }>(`SELECT domain_id, payload FROM analysis_jobs WHERE id = ?`, [jobId]);
    const domainId = Number(jrows[0]?.domain_id);

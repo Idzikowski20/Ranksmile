@@ -43,6 +43,11 @@ describe('enqueueDomainSetup', () => {
     const id = await enqueueDomainSetup(99);
     expect(id).toBe('dsetup_99');
   });
+  it('re-throws a genuine (non-collision) INSERT error instead of masking it', async () => {
+    mockQuery.mockResolvedValueOnce(sel([]));               // lookup → none
+    mockQuery.mockRejectedValueOnce(new Error('permission denied for table analysis_jobs'));
+    await expect(enqueueDomainSetup(99)).rejects.toThrow('permission denied');
+  });
 });
 
 describe('claimJob', () => {
