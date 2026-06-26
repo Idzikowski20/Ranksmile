@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../../services/workspaces';
+import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '../../services/workspaces';
 
 const font = 'var(--font-family-primary)';
 
@@ -24,6 +24,32 @@ const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   </span>
 );
 
+/** Strips protocol, path and the GSC `sc-domain:` prefix to a bare hostname. */
+function cleanDomain(domain?: string | null): string {
+  return (domain || '')
+    .replace(/^sc-domain:/i, '')
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .trim();
+}
+
+/** Workspace icon: the domain's favicon, falling back to the heart glyph. */
+const WorkspaceAvatar = ({ domain, size = 24 }: { domain?: string | null; size?: number }) => {
+  const [err, setErr] = useState(false);
+  const host = cleanDomain(domain);
+  if (!host || err) return <HeartAvatar size={size} />;
+  return (
+    <img
+      alt=""
+      width={size}
+      height={size}
+      src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`}
+      onError={() => setErr(true)}
+      style={{ width: size, height: size, borderRadius: 6, flexShrink: 0, objectFit: 'cover', background: '#fff' }}
+    />
+  );
+};
+
 const ChevronUpDown = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#9F9FA9' }}>
     <path d="M7 15L12 20L17 15M7 9L12 4L17 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -42,20 +68,7 @@ const PlusIcon = () => (
   </svg>
 );
 
-const PencilIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M15.232 5.232l3.536 3.536M9 11l6.768-6.768a2 2 0 012.828 2.828L11.828 13.828A4 4 0 019.172 15H8v-1.172A4 4 0 019 11z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
 function friendly(code: string | undefined): string {
-  if (code === 'WORKSPACE_NOT_EMPTY') return 'Workspace still has domains — move or remove them first.';
   if (code === 'WORKSPACE_LAST') return 'You must keep at least one workspace.';
   return 'Something went wrong.';
 }
@@ -70,8 +83,6 @@ const WorkspaceSwitcher = () => {
   const activeId = data?.activeId ?? null;
   const setActive = useSetActiveWorkspace();
   const createSetup = useCreateSetupWorkspace();
-  const renameWs = useRenameWorkspace();
-  const deleteWs = useDeleteWorkspace();
   const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
 
   useEffect(() => {
@@ -97,7 +108,7 @@ const WorkspaceSwitcher = () => {
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          width: 224,
+          width: 248,
           maxWidth: '100%',
           padding: '8px',
           border: 'none',
@@ -108,8 +119,8 @@ const WorkspaceSwitcher = () => {
           fontFamily: font,
         }}
       >
-        <HeartAvatar />
-        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <WorkspaceAvatar domain={current?.domain} />
+        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'var(--font-family-primary)', fontSize: 16, fontWeight: 400, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {current?.name ?? 'Workspace'}
         </span>
         <ChevronUpDown />
@@ -162,26 +173,10 @@ const WorkspaceSwitcher = () => {
                     textAlign: 'left',
                   }}
                 >
-                  <HeartAvatar size={24} />
+                  <WorkspaceAvatar domain={w.domain} size={24} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, color: '#18181B', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                     {w.name}
                   </span>
-                  <button
-                    type="button"
-                    aria-label="Rename workspace"
-                    onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename workspace', w.name); if (name && name.trim()) renameWs.mutate({ id: w.id, name: name.trim() }, { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: '#9F9FA9', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                  >
-                    <PencilIcon />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Delete workspace"
-                    onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this workspace?')) deleteWs.mutate(w.id, { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: '#9F9FA9', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                  >
-                    <TrashIcon />
-                  </button>
                   {isSel && <CheckIcon />}
                 </button>
               );

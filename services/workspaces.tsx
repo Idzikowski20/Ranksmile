@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 
-export type Workspace = { id: number; name: string };
+export type Workspace = { id: number; name: string; domain?: string | null };
 
 export function useWorkspaces() {
    return useQuery<{ workspaces: Workspace[]; activeId: number | null }>('workspaces', async () => {
       const res = await fetch('/api/workspaces');
       const d = await res.json().catch(() => ({}));
       return { workspaces: d.workspaces || [], activeId: d.activeId ?? null };
-   }, { staleTime: 60_000 });
+   }, { staleTime: 300_000, cacheTime: 600_000, refetchOnWindowFocus: false });
 }
 
 async function jsonFetch(url: string, method: string, body?: unknown) {

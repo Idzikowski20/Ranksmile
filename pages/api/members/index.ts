@@ -1,18 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getCurrentUserId } from '../../../utils/getUser';
-import { listMembers, assertCanManage } from '../../../lib/members';
+import { getCurrentUser } from '../../../utils/getUser';
+import { listMembers, assertCanManage, getCallerRole, backfillCallerEmail } from '../../../lib/members';
 import { listInvitations, createInvitation } from '../../../lib/invitations';
 import { readOrganization } from '../../../lib/organization';
 import { sendMail } from '../../../lib/sendMail';
 import { inviteEmailHtml } from '../../../lib/inviteEmail';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-   const userId = await getCurrentUserId(req, res);
-   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+   const user = await getCurrentUser(req, res);
+   if (!user) return res.status(401).json({ error: 'Not authenticated' });
+   const userId = user.id;
 
    if (req.method === 'GET') {
-      const [members, invitations] = await Promise.all([listMembers(userId), listInvitations(userId)]);
-      return res.status(200).json({ members, invitations });
+      await backfillCallerEmail(userId, user.email);
+      const [members, invitations, role] = await Promise.all([
+         listMembers(userId), listInvitations(userId), getCallerRole(userId),
+      ]);
+      return res.status(200).json({ members, invitations, role });
    }
    if (req.method === 'POST') {
       try { await assertCanManage(userId); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }

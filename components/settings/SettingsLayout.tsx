@@ -8,7 +8,6 @@ import NotificationSettings from './NotificationSettings';
 import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
-import AdWordsSettings from './AdWordsSettings';
 import SubscriptionSettings from './SubscriptionSettings';
 import UsageSettings from './UsageSettings';
 import BillingDetailsSettings from './BillingDetailsSettings';
@@ -17,6 +16,8 @@ import ApiSettings from './ApiSettings';
 import ProfileSettings from './ProfileSettings';
 import BrandKnowledgeSettings from './BrandKnowledgeSettings';
 import CustomVoicesSettings from './CustomVoicesSettings';
+import WorkspaceGeneralSettings from './WorkspaceGeneralSettings';
+import WorkspaceMembersSettings from './WorkspaceMembersSettings';
 import SidebarLaunchpad from './SidebarLaunchpad';
 import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
@@ -26,7 +27,6 @@ export type SettingsPageSlug =
   | 'people'
   | 'brand_knowledge'
   | 'google_search_console'
-  | 'google_ads'
   | 'wordpress'
   | 'api'
   | 'billing_subscription'
@@ -34,6 +34,7 @@ export type SettingsPageSlug =
   | 'billing_invoices'
   | 'billing_details'
   | 'members'
+  | 'workspace_general'
   | 'custom_voices'
   | 'profile'
   | 'notifications'
@@ -48,7 +49,6 @@ const PAGE_ALIASES: Record<string, SettingsPageSlug> = {
   scraper: 'google_search_console',
   notification: 'people',
   searchconsole: 'google_search_console',
-  adwords: 'google_ads',
   workspace_members: 'members',
   workspace_voices: 'custom_voices',
   account_profile: 'profile',
@@ -60,7 +60,6 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   people: 'People',
   brand_knowledge: 'Brand Knowledge',
   google_search_console: 'Search Console',
-  google_ads: 'Google Ads',
   wordpress: 'WordPress',
   api: 'API',
   billing_subscription: 'Your subscription',
@@ -68,6 +67,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   billing_invoices: 'Invoices',
   billing_details: 'Billing details',
   members: 'Members',
+  workspace_general: 'General',
   custom_voices: 'Custom Voices',
   profile: 'Profile',
   notifications: 'Notifications',
@@ -89,8 +89,6 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     items: [
       { slug: 'general', label: 'General' },
       { slug: 'people', label: 'People' },
-      { slug: 'brand_knowledge', label: 'Brand Knowledge' },
-      { slug: 'custom_voices', label: 'Custom Voices' },
     ],
   },
   {
@@ -106,9 +104,17 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     label: 'Integrations',
     items: [
       { slug: 'google_search_console', label: 'Search Console' },
-      { slug: 'google_ads', label: 'Google Ads' },
       { slug: 'wordpress', label: 'WordPress' },
       { slug: 'api', label: 'API' },
+    ],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { slug: 'workspace_general', label: 'General' },
+      { slug: 'members', label: 'Members' },
+      { slug: 'brand_knowledge', label: 'Brand Knowledge' },
+      { slug: 'custom_voices', label: 'Custom Voices' },
     ],
   },
   {
@@ -205,19 +211,14 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   };
 
   const settingsSidebar = (
-    <aside className="relative flex h-full w-[220px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
-      <div className="styled-scrollbar-dark flex h-full flex-col overflow-y-auto overflow-x-hidden pb-[88px]">
-        <div className="sticky top-0 z-[100] bg-[#09090B] py-[24px]">
+    <aside className="relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
+      <div className="styled-scrollbar-dark flex h-full flex-col gap-[2px] overflow-y-auto overflow-x-hidden px-2 pb-[88px]">
+        <div className="sticky top-0 z-[100] bg-[#09090B] pt-3 pb-1">
           <Link href="/dashboard" passHref>
-            <a
-              className="flex w-full items-center gap-2 rounded-md py-1 text-[14px]
-              font-normal text-white/70 no-underline transition-colors hover:text-white"
-            >
-              <span className="flex items-center justify-center rounded-lg bg-white/10 p-[6px]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
+            <a className="group flex w-full items-center gap-2 rounded-lg p-2 text-[14px] font-normal text-white/70 no-underline transition-colors hover:bg-white/[0.06] hover:text-white">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 text-white/45 transition-colors group-hover:text-white">
+                <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               <span>Back to app</span>
             </a>
           </Link>
@@ -225,8 +226,8 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
         {SIDEBAR_SECTIONS.map((section) => (
           <div key={section.label} className="flex w-full flex-col gap-[2px]">
-            <div className="pb-2 pt-4 pl-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/35">
+            <div className="px-2 pb-2 pt-4">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-white/35">
                 {section.label}
               </span>
             </div>
@@ -236,8 +237,8 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
               return (
                 <Link key={item.slug} href={`/settings/${item.slug}`} passHref>
                   <a
-                    className={`flex items-center rounded-md py-3 pl-1 text-[14px] font-normal no-underline transition-colors ${
-                      isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    className={`flex items-center gap-2 rounded-lg p-2 text-[14px] font-normal no-underline transition-colors ${
+                      isActive ? 'bg-white/[0.08] text-white' : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
                     }`}
                   >
                     {item.label}
@@ -270,6 +271,14 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
       return <PeopleSettings />;
     }
 
+    if (currentPage === 'workspace_general') {
+      return <WorkspaceGeneralSettings />;
+    }
+
+    if (currentPage === 'members') {
+      return <WorkspaceMembersSettings />;
+    }
+
     if (currentPage === 'brand_knowledge') {
       return <BrandKnowledgeSettings />;
     }
@@ -296,10 +305,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
           settingsError={settingsError}
         />
       );
-    }
-
-    if (currentPage === 'google_ads') {
-      return <AdWordsSettings settings={settings} />;
     }
 
     if (currentPage === 'billing_subscription') {
