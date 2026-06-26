@@ -87,6 +87,19 @@ const WorkspaceSwitcher = () => {
   const createSetup = useCreateSetupWorkspace();
   const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
 
+  // Cache the active workspace name+domain so a reload shows it instantly (before
+  // react-query refetches) instead of the generic "Workspace" + heart placeholder.
+  // Read AFTER mount so SSR and the first client render match (no hydration mismatch).
+  const [cached, setCached] = useState<{ name: string; domain: string | null } | null>(null);
+  useEffect(() => {
+    try { const raw = localStorage.getItem('active_workspace_cache'); if (raw) setCached(JSON.parse(raw)); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    if (!current) return;
+    try { localStorage.setItem('active_workspace_cache', JSON.stringify({ name: current.name, domain: current.domain ?? null })); } catch { /* ignore */ }
+  }, [current?.name, current?.domain]);
+  const display = current ?? cached;
+
   useEffect(() => {
     if (!open) return undefined;
     const handler = (e: MouseEvent) => {
@@ -121,9 +134,9 @@ const WorkspaceSwitcher = () => {
           fontFamily: font,
         }}
       >
-        <WorkspaceAvatar domain={current?.domain} />
+        <WorkspaceAvatar domain={display?.domain} />
         <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'var(--font-family-primary)', fontSize: 16, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-          {current?.name ? capFirst(current.name) : 'Workspace'}
+          {display?.name ? capFirst(display.name) : 'Workspace'}
         </span>
         <ChevronUpDown />
       </button>
