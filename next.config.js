@@ -25,11 +25,13 @@ const nextConfig = {
     return [
       { source: '/content-editor', destination: '/articles' },
       { source: '/content-editor/:path*', destination: '/articles/:path*' },
+      { source: '/workspace/:wsId/:path*', destination: '/:path*' },
     ];
   },
   async redirects() {
     return [
       { source: '/domain/:slug*', destination: '/sites/:slug*', permanent: true },
+      { source: '/workspace/:wsId', destination: '/workspace/:wsId/dashboard', permanent: false },
     ];
   },
   serverRuntimeConfig: {
