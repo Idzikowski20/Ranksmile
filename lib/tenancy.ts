@@ -10,95 +10,123 @@ async function select(sql: string, replacements: any[]): Promise<Row[]> {
    return rows;
 }
 
-const MEMBERSHIP_SQL = "SELECT org_id FROM organization_members WHERE user_id = ? AND status = 'active' ORDER BY id ASC LIMIT 1";
+const MEMBERSHIP_SQL = "SELECT org_id, role, workspace_ids FROM organization_members WHERE user_id = ? AND status = 'active' ORDER BY id ASC LIMIT 1";
+
+async function createWorkspace(orgId: number, name: string): Promise<number> {
+   await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', { replacements: [orgId, name] });
+   const back = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id DESC LIMIT 1', [orgId]);
+   return Number(back[0].id);
+}
 
 /**
- * Idempotently provisions exactly one organization, one "Default" workspace and one
- * "owner" membership for the user, then claims their domains into that workspace.
- *
- * Concurrency-safe: the create runs inside a transaction, and the UNIQUE index on
- * organizations(owner_user_id) serializes concurrent first-requests — the loser's
- * INSERT throws, its transaction rolls back, and it re-reads the winner's org.
- * Returns the user's org id and default workspace id.
+ * Workspace = domain (1:1). Splits any legacy multi-domain workspace into one
+ * workspace per domain (first domain keeps + renames the workspace; the rest get
+ * fresh ones), and claims the user's unassigned domains into their own workspace.
+ * Idempotent: a no-op once every domain is alone in an org workspace.
  */
-export async function ensureUserTenancy(userId: string): Promise<{ orgId: number; defaultWorkspaceId: number }> {
+async function migrateDomainsToWorkspaces(orgId: number, userId: string, isOwner: boolean): Promise<void> {
+   const shared = await select(
+      `SELECT workspace_id AS ws FROM domain
+        WHERE workspace_id IN (SELECT id FROM workspaces WHERE org_id = ?)
+        GROUP BY workspace_id HAVING COUNT(*) > 1`,
+      [orgId],
+   );
+   for (const s of shared) {
+      const wsId = Number(s.ws);
+      const domains = await select('SELECT id, domain FROM domain WHERE workspace_id = ? ORDER BY id ASC', [wsId]);
+      await db.query('UPDATE workspaces SET name = ? WHERE id = ?', { replacements: [domains[0].domain, wsId] });
+      for (let i = 1; i < domains.length; i += 1) {
+         const newWs = await createWorkspace(orgId, domains[i].domain);
+         await db.query('UPDATE domain SET workspace_id = ? WHERE id = ?', { replacements: [newWs, domains[i].id] });
+      }
+   }
+   const ownerLegacy = isOwner ? ' OR "userId" IS NULL' : '';
+   const orphans = await select(
+      `SELECT id, domain FROM domain
+        WHERE ("userId" = ?${ownerLegacy})
+          AND (workspace_id IS NULL OR workspace_id NOT IN (SELECT id FROM workspaces WHERE org_id = ?))
+        ORDER BY id ASC`,
+      [userId, orgId],
+   );
+   for (const d of orphans) {
+      const newWs = await createWorkspace(orgId, d.domain);
+      await db.query('UPDATE domain SET workspace_id = ? WHERE id = ?', { replacements: [newWs, d.id] });
+   }
+}
+
+/** Provisions the caller's org + owner membership (no default workspace), then migrates domains→workspaces. */
+export async function ensureUserTenancy(userId: string): Promise<{ orgId: number }> {
    if (!userId) throw new Error('ensureUserTenancy requires a non-empty userId');
    await ensureTenancyTables();
 
-   const existing = await select(MEMBERSHIP_SQL, [userId]);
-   let orgId: number | undefined = existing.length ? Number(existing[0].org_id) : undefined;
-
-   if (orgId === undefined) {
+   let member = await select(MEMBERSHIP_SQL, [userId]);
+   if (!member.length) {
       try {
          await db.transaction(async (t: Transaction) => {
-            const opt = (replacements: any[]) => ({ replacements, transaction: t });
+            const opt = (r: any[]) => ({ replacements: r, transaction: t } as any);
             await db.query('INSERT INTO organizations (owner_user_id, name) VALUES (?, ?)', opt([userId, 'My organization']));
-            const [orgs] = (await db.query('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', opt([userId]))) as unknown as [Row[], unknown];
+            const [orgs] = await db.query('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', opt([userId])) as unknown as [Row[], unknown];
             const newOrgId = Number(orgs[0].id);
-            await db.query("INSERT INTO workspaces (org_id, name) VALUES (?, 'Default')", opt([newOrgId]));
             await db.query("INSERT INTO organization_members (org_id, user_id, role, status) VALUES (?, ?, 'owner', 'active')", opt([newOrgId, userId]));
-            const [ws0] = (await db.query('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id ASC LIMIT 1', opt([newOrgId]))) as unknown as [Row[], unknown];
-            const wsId = Number(ws0[0].id);
-            // Claim this user's existing domains (camelCase column → must be quoted).
-            await db.query('UPDATE domain SET workspace_id = ? WHERE "userId" = ? AND workspace_id IS NULL', opt([wsId, userId]));
-            // Owner-only: absorb legacy (pre-tenancy, userId NULL) domains.
-            if (userId === process.env.TENANCY_OWNER_USER_ID) {
-               await db.query('UPDATE domain SET workspace_id = ? WHERE "userId" IS NULL AND workspace_id IS NULL', opt([wsId]));
-            }
          });
-      } catch {
-         // A concurrent request won the UNIQUE(owner_user_id) race — re-read the winner below.
-      }
-      const after = await select(MEMBERSHIP_SQL, [userId]);
-      if (!after.length) throw new Error('tenancy provisioning failed');
-      orgId = Number(after[0].org_id);
+      } catch { /* concurrent winner — re-read below */ }
+      member = await select(MEMBERSHIP_SQL, [userId]);
+      if (!member.length) throw new Error('tenancy provisioning failed');
    }
-
-   const ws = await select('SELECT id FROM workspaces WHERE org_id = ? ORDER BY id ASC LIMIT 1', [orgId]);
-   return { orgId, defaultWorkspaceId: Number(ws[0].id) };
+   const orgId = Number(member[0].org_id);
+   await migrateDomainsToWorkspaces(orgId, userId, member[0].role === 'owner');
+   return { orgId };
 }
 
-/** Workspace ids in every org where the user is an active member. [] for a falsy user. */
+/** Workspace ids the user may access. Owner/Admin → all org workspaces; Member → their workspace_ids (NULL = all). */
 export async function getAccessibleWorkspaceIds(userId: string | null | undefined): Promise<number[]> {
    if (!userId) return [];
    await ensureUserTenancy(userId);
-   const rows = await select(
-      "SELECT w.id AS id FROM workspaces w JOIN organization_members m ON m.org_id = w.org_id WHERE m.user_id = ? AND m.status = 'active'",
-      [userId],
-   );
-   return rows.map((r) => Number(r.id));
+   const member = await select(MEMBERSHIP_SQL, [userId]);
+   if (!member.length) return [];
+   const orgId = Number(member[0].org_id);
+   const all = (await select('SELECT id FROM workspaces WHERE org_id = ?', [orgId])).map((r) => Number(r.id));
+   const role = member[0].role;
+   const wsIdsRaw = member[0].workspace_ids;
+   if (role === 'owner' || role === 'admin' || wsIdsRaw == null) return all;
+   let allowed: number[] = [];
+   try { allowed = (JSON.parse(wsIdsRaw) as any[]).map((n) => Number(n)); } catch { allowed = []; }
+   return all.filter((id) => allowed.includes(id));
 }
 
-/** The active workspace: a valid `active_workspace` cookie, else the user's default workspace. */
+/** The active workspace: a valid `active_workspace` cookie, else the first accessible workspace, else 0 (none → create-workspace flow). */
 export async function getActiveWorkspaceId(req: NextApiRequest, userId: string): Promise<number> {
-   const { defaultWorkspaceId } = await ensureUserTenancy(userId);
+   const accessible = await getAccessibleWorkspaceIds(userId);
    const raw = req.cookies?.active_workspace;
    if (raw) {
       const id = Number(raw);
-      if (Number.isInteger(id) && id > 0) {
-         const accessible = await getAccessibleWorkspaceIds(userId);
-         if (accessible.includes(id)) return id;
-      }
+      if (Number.isInteger(id) && id > 0 && accessible.includes(id)) return id;
    }
-   return defaultWorkspaceId;
+   return accessible.length ? accessible[0] : 0;
 }
 
 /**
- * True if the article's domain belongs to a workspace the user can access. Guards
- * article-by-id routes, which otherwise expose data by raw id regardless of tenant.
- * Provisions first so the user's freshly-claimed domains are visible to the join.
+ * The article id an opaque share token unlocks, or null if the token matches nothing.
  */
+export async function articleIdForShareToken(token: string | null | undefined): Promise<number | null> {
+   if (!token || typeof token !== 'string') return null;
+   const idCol = await getArticleIdSql();
+   const rows = await select(`SELECT ${idCol} AS id FROM articles WHERE share_token = ? LIMIT 1`, [token]);
+   return rows.length ? Number(rows[0].id) : null;
+}
+
+/** True if the article's domain belongs to a workspace the caller can access. */
 export async function assertArticleAccess(userId: string | null | undefined, articleId: number): Promise<boolean> {
    if (!userId || !Number.isInteger(articleId)) return false;
-   await ensureUserTenancy(userId);
+   const accessible = await getAccessibleWorkspaceIds(userId);
+   if (!accessible.length) return false;
    const idCol = await getArticleIdSql();
+   const placeholders = accessible.map(() => '?').join(',');
    const rows = await select(
       `SELECT 1 AS ok FROM articles a
           JOIN domain d ON d."ID" = a.domain_id
-          JOIN workspaces w ON w.id = d.workspace_id
-          JOIN organization_members m ON m.org_id = w.org_id
-        WHERE a.${idCol} = ? AND m.user_id = ? AND m.status = 'active' LIMIT 1`,
-      [articleId, userId],
+        WHERE a.${idCol} = ? AND d.workspace_id IN (${placeholders}) LIMIT 1`,
+      [articleId, ...accessible],
    );
    return rows.length > 0;
 }
