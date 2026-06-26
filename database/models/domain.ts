@@ -57,6 +57,20 @@ class Domain extends Model {
    @Column({ type: DataType.TEXT, allowNull: true, defaultValue: '' })
    brand_voice!: string;
 
+   // Workspace-level settings (workspace == domain)
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
+   country!: string | null;
+
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
+   language!: string | null;
+
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
+   logo_url!: string | null;
+
+   // Per-domain Custom Voices (JSON array) — replaces the global content-settings.json store
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: JSON.stringify([]) })
+   voices!: string | null;
+
    // Auth0 user ID — null oznacza domenę "wspólną" (legacy / nie przypisaną)
    @Column({ type: DataType.STRING, allowNull: true, defaultValue: null })
    userId!: string | null;
