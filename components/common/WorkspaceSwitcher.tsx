@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../../services/workspaces';
+import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '../../services/workspaces';
 
 const font = 'var(--font-family-primary)';
 
@@ -68,20 +68,7 @@ const PlusIcon = () => (
   </svg>
 );
 
-const PencilIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M15.232 5.232l3.536 3.536M9 11l6.768-6.768a2 2 0 012.828 2.828L11.828 13.828A4 4 0 019.172 15H8v-1.172A4 4 0 019 11z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
 function friendly(code: string | undefined): string {
-  if (code === 'WORKSPACE_NOT_EMPTY') return 'Workspace still has domains — move or remove them first.';
   if (code === 'WORKSPACE_LAST') return 'You must keep at least one workspace.';
   return 'Something went wrong.';
 }
@@ -96,8 +83,6 @@ const WorkspaceSwitcher = () => {
   const activeId = data?.activeId ?? null;
   const setActive = useSetActiveWorkspace();
   const createSetup = useCreateSetupWorkspace();
-  const renameWs = useRenameWorkspace();
-  const deleteWs = useDeleteWorkspace();
   const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
 
   useEffect(() => {
@@ -192,22 +177,6 @@ const WorkspaceSwitcher = () => {
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, color: '#18181B', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                     {w.name}
                   </span>
-                  <button
-                    type="button"
-                    aria-label="Rename workspace"
-                    onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename workspace', w.name); if (name && name.trim()) renameWs.mutate({ id: w.id, name: name.trim() }, { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: '#9F9FA9', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                  >
-                    <PencilIcon />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Delete workspace"
-                    onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this workspace?')) deleteWs.mutate(w.id, { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: '#9F9FA9', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                  >
-                    <TrashIcon />
-                  </button>
                   {isSel && <CheckIcon />}
                 </button>
               );
