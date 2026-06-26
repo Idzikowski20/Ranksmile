@@ -62,6 +62,15 @@ const ChevronDown = ({ open }: { open: boolean }) => (
    </span>
 );
 
+// ─── Filled check (GSC benefit bullets) ───────────────────────────────────────
+const CheckCircle = () => (
+   <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 9999, background: '#18181b', flexShrink: 0 }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+         <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+   </span>
+);
+
 // ─── Step progress dots ───────────────────────────────────────────────────────
 // Step 1: dot1 = orange/wide, dot2 = gray/narrow
 // Step 2: dot1 = gray/narrow, dot2 = orange/wide
@@ -150,6 +159,7 @@ const SetupPage: NextPage = () => {
 
    // Step 1
    const [gscSites, setGscSites] = useState<{ siteUrl: string }[]>([]);
+   const [gscLoaded, setGscLoaded] = useState(false);
    const [selectedSite, setSelectedSite] = useState('');
    const [comboOpen, setComboOpen] = useState(false);
    const [urlMode, setUrlMode] = useState(false);
@@ -176,8 +186,15 @@ const SetupPage: NextPage = () => {
          })
          .catch(() => {
             setGscSites([]);
-         });
+         })
+         .finally(() => setGscLoaded(true));
    }, []);
+
+   const connectGsc = () => {
+      if (typeof window !== 'undefined') {
+         window.location.href = `/api/gsc/connect?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      }
+   };
 
    // ── Close combo on outside click ───────────────────────────────────────
    useEffect(() => {
@@ -290,7 +307,9 @@ const SetupPage: NextPage = () => {
                      <div className="gap-2xl flex w-full flex-col justify-center">
                         <StepDots step={1} />
                         <div className="gap-md flex w-full flex-col justify-center">
-                           <h2 className="m-0 text-lg font-semibold">Create a new workspace</h2>
+                           <h2 className="m-0 text-lg font-semibold">
+                              {gscLoaded && gscSites.length > 0 ? 'Create a new workspace' : 'Set up your workspace'}
+                           </h2>
                            <span style={{ color: '#71717a' }}>
                               Workspace is used for a brand you own or manage. You can add workspaces for more brands later.
                            </span>
@@ -301,65 +320,42 @@ const SetupPage: NextPage = () => {
                         <div className="gap-md flex w-full flex-col">
                            <div className="flex w-full flex-col" ref={comboRef}>
                               {!urlMode ? (
-                                 <>
-                                    <div className="text-md pb-xs font-medium text-gray-100">
-                                       Select Search Console site
+                                 // eslint-disable-next-line no-nested-ternary
+                                 !gscLoaded ? (
+                                    <div className="border-gray-40 bg-white-base flex h-[40px] w-full items-center rounded-lg border px-md" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                       <span className="text-gray-60 text-md">Loading…</span>
                                     </div>
-                                    {/* Combobox button */}
-                                    <button
-                                       type="button"
-                                       role="combobox"
-                                       aria-expanded={comboOpen}
-                                       aria-haspopup="dialog"
-                                       onClick={() => setComboOpen((o) => !o)}
-                                       disabled={configuring}
-                                       className="border-gray-40 bg-white-base gap-sm px-md text-md flex h-[40px] w-full cursor-pointer items-center rounded-lg border border-solid text-left font-sans leading-normal outline-2 outline-offset-[4px] outline-transparent transition-[outline-color,border-color] duration-200 hover:border-gray-60 focus-visible:border-gray-80 focus-visible:outline-purple-40 disabled:bg-gray-10 disabled:cursor-not-allowed disabled:opacity-60"
-                                       style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-                                    >
-                                       <GoogleIcon />
-                                       <span className="min-w-0 flex-1 truncate">
-                                          {selectedSite ? (
-                                             <span className="flex-1 truncate text-gray-base">{selectedSite}</span>
-                                          ) : (
-                                             <span className="text-gray-60 flex-1 truncate">Select site</span>
-                                          )}
-                                       </span>
-                                       <div className="ml-auto flex items-center">
-                                          <ChevronDown open={comboOpen} />
-                                       </div>
-                                    </button>
-
-                                    {/* Dropdown */}
-                                    {comboOpen && (
-                                       <div
-                                          className="border-gray-20 bg-white-base mt-xs rounded-lg border"
-                                          style={{
-                                             boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                                             position: 'absolute',
-                                             zIndex: 50,
-                                             width: '100%',
-                                             maxWidth: 400,
-                                             maxHeight: 240,
-                                             overflowY: 'auto',
-                                          }}
+                                 ) : gscSites.length > 0 ? (
+                                    <>
+                                       <div className="text-md pb-xs font-medium text-gray-100">Select Search Console site</div>
+                                       <button
+                                          type="button"
+                                          role="combobox"
+                                          aria-expanded={comboOpen}
+                                          aria-haspopup="dialog"
+                                          onClick={() => setComboOpen((o) => !o)}
+                                          disabled={configuring}
+                                          className="border-gray-40 bg-white-base gap-sm px-md text-md flex h-[40px] w-full cursor-pointer items-center rounded-lg border border-solid text-left font-sans leading-normal outline-2 outline-offset-[4px] outline-transparent transition-[outline-color,border-color] duration-200 hover:border-gray-60 focus-visible:border-gray-80 focus-visible:outline-purple-40 disabled:bg-gray-10 disabled:cursor-not-allowed disabled:opacity-60"
+                                          style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
                                        >
-                                          {gscSites.length === 0 ? (
-                                             <button
-                                                type="button"
-                                                className="flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
-                                                onClick={() => {
-                                                   window.location.href =
-                                                      '/api/gsc/connect?redirect=' +
-                                                      encodeURIComponent(
-                                                         window.location.pathname + window.location.search,
-                                                      );
-                                                }}
-                                             >
-                                                <GoogleIcon />
-                                                <span className="ml-sm">Connect Search Console</span>
-                                             </button>
-                                          ) : (
-                                             gscSites.map((site) => (
+                                          <GoogleIcon />
+                                          <span className="min-w-0 flex-1 truncate">
+                                             {selectedSite ? (
+                                                <span className="flex-1 truncate text-gray-base">{selectedSite}</span>
+                                             ) : (
+                                                <span className="text-gray-60 flex-1 truncate">Select site</span>
+                                             )}
+                                          </span>
+                                          <div className="ml-auto flex items-center">
+                                             <ChevronDown open={comboOpen} />
+                                          </div>
+                                       </button>
+                                       {comboOpen && (
+                                          <div
+                                             className="border-gray-20 bg-white-base mt-xs rounded-lg border"
+                                             style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, maxHeight: 240, overflowY: 'auto' }}
+                                          >
+                                             {gscSites.map((site) => (
                                                 <button
                                                    key={site.siteUrl}
                                                    type="button"
@@ -368,11 +364,32 @@ const SetupPage: NextPage = () => {
                                                 >
                                                    {site.siteUrl}
                                                 </button>
-                                             ))
-                                          )}
+                                             ))}
+                                          </div>
+                                       )}
+                                    </>
+                                 ) : (
+                                    // GSC not connected → benefits + connect CTA (no combobox)
+                                    <div className="gap-base flex w-full flex-col rounded-xl p-base" style={{ background: '#f4f4f5' }}>
+                                       <button
+                                          type="button"
+                                          onClick={connectGsc}
+                                          className="gap-sm text-base flex h-[44px] w-full cursor-pointer items-center justify-center rounded-lg border-none font-sans font-semibold"
+                                          style={{ background: '#18181b', color: '#fff' }}
+                                       >
+                                          <GoogleIcon />
+                                          <span>Connect Search Console</span>
+                                       </button>
+                                       <div className="gap-sm flex flex-col">
+                                          {['Automatic keyword selection', 'Access real traffic and performance data', 'Content ideas based on deep topical analysis'].map((t) => (
+                                             <div key={t} className="gap-sm text-md flex items-center" style={{ color: '#3f3f47' }}>
+                                                <CheckCircle />
+                                                <span>{t}</span>
+                                             </div>
+                                          ))}
                                        </div>
-                                    )}
-                                 </>
+                                    </div>
+                                 )
                               ) : (
                                  <>
                                     <div className="text-md pb-xs font-medium text-gray-100">
