@@ -8,11 +8,13 @@ jest.mock('../../lib/workspaces', () => ({
   createWorkspace: jest.fn().mockResolvedValue({ id: 11, name: 'New' }),
   renameWorkspace: jest.fn().mockResolvedValue(undefined),
   deleteWorkspace: jest.fn().mockResolvedValue(undefined),
+  createSetupWorkspace: jest.fn().mockResolvedValue(7),
 }));
 
 import listHandler from '../../pages/api/workspaces/index';
 import idHandler from '../../pages/api/workspaces/[id]';
 import activeHandler from '../../pages/api/workspaces/active';
+import setupHandler from '../../pages/api/workspaces/setup';
 import { deleteWorkspace } from '../../lib/workspaces';
 
 const makeRes = () => { const r: any = {}; r.status = jest.fn().mockReturnValue(r); r.json = jest.fn().mockReturnValue(r); r.setHeader = jest.fn(); return r; };
@@ -45,5 +47,12 @@ describe('/api/workspaces', () => {
     const res = makeRes();
     await activeHandler({ method: 'POST', cookies: {}, body: { id: 999 } } as any, res);
     expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it('POST /api/workspaces/setup returns 201 with the new workspace id', async () => {
+    const res = makeRes();
+    await setupHandler({ method: 'POST', cookies: {} } as any, res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({ id: 7 });
   });
 });
