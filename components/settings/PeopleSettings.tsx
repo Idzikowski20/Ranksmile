@@ -164,8 +164,8 @@ const PeopleSettings = () => {
   const wsNames = useMemo(() => new Map(workspaces.map((w) => [w.id, w.name])), [workspaces]);
   const callerRole = data?.role ?? null;
   const canManage = callerRole === 'owner' || callerRole === 'admin';
-  // An admin may not edit/remove an owner; an owner may.
-  const canActOn = (m: PeopleMember) => canManage && (callerRole === 'owner' || m.role !== 'owner');
+  // An owner's role can never be changed and an owner can never be removed (from this UI).
+  const canActOn = (m: PeopleMember) => canManage && m.role !== 'owner';
 
   const onError = (e: unknown): void => { toast.error(e instanceof Error ? e.message : 'Something went wrong'); };
   const onOk = (msg: string) => (): void => { toast.success(msg); };
@@ -183,7 +183,7 @@ const PeopleSettings = () => {
   const invitations = data?.invitations || [];
 
   return (
-    <div className="flex w-full flex-col items-start gap-base">
+    <div className="flex w-full flex-col items-start gap-base" style={{ height: '100%' }}>
       <div className="gap-2xs flex flex-col">
         <span className="text-base font-semibold text-gray-140">People</span>
         <span className="text-md font-normal text-gray-100">Manage who has access to this organization</span>
