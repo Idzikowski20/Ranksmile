@@ -23,6 +23,13 @@ const Home: NextPage = () => {
                .then((r) => (r.ok ? r.json() : { completed: false }))
                .catch(() => ({ completed: false }));
             if (!ob.completed) { router.replace('/onboarding'); return; }
+            // Onboarded with no ready workspace: owners/admins go to the creator; a member who
+            // has lost (or never had) workspace access lands on a clear "no access" screen.
+            const role: string | null = await fetch('/api/members')
+               .then((r) => (r.ok ? r.json() : {}))
+               .then((data: { role?: string | null }) => data.role ?? null)
+               .catch(() => null);
+            if (role !== 'owner' && role !== 'admin') { router.replace('/no-access'); return; }
             const created = await fetch('/api/workspaces/setup', { method: 'POST' })
                .then((r) => (r.ok ? r.json() : null))
                .catch(() => null);
