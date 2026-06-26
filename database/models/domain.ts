@@ -61,6 +61,10 @@ class Domain extends Model {
    @Column({ type: DataType.STRING, allowNull: true, defaultValue: null })
    userId!: string | null;
 
+   // Tenancy scope — FK to workspaces.id (null = unassigned/legacy, pre-tenancy)
+   @Column({ type: DataType.INTEGER, allowNull: true, defaultValue: null })
+   workspace_id!: number | null;
+
    // Traffic goal JSON: { percentage, period, startDate, baseClicks }
    @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
    traffic_goal!: string | null;
