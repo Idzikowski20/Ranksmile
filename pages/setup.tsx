@@ -156,7 +156,7 @@ const SetupShell = ({ title, children }: { title: string; children: ReactNode })
       </Head>
       <div className="relative flex flex-col" style={{ minHeight: '100dvh' }}>
          <GlobalTopbar breadcrumb={<SetupLogo />} />
-         <div className="p-sm" style={{ flex: 1 }}>
+         <div className="p-sm flex flex-col" style={{ flex: 1, minHeight: 0 }}>
             {children}
          </div>
       </div>
@@ -382,7 +382,7 @@ const SetupPage: NextPage = () => {
          <SetupShell title="Create a new workspace · SerpBear">
             <div
                data-scroll-element="true"
-               className="relative rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
+               className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
             >
                   <div className="pb-md mx-auto flex w-full flex-col items-center justify-center self-center gap-lg" style={{ maxWidth: 400, paddingTop: '3rem' }}>
                      <div className="gap-2xl flex w-full flex-col justify-center">
