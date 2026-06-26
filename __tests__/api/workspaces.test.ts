@@ -31,12 +31,6 @@ describe('/api/workspaces', () => {
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({ id: 11, name: 'New' });
   });
-  it('DELETE maps WORKSPACE_NOT_EMPTY to 409', async () => {
-    (deleteWorkspace as jest.Mock).mockRejectedValueOnce(new Error('WORKSPACE_NOT_EMPTY'));
-    const res = makeRes();
-    await idHandler({ method: 'DELETE', cookies: {}, query: { id: '10' } } as any, res);
-    expect(res.status).toHaveBeenCalledWith(409);
-  });
   it('active POST sets the cookie when the workspace is accessible', async () => {
     const res = makeRes();
     await activeHandler({ method: 'POST', cookies: {}, body: { id: 10 } } as any, res);

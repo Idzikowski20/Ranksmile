@@ -1,4 +1,4 @@
-jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
+jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({})) } }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
 
 import db from '../../database/database';
@@ -12,8 +12,8 @@ describe('workspaces helpers', () => {
 
   it('listWorkspaces returns the org workspaces', async () => {
     mockQuery.mockResolvedValueOnce(rows([{ id: 9, name: 'Default' }, { id: 10, name: 'Blog' }]));
-    expect(await listWorkspaces('u1')).toEqual([{ id: 9, name: 'Default' }, { id: 10, name: 'Blog' }]);
-    expect(String(mockQuery.mock.calls[0][0])).toContain('FROM workspaces WHERE org_id = ?');
+    expect(await listWorkspaces('u1')).toEqual([{ id: 9, name: 'Default', domain: null }, { id: 10, name: 'Blog', domain: null }]);
+    expect(String(mockQuery.mock.calls[0][0])).toContain('FROM workspaces w WHERE w.org_id = ?');
     expect(String(mockQuery.mock.calls[0][0])).toContain("status = 'ready'");
   });
 
@@ -38,12 +38,15 @@ describe('workspaces helpers', () => {
     await expect(renameWorkspace('u1', 99, 'X')).rejects.toThrow('WORKSPACE_NOT_FOUND');
   });
 
-  it('deleteWorkspace blocks deleting a non-empty workspace', async () => {
+  it('deleteWorkspace cascades the domain(s) then removes the workspace', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 10 }]))   // ownership
-      .mockResolvedValueOnce(rows([{ n: 3 }]))     // workspace count in org (>1)
-      .mockResolvedValueOnce(rows([{ n: 2 }]));    // domain count (>0) -> block
-    await expect(deleteWorkspace('u1', 10)).rejects.toThrow('WORKSPACE_NOT_EMPTY');
+      .mockResolvedValueOnce(rows([{ id: 10 }]))                  // assertInOrg ownership
+      .mockResolvedValueOnce(rows([{ n: 3 }]))                    // workspace count in org (>1)
+      .mockResolvedValueOnce(rows([{ id: 42, domain: 'x.pl' }])); // domains in the workspace
+    await expect(deleteWorkspace('u1', 10)).resolves.toBeUndefined();
+    const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
+    expect(sqls.some((s) => s.includes('DELETE FROM domain'))).toBe(true);
+    expect(sqls.some((s) => s.includes('DELETE FROM workspaces'))).toBe(true);
   });
 
   it('deleteWorkspace blocks deleting the last workspace', async () => {
@@ -51,16 +54,6 @@ describe('workspaces helpers', () => {
       .mockResolvedValueOnce(rows([{ id: 9 }]))    // ownership
       .mockResolvedValueOnce(rows([{ n: 1 }]));    // only one workspace -> block
     await expect(deleteWorkspace('u1', 9)).rejects.toThrow('WORKSPACE_LAST');
-  });
-
-  it('deleteWorkspace deletes an empty non-last workspace', async () => {
-    mockQuery
-      .mockResolvedValueOnce(rows([{ id: 10 }]))   // ownership
-      .mockResolvedValueOnce(rows([{ n: 2 }]))     // workspace count >1
-      .mockResolvedValueOnce(rows([{ n: 0 }]))     // domain count 0
-      .mockResolvedValueOnce(rows([]));            // DELETE
-    await deleteWorkspace('u1', 10);
-    expect(String(mockQuery.mock.calls[3][0])).toContain('DELETE FROM workspaces');
   });
 
   it('createSetupWorkspace inserts a setup workspace and returns its id when none exists', async () => {
