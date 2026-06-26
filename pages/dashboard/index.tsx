@@ -232,7 +232,6 @@ const DashboardPage: NextPage = () => {
               pipeline={pipelineActive && setup ? (
                 <SetupPipeline
                   stages={setup.stages}
-                  stagePercent={setup.stagePercent}
                   status={setup.status}
                   error={setup.error}
                   onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}

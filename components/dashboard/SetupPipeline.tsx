@@ -22,34 +22,16 @@ function CheckIcon() {
    );
 }
 
-function SpinnerIcon({ percent }: { percent: number }) {
+function SpinnerIcon() {
    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, flexShrink: 0, position: 'relative' }}>
-         <span
-            aria-hidden="true"
-            style={{
-               display: 'inline-block', width: 16, height: 16, flexShrink: 0,
-               border: '2px solid #E4E4E7', borderTopColor: '#783AFB', borderRadius: '9999px',
-               animation: 'spin 0.7s linear infinite',
-            }}
-         />
-         {percent > 0 && (
-            <span style={{
-               position: 'absolute',
-               left: '50%',
-               top: 'calc(100% + 2px)',
-               transform: 'translateX(-50%)',
-               fontSize: 9,
-               color: '#783AFB',
-               fontWeight: 700,
-               fontFamily: 'var(--font-family-primary)',
-               whiteSpace: 'nowrap',
-               lineHeight: 1,
-            }}>
-               {percent}%
-            </span>
-         )}
-      </span>
+      <span
+         aria-hidden="true"
+         style={{
+            display: 'inline-block', width: 16, height: 16, flexShrink: 0,
+            border: '2px solid #E4E4E7', borderTopColor: '#783AFB', borderRadius: '9999px',
+            animation: 'spin 0.7s linear infinite',
+         }}
+      />
    );
 }
 
@@ -61,21 +43,20 @@ function HollowCircle() {
    );
 }
 
-function StageGlyph({ state, stagePercent }: { state: StageState; stagePercent: number }) {
+function StageGlyph({ state }: { state: StageState }) {
    if (state === 'done') return <CheckIcon />;
-   if (state === 'running') return <SpinnerIcon percent={stagePercent} />;
+   if (state === 'running') return <SpinnerIcon />;
    return <HollowCircle />;
 }
 
 type Props = {
    stages: SetupStatus['stages'];
-   stagePercent: number;
    status: SetupStatus['status'];
    error: string | null;
    onRetry: () => void;
 };
 
-const SetupPipeline: React.FC<Props> = ({ stages, stagePercent, status, error, onRetry }) => {
+const SetupPipeline: React.FC<Props> = ({ stages, status, error, onRetry }) => {
    const isFailed = status === 'failed';
 
    if (isFailed) {
@@ -127,11 +108,10 @@ const SetupPipeline: React.FC<Props> = ({ stages, stagePercent, status, error, o
          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {STAGE_ORDER.map((key) => {
                const state = stages[key];
-               const isRunning = state === 'running';
                const isPending = state === 'pending';
                return (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 24 }}>
-                     <StageGlyph state={state} stagePercent={isRunning ? stagePercent : 0} />
+                     <StageGlyph state={state} />
                      <span style={{
                         fontSize: 13,
                         fontWeight: isPending ? 400 : 600,
