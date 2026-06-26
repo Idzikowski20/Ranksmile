@@ -5,6 +5,7 @@ jest.mock('../../database/database', () => ({
 jest.mock('../../lib/ensureTenancyTables', () => ({
   ensureTenancyTables: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('../../lib/articleSql', () => ({ getArticleIdSql: jest.fn().mockResolvedValue('id') }));
 
 import db from '../../database/database';
 import { ensureUserTenancy, getAccessibleWorkspaceIds, getActiveWorkspaceId, assertArticleAccess } from '../../lib/tenancy';
