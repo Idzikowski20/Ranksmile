@@ -80,66 +80,73 @@ type Props = {
 const SetupPipeline: React.FC<Props> = ({ stages, stagePercent, status, error, onRetry }) => {
    const isFailed = status === 'failed';
 
+   if (isFailed) {
+      return (
+         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10" fill="#FF6F77" />
+                  <path d="M12 7.5v5.5M12 16.3h.01" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+               </svg>
+               <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                  We couldn&apos;t finish analyzing your domain
+               </span>
+            </div>
+            {error && (
+               <span style={{ fontSize: 12.5, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
+                  {error}
+               </span>
+            )}
+            <button
+               type="button"
+               onClick={onRetry}
+               style={{
+                  alignSelf: 'flex-start', padding: '8px 16px', borderRadius: 8, border: 'none',
+                  background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600,
+                  fontFamily: 'var(--font-family-primary)', cursor: 'pointer', transition: 'background 150ms ease',
+               }}
+               onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+               onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+            >
+               Retry
+            </button>
+         </div>
+      );
+   }
+
    return (
       <div style={{ width: '100%' }}>
-            <p style={{
-               fontSize: 15,
-               fontWeight: 700,
-               color: '#18181B',
-               fontFamily: 'var(--font-family-primary)',
-               margin: '0 0 20px',
-            }}>
-               Analyzing your domain…
-            </p>
+         <p style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: '#18181B',
+            fontFamily: 'var(--font-family-primary)',
+            margin: '0 0 20px',
+         }}>
+            Analyzing your domain…
+         </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-               {STAGE_ORDER.map((key) => {
-                  const state = stages[key];
-                  const isRunning = state === 'running';
-                  const isPending = state === 'pending';
-                  return (
-                     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 24 }}>
-                        <StageGlyph state={state} stagePercent={isRunning ? stagePercent : 0} />
-                        <span style={{
-                           fontSize: 13,
-                           fontWeight: isPending ? 400 : 600,
-                           color: isPending ? '#52525C' : '#18181B',
-                           fontFamily: 'var(--font-family-primary)',
-                           lineHeight: '20px',
-                        }}>
-                           {STAGE_LABELS[key]}
-                        </span>
-                     </div>
-                  );
-               })}
-            </div>
-
-            {isFailed && (
-               <div style={{ marginTop: 20, padding: 12, borderRadius: 8, background: 'rgba(255,111,119,0.07)', border: '1px solid rgba(255,111,119,0.2)' }}>
-                  {error && (
-                     <p style={{ fontSize: 12, color: '#FF6F77', fontFamily: 'var(--font-family-primary)', margin: '0 0 10px', lineHeight: 1.5 }}>
-                        {error}
-                     </p>
-                  )}
-                  <button
-                     type="button"
-                     onClick={onRetry}
-                     style={{
-                        padding: '6px 14px',
-                        borderRadius: 6,
-                        border: '1px solid #783AFB',
-                        background: 'transparent',
-                        color: '#783AFB',
-                        fontSize: 12,
-                        fontWeight: 600,
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {STAGE_ORDER.map((key) => {
+               const state = stages[key];
+               const isRunning = state === 'running';
+               const isPending = state === 'pending';
+               return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 24 }}>
+                     <StageGlyph state={state} stagePercent={isRunning ? stagePercent : 0} />
+                     <span style={{
+                        fontSize: 13,
+                        fontWeight: isPending ? 400 : 600,
+                        color: isPending ? '#52525C' : '#18181B',
                         fontFamily: 'var(--font-family-primary)',
-                        cursor: 'pointer',
-                     }}
-                  >
-                     Retry
-                  </button>
-               </div>
-            )}
+                        lineHeight: '20px',
+                     }}>
+                        {STAGE_LABELS[key]}
+                     </span>
+                  </div>
+               );
+            })}
+         </div>
       </div>
    );
 };
