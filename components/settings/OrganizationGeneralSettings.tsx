@@ -246,10 +246,16 @@ const OrganizationGeneralSettings = () => {
         type="button"
         onClick={handleSave}
         disabled={saving}
-        style={{ opacity: saving ? 0.6 : undefined }}
+        style={{ opacity: saving ? 0.6 : undefined, cursor: saving ? 'default' : 'pointer' }}
         className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100"
       >
-        Save
+        {saving && (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.7s linear infinite' }}>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.3" strokeWidth="3" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        )}
+        <span>{saving ? 'Saving…' : 'Save'}</span>
       </button>
     </div>
   );
