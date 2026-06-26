@@ -8,7 +8,6 @@ import NotificationSettings from './NotificationSettings';
 import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
-import AdWordsSettings from './AdWordsSettings';
 import SubscriptionSettings from './SubscriptionSettings';
 import UsageSettings from './UsageSettings';
 import BillingDetailsSettings from './BillingDetailsSettings';
@@ -28,7 +27,6 @@ export type SettingsPageSlug =
   | 'people'
   | 'brand_knowledge'
   | 'google_search_console'
-  | 'google_ads'
   | 'wordpress'
   | 'api'
   | 'billing_subscription'
@@ -51,7 +49,6 @@ const PAGE_ALIASES: Record<string, SettingsPageSlug> = {
   scraper: 'google_search_console',
   notification: 'people',
   searchconsole: 'google_search_console',
-  adwords: 'google_ads',
   workspace_members: 'members',
   workspace_voices: 'custom_voices',
   account_profile: 'profile',
@@ -63,7 +60,6 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   people: 'People',
   brand_knowledge: 'Brand Knowledge',
   google_search_console: 'Search Console',
-  google_ads: 'Google Ads',
   wordpress: 'WordPress',
   api: 'API',
   billing_subscription: 'Your subscription',
@@ -108,7 +104,6 @@ const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPage
     label: 'Integrations',
     items: [
       { slug: 'google_search_console', label: 'Search Console' },
-      { slug: 'google_ads', label: 'Google Ads' },
       { slug: 'wordpress', label: 'WordPress' },
       { slug: 'api', label: 'API' },
     ],
@@ -310,10 +305,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
           settingsError={settingsError}
         />
       );
-    }
-
-    if (currentPage === 'google_ads') {
-      return <AdWordsSettings settings={settings} />;
     }
 
     if (currentPage === 'billing_subscription') {

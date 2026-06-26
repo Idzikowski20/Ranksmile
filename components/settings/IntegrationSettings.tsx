@@ -1,6 +1,5 @@
 import React from 'react';
 import SearchConsoleSettings from './SearchConsoleSettings';
-import AdWordsSettings from './AdWordsSettings';
 import Icon from '../common/Icon';
 
 type IntegrationSettingsProps = {
@@ -31,24 +30,12 @@ const IntegrationSettings = ({ settings, settingsError, updateSettings, performU
                      onClick={() => {}}>
                      <Icon type='google' size={14} /> Search Console
                   </li>
-                  <li
-                     className={`inline-block px-4 py-1 rounded-full mr-3 cursor-pointer text-sm ${currentTab === 'adwords' ? ' bg-blue-50 text-blue-600' : ''}`}
-                     onClick={() => {}}>
-                     <Icon type='adwords' size={14} /> Google Ads
-                  </li>
                </ul>
             </div>
          )}
          <div>
             {currentTab === 'searchconsole' && settings && (
                <SearchConsoleSettings settings={settings} updateSettings={updateSettings} settingsError={settingsError} />
-            )}
-            {currentTab === 'adwords' && settings && (
-               <AdWordsSettings
-                  settings={settings}
-                  updateSettings={updateSettings}
-                  settingsError={settingsError}
-               />
             )}
          </div>
       </div>
