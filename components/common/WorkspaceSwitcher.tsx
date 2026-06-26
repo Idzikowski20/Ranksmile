@@ -108,7 +108,7 @@ const WorkspaceSwitcher = () => {
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          width: 224,
+          width: 248,
           maxWidth: '100%',
           padding: '8px',
           border: 'none',
@@ -120,7 +120,7 @@ const WorkspaceSwitcher = () => {
         }}
       >
         <WorkspaceAvatar domain={current?.domain} />
-        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'Inter, sans-serif', fontSize: 16, fontWeight: 400, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           {current?.name ?? 'Workspace'}
         </span>
         <ChevronUpDown />

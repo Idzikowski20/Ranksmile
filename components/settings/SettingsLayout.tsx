@@ -211,7 +211,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   };
 
   const settingsSidebar = (
-    <aside className="relative flex h-full w-[224px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
+    <aside className="relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
       <div className="styled-scrollbar-dark flex h-full flex-col gap-[2px] overflow-y-auto overflow-x-hidden px-2 pb-[88px]">
         <div className="sticky top-0 z-[100] bg-[#09090B] pt-3 pb-1">
           <Link href="/dashboard" passHref>
