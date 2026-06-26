@@ -3,6 +3,7 @@ import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
+import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
@@ -49,6 +50,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(401).json({ error: authorized });
   }
   const userId = await getCurrentUserId(req, res);
+  const { Op } = await import('sequelize');
+  const wsIds = await getAccessibleWorkspaceIds(userId);
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -59,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   // Fetch configured domains for chart data
   const configuredDomains = userId
-    ? await Domain.findAll({ where: { userId } })
+    ? await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } })
     : [];
   const domainStats: Record<string, DomainStats> = {};
 
@@ -106,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     // 2. Also try per-domain OAuth tokens for any domains that have them (legacy)
     if (userId) {
-      const domains = await Domain.findAll({ where: { userId } });
+      const domains = await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } });
       for (const d of domains) {
         const plain = d.get({ plain: true });
         const scSettings = plain.search_console ? (() => { try { return JSON.parse(plain.search_console); } catch { return {}; } })() : {};

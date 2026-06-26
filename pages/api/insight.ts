@@ -53,8 +53,7 @@ const getDomainSearchConsoleInsight = async (req: NextApiRequest, res: NextApiRe
 
    // If the Local SC Domain Data file does not exist, fetch from Googel Search Console.
    try {
-      const query = { domain: domainname };
-      const foundDomain:Domain| null = await Domain.findOne({ where: query });
+      const foundDomain: Domain | null = ownership;
       const domainObj: DomainType = foundDomain && foundDomain.get({ plain: true });
       const scDomainAPI = await getSearchConsoleApiInfo(domainObj, userId);
       if (!hasValidSCAuth(scDomainAPI)) {
