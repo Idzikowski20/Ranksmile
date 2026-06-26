@@ -50,11 +50,17 @@ keywords → topics → competitors → blog_audit (NEW) → recommendations (RE
   + GSC site): crawl the sitemap (reuse `pages/api/articles/fetch-site-links.ts` sitemap
   parsing) and read GSC page paths; cluster URLs by path segment; rank candidate segments by
   a **weighted signal score**, not just slug length, to cut false positives (`/produkty/`,
-  `/features/`, `/integrations/`, `/docs/` also have long slugs but are not blogs):
-  - many deep, slug-like children `/<seg>/<long-slug>` (+),
-  - on a small sample of child pages: presence of JSON-LD `Article`/`BlogPosting` schema,
-    `datePublished`, an `author`, a `<article>` element, or an RSS `<link rel="alternate">`
-    (each +). A segment with article signals beats a segment with only long slugs.
+  `/features/`, `/integrations/`, `/docs/` also have long slugs but are not blogs). Signals
+  per candidate segment, summed into a score:
+  - child count — how many `/<seg>/<slug>` URLs it has (+, primary),
+  - average slug length — longer, hyphenated slugs read as articles (+),
+  - URL depth — typical post depth (a `/blog/<slug>` flat structure vs deep nesting) (+),
+  - date share — fraction of children whose path contains a year/`YYYY/MM` date (+),
+  - **known-blog-segment bonus** — segment name in {`blog`, `news`, `articles`, `article`,
+    `posts`, `poradnik`, `academy`, `knowledge`, `insights`} (+),
+  - on a small sample of child pages: JSON-LD `Article`/`BlogPosting` schema, `datePublished`,
+    an `author`, a `<article>` element, or an RSS `<link rel="alternate">` (each +). A
+    segment with article signals beats a segment with only long slugs.
   Return the top candidate prefix(es), e.g. `["/blog/"]` or `["/poradnik/"]`. Sampling is
   bounded (a few child fetches per candidate) so detection stays fast.
 - **Prefix shape:** stored prefixes are **normalized** so a locale/category wrapper still
@@ -75,32 +81,40 @@ keywords → topics → competitors → blog_audit (NEW) → recommendations (RE
 
 ## Data model
 
-- `domain.blog_paths` — `TEXT` holding a JSON array of path prefixes (e.g. `["/blog/"]`).
+- `domain.blog_paths` — `TEXT` holding a JSON array of path segments (e.g. `["blog"]`).
   Added idempotently in `ensureTenancyTables`/domain bootstrap (consistent with existing
-  `ALTER TABLE … ADD COLUMN` patterns), nullable, default null.
+  `ALTER TABLE … ADD COLUMN` patterns). **Default `'[]'`, not null** — so every read is an
+  unconditional `JSON.parse(blog_paths)` with no `if (blog_paths)` guard.
 - New table **`page_audits`** (added in `lib/ensurePipelineTables.ts`):
   - `id` PK, `domain_id` (FK to domain), `url` TEXT, **`path`** TEXT, **`title`** TEXT,
-    `score` INT, `signals_json` TEXT,
+    `score` INT, **`word_count`** INT, `signals_json` TEXT,
     **`fetch_status`** TEXT (`'OK'` | `'TIMEOUT'` | `'HTTP_403'` | `'HTTP_404'` |
-    `'BLOCKED'` | `'ERROR'`), **`content_hash`** TEXT (hash of the fetched main content,
-    for cache invalidation), **`duration_ms`** INT (fetch time),
-    `status` TEXT (`'triaged'` | `'deep'`), `deep_json` TEXT NULL,
-    **`deep_generated_at`** timestamp NULL, `audited_at` timestamp.
-  - `path` + `title` are captured during triage so the dashboard never re-fetches HTML just
-    to render a row (it shows the title and `/blog/<slug>` path directly).
-  - Triage writes `path`+`title`+`score`+`signals_json`+`fetch_status`+`content_hash`
-    +`duration_ms`+`status='triaged'`. Deep-on-demand writes `deep_json`+`deep_generated_at`
-    +`status='deep'`.
-  - `fetch_status` + `duration_ms` make skips explainable (why a post wasn't scored) and
-    surface slow pages during debugging.
-  - **Re-scan swap:** the per-domain delete + re-insert runs inside **one transaction**, so
-    concurrent dashboard readers see the previous audit until commit — no empty-flicker
-    window. No `ON CONFLICT`. (Same transactional discipline as the P3c materialize-on-done.)
+    `'BLOCKED'` | `'ERROR'`), **`content_hash`** TEXT (hash of the fetched main content),
+    **`duration_ms`** INT (fetch time),
+    `status` TEXT — **open vocabulary**, currently `'triaged'` | `'deep'`, reserved for
+    future `'queued'` | `'failed'` | `'outdated'` (stored as plain text, no DB enum, so new
+    states need no migration), `deep_json` TEXT NULL,
+    **`deep_content_hash`** TEXT NULL (the `content_hash` the cached `deep_json` was built
+    against), **`deep_generated_at`** timestamp NULL, **`last_audited_at`** timestamp.
+  - `path` + `title` + `word_count` are captured during triage so the dashboard renders a
+    row ("Score 54 · 650 words · How to Start Investing") without ever re-fetching HTML.
+  - Triage writes `path`+`title`+`score`+`word_count`+`signals_json`+`fetch_status`
+    +`content_hash`+`duration_ms`+`status='triaged'`. Deep-on-demand writes `deep_json`
+    +`deep_content_hash`+`deep_generated_at`+`status='deep'`.
+  - `fetch_status` + `duration_ms` make skips explainable and surface slow pages.
+  - **Re-scan sync (preserves deep_json):** the audit is NOT delete-all. Inside **one
+    transaction**, for each freshly-audited post: `UPDATE` the triage columns of the
+    matching `(domain_id, url)` row — **keeping `deep_json`/`deep_content_hash`/
+    `deep_generated_at`/`status`** — or `INSERT` if the URL is new; then `DELETE` only the
+    rows whose URL no longer appears. No `ON CONFLICT` (SELECT-existing → UPDATE/INSERT →
+    delete-missing). Effect: an expensive deep analysis a user paid for survives every later
+    scan **as long as the post still exists**; it self-invalidates only when its content
+    changes (see deep-cache below) or after the TTL. Single transaction ⇒ no empty-flicker.
 - `domain_recommendations` gains nullable **`url`** TEXT and **`score`** INT columns
   (the `type` column already exists). Idempotent `ALTER TABLE` in `ensurePipelineTables`.
-  Each recommendation row is an **immutable snapshot** taken at scan time: `score`/`url` are
-  copied from `page_audits`, not joined live, so a recommendation never changes mid-browse
-  after a re-scan replaces the underlying audit.
+  Unlike `page_audits`, recommendations ARE regenerated delete-first each scan — they are
+  cheap **immutable snapshots**: `score`/`url` are copied from `page_audits` at scan time,
+  not joined live, so a recommendation never changes mid-browse.
 
 ## Triage scoring (no LLM)
 
@@ -130,17 +144,25 @@ final score + the 6-signal rubric (meta_quality, content_depth, eeat, freshness,
 competitiveness) with per-signal recommendations — is stored in `page_audits.deep_json` +
 `deep_generated_at` and shown in the recommendation detail.
 
-**Cache validity** — a cached `deep_json` is reused only when it is still fresh:
-- the post's content is unchanged (re-fetch and compare `content_hash`), **and**
-- `deep_generated_at` is within the TTL (**30 days**).
-Otherwise the deep analysis re-runs and overwrites the cache. This prevents stale advice
-after the user edits the post or after SERP drift over time.
+**Cache validity** — a cached `deep_json` is reused only when it is still fresh, checked
+with **no extra fetch**:
+- `deep_content_hash === content_hash` — the latest triage hash equals the hash the deep
+  analysis was built against. A re-scan recomputes `content_hash`; if the post changed, the
+  two diverge and the cache is stale. **and**
+- `deep_generated_at` is within the TTL (**30 days**) — covers SERP drift over time.
+Otherwise the deep analysis re-runs and overwrites `deep_json` + `deep_content_hash` +
+`deep_generated_at`. Because re-scan sync keeps these columns, a user's deep analysis stays
+valid across scans until the post's content actually changes.
 
 ## Dashboard / UI
 
-- Recommendations section lists `optimize` recs first (URL + score gauge + "Optimize" label,
-  reusing the existing score-gauge `Row`), then `create` recs (priority pill `Row`). The
-  item shape already supports both (`score?` vs `priority?`).
+- Recommendations are shown as **two visually distinct sub-sections**, not one mixed list:
+  - **"Needs optimization"** — `optimize` recs: title + score gauge + `word_count`
+    ("Score 48 · 650 words · How to Start Investing"), worst-first. Reuses the score-gauge `Row`.
+  - **"Create new content"** — `create` recs: title + priority pill ("Priority High").
+    Reuses the priority-pill `Row`.
+  Each sub-section has its own small header; either is hidden when it has no items. The item
+  shape already supports both (`score?`/`word_count?` vs `priority?`).
 - Empty-state messaging adapts:
   - no `blog_paths` set → "Set your blog path to start auditing your content" + link to
     domain settings.
@@ -168,18 +190,22 @@ after the user edits the post or after SERP drift over time.
 
 ## Decomposition (for the implementation plan)
 
-- **T1 — schema & detection backend:** `domain.blog_paths`, full `page_audits` table
-  (path/title/fetch_status/content_hash/duration_ms/deep_generated_at), nullable
+- **T1 — schema & detection backend:** `domain.blog_paths` (default `'[]'`), full
+  `page_audits` table (path/title/word_count/fetch_status/content_hash/duration_ms/
+  deep_content_hash/deep_generated_at/last_audited_at), nullable
   `domain_recommendations.url/score`, `detect-blog-paths` endpoint with the signal-weighted
-  URL-clustering helper (slug density + Article/`datePublished`/`<article>`/RSS sampling) and
-  prefix normalization + segment-match matcher.
+  URL-clustering helper (child count + slug length + depth + date share + known-segment bonus
+  + Article/`datePublished`/`<article>`/RSS sampling) and prefix normalization + segment-match
+  matcher.
 - **T2 — sidecar blog_audit stage:** crawl + segment-match filter + bounded-concurrency fetch
-  + rule-based triage (`OPTIMIZE_THRESHOLD`), capture path/title/content_hash/fetch_status/
-  duration_ms, persist `page_audits` via a single-transaction swap, emit audited/skipped/total
-  counts; rewrite `recommendations` stage to emit immutable `optimize` (from audits <70) +
-  `create` (LLM) snapshots.
+  + rule-based triage (`OPTIMIZE_THRESHOLD`), capture path/title/word_count/content_hash/
+  fetch_status/duration_ms, persist `page_audits` via single-transaction **UPSERT-sync**
+  (UPDATE/INSERT by (domain_id,url), delete-missing, keep deep columns), emit
+  audited/skipped/total counts; rewrite `recommendations` stage to emit immutable `optimize`
+  (from audits <70) + `create` (LLM) snapshots, delete-first.
 - **T3 — wizard + domain-settings blog-path UI:** detection call, pre-filled editable chips,
   persistence to `domain.blog_paths`.
 - **T4 — deep-on-demand + dashboard wiring:** deep-analysis trigger on rec open with
-  content_hash + 30-day-TTL cache validation, Recommendations section optimize/create
-  rendering, adaptive empty-states, and the "audited X of Y" coverage footnote.
+  `deep_content_hash == content_hash` + 30-day-TTL cache validation (no extra fetch),
+  Recommendations split into "Needs optimization" + "Create new content" sub-sections,
+  adaptive empty-states, and the "audited X of Y" coverage footnote.

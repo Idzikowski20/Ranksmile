@@ -46,7 +46,8 @@
 - `python-sidecar/pipeline/stages/domain/recommendations.py` — emit optimize + create.
 - `pages/setup.tsx` — blog-path detect/confirm step.
 - `components/domains/DomainSettings.tsx` — blog-path field.
-- `pages/dashboard/index.tsx` + `components/dashboard/RecommendationsSection.tsx` — render optimize/create + coverage footnote.
+- `pages/dashboard/index.tsx` + `components/dashboard/RecommendationsSection.tsx` — two sub-sections (optimize/create) + word count + coverage footnote.
+- `pages/api/domains/[slug]/recommendations.ts` — LEFT JOIN `page_audits` for `word_count`.
 - `__tests__/lib/blogPaths.test.ts`, `__tests__/lib/detectBlogPaths.test.ts`.
 
 ---
@@ -206,6 +207,22 @@ describe('rankBlogSegments', () => {
     const ranked = rankBlogSegments(urls);
     expect(ranked[0].segment).toBe('blog'); // longer slugs win
   });
+  it('gives a known-blog-segment name the edge on an otherwise equal tie', () => {
+    const urls = [
+      'https://x.pl/news/pierwszy-wpis-aktualnosci', 'https://x.pl/news/drugi-wpis-aktualnosci',
+      'https://x.pl/zxqp/pierwszy-wpis-aktualnosci', 'https://x.pl/zxqp/drugi-wpis-aktualnosci',
+    ];
+    const ranked = rankBlogSegments(urls);
+    expect(ranked[0].segment).toBe('news'); // known name outranks the unknown 'zxqp'
+  });
+  it('rewards a high share of dated URLs (unknown segment, isolates date signal)', () => {
+    const urls = [
+      'https://x.pl/kronika/2025/01/styczniowy-wpis', 'https://x.pl/kronika/2025/02/lutowy-wpis',
+      'https://x.pl/oferta/pakiet-rozszerzony-firmowy', 'https://x.pl/oferta/pakiet-podstawowy-maly',
+    ];
+    const ranked = rankBlogSegments(urls);
+    expect(ranked[0].segment).toBe('kronika'); // both unknown + equal count; date-share breaks the tie
+  });
 });
 ```
 
@@ -222,24 +239,36 @@ Expected: FAIL — module not found.
  *  (Article schema / <article> / RSS) is layered on top in the API endpoint. */
 
 export interface SegmentCandidate {
-  segment: string;       // first path segment, e.g. "blog"
+  segment: string;       // content segment, e.g. "blog"
   slugChildren: number;  // count of /<segment>/<slug> children with a slug-like child
   avgSlugLen: number;    // average length of those child slugs (longer ⇒ more article-like)
+  dateShare: number;     // fraction of children whose path carries a year (article-ish)
+  score: number;         // composite ranking score (higher = more blog-like)
 }
 
 const WRAPPER = new Set(['en', 'pl', 'de', 'fr', 'es', 'category', 'tag', 'page']);
+const KNOWN_BLOG = new Set([
+  'blog', 'news', 'articles', 'article', 'posts', 'post',
+  'poradnik', 'academy', 'knowledge', 'insights', 'wpisy',
+]);
 
-function firstContentSegment(pathname: string): { seg: string; child: string } | null {
+function firstContentSegment(pathname: string): { seg: string; child: string; dated: boolean } | null {
   const parts = pathname.split('/').map((s) => s.trim().toLowerCase()).filter(Boolean);
   let i = 0;
   while (i < parts.length && WRAPPER.has(parts[i])) i += 1;
   if (i >= parts.length - 1) return null; // need a segment AND a child slug
-  return { seg: parts[i], child: parts[i + 1] };
+  const seg = parts[i];
+  const rest = parts.slice(i + 1);
+  const dated = rest.some((p) => /^(19|20)\d{2}$/.test(p)); // a /YYYY/ segment after the blog segment
+  // the "child slug" is the first non-date segment after the blog segment
+  const child = rest.find((p) => !/^(19|20)\d{2}$/.test(p) && !/^\d{1,2}$/.test(p)) ?? rest[0];
+  return { seg, child, dated };
 }
 
-/** Rank path segments by how many deep, slug-like children they have. */
+/** Rank path segments by a weighted blog-likeness score (child count, slug length,
+ *  date share, and a known-blog-name bonus). */
 export function rankBlogSegments(urls: string[]): SegmentCandidate[] {
-  const acc = new Map<string, { count: number; slugLenSum: number }>();
+  const acc = new Map<string, { count: number; slugLenSum: number; dated: number }>();
   for (const url of urls) {
     let pathname: string;
     try { pathname = new URL(url).pathname; } catch { continue; }
@@ -248,15 +277,21 @@ export function rankBlogSegments(urls: string[]): SegmentCandidate[] {
     // slug-like = contains a hyphen or is reasonably long (article slug, not "a"/"b")
     const slugLike = fc.child.includes('-') || fc.child.length >= 8;
     if (!slugLike) continue;
-    const cur = acc.get(fc.seg) ?? { count: 0, slugLenSum: 0 };
+    const cur = acc.get(fc.seg) ?? { count: 0, slugLenSum: 0, dated: 0 };
     cur.count += 1;
     cur.slugLenSum += fc.child.length;
+    if (fc.dated) cur.dated += 1;
     acc.set(fc.seg, cur);
   }
   return [...acc.entries()]
-    .map(([segment, v]) => ({ segment, slugChildren: v.count, avgSlugLen: v.slugLenSum / v.count }))
+    .map(([segment, v]) => {
+      const avgSlugLen = v.slugLenSum / v.count;
+      const dateShare = v.dated / v.count;
+      const score = v.count * 10 + avgSlugLen + dateShare * 12 + (KNOWN_BLOG.has(segment) ? 15 : 0);
+      return { segment, slugChildren: v.count, avgSlugLen, dateShare, score };
+    })
     .filter((c) => c.slugChildren >= 2)
-    .sort((a, b) => b.slugChildren - a.slugChildren || b.avgSlugLen - a.avgSlugLen);
+    .sort((a, b) => b.score - a.score);
 }
 ```
 
@@ -294,15 +329,19 @@ Run: `cd /c/Users/patry/Desktop/serpbear && sed -n '1,80p' lib/ensurePipelineTab
       path TEXT,
       title TEXT,
       score INTEGER,
+      word_count INTEGER,
       signals_json TEXT,
       fetch_status TEXT,
       content_hash TEXT,
       duration_ms INTEGER,
       status TEXT DEFAULT 'triaged',
       deep_json TEXT,
+      deep_content_hash TEXT,
       deep_generated_at TIMESTAMP,
-      audited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      last_audited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
    )`);
+   // status is open vocabulary (triaged|deep now; queued|failed|outdated reserved) — plain
+   // TEXT, no DB enum, so future states need no migration.
 
    // domain_recommendations: optimize recs carry a page url + snapshot score
    const recCols: Array<[string, string]> = [['url', 'TEXT'], ['score', 'INTEGER']];
@@ -346,10 +385,10 @@ Run: `cd /c/Users/patry/Desktop/serpbear && grep -n "ADD COLUMN\|ignoreExisting\
 - [ ] **Step 2: Add `blog_paths` next to the existing domain ALTERs** (use the SAME `ignoreExisting`/try-catch wrapper the file already uses — mirror the `workspace_id` or `brand_knowledge` line):
 
 ```ts
-   await ignoreExisting(() => db.query(`ALTER TABLE domain ADD COLUMN blog_paths TEXT`));
+   await ignoreExisting(() => db.query(`ALTER TABLE domain ADD COLUMN blog_paths TEXT DEFAULT '[]'`));
 ```
 
-(If the file uses a bare `try { … } catch {}` instead of `ignoreExisting`, mirror that exact form.)
+(If the file uses a bare `try { … } catch {}` instead of `ignoreExisting`, mirror that exact form.) The `DEFAULT '[]'` means every read is an unconditional `JSON.parse(blog_paths)` — no null guard. Existing rows added before this column will be `NULL`; readers must still `JSON.parse(blog_paths || '[]')` to cover those, which the helpers below do.
 
 - [ ] **Step 3: Add the model field.** In `database/models/domain.ts`, beside the existing optional columns (e.g. `brand_knowledge`/`workspace_id`), add:
 
@@ -853,6 +892,7 @@ async def _audit_one(client: httpx.AsyncClient, url: str) -> dict:
             "path": signals["path"],
             "title": signals["title"],
             "score": score,
+            "word_count": signals["word_count"],
             "signals": signals,
             "content_hash": signals["content_hash"],
             "fetch_status": "OK",
@@ -1123,23 +1163,53 @@ export interface DomainResult {
 }
 ```
 
-In `materializeDomainSetup` (≈ line 80-97), add `'page_audits'` to the delete-first loop, insert the audit rows, and add `url`/`score` to the recommendation insert:
+In `materializeDomainSetup` (≈ line 80-97): keep the delete-first loop for the cheap snapshot
+tables (`domain_keywords`/`domain_topics`/`domain_competitors`/`domain_recommendations`) but
+**do NOT** add `page_audits` to it. Instead, sync `page_audits` by `(domain_id, url)` so a
+paid-for `deep_json` survives. Add `url`/`score` to the recommendation insert too:
 
 ```ts
    await db.transaction(async (tx: Transaction) => {
       const q = (sql: string, repl: unknown[]) => db.query(sql, { replacements: repl, transaction: tx });
-      for (const t of ['domain_keywords', 'domain_topics', 'domain_competitors', 'domain_recommendations', 'page_audits'])
+      // cheap regenerated snapshots — delete-first (page_audits is NOT in this list)
+      for (const t of ['domain_keywords', 'domain_topics', 'domain_competitors', 'domain_recommendations'])
          await q(`DELETE FROM ${t} WHERE domain_id = ?`, [domainId]);
       // ...existing topic/keyword/competitor inserts unchanged...
 
-      for (const a of result.page_audits || [])
-         await q(
-            `INSERT INTO page_audits (domain_id, url, path, title, score, signals_json, fetch_status, content_hash, duration_ms, status, audited_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'triaged', CURRENT_TIMESTAMP)`,
-            [domainId, a.url, a.path ?? null, a.title ?? null, a.score ?? null,
-             a.signals ? JSON.stringify(a.signals) : null, a.fetch_status ?? null,
-             a.content_hash ?? null, a.duration_ms ?? null],
-         );
+      // ── page_audits: UPSERT-by-(domain_id,url), keep deep_json across scans ──
+      const existingRows = await db.query<{ url: string }>(
+         `SELECT url FROM page_audits WHERE domain_id = ?`,
+         { replacements: [domainId], type: QueryTypes.SELECT, transaction: tx },
+      );
+      const existingUrls = new Set(existingRows.map((r) => r.url));
+      const incomingUrls = new Set((result.page_audits || []).map((a) => a.url));
+
+      for (const a of result.page_audits || []) {
+         if (existingUrls.has(a.url)) {
+            // refresh triage columns only — deep_json/deep_content_hash/deep_generated_at/status untouched
+            await q(
+               `UPDATE page_audits SET path=?, title=?, score=?, word_count=?, signals_json=?,
+                       fetch_status=?, content_hash=?, duration_ms=?, last_audited_at=CURRENT_TIMESTAMP
+                WHERE domain_id=? AND url=?`,
+               [a.path ?? null, a.title ?? null, a.score ?? null, a.word_count ?? null,
+                a.signals ? JSON.stringify(a.signals) : null, a.fetch_status ?? null,
+                a.content_hash ?? null, a.duration_ms ?? null, domainId, a.url],
+            );
+         } else {
+            await q(
+               `INSERT INTO page_audits (domain_id, url, path, title, score, word_count, signals_json,
+                       fetch_status, content_hash, duration_ms, status, last_audited_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'triaged', CURRENT_TIMESTAMP)`,
+               [domainId, a.url, a.path ?? null, a.title ?? null, a.score ?? null, a.word_count ?? null,
+                a.signals ? JSON.stringify(a.signals) : null, a.fetch_status ?? null,
+                a.content_hash ?? null, a.duration_ms ?? null],
+            );
+         }
+      }
+      // delete ONLY rows whose URL no longer exists on the site
+      for (const url of existingUrls)
+         if (!incomingUrls.has(url))
+            await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
 
       for (const r of result.recommendations || [])
          await q(
@@ -1152,7 +1222,15 @@ In `materializeDomainSetup` (≈ line 80-97), add `'page_audits'` to the delete-
    });
 ```
 
-Replace ONLY the delete loop + the recommendation insert; keep the topic/keyword/competitor inserts and the `topicIds` map exactly as they are.
+Replace ONLY the delete loop (drop `page_audits` from it), add the page_audits sync block, and
+add `url`/`score` to the recommendation insert; keep the topic/keyword/competitor inserts and
+the `topicIds` map exactly as they are. `QueryTypes` is already imported in this file (used by
+`selectRows`); reuse that import.
+
+**Note on the UPDATE preserving `content_hash`:** the UPDATE writes the NEW triage
+`content_hash`. The deep cache stores its own `deep_content_hash` (untouched here), so when a
+post's content changes, `content_hash` diverges from `deep_content_hash` and the deep-on-demand
+endpoint (Task 4.1) recomputes — no stale advice, no extra fetch.
 
 - [ ] **Step 4: Persist `audit_counts` on the job for the dashboard.** The status read is `getSetupStatus` (≈ line 185). Store counts where the job row lives — find the `analysis_jobs` update on done and add a column or stash counts in the existing result/progress JSON. Simplest: add a nullable `audit_counts` TEXT column to `analysis_jobs` in `lib/ensurePipelineTables.ts` and write `JSON.stringify(result.audit_counts)` in `materializeDomainSetup`; surface it from `getSetupStatus`. (If `analysis_jobs` already stores a JSON `result`/`meta` blob, write into that instead of a new column.)
 
@@ -1368,12 +1446,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const url = (req.body?.url as string || '').trim();
    if (!url) return res.status(400).json({ error: 'url is required' });
 
-   const rows = await db.query<{ deep_json: string | null; deep_generated_at: string | null; content_hash: string | null }>(
-      `SELECT deep_json, deep_generated_at, content_hash FROM page_audits WHERE domain_id = ? AND url = ? LIMIT 1`,
+   const rows = await db.query<{
+      deep_json: string | null; deep_generated_at: string | null;
+      deep_content_hash: string | null; content_hash: string | null;
+   }>(
+      `SELECT deep_json, deep_generated_at, deep_content_hash, content_hash
+       FROM page_audits WHERE domain_id = ? AND url = ? LIMIT 1`,
       { replacements: [domainId, url], type: QueryTypes.SELECT },
    );
    const row = rows[0];
-   const fresh = row?.deep_json && row.deep_generated_at
+   // Cache valid iff the deep analysis was built against the current content AND is within TTL.
+   // No extra fetch: a re-scan already refreshed content_hash; divergence ⇒ stale.
+   const fresh = !!row?.deep_json && !!row.deep_generated_at
+      && !!row.deep_content_hash && row.deep_content_hash === row.content_hash
       && (Date.now() - new Date(row.deep_generated_at).getTime()) < TTL_MS;
    if (fresh) {
       return res.status(200).json({ deep: JSON.parse(row.deep_json as string), cached: true });
@@ -1383,8 +1468,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // pages/api/articles/deep-analysis.ts — extract its core into a helper if needed).
    const deep = await runDeepAnalysisForUrl(url); // implement per Step 3
 
+   // Stamp deep_content_hash = the current triage content_hash so the cache self-invalidates
+   // when the next scan detects changed content.
    await db.query(
-      `UPDATE page_audits SET deep_json = ?, deep_generated_at = CURRENT_TIMESTAMP, status = 'deep' WHERE domain_id = ? AND url = ?`,
+      `UPDATE page_audits SET deep_json = ?, deep_content_hash = content_hash,
+              deep_generated_at = CURRENT_TIMESTAMP, status = 'deep'
+       WHERE domain_id = ? AND url = ?`,
       { replacements: [JSON.stringify(deep), domainId, url] },
    );
    return res.status(200).json({ deep, cached: false });
@@ -1439,9 +1528,32 @@ const coverage = setup?.auditCounts; // { audited, skipped, total } | undefined
 
 (If `setup` doesn't carry `auditCounts` yet, extend `getSetupStatus` in `lib/domainPipeline.ts` + the `useSetupStatus` type to include it, reading the column/JSON written in Task 2.6 Step 4.)
 
-- [ ] **Step 2: Render the coverage footnote + the optimize URL.** In `RecommendationsSection.tsx`, extend `Props` with `coverage?: { audited: number; skipped: number; total: number }` and add, below the rows in the populated return (before/after the "View N" link):
+- [ ] **Step 2: Split into two visually distinct sub-sections + show word count + coverage footnote.**
+
+First, carry `word_count` to the dashboard: extend `pages/api/domains/[slug]/recommendations.ts` to
+`LEFT JOIN page_audits pa ON pa.domain_id = dr.domain_id AND pa.url = dr.url` and select
+`pa.word_count`. Map it onto the item in `pages/dashboard/index.tsx`:
+`{ id, title, score, wordCount: r.word_count ?? undefined, priority, href }` (add `wordCount?: number`
+to `RecommendationItem`).
+
+In `RecommendationsSection.tsx`:
+- Extend `Props` with `coverage?: { audited: number; skipped: number; total: number }`.
+- Partition items: `const optimize = items.filter((i) => i.priority == null); const create = items.filter((i) => i.priority != null);`
+- Render two labelled sub-sections (each hidden when empty), inside the existing bordered box:
 
 ```tsx
+{optimize.length > 0 && (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: '#52525C', fontFamily: font }}>Needs optimization</span>
+    {optimize.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
+  </div>
+)}
+{create.length > 0 && (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: '#52525C', fontFamily: font }}>Create new content</span>
+    {create.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
+  </div>
+)}
 {coverage && coverage.total > coverage.audited && (
   <span style={{ fontSize: 12, color: '#71717B', fontFamily: font }}>
     Audited {coverage.audited} of {coverage.total} posts ({coverage.skipped} skipped)
@@ -1449,7 +1561,17 @@ const coverage = setup?.auditCounts; // { audited, skipped, total } | undefined
 )}
 ```
 
-The `Row` already shows the score gauge for items with `score` (optimize) and the priority pill for items with `priority` (create) — no Row change needed since optimize recs carry `score`. Optionally show the path: if `item.title` is empty fall back to the URL path (already handled in the sidecar by titling from `path`/`url`).
+- In `Row`, when `item.wordCount != null`, append it next to the score:
+
+```tsx
+{item.wordCount != null && (
+  <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: font }}>{item.wordCount} words</span>
+)}
+```
+
+The `Row` already shows the score gauge for items with `score` (optimize) and the priority pill for
+items with `priority` (create). Optimize titles fall back to the URL path (handled in the sidecar by
+titling from `path`/`url`).
 
 - [ ] **Step 3: Adapt the empty state for "no blog path set."** Pass whether a blog path exists (from a `GET /api/domains/blog-paths`) and branch the empty state message:
 
