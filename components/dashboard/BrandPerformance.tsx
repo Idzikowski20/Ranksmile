@@ -54,7 +54,7 @@ const ClicksCard = ({ total, deltaPct, points, startLabel, endLabel, href }: {
 }) => {
   const up = deltaPct >= 0;
   return (
-    <div style={{ border: '1px solid #E4E4E7', background: '#fff', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
+    <div style={{ border: '1px solid #E4E4E7', background: 'transparent', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
       <a href={href} style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 188, color: '#18181B', textDecoration: 'none' }}>
         <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 8px 0' }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: '#9F9FA9', fontFamily: font }}>Clicks</div>
@@ -81,7 +81,7 @@ const ClicksCard = ({ total, deltaPct, points, startLabel, endLabel, href }: {
 // ─── AI Visibility card (mockup) ──────────────────────────────────────────────
 
 const AiVisibilityCard = () => (
-  <div style={{ border: '1px solid #E4E4E7', background: '#fff', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
+  <div style={{ border: '1px solid #E4E4E7', background: 'transparent', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
     <div style={{ position: 'relative', display: 'flex', height: '100%', minHeight: 188, flexDirection: 'column' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 8px 0', marginBottom: 'auto' }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: '#9F9FA9', fontFamily: font }}>AI Visibility</div>
@@ -119,7 +119,7 @@ const AiVisibilityCard = () => (
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 
 const CardSkeleton = () => (
-  <div style={{ border: '1px solid #E4E4E7', background: '#fff', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
+  <div style={{ border: '1px solid #E4E4E7', background: 'transparent', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 188 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 8px 0' }}>
         <Skeleton width={72} height={12} />
