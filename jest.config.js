@@ -16,6 +16,7 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@neondatabase/auth/next$': '<rootDir>/__mocks__/neondatabase-auth.ts',
+    '^sequelize$': '<rootDir>/__mocks__/sequelize.ts',
   },
 };
 
