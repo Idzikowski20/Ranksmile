@@ -60,7 +60,7 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
   }, [item.updatedAt]);
 
   return (
-    <div className="border-gray-10 gap-lg p-base hover:border-gray-20 group relative flex cursor-pointer flex-col rounded-2xl border border-solid transition-[transform,box-shadow,border-color] duration-200 ease-out hover:translate-y-[-2px] hover:shadow-md">
+    <div className="border-gray-20 gap-lg p-base hover:border-gray-40 group relative flex cursor-pointer flex-col rounded-2xl border border-solid transition-[transform,box-shadow,border-color] duration-200 ease-out hover:translate-y-[-2px] hover:shadow-md">
       {/* Full-card link overlay */}
       <a
         href={item.href}
@@ -115,7 +115,7 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
 };
 
 const CardSkeleton = () => (
-  <div className="border-gray-10 gap-lg p-base flex flex-col rounded-2xl border border-solid">
+  <div className="border-gray-20 gap-lg p-base flex flex-col rounded-2xl border border-solid">
     <div className="flex items-center justify-between">
       <Skeleton width={20} height={20} radius={4} />
       <Skeleton width={36} height={36} radius={9999} />
@@ -133,7 +133,7 @@ const CardSkeleton = () => (
 
 const EmptyState = () => (
   <div
-    className="border-gray-10 rounded-2xl border border-solid"
+    className="border-gray-20 rounded-2xl border border-solid"
     style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}
   >
     <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 12, background: '#F4F4F5', color: '#9F9FA9' }}>
