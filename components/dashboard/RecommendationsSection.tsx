@@ -82,7 +82,7 @@ const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-        <div style={{ padding: 24, border: '1px solid #F4F4F5', borderRadius: 16 }}>
+        <div style={{ padding: 24, border: '1px solid #E4E4E7', borderRadius: 16 }}>
           {pipeline}
         </div>
       </div>
@@ -92,7 +92,7 @@ const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #F4F4F5', borderRadius: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #E4E4E7', borderRadius: 16 }}>
           <RowSkeleton />
           <RowSkeleton />
           <Skeleton width={150} height={13} />
@@ -104,7 +104,7 @@ const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SectionHeader icon={<BoltIcon />} label="Recommendations" />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #F4F4F5', borderRadius: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24, border: '1px solid #E4E4E7', borderRadius: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {items.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
         </div>
