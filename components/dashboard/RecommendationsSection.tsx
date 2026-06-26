@@ -32,12 +32,15 @@ interface RecommendationBase {
   id: string | number;
   title: string;
   href: string;
+  /** 'optimize' (score-gauge row) | 'create' (priority-pill row). Drives sub-section grouping. */
+  type?: string;
 }
-// A recommendation carries EXACTLY ONE measure: a content score (analyzed articles)
-// or a priority (domain pipeline scan output). The union stops mixed shapes at compile time
-// and lets `'priority' in item` narrow which one a Row is rendering.
+// A recommendation carries EXACTLY ONE measure: a content score (audited posts that
+// need optimization) or a priority (LLM "create new content" ideas). The union stops
+// mixed shapes at compile time and lets `'priority' in item` narrow which one a Row is
+// rendering. Optimize items may also carry a word_count (shown next to the score).
 export type RecommendationItem =
-  | (RecommendationBase & { score: number })
+  | (RecommendationBase & { score: number; wordCount?: number })
   | (RecommendationBase & { priority: string });
 
 const PRIORITY_STYLE: Record<string, { color: string; bg: string; label: string }> = {
@@ -70,6 +73,12 @@ interface Props {
   loading: boolean;
   /** When set (domain pipeline running), shown inside the card instead of the rows. */
   pipeline?: React.ReactNode;
+  /** Blog-audit coverage from the scan; drives the "Audited X of Y" footnote. */
+  coverage?: { audited: number; skipped: number; total: number } | null;
+  /** False ⇒ the domain has no blog_paths set; the empty state prompts to set one. */
+  hasBlogPath?: boolean;
+  /** Where the domain-settings blog-path field lives (no-path empty-state link). */
+  settingsHref?: string;
 }
 
 const RowSkeleton = () => (
@@ -99,12 +108,23 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
     {'priority' in item ? (
       <PriorityPill priority={item.priority} />
     ) : (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: '#9F9FA9' }}>
-        <Star />
-        <span style={{ fontSize: 13, fontFamily: font }}>{(item.score / 10).toFixed(1)}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, color: '#9F9FA9' }}>
+        {item.wordCount != null && (
+          <span style={{ fontSize: 12, fontFamily: font }}>{item.wordCount} words</span>
+        )}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Star />
+          <span style={{ fontSize: 13, fontFamily: font }}>{(item.score / 10).toFixed(1)}</span>
+        </span>
       </span>
     )}
   </a>
+);
+
+const SubSectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <span style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4, color: '#52525C', fontFamily: font }}>
+    {children}
+  </span>
 );
 
 // Single source of truth for the section frame — header + bordered box. Per-state
@@ -119,7 +139,18 @@ const SectionShell = ({ boxStyle, children }: { boxStyle?: React.CSSProperties; 
   </div>
 );
 
-const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading, pipeline }: Props) => {
+const CoverageFootnote = ({ coverage }: { coverage?: Props['coverage'] }) => {
+  if (!coverage || coverage.total <= coverage.audited) return null;
+  return (
+    <span style={{ fontSize: 12, color: '#71717B', fontFamily: font }}>
+      Audited {coverage.audited} of {coverage.total} posts ({coverage.skipped} skipped)
+    </span>
+  );
+};
+
+const RecommendationsSection = ({
+  items, total, faviconDomain, viewHref, loading, pipeline, coverage, hasBlogPath, settingsHref,
+}: Props) => {
   // While the domain pipeline runs, the section shows its progress in place of the rows.
   if (pipeline) {
     return <SectionShell boxStyle={{ padding: 24 }}>{pipeline}</SectionShell>;
@@ -134,6 +165,23 @@ const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading
     );
   }
   if (items.length === 0) {
+    // No blog path configured ⇒ nothing has been audited; prompt the user to set one.
+    if (hasBlogPath === false) {
+      return (
+        <SectionShell boxStyle={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
+          <BoltIcon />
+          <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: font }}>Set your blog path to start auditing your content</span>
+          <span style={{ fontSize: 14, color: '#52525C', maxWidth: 420, lineHeight: 1.5, fontFamily: font }}>
+            Tell us where your blog lives and we&apos;ll audit each post and surface the ones that need work.
+          </span>
+          {settingsHref && (
+            <a href={settingsHref} style={{ fontSize: 13, fontWeight: 600, color: '#783AFB', textDecoration: 'none', fontFamily: font }}>
+              Go to domain settings
+            </a>
+          )}
+        </SectionShell>
+      );
+    }
     return (
       <SectionShell boxStyle={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
         <CheckCircle />
@@ -141,14 +189,32 @@ const RecommendationsSection = ({ items, total, faviconDomain, viewHref, loading
         <span style={{ fontSize: 14, color: '#52525C', maxWidth: 420, lineHeight: 1.5, fontFamily: font }}>
           The scan finished and found no pages that need optimization right now. As your content changes, new opportunities will show up here.
         </span>
+        <CoverageFootnote coverage={coverage} />
       </SectionShell>
     );
   }
+  // Two visually distinct sub-sections: optimize (score gauge) vs create (priority pill).
+  const optimize = items.filter((i) => !('priority' in i));
+  const create = items.filter((i) => 'priority' in i);
   return (
     <SectionShell boxStyle={{ ...colStack, padding: 24 }}>
-      <div style={colStack}>
-        {items.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
-      </div>
+      {optimize.length > 0 && (
+        <div style={colStack}>
+          <SubSectionLabel>Needs optimization</SubSectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {optimize.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
+          </div>
+        </div>
+      )}
+      {create.length > 0 && (
+        <div style={colStack}>
+          <SubSectionLabel>Create new content</SubSectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {create.map((item) => <Row key={item.id} item={item} faviconDomain={faviconDomain} />)}
+          </div>
+        </div>
+      )}
+      <CoverageFootnote coverage={coverage} />
       <a
         href={viewHref}
         className="dashboard-rec-view"

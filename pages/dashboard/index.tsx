@@ -39,7 +39,15 @@ interface DashboardArticle {
   created_at?: string | null;
   source?: string;
 }
-interface DomainRec { id: number; title: string; priority: string | null }
+interface DomainRec {
+  id: number;
+  title: string;
+  priority: string | null;
+  type: string | null;
+  url: string | null;
+  score: number | null;
+  word_count: number | null;
+}
 
 const DashboardPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains({} as any);
@@ -81,6 +89,7 @@ const DashboardPage: NextPage = () => {
   const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
   const clicksHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
   const recommendationsHref = primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites';
+  const settingsHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
 
   // Domain-level recommendations produced by the setup pipeline (the scan output).
   const { data: domainRecsData } = useQuery(
@@ -88,6 +97,14 @@ const DashboardPage: NextPage = () => {
     () => fetchJson(`/api/domains/${activeDomainSlug}/recommendations`, { recommendations: [] as DomainRec[] }),
     { enabled: !!activeDomainSlug, retry: false },
   );
+
+  // Whether the domain has a blog path configured — drives the empty-state message.
+  const { data: blogPathsData } = useQuery(
+    ['blogPaths', activeDomainSlug],
+    () => fetchJson(`/api/domains/blog-paths?slug=${activeDomainSlug}`, { blogPaths: [] as string[] }),
+    { enabled: !!activeDomainSlug, retry: false },
+  );
+  const hasBlogPath = (blogPathsData?.blogPaths?.length ?? 0) > 0;
 
   // ── Pipeline polling ──
   const { data: setup } = useSetupStatus(activeDomainSlug);
@@ -123,7 +140,13 @@ const DashboardPage: NextPage = () => {
   const recommendations: RecommendationItem[] = useMemo(() => {
     const domainRecs = domainRecsData?.recommendations ?? [];
     if (domainRecs.length > 0) {
-      return domainRecs.map((r) => ({ id: r.id, title: r.title, priority: r.priority || 'low', href: recommendationsHref }));
+      // optimize recs carry a snapshot score (+ word count) → score-gauge row;
+      // create recs carry a priority → priority-pill row.
+      return domainRecs.map((r) => (
+        r.type === 'optimize' || r.score != null
+          ? { id: r.id, title: r.title, type: 'optimize', score: r.score ?? 0, wordCount: r.word_count ?? undefined, href: recommendationsHref }
+          : { id: r.id, title: r.title, type: 'create', priority: r.priority || 'low', href: recommendationsHref }
+      ));
     }
     return (articlesData?.articles ?? [])
       .filter((a) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0)
@@ -193,6 +216,9 @@ const DashboardPage: NextPage = () => {
               faviconDomain={primaryDomain?.domain || ''}
               viewHref={recommendationsHref}
               loading={articlesLoading}
+              coverage={setup?.auditCounts}
+              hasBlogPath={hasBlogPath}
+              settingsHref={settingsHref}
               pipeline={pipelineActive && setup ? (
                 <SetupPipeline
                   stages={setup.stages}
