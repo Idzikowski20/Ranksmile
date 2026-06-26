@@ -11,7 +11,7 @@ const font = 'var(--font-family-primary)';
 const OrgBadge = ({ size, logo, initial }: { size: number; logo: string; initial: string }) => (
    <span
       aria-hidden="true"
-      style={{ width: size, height: size, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, overflow: 'hidden', textTransform: 'uppercase' }}
+      style={{ width: size, height: size, borderRadius: 6, background: logo ? 'transparent' : '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, overflow: 'hidden', textTransform: 'uppercase' }}
    >
       {logo ? <img alt="" src={logo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} /> : initial}
    </span>
