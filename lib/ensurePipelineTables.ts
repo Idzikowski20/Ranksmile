@@ -41,7 +41,34 @@ export async function ensurePipelineTables(): Promise<void> {
       id ${PK}, domain_id INTEGER NOT NULL, topic_id INTEGER, title TEXT NOT NULL,
       rationale TEXT, priority TEXT, type TEXT, created_at TIMESTAMP DEFAULT ${NOW})`);
 
-   for (const t of ['domain_gsc_pages','domain_keywords','domain_topics','domain_competitors','domain_recommendations']) {
+   await db.query(`CREATE TABLE IF NOT EXISTS page_audits (
+      id ${PK},
+      domain_id INTEGER NOT NULL,
+      url TEXT NOT NULL,
+      path TEXT,
+      title TEXT,
+      score INTEGER,
+      word_count INTEGER,
+      signals_json TEXT,
+      fetch_status TEXT,
+      content_hash TEXT,
+      duration_ms INTEGER,
+      status TEXT DEFAULT 'triaged',
+      deep_json TEXT,
+      deep_content_hash TEXT,
+      deep_generated_at TIMESTAMP,
+      last_audited_at TIMESTAMP DEFAULT ${NOW}
+   )`);
+   // status is open vocabulary (triaged|deep now; queued|failed|outdated reserved) — plain
+   // TEXT, no DB enum, so future states need no migration.
+
+   // domain_recommendations: optimize recs carry a page url + snapshot score
+   const recCols: Array<[string, string]> = [['url', 'TEXT'], ['score', 'INTEGER']];
+   for (const [col, type] of recCols) {
+      try { await db.query(`ALTER TABLE domain_recommendations ADD COLUMN ${col} ${type}`); } catch (e) { ignoreExisting(`add domain_recommendations.${col}`, e); }
+   }
+
+   for (const t of ['domain_gsc_pages','domain_keywords','domain_topics','domain_competitors','domain_recommendations','page_audits']) {
       try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch (e) { ignoreExisting(`idx_${t}_domain`, e); }
    }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_jobs_domain_type ON analysis_jobs(domain_id, job_type)'); } catch (e) { ignoreExisting('idx_jobs_domain_type', e); }
