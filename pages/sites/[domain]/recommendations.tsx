@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
+import { useSetupStatus } from '../../../services/domainPipeline';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
@@ -174,8 +175,20 @@ const RecommendationsPage: NextPage = () => {
    const { data: domainsData, isLoading: domainsLoading } = useFetchDomains(router, true);
    const domains = domainsData?.domains || [];
    const activeDomain = domains.find((d: any) => d.slug === slug);
+   const activeDomainId: number | null = activeDomain?.ID ?? null;
 
-   const [tab, setTab] = useState<'optimize' | 'ideas' | 'technical'>('optimize');
+   // Pipeline domain recommendations (from domain_recommendations table)
+   const { data: strategyData, isLoading: strategyLoading } = useQuery(
+      ['domain-recommendations', activeDomainId],
+      async () => {
+         const r = await fetch(`/api/domains/${activeDomainId}/recommendations`);
+         return r.json() as Promise<{ recommendations: Array<{ id: number; title: string; rationale: string | null; priority: string | null; type: string | null }> }>;
+      },
+      { enabled: !!activeDomainId, staleTime: 60_000 },
+   );
+   const { data: setupStatus } = useSetupStatus(activeDomainId);
+
+   const [tab, setTab] = useState<'optimize' | 'ideas' | 'technical' | 'strategy'>('optimize');
    const [search, setSearch] = useState('');
    const [showUrls, setShowUrls] = useState(false);
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('content_score');
@@ -443,9 +456,10 @@ const RecommendationsPage: NextPage = () => {
                      { value: 'optimize', label: 'Optimize', count: optimizeRows.length },
                      { value: 'ideas', label: 'Content Ideas', count: gapRows.length },
                      { value: 'technical', label: 'Technical SEO', count: techRows.length },
+                     { value: 'strategy', label: 'Strategy', count: strategyData?.recommendations?.length ?? 0 },
                   ]}
                   value={tab}
-                  onChange={(v) => setTab(v as 'optimize' | 'ideas' | 'technical')}
+                  onChange={(v) => setTab(v as 'optimize' | 'ideas' | 'technical' | 'strategy')}
                />
 
                {/* Right controls */}
@@ -730,6 +744,57 @@ const RecommendationsPage: NextPage = () => {
                            </div>
                         );
                      })}
+                  </div>
+               )}
+
+               {/* ── Strategy tab — pipeline domain recommendations ── */}
+               {tab === 'strategy' && (
+                  <div>
+                     {strategyLoading ? (
+                        <Skeleton />
+                     ) : !strategyData?.recommendations?.length && (setupStatus?.status === 'running' || setupStatus?.status === 'queued') ? (
+                        <Skeleton />
+                     ) : !strategyData?.recommendations?.length ? (
+                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
+                           No strategic recommendations yet. Run the domain analysis to generate them.
+                        </div>
+                     ) : strategyData.recommendations.map((rec, i) => (
+                        <div
+                           key={rec.id}
+                           style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 16,
+                              padding: '16px 20px',
+                              borderBottom: i < strategyData.recommendations.length - 1 ? '1px solid #F4F4F5' : 'none',
+                              background: '#fff',
+                           }}
+                        >
+                           <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                 <span style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                                    {rec.title}
+                                 </span>
+                                 <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: 9999,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    fontFamily: 'var(--font-family-primary)',
+                                    background: rec.priority === 'high' ? 'rgba(26,178,94,0.1)' : rec.priority === 'low' ? 'rgba(212,212,216,0.4)' : 'rgba(120,58,251,0.08)',
+                                    color: rec.priority === 'high' ? '#1AB25E' : rec.priority === 'low' ? '#52525C' : '#783AFB',
+                                 }}>
+                                    {rec.priority || 'medium'}
+                                 </span>
+                              </div>
+                              {rec.rationale && (
+                                 <p style={{ margin: 0, fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: 1.6 }}>
+                                    {rec.rationale}
+                                 </p>
+                              )}
+                           </div>
+                        </div>
+                     ))}
                   </div>
                )}
             </div>

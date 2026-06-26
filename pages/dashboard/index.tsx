@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { CSSTransition } from 'react-transition-group';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import Settings from '../../components/settings/Settings';
@@ -12,6 +12,8 @@ import GetStartedCard from '../../components/dashboard/GetStartedCard';
 import BrandPerformance from '../../components/dashboard/BrandPerformance';
 import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
 import LearnSection from '../../components/dashboard/LearnSection';
+import SetupPipeline from '../../components/dashboard/SetupPipeline';
+import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
 
 const formatShortDate = (dateStr: string): string => {
   if (!dateStr) return '';
@@ -22,6 +24,7 @@ const formatShortDate = (dateStr: string): string => {
 
 const DashboardPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains({} as any);
+  const queryClient = useQueryClient();
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
 
@@ -41,8 +44,9 @@ const DashboardPage: NextPage = () => {
   const clickSeries = useMemo(() => {
     const stats = sitesData?.domainStats || {};
     const byDate = new Map<string, number>();
-    Object.values(stats).forEach((s: any) => {
-      (s?.chart || []).forEach((p: any) => {
+    Object.values(stats).forEach((s: unknown) => {
+      type StatEntry = { chart?: Array<{ date: string; clicks?: number }> };
+      ((s as StatEntry)?.chart || []).forEach((p) => {
         byDate.set(p.date, (byDate.get(p.date) || 0) + (p.clicks || 0));
       });
     });
@@ -57,19 +61,44 @@ const DashboardPage: NextPage = () => {
   const deltaPct = prevSum > 0 ? Math.round(((currSum - prevSum) / prevSum) * 100) : (currSum > 0 ? 100 : 0);
   const hasData = clickSeries.length > 0;
 
-  const domains: any[] = domainsData?.domains || [];
+  const domains: DomainType[] = domainsData?.domains || [];
   const primaryDomain = domains[0];
+  const activeDomainId: number | null = primaryDomain?.ID ?? null;
   const clicksHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
   const recommendationsHref = primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites';
 
+  // ── Pipeline polling ──
+  const { data: setup } = useSetupStatus(activeDomainId);
+  const runSetup = useRunSetup();
+
+  // Fallback kick: if no job exists yet for this domain, trigger one
+  useEffect(() => {
+    if (setup && setup.status === 'none' && activeDomainId) {
+      runSetup.mutate(activeDomainId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setup?.status, activeDomainId]);
+
+  // On transition to done, refresh the dashboard data queries
+  useEffect(() => {
+    if (setup?.status === 'done') {
+      queryClient.invalidateQueries('dashboardArticles');
+      queryClient.invalidateQueries('dashboardSites');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setup?.status]);
+
+  const pipelineActive = setup && (setup.status === 'queued' || setup.status === 'running' || setup.status === 'failed');
+
   // ── Recommendations: analyzed articles (pulls from the recommendations data) ──
   const recommendations: RecommendationItem[] = useMemo(() => {
-    const arts = (articlesData?.articles ?? []).filter(
-      (a: any) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0,
+    type ArticleRow = { id: number; title: string; content_score: number; source: string };
+    const arts: ArticleRow[] = (articlesData?.articles ?? []).filter(
+      (a: ArticleRow) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0,
     );
     return arts
-      .sort((a: any, b: any) => (b.content_score || 0) - (a.content_score || 0))
-      .map((a: any) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
+      .sort((a, b) => (b.content_score || 0) - (a.content_score || 0))
+      .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
   }, [articlesData, recommendationsHref]);
 
   const startLabel = formatShortDate(clickSeries[0]?.date || '');
@@ -88,29 +117,39 @@ const DashboardPage: NextPage = () => {
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
-          <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
-            <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
-            <GetStartedCard />
-            <BrandPerformance
-              total={clicksTotal}
-              deltaPct={deltaPct}
-              points={points}
-              startLabel={startLabel}
-              endLabel={endLabel}
-              clicksHref={clicksHref}
-              loading={sitesLoading}
-            />
-            <RecommendationsSection
-              items={recommendations.slice(0, 3)}
-              total={recommendations.length}
-              faviconDomain={primaryDomain?.domain || ''}
-              viewHref={recommendationsHref}
-              loading={articlesLoading}
-            />
-            <LearnSection />
+        {pipelineActive ? (
+          <SetupPipeline
+            stages={setup.stages}
+            stagePercent={setup.stagePercent}
+            status={setup.status}
+            error={setup.error}
+            onRetry={() => { if (activeDomainId) runSetup.mutate(activeDomainId); }}
+          />
+        ) : (
+          <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
+            <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
+              <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
+              <GetStartedCard />
+              <BrandPerformance
+                total={clicksTotal}
+                deltaPct={deltaPct}
+                points={points}
+                startLabel={startLabel}
+                endLabel={endLabel}
+                clicksHref={clicksHref}
+                loading={sitesLoading}
+              />
+              <RecommendationsSection
+                items={recommendations.slice(0, 3)}
+                total={recommendations.length}
+                faviconDomain={primaryDomain?.domain || ''}
+                viewHref={recommendationsHref}
+                loading={articlesLoading}
+              />
+              <LearnSection />
+            </div>
           </div>
-        </div>
+        )}
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />
