@@ -318,6 +318,24 @@ class PipelineRequest(BaseModel):
     payload: dict  # { url, keyword, language, tone, existing_articles }
 
 
+class DomainSetupRequest(BaseModel):
+    jobId: str
+    nextjsUrl: str = ""
+    payload: dict
+
+
+@app.post("/pipeline/domain-setup")
+async def pipeline_domain_setup(req: DomainSetupRequest):
+    """Async domain pipeline: runs stages, pushes progress + a terminal done/failed
+    callback to /api/articles/job-progress. Returns immediately; Node does not
+    depend on the response body (it materializes from the terminal callback)."""
+    import asyncio
+    from pipeline.domain_runner import run_domain_setup
+    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    asyncio.create_task(run_domain_setup(req.jobId, req.payload, nextjs_url))
+    return {"status": "accepted"}
+
+
 @app.post("/pipeline/deep-analysis")
 async def pipeline_deep_analysis(req: PipelineRequest):
     """
