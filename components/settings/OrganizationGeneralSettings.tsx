@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useOrganization, useUpdateOrganization } from '../../services/organization';
 
 const Separator = () => (
   <div
@@ -12,8 +13,34 @@ const OrganizationGeneralSettings = () => {
   const [orgName, setOrgName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = () => {
-    toast.success('Saved');
+  const { data: org } = useOrganization();
+  const updateOrg = useUpdateOrganization();
+  const seeded = useRef(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [pendingLogo, setPendingLogo] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!org || seeded.current) return;
+    seeded.current = true;
+    setOrgName(org.name || '');
+    setLogoUrl(org.logoUrl);
+  }, [org]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const patch: { name?: string; logoDataUrl?: string } = { name: orgName };
+      if (pendingLogo) patch.logoDataUrl = pendingLogo;
+      const updated = await updateOrg.mutateAsync(patch);
+      if (updated?.logoUrl !== undefined) setLogoUrl(updated.logoUrl);
+      setPendingLogo(null);
+      toast.success('Saved');
+    } catch {
+      toast.error('Failed to save');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,18 +83,22 @@ const OrganizationGeneralSettings = () => {
               flexShrink: 0,
             }}
           >
-            <span
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                color: '#783AFB',
-                textTransform: 'uppercase',
-                fontFamily: 'var(--font-family-primary)',
-                userSelect: 'none',
-              }}
-            >
-              P
-            </span>
+            {(pendingLogo || logoUrl)
+              ? <img src={pendingLogo || logoUrl || ''} alt="Organization logo" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
+              : (
+                <span
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 600,
+                    color: '#783AFB',
+                    textTransform: 'uppercase',
+                    fontFamily: 'var(--font-family-primary)',
+                    userSelect: 'none',
+                  }}
+                >
+                  P
+                </span>
+              )}
           </div>
 
           {/* Upload button + hint */}
@@ -151,6 +182,13 @@ const OrganizationGeneralSettings = () => {
           accept=".png,.jpg,.jpeg,.gif,.webp"
           className="hidden"
           tabIndex={-1}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => setPendingLogo(typeof reader.result === 'string' ? reader.result : null);
+            reader.readAsDataURL(file);
+          }}
         />
       </div>
 
@@ -207,6 +245,8 @@ const OrganizationGeneralSettings = () => {
       <button
         type="button"
         onClick={handleSave}
+        disabled={saving}
+        style={{ opacity: saving ? 0.6 : undefined }}
         className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100"
       >
         Save
