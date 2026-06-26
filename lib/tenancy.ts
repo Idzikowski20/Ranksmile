@@ -2,6 +2,7 @@ import type { NextApiRequest } from 'next';
 import type { Transaction } from 'sequelize';
 import db from '../database/database';
 import { ensureTenancyTables } from './ensureTenancyTables';
+import { getArticleIdSql } from './articleSql';
 
 type Row = Record<string, any>;
 async function select(sql: string, replacements: any[]): Promise<Row[]> {
@@ -90,12 +91,13 @@ export async function getActiveWorkspaceId(req: NextApiRequest, userId: string):
 export async function assertArticleAccess(userId: string | null | undefined, articleId: number): Promise<boolean> {
    if (!userId || !Number.isInteger(articleId)) return false;
    await ensureUserTenancy(userId);
+   const idCol = await getArticleIdSql();
    const rows = await select(
       `SELECT 1 AS ok FROM articles a
           JOIN domain d ON d."ID" = a.domain_id
           JOIN workspaces w ON w.id = d.workspace_id
           JOIN organization_members m ON m.org_id = w.org_id
-        WHERE a.id = ? AND m.user_id = ? AND m.status = 'active' LIMIT 1`,
+        WHERE a.${idCol} = ? AND m.user_id = ? AND m.status = 'active' LIMIT 1`,
       [articleId, userId],
    );
    return rows.length > 0;
