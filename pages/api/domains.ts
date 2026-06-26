@@ -6,6 +6,7 @@ import Keyword from '../../database/models/keyword';
 import getdomainStats from '../../utils/domains';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
+import { getAccessibleWorkspaceIds, getActiveWorkspaceId } from '../../lib/tenancy';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
 
@@ -56,12 +57,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 export const getDomains = async (req: NextApiRequest, res: NextApiResponse<DomainsGetRes>, userId?: string | null) => {
    const withStats = !!req?.query?.withstats;
    try {
-      // Pokaż domeny należące do usera LUB domeny legacy (userId = NULL — dodane przed migracją)
       const { Op } = await import('sequelize');
-      const whereClause = userId
-         ? { [Op.or]: [{ userId }, { userId: null }] }
-         : {};
-      const allDomains: Domain[] = await Domain.findAll({ where: whereClause });
+      const wsIds = await getAccessibleWorkspaceIds(userId);
+      const allDomains: Domain[] = await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } });
       const formattedDomains: DomainType[] = allDomains.map((el) => {
          const domainItem:DomainType = el.get({ plain: true });
          const scData = domainItem?.search_console ? JSON.parse(domainItem.search_console) : {};
@@ -76,10 +74,11 @@ export const getDomains = async (req: NextApiRequest, res: NextApiResponse<Domai
    }
 };
 
-const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddResponse>, userId?: string | null) => {
+export const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddResponse>, userId?: string | null) => {
    const { domains } = req.body;
    if (domains && Array.isArray(domains) && domains.length > 0) {
       const domainsToAdd: any = [];
+      const workspaceId = userId ? await getActiveWorkspaceId(req, userId) : null;
 
       domains.forEach((domain: string) => {
          domainsToAdd.push({
@@ -88,6 +87,7 @@ const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddRes
             lastUpdated: new Date().toJSON(),
             added: new Date().toJSON(),
             userId: userId || null,
+            workspace_id: workspaceId,
          });
       });
       try {
@@ -131,6 +131,15 @@ export const updateDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
       return res.status(400).json({ domain: null, error: 'Domain is Required!' });
    }
    const { domain } = req.query || {};
+   const userId = await getCurrentUserId(req, res);
+   const wsIds = await getAccessibleWorkspaceIds(userId);
+   const existing = await Domain.findOne({ where: { domain } });
+   if (existing) {
+      const ws = (existing as unknown as { workspace_id: number | null }).workspace_id;
+      if (ws == null || !wsIds.includes(Number(ws))) {
+         return res.status(403).json({ domain: null, error: 'Access denied.' });
+      }
+   }
    const {
       notification_interval, notification_emails, search_console,
       scrape_strategy, scrape_pagination_limit, scrape_smart_full_fallback,
