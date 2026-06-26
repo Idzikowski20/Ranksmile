@@ -43,31 +43,18 @@ const RoleSelect = ({ value, options, onChange, compact }: {
   value: string; options: readonly string[]; onChange: (v: string) => void; compact?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
-  const btnRef = useRef<HTMLButtonElement | null>(null);
-  // Position the menu with `position: fixed` from the trigger's rect so it escapes the
-  // settings content's `overflow-auto` (an absolute menu would be clipped near the bottom).
-  const openMenu = () => {
-    const r = btnRef.current?.getBoundingClientRect();
-    if (r) setCoords({ top: r.bottom + 4, left: r.left, width: r.width });
-    setOpen(true);
-  };
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    const onScroll = () => setOpen(false);
     document.addEventListener('mousedown', onDown);
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onScroll);
-    return () => { document.removeEventListener('mousedown', onDown); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
+    return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
   return (
     <div ref={ref} style={{ position: 'relative', width: compact ? 'auto' : '100%', display: compact ? 'inline-block' : 'block' }}>
       <button
-        ref={btnRef}
         type="button"
-        onClick={() => (open ? setOpen(false) : openMenu())}
+        onClick={() => setOpen((v) => !v)}
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: compact ? 'auto' : '100%', minWidth: compact ? 108 : undefined, height: compact ? 32 : 40, border: '1px solid #D4D4D8', borderRadius: 8, padding: compact ? '0 8px 0 12px' : '0 10px 0 12px', fontSize: compact ? 13 : 14, color: '#18181B', background: '#FFFFFF', fontFamily: font, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', outline: 'none' }}
       >
         <span>{cap(value)}</span>
@@ -75,8 +62,8 @@ const RoleSelect = ({ value, options, onChange, compact }: {
           <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
-      {open && coords && (
-        <div style={{ position: 'fixed', top: coords.top, left: coords.left, minWidth: Math.max(coords.width, compact ? 140 : 0), background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 1000, padding: 4, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
+      {open && (
+        <div style={{ position: 'absolute', top: '110%', left: 0, minWidth: compact ? 140 : '100%', background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, padding: 4, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
           {options.map((o) => (
             <button
               key={o}
