@@ -1,15 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useWorkspaces, useSetActiveWorkspace, useCreateWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../../services/workspaces';
 
 const font = 'var(--font-family-primary)';
-
-interface Workspace {
-  id: string;
-  name: string;
-}
-
-// Mockup data — single workspace for now.
-const WORKSPACES: Workspace[] = [{ id: 'idztech', name: 'Idztech' }];
 
 const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   <span
@@ -49,11 +42,37 @@ const PlusIcon = () => (
   </svg>
 );
 
+const PencilIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M15.232 5.232l3.536 3.536M9 11l6.768-6.768a2 2 0 012.828 2.828L11.828 13.828A4 4 0 019.172 15H8v-1.172A4 4 0 019 11z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+function friendly(code: string | undefined): string {
+  if (code === 'WORKSPACE_NOT_EMPTY') return 'Workspace still has domains — move or remove them first.';
+  if (code === 'WORKSPACE_LAST') return 'You must keep at least one workspace.';
+  return 'Something went wrong.';
+}
+
 const WorkspaceSwitcher = () => {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(WORKSPACES[0].id);
   const [btnHover, setBtnHover] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const { data } = useWorkspaces();
+  const workspaces = data?.workspaces || [];
+  const activeId = data?.activeId ?? null;
+  const setActive = useSetActiveWorkspace();
+  const createWs = useCreateWorkspace();
+  const renameWs = useRenameWorkspace();
+  const deleteWs = useDeleteWorkspace();
+  const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
 
   useEffect(() => {
     if (!open) return undefined;
@@ -63,8 +82,6 @@ const WorkspaceSwitcher = () => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
-
-  const current = WORKSPACES.find((w) => w.id === selected) || WORKSPACES[0];
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -93,7 +110,7 @@ const WorkspaceSwitcher = () => {
       >
         <HeartAvatar />
         <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: 600, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-          {current.name}
+          {current?.name ?? 'Workspace'}
         </span>
         <ChevronUpDown />
       </button>
@@ -122,14 +139,14 @@ const WorkspaceSwitcher = () => {
           </div>
 
           <div style={{ padding: '4px 8px 8px' }}>
-            {WORKSPACES.map((w) => {
-              const isSel = w.id === selected;
+            {workspaces.map((w) => {
+              const isSel = w.id === activeId;
               return (
                 <button
                   key={w.id}
                   type="button"
                   role="menuitem"
-                  onClick={() => { setSelected(w.id); setOpen(false); }}
+                  onClick={() => { if (w.id !== activeId) setActive.mutate(w.id); setOpen(false); }}
                   className="workspace-switcher-row"
                   style={{
                     display: 'flex',
@@ -149,6 +166,22 @@ const WorkspaceSwitcher = () => {
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, color: '#18181B', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                     {w.name}
                   </span>
+                  <button
+                    type="button"
+                    aria-label="Rename workspace"
+                    onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename workspace', w.name); if (name && name.trim()) renameWs.mutate({ id: w.id, name: name.trim() }, { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: '#9F9FA9', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+                  >
+                    <PencilIcon />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete workspace"
+                    onClick={(e) => { e.stopPropagation(); if (window.confirm('Delete this workspace?')) deleteWs.mutate(w.id, { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: '#9F9FA9', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+                  >
+                    <TrashIcon />
+                  </button>
                   {isSel && <CheckIcon />}
                 </button>
               );
@@ -161,7 +194,7 @@ const WorkspaceSwitcher = () => {
             <button
               type="button"
               role="menuitem"
-              onClick={() => { setOpen(false); toast('Add new workspace — coming soon!'); }}
+              onClick={() => { setOpen(false); const name = window.prompt('New workspace name'); if (name && name.trim()) createWs.mutate(name.trim(), { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
               className="workspace-switcher-row"
               style={{
                 display: 'flex',
