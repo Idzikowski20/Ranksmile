@@ -12,6 +12,18 @@ import refreshAndUpdateKeywords from '../../utils/refresh';
 import { getKeywordsVolume, updateKeywordsVolumeData } from '../../utils/adwords';
 import { removeFromRetryQueue } from '../../utils/scraper';
 
+export async function userOwnsAllKeywords(ids: Array<number | string>, userId: string | null): Promise<boolean> {
+   if (!ids.length) return false;
+   const { Op } = await import('sequelize');
+   const kws = await Keyword.findAll({ where: { ID: { [Op.in]: ids } }, attributes: ['domain'] });
+   const domains = Array.from(new Set(kws.map((k) => k.domain)));
+   for (const d of domains) {
+      const owns = await verifyDomainOwnership(d, userId);
+      if (owns === false || owns === null) return false;
+   }
+   return true;
+}
+
 type KeywordsGetResponse = {
    keywords?: KeywordType[],
    error?: string|null,
@@ -150,12 +162,7 @@ const deleteKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
 
    try {
       const keywordsToRemove = (req.query.id as string).split(',').map((item) => parseInt(item, 10));
-      // Sprawdź własność domeny przez pierwszy keyword
-      const firstKeyword = await Keyword.findOne({ where: { ID: keywordsToRemove[0] } });
-      if (firstKeyword) {
-         const ownership = await verifyDomainOwnership(firstKeyword.domain, userId ?? null);
-         if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
-      }
+      if (!(await userOwnsAllKeywords(keywordsToRemove, userId ?? null))) return res.status(403).json({ error: 'Access denied.' });
       const removeQuery = { where: { ID: { [Op.in]: keywordsToRemove } } };
       const removedKeywordCount: number = await Keyword.destroy(removeQuery);
 
@@ -180,14 +187,9 @@ const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
    const { sticky, tags } = req.body;
 
    try {
-      const firstKeyword = await Keyword.findOne({ where: { ID: keywordIDs[0] } });
-      if (firstKeyword) {
-         const owns = await verifyDomainOwnership(firstKeyword.domain, userId ?? null);
-         if (owns === false || owns === null) return res.status(403).json({ error: 'Access denied.' });
-      }
-
       let keywords: KeywordType[] = [];
       if (sticky !== undefined) {
+         if (!(await userOwnsAllKeywords(keywordIDs, userId ?? null))) return res.status(403).json({ error: 'Access denied.' });
          await Keyword.update({ sticky }, { where: { ID: { [Op.in]: keywordIDs } } });
          const updateQuery = { where: { ID: { [Op.in]: keywordIDs } } };
          const updatedKeywords:Keyword[] = await Keyword.findAll(updateQuery);
@@ -197,6 +199,7 @@ const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
       }
       if (tags) {
          const tagsKeywordIDs = Object.keys(tags);
+         if (!(await userOwnsAllKeywords(tagsKeywordIDs, userId ?? null))) return res.status(403).json({ error: 'Access denied.' });
          const multipleKeywords = tagsKeywordIDs.length > 1;
          for (const keywordID of tagsKeywordIDs) {
             const selectedKeyword = await Keyword.findOne({ where: { ID: keywordID } });
