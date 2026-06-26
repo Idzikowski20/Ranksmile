@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useWorkspaces, useSetActiveWorkspace, useCreateWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../../services/workspaces';
+import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace, useRenameWorkspace, useDeleteWorkspace } from '../../services/workspaces';
 
 const font = 'var(--font-family-primary)';
 
@@ -69,7 +69,7 @@ const WorkspaceSwitcher = () => {
   const workspaces = data?.workspaces || [];
   const activeId = data?.activeId ?? null;
   const setActive = useSetActiveWorkspace();
-  const createWs = useCreateWorkspace();
+  const createSetup = useCreateSetupWorkspace();
   const renameWs = useRenameWorkspace();
   const deleteWs = useDeleteWorkspace();
   const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
@@ -194,7 +194,13 @@ const WorkspaceSwitcher = () => {
             <button
               type="button"
               role="menuitem"
-              onClick={() => { setOpen(false); const name = window.prompt('New workspace name'); if (name && name.trim()) createWs.mutate(name.trim(), { onError: (err: any) => { toast.error(friendly(err?.message)); } }); }}
+              onClick={() => {
+                setOpen(false);
+                createSetup.mutate(undefined, {
+                  onSuccess: (id) => { if (id && typeof window !== 'undefined') window.location.href = `/workspace/${id}/setup`; },
+                  onError: (err: any) => { toast.error(friendly(err?.message)); },
+                });
+              }}
               className="workspace-switcher-row"
               style={{
                 display: 'flex',
