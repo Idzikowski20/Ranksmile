@@ -76,6 +76,19 @@ const SiteFavicon = ({ domain }: { domain: string }) => (
    />
 );
 
+// ─── Country flag (flag-icons CDN; emoji flags don't render on Windows) ────────
+const Flag = ({ cc }: { cc: string }) => (
+   <span
+      aria-hidden="true"
+      style={{
+         display: 'inline-block', width: 20, height: 15, flexShrink: 0, borderRadius: 2,
+         backgroundColor: '#f4f4f5',
+         backgroundImage: `url(https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${cc}.svg)`,
+         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+      }}
+   />
+);
+
 // ─── Spinner (loading states) ──────────────────────────────────────────────────
 const Spinner = ({ size = 16, color = '#9F9FA9' }: { size?: number; color?: string }) => (
    <span
@@ -502,7 +515,10 @@ const SetupPage: NextPage = () => {
                                  >
                                     <span className="min-w-0 flex-1 truncate">
                                        {location ? (
-                                          <span className="text-gray-base"><span style={{ marginRight: 8 }}>{location.flag}</span>{location.country} - {location.language}</span>
+                                          <span className="gap-sm text-gray-base inline-flex items-center">
+                                             <Flag cc={location.cc} />
+                                             <span>{location.country} - {location.language}</span>
+                                          </span>
                                        ) : (
                                           <span className="text-gray-60">Select location</span>
                                        )}
@@ -535,7 +551,7 @@ const SetupPage: NextPage = () => {
                                                    className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
                                                    onClick={() => { setLocation(l); setLocOpen(false); setLocFilter(''); }}
                                                 >
-                                                   <span style={{ fontSize: 18, lineHeight: 1 }}>{l.flag}</span>
+                                                   <Flag cc={l.cc} />
                                                    <span className="text-gray-base">{l.country} - {l.language}</span>
                                                 </button>
                                              ))}
