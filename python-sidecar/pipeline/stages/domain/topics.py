@@ -1,11 +1,10 @@
 """TopicsStage — cluster keywords into 4–8 SEO topic groups via one LLM call."""
-import json
 import os
-import re
 
 import anthropic
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.llm_json import parse_json_array
 
 _client: anthropic.AsyncAnthropic | None = None
 
@@ -29,21 +28,20 @@ async def _llm_cluster(domain: str, keywords: list[str]) -> list[dict] | None:
     prompt = (
         f"Group these keywords into 4-8 SEO topic clusters for the domain {domain}. "
         f"Keywords: {kw_list}. "
-        "Return ONLY valid JSON (no markdown, no explanation): "
+        "Return ONLY valid JSON (no markdown, no explanation). Keep summaries short and "
+        "do NOT use double-quote characters inside any string value. "
         '[{"title": "...", "summary": "...", "keyword_indexes": [0, 1, 2]}]'
     )
     client = _get_client()
     response = await client.messages.create(
         model=MODEL,
         max_tokens=1024,
+        temperature=0,
         messages=[{"role": "user", "content": prompt}],
     )
     for block in response.content:
         if block.type == "text":
-            raw = block.text
-            json_match = re.search(r"\[[\s\S]*\]", raw)
-            if json_match:
-                return json.loads(json_match[0])
+            return parse_json_array(block.text)
     return None
 
 

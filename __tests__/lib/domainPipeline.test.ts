@@ -21,6 +21,12 @@ describe('deriveStages', () => {
     expect(deriveStages('done', 'recommendations', 100).stages.recommendations).toBe('done');
     expect(deriveStages('done', null, 0).stages.gsc).toBe('done');
   });
+  it('folds the hidden blog_audit stage into competitors (no all-pending flicker)', () => {
+    // blog_audit runs between competitors and recommendations but has no UI row.
+    expect(deriveStages('running', 'blog_audit', 50).stages).toEqual({
+      gsc: 'done', keywords: 'done', topics: 'done', competitors: 'running', recommendations: 'pending',
+    });
+  });
 });
 
 describe('enqueueDomainSetup', () => {
