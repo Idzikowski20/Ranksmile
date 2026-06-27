@@ -61,7 +61,7 @@ const fmtTime = (d: Date) => {
 const fmtRangeLabel = (from: Date | null, to: Date | null) => {
    if (!from) return 'Custom';
    const f = `${MONTHS[from.getMonth()]} ${from.getDate()}`;
-   if (!to) return `${f}, ${from.getFullYear()}`;
+   if (!to || sameDay(from, to)) return `${f}, ${from.getFullYear()}`;
    const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
    const t = sameMonth ? `${to.getDate()}` : `${MONTHS[to.getMonth()]} ${to.getDate()}`;
    return `${f} - ${t}, ${to.getFullYear()}`;
@@ -361,6 +361,12 @@ const ActivityLogPage: NextPage = () => {
       setCustomRange({ from, to: d });
       setCalOpen(false);
    };
+   // Clicking a heatmap dot filters the log to that single day.
+   const filterToDay = (d: Date) => {
+      setMode('custom');
+      setCustomRange({ from: startOfDay(d), to: startOfDay(d) });
+      setCalOpen(false);
+   };
 
    const { data: domainsData } = useFetchDomains(router, true);
    const domains = domainsData?.domains || [];
@@ -469,8 +475,8 @@ const ActivityLogPage: NextPage = () => {
             <title>{`Activity Log — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" actions={exportBtn} contentMaxWidth={880}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" actions={exportBtn} contentMaxWidth="100%">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT, width: '100%', maxWidth: 880, margin: '0 auto' }}>
                {/* Filters row */}
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div ref={segRef} style={{ position: 'relative' }}>
@@ -525,7 +531,7 @@ const ActivityLogPage: NextPage = () => {
                      <span>Active days: <strong style={{ color: '#18181B', fontWeight: 600 }}>{activeDays}</strong></span>
                      <span>Most active day: <strong style={{ color: '#18181B', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
                   </div>
-                  <Heatmap counts={counts} peakKey={peakKey} />
+                  <Heatmap counts={counts} peakKey={peakKey} onPickDay={filterToDay} />
                </div>
 
                {/* Activity table */}
@@ -617,8 +623,9 @@ const ActivityLogPage: NextPage = () => {
 
 // ─── Contribution heatmap ────────────────────────────────────────────────────
 
-const Heatmap = ({ counts, peakKey }: { counts: Map<string, number>; peakKey: string | null }) => {
+const Heatmap = ({ counts, peakKey, onPickDay }: { counts: Map<string, number>; peakKey: string | null; onPickDay: (d: Date) => void }) => {
    const year = new Date().getFullYear();
+   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
    const { weeks, monthLabels } = useMemo(() => {
       const first = new Date(year, 0, 1);
       const start = new Date(first);
@@ -645,45 +652,58 @@ const Heatmap = ({ counts, peakKey }: { counts: Map<string, number>; peakKey: st
    const ROW_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
    return (
-      <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
-         <div style={{ minWidth: 28 + weeks.length * CELL }}>
-            <div style={{ display: 'flex', paddingLeft: 28 }}>
-               {monthLabels.map((label, wi) => (
-                  // eslint-disable-next-line react/no-array-index-key
-                  <div key={wi} style={{ width: CELL, flexShrink: 0, height: 16, fontSize: 10, color: '#71717B', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'visible' }}>{label}</div>
-               ))}
-            </div>
-            <div style={{ display: 'flex' }}>
-               <div style={{ width: 28, flexShrink: 0 }}>
-                  {ROW_LABELS.map((d, ri) => (
+      <>
+         <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
+            <div style={{ minWidth: 28 + weeks.length * CELL }}>
+               <div style={{ display: 'flex', paddingLeft: 28 }}>
+                  {monthLabels.map((label, wi) => (
                      // eslint-disable-next-line react/no-array-index-key
-                     <div key={ri} style={{ height: CELL, display: 'flex', alignItems: 'center', fontSize: 10, color: '#71717B', fontFamily: FONT }}>{d}</div>
+                     <div key={wi} style={{ width: CELL, flexShrink: 0, height: 16, fontSize: 10, color: '#71717B', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'visible' }}>{label}</div>
                   ))}
                </div>
                <div style={{ display: 'flex' }}>
-                  {weeks.map((week, wi) => (
-                     // eslint-disable-next-line react/no-array-index-key
-                     <div key={wi} style={{ display: 'flex', flexDirection: 'column' }}>
-                        {week.map((day) => {
-                           const inYear = day.getFullYear() === year;
-                           const key = dayKey(day);
-                           const count = counts.get(key) || 0;
-                           let bg = DOT_IDLE;
-                           let opacity = inYear ? 0.3 : 0;
-                           if (count > 0) { bg = key === peakKey ? DOT_PEAK : DOT_ACTIVE; opacity = 1; }
-                           const title = count > 0 ? `${count} ${count === 1 ? 'activity' : 'activities'} on ${fmtMostActive(day)}` : undefined;
-                           return (
-                              <div key={key} style={{ width: CELL, height: CELL, display: 'grid', placeItems: 'center' }} title={title}>
-                                 <div style={{ width: 8, height: 8, borderRadius: 9999, background: bg, opacity, transition: 'opacity 300ms' }} />
-                              </div>
-                           );
-                        })}
-                     </div>
-                  ))}
+                  <div style={{ width: 28, flexShrink: 0 }}>
+                     {ROW_LABELS.map((d, ri) => (
+                        // eslint-disable-next-line react/no-array-index-key
+                        <div key={ri} style={{ height: CELL, display: 'flex', alignItems: 'center', fontSize: 10, color: '#71717B', fontFamily: FONT }}>{d}</div>
+                     ))}
+                  </div>
+                  <div style={{ display: 'flex' }}>
+                     {weeks.map((week, wi) => (
+                        // eslint-disable-next-line react/no-array-index-key
+                        <div key={wi} style={{ display: 'flex', flexDirection: 'column' }}>
+                           {week.map((day) => {
+                              const inYear = day.getFullYear() === year;
+                              const key = dayKey(day);
+                              const count = counts.get(key) || 0;
+                              let bg = DOT_IDLE;
+                              let opacity = inYear ? 0.3 : 0;
+                              if (count > 0) { bg = key === peakKey ? DOT_PEAK : DOT_ACTIVE; opacity = 1; }
+                              const text = `${fmtDate(day)}: ${count} ${count === 1 ? 'activity' : 'activities'}`;
+                              return (
+                                 <div
+                                    key={key}
+                                    style={{ width: CELL, height: CELL, display: 'grid', placeItems: 'center', cursor: inYear ? 'pointer' : 'default' }}
+                                    onMouseEnter={inYear ? (ev) => { const r = (ev.currentTarget as HTMLDivElement).getBoundingClientRect(); setTip({ text, x: r.left + r.width / 2, y: r.top }); } : undefined}
+                                    onMouseLeave={inYear ? () => setTip(null) : undefined}
+                                    onClick={inYear ? () => { setTip(null); onPickDay(day); } : undefined}
+                                 >
+                                    <div style={{ width: 8, height: 8, borderRadius: 9999, background: bg, opacity, transition: 'opacity 300ms' }} />
+                                 </div>
+                              );
+                           })}
+                        </div>
+                     ))}
+                  </div>
                </div>
             </div>
          </div>
-      </div>
+         {tip && (
+            <div style={{ position: 'fixed', left: tip.x, top: tip.y, transform: 'translate(-50%, calc(-100% - 8px))', zIndex: 300, pointerEvents: 'none', background: '#18181B', color: '#fff', fontFamily: FONT, fontSize: 13, fontWeight: 500, padding: '6px 10px', borderRadius: 8, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+               {tip.text}
+            </div>
+         )}
+      </>
    );
 };
 
