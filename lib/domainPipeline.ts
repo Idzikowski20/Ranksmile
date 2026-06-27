@@ -170,14 +170,15 @@ async function failJob(jobId: string, stage: StageKey, message: string) {
    await db.query(`UPDATE analysis_jobs SET status='failed', current_stage=?, error=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`, { replacements: [stage, message, jobId] });
 }
 
-/** Stage 1 (Node): GSC fetch + seed fallback. Returns seed keywords. */
-async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string[]> {
+/** Stage 1 (Node): GSC fetch + seed fallback. Returns seed keywords + top page URLs. */
+async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seeds: string[]; pages: string[] }> {
    await emit(jobId, 'gsc', 10, 'Getting Search Console and site data');
    // Resolve domain + userId from the domain row.
    const drows = await selectRows<{ domain: string; userId: string }>(`SELECT domain, "userId" FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
    const domainName = drows[0]?.domain || '';
    const userId = drows[0]?.userId || '';
    let seeds: string[] = [];
+   let pages: string[] = [];
    try {
       const accounts = (await GscAccount.findAll({ where: { userId } })).map((a) => a.get({ plain: true }));
       for (const acc of accounts) {
@@ -192,6 +193,11 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string
                   const rows = r.data.rows || [];
                   if (rows.length) {
                      seeds = rows.map((x) => (x.keys || [])[0]).filter((k): k is string => typeof k === 'string');
+                     // Same property works → also pull top pages (audit fallback when no sitemap).
+                     try {
+                        const pr = await client.searchanalytics.query({ siteUrl, requestBody: { startDate: fmt(start), endDate: fmt(end), dimensions: ['page'], rowLimit: 100 } });
+                        pages = (pr.data.rows || []).map((x) => (x.keys || [])[0]).filter((k): k is string => typeof k === 'string');
+                     } catch { /* pages optional */ }
                      break;
                   }
                } catch { /* try next form */ }
@@ -208,7 +214,7 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string
       seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
    }
    await emit(jobId, 'gsc', 100, 'Search Console and site data ready');
-   return Array.from(new Set(seeds)).slice(0, 30);
+   return { seeds: Array.from(new Set(seeds)).slice(0, 30), pages: Array.from(new Set(pages)) };
 }
 
 /** Fire-and-forget runner. Claims, runs GSC, calls sidecar; sidecar finishes via job-progress 'done'. */
@@ -219,10 +225,14 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
    const domainId = Number(jrows[0]?.domain_id);
    if (!domainId) { await failJob(jobId, 'gsc', 'missing domain_id'); return; }
    try {
-      const seedKeywords = await gscStageAndSeeds(jobId, domainId);
+      const { seeds: seedKeywords, pages: gscPages } = await gscStageAndSeeds(jobId, domainId);
       const drows = await selectRows<{ domain: string; brand_knowledge: string }>(`SELECT domain, brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
       const domainName = drows[0]?.domain || '';
-      const blogUrls = await gatherBlogUrls(domainId, domainName);
+      let blogUrls = await gatherBlogUrls(domainId, domainName);
+      // No sitemap (or nothing matched) → fall back to the domain's top GSC pages.
+      if (!blogUrls.length && gscPages.length) {
+         blogUrls = Array.from(new Set(gscPages.map((u) => u.split('#')[0].split('?')[0])));
+      }
       const body = { jobId, nextjsUrl: selfUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, limits: { keywords: 20, competitorsPerKeyword: 10 } } };
       const resp = await fetch(`${sidecarBase()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
