@@ -1010,6 +1010,11 @@ const ArticleEditorPage: NextPage = () => {
               setAiVisibilitySummary(payload.aiSummary);
             }
 
+            // Freshly scraped competitor outlines → fill the Competitors panel immediately.
+            if (Array.isArray(payload.competitorOutlines) && payload.competitorOutlines.length) {
+              setArticle((prev) => (prev ? { ...prev, competitor_outlines_cache: JSON.stringify({ competitors: payload.competitorOutlines }) } : prev));
+            }
+
             // Apply meta suggestions
             if (payload.suggestedMetaTitle) handleMetaTitleChange(payload.suggestedMetaTitle);
             if (payload.suggestedMetaDescription) handleMetaDescriptionChange(payload.suggestedMetaDescription);
