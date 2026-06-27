@@ -4,7 +4,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
-import { useSetupStatus } from '../../../services/domainPipeline';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
@@ -14,7 +13,6 @@ import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Ske
 import { DeltaDown, SortUpDown } from '../../../components/ui/icons';
 import { useSortState } from '../../../lib/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
-import type { DeepResult } from '../../../lib/deepAnalysis';
 
 function compactNum(n: number): string {
    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -66,7 +64,6 @@ const PanelIcon = () => (
 // ── Types ─────────────────────────────────────────────────────────────────────
 type SortKey = 'content_score' | 'position' | 'clicks' | 'impressions';
 
-type TechIssue = { type: string; label: string; description: string; severity: 'error' | 'warning' };
 
 type RecommRow = {
    id: number | string;
@@ -84,7 +81,6 @@ type RecommRow = {
    updatedAt?: string | null;
 };
 
-type TechRow = RecommRow & { issues: TechIssue[] };
 
 type FilterState = {
    rankDropsOnly: boolean;
@@ -176,20 +172,8 @@ const RecommendationsPage: NextPage = () => {
    const { data: domainsData, isLoading: domainsLoading } = useFetchDomains(router, true);
    const domains = domainsData?.domains || [];
    const activeDomain = domains.find((d: any) => d.slug === slug);
-   const activeDomainId: number | null = activeDomain?.ID ?? null;
 
-   // Pipeline domain recommendations (from domain_recommendations table)
-   const { data: strategyData, isLoading: strategyLoading } = useQuery(
-      ['domain-recommendations', activeDomainId],
-      async () => {
-         const r = await fetch(`/api/domains/${slug}/recommendations`);
-         return r.json() as Promise<{ recommendations: Array<{ id: number; title: string; rationale: string | null; priority: string | null; type: string | null; url: string | null; score: number | null; word_count: number | null }> }>;
-      },
-      { enabled: !!activeDomainId, staleTime: 60_000 },
-   );
-   const { data: setupStatus } = useSetupStatus(slug);
-
-   const [tab, setTab] = useState<'optimize' | 'ideas' | 'technical' | 'strategy'>('optimize');
+   const [tab, setTab] = useState<'optimize' | 'ideas'>('optimize');
    const [search, setSearch] = useState('');
    const [showUrls, setShowUrls] = useState(false);
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('content_score');
@@ -312,16 +296,6 @@ const RecommendationsPage: NextPage = () => {
          .slice(0, 150);
    }, [allGscKeywords, rows]);
 
-   // ── Technical SEO rows — articles with on-page issues ──
-   const techRows = useMemo<TechRow[]>(() => rows.map((r) => {
-      const issues: TechIssue[] = [];
-      if (!r.meta_title) issues.push({ type: 'missing_title', label: 'Missing meta title', description: 'Google may auto-generate a title — set one to control how this page appears in search results', severity: 'error' });
-      if (!r.keyword) issues.push({ type: 'missing_kw', label: 'No target keyword', description: 'Assign a target keyword to enable content scoring and NLP-based optimization', severity: 'warning' });
-      if ((r.word_count ?? 0) > 0 && (r.word_count ?? 0) < 300) issues.push({ type: 'thin_content', label: 'Thin content', description: `Only ${r.word_count} words — aim for 300+ to meet minimum indexing quality thresholds`, severity: 'error' });
-      if (r.content_score === 0 && r.source !== 'site_context') issues.push({ type: 'not_analyzed', label: 'Not analyzed', description: 'Run a deep analysis to compute content score, NLP term coverage, and readability signals', severity: 'warning' });
-      if (r.impressions > 100 && r.clicks === 0) issues.push({ type: 'low_ctr', label: 'Low CTR', description: `${r.impressions.toLocaleString()} impressions with 0 clicks — title or meta description likely needs improvement`, severity: 'warning' });
-      return { ...r, issues };
-   }).filter((r) => r.issues.length > 0), [rows]);
 
    const filtered = useMemo(() => {
       let out = optimizeRows;
@@ -352,35 +326,6 @@ const RecommendationsPage: NextPage = () => {
    const [analyzingIds, setAnalyzingIds] = useState<Set<string | number>>(new Set());
    const [creatingKw, setCreatingKw] = useState<string | null>(null);
 
-   // ── Deep-on-demand for optimize strategy recs ──
-   // Per-URL cache in component state so a second open is instant.
-   const [expandedRec, setExpandedRec] = useState<string | null>(null);
-   const [deepByUrl, setDeepByUrl] = useState<Record<string, DeepResult>>({});
-   const [deepLoadingUrl, setDeepLoadingUrl] = useState<string | null>(null);
-   const [deepErrorUrl, setDeepErrorUrl] = useState<string | null>(null);
-
-   const openOptimizeRec = async (url: string) => {
-      // Toggle closed if already open.
-      if (expandedRec === url) { setExpandedRec(null); return; }
-      setExpandedRec(url);
-      if (deepByUrl[url]) return; // cached — render instantly, no fetch
-      setDeepLoadingUrl(url);
-      setDeepErrorUrl(null);
-      try {
-         const r = await fetch(`/api/domains/${slug}/page-audit-deep`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
-         });
-         if (!r.ok) throw new Error(`deep analysis failed (${r.status})`);
-         const d = await r.json() as { deep: DeepResult };
-         setDeepByUrl((m) => ({ ...m, [url]: d.deep }));
-      } catch {
-         setDeepErrorUrl(url);
-      } finally {
-         setDeepLoadingUrl((cur) => (cur === url ? null : cur));
-      }
-   };
 
    const handleCreateArticleForKeyword = async (keyword: string) => {
       if (!activeDomain?.ID) return;
@@ -486,11 +431,9 @@ const RecommendationsPage: NextPage = () => {
                   items={[
                      { value: 'optimize', label: 'Optimize', count: optimizeRows.length },
                      { value: 'ideas', label: 'Content Ideas', count: gapRows.length },
-                     { value: 'technical', label: 'Technical SEO', count: techRows.length },
-                     { value: 'strategy', label: 'Strategy', count: strategyData?.recommendations?.length ?? 0 },
                   ]}
                   value={tab}
-                  onChange={(v) => setTab(v as 'optimize' | 'ideas' | 'technical' | 'strategy')}
+                  onChange={(v) => setTab(v as 'optimize' | 'ideas')}
                />
 
                {/* Right controls */}
@@ -572,54 +515,6 @@ const RecommendationsPage: NextPage = () => {
                   </div>
                )}
 
-               {/* ── Technical SEO tab ── */}
-               {tab === 'technical' && (
-                  <div style={{ minWidth: 780 }}>
-                     {/* Header */}
-                     <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5', borderRadius: '8px 8px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
-                        <div style={{ padding: '10px 16px', width: 300, flexShrink: 0, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Page</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 160, flexShrink: 0, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Keyword</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 90, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Score</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', flex: 1, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Issues detected</div>
-                     </div>
-                     {loading ? (
-                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Loading…</div>
-                     ) : techRows.length === 0 ? (
-                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>No technical issues found.</div>
-                     ) : techRows.map((row, i) => (
-                        <div key={row.id} className="rec-row" style={{ display: 'flex', alignItems: 'flex-start', borderBottom: i < techRows.length - 1 ? '1px solid #F4F4F5' : 'none', minHeight: 64, background: '#fff', transition: 'background 120ms', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
-                           {/* Page */}
-                           <div style={{ padding: '12px 16px', width: 300, flexShrink: 0, minWidth: 0 }}>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.title}</span>
-                              {row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{row.url}</span>}
-                           </div>
-                           {/* Keyword */}
-                           <div style={{ padding: '12px 16px', borderLeft: '1px solid #F4F4F5', width: 160, flexShrink: 0, overflow: 'hidden' }}>
-                              <span style={{ fontSize: 12, color: row.keyword ? '#18181B' : '#9F9FA9', fontFamily: 'var(--font-family-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                 {row.keyword || '—'}
-                              </span>
-                           </div>
-                           {/* Score */}
-                           <div style={{ padding: '12px 16px', borderLeft: '1px solid #F4F4F5', width: 90, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start' }}>
-                              {row.content_score > 0 ? <Gauge score={row.content_score} size="sm" /> : <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>—</span>}
-                           </div>
-                           {/* Issues */}
-                           <div style={{ padding: '12px 16px', borderLeft: '1px solid #F4F4F5', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              {row.issues.map((issue) => (
-                                 <div key={issue.type} style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                                    <span style={{ padding: '2px 8px', borderRadius: 9999, flexShrink: 0, background: issue.severity === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(234,179,8,0.1)', color: issue.severity === 'error' ? '#dc2626' : '#b45309', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>
-                                       {issue.label}
-                                    </span>
-                                    <span style={{ fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '18px' }}>
-                                       {issue.description}
-                                    </span>
-                                 </div>
-                              ))}
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               )}
 
                {/* ── Optimize tab ── */}
                {tab === 'optimize' && (
@@ -778,118 +673,6 @@ const RecommendationsPage: NextPage = () => {
                   </div>
                )}
 
-               {/* ── Strategy tab — pipeline domain recommendations ── */}
-               {tab === 'strategy' && (
-                  <div>
-                     {strategyLoading ? (
-                        <Skeleton />
-                     ) : !strategyData?.recommendations?.length && (setupStatus?.status === 'running' || setupStatus?.status === 'queued') ? (
-                        <Skeleton />
-                     ) : !strategyData?.recommendations?.length ? (
-                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-                           No strategic recommendations yet. Run the domain analysis to generate them.
-                        </div>
-                     ) : strategyData.recommendations.map((rec, i) => {
-                        const isOptimize = rec.type === 'optimize' && !!rec.url;
-                        const url = rec.url || '';
-                        const isExpanded = isOptimize && expandedRec === url;
-                        const deep = isOptimize ? deepByUrl[url] : undefined;
-                        return (
-                        <div
-                           key={rec.id}
-                           style={{
-                              borderBottom: i < strategyData.recommendations.length - 1 ? '1px solid #F4F4F5' : 'none',
-                              background: '#fff',
-                           }}
-                        >
-                           <div
-                              role={isOptimize ? 'button' : undefined}
-                              tabIndex={isOptimize ? 0 : undefined}
-                              onClick={isOptimize ? () => openOptimizeRec(url) : undefined}
-                              onKeyDown={isOptimize ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openOptimizeRec(url); } } : undefined}
-                              style={{
-                                 display: 'flex',
-                                 alignItems: 'flex-start',
-                                 gap: 16,
-                                 padding: '16px 20px',
-                                 cursor: isOptimize ? 'pointer' : 'default',
-                              }}
-                           >
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
-                                       {rec.title}
-                                    </span>
-                                    {isOptimize && rec.score != null ? (
-                                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                          <Gauge score={rec.score} size="sm" />
-                                          {rec.word_count != null && (
-                                             <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>{rec.word_count} words</span>
-                                          )}
-                                       </span>
-                                    ) : (
-                                       <span style={{
-                                          padding: '2px 8px',
-                                          borderRadius: 9999,
-                                          fontSize: 11,
-                                          fontWeight: 700,
-                                          fontFamily: 'var(--font-family-primary)',
-                                          background: rec.priority === 'high' ? 'rgba(26,178,94,0.1)' : rec.priority === 'low' ? 'rgba(212,212,216,0.4)' : 'rgba(120,58,251,0.08)',
-                                          color: rec.priority === 'high' ? '#1AB25E' : rec.priority === 'low' ? '#52525C' : '#783AFB',
-                                       }}>
-                                          {rec.priority || 'medium'}
-                                       </span>
-                                    )}
-                                 </div>
-                                 {rec.rationale && (
-                                    <p style={{ margin: 0, fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: 1.6 }}>
-                                       {rec.rationale}
-                                    </p>
-                                 )}
-                              </div>
-                           </div>
-
-                           {/* Deep-analysis detail (optimize recs only) */}
-                           {isExpanded && (
-                              <div style={{ padding: '0 20px 16px 20px' }}>
-                                 {deepLoadingUrl === url ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#71717B', fontFamily: 'var(--font-family-primary)' }}>
-                                       <span style={{ width: 14, height: 14, border: '2px solid #E4E4E7', borderTopColor: '#783AFB', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-                                       Running deep analysis…
-                                    </div>
-                                 ) : deepErrorUrl === url ? (
-                                    <span style={{ fontSize: 13, color: '#FF6F77', fontFamily: 'var(--font-family-primary)' }}>
-                                       Deep analysis failed. The triage score above still applies — try again later.
-                                    </span>
-                                 ) : deep ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid #F4F4F5', borderRadius: 8, padding: 16, background: '#F8F9FF' }}>
-                                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                          <span style={{ fontSize: 13, fontWeight: 700, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Ranking score</span>
-                                          <span style={{ fontSize: 13, fontWeight: 700, color: '#783AFB', fontFamily: 'var(--font-family-primary)' }}>{deep.ranking_score}/100</span>
-                                       </div>
-                                       {deep.ranking_signals.map((sig) => (
-                                          <div key={sig.name} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 8, borderTop: '1px solid #ECECF1' }}>
-                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', textTransform: 'capitalize' }}>{sig.name.replace(/_/g, ' ')}</span>
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>{sig.score}</span>
-                                                {sig.verdict && (
-                                                   <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>· {sig.verdict.replace(/_/g, ' ')}</span>
-                                                )}
-                                             </div>
-                                             {sig.recommendation && (
-                                                <span style={{ fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: 1.5 }}>{sig.recommendation}</span>
-                                             )}
-                                          </div>
-                                       ))}
-                                    </div>
-                                 ) : null}
-                              </div>
-                           )}
-                        </div>
-                        );
-                     })}
-                  </div>
-               )}
             </div>
          </DomainSubLayout>
 
