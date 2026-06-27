@@ -57,7 +57,7 @@ const TopProgressBar = () => {
       <div
          aria-hidden="true"
          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, height: 3, zIndex: 2000,
+            position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 2000,
             pointerEvents: 'none', opacity: visible ? 1 : 0, transition: 'opacity 300ms ease',
          }}
       >
