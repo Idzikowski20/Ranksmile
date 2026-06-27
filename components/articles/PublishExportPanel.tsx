@@ -22,6 +22,7 @@ interface Props {
   onMarkDone: () => void;
   readOnly?: boolean;
   onBack: () => void;
+  saveState?: 'saved' | 'saving' | 'unsaved';
 }
 
 /* ── HTML → Markdown (lightweight, browser-only) ───────────────────── */
@@ -99,7 +100,7 @@ const WpLogo = <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path
 const IcoExternal = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const IcoManage = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M5 6h7M16 6h3M5 12h3M12 12h7M5 18h9M18 18h1" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" /><circle cx="14" cy="6" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="10" cy="12" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="16" cy="18" r="2" stroke="currentColor" strokeWidth={1.7} /></svg>;
 
-const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack }: Props) => {
+const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack, saveState }: Props) => {
   const router = useRouter();
   const [doneCardOpen, setDoneCardOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
@@ -149,6 +150,11 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
     : wpPublishing
       ? (wp.published ? 'Updating…' : 'Publishing…')
       : (wp.published ? 'Update to WordPress' : 'Publish to WordPress');
+
+  // Block publish/update while the article has unsaved or in-flight changes — we'd
+  // otherwise push stale content to WordPress.
+  const wpBlocked = wp.connected && (saveState === 'saving' || saveState === 'unsaved');
+  const wpBtnDisabled = readOnly || wpPublishing || wpBlocked;
 
   const copy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`)).catch(() => toast.error('Copy failed'));
@@ -270,12 +276,19 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               </>
             ) : (
               <>
-                <button type="button" disabled={readOnly || wpPublishing} onClick={readOnly ? undefined : (wp.connected ? publishWp : () => router.push('/settings/wordpress'))}
-                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', opacity: (readOnly || wpPublishing) ? 0.5 : 1, transition: 'background 0.15s' }}
-                  onMouseEnter={(e) => { if (!readOnly && !wpPublishing) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                <button type="button" disabled={wpBtnDisabled} onClick={wpBtnDisabled ? undefined : (wp.connected ? publishWp : () => router.push('/settings/wordpress'))}
+                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: wpBtnDisabled ? 'not-allowed' : 'pointer', opacity: wpBtnDisabled ? 0.5 : 1, transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
                   {WpLogo}
                   {wpBtnLabel}
                 </button>
+
+                {/* Why the button is disabled — content must be saved before it ships. */}
+                {wpBlocked && (
+                  <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>
+                    {saveState === 'saving' ? 'Saving changes…' : 'Save your changes to publish to WordPress.'}
+                  </span>
+                )}
 
                 {/* Status — choose draft vs published; applied on the next Publish/Update */}
                 {wp.connected && (

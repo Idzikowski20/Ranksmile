@@ -40,6 +40,7 @@ interface Props {
   initialAiReadability?: any;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
+  saveState?: 'saved' | 'saving' | 'unsaved';
   onInternalLinks?: () => void;
   articleId?: number;
   cachedOutlines?: string | null;
@@ -235,6 +236,7 @@ const ContentScorePanel = ({
   keyword,
   onAutoOptimize,
   isAutoOptimizing,
+  saveState,
   onInternalLinks,
   articleId,
   cachedOutlines,
@@ -515,6 +517,7 @@ const ContentScorePanel = ({
         metaDescription={metaDescription || ''}
         onMetaTitleChange={onMetaTitleChange || (() => {})}
         onMetaDescriptionChange={onMetaDescriptionChange || (() => {})}
+        saveState={saveState}
         keyword={keyword || ''}
         featuredImage={featuredImage || null}
         onFeaturedImageChange={onFeaturedImageChange}
