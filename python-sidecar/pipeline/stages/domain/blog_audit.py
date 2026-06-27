@@ -1,5 +1,6 @@
 """BlogAuditStage — fetch each blog post, compute a no-LLM triage score (P3d)."""
 import asyncio
+import os
 import time
 
 import httpx
@@ -12,12 +13,28 @@ MAX_POSTS = 100
 CONCURRENCY = 8
 FETCH_TIMEOUT = 15.0
 UA = "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
+NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
 
 
 def _status_from_exc(exc: Exception) -> str:
     if isinstance(exc, httpx.TimeoutException):
         return "TIMEOUT"
     return "ERROR"
+
+
+async def _spa_render(url: str) -> str | None:
+    """JS-render a URL via the Next.js headless endpoint (for SPA shells)."""
+    try:
+        async with httpx.AsyncClient(timeout=25) as client:
+            resp = await client.post(f"{NEXTJS_URL}/api/render-page", json={"url": url, "timeout": 15000})
+            resp.raise_for_status()
+            html = resp.json().get("html")
+            if html:
+                print(f"[blog_audit] SPA fallback success for {url}")
+                return html
+    except Exception as exc:  # noqa: BLE001
+        print(f"[blog_audit] SPA fallback failed for {url}: {exc}")
+    return None
 
 
 async def _audit_one(client: httpx.AsyncClient, url: str) -> dict:
@@ -32,6 +49,12 @@ async def _audit_one(client: httpx.AsyncClient, url: str) -> dict:
         if r.status_code >= 400:
             return {"url": url, "fetch_status": "ERROR", "duration_ms": duration_ms}
         signals = extract_page_signals(r.text, url)
+        # SPA sites return the same shell for every route over plain HTTP, so all pages
+        # would score identically. Re-render thin pages so each gets its real content.
+        if signals.get("word_count", 0) < 300:
+            rendered = await _spa_render(url)
+            if rendered:
+                signals = extract_page_signals(rendered, url)
         score = score_triage(signals)
         return {
             "url": url,
