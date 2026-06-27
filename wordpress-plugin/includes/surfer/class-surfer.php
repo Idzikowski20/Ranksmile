@@ -99,6 +99,13 @@ class Surfer {
 	 */
 	protected $general_endpoints = null;
 
+	/**
+	 * Self-hosted updater.
+	 *
+	 * @var Surfer_Updater
+	 */
+	protected $updater = null;
+
 
 	/**
 	 * JSON Schema class.
@@ -332,6 +339,7 @@ class Surfer {
 		$this->gsc               = new Surfer_GSC();
 		$this->integrations      = new Integrations();
 		$this->general_endpoints = new Surfer_General_Endpoints();
+		$this->updater           = new Surfer_Updater();
 		// $this->json_schema       = new Json_Schema();
 	}
 
