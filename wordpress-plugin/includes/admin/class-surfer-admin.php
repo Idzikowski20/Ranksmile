@@ -32,6 +32,7 @@ class Surfer_Admin {
 
 		add_action( 'admin_init', array( $this, 'init_filters' ) );
 		add_action( 'admin_init', array( $this, 'handle_admin_actions' ) );
+		add_action( 'admin_init', array( $this, 'do_admin_redirects' ) );
 
 		add_action( 'admin_notices', array( $this, 'check_wordfence_application_password_protection' ) );
 		add_action( 'admin_notices', array( $this, 'check_elementor_grid_settings' ) );
@@ -335,32 +336,27 @@ class Surfer_Admin {
 	 */
 	public function do_admin_redirects() {
 
-		// Setup wizard redirect. False, because temporarily we want to disable this.
-		if ( false && get_transient( '_surfer_activation_redirect' ) ) {
-			$do_redirect        = true;
-			$current_page       = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : false; // phpcs:ignore WordPress.Security.NonceVerification
-			$is_onboarding_path = ! isset( $_GET['path'] ) || '/setup-surfer-wizard' === sanitize_text_field( wp_unslash( $_GET['page'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
-
-			// On these pages, or during these events, postpone the redirect.
-			if ( wp_doing_ajax() || is_network_admin() || ! current_user_can( 'activate_plugins' ) ) {
-				$do_redirect = false;
-			}
-
-			// On these pages, or during these events, disable the redirect.
-			if (
-			( 'surfer' === $current_page && $is_onboarding_path ) ||
-			isset( $_GET['activate-multi'] ) // phpcs:ignore WordPress.Security.NonceVerification
-			) {
-				delete_transient( '_surfer_activation_redirect' );
-				$do_redirect = false;
-			}
-
-			if ( $do_redirect ) {
-				delete_transient( '_surfer_activation_redirect' );
-				wp_safe_redirect( admin_url( 'admin.php?page=setup-surfer-wizard' ) );
-				exit;
-			}
+		// Set on a brand-new install (see Surfer_Installer::set_activation_transients).
+		if ( ! get_transient( '_surfer_activation_redirect' ) ) {
+			return;
 		}
+
+		// Don't redirect during AJAX, on the network admin, on bulk activation, or
+		// for users who can't manage plugins.
+		if ( wp_doing_ajax() || is_network_admin() || ! current_user_can( 'activate_plugins' ) || isset( $_GET['activate-multi'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return;
+		}
+
+		// Already on the Surfer page – clear the flag and stop (avoids a redirect loop).
+		$current_page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : false; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( 'surfer' === $current_page ) {
+			delete_transient( '_surfer_activation_redirect' );
+			return;
+		}
+
+		delete_transient( '_surfer_activation_redirect' );
+		wp_safe_redirect( admin_url( 'admin.php?page=surfer' ) );
+		exit;
 	}
 
 
