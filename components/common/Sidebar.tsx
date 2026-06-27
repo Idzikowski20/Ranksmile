@@ -335,23 +335,23 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
       return selectedDomainSlug;
    }, [activeName, domains, selectedDomainSlug]);
 
-   const selectedDomain = activeSlug
-      ? domains.find((d) => d.slug === activeSlug) ?? null
-      : null;
-
-   // Recommendations counter — articles for the selected domain that need optimization (score < 70).
-   const { data: recArticlesData } = useQuery(
-      ['articles', selectedDomain?.ID],
-      async () => {
-         const res = await fetch(`/api/articles?domainId=${selectedDomain!.ID}`);
-         return res.json();
-      },
-      { enabled: !!selectedDomain?.ID, staleTime: 60 * 1000 },
+   // Recommendations counter — shares the dashboard's ['domainRecs', slug] query, so the
+   // pipeline's done-invalidation (and any other refresh) updates this badge immediately
+   // instead of going stale behind a separate 60s articles cache.
+   const { data: domainRecsData } = useQuery(
+      ['domainRecs', activeSlug],
+      () => fetch(`/api/domains/${activeSlug}/recommendations`).then((r) => r.json()),
+      { enabled: !!activeSlug, staleTime: 30 * 1000 },
    );
    const recommendationCount = useMemo(() => {
-      const articles: any[] = recArticlesData?.articles || [];
-      return articles.filter((a) => (a.content_score || 0) < 70).length;
-   }, [recArticlesData]);
+      type DomainRec = { type?: string | null; score?: number | null };
+      const recs = (domainRecsData?.recommendations ?? []) as DomainRec[];
+      // Match the dashboard: drop optimize recs with a 0/missing score.
+      return recs.filter((r) => {
+         const isOptimize = r.type === 'optimize' || r.score != null;
+         return !isOptimize || (r.score ?? 0) > 0;
+      }).length;
+   }, [domainRecsData]);
 
    const toolItems = [
       { href: workspaceHref(activeId, '/dashboard'), label: 'Audit', icon: <IcoAudit /> },
