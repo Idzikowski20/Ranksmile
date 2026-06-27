@@ -2,6 +2,8 @@
 // Automatycznie generuje artykuł dla każdej aktywnej domeny z topics
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
+import Domain from '../../../database/models/domain';
+import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../../utils/searchConsole';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    // Weryfikuj Vercel Cron Secret
@@ -10,6 +12,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
 
    await db.sync();
+
+   // Refresh Search Console data for every domain so the dashboard/performance stay current.
+   try {
+      const scDomains = (await Domain.findAll()).map((el) => el.get({ plain: true }));
+      for (const dom of scDomains) {
+         try {
+            const scApi = await getSearchConsoleApiInfo(dom);
+            if (hasValidSCAuth(scApi)) await fetchDomainSCData(dom, scApi);
+         } catch (e) {
+            console.error('[cron] GSC refresh failed for', dom.domain, e);
+         }
+      }
+   } catch (e) {
+      console.error('[cron] GSC refresh sweep failed', e);
+   }
 
    try {
       // Pobierz wszystkie domeny z topics w site_context
