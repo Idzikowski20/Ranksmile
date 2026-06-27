@@ -4,7 +4,13 @@ import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '.
 
 const font = 'var(--font-family-primary)';
 
-const capFirst = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+// Capitalize the first letter. All-caps names (e.g. "IDZTECH") get the rest
+// lowercased → "Idztech"; mixed-case names (e.g. "SerpBear") keep their casing.
+const capFirst = (s: string) => {
+   if (!s) return s;
+   const rest = s === s.toUpperCase() ? s.slice(1).toLowerCase() : s.slice(1);
+   return s.charAt(0).toUpperCase() + rest;
+};
 
 const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   <span
