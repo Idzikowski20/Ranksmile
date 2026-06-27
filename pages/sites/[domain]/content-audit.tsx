@@ -136,27 +136,35 @@ const ContentAuditPage: NextPage = () => {
 
    const rows = useMemo(() => {
       const articles: any[] = articlesData?.articles || [];
-      const scKeywords: any[] = scData?.data?.thirtyDays || [];
-      const scMap = new Map<string, { clicks: number; impressions: number; position: number }>();
-      scKeywords.forEach((kw: any) => {
-         if (kw.keyword) {
-            const existing = scMap.get(kw.keyword.toLowerCase());
-            if (!existing || kw.clicks > existing.clicks) {
-               scMap.set(kw.keyword.toLowerCase(), { clicks: kw.clicks, impressions: kw.impressions, position: kw.position });
-            }
-         }
+      const scItems: any[] = scData?.data?.thirtyDays || [];
+      // Aggregate the last-30-days GSC data per PAGE (not per target keyword): a page
+      // ranks for many queries, so clicks/impressions are summed across all of them and
+      // position is an impression-weighted average. Matching by keyword missed every page
+      // whose target_keyword didn't exactly equal a GSC query → "—" everywhere.
+      const pageMetrics = new Map<string, { clicks: number; impressions: number; posWeight: number }>();
+      scItems.forEach((it: any) => {
+         if (!it.page) return;
+         const path = toPath(it.page);
+         if (!path) return;
+         const e = pageMetrics.get(path) || { clicks: 0, impressions: 0, posWeight: 0 };
+         const imp = it.impressions || 0;
+         e.clicks += it.clicks || 0;
+         e.impressions += imp;
+         e.posWeight += (it.position || 0) * imp;
+         pageMetrics.set(path, e);
       });
       return articles.map((a: any) => {
-         const sc = a.target_keyword ? scMap.get(a.target_keyword.toLowerCase()) : undefined;
+         const url = a.publish_url || a.meta_url || '';
+         const m = url ? pageMetrics.get(toPath(url)) : undefined;
          return {
             id: a.id,
             title: a.title,
-            url: a.publish_url || a.meta_url || '',
+            url,
             keyword: a.target_keyword || '',
             content_score: a.content_score || 0,
-            position: sc?.position ?? 0,
-            clicks: sc?.clicks ?? 0,
-            impressions: sc?.impressions ?? 0,
+            position: m && m.impressions > 0 ? m.posWeight / m.impressions : 0,
+            clicks: m?.clicks ?? 0,
+            impressions: m?.impressions ?? 0,
             status: a.status,
             created_at: a.created_at,
             updatedAt: a.updated_at || a.created_at,
