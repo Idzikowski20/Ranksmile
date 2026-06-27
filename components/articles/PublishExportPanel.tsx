@@ -100,14 +100,21 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // WordPress connection (made from the WP plugin) + one-click publish via the plugin.
-  const [wp, setWp] = useState<{ connected: boolean; siteUrl: string | null }>({ connected: false, siteUrl: null });
+  // WordPress connection (made from the WP plugin) + one-click publish/update via the plugin.
+  type WpState = { connected: boolean; siteUrl: string | null; published: boolean; postStatus: 'publish' | 'draft' | null; postUrl: string | null };
+  const [wp, setWp] = useState<WpState>({ connected: false, siteUrl: null, published: false, postStatus: null, postUrl: null });
+  const [wpStatus, setWpStatus] = useState<'publish' | 'draft'>('publish'); // target status for the next publish/update
   const [wpPublishing, setWpPublishing] = useState(false);
   useEffect(() => {
     if (!articleId) return;
     fetch(`/api/wordpress/status?articleId=${articleId}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) setWp({ connected: !!d.connected, siteUrl: d.siteUrl ?? null }); })
+      .then((d) => {
+        if (!d) return;
+        const ps = d.postStatus === 'draft' ? 'draft' : d.postStatus === 'publish' ? 'publish' : null;
+        setWp({ connected: !!d.connected, siteUrl: d.siteUrl ?? null, published: !!d.published, postStatus: ps, postUrl: d.postUrl ?? null });
+        if (ps) setWpStatus(ps);
+      })
       .catch(() => {});
   }, [articleId]);
   const wpHost = (() => { try { return wp.siteUrl ? new URL(wp.siteUrl).host : ''; } catch { return wp.siteUrl || ''; } })();
@@ -115,14 +122,25 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
   const publishWp = async () => {
     if (!articleId || wpPublishing) return;
     setWpPublishing(true);
+    const wasPublished = wp.published;
     try {
-      const res = await fetch('/api/wordpress/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articleId, status: 'publish' }) });
+      const res = await fetch('/api/wordpress/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articleId, status: wpStatus }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data?.error || 'WordPress publish failed.'); return; }
-      toast.success('Published to WordPress');
-      if (data.post_url && typeof window !== 'undefined') window.open(data.post_url, '_blank');
+      const ps = data.post_status === 'draft' ? 'draft' : 'publish';
+      setWp((p) => ({ ...p, published: true, postStatus: ps, postUrl: data.post_url || p.postUrl }));
+      setWpStatus(ps);
+      toast.success(data.updated ? 'Updated on WordPress' : (ps === 'draft' ? 'Saved as draft on WordPress' : 'Published to WordPress'));
+      // Open the live post in a new tab only on the first publish, not on every update.
+      if (data.post_url && !wasPublished && ps === 'publish' && typeof window !== 'undefined') window.open(data.post_url, '_blank');
     } catch { toast.error('WordPress publish failed.'); } finally { setWpPublishing(false); }
   };
+
+  const wpBtnLabel = !wp.connected
+    ? 'WordPress'
+    : wpPublishing
+      ? (wp.published ? 'Updating…' : 'Publishing…')
+      : (wp.published ? 'Update to WordPress' : 'Publish to WordPress');
 
   const copy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`)).catch(() => toast.error('Copy failed'));
@@ -240,18 +258,46 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', opacity: (readOnly || wpPublishing) ? 0.5 : 1, transition: 'background 0.15s' }}
               onMouseEnter={(e) => { if (!readOnly && !wpPublishing) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
               <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>
-              {wp.connected ? (wpPublishing ? 'Publishing…' : 'Publish to WordPress') : 'WordPress'}
+              {wpBtnLabel}
             </button>
+
+            {/* Status — choose draft vs published; applied on the next Publish/Update */}
+            {wp.connected && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47', fontFamily: F }}>Status</span>
+                <div role="group" aria-label="WordPress post status" style={{ display: 'inline-flex', padding: 3, gap: 2, background: '#f4f4f5', borderRadius: 9999 }}>
+                  {(['draft', 'publish'] as const).map((s) => {
+                    const sel = wpStatus === s;
+                    return (
+                      <button key={s} type="button" disabled={readOnly || wpPublishing} aria-pressed={sel} onClick={() => setWpStatus(s)}
+                        style={{ padding: '5px 14px', borderRadius: 9999, border: 'none', cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, fontFamily: F, background: sel ? '#ffffff' : 'transparent', color: sel ? '#18181b' : '#71717b', boxShadow: sel ? '0px 1px 2px 0px rgba(26,29,40,0.06)' : 'none', transition: 'background 0.15s, color 0.15s' }}>
+                        {s === 'draft' ? 'Draft' : 'Published'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F, minWidth: 0 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? '#1AB25E' : '#e5484d', flexShrink: 0 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wp.connected ? `Connected to ${wpHost}` : 'Not connected to any WordPress site'}</span>
               </div>
-              <button type="button" onClick={() => router.push('/settings/wordpress')}
-                style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap' }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
-                Manage
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                {wp.published && wp.postUrl && (
+                  <a href={wp.postUrl} target="_blank" rel="noreferrer noopener"
+                    style={{ fontSize: 14, fontWeight: 600, color: '#783AFB', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#4D08B5'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#783AFB'; }}>
+                    View post
+                  </a>
+                )}
+                <button type="button" onClick={() => router.push('/settings/wordpress')}
+                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                  Manage
+                </button>
+              </div>
             </div>
           </div>
         </div>

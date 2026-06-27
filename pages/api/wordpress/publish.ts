@@ -16,6 +16,7 @@ import { cleanHtmlForWordPress } from '../../../lib/wpContentClean';
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;
    target_keyword: string | null; meta_title: string | null; meta_description: string | null; slug: string | null;
+   wp_post_id: number | null;
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -32,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const articleIdSql = await getArticleIdSql();
    const [rows] = await db.query(
-      `SELECT ${articleIdSql} AS id, domain_id, title, content, target_keyword, meta_title, meta_description, slug FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+      `SELECT ${articleIdSql} AS id, domain_id, title, content, target_keyword, meta_title, meta_description, slug, wp_post_id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
       { replacements: [articleId] },
    );
    const article = (rows as ArticleRow[])[0];
@@ -48,7 +49,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const cleanContent = cleanHtmlForWordPress(article.content);
    if (!cleanContent) return res.status(400).json({ error: 'Article content is empty after cleanup.' });
 
-   const payload = {
+   // If we've published this article before, send the remote post id so the plugin
+   // UPDATES that post (wp_insert_post with an ID) instead of creating a duplicate.
+   const existingPostId = article.wp_post_id && article.wp_post_id > 0 ? article.wp_post_id : undefined;
+
+   const payload: Record<string, unknown> = {
       content: cleanContent,
       metadata: {
          postTitle: article.title || '',
@@ -63,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       keywords: article.target_keyword ? [article.target_keyword] : [],
       location: 'United States',
    };
+   if (existingPostId) payload.post_id = existingPostId;
 
    let result: { post_id?: number; post_url?: string; edit_post_url?: string; post_status?: string };
    try {
@@ -80,17 +86,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(502).json({ error: 'Could not reach the WordPress site.' });
    }
 
-   // Record where it was published.
+   // Record where it was published + the remote post id/status (for future updates).
+   const wpStatus = result.post_status || postStatus;
    await db.query(
       `UPDATE articles SET publish_url = ?, publish_target = 'wordpress', published_at = CURRENT_TIMESTAMP,
+       wp_post_id = ?, wp_post_status = ?,
        status = ${postStatus === 'publish' ? "'published'" : 'status'}, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-      { replacements: [result.post_url || '', articleId], type: QueryTypes.UPDATE },
+      { replacements: [result.post_url || '', result.post_id ?? existingPostId ?? null, wpStatus, articleId], type: QueryTypes.UPDATE },
    ).catch(() => {});
 
    return res.status(200).json({
       post_id: result.post_id,
       post_url: result.post_url,
       edit_post_url: result.edit_post_url,
-      post_status: result.post_status || postStatus,
+      post_status: wpStatus,
+      updated: !!existingPostId,
    });
 }
