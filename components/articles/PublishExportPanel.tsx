@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 
 const F = 'var(--font-family-primary)';
 
 interface Props {
+  articleId?: number;
   score: number;
   html: string;
   plainText: string;
@@ -93,11 +94,35 @@ const IcoContent = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><
 const IcoHtml = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M17 17l5-5-5-5M7 7l-5 5 5 5M14 3l-4 18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const IcoMd = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M4 8h16M4 16h16M8 3v18M16 3v18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-const PublishExportPanel = ({ score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack }: Props) => {
+const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack }: Props) => {
   const router = useRouter();
   const [doneCardOpen, setDoneCardOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // WordPress connection (made from the WP plugin) + one-click publish via the plugin.
+  const [wp, setWp] = useState<{ connected: boolean; siteUrl: string | null }>({ connected: false, siteUrl: null });
+  const [wpPublishing, setWpPublishing] = useState(false);
+  useEffect(() => {
+    if (!articleId) return;
+    fetch(`/api/wordpress/status?articleId=${articleId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setWp({ connected: !!d.connected, siteUrl: d.siteUrl ?? null }); })
+      .catch(() => {});
+  }, [articleId]);
+  const wpHost = (() => { try { return wp.siteUrl ? new URL(wp.siteUrl).host : ''; } catch { return wp.siteUrl || ''; } })();
+
+  const publishWp = async () => {
+    if (!articleId || wpPublishing) return;
+    setWpPublishing(true);
+    try {
+      const res = await fetch('/api/wordpress/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articleId, status: 'publish' }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(data?.error || 'WordPress publish failed.'); return; }
+      toast.success('Published to WordPress');
+      if (data.post_url && typeof window !== 'undefined') window.open(data.post_url, '_blank');
+    } catch { toast.error('WordPress publish failed.'); } finally { setWpPublishing(false); }
+  };
 
   const copy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`)).catch(() => toast.error('Copy failed'));
@@ -211,16 +236,16 @@ const PublishExportPanel = ({ score, html, plainText, title, metaTitle, metaDesc
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 16px' }}>
           <SectionTitle>Export</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button type="button" disabled={readOnly} onClick={readOnly ? undefined : () => router.push('/settings/wordpress')}
-              style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', opacity: readOnly ? 0.5 : 1, transition: 'background 0.15s' }}
-              onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+            <button type="button" disabled={readOnly || wpPublishing} onClick={readOnly ? undefined : (wp.connected ? publishWp : () => router.push('/settings/wordpress'))}
+              style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', opacity: (readOnly || wpPublishing) ? 0.5 : 1, transition: 'background 0.15s' }}
+              onMouseEnter={(e) => { if (!readOnly && !wpPublishing) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
               <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>
-              WordPress
+              {wp.connected ? (wpPublishing ? 'Publishing…' : 'Publish to WordPress') : 'WordPress'}
             </button>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#e5484d', flexShrink: 0 }} />
-                Not connected to any WordPress site
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F, minWidth: 0 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? '#1AB25E' : '#e5484d', flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wp.connected ? `Connected to ${wpHost}` : 'Not connected to any WordPress site'}</span>
               </div>
               <button type="button" onClick={() => router.push('/settings/wordpress')}
                 style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap' }}
