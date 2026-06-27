@@ -375,9 +375,19 @@ const WorkspaceGeneralSettings = () => {
       <ConfirmModal
         open={confirmOpen}
         destructive
-        title={current ? `Remove "${current.name}"?` : 'Remove workspace?'}
-        message="This permanently deletes the workspace and all of its data — keywords, articles and audits. This cannot be undone."
-        confirmText="Delete"
+        title="Remove Workspace?"
+        message={current ? (
+          <>
+            This action cannot be undone. All content in this workspace will be removed. To proceed, enter the workspace name
+            {' '}
+            <strong style={{ color: '#18181B', fontWeight: 600 }}>{current.name}</strong>
+            {' '}
+            below to confirm deletion.
+          </>
+        ) : 'This action cannot be undone. All content in this workspace will be removed.'}
+        confirmText={current?.name || ''}
+        confirmFieldLabel="Workspace name"
+        confirmHint="Case sensitive"
         confirmLabel="Remove Workspace"
         loading={removing}
         onConfirm={doRemove}
