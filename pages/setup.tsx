@@ -622,9 +622,9 @@ const SetupPage: NextPage = () => {
                               {/* Where does your blog live? */}
                               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                                  <label style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
-                                    Where does your blog live?
+                                    Where does your blog live? <span style={{ fontWeight: 400, color: '#71717B' }}>(optional)</span>
                                  </label>
-                                 <span style={{ fontSize: 12, color: '#52525C' }}>We audit posts under these paths.</span>
+                                 <span style={{ fontSize: 12, color: '#52525C' }}>Leave empty to scan your whole site. Set a path to focus the audit on a section.</span>
                                  {blogDetecting ? (
                                     <span className="gap-sm flex items-center" style={{ fontSize: 13, color: '#71717B' }}>
                                        <Spinner /> Detecting your blog…
