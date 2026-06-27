@@ -5,6 +5,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUser } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { listConnectionsForWorkspace, deleteConnection } from '../../../lib/wpConnection';
+import { wpRestFetch } from '../../../lib/wpRest';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
@@ -32,9 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Best-effort: tell the plugin to forget us too. We've already removed our side,
       // so a failure here (site down, plugin removed) must not fail the disconnect.
-      const disconnectUrl = `${row.site_url.replace(/\/+$/, '')}/wp-json/surferseo/v1/disconnect/`;
       try {
-         await fetch(disconnectUrl, { method: 'DELETE', headers: { Authorization: `Bearer ${row.api_key}` } });
+         await wpRestFetch(row.site_url, 'surferseo/v1/disconnect/', { method: 'DELETE', headers: { Authorization: `Bearer ${row.api_key}` } });
       } catch { /* plugin side may be unreachable — our record is already gone */ }
 
       return res.status(200).json({ disconnected: true });

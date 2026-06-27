@@ -43,12 +43,7 @@ const WordPressConnect: NextPage = () => {
             body: JSON.stringify({ token, siteUrl, workspaceId, orgName: org?.name || '' }),
          });
          const data = await res.json().catch(() => ({}));
-         if (!res.ok || !data?.connected) {
-            const dbg = data?.debug ? ` [${data.debug.status ?? ''} ${String(data.debug.body || data.debug.message || '').slice(0, 200)}]` : '';
-            setErrorMsg((data?.error || 'Connection failed.') + dbg);
-            setState('error');
-            return;
-         }
+         if (!res.ok || !data?.connected) { setErrorMsg(data?.error || 'Connection failed.'); setState('error'); return; }
          setState('done');
          // Land the user on the WordPress Integration page for this workspace.
          router.replace(workspaceHref(workspaceId, '/wordpress'));
