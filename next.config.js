@@ -32,6 +32,8 @@ const nextConfig = {
     return [
       { source: '/domain/:slug*', destination: '/sites/:slug*', permanent: true },
       { source: '/workspace/:wsId', destination: '/workspace/:wsId/dashboard', permanent: false },
+      // The WordPress plugin opens the editor at /drafts/<id> (draft id == article id).
+      { source: '/drafts/:id', destination: '/articles/:id', permanent: false },
     ];
   },
   serverRuntimeConfig: {
