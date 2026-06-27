@@ -925,9 +925,10 @@ body {
 }
 
 /* Dashboard recommendation row hover */
-.dashboard-rec-row:hover span {
-   color: #000 !important;
-}
+.dashboard-rec-row:hover .rec-title { color: #18181B !important; }
+.dashboard-rec-row:hover .rec-optimize-ico { color: #18181B !important; }
+.dashboard-rec-row:hover .rec-rating,
+.dashboard-rec-row:hover .rec-rating span { color: #FF6F77 !important; }
 .dashboard-rec-view:hover {
    text-decoration: underline !important;
 }
