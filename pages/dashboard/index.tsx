@@ -162,10 +162,13 @@ const DashboardPage: NextPage = () => {
           ? { id: r.id, title: r.title, type: 'optimize', score: r.score ?? 0, wordCount: r.word_count ?? undefined, href: recommendationsHref }
           : { id: r.id, title: r.title, type: 'create', priority: r.priority || 'low', href: recommendationsHref }
       ));
-    if (mapped.length > 0) return mapped;
+    // Most urgent first: optimize rows (lowest content score = highest priority) ahead of
+    // create rows. `urgency` is the content score for optimize, +∞ for create (sorted last).
+    const urgency = (it: RecommendationItem) => ('priority' in it ? Number.POSITIVE_INFINITY : it.score);
+    if (mapped.length > 0) return mapped.sort((a, b) => urgency(a) - urgency(b));
     return (articlesData?.articles ?? [])
       .filter((a) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0)
-      .sort((a, b) => (b.content_score || 0) - (a.content_score || 0))
+      .sort((a, b) => (a.content_score || 0) - (b.content_score || 0))
       .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
   }, [domainRecsData, articlesData, recommendationsHref]);
 
