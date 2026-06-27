@@ -19,15 +19,46 @@ export function mintApiKey(): string {
 
 const stripSlash = (u: string) => u.replace(/\/+$/, '');
 
+export type WpConnectionRow = {
+   id: number;
+   site_url: string;
+   org_name: string | null;
+   integrated_by_email: string | null;
+   created_at: string;
+};
+
 /** One connection per (workspace, site) — replace any existing for that pair. */
-export async function createConnection(p: { workspaceId: number; userId: string; siteUrl: string; apiKey: string; orgName: string | null }): Promise<void> {
+export async function createConnection(p: { workspaceId: number; userId: string; siteUrl: string; apiKey: string; orgName: string | null; email?: string | null }): Promise<void> {
    await ensureWpTables();
    const site = stripSlash(p.siteUrl);
    await db.query('DELETE FROM wp_connections WHERE workspace_id = ? AND site_url = ?', { replacements: [p.workspaceId, site] }).catch(() => {});
    await db.query(
-      'INSERT INTO wp_connections (workspace_id, user_id, site_url, api_key, org_name) VALUES (?, ?, ?, ?, ?)',
-      { replacements: [p.workspaceId, p.userId, site, p.apiKey, p.orgName] },
+      'INSERT INTO wp_connections (workspace_id, user_id, site_url, api_key, org_name, integrated_by_email) VALUES (?, ?, ?, ?, ?, ?)',
+      { replacements: [p.workspaceId, p.userId, site, p.apiKey, p.orgName, p.email || null] },
    );
+}
+
+/** All connections for a workspace, newest first (for the WordPress Integration page). */
+export async function listConnectionsForWorkspace(workspaceId: number): Promise<WpConnectionRow[]> {
+   await ensureWpTables();
+   const [rows] = await db.query(
+      'SELECT id, site_url, org_name, integrated_by_email, created_at FROM wp_connections WHERE workspace_id = ? ORDER BY id DESC',
+      { replacements: [workspaceId] },
+   );
+   return rows as WpConnectionRow[];
+}
+
+/** Remove a connection (scoped to its workspace) — returns the site + secret so the caller can notify the plugin. */
+export async function deleteConnection(id: number, workspaceId: number): Promise<{ site_url: string; api_key: string } | null> {
+   await ensureWpTables();
+   const [rows] = await db.query(
+      'SELECT site_url, api_key FROM wp_connections WHERE id = ? AND workspace_id = ? LIMIT 1',
+      { replacements: [id, workspaceId] },
+   );
+   const row = (rows as { site_url: string; api_key: string }[])[0];
+   if (!row) return null;
+   await db.query('DELETE FROM wp_connections WHERE id = ? AND workspace_id = ?', { replacements: [id, workspaceId] });
+   return row;
 }
 
 /** Resolve the connection (→ workspace + site) from the plugin's `api-key` header. */
