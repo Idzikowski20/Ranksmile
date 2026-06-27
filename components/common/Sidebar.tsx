@@ -185,8 +185,9 @@ const subNavHoverOut = (e: React.MouseEvent<HTMLElement>, active: boolean) => {
    if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }
 };
 
-// Animated flame (Framer Motion): the icon flickers — body wobbles/scales from its
-// base while the fill pulses, like a live flame. Respects prefers-reduced-motion.
+// Animated flame (Framer Motion): anchored at its base, the body stretches/narrows
+// and the tip wavers side-to-side (skew + rotate) while the fill shimmers through fire
+// colors — a live flicker rather than a uniform pulse. Respects prefers-reduced-motion.
 const IcoFlame = () => {
    const reduce = useReducedMotion();
    return (
@@ -194,18 +195,25 @@ const IcoFlame = () => {
          viewBox="0 0 20 20"
          width="16"
          height="16"
-         style={{ flexShrink: 0, color: '#FB5D5D', transformOrigin: 'center 85%' }}
+         style={{ flexShrink: 0, transformOrigin: 'center bottom' }}
          aria-hidden="true"
-         animate={reduce ? undefined : { scale: [1, 1.16, 0.95, 1.09, 1], rotate: [0, -3, 2, -1, 0] }}
-         transition={reduce ? undefined : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+         animate={reduce ? undefined : {
+            scaleY: [1, 1.2, 0.9, 1.13, 0.95, 1],
+            scaleX: [1, 0.92, 1.08, 0.96, 1.05, 1],
+            skewX: [0, -5, 3.5, -2.5, 4.5, 0],
+            rotate: [0, -2.5, 2, -1, 1.5, 0],
+         }}
+         transition={reduce ? undefined : { duration: 1.05, repeat: Infinity, ease: 'easeInOut', times: [0, 0.18, 0.42, 0.62, 0.82, 1] }}
       >
          <motion.path
-            fill="currentColor"
             fillRule="evenodd"
             clipRule="evenodd"
             d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12"
-            animate={reduce ? undefined : { opacity: [1, 0.82, 1, 0.9, 1] }}
-            transition={reduce ? undefined : { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+            animate={reduce ? { fill: '#FB5D5D' } : {
+               fill: ['#FB5D5D', '#FF8A3D', '#FFC24D', '#FF6A3D', '#FB5D5D'],
+               opacity: [1, 0.92, 1, 0.85, 1],
+            }}
+            transition={reduce ? undefined : { duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
          />
       </motion.svg>
    );
