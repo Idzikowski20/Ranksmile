@@ -1,0 +1,9 @@
+﻿{
+    "name":  "Surfer – WordPress Plugin",
+    "version":  "1.7.0.639",
+    "requires":  "6.0",
+    "tested":  "6.9",
+    "download":  "/downloads/surfer-plugin.zip",
+    "homepage":  "",
+    "changelog":  "\u003ch4\u003e1.7.0.639\u003c/h4\u003e\u003cul\u003e\u003cli\u003eConnected to your app.\u003c/li\u003e\u003c/ul\u003e"
+}
