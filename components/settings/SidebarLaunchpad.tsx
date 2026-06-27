@@ -1,8 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery } from 'react-query';
-import { useWorkspaces } from '../../services/workspaces';
-import { useFetchDomains } from '../../services/domains';
+import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
 
 const font = 'var(--font-family-primary)';
 const GREEN = '#1AB25E';
@@ -108,31 +106,8 @@ const SidebarLaunchpad = () => {
   const [skipHover, setSkipHover] = useState(false);
   const [pillHover, setPillHover] = useState(false);
 
-  // ── Real onboarding signals ──────────────────────────────────────────
-  const { data: wsData } = useWorkspaces();
-  const { data: domainsData } = useFetchDomains({} as never);
-  const slug = domainsData?.domains?.[0]?.slug ?? null;
-  const getJson = <T, >(url: string): Promise<T | null> => fetch(url).then((r) => (r.ok ? (r.json() as Promise<T>) : null));
-  // Shared query keys with the dashboard/sidebar so the cache is reused.
-  const { data: sitesData } = useQuery('dashboardSites', () => getJson<{ sites?: unknown[] }>('/api/sites'), { staleTime: 5 * 60 * 1000, retry: false });
-  const { data: recsData } = useQuery(['domainRecs', slug], () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`), { enabled: !!slug, staleTime: 60 * 1000 });
-  const { data: articlesData } = useQuery('dashboardArticles', () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles'));
-
-  const ITEMS: ChecklistItem[] = useMemo(() => {
-    const hasWorkspace = (wsData?.workspaces?.length ?? 0) > 0;          // first workspace created
-    const hasGsc = (sitesData?.sites?.length ?? 0) > 0;                  // a GSC account is connected
-    const hasAudit = (recsData?.recommendations?.length ?? 0) > 0;      // the domain scan produced recs
-    const hasArticle = (articlesData?.articles ?? []).some((a) => a.source !== 'site_context' && !!a.title); // real content exists
-    return [
-      { label: 'Set up your workspace', done: hasWorkspace },
-      { label: 'Connect Google Search Console', done: hasGsc },
-      { label: 'Audit existing content and find quick wins', done: hasAudit },
-      { label: 'See if AI mentions your brand', done: false, time: '2m' },
-      { label: 'Create content that ranks in AI Search and SEO', done: hasArticle, time: '10m' },
-    ];
-  }, [wsData, sitesData, recsData, articlesData]);
-  const DONE = ITEMS.filter((i) => i.done).length;
-  const PCT = Math.round((DONE / ITEMS.length) * 100);
+  // Real onboarding state (shared with the dashboard "Get started" card).
+  const { steps: ITEMS, done: DONE, pct: PCT } = useOnboardingChecklist();
 
   if (dismissed) return null;
 
