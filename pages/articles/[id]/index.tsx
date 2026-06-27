@@ -990,19 +990,11 @@ const ArticleEditorPage: NextPage = () => {
             setAutoOptimizeBar({ preHtml });
             setIsAutoOptimizing(false);
             try { editor.commands.setContent(payload.content); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
-            if (payload.pendingImages?.length && article?.target_keyword) {
-              await generatePendingImages(payload.pendingImages, article.target_keyword);
-              // Save final content with real image URLs to DB
-              const finalHtml = editor.getHTML();
-              const putId = article?.id || id;
-              if (putId) {
-                await fetch(`/api/articles/${putId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ content: finalHtml }),
-                }).catch(() => {});
-              }
-            }
+
+            // Apply the analysis results FIRST — they ship in this `done` payload and the
+            // panel (SEO entities + AI Search) should populate the instant optimize finishes.
+            // Image generation below is sequential and slow; running it before these setState
+            // calls made terms/AI-Search appear ~a minute late with no loading indicator.
 
             // Sync the FAQ questions the optimizer resolved (in the article's language) so the live
             // score credits the FAQ section.
@@ -1031,6 +1023,22 @@ const ArticleEditorPage: NextPage = () => {
               setAutoOptimizeStatus(
                 `Score: ${payload.postScore}/100 (${icon}${sign}${delta})${target}`
               );
+            }
+
+            // Now fill image placeholders with real images (sequential → slow). This only
+            // mutates the editor body, so the panel data above is already live.
+            if (payload.pendingImages?.length && article?.target_keyword) {
+              await generatePendingImages(payload.pendingImages, article.target_keyword);
+              // Save final content with real image URLs to DB
+              const finalHtml = editor.getHTML();
+              const putId = article?.id || id;
+              if (putId) {
+                await fetch(`/api/articles/${putId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ content: finalHtml }),
+                }).catch(() => {});
+              }
             }
             return;
           } else if (eventType === 'error') {
