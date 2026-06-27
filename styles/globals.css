@@ -303,11 +303,11 @@ body {
    gap: 8px;
 }
 
-/* ── Topbar centering (SurferSEO grid trick) ───────────────────────────
-   The left slot hugs the workspace switcher (≈ sidebar width). Inside the
-   main region the search is centered by equal-flex spacers on each side, so
-   it sits over the content column, not the full viewport. On mobile the
-   spacer collapses and the search grows to fill. */
+/* ── Topbar centering ──────────────────────────────────────────────────
+   On mobile the search grows to fill its flex slot. On desktop it is pinned
+   to the TRUE centre of the topbar (the bar is position:sticky, so it is the
+   positioning context spanning the full viewport) — so it stays centred no
+   matter how wide the left slot is (workspace switcher vs. editor breadcrumb). */
 .global-topbar-center {
    flex: 1 1 auto;
    min-width: 0;
@@ -318,6 +318,9 @@ body {
 @media (min-width: 768px) {
    .global-topbar-spacer { display: block; flex: 1 1 0; }
    .global-topbar-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
       flex: 0 0 auto;
       width: min(250px, 100%);
    }
