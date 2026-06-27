@@ -328,6 +328,8 @@ class Surferseo {
 
 		wp_enqueue_style( 'surfer-admin', $this->baseurl . 'assets/css/admin.css', array( 'surfer-components' ), SURFER_VERSION );
 		wp_enqueue_style( 'surfer-styles', $this->baseurl . 'assets/css/surferseo.css', array( 'surfer-components' ), SURFER_VERSION );
+		// Design-system override — must load last so its rules win by source order.
+		wp_enqueue_style( 'surfer-redesign', $this->baseurl . 'assets/css/surfer-redesign.css', array( 'surfer-components', 'surfer-admin', 'surfer-styles' ), SURFER_VERSION );
 	}
 
 	/**
