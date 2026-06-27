@@ -506,6 +506,7 @@ const ContentScorePanel = ({
   if (view === 'publish') {
     return (
       <PublishExportPanel
+        articleId={articleId}
         score={score}
         html={html || ''}
         plainText={plainText}
