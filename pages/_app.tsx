@@ -9,6 +9,7 @@ import { NeonAuthUIProvider } from '@neondatabase/auth/react';
 import { authClient } from '../lib/auth/client';
 import AppToaster from '../components/common/AppToaster';
 import AppLoading from '../components/common/AppLoading';
+import TopProgressBar from '../components/common/TopProgressBar';
 import { OnboardingStatusContext } from '../lib/onboardingStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 
@@ -106,6 +107,7 @@ function MyApp({ Component, pageProps }: AppProps) {
    return (
       <NeonAuthUIProvider authClient={authClient} redirectTo="/" basePath="/auth">
          <QueryClientProvider client={queryClient}>
+            <TopProgressBar />
             <WorkspaceCookieSync />
             <OnboardingGuard>
                <Component {...pageProps} />
