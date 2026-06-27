@@ -1,7 +1,7 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { authClient } from '../../lib/auth/client';
 import { useWorkspaces } from '../../services/workspaces';
 import { useOrganization } from '../../services/organization';
@@ -31,10 +31,6 @@ const WordPressConnect: NextPage = () => {
    const [state, setState] = useState<'idle' | 'connecting' | 'done' | 'error'>('idle');
    const [errorMsg, setErrorMsg] = useState('');
 
-   const host = useMemo(() => {
-      try { return siteUrl ? new URL(siteUrl).host : ''; } catch { return siteUrl || ''; }
-   }, [siteUrl]);
-
    const connect = async () => {
       if (!token || !siteUrl || !workspaceId) return;
       setState('connecting');
@@ -53,71 +49,136 @@ const WordPressConnect: NextPage = () => {
       }
    };
 
-   const card: React.CSSProperties = {
-      width: 'min(460px, 100%)', background: '#fff', border: '1px solid #F4F4F5', borderRadius: 16,
-      padding: 28, boxShadow: '0 18px 48px rgba(17,24,39,0.10)', fontFamily: font,
+   // ── styles (design.md tokens, inline) ───────────────────────────────────
+   const wrap: React.CSSProperties = {
+      minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: '#FFFFFF', padding: 24, fontFamily: font,
    };
-   const btn = (disabled: boolean): React.CSSProperties => ({
-      width: '100%', height: 44, borderRadius: 8, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-      background: '#18181B', color: '#fff', fontSize: 15, fontWeight: 600, fontFamily: font, opacity: disabled ? 0.5 : 1,
-      transition: 'background 150ms ease',
+   const column: React.CSSProperties = { width: 'min(656px, 100%)', display: 'flex', flexDirection: 'column', gap: 24 };
+   const headingWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
+   const h1: React.CSSProperties = { margin: 0, fontSize: 20, lineHeight: '28px', fontWeight: 600, color: '#18181B' };
+   const subtitle: React.CSSProperties = { margin: 0, fontSize: 18, lineHeight: '26px', fontWeight: 400, color: '#3F3F47' };
+   const listWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 12 };
+   const buttonRow: React.CSSProperties = { display: 'flex', justifyContent: 'flex-end' };
+   const errStyle: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: '18px', color: '#FF6F77' };
+
+   const primaryBtn = (disabled: boolean): React.CSSProperties => ({
+      border: 'none', borderRadius: 8, padding: '10px 20px', background: '#18181B', color: '#FFFFFF',
+      fontFamily: font, fontSize: 14, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.5 : 1, transition: 'background 150ms ease', textDecoration: 'none',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+   });
+   const setBtnBg = (e: React.MouseEvent<HTMLElement>, c: string) => { (e.currentTarget as HTMLElement).style.background = c; };
+
+   const radioCard = (selected: boolean): React.CSSProperties => ({
+      position: 'relative', display: 'flex', alignItems: 'center', gap: 12, width: '100%', boxSizing: 'border-box',
+      padding: 16, borderRadius: 12, background: '#FFFFFF', cursor: 'pointer',
+      border: `1px solid ${selected ? '#18181B' : '#D4D4D8'}`,
+      boxShadow: selected ? 'inset 0 0 0 1px #18181B' : 'none',
+      transition: 'border-color 150ms ease, box-shadow 150ms ease',
+      fontSize: 14, fontWeight: 500, color: '#18181B',
+   });
+   const radioRing = (selected: boolean): React.CSSProperties => ({
+      width: 18, height: 18, borderRadius: 9999, flexShrink: 0, display: 'grid', placeItems: 'center',
+      border: `2px solid ${selected ? '#18181B' : '#9F9FA9'}`, transition: 'border-color 150ms ease',
    });
 
-   const notReady = !token || !siteUrl;
+   const renderBody = () => {
+      if (!token || !siteUrl) {
+         return (
+            <div style={headingWrap}>
+               <h1 style={h1}>Connect your WordPress site</h1>
+               <p style={subtitle}>This page is opened from the Surfer plugin in your WordPress admin. We couldn’t find a connection token — start the connection again from WordPress (Surfer → Connect).</p>
+            </div>
+         );
+      }
 
-   return (
-      <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: '#f8f9ff', padding: 16 }}>
-         <Head><title>Connect WordPress — Surfer</title></Head>
-         <div style={card}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-               <span aria-hidden style={{ width: 32, height: 32, borderRadius: 8, background: '#783AFB', display: 'grid', placeItems: 'center' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-               </span>
-               <span style={{ fontSize: 18, fontWeight: 700, color: '#18181B' }}>Connect WordPress</span>
+      if (!email) {
+         return (
+            <>
+               <div style={headingWrap}>
+                  <h1 style={h1}>Connect your WordPress site</h1>
+                  <p style={subtitle}>Sign in to connect <span style={{ color: '#18181B', fontWeight: 500 }}>{siteUrl}</span> to your account.</p>
+               </div>
+               <div style={buttonRow}>
+                  <a
+                     href={`/auth/sign-in?next=${encodeURIComponent(router.asPath)}`}
+                     style={primaryBtn(false)}
+                     onMouseEnter={(e) => setBtnBg(e, '#783AFB')}
+                     onMouseLeave={(e) => setBtnBg(e, '#18181B')}
+                  >Sign in</a>
+               </div>
+            </>
+         );
+      }
+
+      if (state === 'done') {
+         return (
+            <div style={headingWrap}>
+               <h1 style={{ ...h1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                     <circle cx="12" cy="12" r="10" fill="#1AB25E" />
+                     <path d="M7.5 12.5l3 3 6-6.5" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  WordPress connected
+               </h1>
+               <p style={subtitle}><span style={{ color: '#18181B', fontWeight: 500 }}>{siteUrl}</span> is now connected. You can close this tab and return to WordPress.</p>
+            </div>
+         );
+      }
+
+      const busy = state === 'connecting';
+      const disabled = busy || !workspaceId;
+      return (
+         <>
+            <div style={headingWrap}>
+               <h1 style={h1}>Hi {email}!</h1>
+               <p style={subtitle}>Choose the workspace to connect your WordPress site ({siteUrl}) to:</p>
             </div>
 
-            {notReady ? (
-               <p style={{ fontSize: 14, color: '#52525C', lineHeight: 1.6 }}>This page is opened from the WordPress plugin. Missing connection token — start the connection from your WordPress admin (Surfer → Connect).</p>
-            ) : !email ? (
-               <>
-                  <p style={{ fontSize: 14, color: '#52525C', lineHeight: 1.6, marginBottom: 16 }}>Sign in to authorise connecting <strong style={{ color: '#18181B' }}>{host}</strong>.</p>
-                  <a href={`/auth/sign-in?next=${encodeURIComponent(router.asPath)}`} style={{ ...btn(false), display: 'grid', placeItems: 'center', textDecoration: 'none' }}>Sign in</a>
-               </>
-            ) : state === 'done' ? (
-               <div style={{ fontSize: 14, color: '#18181B', lineHeight: 1.6 }}>
-                  <p style={{ marginBottom: 8 }}>✅ <strong>{host}</strong> is connected.</p>
-                  <p style={{ color: '#52525C' }}>You can close this tab and return to WordPress.</p>
-               </div>
-            ) : (
-               <>
-                  <p style={{ fontSize: 14, color: '#52525C', lineHeight: 1.6, marginBottom: 16 }}>
-                     Connect <strong style={{ color: '#18181B' }}>{host}</strong> to your account ({email}). The plugin will be able to import and publish content for the selected workspace.
-                  </p>
+            <div style={listWrap} role="radiogroup" aria-label="Workspace">
+               {workspaces.map((w) => {
+                  const selected = workspaceId === w.id;
+                  return (
+                     <label key={w.id} style={radioCard(selected)}>
+                        <input
+                           type="radio"
+                           name="workspace"
+                           checked={selected}
+                           onChange={() => setWorkspaceId(w.id)}
+                           style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span aria-hidden="true" style={radioRing(selected)}>
+                           {selected && <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#18181B' }} />}
+                        </span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</span>
+                     </label>
+                  );
+               })}
+            </div>
 
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#18181B', marginBottom: 6 }}>Workspace</label>
-                  <select
-                     value={workspaceId ?? ''}
-                     onChange={(e) => setWorkspaceId(Number(e.target.value))}
-                     style={{ width: '100%', height: 40, padding: '0 10px', borderRadius: 8, border: '1px solid #D4D4D8', fontFamily: font, fontSize: 14, color: '#18181B', background: '#fff', marginBottom: 18 }}
-                  >
-                     {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+            {state === 'error' && <p style={errStyle}>{errorMsg}</p>}
 
-                  {state === 'error' && <p style={{ fontSize: 13, color: '#FF6F77', marginBottom: 12 }}>{errorMsg}</p>}
+            <div style={buttonRow}>
+               <button
+                  type="button"
+                  onClick={connect}
+                  disabled={disabled}
+                  style={primaryBtn(disabled)}
+                  onMouseEnter={(e) => { if (!disabled) setBtnBg(e, '#783AFB'); }}
+                  onMouseDown={(e) => { if (!disabled) setBtnBg(e, '#4D08B5'); }}
+                  onMouseUp={(e) => { if (!disabled) setBtnBg(e, '#783AFB'); }}
+                  onMouseLeave={(e) => setBtnBg(e, '#18181B')}
+               >{busy ? 'Connecting…' : 'Connect'}</button>
+            </div>
+         </>
+      );
+   };
 
-                  <button
-                     type="button"
-                     onClick={connect}
-                     disabled={state === 'connecting' || !workspaceId}
-                     style={btn(state === 'connecting' || !workspaceId)}
-                     onMouseEnter={(e) => { if (state !== 'connecting' && workspaceId) (e.currentTarget as HTMLButtonElement).style.background = '#783AFB'; }}
-                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#18181B'; }}
-                  >
-                     {state === 'connecting' ? 'Connecting…' : 'Connect'}
-                  </button>
-               </>
-            )}
-         </div>
+   return (
+      <div style={wrap}>
+         <Head><title>Connect WordPress — Surfer</title></Head>
+         <div style={column}>{renderBody()}</div>
       </div>
    );
 };
