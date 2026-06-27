@@ -453,7 +453,13 @@ const RecommendationsPage: NextPage = () => {
 
    const handleRemoveSelected = async () => {
       const ids = Array.from(selectedIds);
-      await Promise.all(ids.map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' }).catch(() => {})));
+      // `sc_<id>` rows are GSC/imported pages living in site_context, not articles —
+      // they delete via a different endpoint (the articles route 400s on a non-numeric id).
+      await Promise.all(ids.map((id) => {
+         const s = String(id);
+         const url = s.startsWith('sc_') ? `/api/site-context/${s.slice(3)}` : `/api/articles/${id}`;
+         return fetch(url, { method: 'DELETE' }).catch(() => {});
+      }));
       setSelectedIds(new Set());
       queryClient.invalidateQueries(['articles', slug]);
    };
