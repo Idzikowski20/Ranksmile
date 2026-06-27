@@ -189,6 +189,94 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
   return { urls: [], serpMeta: [] };
 }
 
+// ── Internal linking (Surfer "auto internal links") ────────────────────
+interface SiteLink { id: number; title: string; url: string; }
+
+async function suggestInternalLinks(
+  content: string, keyword: string, articles: SiteLink[], apiKey: string,
+): Promise<Array<{ anchorText: string; url: string }>> {
+  const trimmed = content.length > 12000 ? `${content.slice(0, 12000)}…` : content;
+  const list = articles.map((a, i) => `${i + 1}. URL: ${a.url} | Title: "${a.title}"`).join('\n');
+  const prompt = `You are an SEO specialist. Find natural internal-linking opportunities in this article.
+ARTICLE KEYWORD: "${keyword}"
+ARTICLE CONTENT:
+${trimmed}
+AVAILABLE PAGES TO LINK TO:
+${list}
+Rules: the anchor text must appear VERBATIM as plain text in the article; link each page at most once; prefer specific multi-word phrases; only semantically relevant matches.
+OUTPUT — JSON array only, no other text: [{"anchorText":"exact phrase from the article","url":"target page url"}]
+If none: []`;
+  try {
+    const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 1500, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }),
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    const raw: string = data.choices?.[0]?.message?.content || '[]';
+    const m = raw.match(/\[[\s\S]*\]/);
+    if (!m) return [];
+    const parsed = JSON.parse(m[0]) as Array<{ anchorText?: string; url?: string }>;
+    return parsed.filter((x): x is { anchorText: string; url: string } => !!x.anchorText && !!x.url);
+  } catch { return []; }
+}
+
+/** Insert up to `max` internal links into <p> text (never inside existing anchors/tags). */
+function applyInternalLinks(html: string, links: Array<{ anchorText: string; url: string }>, max: number): { html: string; applied: number } {
+  const $ = cheerio.load(html, { decodeEntities: false });
+  let applied = 0;
+  const usedUrls = new Set<string>();
+  for (const link of links) {
+    if (applied >= max) break;
+    if (usedUrls.has(link.url)) continue;
+    let done = false;
+    $('p').each((_, el) => {
+      if (done) return;
+      const $el = $(el);
+      const inner = $el.html() || '';
+      if (inner.includes(link.url)) return; // already links somewhere in this paragraph
+      const safe = link.anchorText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // The phrase must exist OUTSIDE any existing <a>…</a> so we don't nest anchors.
+      const withoutAnchors = inner.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, '');
+      if (!new RegExp(safe).test(withoutAnchors)) return;
+      const replaced = inner.replace(new RegExp(safe), `<a href="${link.url}">${link.anchorText}</a>`);
+      if (replaced !== inner) { $el.html(replaced); done = true; applied += 1; usedUrls.add(link.url); }
+    });
+  }
+  const body = $('body');
+  return { html: body.length ? (body.html() || html) : html, applied };
+}
+
+/** FAQPage JSON-LD from the article's FAQ section (Q = <h3>, A = following <p>). */
+function buildFaqSchema(html: string): string {
+  const h2s: Array<{ index: number; end: number; text: string }> = [];
+  const h2Re = /<h2\b[^>]*>([\s\S]*?)<\/h2>/gi;
+  let mm: RegExpExecArray | null;
+  // eslint-disable-next-line no-cond-assign
+  while ((mm = h2Re.exec(html))) h2s.push({ index: mm.index, end: mm.index + mm[0].length, text: mm[1].replace(/<[^>]+>/g, '').trim() });
+  const faqIdx = h2s.findIndex((h) => /faq|najczęściej zadawane|frequently asked/i.test(h.text));
+  if (faqIdx === -1) return '';
+  const sectionEnd = faqIdx + 1 < h2s.length ? h2s[faqIdx + 1].index : html.length;
+  const section = html.slice(h2s[faqIdx].end, sectionEnd);
+  const strip = (s: string) => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const qa: Array<{ q: string; a: string }> = [];
+  const pairRe = /<h3\b[^>]*>([\s\S]*?)<\/h3>\s*(?:<\/div>\s*<div[^>]*>\s*)?<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  let p: RegExpExecArray | null;
+  // eslint-disable-next-line no-cond-assign
+  while ((p = pairRe.exec(section))) {
+    const q = strip(p[1]); const a = strip(p[2]);
+    if (q && a) qa.push({ q, a });
+  }
+  if (!qa.length) return '';
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: qa.map(({ q, a }) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+  };
+  return `<script type="application/ld+json">${JSON.stringify(schema)}</script>`;
+}
+
 // ── Main handler ───────────────────────────────────────────────────────
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
@@ -729,6 +817,47 @@ Return the complete HTML with targeted fixes applied.`;
         break;
       }
       attempts++;
+    }
+
+    // ── Internal linking: link to the domain's other pages ─────────
+    if (articleId) {
+      try {
+        const articleIdSql = await getArticleIdSql();
+        const [drow] = await db.query(`SELECT domain_id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, { replacements: [articleId] });
+        const domainId = (drow as any[])[0]?.domain_id;
+        if (domainId) {
+          const [candRows] = await db.query(
+            `SELECT ${articleIdSql} AS id, title, publish_url, meta_url FROM articles
+             WHERE domain_id = ? AND ${articleIdSql} <> ? AND title IS NOT NULL
+             ORDER BY updated_at DESC LIMIT 40`,
+            { replacements: [domainId, articleId] },
+          );
+          const candidates: SiteLink[] = (candRows as any[])
+            .map((a) => ({ id: a.id, title: String(a.title || ''), url: String(a.publish_url || a.meta_url || '') }))
+            .filter((a) => a.url && a.title);
+          if (candidates.length) {
+            sse(res, 'progress', { message: 'Adding internal links…' });
+            const links = await suggestInternalLinks(optimized, keyword || '', candidates, apiKey);
+            if (links.length) {
+              const { html: linked, applied: linkCount } = applyInternalLinks(optimized, links, 5);
+              optimized = linked;
+              console.log('[auto-optimize] internal links applied:', linkCount, 'of', links.length);
+              if (linkCount) sse(res, 'progress', { message: `Added ${linkCount} internal link${linkCount > 1 ? 's' : ''} ✓` });
+            }
+          }
+        }
+      } catch (err: any) {
+        console.log('[auto-optimize] internal linking failed (non-fatal):', err?.message);
+      }
+    }
+
+    // ── FAQ structured data (FAQPage JSON-LD) for rich results + AI citations ──
+    if (resolvedPaaQuestions.length && !optimized.includes('"FAQPage"')) {
+      const faqSchema = buildFaqSchema(optimized);
+      if (faqSchema) {
+        optimized = `${optimized.trimEnd()}\n${faqSchema}`;
+        console.log('[auto-optimize] FAQ JSON-LD schema appended');
+      }
     }
 
     // ── Meta title & description optimization ─────────────────────
