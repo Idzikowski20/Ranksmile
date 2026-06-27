@@ -240,7 +240,7 @@ body {
 
 .global-topbar-left {
    min-width: 0;
-   flex: 1;
+   flex: 0 0 auto;
    gap: 8px;
 }
 
@@ -289,18 +289,26 @@ body {
    color: var(--topbar-muted);
 }
 
+.global-topbar-main {
+   flex: 1 1 auto;
+   min-width: 0;
+   display: flex;
+   align-items: center;
+   gap: 12px;
+}
+.global-topbar-spacer { display: none; }
 .global-topbar-actions {
-   flex: 1;
+   flex: 0 0 auto;
    justify-content: flex-end;
    gap: 8px;
 }
 
-/* ── Topbar responsive ──────────────────────────────────────────────
-   Search sits in normal flow (and shrinks) on mobile, and is absolutely
-   centered only on desktop where there's room. Below ~520px the old
-   absolute width calc went negative and collapsed the search. */
+/* ── Topbar centering (SurferSEO grid trick) ───────────────────────────
+   The left slot hugs the workspace switcher (≈ sidebar width). Inside the
+   main region the search is centered by equal-flex spacers on each side, so
+   it sits over the content column, not the full viewport. On mobile the
+   spacer collapses and the search grows to fill. */
 .global-topbar-center {
-   position: static;
    flex: 1 1 auto;
    min-width: 0;
    display: flex;
@@ -308,14 +316,12 @@ body {
    justify-content: center;
 }
 @media (min-width: 768px) {
+   .global-topbar-spacer { display: block; flex: 1 1 0; }
    .global-topbar-center {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: min(250px, calc(100vw - 520px));
       flex: 0 0 auto;
+      width: min(250px, 100%);
    }
+   .global-topbar-actions { flex: 1 1 0; }
 }
 /* Workspace switcher: icon-only on mobile, full 224px on desktop */
 .workspace-switcher-btn { width: auto !important; }
@@ -328,18 +334,6 @@ body {
 .topbar-search-kbd { display: none !important; }
 @media (min-width: 768px) {
    .topbar-search-kbd { display: inline-flex !important; }
-}
-/* Sides hug their content on mobile so the search fills the middle;
-   they share the row equally again on desktop. */
-.global-topbar-left,
-.global-topbar-actions {
-   flex: 0 0 auto;
-}
-@media (min-width: 768px) {
-   .global-topbar-left,
-   .global-topbar-actions {
-      flex: 1 1 0;
-   }
 }
 
 .app-shell-body {
