@@ -135,7 +135,7 @@ async function scrapeCompetitor(url: string): Promise<CompetitorSummary | null> 
 
 interface SerpMeta { url: string; snippet: string; serpTitle: string; }
 
-async function getCompetitorData(keyword: string, articleId?: number): Promise<{ urls: string[]; serpMeta: SerpMeta[] }> {
+async function getCompetitorData(keyword: string, articleId?: number): Promise<{ urls: string[]; serpMeta: SerpMeta[]; competitors: CompetitorSummary[] }> {
   if (articleId) {
     try {
       const articleIdSql = await getArticleIdSql();
@@ -153,7 +153,7 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
           snippet: c.snippet || '',
           serpTitle: c.serp_title || '',
         }));
-        if (urls.length) return { urls, serpMeta };
+        if (urls.length) return { urls, serpMeta, competitors: Array.isArray(parsed._scraped) ? parsed._scraped : [] };
       }
     } catch {}
   }
@@ -182,11 +182,11 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
           { replacements: [JSON.stringify(data), articleId] },
         ).catch(() => {});
       }
-      return { urls, serpMeta };
+      return { urls, serpMeta, competitors: [] };
     }
   } catch {}
 
-  return { urls: [], serpMeta: [] };
+  return { urls: [], serpMeta: [], competitors: [] };
 }
 
 // ── Internal linking (Surfer "auto internal links") ────────────────────
@@ -445,36 +445,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (keyword) {
       sse(res, 'progress', { message: 'Looking up competitor pages…' });
 
-      const { urls, serpMeta } = await getCompetitorData(keyword, articleId);
+      const { urls, serpMeta, competitors: cachedComps } = await getCompetitorData(keyword, articleId);
       // Build a lookup map for SERP metadata by URL
       const serpByUrl = new Map(serpMeta.map((m) => [m.url, m]));
 
       if (urls.length) {
         console.log('[auto-optimize] competitor URLs found:', urls.length);
         urls.forEach((u: string, i: number) => console.log(`[auto-optimize]   competitor ${i + 1}: ${u}`));
-        sse(res, 'progress', { message: `Scraping ${urls.length} competitor articles…` });
 
-        // Scrape competitors one-by-one so we can emit per-page progress
-        const competitors: CompetitorSummary[] = [];
-        await Promise.all(
-          urls.map(async (url, i) => {
-            const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
-            sse(res, 'progress', { message: `Reading competitor ${i + 1}/${urls.length}: ${hostname}` });
-            const meta = serpByUrl.get(url);
-            const result = await scrapeCompetitor(url);
-            if (result && result.headings.length > 0) {
-              result.snippet = meta?.snippet || '';
-              result.serpTitle = meta?.serpTitle || '';
-              console.log(`[auto-optimize] competitor ${i + 1} scraped: "${result.title}" (${result.wordCount} words, ${result.headings.length} headings)`);
-              console.log(`[auto-optimize]   snippet: ${result.snippet.slice(0, 120)}…`);
-              console.log(`[auto-optimize]   headings: ${result.headings.slice(0, 8).join(' | ')}`);
-              console.log(`[auto-optimize]   intro: ${result.intro.slice(0, 150)}…`);
-              competitors.push(result);
-            } else {
-              console.log(`[auto-optimize] competitor ${i + 1} skipped: no headings extracted`);
-            }
-          }),
-        );
+        // Reuse the previously-scraped competitor summaries when available — repeat
+        // optimizes then skip the network scrape entirely (URLs were already cached).
+        let competitors: CompetitorSummary[] = cachedComps;
+        if (competitors.length) {
+          sse(res, 'progress', { message: `Using cached competitor analysis (${competitors.length}) ✓` });
+        } else {
+          sse(res, 'progress', { message: `Scraping ${urls.length} competitor articles…` });
+          competitors = [];
+          // Scrape competitors in parallel; emit per-page progress
+          await Promise.all(
+            urls.map(async (url, i) => {
+              const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
+              sse(res, 'progress', { message: `Reading competitor ${i + 1}/${urls.length}: ${hostname}` });
+              const meta = serpByUrl.get(url);
+              const result = await scrapeCompetitor(url);
+              if (result && result.headings.length > 0) {
+                result.snippet = meta?.snippet || '';
+                result.serpTitle = meta?.serpTitle || '';
+                console.log(`[auto-optimize] competitor ${i + 1} scraped: "${result.title}" (${result.wordCount} words, ${result.headings.length} headings)`);
+                competitors.push(result);
+              } else {
+                console.log(`[auto-optimize] competitor ${i + 1} skipped: no headings extracted`);
+              }
+            }),
+          );
+          // Persist the scraped summaries so the next optimize run reuses them.
+          if (articleId && competitors.length) {
+            try {
+              const aidSql = await getArticleIdSql();
+              const [crows] = await db.query(`SELECT competitor_outlines_cache FROM articles WHERE ${aidSql} = ? LIMIT 1`, { replacements: [articleId] });
+              let obj: any = {};
+              try { obj = JSON.parse((crows as any[])[0]?.competitor_outlines_cache || '{}'); } catch { obj = {}; }
+              obj._scraped = competitors;
+              await db.query(`UPDATE articles SET competitor_outlines_cache = ? WHERE ${aidSql} = ?`, { replacements: [JSON.stringify(obj), articleId] }).catch(() => {});
+            } catch { /* cache write is best-effort */ }
+          }
+        }
 
         if (competitors.length) {
           sse(res, 'progress', { message: `Analyzed ${competitors.length} competitor articles ✓` });
@@ -532,6 +547,93 @@ STRICT RULES:
 ${gapBlock}${scoreGapsBlock}${signalImprovementBlock}${competitorBlock}${aiSearchBlock}
 
 OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
+
+    // ── FAQ in parallel ───────────────────────────────────────────────────
+    // The FAQ (PAA fetch + answer generation) depends only on the keyword, not the
+    // optimized body — kick it off now so it overlaps the rewrite + humanize passes.
+    // Merged after humanize, unless the article already contains an FAQ.
+    const extractFaqQuestions = (htmlStr: string): string[] => {
+      const h2s: Array<{ index: number; end: number; text: string }> = [];
+      const h2Re = /<h2\b[^>]*>([\s\S]*?)<\/h2>/gi;
+      let mm: RegExpExecArray | null;
+      // eslint-disable-next-line no-cond-assign
+      while ((mm = h2Re.exec(htmlStr))) {
+        h2s.push({ index: mm.index, end: mm.index + mm[0].length, text: mm[1].replace(/<[^>]+>/g, '').trim() });
+      }
+      const faqIdx = h2s.findIndex((h) => /faq|najczęściej zadawane|frequently asked/i.test(h.text));
+      if (faqIdx === -1) return [];
+      const sectionEnd = faqIdx + 1 < h2s.length ? h2s[faqIdx + 1].index : htmlStr.length;
+      const section = htmlStr.slice(h2s[faqIdx].end, sectionEnd);
+      return [...section.matchAll(/<h3\b[^>]*>([\s\S]*?)<\/h3>/gi)]
+        .map((x) => x[1].replace(/<[^>]+>/g, '').trim())
+        .filter(Boolean)
+        .slice(0, 8);
+    };
+
+    // Skip generation if the source already has an FAQ (the optimizer preserves it).
+    const sourceHasFaq = keyword ? extractFaqQuestions(content).length > 0 : false;
+    const faqPromise: Promise<{ html: string; questions: string[] }> = (keyword && !sourceHasFaq)
+      ? (async () => {
+        let paaQuestions: string[] = Array.isArray(scoreData?.paa_questions)
+          ? scoreData!.paa_questions.filter(Boolean).slice(0, 6)
+          : [];
+        if (!paaQuestions.length && process.env.SERPER_API_KEY) {
+          try {
+            const serperRes = await fetch('https://google.serper.dev/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-API-KEY': process.env.SERPER_API_KEY },
+              body: JSON.stringify({ q: keyword, gl: 'pl', hl: 'pl', num: 10 }),
+            });
+            if (serperRes.ok) {
+              const serperData = await serperRes.json();
+              paaQuestions = (serperData.peopleAlsoAsk || []).slice(0, 5).map((item: any) => item.question as string).filter(Boolean);
+            }
+          } catch (faqErr: any) { console.log('[auto-optimize] Serper PAA error (non-fatal):', faqErr?.message); }
+        }
+        if (!paaQuestions.length) return { html: '', questions: [] };
+        const faqSystemPrompt = `You are an SEO content writer adding ONE FAQ section to a web article.
+Write a concise, complete answer (2-4 sentences) for EACH question provided.
+RULES:
+- Detect the article's language from the keyword and content, and write the ENTIRE FAQ (questions AND answers) in THAT language
+- If a question is in a different language, TRANSLATE it naturally into the article's language and use the translation as the <h3> — keep its original meaning
+- Naturally repeat the key words from each question inside its answer so the topic is unmistakably covered
+- Answer EVERY question in the list — do not skip any
+Format output as ONLY this HTML block — no preamble:
+
+<h2>FAQ</h2>
+<div class="faq-section">
+  <div class="faq-item">
+    <h3>[question in the article's language]</h3>
+    <p>[answer]</p>
+  </div>
+</div>
+
+Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
+        try {
+          const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              max_tokens: 4000,
+              temperature: 0.4,
+              messages: [
+                { role: 'system', content: faqSystemPrompt },
+                { role: 'user', content: `Article keyword: "${keyword}"\n\nQuestions (answer each in the article's language):\n${paaQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}` },
+              ],
+            }),
+          });
+          if (faqRes.ok) {
+            const faqData = await faqRes.json();
+            const faqHtml = (faqData.choices?.[0]?.message?.content || '').trim().replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+            if (faqHtml) return { html: faqHtml, questions: extractFaqQuestions(faqHtml) };
+          } else {
+            console.log('[auto-optimize] FAQ DeepSeek failed HTTP', faqRes.status);
+          }
+        } catch (faqErr: any) { console.log('[auto-optimize] FAQ phase error (non-fatal):', faqErr?.message); }
+        return { html: '', questions: [] };
+      })()
+      : Promise.resolve({ html: '', questions: [] });
 
     console.log('[auto-optimize] calling DeepSeek, content length:', content.length, 'systemPrompt length:', systemPrompt.length);
     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -618,121 +720,20 @@ OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, 
     }
 
     // ── Phase 3: FAQ / People Also Ask ───────────────────────────────────
-    // Questions the finished FAQ actually contains, in the article's language — returned to the
-    // editor and persisted so the score credits the FAQ regardless of the stored PAA language.
+    // The FAQ was generated in parallel (faqPromise, started before the rewrite). Merge it
+    // now unless the optimized article already contains an FAQ section.
     let resolvedPaaQuestions: string[] = [];
-
-    // Pull the <h3> question texts out of an FAQ section already present in the HTML.
-    const extractFaqQuestions = (htmlStr: string): string[] => {
-      const h2s: Array<{ index: number; end: number; text: string }> = [];
-      const h2Re = /<h2\b[^>]*>([\s\S]*?)<\/h2>/gi;
-      let mm: RegExpExecArray | null;
-      // eslint-disable-next-line no-cond-assign
-      while ((mm = h2Re.exec(htmlStr))) {
-        h2s.push({ index: mm.index, end: mm.index + mm[0].length, text: mm[1].replace(/<[^>]+>/g, '').trim() });
-      }
-      const faqIdx = h2s.findIndex((h) => /faq|najczęściej zadawane|frequently asked/i.test(h.text));
-      if (faqIdx === -1) return [];
-      const sectionEnd = faqIdx + 1 < h2s.length ? h2s[faqIdx + 1].index : htmlStr.length;
-      const section = htmlStr.slice(h2s[faqIdx].end, sectionEnd);
-      return [...section.matchAll(/<h3\b[^>]*>([\s\S]*?)<\/h3>/gi)]
-        .map((x) => x[1].replace(/<[^>]+>/g, '').trim())
-        .filter(Boolean)
-        .slice(0, 8);
-    };
-
     if (keyword) {
-      // If the article already has an FAQ (prior run or source content), reuse it — never append a
-      // second — and credit its questions toward the score.
       const existingFaq = extractFaqQuestions(optimized);
       if (existingFaq.length) {
         resolvedPaaQuestions = existingFaq;
         console.log('[auto-optimize] reusing existing FAQ —', existingFaq.length, 'questions; skipping generation');
       } else {
-        let paaQuestions: string[] = Array.isArray(scoreData?.paa_questions)
-          ? scoreData!.paa_questions.filter(Boolean).slice(0, 6)
-          : [];
-
-        if (!paaQuestions.length && process.env.SERPER_API_KEY) {
-          sse(res, 'progress', { message: 'Fetching People Also Ask…' });
-          try {
-            const serperRes = await fetch('https://google.serper.dev/search', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-API-KEY': process.env.SERPER_API_KEY },
-              body: JSON.stringify({ q: keyword, gl: 'pl', hl: 'pl', num: 10 }),
-            });
-            if (serperRes.ok) {
-              const serperData = await serperRes.json();
-              paaQuestions = (serperData.peopleAlsoAsk || [])
-                .slice(0, 5)
-                .map((item: any) => item.question as string)
-                .filter(Boolean);
-            } else {
-              console.log('[auto-optimize] Serper PAA failed HTTP', serperRes.status);
-            }
-          } catch (faqErr: any) {
-            console.log('[auto-optimize] Serper PAA error (non-fatal):', faqErr?.message);
-          }
-        }
-
-        console.log('[auto-optimize] PAA questions:', paaQuestions.length, paaQuestions.slice(0, 3));
-
-        if (paaQuestions.length) {
-          sse(res, 'progress', { message: `Writing answers to ${paaQuestions.length} FAQ questions…` });
-
-          const faqSystemPrompt = `You are an SEO content writer adding ONE FAQ section to a web article.
-Write a concise, complete answer (2-4 sentences) for EACH question provided.
-RULES:
-- Detect the article's language from the keyword and content, and write the ENTIRE FAQ (questions AND answers) in THAT language
-- If a question is in a different language, TRANSLATE it naturally into the article's language and use the translation as the <h3> — keep its original meaning
-- Naturally repeat the key words from each question inside its answer so the topic is unmistakably covered
-- Answer EVERY question in the list — do not skip any
-Format output as ONLY this HTML block — no preamble:
-
-<h2>FAQ</h2>
-<div class="faq-section">
-  <div class="faq-item">
-    <h3>[question in the article's language]</h3>
-    <p>[answer]</p>
-  </div>
-</div>
-
-Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
-
-          let faqHtml = '';
-          try {
-            const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-              body: JSON.stringify({
-                model: 'deepseek-chat',
-                max_tokens: 4000,
-                temperature: 0.4,
-                messages: [
-                  { role: 'system', content: faqSystemPrompt },
-                  { role: 'user', content: `Article keyword: "${keyword}"\n\nQuestions (answer each in the article's language):\n${paaQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}` },
-                ],
-              }),
-            });
-            if (faqRes.ok) {
-              const faqData = await faqRes.json();
-              faqHtml = (faqData.choices?.[0]?.message?.content || '').trim()
-                .replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-              console.log('[auto-optimize] FAQ generated, length:', faqHtml.length);
-            } else {
-              console.log('[auto-optimize] FAQ DeepSeek failed HTTP', faqRes.status);
-            }
-          } catch (faqErr: any) {
-            console.log('[auto-optimize] FAQ phase error (non-fatal):', faqErr?.message);
-          }
-
-          if (faqHtml) {
-            optimized = optimized.trimEnd() + '\n\n' + faqHtml;
-            resolvedPaaQuestions = extractFaqQuestions(faqHtml);
-            console.log('[auto-optimize] FAQ appended;', resolvedPaaQuestions.length, 'questions resolved');
-          }
-        } else {
-          console.log('[auto-optimize] No PAA questions (stored or Serper) — skipping FAQ phase');
+        const faq = await faqPromise;
+        if (faq.html) {
+          optimized = optimized.trimEnd() + '\n\n' + faq.html;
+          resolvedPaaQuestions = faq.questions;
+          console.log('[auto-optimize] FAQ appended;', resolvedPaaQuestions.length, 'questions resolved');
         }
       }
     }
@@ -743,6 +744,7 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
     let scoreDelta: number | null = null;
     let attempts = 1;
     const MAX_ATTEMPTS = 3;
+    let prevPost: number | null = null;
 
     while (attempts <= MAX_ATTEMPTS) {
       try {
@@ -773,6 +775,14 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
           });
 
           if (postScore >= 90 || !postSignals?.signals?.length) break;
+
+          // Diminishing returns: the previous full-article patch barely moved the score and
+          // we're already in a solid range — another ~16k-token patch isn't worth the wait.
+          if (prevPost !== null && postScore - prevPost < 2 && postScore >= 80) {
+            console.log('[auto-optimize] stopping early — patch gain', postScore - prevPost, '< 2 at', postScore);
+            break;
+          }
+          prevPost = postScore;
 
           if (attempts < MAX_ATTEMPTS) {
             const weakSignals = [...(postSignals?.signals || [])]
