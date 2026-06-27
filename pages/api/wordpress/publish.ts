@@ -9,6 +9,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getConnectionForWorkspace } from '../../../lib/wpConnection';
+import { wpRestFetch } from '../../../lib/wpRest';
 import { permalinkHash } from '../../../lib/wpDraft';
 import { cleanHtmlForWordPress } from '../../../lib/wpContentClean';
 
@@ -65,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    let result: { post_id?: number; post_url?: string; edit_post_url?: string; post_status?: string };
    try {
-      const r = await fetch(`${conn.site_url}/wp-json/surferseo/v1/import_post/`, {
+      const r = await wpRestFetch(conn.site_url, 'surferseo/v1/import_post/', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${conn.api_key}` },
          body: JSON.stringify(payload),

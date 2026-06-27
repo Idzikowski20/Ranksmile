@@ -7,6 +7,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUser } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { createConnection, mintApiKey } from '../../../lib/wpConnection';
+import { wpRestFetch } from '../../../lib/wpRest';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
@@ -28,9 +29,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (!allowed.includes(Number(workspaceId))) return res.status(403).json({ error: 'Access denied.' });
 
    const apiKey = mintApiKey();
-   const verifyUrl = `${String(siteUrl).replace(/\/+$/, '')}/wp-json/surferseo/v1/connect/`;
    try {
-      const r = await fetch(verifyUrl, {
+      // wpRestFetch falls back to `?rest_route=` when the site's pretty /wp-json/
+      // routing is broken (LiteSpeed/plain-permalink hosts), so the handshake works
+      // regardless of the WordPress site's permalink configuration.
+      const r = await wpRestFetch(String(siteUrl), 'surferseo/v1/connect/', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({
@@ -40,30 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             via_email: user.email || '',
          }),
       });
-      const bodyText = await r.text();
-      // TEMP diagnostics: surface exactly what the WP site returned so we can tell a
-      // token mismatch apart from a WAF/security-plugin block, a 404 (route missing),
-      // a redirect, etc. Logged to the dev terminal and echoed in the error payload.
-      // eslint-disable-next-line no-console
-      console.error('[wp-connect] POST', verifyUrl, '->', r.status, r.headers.get('content-type'), '| body:', bodyText.slice(0, 500));
       if (!r.ok) {
-         return res.status(502).json({
-            error: 'WordPress rejected the connection — check the plugin is installed and the token is still valid.',
-            debug: { url: verifyUrl, status: r.status, contentType: r.headers.get('content-type'), body: bodyText.slice(0, 500), sentToken: token },
-         });
+         return res.status(502).json({ error: 'WordPress rejected the connection — check the plugin is installed and the token is still valid.' });
       }
-      let data: { token_saved?: unknown } = {};
-      try { data = JSON.parse(bodyText); } catch { /* non-JSON success body */ }
+      const data = await r.json().catch(() => ({}));
       if (!data?.token_saved) {
-         return res.status(502).json({
-            error: 'WordPress did not confirm the connection.',
-            debug: { url: verifyUrl, status: r.status, body: bodyText.slice(0, 500) },
-         });
+         return res.status(502).json({ error: 'WordPress did not confirm the connection.' });
       }
-   } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('[wp-connect] fetch failed', verifyUrl, e);
-      return res.status(502).json({ error: 'Could not reach the WordPress site.', debug: { url: verifyUrl, message: String(e) } });
+   } catch {
+      return res.status(502).json({ error: 'Could not reach the WordPress site.' });
    }
 
    await createConnection({ workspaceId: Number(workspaceId), userId: user.id, siteUrl, apiKey, orgName: orgName || null, email: user.email || null });
