@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
@@ -184,11 +185,31 @@ const subNavHoverOut = (e: React.MouseEvent<HTMLElement>, active: boolean) => {
    if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }
 };
 
-const IcoFlame = () => (
-   <svg viewBox="0 0 20 20" width="16" height="16" style={{ flexShrink: 0, color: '#FB5D5D' }} aria-hidden="true">
-      <path fill="currentColor" fillRule="evenodd" d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12" clipRule="evenodd" />
-   </svg>
-);
+// Animated flame (Framer Motion): the icon flickers — body wobbles/scales from its
+// base while the fill pulses, like a live flame. Respects prefers-reduced-motion.
+const IcoFlame = () => {
+   const reduce = useReducedMotion();
+   return (
+      <motion.svg
+         viewBox="0 0 20 20"
+         width="16"
+         height="16"
+         style={{ flexShrink: 0, color: '#FB5D5D', transformOrigin: 'center 85%' }}
+         aria-hidden="true"
+         animate={reduce ? undefined : { scale: [1, 1.16, 0.95, 1.09, 1], rotate: [0, -3, 2, -1, 0] }}
+         transition={reduce ? undefined : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+      >
+         <motion.path
+            fill="currentColor"
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12"
+            animate={reduce ? undefined : { opacity: [1, 0.82, 1, 0.9, 1] }}
+            transition={reduce ? undefined : { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+         />
+      </motion.svg>
+   );
+};
 
 type SubNavItemProps = { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: string; count?: number; mock?: boolean };
 const SubNavItem = ({ href, label, icon, active, badge, count, mock }: SubNavItemProps) => {
