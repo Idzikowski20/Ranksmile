@@ -50,10 +50,6 @@ const WordPressConnect: NextPage = () => {
    };
 
    // ── styles (design.md tokens, inline) ───────────────────────────────────
-   const wrap: React.CSSProperties = {
-      minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#FFFFFF', padding: 24, fontFamily: font,
-   };
    const column: React.CSSProperties = { width: 'min(656px, 100%)', display: 'flex', flexDirection: 'column', gap: 24 };
    const headingWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
    const h1: React.CSSProperties = { margin: 0, fontSize: 20, lineHeight: '28px', fontWeight: 600, color: '#18181B' };
@@ -176,9 +172,14 @@ const WordPressConnect: NextPage = () => {
    };
 
    return (
-      <div style={wrap}>
+      <div className="p-sm relative flex flex-col overflow-hidden" style={{ minHeight: '100dvh', fontFamily: font }}>
          <Head><title>Connect WordPress — Surfer</title></Head>
-         <div style={column}>{renderBody()}</div>
+         <div
+            className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] bg-white-base"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+         >
+            <div style={column}>{renderBody()}</div>
+         </div>
       </div>
    );
 };
