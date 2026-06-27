@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
@@ -648,12 +649,25 @@ const Heatmap = ({ counts, peakKey, onPickDay }: { counts: Map<string, number>; 
       return { weeks: cols, monthLabels: labels };
    }, [year]);
 
-   const CELL = 14;
+   // Scale the grid to fill the card width (Surfer-sized cells), recomputed on resize.
+   const scrollRef = useRef<HTMLDivElement>(null);
+   const [cell, setCell] = useState(16);
+   useEffect(() => {
+      const el = scrollRef.current;
+      if (!el) return undefined;
+      const measure = () => setCell(Math.max(14, Math.floor((el.clientWidth - 28) / weeks.length)));
+      measure();
+      const ro = new ResizeObserver(measure);
+      ro.observe(el);
+      return () => ro.disconnect();
+   }, [weeks.length]);
+   const CELL = cell;
+   const DOT = Math.max(9, CELL - 5);
    const ROW_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
    return (
       <>
-         <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
+         <div ref={scrollRef} style={{ overflowX: 'auto' }} className="styled-scrollbar">
             <div style={{ minWidth: 28 + weeks.length * CELL }}>
                <div style={{ display: 'flex', paddingLeft: 28 }}>
                   {monthLabels.map((label, wi) => (
@@ -688,7 +702,7 @@ const Heatmap = ({ counts, peakKey, onPickDay }: { counts: Map<string, number>; 
                                     onMouseLeave={inYear ? () => setTip(null) : undefined}
                                     onClick={inYear ? () => { setTip(null); onPickDay(day); } : undefined}
                                  >
-                                    <div style={{ width: 8, height: 8, borderRadius: 9999, background: bg, opacity, transition: 'opacity 300ms' }} />
+                                    <div style={{ width: DOT, height: DOT, borderRadius: 9999, background: bg, opacity, transition: 'opacity 300ms' }} />
                                  </div>
                               );
                            })}
@@ -698,10 +712,11 @@ const Heatmap = ({ counts, peakKey, onPickDay }: { counts: Map<string, number>; 
                </div>
             </div>
          </div>
-         {tip && (
-            <div style={{ position: 'fixed', left: tip.x, top: tip.y, transform: 'translate(-50%, calc(-100% - 8px))', zIndex: 300, pointerEvents: 'none', background: '#18181B', color: '#fff', fontFamily: FONT, fontSize: 13, fontWeight: 500, padding: '6px 10px', borderRadius: 8, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+         {tip && typeof document !== 'undefined' && createPortal(
+            <div style={{ position: 'fixed', left: tip.x, top: tip.y, transform: 'translate(-50%, calc(-100% - 10px))', zIndex: 300, pointerEvents: 'none', background: '#18181B', color: '#fff', fontFamily: FONT, fontSize: 13, fontWeight: 500, padding: '6px 10px', borderRadius: 8, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
                {tip.text}
-            </div>
+            </div>,
+            document.body,
          )}
       </>
    );
