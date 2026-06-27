@@ -70,8 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const plain = d.get({ plain: true });
     const scData = await readLocalSCData(plain.domain);
     const statsArr = scData && scData.stats ? scData.stats : [];
-    // Take last 30 days of daily stats
-    const recentStats = statsArr.slice(-30);
+    // Last 60 days so the dashboard can compare the last 30d vs the previous 30d.
+    const recentStats = statsArr.slice(-60);
     domainStats[plain.domain] = {
       impressions: plain.scImpressions || 0,
       clicks: plain.scVisits || 0,
