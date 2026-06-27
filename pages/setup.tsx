@@ -416,13 +416,19 @@ const SetupPage: NextPage = () => {
                                     <div className="text-md pb-xs font-medium text-gray-100">Select Search Console site</div>
                                     <button
                                        type="button"
-                                       onClick={() => { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }}
+                                       aria-expanded={comboOpen}
+                                       onClick={() => {
+                                          // Re-clicking a chosen domain reopens the GSC list to pick another.
+                                          // With no GSC sites (URL-entered domain) there's no list, so clear it.
+                                          if (gscSites.length > 0) setComboOpen((o) => !o);
+                                          else { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }
+                                       }}
                                        className="border-gray-40 bg-white-base gap-sm px-md text-md flex h-[40px] w-full cursor-pointer items-center rounded-lg border border-solid text-left font-sans hover:border-gray-60"
                                        style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
                                     >
                                        <SiteFavicon domain={domain} />
                                        <span className="min-w-0 flex-1 truncate text-gray-base">{domain}</span>
-                                       <div className="ml-auto flex items-center"><ChevronDown open={false} /></div>
+                                       <div className="ml-auto flex items-center"><ChevronDown open={comboOpen} /></div>
                                     </button>
                                  </>
                               ) : !urlMode ? (
@@ -456,51 +462,6 @@ const SetupPage: NextPage = () => {
                                              <ChevronDown open={comboOpen} />
                                           </div>
                                        </button>
-                                       {comboOpen && (
-                                          <div
-                                             className="border-gray-20 bg-white-base mt-xs rounded-lg border"
-                                             style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, overflow: 'hidden' }}
-                                          >
-                                             <div className="p-xs">
-                                                <input
-                                                   type="text"
-                                                   autoFocus
-                                                   value={siteFilter}
-                                                   onChange={(e) => setSiteFilter(e.target.value)}
-                                                   placeholder="Search sites"
-                                                   className="border-gray-40 bg-white-base text-md h-[36px] w-full rounded-lg border px-md outline-none focus:border-purple-40"
-                                                   style={{ fontFamily: 'var(--font-family-primary)' }}
-                                                />
-                                             </div>
-                                             <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                                                {gscSites
-                                                   .filter((site) => normalizeDomain(site.siteUrl).toLowerCase().includes(siteFilter.trim().toLowerCase()))
-                                                   .map((site) => {
-                                                      const dom = normalizeDomain(site.siteUrl);
-                                                      return (
-                                                         <button
-                                                            key={site.siteUrl}
-                                                            type="button"
-                                                            className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
-                                                            onClick={() => handleSiteSelect(site.siteUrl)}
-                                                         >
-                                                            <SiteFavicon domain={dom} />
-                                                            <span className="min-w-0 flex-1 truncate text-gray-base">{dom}</span>
-                                                         </button>
-                                                      );
-                                                   })}
-                                             </div>
-                                             <button
-                                                type="button"
-                                                onClick={connectGsc}
-                                                className="border-gray-20 gap-sm flex w-full items-center border-t px-md py-sm text-left text-md font-medium hover:bg-gray-10"
-                                                style={{ color: '#18181b' }}
-                                             >
-                                                <GoogleIcon />
-                                                <span>Add another Search Console account</span>
-                                             </button>
-                                          </div>
-                                       )}
                                     </>
                                  ) : (
                                     // GSC not connected → benefits + connect CTA (no combobox)
@@ -540,6 +501,55 @@ const SetupPage: NextPage = () => {
                                        style={{ fontFamily: 'var(--font-family-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
                                     />
                                  </>
+                              )}
+
+                              {/* Shared GSC site dropdown — opened by either the empty combobox
+                                  button or the already-selected-domain button, so re-clicking a
+                                  chosen domain reopens the list instead of clearing the selection. */}
+                              {comboOpen && gscSites.length > 0 && (
+                                 <div
+                                    className="border-gray-20 bg-white-base mt-xs rounded-lg border"
+                                    style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, overflow: 'hidden' }}
+                                 >
+                                    <div className="p-xs">
+                                       <input
+                                          type="text"
+                                          autoFocus
+                                          value={siteFilter}
+                                          onChange={(e) => setSiteFilter(e.target.value)}
+                                          placeholder="Search sites"
+                                          className="border-gray-40 bg-white-base text-md h-[36px] w-full rounded-lg border px-md outline-none focus:border-purple-40"
+                                          style={{ fontFamily: 'var(--font-family-primary)' }}
+                                       />
+                                    </div>
+                                    <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                                       {gscSites
+                                          .filter((site) => normalizeDomain(site.siteUrl).toLowerCase().includes(siteFilter.trim().toLowerCase()))
+                                          .map((site) => {
+                                             const dom = normalizeDomain(site.siteUrl);
+                                             return (
+                                                <button
+                                                   key={site.siteUrl}
+                                                   type="button"
+                                                   className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
+                                                   onClick={() => handleSiteSelect(site.siteUrl)}
+                                                >
+                                                   <SiteFavicon domain={dom} />
+                                                   <span className="min-w-0 flex-1 truncate text-gray-base">{dom}</span>
+                                                </button>
+                                             );
+                                          })}
+                                    </div>
+                                    <button
+                                       type="button"
+                                       onClick={connectGsc}
+                                       className="border-gray-20 gap-sm flex w-full items-center border-t px-md py-sm text-left text-md font-medium hover:bg-gray-10"
+                                       style={{ color: '#18181b' }}
+                                    >
+                                       <GoogleIcon />
+                                       <span>Add another Search Console account</span>
+                                    </button>
+                                 </div>
                               )}
                            </div>
                         </div>
