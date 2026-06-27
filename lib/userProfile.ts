@@ -1,6 +1,6 @@
 import db from '../database/database';
 
-export type UserProfile = { name: string | null; avatarUrl: string | null };
+export type UserProfile = { name: string | null; avatarUrl: string | null; productUpdates: boolean };
 type Row = Record<string, any>;
 
 const NOW = 'CURRENT_TIMESTAMP';
@@ -19,20 +19,23 @@ async function ensureTable(): Promise<void> {
          user_id    TEXT PRIMARY KEY,
          name       TEXT,
          avatar_url TEXT,
+         notify_product_updates INTEGER DEFAULT 0,
          updated_at TIMESTAMP DEFAULT ${NOW}
       )
    `);
+   // Idempotent add for tables created before this column existed.
+   try { await db.query('ALTER TABLE user_profiles ADD COLUMN notify_product_updates INTEGER DEFAULT 0'); } catch { /* already exists */ }
    tableChecked = true;
 }
 
 export async function readProfile(userId: string): Promise<UserProfile> {
    await ensureTable();
-   const rows = await select('SELECT name, avatar_url FROM user_profiles WHERE user_id = ? LIMIT 1', [userId]);
+   const rows = await select('SELECT name, avatar_url, notify_product_updates FROM user_profiles WHERE user_id = ? LIMIT 1', [userId]);
    const r = rows[0] || {};
-   return { name: r.name ?? null, avatarUrl: r.avatar_url ?? null };
+   return { name: r.name ?? null, avatarUrl: r.avatar_url ?? null, productUpdates: !!r.notify_product_updates };
 }
 
-export async function writeProfile(userId: string, patch: { name?: string; avatarUrl?: string }): Promise<UserProfile> {
+export async function writeProfile(userId: string, patch: { name?: string; avatarUrl?: string; productUpdates?: boolean }): Promise<UserProfile> {
    await ensureTable();
    const existing = await select('SELECT user_id FROM user_profiles WHERE user_id = ? LIMIT 1', [userId]);
    if (!existing.length) {
@@ -42,6 +45,7 @@ export async function writeProfile(userId: string, patch: { name?: string; avata
    const vals: any[] = [];
    if (patch.name !== undefined) { sets.push('name = ?'); vals.push(patch.name); }
    if (patch.avatarUrl !== undefined) { sets.push('avatar_url = ?'); vals.push(patch.avatarUrl); }
+   if (patch.productUpdates !== undefined) { sets.push('notify_product_updates = ?'); vals.push(patch.productUpdates ? 1 : 0); }
    if (sets.length) {
       sets.push(`updated_at = ${NOW}`);
       await db.query(`UPDATE user_profiles SET ${sets.join(', ')} WHERE user_id = ?`, { replacements: [...vals, userId] });

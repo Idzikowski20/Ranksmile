@@ -3,8 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AppShell from '../common/AppShell';
-import Icon from '../common/Icon';
-import NotificationSettings from './NotificationSettings';
+import AccountNotificationSettings from './AccountNotificationSettings';
 import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
 import SearchConsoleSettings from './SearchConsoleSettings';
@@ -19,7 +18,7 @@ import CustomVoicesSettings from './CustomVoicesSettings';
 import WorkspaceGeneralSettings from './WorkspaceGeneralSettings';
 import WorkspaceMembersSettings from './WorkspaceMembersSettings';
 import SidebarLaunchpad from './SidebarLaunchpad';
-import { useFetchSettings, useUpdateSettings } from '../../services/settings';
+import { useFetchSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
 export type SettingsPageSlug =
@@ -75,6 +74,7 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 };
 
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
+  notifications: 'Manage notifications from Surfer or other organization members',
   brand_knowledge: 'Manage what we know about your brand',
   custom_voices: 'Manage Custom Voices to be used in Content Editor, Humanizer, and Surfer AI',
   billing_details: 'Manage your billing information',
@@ -167,7 +167,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const { data: domainsData } = useFetchDomains(router);
   const domains: DomainType[] = domainsData?.domains || [];
   const { data: appSettings, isLoading } = useFetchSettings();
-  const { mutate: updateMutate, isLoading: isUpdating } = useUpdateSettings(() => {});
 
   useEffect(() => {
     if (appSettings?.settings) {
@@ -177,37 +176,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
 
   const updateSettings = (key: string, value: string | number | boolean) => {
     setSettings({ ...settings, [key]: value });
-  };
-
-  const performUpdate = () => {
-    let error: null | SettingsError = null;
-    const {
-      notification_interval,
-      notification_email,
-      notification_email_from,
-      smtp_port,
-      smtp_server,
-    } = settings;
-
-    if (notification_interval !== 'never') {
-      if (!settings.notification_email) {
-        error = { type: 'no_email', msg: 'Insert a Valid Email address' };
-      }
-      if (notification_email && (!smtp_port || !smtp_server || !notification_email_from)) {
-        let type = 'no_smtp_from';
-        if (!smtp_port) type = 'no_smtp_server';
-        if (!smtp_server) type = 'no_smtp_server';
-        error = { type, msg: 'Insert SMTP Server details that will be used to send the emails.' };
-      }
-    }
-
-    if (error) {
-      setSettingsError(error);
-      setTimeout(() => setSettingsError(null), 3000);
-      return;
-    }
-
-    updateMutate(settings);
   };
 
   const settingsSidebar = (
@@ -288,13 +256,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     }
 
     if (currentPage === 'notifications') {
-      return (
-        <NotificationSettings
-          settings={settings}
-          updateSettings={updateSettings}
-          settingsError={settingsError}
-        />
-      );
+      return <AccountNotificationSettings />;
     }
 
     if (currentPage === 'google_search_console') {
@@ -337,8 +299,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
       </div>
     );
   };
-
-  const showUpdateButton = currentPage === 'notifications';
 
   return (
     <AppShell
@@ -394,25 +354,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
                 </div>
               )}
 
-              {showUpdateButton && (
-                <div className="pt-lg flex w-full justify-end">
-                  <button
-                    type="button"
-                    onClick={performUpdate}
-                    disabled={isUpdating}
-                    className="gap-sm focus-visible:outline-purple-40 relative inline-flex
-                    cursor-pointer items-center justify-center border-none font-sans
-                    font-semibold transition-[color,background-color,box-shadow,opacity]
-                    focus-visible:outline-2 focus-visible:outline-offset-2
-                    [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md
-                    bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100
-                    disabled:opacity-60"
-                  >
-                    {isUpdating && <Icon type="loading" size={16} />}
-                    Update Settings
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>

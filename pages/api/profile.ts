@@ -15,9 +15,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
 
    if (req.method === 'PUT') {
-      const { name, avatarDataUrl } = req.body || {};
-      const patch: { name?: string; avatarUrl?: string } = {};
+      const { name, avatarDataUrl, productUpdates } = req.body || {};
+      const patch: { name?: string; avatarUrl?: string; productUpdates?: boolean } = {};
       if (name !== undefined) patch.name = String(name).slice(0, 80);
+      if (typeof productUpdates === 'boolean') patch.productUpdates = productUpdates;
       if (typeof avatarDataUrl === 'string' && avatarDataUrl.startsWith('data:')) {
          const parsed = parseDataUrl(avatarDataUrl);
          if (!parsed) return res.status(400).json({ error: 'Invalid image' });
