@@ -41,20 +41,6 @@ class Surfer_Updater {
 	 * Register the update hooks.
 	 */
 	public function __construct() {
-		// During plugin activation WordPress includes the plugin in a sandbox and
-		// treats ANY output as an error ("generated N characters of unexpected
-		// output"). The updater has no business hooking the update pipeline then,
-		// so stay completely inert while scraping.
-		if ( defined( 'WP_SANDBOX_SCRAPING' ) && WP_SANDBOX_SCRAPING ) {
-			return;
-		}
-
-		// Only the admin and cron ever check for / install updates — never the
-		// front-end. Registering there only adds avoidable work (and risk).
-		if ( ! is_admin() && ! wp_doing_cron() ) {
-			return;
-		}
-
 		$this->basename = plugin_basename( SURFER_PLUGIN_FILE );
 		$this->slug     = dirname( $this->basename );
 
