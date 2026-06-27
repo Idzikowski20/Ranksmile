@@ -8,7 +8,7 @@ import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../lib/gscAccounts';
-import { readLocalSCData } from '../../utils/searchConsole';
+import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
 
 type GSCSite = {
   siteUrl: string;
@@ -82,6 +82,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         impressions: s.impressions || 0,
       })),
     };
+
+    // Stale-while-revalidate: if we haven't refreshed in >18h, kick a background GSC
+    // fetch so the next dashboard load is current (GSC data itself lags ~2-3 days).
+    const lastFetched = (scData && (scData as { lastFetched?: string }).lastFetched) || '';
+    if (!lastFetched || Date.now() - new Date(lastFetched).getTime() > 18 * 60 * 60 * 1000) {
+      getSearchConsoleApiInfo(plain, userId)
+        .then((scApi) => (hasValidSCAuth(scApi) ? fetchDomainSCData(plain, scApi) : undefined))
+        .catch(() => {});
+    }
   }
 
   try {
