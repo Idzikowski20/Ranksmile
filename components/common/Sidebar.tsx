@@ -491,7 +491,12 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                            ? `/sites/${activeSlug}`
                            : `/sites/${activeSlug}/${item.key}`;
                         const href = workspaceHref(activeId, seoPath);
-                        const active = mounted && isActiveSuffix(seoPath);
+                        // Performance is the base `/sites/<slug>` route, so it must match exactly —
+                        // a substring check would also light up on every `/sites/<slug>/...` sub-page.
+                        const cleanPath = router.asPath.split('?')[0].split('#')[0].replace(/\/$/, '');
+                        const active = mounted && (item.key === 'performance'
+                           ? cleanPath.endsWith(`/sites/${activeSlug}`)
+                           : isActiveSuffix(seoPath));
                         return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} />;
                      })}
                   </CollapsibleGroup>
