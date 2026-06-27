@@ -203,7 +203,7 @@ const IcoFlame = () => {
             skewX: [0, -5, 3.5, -2.5, 4.5, 0],
             rotate: [0, -2.5, 2, -1, 1.5, 0],
          }}
-         transition={reduce ? undefined : { duration: 1.05, repeat: Infinity, ease: 'easeInOut', times: [0, 0.18, 0.42, 0.62, 0.82, 1] }}
+         transition={reduce ? undefined : { duration: 4, repeat: Infinity, ease: 'easeInOut', times: [0, 0.18, 0.42, 0.62, 0.82, 1] }}
       >
          <motion.path
             fillRule="evenodd"
@@ -213,7 +213,7 @@ const IcoFlame = () => {
                fill: ['#FB5D5D', '#FF8A3D', '#FFC24D', '#FF6A3D', '#FB5D5D'],
                opacity: [1, 0.92, 1, 0.85, 1],
             }}
-            transition={reduce ? undefined : { duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
+            transition={reduce ? undefined : { duration: 6, repeat: Infinity, ease: 'easeInOut' }}
          />
       </motion.svg>
    );
