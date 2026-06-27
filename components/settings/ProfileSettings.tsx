@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { authClient } from '../../lib/auth/client';
+import { useGscAccount } from '../../services/gscAccount';
+import { useProfile, useUpdateProfile } from '../../services/profile';
 
 const font = 'var(--font-family-primary)';
 const labelStyle: React.CSSProperties = { fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' };
@@ -38,72 +41,84 @@ const inputBase: React.CSSProperties = {
   outline: 'none',
 };
 
-const NameInput = () => {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      type="text"
-      maxLength={40}
-      placeholder="patryk.idzikowski@interia.pl"
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={{
-        ...inputBase,
-        background: '#fff',
-        border: `1px solid ${focused ? '#AA93FD' : '#E4E4E7'}`,
-        boxShadow: focused ? '0 0 0 3px rgba(120,58,251,0.1)' : inputBase.boxShadow,
-      }}
-    />
-  );
-};
-
-const SaveButton = () => {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => toast.success('Profile saved')}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 16px',
-        borderRadius: 6,
-        border: 'none',
-        cursor: 'pointer',
-        fontFamily: font,
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#fff',
-        background: hover ? '#783AFB' : '#18181B',
-        transition: 'background 150ms ease',
-      }}
-    >
-      Save
-    </button>
-  );
-};
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const ProfileSettings = () => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const session = authClient.useSession?.();
+  const email = mounted ? (session?.data?.user?.email ?? '') : '';
+  const sessionName = mounted ? (session?.data?.user?.name ?? '') : '';
+  const { data: gscAccount } = useGscAccount();
+  const googlePicture = gscAccount?.picture || '';
+
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
+
+  const [name, setName] = useState('');
+  const [preview, setPreview] = useState<string | null>(null); // pending avatar data URL
+  const fileRef = useRef<HTMLInputElement>(null);
   const [uploadHover, setUploadHover] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
+  const [saveHover, setSaveHover] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  // Prefill the name once the saved profile loads.
+  useEffect(() => { if (profile?.name != null) setName(profile.name); }, [profile?.name]);
+
+  // Avatar shown: pending upload → saved custom → Google (default) → initials.
+  const avatarSrc = preview || profile?.avatarUrl || googlePicture || '';
+  const initial = (name || sessionName || email || '?').charAt(0).toUpperCase();
+
+  const ingestFile = (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file'); return; }
+    if (file.size > MAX_AVATAR_BYTES) { toast.error('Image is too large (max 5MB)'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setPreview(typeof reader.result === 'string' ? reader.result : null);
+    reader.readAsDataURL(file);
+  };
+
+  const save = () => {
+    const patch: { name?: string; avatarDataUrl?: string } = { name: name.trim() };
+    if (preview) patch.avatarDataUrl = preview;
+    updateProfile.mutate(patch, {
+      onSuccess: () => {
+        setPreview(null);
+        toast.success(patch.name ? `Name changed to ${patch.name}` : 'Profile saved');
+      },
+      onError: () => { toast.error('Could not save your profile'); },
+    });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 16, width: '100%', fontFamily: font }}>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp"
+        style={{ display: 'none' }}
+        onChange={(e) => { ingestFile(e.target.files?.[0]); e.target.value = ''; }}
+      />
+
       {/* Profile Picture */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 16, width: '100%' }}>
         <label style={labelStyle}>Profile Picture</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
+          <div
+            style={{ display: 'flex', alignItems: 'flex-start', gap: 24, borderRadius: 12, padding: dragOver ? 8 : 0, margin: dragOver ? -8 : 0, outline: dragOver ? '2px dashed #AA93FD' : 'none', transition: 'outline 120ms ease' }}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); ingestFile(e.dataTransfer.files?.[0]); }}
+          >
             <div
               style={{
                 width: 64,
                 height: 64,
                 borderRadius: 9999,
-                background: '#F4F4F5',
+                background: avatarSrc ? 'transparent' : '#F4F4F5',
                 color: '#09090B',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -112,13 +127,14 @@ const ProfileSettings = () => {
                 fontWeight: 500,
                 textTransform: 'uppercase',
                 flexShrink: 0,
+                overflow: 'hidden',
               }}
             >
-              P
+              {avatarSrc ? <img alt="" src={avatarSrc} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initial}
             </div>
             <button
               type="button"
-              onClick={() => toast('Image upload — coming soon!')}
+              onClick={() => fileRef.current?.click()}
               onMouseEnter={() => setUploadHover(true)}
               onMouseLeave={() => setUploadHover(false)}
               style={{
@@ -144,7 +160,7 @@ const ProfileSettings = () => {
             <span style={{ fontFamily: font, fontSize: 13, color: '#52525C' }}>Drag an image or click &quot;Upload&quot; to browse</span>
             <button
               type="button"
-              onClick={() => toast('PNG, JPG, GIF or WEBP — up to a few MB')}
+              onClick={() => toast('PNG, JPG, GIF or WEBP — up to 5MB')}
               style={{ display: 'inline-flex', alignItems: 'center', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
             >
               <InfoIcon />
@@ -158,7 +174,21 @@ const ProfileSettings = () => {
       {/* Full name */}
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
         <label style={{ ...labelStyle, paddingBottom: 6 }}>Full name</label>
-        <NameInput />
+        <input
+          type="text"
+          maxLength={80}
+          value={name}
+          placeholder={email || 'Your name'}
+          onChange={(e) => setName(e.target.value)}
+          onFocus={() => setNameFocused(true)}
+          onBlur={() => setNameFocused(false)}
+          style={{
+            ...inputBase,
+            background: '#fff',
+            border: `1px solid ${nameFocused ? '#AA93FD' : '#E4E4E7'}`,
+            boxShadow: nameFocused ? '0 0 0 3px rgba(120,58,251,0.1)' : inputBase.boxShadow,
+          }}
+        />
       </div>
 
       {/* Email (disabled) */}
@@ -167,7 +197,7 @@ const ProfileSettings = () => {
         <input
           type="text"
           disabled
-          value="patryk.idzikowski@interia.pl"
+          value={email}
           readOnly
           style={{
             ...inputBase,
@@ -179,7 +209,31 @@ const ProfileSettings = () => {
         />
       </div>
 
-      <SaveButton />
+      <button
+        type="button"
+        onClick={save}
+        disabled={updateProfile.isLoading}
+        onMouseEnter={() => setSaveHover(true)}
+        onMouseLeave={() => setSaveHover(false)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '8px 16px',
+          borderRadius: 6,
+          border: 'none',
+          cursor: updateProfile.isLoading ? 'not-allowed' : 'pointer',
+          fontFamily: font,
+          fontSize: 14,
+          fontWeight: 600,
+          color: '#fff',
+          background: saveHover && !updateProfile.isLoading ? '#783AFB' : '#18181B',
+          opacity: updateProfile.isLoading ? 0.7 : 1,
+          transition: 'background 150ms ease',
+        }}
+      >
+        {updateProfile.isLoading ? 'Saving…' : 'Save'}
+      </button>
     </div>
   );
 };

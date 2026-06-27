@@ -4,6 +4,7 @@ import Icon from './Icon';
 import { authClient } from '../../lib/auth/client';
 import { useOrganization } from '../../services/organization';
 import { useGscAccount } from '../../services/gscAccount';
+import { useProfile } from '../../services/profile';
 
 const font = 'var(--font-family-primary)';
 
@@ -52,16 +53,17 @@ const TopbarAccountMenu = () => {
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
    const { data: gscAccount } = useGscAccount();
+   const { data: profile } = useProfile();
    const { data: org } = useOrganization();
    const orgName = org?.name || 'Organization';
    const orgInitial = (org?.name || '').charAt(0).toUpperCase() || 'O';
    const orgLogo = org?.logoUrl || '';
    const email = mounted ? (session?.data?.user?.email ?? '') : '';
-   const name = mounted ? (session?.data?.user?.name ?? email) : '';
-   const initials = name ? name.charAt(0).toUpperCase() : '?';
-   const accountPicture = gscAccount?.picture || '';
-   const accountLabel = gscAccount?.email || email;
-   const accountInitials = accountLabel ? accountLabel.charAt(0).toUpperCase() : initials;
+   // Display name: user's saved profile name → auth name → none. Avatar: custom
+   // upload → Google (GSC) picture → initials.
+   const displayName = mounted ? (profile?.name || session?.data?.user?.name || '') : '';
+   const accountPicture = (profile?.avatarUrl || gscAccount?.picture) || '';
+   const accountInitials = (displayName || email || '?').charAt(0).toUpperCase();
 
    useEffect(() => {
       setMounted(true);
@@ -131,7 +133,10 @@ const TopbarAccountMenu = () => {
                      )}
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                     <span style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accountLabel}</span>
+                     {displayName && (
+                        <span style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                     )}
+                     <span style={{ fontFamily: font, fontSize: displayName ? 13 : 14, fontWeight: displayName ? 400 : 600, color: displayName ? '#71717B' : '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
                   </div>
                </a>
 
