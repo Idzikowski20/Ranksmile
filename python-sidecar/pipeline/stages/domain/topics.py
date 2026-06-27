@@ -19,7 +19,9 @@ def _get_client() -> anthropic.AsyncAnthropic:
     return _client
 
 
-MODEL = "deepseek-v4-flash"
+# Non-reasoning model: deepseek-v4-flash emits a 'thinking' block that ate the whole
+# max_tokens budget, leaving no 'text' output → topics=0. deepseek-chat returns clean JSON.
+MODEL = "deepseek-chat"
 
 
 async def _llm_cluster(domain: str, keywords: list[str]) -> list[dict] | None:
