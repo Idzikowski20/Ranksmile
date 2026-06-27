@@ -197,6 +197,16 @@ const RecommendationsPage: NextPage = () => {
       async () => { const r = await fetch(`/api/searchconsole?domain=${slug}`); return r.json(); },
       { enabled: !!slug, staleTime: 5 * 60 * 1000 },
    );
+   // Domain-scan recommendations (domain_recommendations). Shares the dashboard/sidebar
+   // ['domainRecs', slug] cache so the scan's "pages worth optimizing" stay in sync.
+   const { data: recsData } = useQuery(
+      ['domainRecs', slug],
+      async () => {
+         const r = await fetch(`/api/domains/${slug}/recommendations`);
+         return r.json() as Promise<{ recommendations: Array<{ id: number; title: string; type: string | null; url: string | null; score: number | null; word_count: number | null }> }>;
+      },
+      { enabled: !!slug, staleTime: 60_000 },
+   );
 
    const loading = domainsLoading || articlesLoading || scLoading;
 
@@ -286,7 +296,38 @@ const RecommendationsPage: NextPage = () => {
       });
    }, [articlesData, allGscKeywords, urlKeywordMap]);
 
-   const optimizeRows = rows.filter((r) => r.content_score < 70);
+   // Pages the domain scan flagged for optimization (type=optimize, with a URL + score),
+   // mapped into the Optimize table shape and enriched with GSC stats by URL.
+   const auditRows = useMemo<RecommRow[]>(() => {
+      const recs = recsData?.recommendations || [];
+      return recs
+         .filter((r) => r.type === 'optimize' && !!r.url && (r.score ?? 0) > 0)
+         .map((r) => {
+            const sc = urlKeywordMap.get(normalizeUrlForMatch(r.url || ''));
+            return {
+               id: `rec_${r.id}`,
+               title: r.title,
+               url: r.url || '',
+               keyword: sc?.keyword || '',
+               content_score: r.score ?? 0,
+               position: sc?.position ?? 0,
+               clicks: sc?.clicks ?? 0,
+               impressions: sc?.impressions ?? 0,
+               status: 'not_started',
+               source: 'audit',
+               meta_title: null,
+               word_count: r.word_count ?? 0,
+               updatedAt: null,
+            };
+         });
+   }, [recsData, urlKeywordMap]);
+
+   // Optimize tab = existing articles + scan-flagged pages, all under 70, deduped by URL.
+   const optimizeRows = useMemo(() => {
+      const seen = new Set(rows.map((r) => normalizeUrlForMatch(r.url)).filter(Boolean));
+      const fromScan = auditRows.filter((a) => a.url && !seen.has(normalizeUrlForMatch(a.url)));
+      return [...rows, ...fromScan].filter((r) => r.content_score < 70);
+   }, [rows, auditRows]);
 
    // ── Content gap rows (ideas tab) — GSC keywords not covered by any article ──
    const gapRows = useMemo(() => {
