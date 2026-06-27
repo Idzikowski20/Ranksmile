@@ -21,12 +21,12 @@ const SelectionBar = ({ count, onRemove, onClear }: { count: number; onRemove: (
          onClick={onRemove}
          style={{
             display: 'inline-flex', alignItems: 'center', height: 32, padding: '0 14px', borderRadius: 8,
-            border: '1px solid rgba(255,111,119,0.35)', background: 'rgba(255,111,119,0.14)', color: '#FF6F77',
+            border: 'none', background: 'rgba(255,111,119,0.12)', color: '#FF6F77',
             fontSize: 13, fontWeight: 600, fontFamily: font, cursor: 'pointer',
-            transition: 'background 150ms ease, color 150ms ease, border-color 150ms ease',
+            transition: 'background 150ms ease',
          }}
-         onMouseEnter={(e) => { e.currentTarget.style.background = '#FF6F77'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#FF6F77'; }}
-         onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,111,119,0.14)'; e.currentTarget.style.color = '#FF6F77'; e.currentTarget.style.borderColor = 'rgba(255,111,119,0.35)'; }}
+         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,111,119,0.20)'; }}
+         onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,111,119,0.12)'; }}
       >
          Remove selected
       </button>
