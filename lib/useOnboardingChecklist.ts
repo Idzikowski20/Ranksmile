@@ -1,0 +1,62 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import { useQuery } from 'react-query';
+import { useWorkspaces } from '../services/workspaces';
+import { useFetchDomains } from '../services/domains';
+import { deriveActiveId, workspaceHref } from './activeWorkspace';
+
+export interface OnboardingStep {
+   key: string;
+   label: string;
+   done: boolean;
+   time?: string;
+   href?: string; // where the step's CTA / row navigates
+   cta?: string;  // dashboard "next step" button label
+}
+
+const getJson = <T, >(url: string): Promise<T | null> => fetch(url).then((r) => (r.ok ? (r.json() as Promise<T>) : null));
+
+/**
+ * The "Get started" onboarding checklist, derived from real signals and shared by the
+ * sidebar launchpad and the dashboard next-step card. Reuses the dashboard/sidebar
+ * react-query keys so the cache is shared.
+ */
+export function useOnboardingChecklist(): {
+   steps: OnboardingStep[];
+   done: number;
+   total: number;
+   pct: number;
+   nextStep: OnboardingStep | null;
+} {
+   const router = useRouter();
+   const { data: wsData } = useWorkspaces();
+   const { data: domainsData } = useFetchDomains({} as never);
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => setMounted(true), []);
+   const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+   const slug = domainsData?.domains?.[0]?.slug ?? null;
+
+   const { data: sitesData } = useQuery('dashboardSites', () => getJson<{ sites?: unknown[] }>('/api/sites'), { staleTime: 5 * 60 * 1000, retry: false });
+   const { data: recsData } = useQuery(['domainRecs', slug], () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`), { enabled: !!slug, staleTime: 60 * 1000 });
+   const { data: articlesData } = useQuery('dashboardArticles', () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles'));
+
+   return useMemo(() => {
+      const ws = (p: string) => workspaceHref(wsId, p);
+      const hasWorkspace = (wsData?.workspaces?.length ?? 0) > 0;          // first workspace created
+      const hasGsc = (sitesData?.sites?.length ?? 0) > 0;                  // a GSC account is connected
+      const hasAudit = (recsData?.recommendations?.length ?? 0) > 0;       // the domain scan produced recs
+      const hasArticle = (articlesData?.articles ?? []).some((a) => a.source !== 'site_context' && !!a.title); // real content exists
+      const steps: OnboardingStep[] = [
+         { key: 'workspace', label: 'Set up your workspace', done: hasWorkspace },
+         { key: 'gsc', label: 'Connect Google Search Console', done: hasGsc },
+         { key: 'audit', label: 'Audit existing content and find quick wins', done: hasAudit, href: ws(slug ? `/sites/${slug}/recommendations` : '/dashboard'), cta: 'View recommendations' },
+         { key: 'ai', label: 'See if AI mentions your brand', done: false, time: '2m', href: ws('/ai_tracker?intent=overview'), cta: 'See AI Visibility' },
+         { key: 'content', label: 'Create content that ranks in AI Search and SEO', done: hasArticle, time: '10m', href: ws('/articles'), cta: 'Open Content Editor' },
+      ];
+      const done = steps.filter((s) => s.done).length;
+      const total = steps.length;
+      const pct = Math.round((done / total) * 100);
+      const nextStep = steps.find((s) => !s.done) ?? null;
+      return { steps, done, total, pct, nextStep };
+   }, [wsId, slug, wsData, sitesData, recsData, articlesData]);
+}

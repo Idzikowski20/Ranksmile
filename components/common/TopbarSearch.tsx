@@ -46,12 +46,14 @@ function useCommands(): Command[] {
   }, [wsId, slug]);
 }
 
-const CommandMenu = ({ open, onClose, commands }: { open: boolean; onClose: () => void; commands: Command[] }) => {
+const CommandMenu = ({ open, onClose, commands, anchorRef }: {
+  open: boolean; onClose: () => void; commands: Command[]; anchorRef: React.RefObject<HTMLElement>;
+}) => {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [sel, setSel] = useState(0);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,30 +61,46 @@ const CommandMenu = ({ open, onClose, commands }: { open: boolean; onClose: () =
     return commands.filter((c) => c.label.toLowerCase().includes(q) || c.category.toLowerCase().includes(q));
   }, [commands, query]);
 
-  useEffect(() => { if (open) { setQuery(''); setSel(0); setTimeout(() => inputRef.current?.focus(), 0); } }, [open]);
+  useEffect(() => { if (open) { setQuery(''); setSel(0); } }, [open]);
   useEffect(() => { if (sel > filtered.length - 1) setSel(Math.max(0, filtered.length - 1)); }, [filtered, sel]);
+
+  // Anchor the menu directly under the search trigger (centered on it), clamped to the viewport.
+  useEffect(() => {
+    if (!open) return undefined;
+    const compute = () => {
+      const w = Math.min(600, window.innerWidth - 16);
+      const el = anchorRef.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
+        setPos({ top: r.bottom + 6, left, width: w });
+      } else {
+        setPos({ top: 70, left: (window.innerWidth - w) / 2, width: w });
+      }
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, [open, anchorRef]);
 
   const go = (cmd?: Command) => { if (cmd) { onClose(); router.push(cmd.href); } };
 
-  if (!open || typeof document === 'undefined') return null;
+  if (!open || !pos || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div
-      role="presentation"
-      onMouseDown={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '10vh 16px 16px' }}
-    >
+    <div role="presentation" onMouseDown={onClose} style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(0,0,0,0.6)' }}>
       <div
         role="dialog"
         aria-label="Command Menu"
         onMouseDown={(e) => e.stopPropagation()}
-        style={{ width: 'min(600px, 100%)', maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#18181B', border: '1px solid #221E28', borderRadius: 12, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', fontFamily: font, animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)' }}
+        style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#18181B', border: '1px solid #221E28', borderRadius: 12, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', fontFamily: font, animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}
       >
         {/* Search input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid #221E28', background: '#09090B' }}>
           <span style={{ color: '#9F9FA9', display: 'inline-flex' }}><SearchIcon size={20} /></span>
           <input
             ref={inputRef}
+            autoFocus
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSel(0); }}
             onKeyDown={(e) => {
@@ -99,7 +117,7 @@ const CommandMenu = ({ open, onClose, commands }: { open: boolean; onClose: () =
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="styled-scrollbar" style={{ padding: 8, overflowY: 'auto', background: '#09090B' }}>
+        <div className="styled-scrollbar" style={{ padding: 8, overflowY: 'auto', background: '#09090B' }}>
           {filtered.length === 0 ? (
             <div style={{ padding: '24px 12px', textAlign: 'center', color: '#71717B', fontSize: 14 }}>No results.</div>
           ) : (
@@ -131,6 +149,7 @@ const CommandMenu = ({ open, onClose, commands }: { open: boolean; onClose: () =
 
 const TopbarSearch = () => {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const commands = useCommands();
 
   // Ctrl/⌘+K toggles the command menu.
@@ -145,6 +164,7 @@ const TopbarSearch = () => {
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
@@ -165,7 +185,7 @@ const TopbarSearch = () => {
         </span>
       </button>
 
-      <CommandMenu open={open} onClose={() => setOpen(false)} commands={commands} />
+      <CommandMenu open={open} onClose={() => setOpen(false)} commands={commands} anchorRef={triggerRef} />
     </>
   );
 };
