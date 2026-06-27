@@ -86,13 +86,16 @@ const DashboardPage: NextPage = () => {
     return [...byDate.keys()].sort().map((date) => ({ date, clicks: byDate.get(date) || 0 }));
   }, [sitesData]);
 
-  const points = clickSeries.map((p) => p.clicks);
+  // Period-over-period like SurferSEO: the last 30 days vs the previous 30 days —
+  // NOT the two halves of one window. The chart + total reflect the last 30 days.
+  const recent30 = clickSeries.slice(-30);
+  const prev30 = clickSeries.slice(-60, -30);
+  const points = recent30.map((p) => p.clicks);
   const clicksTotal = points.reduce((a, b) => a + b, 0);
-  const half = Math.floor(clickSeries.length / 2);
-  const prevSum = points.slice(0, half).reduce((a, b) => a + b, 0);
-  const currSum = points.slice(half).reduce((a, b) => a + b, 0);
+  const prevSum = prev30.reduce((a, b) => a + b.clicks, 0);
+  const currSum = clicksTotal;
   const deltaPct = prevSum > 0 ? Math.round(((currSum - prevSum) / prevSum) * 100) : (currSum > 0 ? 100 : 0);
-  const hasData = clickSeries.length > 0;
+  const hasData = recent30.length > 0;
 
   const domains: DomainType[] = domainsData?.domains || [];
   const primaryDomain = domains[0];
@@ -206,8 +209,8 @@ const DashboardPage: NextPage = () => {
       }));
   }, [articlesData]);
 
-  const startLabel = formatShortDate(clickSeries[0]?.date || '');
-  const endLabel = formatShortDate(clickSeries[clickSeries.length - 1]?.date || '');
+  const startLabel = formatShortDate(recent30[0]?.date || '');
+  const endLabel = formatShortDate(recent30[recent30.length - 1]?.date || '');
 
   return (
     <DashboardLayout
