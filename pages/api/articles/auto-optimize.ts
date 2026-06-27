@@ -190,7 +190,10 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
 }
 
 // ── Internal linking (Surfer "auto internal links") ────────────────────
-interface SiteLink { id: number; title: string; url: string; }
+interface SiteLink { title: string; url: string; }
+
+/** Bare host+path, lowercased — for de-duping link candidates and self-exclusion. */
+const normUrl = (u: string) => (u || '').split('#')[0].split('?')[0].replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase();
 
 async function suggestInternalLinks(
   content: string, keyword: string, articles: SiteLink[], apiKey: string,
@@ -823,18 +826,39 @@ Return the complete HTML with targeted fixes applied.`;
     if (articleId) {
       try {
         const articleIdSql = await getArticleIdSql();
-        const [drow] = await db.query(`SELECT domain_id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, { replacements: [articleId] });
-        const domainId = (drow as any[])[0]?.domain_id;
+        const [drow] = await db.query(`SELECT domain_id, publish_url, meta_url FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, { replacements: [articleId] });
+        const self = (drow as any[])[0] || {};
+        const domainId = self.domain_id;
         if (domainId) {
-          const [candRows] = await db.query(
-            `SELECT ${articleIdSql} AS id, title, publish_url, meta_url FROM articles
+          // Sibling articles that have a public URL…
+          const [artRows] = await db.query(
+            `SELECT title, publish_url, meta_url FROM articles
              WHERE domain_id = ? AND ${articleIdSql} <> ? AND title IS NOT NULL
              ORDER BY updated_at DESC LIMIT 40`,
             { replacements: [domainId, articleId] },
           );
-          const candidates: SiteLink[] = (candRows as any[])
-            .map((a) => ({ id: a.id, title: String(a.title || ''), url: String(a.publish_url || a.meta_url || '') }))
-            .filter((a) => a.url && a.title);
+          // …plus every page the scan audited (whole-site coverage, with real titles).
+          const [auditRows] = await db.query(
+            `SELECT url, title FROM page_audits
+             WHERE domain_id = ? AND fetch_status = 'OK' AND title IS NOT NULL AND url IS NOT NULL
+             ORDER BY last_audited_at DESC LIMIT 100`,
+            { replacements: [domainId] },
+          );
+
+          const seen = new Set<string>();
+          const ownUrl = normUrl(self.publish_url || self.meta_url || '');
+          if (ownUrl) seen.add(ownUrl);
+          const candidates: SiteLink[] = [];
+          const pushCand = (title: unknown, url: unknown) => {
+            const t = String(title || '').trim();
+            const u = String(url || '').trim();
+            const key = normUrl(u);
+            if (!t || !u || !key || seen.has(key) || candidates.length >= 60) return;
+            seen.add(key);
+            candidates.push({ title: t, url: u });
+          };
+          for (const a of artRows as any[]) pushCand(a.title, a.publish_url || a.meta_url);
+          for (const a of auditRows as any[]) pushCand(a.title, a.url);
           if (candidates.length) {
             sse(res, 'progress', { message: 'Adding internal links…' });
             const links = await suggestInternalLinks(optimized, keyword || '', candidates, apiKey);
