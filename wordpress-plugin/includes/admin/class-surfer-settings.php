@@ -167,7 +167,11 @@ class Surfer_Settings {
 		$defaults = array(
 			'surfer_url'                          => 'http://localhost:3000',
 			'surfer_api_url'                      => 'http://localhost:3000/api/v1/wordpress/',
-			'default_content_editor'              => Parsers_Controller::AUTOMATIC,
+			// Default to the Gutenberg parser: our content is exported as clean,
+			// Gutenberg-oriented HTML. Auto-detection would pick the Elementor parser
+			// on any Elementor-active site, leaving the post body empty in the block
+			// editor. Users who really want Elementor can still select it here.
+			'default_content_editor'              => Parsers_Controller::GUTENBERG,
 			'default_page_template'               => 'default',
 			'default_elementor_template'          => '',
 			'default_seo_plugin'                  => '',
