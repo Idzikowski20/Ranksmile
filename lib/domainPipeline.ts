@@ -21,10 +21,17 @@ type DomainResult = {
    audit_counts?: { audited: number; skipped: number; total: number };
 };
 
+// The sidecar runs a hidden 'blog_audit' stage between 'competitors' and
+// 'recommendations' that has no UI row. Fold it into 'competitors' (whose label is
+// "…and coverage") so the in-between poll doesn't map to index -1 and reset every
+// row to pending — which blanked the checkmarks/spinner for ~2s.
+const STAGE_ALIASES: Record<string, StageKey> = { blog_audit: 'competitors' };
+
 /** Pure: maps job status/current_stage to the 5-row UI map + active stagePercent. */
 export function deriveStages(status: string, currentStage: string | null, stagePercent: number) {
    const done = status === 'done';
-   const curIdx = currentStage ? STAGE_ORDER.indexOf(currentStage as StageKey) : -1;
+   const effectiveStage = currentStage ? (STAGE_ALIASES[currentStage] ?? currentStage) : null;
+   const curIdx = effectiveStage ? STAGE_ORDER.indexOf(effectiveStage as StageKey) : -1;
    const stages = {} as Record<StageKey, 'pending' | 'running' | 'done'>;
    STAGE_ORDER.forEach((k, i) => {
       if (done) stages[k] = 'done';

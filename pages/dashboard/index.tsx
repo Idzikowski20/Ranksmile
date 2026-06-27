@@ -149,15 +149,20 @@ const DashboardPage: NextPage = () => {
   //    Falls back to analyzed articles with a content score when the scan produced none. ──
   const recommendations: RecommendationItem[] = useMemo(() => {
     const domainRecs = domainRecsData?.recommendations ?? [];
-    if (domainRecs.length > 0) {
-      // optimize recs carry a snapshot score (+ word count) → score-gauge row;
-      // create recs carry a priority → priority-pill row.
-      return domainRecs.map((r) => (
+    // optimize recs carry a snapshot score (+ word count) → score-gauge row;
+    // create recs carry a priority → priority-pill row. Drop optimize recs with a
+    // 0 (or missing) score — an unscored page is noise, not a useful recommendation.
+    const mapped: RecommendationItem[] = domainRecs
+      .filter((r) => {
+        const isOptimize = r.type === 'optimize' || r.score != null;
+        return !isOptimize || (r.score ?? 0) > 0;
+      })
+      .map((r) => (
         r.type === 'optimize' || r.score != null
           ? { id: r.id, title: r.title, type: 'optimize', score: r.score ?? 0, wordCount: r.word_count ?? undefined, href: recommendationsHref }
           : { id: r.id, title: r.title, type: 'create', priority: r.priority || 'low', href: recommendationsHref }
       ));
-    }
+    if (mapped.length > 0) return mapped;
     return (articlesData?.articles ?? [])
       .filter((a) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0)
       .sort((a, b) => (b.content_score || 0) - (a.content_score || 0))

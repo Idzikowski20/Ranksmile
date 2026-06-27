@@ -1,11 +1,11 @@
 """RecommendationsStage — LLM-generated content recommendations over topics + competitors."""
 import json
 import os
-import re
 
 import anthropic
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.llm_json import parse_json_array
 
 _client: anthropic.AsyncAnthropic | None = None
 
@@ -39,7 +39,8 @@ async def _llm_recommendations(
     prompt = (
         f"Given these SEO topics {topics_str}, competitor domains {competitors_str}, "
         f"and {brand_block} produce 5-10 prioritized content recommendations. "
-        "Return ONLY valid JSON (no markdown, no explanation): "
+        "Return ONLY valid JSON (no markdown, no explanation). Keep rationales short and "
+        "do NOT use double-quote characters inside any string value. "
         '[{"title": "...", "rationale": "...", "priority": "high|medium|low", '
         '"type": "...", "topic_index": 0}]'
     )
@@ -47,14 +48,12 @@ async def _llm_recommendations(
     response = await client.messages.create(
         model=MODEL,
         max_tokens=1024,
+        temperature=0,
         messages=[{"role": "user", "content": prompt}],
     )
     for block in response.content:
         if block.type == "text":
-            raw = block.text
-            json_match = re.search(r"\[[\s\S]*\]", raw)
-            if json_match:
-                return json.loads(json_match[0])
+            return parse_json_array(block.text)
     return None
 
 
