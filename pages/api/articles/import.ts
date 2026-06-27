@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { url, keywords = [], country = 'US', device = 'Desktop' } = req.body;
+   const { url, keywords = [], country = 'US', device = 'Desktop', domainId: bodyDomainId } = req.body;
 
    if (!url) {
       return res.status(400).json({ error: 'url is required' });
@@ -335,9 +335,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          contentHtml, (keywords as string[])[0] || '',
       );
 
-      // Get first available domain
-      const [domains] = await db.query('SELECT "ID" FROM domain LIMIT 1', { replacements: [] });
-      const domainId = (domains as any[])[0]?.ID || 1;
+      // Target domain: explicit from the request (audit/recommendation imports), else the first.
+      let domainId = Number(bodyDomainId) || 0;
+      if (!domainId) {
+         const [domains] = await db.query('SELECT "ID" FROM domain LIMIT 1', { replacements: [] });
+         domainId = (domains as Array<{ ID: number }>)[0]?.ID || 1;
+      }
 
       // Slug from title
       const slug = title

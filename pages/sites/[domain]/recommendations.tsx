@@ -366,6 +366,27 @@ const RecommendationsPage: NextPage = () => {
 
    const [analyzingIds, setAnalyzingIds] = useState<Set<string | number>>(new Set());
    const [creatingKw, setCreatingKw] = useState<string | null>(null);
+   const [optimizingId, setOptimizingId] = useState<string | number | null>(null);
+
+   // Optimize: real articles (numeric id) open straight in the editor; scanned pages
+   // (audit/site_context rows, no article yet) are scraped into a draft via the import
+   // endpoint and then opened — the "pull the page into the Content Editor" step.
+   const handleOptimize = async (row: RecommRow, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (typeof row.id === 'number') { router.push(`/articles/${row.id}`); return; }
+      if (!row.url) return;
+      setOptimizingId(row.id);
+      try {
+         const res = await fetch('/api/articles/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: row.url, keywords: row.keyword ? [row.keyword] : [], domainId: activeDomain?.ID }),
+         });
+         const data = await res.json();
+         if (data.articleId) { router.push(`/articles/${data.articleId}`); return; }
+      } catch { /* ignore */ }
+      setOptimizingId(null);
+   };
 
 
    const handleCreateArticleForKeyword = async (keyword: string) => {
@@ -652,8 +673,8 @@ const RecommendationsPage: NextPage = () => {
                                     <button type="button" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} style={{ display: 'inline-flex', border: 'none', background: 'transparent', color: '#3F3F47', cursor: 'pointer', padding: 0 }}>
                                        <PanelIcon />
                                     </button>
-                                    <button type="button" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 6, border: 'none', background: '#F4F4F5', color: '#18181B', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: 'pointer' }}>
-                                       Optimize
+                                    <button type="button" disabled={optimizingId === row.id} onClick={(e) => handleOptimize(row, e)} style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 6, border: 'none', background: '#F4F4F5', color: '#18181B', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: optimizingId === row.id ? 'default' : 'pointer', opacity: optimizingId === row.id ? 0.6 : 1 }}>
+                                       {optimizingId === row.id ? 'Optimizing…' : 'Optimize'}
                                     </button>
                                  </div>
                               </div>
