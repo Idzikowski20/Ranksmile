@@ -178,7 +178,9 @@ class Surfer_Tracking {
 	 */
 	public function track_wp_environment() {
 		if ( ! $this->is_tracking_allowed() ) {
-			echo 'Tracking disabled';
+			// NB: never echo here — this runs during plugin activation (via the
+			// installer's send_tracking_data), and any output makes WordPress report
+			// "the plugin generated N characters of unexpected output".
 			return false;
 		}
 
