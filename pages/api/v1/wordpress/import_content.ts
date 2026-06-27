@@ -19,5 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const id = await createArticleFromWp({ domainId, title, keyword, content: String(b.content || '') });
    if (!id) return res.status(500).json({ message: 'Failed to create draft.' });
-   return res.status(200).json({ id, permalink_hash: permalinkHash(id) });
+
+   // The plugin opens this `url` in a new tab (window.open) so the user lands in our editor.
+   const proto = (req.headers['x-forwarded-proto'] as string) || 'http';
+   const origin = (process.env.NEXT_PUBLIC_APP_URL || `${proto}://${req.headers.host || 'localhost:3000'}`).replace(/\/+$/, '');
+   return res.status(200).json({ id, permalink_hash: permalinkHash(id), url: `${origin}/drafts/${id}` });
 }
+
