@@ -41,7 +41,12 @@ async def _llm_cluster(domain: str, keywords: list[str]) -> list[dict] | None:
     )
     for block in response.content:
         if block.type == "text":
-            return parse_json_array(block.text)
+            parsed = parse_json_array(block.text)
+            if not parsed:
+                # Evidence: show what the model actually returned when it doesn't parse.
+                print(f"[topics] LLM text unparseable ({len(block.text)} chars) head={block.text[:400]!r}")
+            return parsed
+    print(f"[topics] LLM response had no text block: {[b.type for b in response.content]}")
     return None
 
 
@@ -53,6 +58,10 @@ class TopicsStage(AnalysisStage):
         keywords: list[dict[str, str]] = ctx.get_state("keywords") or []
         domain: str = ctx.payload.get("domain", "")
         kw_strings = [k["keyword"] for k in keywords]
+
+        # Evidence at the keywords → topics boundary: 0 keywords ⇒ the keywords stage
+        # is the real culprit, not the topics LLM.
+        print(f"[topics] input keywords={len(kw_strings)} sample={kw_strings[:5]}")
 
         await ctx.emit_progress(self, 20, "Clustering keywords into topic groups")
 
