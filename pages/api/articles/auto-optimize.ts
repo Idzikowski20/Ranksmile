@@ -385,10 +385,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? `CONTENT GAPS TO FIX:\n${gaps.map((g, i) => `${i + 1}. ${g}`).join('\n\n')}`
       : 'Article is already well-optimized. Improve NLP term density and expand thin sections.';
     const aiSearchBlock = aiVisibilitySummary?.citations?.length
-      ? `\n\nAI SEARCH — QUESTIONS THAT DRIVE LLM CITATIONS (answer these to appear in AI search):\n${aiVisibilitySummary.citations
-        .slice(0, 12)
+      ? `\n\nAI SEARCH — COVER EVERY QUESTION BELOW (these drive LLM citations; you MUST leave NONE uncovered):\n${aiVisibilitySummary.citations
+        .slice(0, 25)
         .map((c, i) => `${i + 1}. "${c.prompt}" | currently cited: ${c.cited_domain || 'none'}${c.is_own_domain ? ' (us ✓)' : ''} | competitor answer: "${(c.answer || '').slice(0, 180)}"`)
-        .join('\n')}\n\nFor EACH question above that we do NOT already answer, add a concise, directly-quotable answer (1–3 sentences) immediately under the most relevant heading: definition-first, factual, self-contained, so an LLM can lift it as a citation. Prefer specifics (numbers, named entities, steps) over vague phrasing. Where natural, add an FAQ section using these questions verbatim as H3s with crisp answers.`
+        .join('\n')}\n\nFor EVERY question above, ensure the article contains a concise, directly-quotable answer (1–3 sentences) under the most relevant heading: definition-first, factual, self-contained, so an LLM can lift it as a citation. Prefer specifics (numbers, named entities, steps) over vague phrasing. Add an FAQ section using any still-uncovered questions verbatim as H3s with crisp answers — do not skip any.`
       : '';
 
     sse(res, 'progress', {
@@ -522,8 +522,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       : '';
 
     // Score gaps from the editor's "What's missing" view — the exact slots still losing points.
+    // This is the single most important instruction — placed first in the prompt body below.
     const scoreGapsBlock = Array.isArray(clientScoreGaps) && clientScoreGaps.length
-      ? `\n\nPRIORITY SCORE FIXES — the article is currently losing these points; you MUST address every one of them in this pass:\n${clientScoreGaps.map((g) => `- [+${g.points} pts] ${g.label}: ${g.hint}`).join('\n')}`
+      ? `★★★ TOP PRIORITY — "WHAT'S MISSING": the article is losing these exact points and you MUST fully resolve EVERY one of them in this pass. Prioritise this above all else:\n${clientScoreGaps.map((g) => `- [+${g.points} pts] ${g.label}: ${g.hint}`).join('\n')}\n\n`
       : '';
 
     const systemPrompt = `You are an expert SEO content optimizer, similar to Surfer SEO's Auto-Optimize feature.
@@ -544,7 +545,7 @@ STRICT RULES:
 - Do NOT change the meta title or meta description
 - Keep the human, expert tone — avoid AI-sounding filler phrases${protectedTermsBlock}${IMG_TOKEN_RULE}
 
-${gapBlock}${scoreGapsBlock}${signalImprovementBlock}${competitorBlock}${aiSearchBlock}
+${scoreGapsBlock}${gapBlock}${signalImprovementBlock}${competitorBlock}${aiSearchBlock}
 
 OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, no markdown code fences, no comments. Raw HTML only.${brandVoiceBlock}\n\n${ANTI_HALLUCINATION_RULES}`;
 
@@ -1064,10 +1065,23 @@ Return ONLY a JSON object:
       }
     }
 
+    // Competitor outlines (with headings) for the editor's Competitors panel — read from the
+    // cache getCompetitorData populated this run, so the panel fills in right after optimize.
+    let competitorOutlines: any[] | null = null;
+    if (articleId) {
+      try {
+        const aidSql = await getArticleIdSql();
+        const [orows] = await db.query(`SELECT competitor_outlines_cache FROM articles WHERE ${aidSql} = ? LIMIT 1`, { replacements: [articleId] });
+        const parsed = JSON.parse((orows as any[])[0]?.competitor_outlines_cache || '{}');
+        if (Array.isArray(parsed.competitors) && parsed.competitors.length) competitorOutlines = parsed.competitors;
+      } catch { /* ignore */ }
+    }
+
     console.log('[auto-optimize] sending done event, pendingImages:', pendingImages.length);
     sse(res, 'done', {
       content: optimizedWithImages,
       pendingImages,
+      ...(competitorOutlines ? { competitorOutlines } : {}),
       ...(refreshedTerms ? { updatedTerms: refreshedTerms } : {}),
       ...(refreshedAiSummary ? { aiSummary: refreshedAiSummary } : {}),
       ...(resolvedPaaQuestions.length ? { paaQuestions: resolvedPaaQuestions } : {}),
