@@ -26,5 +26,7 @@ export async function ensureWpTables(): Promise<void> {
    `);
    try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_wp_conn_apikey ON wp_connections(api_key)'); } catch { /* exists */ }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_wp_conn_ws ON wp_connections(workspace_id)'); } catch { /* exists */ }
+   // "Integrated by" email, added after the initial schema — ALTER is a no-op if it already exists.
+   try { await db.query('ALTER TABLE wp_connections ADD COLUMN integrated_by_email TEXT'); } catch { /* exists */ }
    tableChecked = true;
 }

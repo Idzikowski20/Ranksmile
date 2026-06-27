@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { authClient } from '../../lib/auth/client';
 import { useWorkspaces } from '../../services/workspaces';
 import { useOrganization } from '../../services/organization';
+import { workspaceHref } from '../../lib/activeWorkspace';
 
 const font = 'var(--font-family-primary)';
 
@@ -44,6 +45,8 @@ const WordPressConnect: NextPage = () => {
          const data = await res.json().catch(() => ({}));
          if (!res.ok || !data?.connected) { setErrorMsg(data?.error || 'Connection failed.'); setState('error'); return; }
          setState('done');
+         // Land the user on the WordPress Integration page for this workspace.
+         router.replace(workspaceHref(workspaceId, '/wordpress'));
       } catch {
          setErrorMsg('Connection failed.'); setState('error');
       }
