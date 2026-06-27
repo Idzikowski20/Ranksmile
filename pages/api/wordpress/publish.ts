@@ -10,6 +10,7 @@ import { assertArticleAccess } from '../../../lib/tenancy';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getConnectionForWorkspace } from '../../../lib/wpConnection';
 import { permalinkHash } from '../../../lib/wpDraft';
+import { cleanHtmlForWordPress } from '../../../lib/wpContentClean';
 
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;
@@ -43,8 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const conn = workspaceId ? await getConnectionForWorkspace(workspaceId) : null;
    if (!conn) return res.status(400).json({ error: 'No WordPress site is connected to this workspace.' });
 
+   const cleanContent = cleanHtmlForWordPress(article.content);
+   if (!cleanContent) return res.status(400).json({ error: 'Article content is empty after cleanup.' });
+
    const payload = {
-      content: article.content,
+      content: cleanContent,
       metadata: {
          postTitle: article.title || '',
          postStatus: { value: postStatus },
