@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { Tabs } from '../ui';
 
 const F = 'var(--font-family-primary)';
 
@@ -94,6 +95,10 @@ const IcoContent = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><
 const IcoHtml = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M17 17l5-5-5-5M7 7l-5 5 5 5M14 3l-4 18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const IcoMd = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M4 8h16M4 16h16M8 3v18M16 3v18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
+const WpLogo = <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>;
+const IcoExternal = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const IcoManage = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M5 6h7M16 6h3M5 12h3M12 12h7M5 18h9M18 18h1" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" /><circle cx="14" cy="6" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="10" cy="12" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="16" cy="18" r="2" stroke="currentColor" strokeWidth={1.7} /></svg>;
+
 const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack }: Props) => {
   const router = useRouter();
   const [doneCardOpen, setDoneCardOpen] = useState(true);
@@ -105,8 +110,10 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
   const [wp, setWp] = useState<WpState>({ connected: false, siteUrl: null, published: false, postStatus: null, postUrl: null });
   const [wpStatus, setWpStatus] = useState<'publish' | 'draft'>('publish'); // target status for the next publish/update
   const [wpPublishing, setWpPublishing] = useState(false);
+  const [wpLoading, setWpLoading] = useState(true); // skeleton until the status is known (never flash "Not connected")
   useEffect(() => {
-    if (!articleId) return;
+    if (!articleId) { setWpLoading(false); return; }
+    setWpLoading(true);
     fetch(`/api/wordpress/status?articleId=${articleId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -115,7 +122,8 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
         setWp({ connected: !!d.connected, siteUrl: d.siteUrl ?? null, published: !!d.published, postStatus: ps, postUrl: d.postUrl ?? null });
         if (ps) setWpStatus(ps);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setWpLoading(false));
   }, [articleId]);
   const wpHost = (() => { try { return wp.siteUrl ? new URL(wp.siteUrl).host : ''; } catch { return wp.siteUrl || ''; } })();
 
@@ -253,52 +261,61 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
         {/* Export → WordPress */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 16px' }}>
           <SectionTitle>Export</SectionTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button type="button" disabled={readOnly || wpPublishing} onClick={readOnly ? undefined : (wp.connected ? publishWp : () => router.push('/settings/wordpress'))}
-              style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', opacity: (readOnly || wpPublishing) ? 0.5 : 1, transition: 'background 0.15s' }}
-              onMouseEnter={(e) => { if (!readOnly && !wpPublishing) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
-              <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>
-              {wpBtnLabel}
-            </button>
-
-            {/* Status — choose draft vs published; applied on the next Publish/Update */}
-            {wp.connected && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47', fontFamily: F }}>Status</span>
-                <div role="group" aria-label="WordPress post status" style={{ display: 'inline-flex', padding: 3, gap: 2, background: '#f4f4f5', borderRadius: 9999 }}>
-                  {(['draft', 'publish'] as const).map((s) => {
-                    const sel = wpStatus === s;
-                    return (
-                      <button key={s} type="button" disabled={readOnly || wpPublishing} aria-pressed={sel} onClick={() => setWpStatus(s)}
-                        style={{ padding: '5px 14px', borderRadius: 9999, border: 'none', cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, fontFamily: F, background: sel ? '#ffffff' : 'transparent', color: sel ? '#18181b' : '#71717b', boxShadow: sel ? '0px 1px 2px 0px rgba(26,29,40,0.06)' : 'none', transition: 'background 0.15s, color 0.15s' }}>
-                        {s === 'draft' ? 'Draft' : 'Published'}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F, minWidth: 0 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? '#1AB25E' : '#e5484d', flexShrink: 0 }} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wp.connected ? `Connected to ${wpHost}` : 'Not connected to any WordPress site'}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                {wp.published && wp.postUrl && (
-                  <a href={wp.postUrl} target="_blank" rel="noreferrer noopener"
-                    style={{ fontSize: 14, fontWeight: 600, color: '#783AFB', textDecoration: 'none', whiteSpace: 'nowrap' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#4D08B5'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#783AFB'; }}>
-                    View post
-                  </a>
-                )}
-                <button type="button" onClick={() => router.push('/settings/wordpress')}
-                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
-                  Manage
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {wpLoading ? (
+              /* Skeleton until the connection status resolves — never flash "Not connected". */
+              <>
+                <div style={{ height: 38, borderRadius: 6, background: '#f4f4f5' }} />
+                <div style={{ height: 14, width: 180, borderRadius: 6, background: '#f4f4f5' }} />
+              </>
+            ) : (
+              <>
+                <button type="button" disabled={readOnly || wpPublishing} onClick={readOnly ? undefined : (wp.connected ? publishWp : () => router.push('/settings/wordpress'))}
+                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: (readOnly || wpPublishing) ? 'not-allowed' : 'pointer', opacity: (readOnly || wpPublishing) ? 0.5 : 1, transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => { if (!readOnly && !wpPublishing) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                  {WpLogo}
+                  {wpBtnLabel}
                 </button>
-              </div>
-            </div>
+
+                {/* Status — choose draft vs published; applied on the next Publish/Update */}
+                {wp.connected && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47', fontFamily: F }}>Status</span>
+                    <div style={{ opacity: (readOnly || wpPublishing) ? 0.6 : 1, pointerEvents: (readOnly || wpPublishing) ? 'none' : 'auto' }}>
+                      <Tabs
+                        items={[{ value: 'draft', label: 'Draft' }, { value: 'publish', label: 'Published' }]}
+                        value={wpStatus}
+                        onChange={(v) => setWpStatus(v === 'draft' ? 'draft' : 'publish')}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Connection status, with the actions stacked beneath it */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? '#1AB25E' : '#e5484d', flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wp.connected ? `Connected to ${wpHost}` : 'Not connected to any WordPress site'}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                    {wp.connected && wp.published && wp.postUrl && (
+                      <a href={wp.postUrl} target="_blank" rel="noreferrer noopener"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, textDecoration: 'none', whiteSpace: 'nowrap', lineHeight: 1 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                        {IcoExternal}
+                        View post
+                      </a>
+                    )}
+                    <button type="button" onClick={() => router.push('/settings/wordpress')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap', lineHeight: 1 }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                      {IcoManage}
+                      Manage
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
