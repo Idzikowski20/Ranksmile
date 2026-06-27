@@ -45,20 +45,9 @@ export type RecommendationItem =
   | (RecommendationBase & { score: number; wordCount?: number })
   | (RecommendationBase & { priority: string });
 
-const PRIORITY_STYLE: Record<string, { color: string; bg: string; label: string }> = {
-  high: { color: '#FF6F77', bg: 'rgba(255,111,119,0.1)', label: 'High' },
-  medium: { color: '#D97706', bg: '#FFF7ED', label: 'Medium' },
-  low: { color: '#71717B', bg: '#F4F4F5', label: 'Low' },
-};
-
-const PriorityPill = ({ priority }: { priority: string }) => {
-  const s = PRIORITY_STYLE[priority] ?? PRIORITY_STYLE.low;
-  return (
-    <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: s.color, background: s.bg, borderRadius: 9999, padding: '2px 8px', lineHeight: '16px', fontFamily: font }}>
-      {s.label}
-    </span>
-  );
-};
+// Create-content recs carry a priority instead of a content score; map it onto the same
+// 1–10 rating scale (high = most worth doing) so every row shows a star, not a pill.
+const PRIORITY_RATING: Record<string, number> = { high: 9, medium: 6, low: 3 };
 
 const CheckCircle = () => (
   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -100,6 +89,11 @@ const RowSkeleton = () => (
  */
 const optimizeRating = (score: number) => Math.max(1, Math.min(10, (100 - score) / 10));
 
+/** The 1–10 star value for any row: priority-derived for create recs, score-derived otherwise. */
+const rowRating = (item: RecommendationItem) => (
+  'priority' in item ? (PRIORITY_RATING[item.priority] ?? 5) : optimizeRating(item.score)
+);
+
 const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain: string }) => (
   <a
     href={item.href}
@@ -114,19 +108,15 @@ const Row = ({ item, faviconDomain }: { item: RecommendationItem; faviconDomain:
     <span className="rec-title" style={{ minWidth: 0, flex: 1, fontSize: 14, fontWeight: 500, color: '#52525C', fontFamily: font, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', transition: 'color 150ms' }}>
       {item.title}
     </span>
-    {'priority' in item ? (
-      <PriorityPill priority={item.priority} />
-    ) : (
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        {item.wordCount != null && (
-          <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: font }}>{item.wordCount} words</span>
-        )}
-        <span className="rec-rating" style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#9F9FA9', transition: 'color 150ms' }}>
-          <Star />
-          <span style={{ fontSize: 13, fontFamily: font }}>{optimizeRating(item.score).toFixed(1)}</span>
-        </span>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      {!('priority' in item) && item.wordCount != null && (
+        <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: font }}>{item.wordCount} words</span>
+      )}
+      <span className="rec-rating" style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#9F9FA9', transition: 'color 150ms' }}>
+        <Star />
+        <span style={{ fontSize: 13, fontFamily: font }}>{rowRating(item).toFixed(1)}</span>
       </span>
-    )}
+    </span>
   </a>
 );
 
