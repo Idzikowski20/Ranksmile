@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
+import { useWorkspaces } from '../../services/workspaces';
+import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
@@ -52,6 +55,13 @@ interface DomainRec {
 const DashboardPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains({} as any);
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { data: wsData } = useWorkspaces();
+  // SSR-safe active workspace id so links carry the /workspace/<id> prefix the rest of
+  // the app uses (parsed from the URL after mount; falls back to the workspaces activeId).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const activeWsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
 
@@ -87,9 +97,9 @@ const DashboardPage: NextPage = () => {
   const domains: DomainType[] = domainsData?.domains || [];
   const primaryDomain = domains[0];
   const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
-  const clicksHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
-  const recommendationsHref = primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites';
-  const settingsHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
+  const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
+  const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites');
+  const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
 
   // Domain-level recommendations produced by the setup pipeline (the scan output).
   const { data: domainRecsData, isLoading: domainRecsLoading } = useQuery(
