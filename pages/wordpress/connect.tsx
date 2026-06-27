@@ -43,7 +43,12 @@ const WordPressConnect: NextPage = () => {
             body: JSON.stringify({ token, siteUrl, workspaceId, orgName: org?.name || '' }),
          });
          const data = await res.json().catch(() => ({}));
-         if (!res.ok || !data?.connected) { setErrorMsg(data?.error || 'Connection failed.'); setState('error'); return; }
+         if (!res.ok || !data?.connected) {
+            const dbg = data?.debug ? ` [${data.debug.status ?? ''} ${String(data.debug.body || data.debug.message || '').slice(0, 200)}]` : '';
+            setErrorMsg((data?.error || 'Connection failed.') + dbg);
+            setState('error');
+            return;
+         }
          setState('done');
          // Land the user on the WordPress Integration page for this workspace.
          router.replace(workspaceHref(workspaceId, '/wordpress'));
@@ -59,7 +64,7 @@ const WordPressConnect: NextPage = () => {
    const subtitle: React.CSSProperties = { margin: 0, fontSize: 18, lineHeight: '26px', fontWeight: 400, color: '#3F3F47' };
    const listWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 12 };
    const buttonRow: React.CSSProperties = { display: 'flex', justifyContent: 'flex-end' };
-   const errStyle: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: '18px', color: '#FF6F77' };
+   const errStyle: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: '18px', color: '#FF6F77', wordBreak: 'break-word' };
 
    const primaryBtn = (disabled: boolean): React.CSSProperties => ({
       border: 'none', borderRadius: 8, padding: '10px 20px', background: '#18181B', color: '#FFFFFF',

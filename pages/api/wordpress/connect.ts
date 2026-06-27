@@ -40,15 +40,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             via_email: user.email || '',
          }),
       });
+      const bodyText = await r.text();
+      // TEMP diagnostics: surface exactly what the WP site returned so we can tell a
+      // token mismatch apart from a WAF/security-plugin block, a 404 (route missing),
+      // a redirect, etc. Logged to the dev terminal and echoed in the error payload.
+      // eslint-disable-next-line no-console
+      console.error('[wp-connect] POST', verifyUrl, '->', r.status, r.headers.get('content-type'), '| body:', bodyText.slice(0, 500));
       if (!r.ok) {
-         return res.status(502).json({ error: 'WordPress rejected the connection — check the plugin is installed and the token is still valid.' });
+         return res.status(502).json({
+            error: 'WordPress rejected the connection — check the plugin is installed and the token is still valid.',
+            debug: { url: verifyUrl, status: r.status, contentType: r.headers.get('content-type'), body: bodyText.slice(0, 500), sentToken: token },
+         });
       }
-      const data = await r.json().catch(() => ({}));
+      let data: { token_saved?: unknown } = {};
+      try { data = JSON.parse(bodyText); } catch { /* non-JSON success body */ }
       if (!data?.token_saved) {
-         return res.status(502).json({ error: 'WordPress did not confirm the connection.' });
+         return res.status(502).json({
+            error: 'WordPress did not confirm the connection.',
+            debug: { url: verifyUrl, status: r.status, body: bodyText.slice(0, 500) },
+         });
       }
-   } catch {
-      return res.status(502).json({ error: 'Could not reach the WordPress site.' });
+   } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[wp-connect] fetch failed', verifyUrl, e);
+      return res.status(502).json({ error: 'Could not reach the WordPress site.', debug: { url: verifyUrl, message: String(e) } });
    }
 
    await createConnection({ workspaceId: Number(workspaceId), userId: user.id, siteUrl, apiKey, orgName: orgName || null, email: user.email || null });
