@@ -506,7 +506,7 @@ class Surfer_Form_Config_Ci extends Surfer_Form {
 							</p>
 
 							<p class="surfer-connection-box__actions">
-								<a href="<?php echo esc_attr( Surfer()->get_surfer()->get_surfer_url() ); ?>/settings/google_search_console" class="surfer-button surfer-button--primary surfer-button--small" target="_blank">
+								<a href="<?php echo esc_attr( Surfer()->get_surfer()->get_surfer_url() ); ?>/api/gsc/connect?redirect=/wordpress" class="surfer-button surfer-button--primary surfer-button--small" target="_blank">
 									<?php esc_html_e( 'Add GSC account to Surfer', 'surferseo' ); ?>
 								</a>
 							</p>
