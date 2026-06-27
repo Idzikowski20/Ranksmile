@@ -1210,3 +1210,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
    .surfer-loader-sweep { animation: none; }
 }
+
+/* Activity Log table — row hover + title link underline-on-hover */
+.activity-log-row > td { transition: background 120ms ease; }
+.activity-log-row:hover > td { background: #FAFAFA; }
+.activity-log-row:hover > td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.activity-log-row:hover > td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+.activity-log-link:hover { color: #783AFB; text-decoration-color: #783AFB !important; }
