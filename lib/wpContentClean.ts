@@ -26,10 +26,12 @@ export function cleanHtmlForWordPress(html: string): string {
    $body.find('script, style, noscript').remove();
    $body.find('*').contents().filter((_, n) => n.type === 'comment').remove();
 
-   // 2. <figure> → its <img> (captions/wrappers dropped).
+   // 2. <figure> → its <img> (captions/wrappers dropped). If the figure wraps
+   //    non-image content (e.g. a table or code block), unwrap it rather than drop
+   //    it — losing the whole block would silently delete real content.
    $body.find('figure').each((_, el) => {
       const img = $(el).find('img').first();
-      if (img.length) $(el).replaceWith($.html(img)); else $(el).remove();
+      if (img.length) $(el).replaceWith($.html(img)); else $(el).replaceWith($(el).contents());
    });
 
    // 3. Lift <img> out of <p> (→ after the paragraph) and out of lists (→ after the
