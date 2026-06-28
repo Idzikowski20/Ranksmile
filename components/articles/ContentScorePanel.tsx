@@ -65,6 +65,8 @@ interface Props {
   onApplyReadability?: (result: AiReadabilityResult) => void;
   /** Plagiarism panel → editor red highlights (active sentences + focused one). */
   onPlagiarismHighlight?: (sentences: string[], focused: string | null) => void;
+  /** Bumped when a readability optimize is Accepted → mark its suggestions done. */
+  readabilityAccepted?: number;
   /** Shared/preview mode — disables every mutating action. */
   readOnly?: boolean;
 }
@@ -260,6 +262,7 @@ const ContentScorePanel = ({
   onRunAiVisibility,
   onApplyReadability,
   onPlagiarismHighlight,
+  readabilityAccepted,
   readOnly,
   highlightTerms,
   onHighlightTermsChange,
@@ -550,6 +553,7 @@ const ContentScorePanel = ({
         initialAiReadability={initialAiReadability}
         onApplyReadability={onApplyReadability}
         onPlagiarismHighlight={onPlagiarismHighlight}
+        readabilityAccepted={readabilityAccepted}
       />
     );
   }

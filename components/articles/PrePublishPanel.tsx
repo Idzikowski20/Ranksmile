@@ -29,6 +29,8 @@ interface Props {
   onApplyReadability?: (result: AiReadabilityResult) => void;
   /** Plagiarism panel → editor red highlights (active sentences + focused one). */
   onPlagiarismHighlight?: (sentences: string[], focused: string | null) => void;
+  /** Bumped when a readability optimize is Accepted → mark the suggestions as done. */
+  readabilityAccepted?: number;
 }
 
 /* ── Flesch–Kincaid grade level (approximate) ──────────────────────── */
@@ -144,7 +146,7 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
   document.body,
 );
 
-const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly, onBack, initialPlagiarism, initialAiReadability, onApplyReadability, onPlagiarismHighlight }: Props) => {
+const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly, onBack, initialPlagiarism, initialAiReadability, onApplyReadability, onPlagiarismHighlight, readabilityAccepted }: Props) => {
   const r = readability(plainText);
   const mainScore = (hasAi && typeof aiScore === 'number') ? Math.round((score + aiScore) / 2) : score;
   const [scoreTip, setScoreTip] = useState(false);
@@ -154,6 +156,12 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
   const [plag, setPlag] = useState<PlagiarismResult | null>(initialPlagiarism ?? null);
   const [aiRead, setAiRead] = useState<AiReadabilityResult | null>(hasSuggestionShape(initialAiReadability) ? initialAiReadability! : null);
   const [analyzingRead, setAnalyzingRead] = useState(false);
+  const [applied, setApplied] = useState(false); // suggestions accepted (Optimize AI Readability → Accept)
+  const prevAcceptRef = useRef(readabilityAccepted ?? 0);
+  useEffect(() => {
+    if ((readabilityAccepted ?? 0) > prevAcceptRef.current) setApplied(true);
+    prevAcceptRef.current = readabilityAccepted ?? 0;
+  }, [readabilityAccepted]);
 
   // Seed from saved results once they arrive (only the new suggestions-shaped result, and only
   // if not run yet this session).
@@ -166,6 +174,7 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
   const analyze = () => {
     if (!articleId || analyzingRead) return;
     setAnalyzingRead(true);
+    setApplied(false);
     fetch('/api/articles/ai-readability', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articleId }) })
       .then((res) => res.json())
       .then((d) => { if (d && Array.isArray(d.criteria)) setAiRead(d); })
@@ -321,12 +330,26 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#9f9fa9' }}>
-                  <svg viewBox="0 0 20 20" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx={10} cy={10} r={7} /></svg>
-                  {cards.length === 0
-                    ? <span style={{ color: '#1AB25E', fontWeight: 500 }}>All criteria met — nothing to improve.</span>
-                    : <span>0/{cards.length} suggestions</span>}
+                  {cards.length === 0 ? (
+                    <>
+                      <svg viewBox="0 0 20 20" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx={10} cy={10} r={7} /></svg>
+                      <span style={{ color: '#1AB25E', fontWeight: 500 }}>All criteria met — nothing to improve.</span>
+                    </>
+                  ) : applied ? (
+                    <>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: '#1AB25E', color: '#fff', flexShrink: 0 }}>
+                        <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </span>
+                      <span style={{ color: '#1AB25E', fontWeight: 500 }}>{cards.length}/{cards.length} suggestions applied</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 20 20" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx={10} cy={10} r={7} /></svg>
+                      <span>0/{cards.length} suggestions</span>
+                    </>
+                  )}
                 </div>
-                {onApplyReadability && cards.length > 0 && (
+                {onApplyReadability && cards.length > 0 && !applied && (
                   <button type="button" disabled={readOnly} onClick={() => onApplyReadability(aiRead)}
                     style={{ width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#783afb'; }}
@@ -337,8 +360,15 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
                 {cards.map((c) => {
                   const title = AI_READABILITY_CRITERIA.find((x) => x.key === c.key)?.title || c.key;
                   return (
-                    <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, border: '1px solid #f4f4f5', borderRadius: 12 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#9f9fa9' }}>{title}</div>
+                    <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, border: '1px solid #f4f4f5', borderRadius: 12, opacity: applied ? 0.6 : 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#9f9fa9' }}>
+                        <span>{title}</span>
+                        {applied && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: '#1AB25E', color: '#fff', flexShrink: 0 }}>
+                            <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          </span>
+                        )}
+                      </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {(c.suggestions ?? []).map((s, i) => (
                           <span key={i} style={{ fontSize: 14, lineHeight: '20px', color: '#3f3f47', whiteSpace: 'pre-wrap', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? 'none' : '1px solid #f4f4f5' }}>{s}</span>

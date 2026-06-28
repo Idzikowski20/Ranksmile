@@ -417,6 +417,8 @@ const ArticleEditorPage: NextPage = () => {
   // AI Readability "Apply All" → structure-only optimize, reviewed via its own bottom bar.
   const [isApplyingReadability, setIsApplyingReadability] = useState(false);
   const [readabilityBar, setReadabilityBar] = useState<{ preHtml: string } | null>(null);
+  // Bumped when the readability optimize is Accepted → the panel marks its suggestions done.
+  const [readabilityAcceptKey, setReadabilityAcceptKey] = useState(0);
   // "Compare versions" modal — ORIGINAL (pre-optimize) vs NEW (current editor) side-by-side diff.
   const [compareVersions, setCompareVersions] = useState<{ original: string; updated: string } | null>(null);
   // Plagiarism highlights pushed up from the Plagiarism panel → red underlines in the editor.
@@ -1697,6 +1699,7 @@ const ArticleEditorPage: NextPage = () => {
                       onRunAiVisibility={handleRunAiVisibility}
                       onApplyReadability={handleApplyReadability}
                       onPlagiarismHighlight={handlePlagiarismHighlight}
+                      readabilityAccepted={readabilityAcceptKey}
                     />
                   </div>
                 </>
@@ -1899,6 +1902,7 @@ const ArticleEditorPage: NextPage = () => {
                   await doSave('readability_optimize');
                   lastVersionAt.current = Date.now();
                   setAutoSaveState('saved');
+                  setReadabilityAcceptKey((k) => k + 1);
                   toast.success('Changes accepted — version saved');
                 } catch {
                   setAutoSaveState('unsaved');
