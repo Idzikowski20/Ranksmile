@@ -12,6 +12,7 @@ import { getConnectionForWorkspace } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
 import { permalinkHash } from '../../../lib/wpDraft';
 import { cleanHtmlForWordPress } from '../../../lib/wpContentClean';
+import { logRun } from '../../../lib/optimizeLog';
 
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;
@@ -96,6 +97,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
        status = ${postStatus === 'publish' ? "'published'" : 'status'}, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
       { replacements: [result.post_url || '', result.post_id ?? existingPostId ?? null, wpStatus, articleId], type: QueryTypes.UPDATE },
    ).catch(() => {});
+
+   // Best-effort before/after log for debugging publish runs (never blocks the response).
+   await logRun({
+      articleId: Number(articleId),
+      kind: 'publish',
+      after: cleanContent,
+      meta: { title: article.meta_title || article.title || '', status: wpStatus, post_id: result.post_id, updated: !!existingPostId, url: result.post_url },
+   });
 
    return res.status(200).json({
       post_id: result.post_id,

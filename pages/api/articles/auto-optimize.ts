@@ -7,6 +7,7 @@ import verifyUser from '../../../utils/verifyUser';
 import type { ScoreData } from '../../../lib/contentScore';
 import { countOccurrences } from '../../../lib/contentScore';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { logRun } from '../../../lib/optimizeLog';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { enrichTerms, getAiSearchInfo } from '../../../lib/seo/keywordData';
@@ -1000,6 +1001,8 @@ Return ONLY a JSON object:
       } catch (err: any) {
         console.log('[auto-optimize] failed to save to article:', err.message);
       }
+      // Best-effort before/after log (debugging "did optimize help?"). Never blocks.
+      await logRun({ articleId: Number(articleId), kind: 'auto-optimize', before: content, after: optimizedWithImages, afterScore: postScore, meta: { keyword: keyword || '' } });
     }
 
     // Persist the FAQ's resolved (article-language) questions so the saved/listed score credits the FAQ.
