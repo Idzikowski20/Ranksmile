@@ -165,8 +165,8 @@ class Surfer_Settings {
 		$users = get_users( $args );
 
 		$defaults = array(
-			'surfer_url'                          => 'http://localhost:3000',
-			'surfer_api_url'                      => 'http://localhost:3000/api/v1/wordpress/',
+			'surfer_url'                          => 'https://serp-bear-neon.vercel.app',
+			'surfer_api_url'                      => 'https://serp-bear-neon.vercel.app/api/v1/wordpress/',
 			// Default to the Gutenberg parser: our content is exported as clean,
 			// Gutenberg-oriented HTML. Auto-detection would pick the Elementor parser
 			// on any Elementor-active site, leaving the post body empty in the block
