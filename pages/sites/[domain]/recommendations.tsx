@@ -453,15 +453,22 @@ const RecommendationsPage: NextPage = () => {
 
    const handleRemoveSelected = async () => {
       const ids = Array.from(selectedIds);
-      // `sc_<id>` rows are GSC/imported pages living in site_context, not articles —
-      // they delete via a different endpoint (the articles route 400s on a non-numeric id).
+      // Rows come from 3 sources with different delete endpoints:
+      //  - `sc_<id>`  → GSC/imported pages in site_context
+      //  - `rec_<id>` → audit recommendations in domain_recommendations
+      //  - numeric    → real articles
+      // (the articles route 403s on a non-numeric id, which is what broke rec_ deletes.)
       await Promise.all(ids.map((id) => {
          const s = String(id);
-         const url = s.startsWith('sc_') ? `/api/site-context/${s.slice(3)}` : `/api/articles/${id}`;
+         let url: string;
+         if (s.startsWith('sc_')) url = `/api/site-context/${s.slice(3)}`;
+         else if (s.startsWith('rec_')) url = `/api/domains/${encodeURIComponent(slug)}/recommendations?id=${s.slice(4)}`;
+         else url = `/api/articles/${id}`;
          return fetch(url, { method: 'DELETE' }).catch(() => {});
       }));
       setSelectedIds(new Set());
       queryClient.invalidateQueries(['articles', slug]);
+      queryClient.invalidateQueries(['domainRecs', slug]);
    };
 
    const handleSaveKeyword = async (newKeyword: string) => {

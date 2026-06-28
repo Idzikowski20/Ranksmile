@@ -8,12 +8,20 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
-   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
+   if (req.method !== 'GET' && req.method !== 'DELETE') { res.setHeader('Allow', 'GET, DELETE'); return res.status(405).json({ error: 'Method not allowed' }); }
    const userId = await getCurrentUserId(req, res);
    const ownership = await verifyDomainOwnershipBySlug(req.query.slug as string, userId);
    if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as { ID: number }).ID;
+
+   // DELETE — dismiss a single optimize/create recommendation (UI sends rec_<id>).
+   if (req.method === 'DELETE') {
+      const recId = parseInt(String(req.query.id ?? ''), 10);
+      if (!Number.isInteger(recId)) return res.status(400).json({ error: 'Invalid recommendation id' });
+      await db.query('DELETE FROM domain_recommendations WHERE id = ? AND domain_id = ?', { replacements: [recId, domainId] });
+      return res.status(200).json({ ok: true });
+   }
 
    const recommendations = await db.query<{
       id: number; domain_id: number; topic_id: number | null;
