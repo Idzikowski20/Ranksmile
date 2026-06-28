@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -12,6 +13,16 @@ import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../
 import SurferImageNode from './SurferImageNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
 import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
+import { TableKit } from '@tiptap/extension-table';
+import Typography from '@tiptap/extension-typography';
+import CharacterCount from '@tiptap/extension-character-count';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
+import { TextStyle, Color } from '@tiptap/extension-text-style';
+import { Details, DetailsSummary, DetailsContent } from '@tiptap/extension-details';
+import Youtube from '@tiptap/extension-youtube';
 import { TermHighlight } from './termHighlightExtension';
 import { PlagiarismHighlight } from './plagiarismHighlightExtension';
 import { TIP_BUBBLE_BASE } from './tipBubble';
@@ -113,13 +124,114 @@ const IconSurfy = ({ size = 20 }: { size?: number }) => (
   </svg>
 );
 
+/**
+ * A toolbar group rendered as a single trigger button that opens a small
+ * popover (Heading / List / Align). Defined at module scope so it keeps its
+ * own `open` state across the parent toolbar's frequent re-renders (the
+ * toolbar re-renders on every editor transaction to refresh active states).
+ */
+const TOOLBAR_TRIGGER: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+  height: 28, minWidth: 28, padding: '0 4px', borderRadius: 4,
+  border: 'none', cursor: 'pointer', flexShrink: 0,
+  background: 'transparent', color: '#18181B',
+  transition: 'background-color 150ms', fontFamily: 'var(--font-family-primary)',
+};
+
+const ToolbarMenu = ({
+  title, active, trigger, children, wide = false, hideChevron = false,
+}: {
+  title: string;
+  active: boolean;
+  trigger: React.ReactNode;
+  children: (close: () => void) => React.ReactNode;
+  wide?: boolean;
+  hideChevron?: boolean;
+}) => {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number; right: number } | null>(null);
+  const open = anchor !== null;
+  const close = () => setAnchor(null);
+
+  const toggle = () => {
+    if (open) { close(); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setAnchor({ top: r.bottom + 6, left: r.left, right: r.right });
+  };
+
+  // The toolbar clips its overflow (horizontal button scroll on mobile), which
+  // would chop off an in-flow popover. Render it in a body portal with fixed
+  // positioning to escape the clip; close on scroll/resize so the anchored
+  // position can't go stale.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onMove = () => close();
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+    return () => {
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
+  }, [open]);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        title={title}
+        onClick={toggle}
+        style={{ ...TOOLBAR_TRIGGER, color: active ? '#630DE3' : '#18181B', background: open ? '#F4F4F5' : active ? '#F3EEFF' : 'transparent' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = open ? '#F4F4F5' : active ? '#F3EEFF' : '#F4F4F5'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = open ? '#F4F4F5' : active ? '#F3EEFF' : 'transparent'; }}
+      >
+        {trigger}
+        {!hideChevron && (
+          <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}><path d="m6 9 6 6 6-6" /></svg>
+        )}
+      </button>
+      {open && anchor && createPortal(
+        (() => {
+          const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+          const MENU_W = 248;
+          // Wide menus open left-aligned (clamped into the viewport); icon-row
+          // menus stay centred under the trigger.
+          const left = wide ? Math.max(8, Math.min(anchor.left, vw - 8 - MENU_W)) : (anchor.left + anchor.right) / 2;
+          return (
+            <>
+              {/* click-outside backdrop */}
+              <div onMouseDown={close} style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
+              <div style={{ position: 'fixed', top: anchor.top, left, transform: wide ? 'none' : 'translateX(-50%)', zIndex: 1000 }}>
+                <div
+                  style={{
+                    background: '#fff', borderRadius: 8, padding: wide ? 6 : 4,
+                    boxShadow: '0px 4px 16px 0px rgba(24,26,34,0.12), 0px 1px 4px 0px rgba(24,26,34,0.08)',
+                    border: '1px solid #F4F4F5',
+                    display: 'flex', flexDirection: wide ? 'column' : 'row',
+                    alignItems: wide ? 'stretch' : 'center', gap: wide ? 2 : 4,
+                    minWidth: wide ? MENU_W : undefined,
+                    transformOrigin: wide ? 'top left' : 'top center',
+                    animation: 'growOut 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                >
+                  {children(close)}
+                </div>
+              </div>
+            </>
+          );
+        })(),
+        document.body,
+      )}
+    </div>
+  );
+};
+
 const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkInitialText, setLinkInitialText] = useState('');
   const [linkInitialHref, setLinkInitialHref] = useState('');
   const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
-  const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
 
   const openLinkModal = useCallback(() => {
     if (!editor) return;
@@ -175,23 +287,34 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
       {/* Formatting */}
       <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
-        {/* Headings */}
-        {([1, 2, 3] as const).map((lvl) => {
-          const active = editor.isActive('heading', { level: lvl });
+        {/* Headings dropdown */}
+        {(() => {
+          const curLevel = ([1, 2, 3] as const).find((l) => editor.isActive('heading', { level: l }));
           return (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => editor.chain().focus().toggleHeading({ level: lvl }).run()}
-              title={`Heading ${lvl}`}
-              style={{ ...btnStyle, fontWeight: 600, fontSize: lvl === 1 ? 15 : lvl === 2 ? 14 : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+            <ToolbarMenu
+              title="Heading"
+              active={!!curLevel}
+              trigger={<span style={{ fontWeight: 600, fontSize: 13 }}>{curLevel ? `H${curLevel}` : 'H'}</span>}
             >
-              H{lvl}
-            </button>
+              {(close) => ([1, 2, 3] as const).map((lvl) => {
+                const active = editor.isActive('heading', { level: lvl });
+                return (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => { editor.chain().focus().toggleHeading({ level: lvl }).run(); close(); }}
+                    title={`Heading ${lvl}`}
+                    style={{ ...btnStyle, fontWeight: 600, fontSize: lvl === 1 ? 15 : lvl === 2 ? 14 : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+                  >
+                    H{lvl}
+                  </button>
+                );
+              })}
+            </ToolbarMenu>
           );
-        })}
+        })()}
 
         <Sep />
 
@@ -207,32 +330,76 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" style={{ ...btnStyle, textDecoration: 'underline', fontSize: 14, color: editor.isActive('underline') ? '#630DE3' : '#18181B', background: editor.isActive('underline') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? '#F3EEFF' : 'transparent'; }}>
           <span>U</span>
         </button>
+        {/* Sub / superscript dropdown */}
+        <ToolbarMenu
+          title="Sub / superscript"
+          active={editor.isActive('subscript') || editor.isActive('superscript')}
+          trigger={<span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sup style={{ fontSize: 9 }}>2</sup></span>}
+        >
+          {(close) => (
+            <>
+              <button type="button" onClick={() => { editor.chain().focus().toggleSuperscript().run(); close(); }} title="Superscript" style={{ ...btnStyle, color: editor.isActive('superscript') ? '#630DE3' : '#18181B', background: editor.isActive('superscript') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? '#F3EEFF' : 'transparent'; }}>
+                <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sup style={{ fontSize: 9 }}>2</sup></span>
+              </button>
+              <button type="button" onClick={() => { editor.chain().focus().toggleSubscript().run(); close(); }} title="Subscript" style={{ ...btnStyle, color: editor.isActive('subscript') ? '#630DE3' : '#18181B', background: editor.isActive('subscript') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? '#F3EEFF' : 'transparent'; }}>
+                <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sub style={{ fontSize: 9 }}>2</sub></span>
+              </button>
+            </>
+          )}
+        </ToolbarMenu>
 
         <Sep />
 
-        {/* Bullet list */}
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list" style={{ ...btnStyle, color: editor.isActive('bulletList') ? '#630DE3' : '#18181B', background: editor.isActive('bulletList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
-        </button>
-        {/* Ordered list */}
-        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list" style={{ ...btnStyle, color: editor.isActive('orderedList') ? '#630DE3' : '#18181B', background: editor.isActive('orderedList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
-        </button>
+        {/* Lists dropdown */}
+        <ToolbarMenu
+          title="List"
+          active={editor.isActive('bulletList') || editor.isActive('orderedList')}
+          trigger={
+            editor.isActive('orderedList')
+              ? <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
+              : <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
+          }
+        >
+          {(close) => (
+            <>
+              <button type="button" onClick={() => { editor.chain().focus().toggleBulletList().run(); close(); }} title="Bullet list" style={{ ...btnStyle, color: editor.isActive('bulletList') ? '#630DE3' : '#18181B', background: editor.isActive('bulletList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : 'transparent'; }}>
+                <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
+              </button>
+              <button type="button" onClick={() => { editor.chain().focus().toggleOrderedList().run(); close(); }} title="Ordered list" style={{ ...btnStyle, color: editor.isActive('orderedList') ? '#630DE3' : '#18181B', background: editor.isActive('orderedList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : 'transparent'; }}>
+                <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
+              </button>
+              <button type="button" onClick={() => { editor.chain().focus().toggleTaskList().run(); close(); }} title="Checklist" style={{ ...btnStyle, color: editor.isActive('taskList') ? '#630DE3' : '#18181B', background: editor.isActive('taskList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? '#F3EEFF' : 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 6h10M11 12h10M11 18h10M3 6l1.5 1.5L7 5M3 13l1.5 1.5L7 12" /></svg>
+              </button>
+            </>
+          )}
+        </ToolbarMenu>
 
-        <Sep />
-
-        {/* Align left */}
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left" style={{ ...btnStyle, color: editor.getAttributes('paragraph').textAlign === 'left' || !editor.getAttributes('paragraph').textAlign ? '#630DE3' : '#18181B', background: (!editor.getAttributes('paragraph').textAlign || editor.getAttributes('paragraph').textAlign === 'left') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { const a = editor.getAttributes('paragraph').textAlign; e.currentTarget.style.background = (!a || a === 'left') ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d="M3.75 6.75h12.5M3.75 12h16.5M3.75 17.25h10.5" /></svg>
-        </button>
-        {/* Align center */}
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align center" style={{ ...btnStyle, color: editor.getAttributes('paragraph').textAlign === 'center' ? '#630DE3' : '#18181B', background: editor.getAttributes('paragraph').textAlign === 'center' ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'center' ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'center' ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d="M5.25 6.75h13.5M3.75 12h16.5M7.25 17.25h9.5" /></svg>
-        </button>
-        {/* Align right */}
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right" style={{ ...btnStyle, color: editor.getAttributes('paragraph').textAlign === 'right' ? '#630DE3' : '#18181B', background: editor.getAttributes('paragraph').textAlign === 'right' ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'right' ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'right' ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d="M7.75 6.75h12.5M3.75 12h16.5M9.75 17.25h10.5" /></svg>
-        </button>
+        {/* Align dropdown */}
+        {(() => {
+          const aligns = [
+            { key: 'left', title: 'Align left', d: 'M3.75 6.75h12.5M3.75 12h16.5M3.75 17.25h10.5' },
+            { key: 'center', title: 'Align center', d: 'M5.25 6.75h13.5M3.75 12h16.5M7.25 17.25h9.5' },
+            { key: 'right', title: 'Align right', d: 'M7.75 6.75h12.5M3.75 12h16.5M9.75 17.25h10.5' },
+          ] as const;
+          const cur = aligns.find((a) => editor.isActive({ textAlign: a.key })) || aligns[0];
+          return (
+            <ToolbarMenu
+              title="Text align"
+              active={cur.key !== 'left'}
+              trigger={<svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d={cur.d} /></svg>}
+            >
+              {(close) => aligns.map((a) => {
+                const active = editor.isActive({ textAlign: a.key }) || (a.key === 'left' && !editor.isActive({ textAlign: 'center' }) && !editor.isActive({ textAlign: 'right' }));
+                return (
+                  <button key={a.key} type="button" onClick={() => { editor.chain().focus().setTextAlign(a.key).run(); close(); }} title={a.title} style={{ ...btnStyle, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}>
+                    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d={a.d} /></svg>
+                  </button>
+                );
+              })}
+            </ToolbarMenu>
+          );
+        })()}
 
         <Sep />
 
@@ -261,38 +428,72 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5m10.5-11.25h.008v.008h-.008zm.375 0a.375.375 0 1 1-.75 0a.375.375 0 0 1 .75 0" /></svg>
         </button>
 
-        {/* Highlight color picker */}
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => setHighlightMenuOpen((v) => !v)}
-            title="Highlight color"
-            style={{
-              ...btnStyle,
-              color: editor.isActive('highlight') ? '#630DE3' : '#18181B',
-              background: highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : '#F4F4F5';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : 'transparent';
-            }}
-          >
-            <svg viewBox="0 0 256 256" width={18} height={18} style={{ display: 'inline-block', flexShrink: 0 }}>
-              <path fill="currentColor" d="M208 56v32a8 8 0 0 1-16 0V64h-56v128h24a8 8 0 0 1 0 16H96a8 8 0 0 1 0-16h24V64H64v24a8 8 0 0 1-16 0V56a8 8 0 0 1 8-8h144a8 8 0 0 1 8 8" />
-            </svg>
-          </button>
-          {highlightMenuOpen && (
-            <div
-              style={{
-                position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                marginTop: 6, background: '#fff', borderRadius: 8, padding: 4,
-                boxShadow: '0px 4px 16px 0px rgba(24,26,34,0.12), 0px 1px 4px 0px rgba(24,26,34,0.08)',
-                border: '1px solid #F4F4F5', zIndex: 200, minWidth: 172,
-                animation: 'growOut 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
+        {/* Insert table (3×3 with a header row) */}
+        <button type="button" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={4} width={18} height={16} rx={1.5} /><path d="M3 9.5h18M3 15h18M9 4.5v15M15 4.5v15" /></svg>
+        </button>
+
+        {/* Insert (media / blocks) dropdown */}
+        <ToolbarMenu
+          title="Insert"
+          active={false}
+          trigger={<svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+        >
+          {(close) => (
+            <>
+              <button type="button" title="Embed YouTube video" onClick={() => { const url = window.prompt('YouTube video URL'); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor"><path d="M21.58 7.19c-.23-.86-.91-1.54-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42c.86-.23 1.54-.91 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81M10 15V9l5 3z" /></svg>
+                <span>YouTube</span>
+              </button>
+              <button type="button" title="Collapsible details / FAQ" onClick={() => { editor.chain().focus().setDetails().run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+                <span>Details / FAQ</span>
+              </button>
+            </>
+          )}
+        </ToolbarMenu>
+
+        {/* Text color dropdown */}
+        {(() => {
+          const TEXT_COLORS = [
+            { label: 'Default', value: null, swatch: '#18181B' },
+            { label: 'Purple', value: '#783AFB', swatch: '#783AFB' },
+            { label: 'Green', value: '#1AB25E', swatch: '#1AB25E' },
+            { label: 'Red', value: '#FF6F77', swatch: '#FF6F77' },
+            { label: 'Gray', value: '#52525C', swatch: '#52525C' },
+          ] as const;
+          const cur = editor.getAttributes('textStyle').color || '#18181B';
+          return (
+            <ToolbarMenu
+              title="Text color"
+              active={!!editor.getAttributes('textStyle').color}
+              trigger={<span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1, borderBottom: `3px solid ${cur}`, paddingBottom: 1 }}>A</span>}
             >
+              {(close) => TEXT_COLORS.map((c) => {
+                const active = c.value ? editor.isActive('textStyle', { color: c.value }) : !editor.getAttributes('textStyle').color;
+                return (
+                  <button key={c.label} type="button" title={c.label} onClick={() => { if (c.value) editor.chain().focus().setColor(c.value).run(); else editor.chain().focus().unsetColor().run(); close(); }} style={{ ...btnStyle, background: active ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}>
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.swatch, border: c.value ? 'none' : '1.5px solid #D4D4D8', display: 'inline-block' }} />
+                  </button>
+                );
+              })}
+            </ToolbarMenu>
+          );
+        })()}
+
+        {/* Highlight color dropdown */}
+        <ToolbarMenu
+          title="Highlight color"
+          active={editor.isActive('highlight')}
+          wide
+          trigger={(
+            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', flexShrink: 0 }}>
+              <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128a2.25 2.25 0 0 1-2.4 2.245a4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128m0 0a16 16 0 0 0 3.388-1.62m-5.043-.025a16 16 0 0 1 1.622-3.395m3.42 3.42a16 16 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a16 16 0 0 0-4.649 4.764m3.42 3.42a6.78 6.78 0 0 0-3.42-3.42" />
+            </svg>
+          )}
+        >
+          {(close) => (
+            <>
               {HIGHLIGHT_COLORS.map((item) => {
                 const active = isHighlightActive(editor, item.color);
                 return (
@@ -306,7 +507,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
                       } else {
                         editor.chain().focus().toggleHighlight({ color: item.color }).run();
                       }
-                      setHighlightMenuOpen(false);
+                      close();
                     }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
@@ -331,7 +532,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
                 onMouseDown={(e) => {
                   e.preventDefault();
                   editor.chain().focus().unsetHighlight().run();
-                  setHighlightMenuOpen(false);
+                  close();
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
@@ -349,9 +550,9 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
                 </svg>
                 Clear all highlights
               </button>
-            </div>
+            </>
           )}
-        </div>
+        </ToolbarMenu>
 
         <Sep />
 
@@ -363,6 +564,46 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         <button type="button" onClick={() => editor.chain().focus().redo().run()} title="Redo" disabled={!canRedo} style={{ ...btnStyle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }} onMouseEnter={(e) => { if (canRedo) e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m15 15l6-6m0 0l-6-6m6 6H9a6 6 0 0 0 0 12h3" /></svg>
         </button>
+
+        <Sep />
+
+        {/* Overflow ("…") menu — less-common actions, keeps the toolbar narrow */}
+        <ToolbarMenu
+          title="More"
+          active={editor.isActive('codeBlock') || editor.isActive('blockquote')}
+          wide
+          hideChevron
+          trigger={<svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor"><circle cx={5} cy={12} r={1.7} /><circle cx={12} cy={12} r={1.7} /><circle cx={19} cy={12} r={1.7} /></svg>}
+        >
+          {(close) => {
+            const row = (key: string, icon: React.ReactNode, label: string, run: () => void, shortcut?: string, on = false) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => { run(); close(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: on ? '#F3EEFF' : 'transparent', color: on ? '#630DE3' : '#18181B', fontSize: 13, fontFamily: 'var(--font-family-primary)', textAlign: 'left', transition: 'background-color 120ms ease' }}
+                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = '#F4F4F5'; }}
+                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <span style={{ flexShrink: 0, color: on ? '#630DE3' : '#52525C', display: 'inline-flex' }}>{icon}</span>
+                <span style={{ flex: 1 }}>{label}</span>
+                {shortcut && <span style={{ color: '#9f9fa9', fontSize: 12, flexShrink: 0 }}>{shortcut}</span>}
+              </button>
+            );
+            const divider = <div style={{ height: 1, background: '#F4F4F5', margin: '4px 6px' }} />;
+            return (
+              <>
+                {row('code', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="m8 9l-3 3l3 3m8-6l3 3l-3 3" /></svg>, 'Toggle code block', () => editor.chain().focus().toggleCodeBlock().run(), 'Ctrl+Alt+C', editor.isActive('codeBlock'))}
+                {row('quote', <svg viewBox="0 0 24 24" width={17} height={17} fill="currentColor"><path d="M7 7h4v6c0 2.2-1.5 3.6-3.7 4l-.5-1.3c1.3-.3 2-.9 2.1-1.9H7zm7 0h4v6c0 2.2-1.5 3.6-3.7 4l-.5-1.3c1.3-.3 2-.9 2.1-1.9H14z" /></svg>, 'Toggle blockquote', () => editor.chain().focus().toggleBlockquote().run(), 'Ctrl+Shift+B', editor.isActive('blockquote'))}
+                {divider}
+                {row('hr', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round"><path d="M4 12h16" /></svg>, 'Insert horizontal rule', () => editor.chain().focus().setHorizontalRule().run())}
+                {row('break', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M20 5v6a3 3 0 0 1-3 3H5m0 0l4-4m-4 4l4 4" /></svg>, 'Insert hard break', () => editor.chain().focus().setHardBreak().run())}
+                {divider}
+                {row('clear', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h11M9 7l-2 13m6-13l-1 6.5M5 21l14-14" /></svg>, 'Clear formatting', () => editor.chain().focus().unsetAllMarks().run())}
+              </>
+            );
+          }}
+        </ToolbarMenu>
 
       </div>
 
@@ -925,7 +1166,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       // Strip highlight marks when Surfy is open to prevent leaking into saved content
       if (surfyOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
       const text = ed.getText();
-      const words = text.split(/\s+/).filter(Boolean).length;
+      // Word count comes from Tiptap's CharacterCount (handles unicode/whitespace
+      // more robustly than a naive split) with a split fallback if unavailable.
+      const words = ed.storage.characterCount?.words?.() ?? text.split(/\s+/).filter(Boolean).length;
       const json = ed.getJSON();
       const headings = (json.content || []).filter((n: any) => n.type === 'heading').length;
       const paragraphs = (json.content || []).filter((n: any) => n.type === 'paragraph' && n.content?.length).length;
@@ -968,6 +1211,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           getSentences: () => plagSentencesRef.current,
           getFocused: () => plagFocusedRef.current,
         }),
+        TableKit.configure({ table: { resizable: true } }),
+        Typography,
+        CharacterCount,
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Subscript,
+        Superscript,
+        TextStyle,
+        Color,
+        Details.configure({ persist: true, HTMLAttributes: { class: 'art-details' } }),
+        DetailsSummary,
+        DetailsContent,
+        Youtube.configure({ width: 640, height: 360, nocookie: true, HTMLAttributes: { class: 'art-youtube' } }),
       ],
       content,
       immediatelyRender: false,
@@ -1114,6 +1370,32 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid #e4e4e7; margin: 22px 0; }
           .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: #783AFB; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(120,58,251,0.08); cursor: pointer; }
           .art-editor-scroll .ProseMirror .comment-mark-draft { background: rgba(120,58,251,0.22); }
+          .art-editor-scroll .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 18px 0; overflow: hidden; font-size: 14px; }
+          .art-editor-scroll .ProseMirror table td, .art-editor-scroll .ProseMirror table th { border: 1px solid #e4e4e7; padding: 8px 12px; vertical-align: top; box-sizing: border-box; position: relative; min-width: 1em; color: #374151; line-height: 1.6; }
+          .art-editor-scroll .ProseMirror table th { background: #f4f4f5; font-weight: 600; color: #18181b; text-align: left; }
+          .art-editor-scroll .ProseMirror table p { margin: 0; }
+          .art-editor-scroll .ProseMirror table .selectedCell:after { content: ''; position: absolute; inset: 0; background: rgba(120,58,251,0.08); pointer-events: none; z-index: 2; }
+          .art-editor-scroll .ProseMirror table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: #783afb; pointer-events: none; }
+          .art-editor-scroll .ProseMirror.resize-cursor { cursor: col-resize; }
+          /* Task list (checklist) */
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] { list-style: none; padding: 0; margin: 10px 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 3px; user-select: none; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div > p { margin: 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: #783afb; cursor: pointer; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: #9f9fa9; text-decoration: line-through; }
+          /* Details / FAQ (collapsible) */
+          .art-editor-scroll .ProseMirror [data-type="details"] { display: flex; gap: 8px; border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: #fafafa; }
+          .art-editor-scroll .ProseMirror [data-type="details"] > button { flex: 0 0 auto; width: 16px; height: 22px; background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+          .art-editor-scroll .ProseMirror [data-type="details"] > button::before { content: '▶'; color: #783afb; font-size: 10px; transition: transform 0.15s ease; }
+          .art-editor-scroll .ProseMirror [data-type="details"].is-open > button::before { transform: rotate(90deg); }
+          .art-editor-scroll .ProseMirror [data-type="details"] > div { flex: 1 1 auto; min-width: 0; }
+          .art-editor-scroll .ProseMirror [data-type="detailsSummary"] { font-weight: 600; color: #18181b; }
+          .art-editor-scroll .ProseMirror [data-type="detailsContent"] > p { margin: 6px 0 0; color: #374151; }
+          /* YouTube embed */
+          .art-editor-scroll .ProseMirror div[data-youtube-video] { margin: 16px 0; }
+          .art-editor-scroll .ProseMirror div[data-youtube-video] iframe { max-width: 100%; width: 100%; aspect-ratio: 16 / 9; height: auto; border: none; border-radius: 8px; }
         `}</style>
 
         {/* Toolbar */}
@@ -1426,6 +1708,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                     <path d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+              </div>
+
+              {/* Early-alpha disclaimer */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0 0.5rem 0.5rem', color: 'rgba(255,255,255,0.4)', fontSize: 11, lineHeight: '14px', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>
+                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" />
+                </svg>
+                <span>Surfy is a very early alpha and can make mistakes.</span>
               </div>
             </div>
           </div>

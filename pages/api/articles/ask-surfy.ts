@@ -111,6 +111,28 @@ ${termLines.join('\n')}
 IMPORTANT: Always consider how your changes affect the score. Adding headings, expanding text, or including missing NLP terms will IMPROVE the score. Removing headings, deleting paragraphs, or stripping keywords will HURT the score. Prioritize improvements that boost the score.`;
 }
 
+// Embedded base64 data-URL images (the editor allows `allowBase64`) can be
+// megabytes each. Replace their `src` with a short placeholder before sending to
+// the LLM — the model only needs to know an image exists, not its pixel bytes —
+// and restore the originals on the way back so applied content keeps real images.
+function stripDataImages(html: string): { stripped: string; map: Map<string, string> } {
+  const map = new Map<string, string>();
+  let i = 0;
+  const stripped = html.replace(/(<img[^>]*\ssrc=)["'](data:[^"']+)["']/gi, (_m, pre, dataUrl) => {
+    const token = `__SURFY_IMG_${i}__`;
+    i += 1;
+    map.set(token, dataUrl);
+    return `${pre}"${token}"`;
+  });
+  return { stripped, map };
+}
+
+function restoreDataImages(html: string, map: Map<string, string>): string {
+  let out = html;
+  map.forEach((dataUrl, token) => { out = out.split(token).join(dataUrl); });
+  return out;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -125,12 +147,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const action = detectSurfyAction(prompt, mode as 'selection' | 'article');
 
+    // Strip megabyte base64 images out of the article before it ever reaches the
+    // prompt; restore them on the parsed response (see stripDataImages above).
+    const { stripped: leanContent, map: imageMap } = stripDataImages(content as string);
+
     // ── Scoring awareness (only when needed) ───────────────────────
     let scoringBlock = '';
     if (shouldUseScoring(prompt, action) && keyword && process.env.DEEPSEEK_API_KEY) {
       try {
         const scoreResult = await scoreContent(
-          content as string,
+          leanContent,
           keyword as string,
           scoreData || {},
           articleTitle || '',
@@ -161,11 +187,11 @@ ${action === 'analysis_only'
     }
 
     // ── Build system prompt ─────────────────────────────────────────
-    const plainText = content.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    const plainText = leanContent.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
 
     let extraContext = '';
     if (scoreData?.terms?.length) {
-      extraContext += '\n\n' + buildScoreContext(scoreData, plainText, content);
+      extraContext += '\n\n' + buildScoreContext(scoreData, plainText, leanContent);
     }
     if (internalArticles.length > 0) {
       extraContext += '\n\nINTERNAL LINKING TARGETS (articles you can link to):';
@@ -176,8 +202,8 @@ ${action === 'analysis_only'
     }
 
     const scopeBlock = mode === 'selection' && selectedText
-      ? `MODE: selection\nYou are editing ONLY the selected fragment below. Do NOT modify anything outside it.\n\nSELECTED TEXT:\n---\n${selectedText}\n---\n\nFULL ARTICLE (for context only, do NOT edit unless asked):\n${content}\n\nIMPORTANT: Return content = the replacement HTML for the selected fragment ONLY, not the full article.`
-      : `MODE: article\nYou may edit the full article if the user asks for changes.\n\nFULL ARTICLE:\n${content}`;
+      ? `MODE: selection\nYou are editing ONLY the selected fragment below. Do NOT modify anything outside it.\n\nSELECTED TEXT:\n---\n${selectedText}\n---\n\nFULL ARTICLE (for context only, do NOT edit unless asked):\n${leanContent}\n\nIMPORTANT: Return content = the replacement HTML for the selected fragment ONLY, not the full article.`
+      : `MODE: article\nYou may edit the full article if the user asks for changes.\n\nFULL ARTICLE:\n${leanContent}`;
 
     const actionUnderstandingBlock = `You are Surfy, an intelligent SEO content assistant with deep understanding of user intent.
 
@@ -227,9 +253,9 @@ RULES:
       ANTI_HALLUCINATION_RULES,
     ].filter(Boolean).join('\n\n');
 
-    const userMessage = mode === 'selection' && selectedText
-      ? `User prompt: ${prompt}\n\n${scopeBlock}`
-      : `Article HTML:\n\n${content}\n\n---\n\nUser: ${prompt}`;
+    // The article/selection context already lives in the system prompt (scopeBlock);
+    // the user turn only carries the instruction to avoid duplicating the article.
+    const userMessage = `User: ${prompt}`;
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -276,6 +302,9 @@ RULES:
         if (!htmlContent || htmlContent.length < 10) htmlContent = null;
       }
     }
+
+    // Swap the base64 placeholders back to the real image data before applying.
+    if (htmlContent && imageMap.size) htmlContent = restoreDataImages(htmlContent, imageMap);
 
     return res.status(200).json({ action: parsedAction, message, content: htmlContent });
   } catch (error: any) {
