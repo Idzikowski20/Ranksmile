@@ -1,6 +1,6 @@
 import db from '../database/database';
 
-let tablesChecked = false;
+let ready: Promise<void> | null = null;
 const isPostgres = !!process.env.DATABASE_URL;
 const PK = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
 const NOW = 'CURRENT_TIMESTAMP';
@@ -15,10 +15,19 @@ function ignoreExisting(label: string, e: unknown): void {
    if (!/exist|duplicate|already/i.test(m)) console.warn(`[tenancy] ${label} failed:`, m);
 }
 
-/** Creates the org/workspace/member tables and the domain.workspace_id column. Idempotent. */
-export async function ensureTenancyTables(): Promise<void> {
-   if (tablesChecked) return;
+/**
+ * Creates the org/workspace/member tables and the domain.workspace_id column.
+ * Idempotent AND concurrency-safe: the first call memoises its in-flight promise so
+ * concurrent first-requests await the same run instead of each re-executing the whole
+ * DDL pass (which also made the owner warning fire once per racing request). Reset on
+ * failure so a later call can retry.
+ */
+export function ensureTenancyTables(): Promise<void> {
+   if (!ready) ready = runEnsureTenancyTables().catch((e) => { ready = null; throw e; });
+   return ready;
+}
 
+async function runEnsureTenancyTables(): Promise<void> {
    await db.query(`
       CREATE TABLE IF NOT EXISTS organizations (
          id            ${PK},
@@ -100,6 +109,4 @@ export async function ensureTenancyTables(): Promise<void> {
    if (!process.env.TENANCY_OWNER_USER_ID) {
       console.warn('[tenancy] TENANCY_OWNER_USER_ID is unset — legacy (NULL workspace) domains stay hidden until claimed.');
    }
-
-   tablesChecked = true;
 }
