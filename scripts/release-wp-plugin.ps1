@@ -40,7 +40,9 @@ if ($Version) {
   $php = Get-Content -Raw -Encoding UTF8 $mainFile
   $php = $php -replace '(\*\s*Version:\s*)[\d.]+', "`${1}$Version"
   $php = $php -replace "(define\(\s*'SURFER_VERSION',\s*')[\d.]+(')", "`${1}$Version`${2}"
-  Set-Content -Encoding UTF8 -NoNewline $mainFile $php
+  # Write UTF-8 WITHOUT BOM — a BOM in a PHP file is emitted before headers and
+  # breaks WordPress ("headers already sent"). PS 5.1's -Encoding UTF8 adds a BOM.
+  [System.IO.File]::WriteAllText($mainFile, $php, (New-Object System.Text.UTF8Encoding($false)))
   Write-Host "Bumped plugin version to $Version"
 }
 
@@ -72,7 +74,10 @@ try {
 $info = Get-Content -Raw -Encoding UTF8 $manifest | ConvertFrom-Json
 $info.version = $shipVersion
 if ($Changelog) { $info.changelog = $Changelog }
-$info | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 $manifest
+# Write UTF-8 WITHOUT BOM — PHP's json_decode() returns null on a leading BOM, which
+# would silently disable the in-app updater. PS 5.1's -Encoding UTF8 adds a BOM.
+$json = $info | ConvertTo-Json -Depth 5
+[System.IO.File]::WriteAllText($manifest, $json, (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "Packaged $slug $shipVersion -> $zipPath"
 Write-Host "Manifest updated: $manifest"
