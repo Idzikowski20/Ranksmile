@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import { BubbleMenu } from '@tiptap/react/menus';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 
 const IconBold = () => (
@@ -155,10 +156,6 @@ function ToolButton({ editor, command, isActive, onClick, children }: {
   );
 }
 
-const MENU_ESTIMATED_WIDTH = 370; // px — used for viewport clamping before first measure
-const MENU_HEIGHT = 40;
-const MENU_GAP = 8;
-const VIEWPORT_MARGIN = 8;
 const BLOCK_FORMAT_OPTIONS = [
   { type: 'paragraph' as const, label: 'Paragraph', icon: 'paragraph' as const },
   { type: 'heading' as const, level: 1 as const, label: 'Heading 1', icon: 'h1' as const },
@@ -167,60 +164,10 @@ const BLOCK_FORMAT_OPTIONS = [
   { type: 'heading' as const, level: 4 as const, label: 'Heading 4', icon: 'h4' as const },
 ];
 
-type BubbleMenuRect = Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>;
-type BubbleMenuOffsetRect = Pick<DOMRect, 'left' | 'top'>;
-type BubbleMenuBoundaryRect = Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>;
 type LinkRange = { from: number; to: number };
 
 export function getBlockFormatLabel(level?: 1 | 2 | 3 | 4) {
   return level ? `H${level}` : 'Aa';
-}
-
-export function getBubbleMenuPosition({
-  cursorRect,
-  offsetParentRect,
-  menuWidth,
-  menuHeight,
-  menuGap,
-  viewportWidth,
-  viewportHeight,
-  boundaryRect,
-  viewportMargin = VIEWPORT_MARGIN,
-}: {
-  cursorRect: BubbleMenuRect;
-  offsetParentRect: BubbleMenuOffsetRect;
-  menuWidth: number;
-  menuHeight: number;
-  menuGap: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  boundaryRect?: BubbleMenuBoundaryRect;
-  viewportMargin?: number;
-}) {
-  const boundaryLeft = Math.max(viewportMargin, boundaryRect?.left ?? viewportMargin);
-  const boundaryRight = Math.min(viewportWidth - viewportMargin, boundaryRect?.right ?? viewportWidth - viewportMargin);
-  const boundaryTop = Math.max(viewportMargin, boundaryRect?.top ?? viewportMargin);
-  const boundaryBottom = Math.min(viewportHeight - viewportMargin, boundaryRect?.bottom ?? viewportHeight - viewportMargin);
-  const boundaryWidth = Math.max(0, boundaryRight - boundaryLeft);
-  const visibleMenuWidth = Math.min(menuWidth, boundaryWidth);
-  const cursorCenter = (cursorRect.left + cursorRect.right) / 2;
-  const minViewportLeft = boundaryLeft;
-  const maxViewportLeft = Math.max(boundaryLeft, boundaryRight - visibleMenuWidth);
-  const viewportLeft = Math.max(
-    minViewportLeft,
-    Math.min(maxViewportLeft, cursorCenter - visibleMenuWidth / 2),
-  );
-
-  const topAboveCursor = cursorRect.top - menuHeight - menuGap;
-  const topBelowCursor = cursorRect.bottom + menuGap;
-  const maxViewportTop = Math.max(boundaryTop, boundaryBottom - menuHeight);
-  let viewportTop = topAboveCursor >= boundaryTop ? topAboveCursor : topBelowCursor;
-  viewportTop = Math.max(boundaryTop, Math.min(maxViewportTop, viewportTop));
-
-  return {
-    left: viewportLeft - offsetParentRect.left,
-    top: viewportTop - offsetParentRect.top,
-  };
 }
 
 export function SurfyLinkModal({
@@ -475,129 +422,46 @@ export function SurfyLinkModal({
 }
 
 export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: SurfyBubbleMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ display: 'none' });
-  const [isActive, setIsActive] = useState({ bold: false, italic: false, underline: false, strike: false, link: false });
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
   const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkHref, setLinkHref] = useState('');
   const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
-  const visibleRef = useRef(false);
   const linkModalOpenRef = useRef(false);
 
-  const computeStyle = useCallback(() => {
-    if (!editor) return;
-    const { from, to, empty } = editor.state.selection;
-    if (empty || from === to) {
-      visibleRef.current = false;
-      setBlockMenuOpen(false);
-      setMenuStyle({ display: 'none' });
-      return;
-    }
-
-    setIsActive({
-      bold: editor.isActive('bold'),
-      italic: editor.isActive('italic'),
-      underline: editor.isActive('underline'),
-      strike: editor.isActive('strike'),
-      link: editor.isActive('link'),
-    });
-
-    try {
-      const cursorRect = editor.view.coordsAtPos(editor.state.selection.head || to);
-      const offsetParentRect = menuRef.current?.parentElement?.getBoundingClientRect()
-        || editor.view.dom.getBoundingClientRect();
-      const boundaryRect = editor.view.dom.closest('.art-editor-scroll')?.getBoundingClientRect();
-      const menuWidth = menuRef.current?.offsetWidth || MENU_ESTIMATED_WIDTH;
-      const { left, top } = getBubbleMenuPosition({
-        cursorRect,
-        offsetParentRect,
-        menuWidth,
-        menuHeight: MENU_HEIGHT,
-        menuGap: MENU_GAP,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        boundaryRect,
-      });
-
-      visibleRef.current = true;
-      setMenuStyle({
-        position: 'absolute',
-        left: `${left}px`,
-        top: `${top}px`,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-        background: '#2F2F34',
-        padding: '0 12px',
-        height: MENU_HEIGHT,
-        maxWidth: `calc(100vw - ${VIEWPORT_MARGIN * 2}px)`,
-        overflow: 'visible',
-        borderRadius: 4,
-        boxShadow: '0px 16px 32px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
-        fontFamily: 'var(--font-family-primary)',
-      });
-    } catch {
-      visibleRef.current = false;
-      setBlockMenuOpen(false);
-      setMenuStyle({ display: 'none' });
-    }
+  // Tiptap's <BubbleMenu> owns show/hide + Floating-UI positioning. We only need
+  // the (always-mounted) content to re-render when the selection or marks change
+  // so the button active-states stay accurate.
+  const [, bumpTick] = useState(0);
+  useEffect(() => {
+    if (!editor) return undefined;
+    const refresh = () => bumpTick((t) => t + 1);
+    editor.on('selectionUpdate', refresh);
+    editor.on('transaction', refresh);
+    return () => {
+      editor.off('selectionUpdate', refresh);
+      editor.off('transaction', refresh);
+    };
   }, [editor]);
 
-  useEffect(() => {
-    if (!editor) return;
-
-    const dom = editor.view.dom;
-
-    // Show toolbar on mouseup (after selection drag or double-click completes)
-    const onMouseUp = () => {
-      // Small delay so ProseMirror has time to update its selection state
-      requestAnimationFrame(computeStyle);
-    };
-
-    // Touch devices never fire mouseup — show the toolbar after a touch selection
-    // settles (double rAF lets the native selection handles finalize first).
-    const onTouchEnd = () => {
-      requestAnimationFrame(() => requestAnimationFrame(computeStyle));
-    };
-
-    // Track keyboard-driven selection changes only when toolbar is already visible
-    const onSelectionUpdate = () => {
-      if (visibleRef.current) computeStyle();
-    };
-
-    const onViewportChange = () => {
-      if (visibleRef.current) requestAnimationFrame(computeStyle);
-    };
-
-    const onBlur = () => {
-      if (linkModalOpenRef.current) return;
-
-      visibleRef.current = false;
-      setBlockMenuOpen(false);
-      setMenuStyle({ display: 'none' });
-    };
-
-    dom.addEventListener('mouseup', onMouseUp);
-    dom.addEventListener('touchend', onTouchEnd);
-    window.addEventListener('resize', onViewportChange);
-    document.addEventListener('scroll', onViewportChange, true);
-    editor.on('selectionUpdate', onSelectionUpdate);
-    editor.on('blur', onBlur);
-
-    return () => {
-      dom.removeEventListener('mouseup', onMouseUp);
-      dom.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('resize', onViewportChange);
-      document.removeEventListener('scroll', onViewportChange, true);
-      editor.off('selectionUpdate', onSelectionUpdate);
-      editor.off('blur', onBlur);
-    };
-  }, [editor, computeStyle]);
+  // The editor body scrolls inside `.art-editor-scroll`, so point Floating UI at
+  // that container (not just the window) to reposition on inner scroll.
+  const scrollTarget = useMemo(
+    () => (editor ? (editor.view.dom.closest('.art-editor-scroll') as HTMLElement | null) : null),
+    [editor],
+  );
+  const bubbleOptions = useMemo(
+    () => ({
+      placement: 'top' as const,
+      strategy: 'fixed' as const,
+      offset: 8,
+      flip: true,
+      shift: { padding: 8 },
+      ...(scrollTarget ? { scrollTarget } : {}),
+    }),
+    [scrollTarget],
+  );
 
   const handleAskSurfy = useCallback(() => {
     const { from, to } = editor.state.selection;
@@ -669,11 +533,22 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
   };
 
   return (
+    <>
+    <BubbleMenu
+      editor={editor}
+      options={bubbleOptions}
+      appendTo={() => document.body}
+      shouldShow={({ state, from, to }) => !linkModalOpenRef.current && !state.selection.empty && from !== to}
+      style={{ zIndex: 100 }}
+    >
     <div
-      ref={menuRef}
-      style={menuStyle}
-      onMouseDown={(e) => {
-        if (!(e.target as HTMLElement).closest('[data-surfy-link-modal]')) e.preventDefault();
+      onMouseDown={(e) => e.preventDefault()}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+        background: '#2F2F34', padding: '0 12px', height: 40, maxWidth: 'calc(100vw - 16px)',
+        overflow: 'visible', borderRadius: 4,
+        boxShadow: '0px 16px 32px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
+        fontFamily: 'var(--font-family-primary)',
       }}
     >
       <style>{`
@@ -779,19 +654,19 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
 
       <Separator />
 
-      <ToolButton editor={editor} command="toggleBold" isActive={isActive.bold}>
+      <ToolButton editor={editor} command="toggleBold" isActive={editor.isActive('bold')}>
         <IconBold />
       </ToolButton>
 
-      <ToolButton editor={editor} command="toggleItalic" isActive={isActive.italic}>
+      <ToolButton editor={editor} command="toggleItalic" isActive={editor.isActive('italic')}>
         <IconItalic />
       </ToolButton>
 
-      <ToolButton editor={editor} command="toggleUnderline" isActive={isActive.underline}>
+      <ToolButton editor={editor} command="toggleUnderline" isActive={editor.isActive('underline')}>
         <IconUnderline />
       </ToolButton>
 
-      <ToolButton editor={editor} command="toggleStrike" isActive={isActive.strike}>
+      <ToolButton editor={editor} command="toggleStrike" isActive={editor.isActive('strike')}>
         <IconStrike />
       </ToolButton>
 
@@ -800,7 +675,7 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
       <ToolButton
         editor={editor}
         command="toggleLink"
-        isActive={isActive.link}
+        isActive={editor.isActive('link')}
         onClick={openLinkModal}
       >
         <IconLink />
@@ -995,6 +870,8 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
         <IconSurfy />
         Ask Surfy
       </button>
+    </div>
+    </BubbleMenu>
 
       {linkModalOpen && (
         <div
@@ -1206,6 +1083,6 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
           </form>
         </div>
       )}
-    </div>
+    </>
   );
 }
