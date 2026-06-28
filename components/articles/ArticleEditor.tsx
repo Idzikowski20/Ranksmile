@@ -13,6 +13,7 @@ import SurferImageNode from './SurferImageNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
 import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
 import { TermHighlight } from './termHighlightExtension';
+import { PlagiarismHighlight } from './plagiarismHighlightExtension';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import CommentComposer, { DraftComment } from './comments/CommentComposer';
 import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
@@ -47,6 +48,10 @@ interface Props {
   onAiActivity?: (active: boolean) => void;
   /** Target keyword for Surfy scoring context */
   articleKeyword?: string;
+  /** Plagiarised sentences to underline in red (view-only; from the Plagiarism panel). */
+  plagiarismSentences?: string[];
+  /** The plagiarism match currently focused in the panel — highlighted stronger + scrolled into view. */
+  plagiarismFocused?: string | null;
   /** Comment anchors to highlight inline (view-only ProseMirror decorations). */
   comments?: CommentAnchor[];
   /** Full comment threads for the in-editor pins + bubbles overlay. */
@@ -696,7 +701,7 @@ const TitleDescriptionBlock = ({
   );
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -710,6 +715,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     termsRef.current = (scoreData?.terms as any[]) || [];
     const highlightTermsRef = useRef<boolean>(highlightTerms ?? true);
     highlightTermsRef.current = highlightTerms ?? true;
+    const plagSentencesRef = useRef<string[]>([]);
+    plagSentencesRef.current = plagiarismSentences ?? [];
+    const plagFocusedRef = useRef<string | null>(null);
+    plagFocusedRef.current = plagiarismFocused ?? null;
     const editorWrapRef = useRef<HTMLDivElement>(null);
     const [linkTip, setLinkTip] = useState<{ text: string; top: number; left: number } | null>(null);
     const [openCommentId, setOpenCommentId] = useState<string | null>(null);
@@ -955,6 +964,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           getTerms: () => termsRef.current,
           getEnabled: () => highlightTermsRef.current,
         }),
+        PlagiarismHighlight.configure({
+          getSentences: () => plagSentencesRef.current,
+          getFocused: () => plagFocusedRef.current,
+        }),
       ],
       content,
       immediatelyRender: false,
@@ -1013,6 +1026,21 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => {
       if (editor) editor.view.dispatch(editor.state.tr);
     }, [highlightTerms, editor]);
+    // Repaint plagiarism highlights only when the active sentences / focused match actually
+    // change — `plagiarismSentences` is a fresh array each render, so key on a stable signature.
+    const plagSig = `${(plagiarismSentences ?? []).join('')} ${plagiarismFocused ?? ''}`;
+    useEffect(() => {
+      if (editor) editor.view.dispatch(editor.state.tr);
+    }, [plagSig, editor]);
+    // Scroll the focused plagiarism match into view (after the decoration repaint above).
+    useEffect(() => {
+      if (!editor || !plagiarismFocused) return undefined;
+      const t = setTimeout(() => {
+        editor.view.dom.querySelector('.plag-hl-focus')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 60);
+      return () => clearTimeout(t);
+    }, [plagiarismFocused, editor]);
+
     // While enabled, repaint as coverage changes; skipped entirely when off so the
     // findTermRangesBatch pass doesn't run on every save.
     useEffect(() => {

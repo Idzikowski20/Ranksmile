@@ -20,7 +20,7 @@ from analyzers.serp_analyzer import analyze_serp, extract_competitor_outlines
 from analyzers.meta_generator import generate_meta
 from analyzers.image_generator import generate_article_image
 from analyzers.ai_visibility import run_ai_visibility
-from analyzers.ai_readability import run_ai_readability
+from analyzers.ai_readability import run_ai_readability, apply_ai_readability
 from analyzers.content_classifier import classify
 from analyzers.ranking_scorer import predict_ranking
 from analyzers.plagiarism import run_plagiarism
@@ -328,6 +328,15 @@ async def ai_readability_endpoint(body: dict):
     article_content = body.get("article_content", "")
     keyword = body.get("keyword", "")
     return await run_ai_readability(article_content, keyword)
+
+
+@app.post("/apply-ai-readability")
+async def apply_ai_readability_endpoint(body: dict):
+    """Apply AI-readability suggestions to the article HTML (structure-only rewrite)."""
+    content = body.get("content", "")
+    suggestions = body.get("suggestions", []) or []
+    keyword = body.get("keyword", "")
+    return await apply_ai_readability(content, suggestions, keyword)
 
 
 class PipelineRequest(BaseModel):

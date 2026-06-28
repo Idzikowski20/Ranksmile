@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { computeAiSearchScore, AiVisibilitySummary } from '../../lib/aiSearchScore';
 import MiniGauge from './MiniGauge';
+import PlagiarismScanningModal from './PlagiarismScanningModal';
+import PlagiarismPanel from './PlagiarismPanel';
 
 const F = 'var(--font-family-primary)';
 
@@ -10,18 +11,24 @@ type PlagiarismMatch = { text: string; url: string; title: string; domain: strin
 type PlagiarismResult = { available: boolean; checked: number; matched: number; uniqueness: number; matches: PlagiarismMatch[]; error?: string };
 
 interface Props {
+  /** SEO / content score. */
   score: number;
+  /** AI Search score (0 when no AI visibility analysis has run). */
+  aiScore?: number;
+  /** Whether an AI visibility analysis exists, so the main score blends SEO + AI. */
+  hasAi?: boolean;
   plainText: string;
   articleId?: number;
-  aiSummary?: AiVisibilitySummary | null;
-  isAnalyzingAi: boolean;
-  onAnalyzeAi: () => void;
   readOnly?: boolean;
   onBack: () => void;
   /** Previously saved plagiarism result (restored from the article). */
   initialPlagiarism?: PlagiarismResult | null;
   /** Previously saved AI Readability rubric result (restored from the article). */
   initialAiReadability?: AiReadabilityResult | null;
+  /** Apply All — hand the readability suggestions to the optimize pipeline (wired in a later step). */
+  onApplyReadability?: (result: AiReadabilityResult) => void;
+  /** Plagiarism panel → editor red highlights (active sentences + focused one). */
+  onPlagiarismHighlight?: (sentences: string[], focused: string | null) => void;
 }
 
 /* ── Flesch–Kincaid grade level (approximate) ──────────────────────── */
@@ -67,20 +74,21 @@ const OutlineButton = ({ label, disabled, onClick }: { label: React.ReactNode; d
   </button>
 );
 
-const uniquenessColor = (u: number) => (u >= 90 ? '#1AB25E' : u >= 70 ? '#F97316' : '#E5484D');
 
 const Spinner = () => (
-  <span style={{ width: 13, height: 13, border: '2px solid rgba(63,63,71,0.25)', borderTopColor: '#3f3f47', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+  <span style={{ display: 'inline-block', width: 13, height: 13, border: '2px solid rgba(63,63,71,0.25)', borderTopColor: '#3f3f47', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
 );
 
 const Busy = ({ label }: { label: string }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Spinner />{label}</span>
 );
 
-// Shared look for the small "label … value" rows (AI Readability / AI Search).
-const SCORE_BOX: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 8, padding: '10px 12px' };
+type AiReadabilityCriterion = { key: string; met: boolean; note?: string; suggestions?: string[] };
+export type AiReadabilityResult = { score: number; criteria: AiReadabilityCriterion[] };
 
-type AiReadabilityResult = { score: number; criteria: Array<{ key: string; met: boolean; note?: string }> };
+// A saved result is only usable by the new suggestions UI if it carries the `suggestions` shape.
+// Old saved results (met/note only) are treated as "not analyzed" so the Analyze button shows.
+const hasSuggestionShape = (r?: AiReadabilityResult | null): boolean => !!r?.criteria?.some((c) => Array.isArray(c.suggestions));
 
 const AI_READABILITY_CRITERIA: Array<{ key: string; title: string; desc: string }> = [
   { key: 'introduction', title: 'Introduction Section', desc: "Clear, dedicated introduction that sets expectations (what's covered, who it's for, why it matters) and provides context." },
@@ -136,22 +144,26 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
   document.body,
 );
 
-const PrePublishPanel = ({ score, plainText, articleId, aiSummary, isAnalyzingAi, onAnalyzeAi, readOnly, onBack, initialPlagiarism, initialAiReadability }: Props) => {
+const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly, onBack, initialPlagiarism, initialAiReadability, onApplyReadability, onPlagiarismHighlight }: Props) => {
   const r = readability(plainText);
-  const aiScore = computeAiSearchScore(aiSummary);
+  const mainScore = (hasAi && typeof aiScore === 'number') ? Math.round((score + aiScore) / 2) : score;
+  const [scoreTip, setScoreTip] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [showPlagPanel, setShowPlagPanel] = useState(false);
   const [showAiInfo, setShowAiInfo] = useState(false);
   const [plag, setPlag] = useState<PlagiarismResult | null>(initialPlagiarism ?? null);
-  const [aiRead, setAiRead] = useState<AiReadabilityResult | null>(initialAiReadability ?? null);
+  const [aiRead, setAiRead] = useState<AiReadabilityResult | null>(hasSuggestionShape(initialAiReadability) ? initialAiReadability! : null);
   const [analyzingRead, setAnalyzingRead] = useState(false);
 
-  // Seed from saved results once they arrive (only if not run yet this session).
+  // Seed from saved results once they arrive (only the new suggestions-shaped result, and only
+  // if not run yet this session).
   useEffect(() => { if (initialPlagiarism && plag === null) setPlag(initialPlagiarism); }, [initialPlagiarism, plag]);
-  useEffect(() => { if (initialAiReadability && aiRead === null) setAiRead(initialAiReadability); }, [initialAiReadability, aiRead]);
+  useEffect(() => { if (hasSuggestionShape(initialAiReadability) && aiRead === null) setAiRead(initialAiReadability!); }, [initialAiReadability, aiRead]);
 
-  // "Analyze Content" runs both: AI Readability rubric (here) + AI Search visibility (page).
+  // "Analyze Content" runs ONLY the AI Readability rubric — it must never touch the AI Search
+  // score (that's driven by the separate ai-visibility analysis). Decoupled on purpose, which
+  // also stops the editor's AI glow ring (gated on isRunningAiVisibility) from firing here.
   const analyze = () => {
-    onAnalyzeAi();
     if (!articleId || analyzingRead) return;
     setAnalyzingRead(true);
     fetch('/api/articles/ai-readability', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articleId }) })
@@ -161,22 +173,48 @@ const PrePublishPanel = ({ score, plainText, articleId, aiSummary, isAnalyzingAi
       .finally(() => setAnalyzingRead(false));
   };
 
+  const scanAbortRef = useRef<AbortController | null>(null);
   const runPlagiarism = async () => {
     if (!articleId || scanning) return;
     setScanning(true);
     setPlag(null);
+    const controller = new AbortController();
+    scanAbortRef.current = controller;
     try {
       const res = await fetch('/api/articles/plagiarism', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ articleId }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Scan failed');
       if (data.available === false) { toast.error('Plagiarism scan unavailable — SERP key not configured'); return; }
       setPlag(data);
+      setShowPlagPanel(true);
       toast.success(`Scan complete — ${data.uniqueness}% unique`);
-    } catch (e: any) { toast.error(e?.message || 'Scan failed'); } finally { setScanning(false); }
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return; // user cancelled — no toast
+      toast.error(e?.message || 'Scan failed');
+    } finally { scanAbortRef.current = null; setScanning(false); }
   };
+  const cancelScan = () => { scanAbortRef.current?.abort(); setScanning(false); };
+
+  // Plagiarism check replaces the panel with its own dedicated view (Close → back here).
+  if (showPlagPanel && plag) {
+    return (
+      <>
+        <PlagiarismPanel
+          result={plag}
+          onClose={() => setShowPlagPanel(false)}
+          onRescan={runPlagiarism}
+          rescanning={scanning}
+          readOnly={readOnly}
+          onHighlight={onPlagiarismHighlight}
+        />
+        {scanning && <PlagiarismScanningModal onCancel={cancelScan} />}
+      </>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', fontFamily: F }}>
@@ -192,7 +230,27 @@ const PrePublishPanel = ({ score, plainText, articleId, aiSummary, isAnalyzingAi
           </button>
           <span style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>Pre-Publish Review</span>
         </div>
-        <MiniGauge score={score} />
+        <div
+          style={{ position: 'relative', display: 'inline-flex' }}
+          onMouseEnter={() => setScoreTip(true)}
+          onMouseLeave={() => setScoreTip(false)}
+        >
+          <MiniGauge score={mainScore} />
+          {scoreTip && (
+            <div style={{ position: 'absolute', top: '50%', right: 'calc(100% + 10px)', transform: 'translateY(-50%)', background: '#18181b', color: '#fff', borderRadius: 8, padding: '8px 12px', whiteSpace: 'nowrap', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', fontFamily: F }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#a1a1aa' }}>SEO</span>
+                <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Math.round(score)}</span>
+              </div>
+              {hasAi && typeof aiScore === 'number' && (
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginTop: 6, paddingTop: 6, borderTop: '1px solid #3f3f47' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#a1a1aa' }}>AI SEARCH</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{aiScore}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Body */}
@@ -214,12 +272,7 @@ const PrePublishPanel = ({ score, plainText, articleId, aiSummary, isAnalyzingAi
 
         {/* Plagiarism Check */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Plagiarism Check</span>
-            {plag && (
-              <span style={{ fontSize: 14, fontWeight: 700, color: uniquenessColor(plag.uniqueness) }}>{plag.uniqueness}% unique</span>
-            )}
-          </div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Plagiarism Check</span>
           <OutlineButton
             disabled={scanning || !articleId || readOnly}
             onClick={runPlagiarism}
@@ -230,61 +283,78 @@ const PrePublishPanel = ({ score, plainText, articleId, aiSummary, isAnalyzingAi
           {!plag && !scanning && (
             <span style={{ fontSize: 13, color: '#52525c' }}>Checks representative passages against the web for verbatim matches.</span>
           )}
-          {plag && (
-            plag.matched === 0 ? (
-              <span style={{ fontSize: 13, color: '#1AB25E', fontWeight: 500 }}>No matching passages found across {plag.checked} checked.</span>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <span style={{ fontSize: 13, color: '#52525c' }}>{plag.matched} of {plag.checked} passages matched external sources</span>
-                {plag.matches.map((m, i) => (
-                  <a key={i} href={m.url} target="_blank" rel="noreferrer noopener"
-                    style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 12px', borderRadius: 8, border: '1px solid #f4f4f5', background: '#f8f8f9', textDecoration: 'none' }}>
-                    <span style={{ fontSize: 13, color: '#18181b', lineHeight: '18px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>&ldquo;{m.text}&rdquo;</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#783AFB', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <img alt="" width={14} height={14} style={{ borderRadius: 3, flexShrink: 0 }} src={`https://www.google.com/s2/favicons?domain=${m.domain}&sz=32`} />
-                      {m.domain}{m.sources > 1 ? ` +${m.sources - 1} more` : ''}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            )
-          )}
         </div>
 
         <Divider />
 
         {/* AI Readability */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 16px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#18181b' }}>
-            AI Readability
-            <button type="button" onClick={() => setShowAiInfo(true)} aria-label="How do we assess AI Readability?" title="How do we assess AI Readability?" style={{ display: 'inline-flex', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#52525c' }}>
-              <InfoIcon />
-            </button>
-          </span>
-          <OutlineButton
-            disabled={isAnalyzingAi || analyzingRead || readOnly}
-            onClick={analyze}
-            label={(isAnalyzingAi || analyzingRead)
-              ? <Busy label="Analyzing…" />
-              : 'Analyze Content'}
-          />
-          {aiRead && (
-            <button type="button" onClick={() => setShowAiInfo(true)} title="See criteria"
-              style={{ ...SCORE_BOX, width: '100%', cursor: 'pointer', fontFamily: F }}>
-              <span style={{ fontSize: 13, color: '#52525c' }}>AI Readability</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: aiRead.score >= 80 ? '#1AB25E' : aiRead.score >= 50 ? '#F97316' : '#E5484D' }}>{aiRead.score}/100</span>
-            </button>
-          )}
-          {aiSummary && (
-            <div style={SCORE_BOX}>
-              <span style={{ fontSize: 13, color: '#52525c' }}>AI Search score</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>{aiScore}/100</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+              AI Readability
+              <button type="button" onClick={() => setShowAiInfo(true)} aria-label="How do we assess AI Readability?" title="How do we assess AI Readability?" style={{ display: 'inline-flex', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#52525c' }}>
+                <InfoIcon />
+              </button>
+            </span>
+            {aiRead && !analyzingRead && (
+              <button type="button" onClick={analyze} disabled={readOnly} aria-label="Re-run analysis" title="Re-run analysis"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: readOnly ? 'not-allowed' : 'pointer', color: '#52525c' }}
+                onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#f4f4f5'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
+              </button>
+            )}
+          </div>
+
+          {analyzingRead ? (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '2px 0', fontSize: 13, lineHeight: '20px', color: '#52525c' }}>
+              <span style={{ marginTop: 2, flexShrink: 0 }}><Spinner /></span>
+              <span>Assessing how clearly your content is structured for AI models. This may take a minute or two.</span>
             </div>
-          )}
+          ) : !aiRead ? (
+            <>
+              <OutlineButton disabled={readOnly} onClick={analyze} label="Analyze Content" />
+              <span style={{ fontSize: 13, color: '#52525c' }}>Checks how clearly your content is structured for AI models against 10 criteria.</span>
+            </>
+          ) : (() => {
+            const cards = aiRead.criteria.filter((c) => (c.suggestions?.length ?? 0) > 0);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#9f9fa9' }}>
+                  <svg viewBox="0 0 20 20" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6}><circle cx={10} cy={10} r={7} /></svg>
+                  {cards.length === 0
+                    ? <span style={{ color: '#1AB25E', fontWeight: 500 }}>All criteria met — nothing to improve.</span>
+                    : <span>0/{cards.length} suggestions</span>}
+                </div>
+                {onApplyReadability && cards.length > 0 && (
+                  <button type="button" disabled={readOnly} onClick={() => onApplyReadability(aiRead)}
+                    style={{ width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
+                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#783afb'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                    Apply All
+                  </button>
+                )}
+                {cards.map((c) => {
+                  const title = AI_READABILITY_CRITERIA.find((x) => x.key === c.key)?.title || c.key;
+                  return (
+                    <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, border: '1px solid #f4f4f5', borderRadius: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#9f9fa9' }}>{title}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {(c.suggestions ?? []).map((s, i) => (
+                          <span key={i} style={{ fontSize: 14, lineHeight: '20px', color: '#3f3f47', whiteSpace: 'pre-wrap', paddingTop: i === 0 ? 0 : 12, marginTop: i === 0 ? 0 : 12, borderTop: i === 0 ? 'none' : '1px solid #f4f4f5' }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
       {showAiInfo && <AiReadabilityInfoModal onClose={() => setShowAiInfo(false)} result={aiRead} />}
+      {scanning && <PlagiarismScanningModal onCancel={cancelScan} />}
     </div>
   );
 };
