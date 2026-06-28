@@ -1,10 +1,10 @@
 import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
-import { readFile } from 'fs/promises';
 import { countryAlphaTwoCodes, getCountryCodeFromAlphaThree } from './countries';
 import GscAccount from '../database/models/gscAccount';
 import db from '../database/database';
 import { ensureGscDataTable } from '../lib/ensureGscDataTable';
+import { readSettingsBlob } from '../lib/appSettingsStore';
 
 export type SCDomainFetchError = {
    error: boolean,
@@ -398,8 +398,7 @@ export const getSearchConsoleApiInfo = async (domain: DomainType, userId?: strin
 
    // 4. Service account — global settings
    if (!scAPIData.private_key) {
-      const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' });
-      const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
+      const settings = ((await readSettingsBlob()) as SettingsType | null) || ({} as SettingsType);
       scAPIData.client_email = settings.search_console_client_email ? cryptr.decrypt(settings.search_console_client_email) : '';
       scAPIData.private_key = settings.search_console_private_key ? cryptr.decrypt(settings.search_console_private_key) : '';
    }
