@@ -4,6 +4,7 @@ import Cryptr from 'cryptr';
 import getConfig from 'next/config';
 import verifyUser from '../../utils/verifyUser';
 import allScrapers from '../../scrapers/index';
+import { readSettingsBlob, writeSettingsBlob } from '../../lib/appSettingsStore';
 
 type SettingsGetResponse = {
    settings?: object | null,
@@ -65,7 +66,7 @@ const updateSettings = async (req: NextApiRequest, res: NextApiResponse<Settings
          search_console_private_key,
       };
 
-      await writeFile(`${process.cwd()}/data/settings.json`, JSON.stringify(securedSettings), { encoding: 'utf-8' });
+      await writeSettingsBlob(securedSettings);
       return res.status(200).json({ settings });
    } catch (error) {
       console.log('[ERROR] Updating App Settings. ', error);
@@ -133,7 +134,7 @@ export const getAppSettings = async () : Promise<SettingsType> => {
       scrape_smart_full_fallback: false,
    };
 
-   const settings: SettingsType = await safeReadJSON(`${process.cwd()}/data/settings.json`, defaultSettings);
+   const settings: SettingsType = ((await readSettingsBlob()) as SettingsType | null) || defaultSettings;
    const failedQueue: string[] = await safeReadJSON(`${process.cwd()}/data/failed_queue.json`, []);
 
    let decryptedSettings = settings;
