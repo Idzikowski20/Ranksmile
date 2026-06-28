@@ -480,6 +480,15 @@ const ArticleEditorPage: NextPage = () => {
     return () => window.removeEventListener('surfer:open-pixabay', handler);
   }, []);
 
+  // The Content Editor must scroll INTERNALLY (fixed dark shell + scrollable
+  // body) at ALL widths, not just desktop. Opt <html> into the editor
+  // height-chain while this page is mounted; cleanup restores normal page
+  // scrolling for every other route.
+  useEffect(() => {
+    document.documentElement.classList.add('editor-route');
+    return () => document.documentElement.classList.remove('editor-route');
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     setIsLoading(true);
@@ -1082,6 +1091,7 @@ const ArticleEditorPage: NextPage = () => {
         showSidebar={false}
         topbarTitle=""
         contentClassName="article-editor-shell"
+        hideMobileNav
       >
         {/* Surfer-style loading screen inside the editor gray wrapper */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
@@ -1123,6 +1133,7 @@ const ArticleEditorPage: NextPage = () => {
         />
       )}
       contentClassName="article-editor-shell"
+      hideMobileNav
     >
       <style>{`
         @keyframes ai-glow-shift {

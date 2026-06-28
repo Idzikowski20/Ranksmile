@@ -279,6 +279,9 @@ body {
    .ce-bc-rest { display: none !important; }
    .global-topbar-center { display: none !important; }
    .ce-search-compact { display: inline-flex !important; }
+   /* The centred search slot is hidden here, so nothing was pushing the action
+      icons right — pin them to the right edge (domain icon stays on the left). */
+   .global-topbar-main { justify-content: flex-end; }
 }
 
 .global-topbar-title {
@@ -498,37 +501,51 @@ body {
    min-height: 0;
 }
 
-@media (max-width: 1023px) {
-   .app-content {
-      min-height: 100vh;
-   }
+/* ── Content Editor: ONE layout at every width ─────────────────────
+   The editor is the only route that must scroll INTERNALLY (fixed dark
+   shell + scrollable content) at all widths, not just desktop. The
+   height-chain (html → body → #__next → .app-shell → .app-content) and
+   the dark body frame (body padding) are normally gated behind
+   @media(min-width:1024px). The editor opts <html> into them at ALL
+   widths via `.editor-route`, scoped so every other (body-scrolling)
+   mobile page is untouched. No width-dependent layout divergence: the
+   editor renders identically from phone to desktop, only topbar items
+   (breadcrumb rest / search bar / format toolbar) get hidden below their
+   breakpoints elsewhere in this file. */
+html.editor-route,
+html.editor-route body {
+   height: 100%;
+   overflow: hidden;
+}
+html.editor-route body {
+   padding: 8px;
+   box-sizing: border-box;
+}
+html.editor-route #__next { height: 100%; }
+html.editor-route #__next > div {
+   height: 100% !important;
+   min-height: 0 !important;
+}
+/* The editor hides the mobile bottom nav (hideMobileNav), so the <1024px
+   `.app-shell { padding-bottom: var(--mobile-nav-height) }` reservation is dead
+   space — a thick black band under the editor. Reclaim it. */
+html.editor-route .app-shell { padding-bottom: 0; }
+html.editor-route .app-content {
+   border-radius: 12px;
+   overflow-y: auto;
+   min-height: 0;
 }
 
-/* ── Content Editor: tablet / phone responsiveness ─────────────────
-   The editor is a 2-column layout (editor card + a fixed 320px Content
-   Score panel reserved via the editor's margin-right). On <1024px the
-   editor goes full-width and the panel becomes a full-width drawer that
-   slides over the content area. */
+/* Long words / pasted URLs must wrap instead of widening the layout. */
+.article-editor-shell .ProseMirror { overflow-wrap: break-word; word-break: break-word; }
+.article-editor-shell .ProseMirror img { max-width: 100%; height: auto; }
+
+/* Phones + tablets: hide the editor's top format toolbar entirely — formatting
+   is reached by selecting text (the SurfyBubbleMenu appears on touch). The
+   right-hand actions (…, sidebar toggle, Share) live in the page header and
+   stay put. Avoids the cramped horizontal-scroll toolbar on narrow screens. */
 @media (max-width: 1023px) {
-   .ce-editor-card { margin-right: 0 !important; }
-   .ce-right-panel {
-      left: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      gap: 0 !important;
-      z-index: 200 !important;
-   }
-   .ce-right-panel > * { width: 100% !important; max-width: 100% !important; }
-   /* Long words / pasted URLs must wrap instead of pushing the page wider. */
-   .article-editor-shell .ProseMirror { overflow-wrap: break-word; word-break: break-word; }
-   .article-editor-shell .ProseMirror img { max-width: 100%; height: auto; }
-   /* Reserve room for the fixed MobileBottomNav so it isn't covered by the editor. */
-   .article-editor-shell {
-      box-sizing: border-box;
-      padding-bottom: var(--mobile-nav-height, 64px);
-   }
-   /* The full-screen Content Score drawer must clear the bottom nav too. */
-   .ce-right-panel { bottom: var(--mobile-nav-height, 64px) !important; }
+   .ce-format-toolbar { display: none !important; }
 }
 
 /* Fully hidden scrollbar — element still scrolls (wheel / trackpad). */
