@@ -149,21 +149,26 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   return (
     <>
       <div
+        className="no-scrollbar ce-format-toolbar"
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          // `safe center` keeps the toolbar centred when it fits (desktop) but
+          // falls back to start-aligned + scrollable when it overflows (mobile),
+          // so narrow screens scroll the buttons instead of clipping/overlapping.
+          justifyContent: 'safe center',
           padding: '0 12px',
           height: 44,
           background: '#fff',
           flexShrink: 0,
           borderBottom: 'none',
           gap: 8,
-          overflow: 'hidden',
+          overflowX: 'auto',
+          overflowY: 'hidden',
         }}
       >
       {/* Formatting */}
-      <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+      <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
         {/* Headings */}
         {([1, 2, 3] as const).map((lvl) => {
@@ -1020,6 +1025,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll {
             flex: 1;
             overflow-y: auto;
+            /* overflow-y:auto makes the browser compute overflow-x as auto too,
+               so absolutely-positioned overlays (comment pins, bubble menu) that
+               peek past the right edge trigger a horizontal scrollbar — which adds
+               a chunky gutter at the bottom. Article text wraps and images are
+               capped at 100%, so nothing legitimate needs horizontal scroll. */
+            overflow-x: hidden;
             background: #fff;
           }
           .art-editor-scroll .ProseMirror {

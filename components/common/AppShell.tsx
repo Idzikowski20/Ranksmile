@@ -14,6 +14,8 @@ type AppShellProps = {
    /** Replaces the workspace switcher in the topbar's left slot (e.g. editor breadcrumb). */
    breadcrumb?: React.ReactNode;
    contentClassName?: string;
+   /** Hide the mobile bottom nav (e.g. the content editor wants the full height). */
+   hideMobileNav?: boolean;
 };
 
 const AppShell = ({
@@ -26,6 +28,7 @@ const AppShell = ({
    topbarTitle,
    breadcrumb,
    contentClassName = '',
+   hideMobileNav = false,
 }: AppShellProps) => {
    return (
       <div className="app-shell">
@@ -42,11 +45,13 @@ const AppShell = ({
                {children}
             </main>
          </div>
-         <MobileBottomNav
-            domains={domains}
-            showAddModal={showAddModal}
-            showSettings={showSettings}
-         />
+         {!hideMobileNav && (
+            <MobileBottomNav
+               domains={domains}
+               showAddModal={showAddModal}
+               showSettings={showSettings}
+            />
+         )}
       </div>
    );
 };
