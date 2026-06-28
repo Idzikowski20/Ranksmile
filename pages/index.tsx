@@ -14,6 +14,7 @@ const Home: NextPage = () => {
       (async () => {
          try {
             const res = await fetch('/api/workspaces');
+            if (res.status === 401) { router.replace('/auth/sign-in'); return; }
             const d = await res.json().catch(() => ({}));
             const first = (d.workspaces || [])[0];
             if (first?.id) { router.replace(`/workspace/${first.id}/dashboard`); return; }
