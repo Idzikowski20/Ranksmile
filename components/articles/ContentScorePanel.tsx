@@ -8,6 +8,7 @@ import KeywordResearchSection from './KeywordResearchSection';
 import WriteOptimizePanel from './WriteOptimizePanel';
 import PublishExportPanel from './PublishExportPanel';
 import PrePublishPanel from './PrePublishPanel';
+import type { AiReadabilityResult } from './PrePublishPanel';
 import ScoreTrio from './ScoreTrio';
 import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
 
@@ -60,6 +61,10 @@ interface Props {
   aiVisibilitySummary?: AiVisibilitySummary | null;
   isRunningAiVisibility?: boolean;
   onRunAiVisibility?: () => void;
+  /** AI Readability "Apply All" — runs the structure-only optimize on the page. */
+  onApplyReadability?: (result: AiReadabilityResult) => void;
+  /** Plagiarism panel → editor red highlights (active sentences + focused one). */
+  onPlagiarismHighlight?: (sentences: string[], focused: string | null) => void;
   /** Shared/preview mode — disables every mutating action. */
   readOnly?: boolean;
 }
@@ -253,6 +258,8 @@ const ContentScorePanel = ({
   aiVisibilitySummary,
   isRunningAiVisibility,
   onRunAiVisibility,
+  onApplyReadability,
+  onPlagiarismHighlight,
   readOnly,
   highlightTerms,
   onHighlightTermsChange,
@@ -533,15 +540,16 @@ const ContentScorePanel = ({
     return (
       <PrePublishPanel
         score={score}
+        aiScore={aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0}
+        hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         plainText={plainText}
         articleId={articleId}
-        aiSummary={aiVisibilitySummary}
-        isAnalyzingAi={!!isRunningAiVisibility}
-        onAnalyzeAi={() => { onRunAiVisibility?.(); }}
         readOnly={readOnly}
         onBack={() => setView('main')}
         initialPlagiarism={initialPlagiarism}
         initialAiReadability={initialAiReadability}
+        onApplyReadability={onApplyReadability}
+        onPlagiarismHighlight={onPlagiarismHighlight}
       />
     );
   }

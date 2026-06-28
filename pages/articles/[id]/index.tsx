@@ -15,6 +15,7 @@ import CustomizationPanelModal from '../../../components/articles/CustomizationP
 import EditorOnboarding from '../../../components/articles/EditorOnboarding';
 import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
 import EditorLoading from '../../../components/articles/EditorLoading';
+import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
@@ -413,6 +414,18 @@ const ArticleEditorPage: NextPage = () => {
   const [linkBar, setLinkBar] = useState<{ count: number; preLinkHtml: string; positions: number[] } | null>(null);
   const [linkNavIdx, setLinkNavIdx] = useState(0);
   const [autoOptimizeBar, setAutoOptimizeBar] = useState<{ preHtml: string } | null>(null);
+  // AI Readability "Apply All" → structure-only optimize, reviewed via its own bottom bar.
+  const [isApplyingReadability, setIsApplyingReadability] = useState(false);
+  const [readabilityBar, setReadabilityBar] = useState<{ preHtml: string } | null>(null);
+  // "Compare versions" modal — ORIGINAL (pre-optimize) vs NEW (current editor) side-by-side diff.
+  const [compareVersions, setCompareVersions] = useState<{ original: string; updated: string } | null>(null);
+  // Plagiarism highlights pushed up from the Plagiarism panel → red underlines in the editor.
+  const [plagSentences, setPlagSentences] = useState<string[]>([]);
+  const [plagFocused, setPlagFocused] = useState<string | null>(null);
+  const handlePlagiarismHighlight = useCallback((sentences: string[], focused: string | null) => {
+    setPlagSentences(sentences);
+    setPlagFocused(focused);
+  }, []);
   const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
   const [autoOptimizeStatus, setAutoOptimizeStatus] = useState('Optimizing article…');
   const [pendingImageCount, setPendingImageCount] = useState(0);
@@ -733,6 +746,54 @@ const ArticleEditorPage: NextPage = () => {
       setIsRunningAiVisibility(false);
     }
   };
+
+  // "Apply All" from the AI Readability panel — send the suggestions to the sidecar, which
+  // rewrites the article HTML applying them (structure only), then show the review bar.
+  const handleApplyReadability = async (result: { criteria?: Array<{ suggestions?: string[] }> }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor || !id || isApplyingReadability) return;
+    const suggestions = (result?.criteria || []).flatMap((c) => c.suggestions || []).filter(Boolean);
+    if (!suggestions.length) return;
+    const preHtml = editor.getHTML();
+    setIsApplyingReadability(true);
+    try {
+      const res = await fetch('/api/articles/apply-readability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: id, content: preHtml, suggestions }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.content) throw new Error(data?.error || 'Could not apply suggestions');
+      if (data.warning) { toast(data.warning, { icon: '⚠️' }); return; } // content unchanged → no review bar
+      try { editor.commands.setContent(data.content); } catch { /* noop */ }
+      setReadabilityBar({ preHtml });
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not apply suggestions');
+    } finally {
+      setIsApplyingReadability(false);
+    }
+  };
+
+  // Open the side-by-side diff of a pre-optimize snapshot vs. the current editor content.
+  const openCompareVersions = (preHtml: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    setCompareVersions({ original: preHtml, updated: editor ? editor.getHTML() : '' });
+  };
+  // Shared "Compare versions" button for the Auto-Optimize and Optimize-AI-Readability bars.
+  const compareVersionsButton = (preHtml: string) => (
+    <button
+      type="button"
+      onClick={() => openCompareVersions(preHtml)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; }}
+    >
+      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9" /></svg>
+      Compare versions
+    </button>
+  );
 
   const handleInsertLinks = (links: Array<{ anchorText: string; url: string }>) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1389,6 +1450,8 @@ const ArticleEditorPage: NextPage = () => {
               highlightTerms={highlightTerms}
               onAiActivity={setSurfyAiActive}
               articleKeyword={article?.target_keyword || ''}
+              plagiarismSentences={plagSentences}
+              plagiarismFocused={plagFocused}
               onChange={handleEditorChange}
               onMetaTitleChange={handleMetaTitleChange}
               onMetaDescriptionChange={handleMetaDescriptionChange}
@@ -1444,32 +1507,9 @@ const ArticleEditorPage: NextPage = () => {
                     />
                     <MenuRow icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowInternalLinksPanel(false); setShowHistory(true); setActionsMenu(false); }} />
                     <MenuRow icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
-                    {process.env.NODE_ENV !== 'production' && (
-                      <MenuRow
-                        icon={(
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: '#52525C' }}>
-                            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                        label="Dev: export debug JSON"
-                        onClick={async () => {
-                          setActionsMenu(false);
-                          try {
-                            const r = await fetch(`/api/articles/${id}/debug-export`);
-                            if (!r.ok) return;
-                            const blob = await r.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url; a.download = `article-${id}-debug.json`;
-                            document.body.appendChild(a); a.click(); a.remove();
-                            URL.revokeObjectURL(url);
-                          } catch { /* ignore */ }
-                        }}
-                      />
-                    )}
                     <div style={{ position: 'relative' }}>
                       <MenuRow icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
-                      {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 0, right: 'calc(100% + 8px)' }} />}
+                      {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
                     </div>
                   </div>
                 )}
@@ -1655,6 +1695,8 @@ const ArticleEditorPage: NextPage = () => {
                       aiVisibilitySummary={aiVisibilitySummary}
                       isRunningAiVisibility={isRunningAiVisibility}
                       onRunAiVisibility={handleRunAiVisibility}
+                      onApplyReadability={handleApplyReadability}
+                      onPlagiarismHighlight={handlePlagiarismHighlight}
                     />
                   </div>
                 </>
@@ -1719,6 +1761,9 @@ const ArticleEditorPage: NextPage = () => {
             <div style={{ width: 1, height: 18, background: '#27272a', flexShrink: 0 }} />
 
             <div style={{ flex: 1 }} />
+
+            {/* Compare versions */}
+            {compareVersionsButton(autoOptimizeBar.preHtml)}
 
             {/* Retry */}
             <button
@@ -1796,6 +1841,87 @@ const ArticleEditorPage: NextPage = () => {
               Accept changes
             </button>
           </div>
+        )}
+
+        {/* ── AI Readability optimize: working ──────────────────────── */}
+        {isApplyingReadability && (
+          <div style={{
+            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
+            background: '#09090b', borderRadius: 10,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
+          }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)' }}>Optimize AI Readability</span>
+            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#783afb', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Working</span>
+          </div>
+        )}
+
+        {/* ── AI Readability optimize: result bar (Compare versions added in a later step) ── */}
+        {readabilityBar && !isApplyingReadability && (
+          <div style={{
+            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
+            background: '#09090b', borderRadius: 10,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', padding: '0 10px 0 16px', height: 52, gap: 16,
+          }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>Optimize AI Readability</span>
+
+            {/* Compare versions */}
+            {compareVersionsButton(readabilityBar.preHtml)}
+
+            {/* Cancel — revert the editor to the pre-apply state (autosave re-persists it). */}
+            <button
+              type="button"
+              onClick={() => {
+                const preHtml = readabilityBar.preHtml;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const editor = (editorRef.current as any)?.getEditor?.();
+                if (editor) editor.commands.setContent(preHtml);
+                setReadabilityBar(null);
+              }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; }}
+            >
+              Cancel
+            </button>
+
+            {/* Accept — snapshot the optimized content as a new version. */}
+            <button
+              type="button"
+              onClick={async () => {
+                setReadabilityBar(null);
+                try {
+                  setAutoSaveState('saving');
+                  await doSave('readability_optimize');
+                  lastVersionAt.current = Date.now();
+                  setAutoSaveState('saved');
+                  toast.success('Changes accepted — version saved');
+                } catch {
+                  setAutoSaveState('unsaved');
+                  toast.error('Could not save version');
+                }
+              }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#18181b', background: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'opacity 0.15s', flexShrink: 0 }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            >
+              Accept
+            </button>
+          </div>
+        )}
+
+        {/* ── Compare versions modal (shared by Auto-Optimize + AI Readability bars) ── */}
+        {compareVersions && (
+          <CompareVersionsModal
+            original={compareVersions.original}
+            updated={compareVersions.updated}
+            terms={[article?.target_keyword, ...((scoreData?.terms || []).map((t) => t.term))].filter(Boolean) as string[]}
+            onClose={() => setCompareVersions(null)}
+          />
         )}
 
         {/* ── Link review floating modal (Surfy-style) ─────────────── */}

@@ -1,6 +1,7 @@
-// POST /api/articles/ai-readability  { articleId }
-// Runs the LLM "AI Readability" rubric (10 criteria) on the article via the sidecar,
-// persists the result, and returns { score, criteria }.
+// POST /api/articles/apply-readability  { articleId, content, suggestions[] }
+// Applies the AI Readability suggestions to the article HTML via the sidecar (structure-only
+// rewrite) and returns { content }. The client shows a diff/accept bar; persistence happens
+// on Accept (separate save), so this route does NOT write to the DB.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
@@ -10,7 +11,7 @@ import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+// Vercel: the LLM rewrite can take ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,8 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { articleId } = req.body;
+   const { articleId, content, suggestions } = req.body;
    if (!articleId) return res.status(400).json({ error: 'articleId is required' });
+   if (!content || !Array.isArray(suggestions) || suggestions.length === 0) {
+      return res.status(400).json({ error: 'content and suggestions are required' });
+   }
 
    const userId = await getCurrentUserId(req, res);
    if (!(await assertArticleAccess(userId, Number(articleId)))) {
@@ -31,23 +35,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    try {
       const articleIdSql = await getArticleIdSql();
       const [rows] = await db.query(
-         `SELECT content, meta_title, meta_description, target_keyword, title FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+         `SELECT target_keyword, title FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
          { replacements: [articleId] },
       );
       const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
-      const articleContent = `${article.meta_title || ''}\n${article.meta_description || ''}\n${article.content || ''}`;
-      const data = await callSidecar('/ai-readability', { article_content: articleContent, keyword: article.target_keyword || article.title || '' });
-      try {
-         await db.query(
-            `UPDATE articles SET ai_readability_json = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-            { replacements: [JSON.stringify(data), articleId] },
-         );
-      } catch { /* non-fatal */ }
+      const data = await callSidecar('/apply-ai-readability', {
+         content,
+         suggestions,
+         keyword: article.target_keyword || article.title || '',
+      });
 
       return res.status(200).json(data);
    } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'AI readability failed' });
+      return res.status(500).json({ error: error?.message || 'Apply readability failed' });
    }
 }
