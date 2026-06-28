@@ -39,6 +39,7 @@ const GlobalTopbar = ({ breadcrumb }: Props) => (
             <TopbarSearch />
          </div>
          <div className="global-topbar-actions" style={{ gap: 16 }}>
+            <span className="ce-search-compact"><TopbarSearch compact /></span>
             <TopbarInbox />
             <HelpButton />
             <TopbarAccountMenu />
