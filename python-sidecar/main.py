@@ -10,6 +10,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from bs4 import BeautifulSoup
@@ -39,6 +40,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def require_internal_token(request: Request, call_next):
+    """Authorise every request with the shared secret when one is configured.
+
+    The sidecar is deployed publicly (the Next.js app calls it server-to-server),
+    so without this anyone could hit the LLM endpoints and burn API credits. When
+    INTERNAL_PIPELINE_TOKEN is unset (local dev) the check is skipped; /health and
+    CORS preflight stay open.
+    """
+    expected = os.getenv("INTERNAL_PIPELINE_TOKEN", "")
+    if expected and request.method != "OPTIONS" and request.url.path != "/health":
+        if request.headers.get("x-internal-token", "") != expected:
+            return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+    return await call_next(request)
 
 
 class ArticleRef(BaseModel):

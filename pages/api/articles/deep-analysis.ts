@@ -319,7 +319,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       sidecarResp = await fetch(`${sidecarUrl}/pipeline/deep-analysis`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
         body: JSON.stringify({ jobId, payload }),
         signal: controller.signal,
       });

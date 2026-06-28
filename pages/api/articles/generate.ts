@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const sidecarRes = await axios.post(
             `${sidecarUrl}/generate`,
             { url: `https://${domain.domain}`, keyword, language, tone, existing_articles: domainArticles },
-            { timeout: 300000 }, // 5 minut — generowanie artykułu jest długie
+            { timeout: 300000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } }, // 5 minut — generowanie artykułu jest długie
          );
          sidecarData = sidecarRes.data;
          console.log(`[generate] Sidecar responded OK`);

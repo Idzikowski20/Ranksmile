@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const sidecarRes = await axios.post(
          `${sidecarUrl}/generate-image`,
          { keyword, title: prompt },
-         { timeout: 120000 },
+         { timeout: 120000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } },
       );
 
       // B1: self-host the generated image. Pollinations returns an ephemeral external URL —

@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
-    const r = await axios.post(`${sidecarUrl}/brand-knowledge`, { url }, { timeout: 60000 });
+    const r = await axios.post(`${sidecarUrl}/brand-knowledge`, { url }, { timeout: 60000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } });
     return res.status(200).json({ brandName: r.data?.brand_name || '', brandKnowledge: r.data?.brand_knowledge || '' });
   } catch (e: any) {
     const detail = e?.response?.data?.detail || e?.message || 'Analysis failed';
