@@ -25,8 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
 
-   const { articleId, status } = req.body || {};
+   const { articleId, status, customFields } = req.body || {};
    if (!articleId) return res.status(400).json({ error: 'articleId is required' });
+   // B5: optional ACF/custom-field map { fieldName: value } forwarded to the plugin
+   // (it writes each as post meta — ACF fields are post meta). A field-mapping UI is
+   // out of scope until a user needs it; this keeps the plumbing real end-to-end.
+   const customFieldsMap = customFields && typeof customFields === 'object' && !Array.isArray(customFields) ? customFields : null;
    const postStatus = status === 'draft' ? 'draft' : 'publish';
 
    const userId = await getCurrentUserId(req, res);
@@ -72,6 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       location: 'United States',
    };
    if (existingPostId) payload.post_id = existingPostId;
+   if (customFieldsMap) payload.custom_fields = customFieldsMap;
 
    let result: { post_id?: number; post_url?: string; edit_post_url?: string; post_status?: string };
    try {
