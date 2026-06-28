@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sidecarRes = await axios.post(
       `${sidecarUrl}/competitor-outlines`,
       { keyword, language, num },
-      { timeout: 60000 },
+      { timeout: 60000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } },
     );
     const result = sidecarRes.data;
 

@@ -163,7 +163,7 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
     const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
     const r = await fetch(`${sidecarUrl}/competitor-outlines`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
       body: JSON.stringify({ keyword, language: 'pl', num: 5 }),
       signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined,
     } as RequestInit);

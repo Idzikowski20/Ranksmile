@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         url: `https://${domainName}`, keyword, language: lang, tone, existing_articles: domainArticles,
         content_type: contentType, instructions, internal_links: internalLinks, external_links: externalLinks, review_outline: reviewOutline,
         brand_knowledge: brandKnowledge, voice_tone: voiceTone,
-      }, { timeout: 300000 });
+      }, { timeout: 300000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } });
       data = resp.data;
     } catch (sidecarError: any) {
       const detail = sidecarError?.response?.data || sidecarError?.message || 'sidecar unavailable';
