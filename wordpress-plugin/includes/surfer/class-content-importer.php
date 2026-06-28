@@ -126,6 +126,10 @@ class Content_Importer {
 
 			$this->content_parser->run_after_post_insert_actions( $post_id );
 
+			if ( ! is_wp_error( $post_id ) ) {
+				$this->rebuild_yoast_indexable( $post_id );
+			}
+
 			$logger->log_import( $original_content, $content, true );
 			return $post_id;
 
@@ -472,6 +476,12 @@ class Content_Importer {
 			$data['meta_input'] = array();
 		}
 
+		// First keyword (if any) becomes the SEO plugin's focus keyword.
+		$focus_keyword = '';
+		if ( isset( $args['keywords'] ) && is_array( $args['keywords'] ) && ! empty( $args['keywords'] ) ) {
+			$focus_keyword = (string) $args['keywords'][0];
+		}
+
 		// Yoast SEO is active.
 		if ( 'yoast' === $chosen_seo_plugin ) {
 
@@ -481,6 +491,10 @@ class Content_Importer {
 
 			if ( isset( $args['meta_description'] ) && '' !== $args['meta_description'] ) {
 				$data['meta_input']['_yoast_wpseo_metadesc'] = $args['meta_description'];
+			}
+
+			if ( '' !== $focus_keyword ) {
+				$data['meta_input']['_yoast_wpseo_focuskw'] = $focus_keyword;
 			}
 		}
 
@@ -494,6 +508,10 @@ class Content_Importer {
 			if ( isset( $args['meta_description'] ) && '' !== $args['meta_description'] ) {
 				$data['meta_input']['_aioseo_description'] = $args['meta_description'];
 			}
+
+			if ( '' !== $focus_keyword ) {
+				$data['meta_input']['_aioseo_focus_keyword'] = $focus_keyword;
+			}
 		}
 
 		// Rank Math SEO.
@@ -505,6 +523,10 @@ class Content_Importer {
 
 			if ( isset( $args['meta_description'] ) && '' !== $args['meta_description'] ) {
 				$data['meta_input']['rank_math_description'] = $args['meta_description'];
+			}
+
+			if ( '' !== $focus_keyword ) {
+				$data['meta_input']['rank_math_focus_keyword'] = $focus_keyword;
 			}
 		}
 
@@ -535,6 +557,33 @@ class Content_Importer {
 		}
 
 		return 'surfer';
+	}
+
+	/**
+	 * Rebuild Yoast's indexable for a freshly imported post so its SEO score is
+	 * computed immediately (Yoast otherwise rebuilds lazily). Best-effort: never
+	 * fail the import if the Yoast API isn't available for this version.
+	 *
+	 * @param int $post_id - the imported post id.
+	 * @return void
+	 */
+	private function rebuild_yoast_indexable( $post_id ) {
+		if ( ! surfer_check_if_plugins_is_active( 'wordpress-seo/wp-seo.php' ) ) {
+			return;
+		}
+		try {
+			if ( function_exists( 'YoastSEO' ) ) {
+				$container = YoastSEO()->classes;
+				$repository = $container->get( \Yoast\WP\SEO\Repositories\Indexable_Repository::class );
+				$builder    = $container->get( \Yoast\WP\SEO\Builders\Indexable_Builder::class );
+				$indexable  = $repository->find_by_id_and_type( $post_id, 'post', false );
+				$builder->build_for_id_and_type( $post_id, 'post', $indexable ? $indexable : false );
+			} else {
+				do_action( 'wpseo_save_indexable', $post_id );
+			}
+		} catch ( \Throwable $e ) {
+			do_action( 'wpseo_save_indexable', $post_id ); // pre-14.x fallback
+		}
 	}
 
 
