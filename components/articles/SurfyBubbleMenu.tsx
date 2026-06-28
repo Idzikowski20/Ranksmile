@@ -559,6 +559,12 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
       requestAnimationFrame(computeStyle);
     };
 
+    // Touch devices never fire mouseup — show the toolbar after a touch selection
+    // settles (double rAF lets the native selection handles finalize first).
+    const onTouchEnd = () => {
+      requestAnimationFrame(() => requestAnimationFrame(computeStyle));
+    };
+
     // Track keyboard-driven selection changes only when toolbar is already visible
     const onSelectionUpdate = () => {
       if (visibleRef.current) computeStyle();
@@ -577,6 +583,7 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
     };
 
     dom.addEventListener('mouseup', onMouseUp);
+    dom.addEventListener('touchend', onTouchEnd);
     window.addEventListener('resize', onViewportChange);
     document.addEventListener('scroll', onViewportChange, true);
     editor.on('selectionUpdate', onSelectionUpdate);
@@ -584,6 +591,7 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
 
     return () => {
       dom.removeEventListener('mouseup', onMouseUp);
+      dom.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', onViewportChange);
       document.removeEventListener('scroll', onViewportChange, true);
       editor.off('selectionUpdate', onSelectionUpdate);

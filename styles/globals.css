@@ -492,6 +492,33 @@ body {
    }
 }
 
+/* ── Content Editor: tablet / phone responsiveness ─────────────────
+   The editor is a 2-column layout (editor card + a fixed 320px Content
+   Score panel reserved via the editor's margin-right). On <1024px the
+   editor goes full-width and the panel becomes a full-width drawer that
+   slides over the content area. */
+@media (max-width: 1023px) {
+   .ce-editor-card { margin-right: 0 !important; }
+   .ce-right-panel {
+      left: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      gap: 0 !important;
+      z-index: 200 !important;
+   }
+   .ce-right-panel > * { width: 100% !important; max-width: 100% !important; }
+   /* Long words / pasted URLs must wrap instead of pushing the page wider. */
+   .article-editor-shell .ProseMirror { overflow-wrap: break-word; word-break: break-word; }
+   .article-editor-shell .ProseMirror img { max-width: 100%; height: auto; }
+   /* Reserve room for the fixed MobileBottomNav so it isn't covered by the editor. */
+   .article-editor-shell {
+      box-sizing: border-box;
+      padding-bottom: var(--mobile-nav-height, 64px);
+   }
+   /* The full-screen Content Score drawer must clear the bottom nav too. */
+   .ce-right-panel { bottom: var(--mobile-nav-height, 64px) !important; }
+}
+
 /* Fully hidden scrollbar — element still scrolls (wheel / trackpad). */
 .no-scrollbar {
    scrollbar-width: none;
