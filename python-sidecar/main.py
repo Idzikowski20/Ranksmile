@@ -353,6 +353,30 @@ async def pipeline_domain_setup(req: DomainSetupRequest):
     return {"status": "accepted"}
 
 
+@app.post("/pipeline/generate")
+async def pipeline_generate(req: DomainSetupRequest):
+    """Async single-article generation: runs /generate in the background and POSTs a
+    terminal done/failed callback to /api/articles/job-progress with the article result.
+    Returns immediately so the caller (a Vercel function) isn't bound by the LLM duration."""
+    import asyncio
+    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    asyncio.create_task(run_generate(req.jobId, req.payload, nextjs_url))
+    return {"status": "accepted"}
+
+
+async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
+    """Generate one article and post the result to job-progress. Never raises
+    (runs as an asyncio background task) — always posts a terminal done/failed callback."""
+    from pipeline.domain_runner import post_terminal
+    try:
+        resp = await generate_article(GenerateRequest(**payload))
+        await post_terminal(nextjs_url, job_id, "done", result=resp.model_dump())
+    except Exception as exc:
+        err = f"{type(exc).__name__}: {exc}"
+        print(f"[generate_runner] failed for {job_id}: {err}")
+        await post_terminal(nextjs_url, job_id, "failed", error=err)
+
+
 @app.post("/pipeline/deep-analysis")
 async def pipeline_deep_analysis(req: PipelineRequest):
     """
