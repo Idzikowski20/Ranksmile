@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { diffBlocks, DiffBlock, WordSeg } from '../../lib/wordDiff';
 
@@ -64,8 +64,8 @@ const renderSegs = (segs: WordSeg[], regex: RegExp | null): React.ReactNode => s
   return <span key={i} style={style}>{highlightTerms(seg.text, regex)}</span>;
 });
 
-const Pane = ({ blocks, side, regex }: { blocks: DiffBlock[]; side: 'left' | 'right'; regex: RegExp | null }) => (
-  <div style={{ flex: 1, minWidth: 0, border: '1px solid #e4e4e7', borderRadius: 8, padding: '12px 16px', overflowY: 'auto' }} className="styled-scrollbar">
+const Pane = ({ blocks, side, regex, innerRef, onScroll }: { blocks: DiffBlock[]; side: 'left' | 'right'; regex: RegExp | null; innerRef: React.RefObject<HTMLDivElement>; onScroll: () => void }) => (
+  <div ref={innerRef} onScroll={onScroll} style={{ flex: 1, minWidth: 0, border: '1px solid #e4e4e7', borderRadius: 8, padding: '12px 16px', overflowY: 'auto' }} className="styled-scrollbar">
     {blocks.map((b, i) => {
       const segs = side === 'left' ? b.left : b.right;
       if (!segs) return null;
@@ -78,6 +78,20 @@ const CompareVersionsModal = ({ original, updated, terms, onClose }: Props) => {
   const [highlight, setHighlight] = useState(true);
   const blocks = useMemo(() => diffBlocks(original, updated), [original, updated]);
   const regex = useMemo(() => (highlight ? buildTermRegex(terms) : null), [highlight, terms]);
+
+  // Scroll the two panes together — scrolling either one drives the other (single gesture).
+  const leftRef = useRef<HTMLDivElement>(null);
+  const rightRef = useRef<HTMLDivElement>(null);
+  const syncing = useRef(false);
+  const syncScroll = (from: 'left' | 'right') => {
+    if (syncing.current) return;
+    const src = (from === 'left' ? leftRef : rightRef).current;
+    const dst = (from === 'left' ? rightRef : leftRef).current;
+    if (!src || !dst) return;
+    syncing.current = true;
+    dst.scrollTop = src.scrollTop;
+    requestAnimationFrame(() => { syncing.current = false; });
+  };
 
   return createPortal(
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
@@ -111,8 +125,8 @@ const CompareVersionsModal = ({ original, updated, terms, onClose }: Props) => {
 
         {/* Diff panes */}
         <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, padding: '0 24px 16px' }}>
-          <Pane blocks={blocks} side="left" regex={regex} />
-          <Pane blocks={blocks} side="right" regex={regex} />
+          <Pane blocks={blocks} side="left" regex={regex} innerRef={leftRef} onScroll={() => syncScroll('left')} />
+          <Pane blocks={blocks} side="right" regex={regex} innerRef={rightRef} onScroll={() => syncScroll('right')} />
         </div>
 
         {/* Footer */}
