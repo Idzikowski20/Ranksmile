@@ -56,7 +56,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const payload: Record<string, unknown> = {
       content: cleanContent,
       metadata: {
-         postTitle: article.title || '',
+         // The WP post title should be the SEO/meta title the user set (the article's
+         // `title` is the in-editor heading and can be a stale/generic default).
+         postTitle: article.meta_title || article.title || '',
          postStatus: { value: postStatus },
          postType: { value: 'post' },
          postMetaTitle: article.meta_title || '',
