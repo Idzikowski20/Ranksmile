@@ -147,19 +147,44 @@ const CommandMenu = ({ open, onClose, commands, anchorRef }: {
   );
 };
 
-const TopbarSearch = () => {
+const TopbarSearch = ({ compact = false }: { compact?: boolean }) => {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const commands = useCommands();
 
-  // Ctrl/⌘+K toggles the command menu.
+  // Ctrl/⌘+K toggles the command menu. Only the full-bar instance owns the
+  // shortcut (the compact icon is a duplicate rendered on narrow screens).
   useEffect(() => {
+    if (compact) return undefined;
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); setOpen((o) => !o); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [compact]);
+
+  if (compact) {
+    return (
+      <>
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-label="Search"
+          onClick={() => setOpen(true)}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, height: 36, borderRadius: 9999, border: 'none', cursor: 'pointer',
+            background: 'transparent', color: '#9F9FA9', transition: 'opacity 150ms ease',
+          }}
+        >
+          <SearchIcon size={20} />
+        </button>
+        <CommandMenu open={open} onClose={() => setOpen(false)} commands={commands} anchorRef={triggerRef} />
+      </>
+    );
+  }
 
   return (
     <>

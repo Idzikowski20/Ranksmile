@@ -312,6 +312,7 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
           <img alt="" width={20} height={20} style={{ borderRadius: 4 }} src={`https://www.google.com/s2/favicons?domain=${domain || 'serpbear'}&sz=32`} />
         </span>
       </Link>
+      <div className="ce-bc-rest" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
       <BcChevron />
       <Link href="/articles" style={{ color: '#9F9FA9', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: f, fontSize: 14 }}>Content Editor</Link>
       <BcChevron />
@@ -356,6 +357,7 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

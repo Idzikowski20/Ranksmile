@@ -269,6 +269,18 @@ body {
    opacity: 0.85;
 }
 
+/* The compact search icon (in the actions cluster) only shows on narrow screens. */
+.ce-search-compact { display: none; }
+
+/* <640px: collapse the topbar so it never overflows horizontally — the editor
+   breadcrumb shrinks to just its leading domain icon (still links to the
+   dashboard) and the full search bar is swapped for a search icon. */
+@media (max-width: 639px) {
+   .ce-bc-rest { display: none !important; }
+   .global-topbar-center { display: none !important; }
+   .ce-search-compact { display: inline-flex !important; }
+}
+
 .global-topbar-title {
    min-width: 0;
    gap: 8px;
