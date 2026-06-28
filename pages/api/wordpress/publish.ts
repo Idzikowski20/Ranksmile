@@ -25,13 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
 
-   const { articleId, status, customFields } = req.body || {};
+   const { articleId, status, customFields, title, metaTitle, metaDescription, author, categories, tags, type, mode } = req.body || {};
    if (!articleId) return res.status(400).json({ error: 'articleId is required' });
    // B5: optional ACF/custom-field map { fieldName: value } forwarded to the plugin
    // (it writes each as post meta — ACF fields are post meta). A field-mapping UI is
    // out of scope until a user needs it; this keeps the plumbing real end-to-end.
    const customFieldsMap = customFields && typeof customFields === 'object' && !Array.isArray(customFields) ? customFields : null;
-   const postStatus = status === 'draft' ? 'draft' : 'publish';
+   // The plugin validates the status itself; default to publish for anything unexpected.
+   const ALLOWED_STATUS = new Set(['draft', 'publish', 'pending', 'future', 'private']);
+   const postStatus = typeof status === 'string' && ALLOWED_STATUS.has(status) ? status : 'publish';
 
    const userId = await getCurrentUserId(req, res);
    if (!(await assertArticleAccess(userId, Number(articleId)))) return res.status(403).json({ error: 'Access denied.' });
@@ -54,21 +56,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const cleanContent = cleanHtmlForWordPress(article.content);
    if (!cleanContent) return res.status(400).json({ error: 'Article content is empty after cleanup.' });
 
-   // If we've published this article before, send the remote post id so the plugin
-   // UPDATES that post (wp_insert_post with an ID) instead of creating a duplicate.
-   const existingPostId = article.wp_post_id && article.wp_post_id > 0 ? article.wp_post_id : undefined;
+   // "create" forces a brand-new post; otherwise, if we've published this article before, send
+   // the remote post id so the plugin UPDATES that post instead of creating a duplicate.
+   const existingPostId = mode !== 'create' && article.wp_post_id && article.wp_post_id > 0 ? article.wp_post_id : undefined;
+
+   // Build metadata from the modal's selections, falling back to the article's own values.
+   // post types/categories/tags/authors are all { value, label } from the plugin; the importer
+   // wants { value } (categories/tags as arrays of { value }).
+   const toValue = (x: any) => ({ value: x && typeof x === 'object' ? x.value : x });
+   const metadata: Record<string, unknown> = {
+      // The WP post title defaults to the SEO/meta title (the article's `title` is the in-editor
+      // heading and can be a stale/generic default), but the modal may override it.
+      postTitle: (typeof title === 'string' && title.trim()) || article.meta_title || article.title || '',
+      postStatus: { value: postStatus },
+      postType: type && (type as any).value ? { value: (type as any).value } : { value: 'post' },
+      postMetaTitle: (typeof metaTitle === 'string' ? metaTitle : article.meta_title) || '',
+      postMetaDescription: (typeof metaDescription === 'string' ? metaDescription : article.meta_description) || '',
+   };
+   if (author && (author as any).value) metadata.postAuthor = { value: (author as any).value };
+   const catValues = Array.isArray(categories) ? categories.map(toValue).filter((c) => c.value != null && c.value !== '') : [];
+   if (catValues.length) metadata.postCategory = catValues;
+   const tagValues = Array.isArray(tags) ? tags.map(toValue).filter((t) => t.value != null && t.value !== '') : [];
+   if (tagValues.length) metadata.postTags = tagValues;
 
    const payload: Record<string, unknown> = {
       content: cleanContent,
-      metadata: {
-         // The WP post title should be the SEO/meta title the user set (the article's
-         // `title` is the in-editor heading and can be a stale/generic default).
-         postTitle: article.meta_title || article.title || '',
-         postStatus: { value: postStatus },
-         postType: { value: 'post' },
-         postMetaTitle: article.meta_title || '',
-         postMetaDescription: article.meta_description || '',
-      },
+      metadata,
       url: article.slug || '',
       draft_id: article.id,
       permalink_hash: permalinkHash(article.id),

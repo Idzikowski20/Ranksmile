@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
-import { Tabs } from '../ui';
+import WordPressExportModal from './WordPressExportModal';
+import SocialMediaModal from './SocialMediaModal';
 
 const F = 'var(--font-family-primary)';
 
@@ -109,8 +110,8 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
   // WordPress connection (made from the WP plugin) + one-click publish/update via the plugin.
   type WpState = { connected: boolean; siteUrl: string | null; published: boolean; postStatus: 'publish' | 'draft' | null; postUrl: string | null };
   const [wp, setWp] = useState<WpState>({ connected: false, siteUrl: null, published: false, postStatus: null, postUrl: null });
-  const [wpStatus, setWpStatus] = useState<'publish' | 'draft'>('publish'); // target status for the next publish/update
-  const [wpPublishing, setWpPublishing] = useState(false);
+  const [wpModalOpen, setWpModalOpen] = useState(false);
+  const [socialModalOpen, setSocialModalOpen] = useState(false);
   const [wpLoading, setWpLoading] = useState(true); // skeleton until the status is known (never flash "Not connected")
   useEffect(() => {
     if (!articleId) { setWpLoading(false); return; }
@@ -121,40 +122,16 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
         if (!d) return;
         const ps = d.postStatus === 'draft' ? 'draft' : d.postStatus === 'publish' ? 'publish' : null;
         setWp({ connected: !!d.connected, siteUrl: d.siteUrl ?? null, published: !!d.published, postStatus: ps, postUrl: d.postUrl ?? null });
-        if (ps) setWpStatus(ps);
       })
       .catch(() => {})
       .finally(() => setWpLoading(false));
   }, [articleId]);
   const wpHost = (() => { try { return wp.siteUrl ? new URL(wp.siteUrl).host : ''; } catch { return wp.siteUrl || ''; } })();
 
-  const publishWp = async () => {
-    if (!articleId || wpPublishing) return;
-    setWpPublishing(true);
-    const wasPublished = wp.published;
-    try {
-      const res = await fetch('/api/wordpress/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ articleId, status: wpStatus }) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(data?.error || 'WordPress publish failed.'); return; }
-      const ps = data.post_status === 'draft' ? 'draft' : 'publish';
-      setWp((p) => ({ ...p, published: true, postStatus: ps, postUrl: data.post_url || p.postUrl }));
-      setWpStatus(ps);
-      toast.success(data.updated ? 'Updated on WordPress' : (ps === 'draft' ? 'Saved as draft on WordPress' : 'Published to WordPress'));
-      // Open the live post in a new tab only on the first publish, not on every update.
-      if (data.post_url && !wasPublished && ps === 'publish' && typeof window !== 'undefined') window.open(data.post_url, '_blank');
-    } catch { toast.error('WordPress publish failed.'); } finally { setWpPublishing(false); }
-  };
-
-  const wpBtnLabel = !wp.connected
-    ? 'WordPress'
-    : wpPublishing
-      ? (wp.published ? 'Updating…' : 'Publishing…')
-      : (wp.published ? 'Update to WordPress' : 'Publish to WordPress');
-
-  // Block publish/update while the article has unsaved or in-flight changes — we'd
-  // otherwise push stale content to WordPress.
+  // Block opening the export modal while the article has unsaved or in-flight changes — the
+  // modal publishes the last-saved content, so we'd otherwise push stale content to WordPress.
   const wpBlocked = wp.connected && (saveState === 'saving' || saveState === 'unsaved');
-  const wpBtnDisabled = readOnly || wpPublishing || wpBlocked;
+  const wpBtnDisabled = readOnly || wpBlocked;
 
   const copy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`)).catch(() => toast.error('Copy failed'));
@@ -276,11 +253,11 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               </>
             ) : (
               <>
-                <button type="button" disabled={wpBtnDisabled} onClick={wpBtnDisabled ? undefined : (wp.connected ? publishWp : () => router.push('/settings/wordpress'))}
+                <button type="button" disabled={wpBtnDisabled} onClick={wpBtnDisabled ? undefined : (wp.connected ? () => setWpModalOpen(true) : () => router.push('/settings/wordpress'))}
                   style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: wpBtnDisabled ? 'not-allowed' : 'pointer', opacity: wpBtnDisabled ? 0.5 : 1, transition: 'background 0.15s' }}
                   onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
                   {WpLogo}
-                  {wpBtnLabel}
+                  WordPress
                 </button>
 
                 {/* Why the button is disabled — content must be saved before it ships. */}
@@ -288,20 +265,6 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
                   <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>
                     {saveState === 'saving' ? 'Saving changes…' : 'Save your changes to publish to WordPress.'}
                   </span>
-                )}
-
-                {/* Status — choose draft vs published; applied on the next Publish/Update */}
-                {wp.connected && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47', fontFamily: F }}>Status</span>
-                    <div style={{ opacity: (readOnly || wpPublishing) ? 0.6 : 1, pointerEvents: (readOnly || wpPublishing) ? 'none' : 'auto' }}>
-                      <Tabs
-                        items={[{ value: 'draft', label: 'Draft' }, { value: 'publish', label: 'Published' }]}
-                        value={wpStatus}
-                        onChange={(v) => setWpStatus(v === 'draft' ? 'draft' : 'publish')}
-                      />
-                    </div>
-                  </div>
                 )}
 
                 {/* Connection status, with the actions stacked beneath it */}
@@ -361,9 +324,9 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px' }}>
           <SectionTitle>Social media</SectionTitle>
           <span style={{ fontSize: 14, color: '#18181b', fontFamily: F }}>Create a social media post from your content</span>
-          <button type="button" onClick={() => toast('Social media post — coming soon')}
-            style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer', transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          <button type="button" disabled={!articleId} onClick={() => articleId && setSocialModalOpen(true)}
+            style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: articleId ? 'pointer' : 'not-allowed', opacity: articleId ? 1 : 0.5, transition: 'background 0.15s' }}
+            onMouseEnter={(e) => { if (articleId) e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
             Create Social Media Post
           </button>
         </div>
@@ -390,6 +353,12 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           </div>
         )}
       </div>
+      {wpModalOpen && articleId && (
+        <WordPressExportModal articleId={articleId} onClose={() => setWpModalOpen(false)} />
+      )}
+      {socialModalOpen && articleId && (
+        <SocialMediaModal articleId={articleId} onClose={() => setSocialModalOpen(false)} />
+      )}
     </div>
   );
 };

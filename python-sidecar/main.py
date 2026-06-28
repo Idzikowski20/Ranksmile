@@ -21,6 +21,7 @@ from analyzers.meta_generator import generate_meta
 from analyzers.image_generator import generate_article_image
 from analyzers.ai_visibility import run_ai_visibility
 from analyzers.ai_readability import run_ai_readability, apply_ai_readability
+from analyzers.social_posts import generate_social_posts
 from analyzers.content_classifier import classify
 from analyzers.ranking_scorer import predict_ranking
 from analyzers.plagiarism import run_plagiarism
@@ -337,6 +338,14 @@ async def apply_ai_readability_endpoint(body: dict):
     suggestions = body.get("suggestions", []) or []
     keyword = body.get("keyword", "")
     return await apply_ai_readability(content, suggestions, keyword)
+
+
+@app.post("/social-posts")
+async def social_posts_endpoint(body: dict):
+    """Generate 3 social-media promo post variants from the article."""
+    content = body.get("article_content", "")
+    keyword = body.get("keyword", "")
+    return await generate_social_posts(content, keyword)
 
 
 class PipelineRequest(BaseModel):
