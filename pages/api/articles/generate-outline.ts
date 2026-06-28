@@ -6,6 +6,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import type { CompetitorOutline } from '../../../components/articles/ResearchOutlinePanel';
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });

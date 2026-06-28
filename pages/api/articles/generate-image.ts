@@ -7,6 +7,7 @@ import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 
 // Obraz jako base64 może mieć 500KB+ — zwiększ limit odpowiedzi
 export const config = {
+   maxDuration: 60,
    api: { responseLimit: '10mb' },
 };
 

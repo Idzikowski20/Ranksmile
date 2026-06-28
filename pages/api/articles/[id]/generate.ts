@@ -14,6 +14,9 @@ import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();

@@ -18,7 +18,7 @@ import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
 import { scoreContent } from '../../../lib/seo/scoreContentClient';
 
-export const config = { api: { responseLimit: '10mb' } };
+export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
 // Strip LLM meta-chatter that occasionally leaks into the article body:
 // a leading "Here is the complete HTML article…" preamble and placeholder

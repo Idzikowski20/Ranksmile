@@ -9,7 +9,7 @@ import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
 import { scoreContent } from '../../../lib/seo/scoreContentClient';
 
-export const config = { api: { responseLimit: '10mb' } };
+export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
 type SurfyAction =
   | 'analysis_only'

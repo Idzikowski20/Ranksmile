@@ -8,6 +8,9 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
    const authorized = await verifyUser(req, res);
