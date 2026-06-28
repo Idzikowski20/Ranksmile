@@ -166,6 +166,9 @@ async function runKeywordMode(
   sse(res, 'done', { articleId });
 }
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[deep-analysis] handler invoked', req.method);
   await db.sync();

@@ -12,6 +12,9 @@ type NotifyResponse = {
    error?: string|null,
 }
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method === 'POST') {
       await db.sync();

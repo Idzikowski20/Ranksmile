@@ -10,6 +10,9 @@ import { computeDrops } from '../../../lib/gscDrops';
 import { buildGscDigest, DomainDigest } from '../../../lib/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    // Weryfikuj Vercel Cron Secret
    if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
