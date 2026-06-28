@@ -8,6 +8,7 @@ import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
@@ -259,6 +260,7 @@ const DashboardPage: NextPage = () => {
                 />
               ) : undefined}
             />
+            <TrafficAlertsSection />
             <LearnSection />
           </div>
         </div>
