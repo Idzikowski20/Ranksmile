@@ -2,13 +2,16 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { Gauge, Button, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel } from '../../../components/ui';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
+import { useWorkspaces } from '../../../services/workspaces';
+import { deriveActiveId } from '../../../lib/activeWorkspace';
+import { useTrafficAlerts } from '../../../lib/useTrafficAlerts';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { kwScore } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
@@ -103,6 +106,13 @@ const ContentAuditPage: NextPage = () => {
    const { data: domainsData } = useFetchDomains(router, true);
    const domains = domainsData?.domains || [];
    const activeDomain = domains.find((d) => d.slug === slug);
+
+   // GSC weekly drop alerts → "Traffic drop" badge on pages that lost ranking this week.
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => { setMounted(true); }, []);
+   const { data: wsData } = useWorkspaces();
+   const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+   const { droppedPaths } = useTrafficAlerts(wsId);
 
    const [search, setSearch] = useState('');
    const [showUrls, setShowUrls] = useState(false);
@@ -440,6 +450,9 @@ const ContentAuditPage: NextPage = () => {
                                     {row.title}
                                  </span>
                                  <StatusBadge status={row.status} />
+                                 {row.url && droppedPaths.has(toPath(row.url)) && (
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: '#B91C1C', background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 9999, padding: '1px 8px', whiteSpace: 'nowrap', fontFamily: FONT }}>Traffic drop</span>
+                                 )}
                               </div>
                               {row.keyword ? (
                                  <button type="button" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, maxWidth: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 12, color: '#71717B', overflow: 'hidden', textAlign: 'left' }}>
