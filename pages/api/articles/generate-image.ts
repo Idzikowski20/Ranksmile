@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
+import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 
 // Obraz jako base64 może mieć 500KB+ — zwiększ limit odpowiedzi
 export const config = {
@@ -27,7 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          { keyword, title: prompt },
          { timeout: 120000 },
       );
-      return res.status(200).json(sidecarRes.data);
+
+      // B1: self-host the generated image. Pollinations returns an ephemeral external URL —
+      // mirror it into our R2 bucket and return the stable URL instead. Fail-safe: on any
+      // upload failure we keep the original URL (and data: URLs are left untouched).
+      const data = sidecarRes.data as { url?: string } & Record<string, unknown>;
+      if (data?.url && /^https?:\/\//i.test(data.url)) {
+         const fname = String(prompt || keyword || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'image';
+         const r2 = await uploadImageFromUrl(data.url, fname);
+         if (r2) data.url = r2;
+      }
+      return res.status(200).json(data);
    } catch (error: any) {
       const detail = error?.response?.data?.detail || error?.message || 'Image generation failed';
       console.error('[generate-image] error:', detail);
