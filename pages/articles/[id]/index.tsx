@@ -1349,6 +1349,7 @@ const ArticleEditorPage: NextPage = () => {
 
           {/* ── Editor card (white rounded, padding-right for panel) ── */}
           <div
+            className="ce-editor-card"
             style={{
               flex: 1,
               minWidth: 0,
@@ -1483,6 +1484,7 @@ const ArticleEditorPage: NextPage = () => {
           {!panelCollapsed && (
           <motion.div
             key="rightpanel"
+            className="ce-right-panel"
             initial={{ x: PANEL_W + 24, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: PANEL_W + 24, opacity: 0 }}
