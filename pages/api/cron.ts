@@ -4,6 +4,8 @@ import Keyword from '../../database/models/keyword';
 import Domain from '../../database/models/domain';
 import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { getCallerRole } from '../../lib/members';
 import refreshAndUpdateKeywords from '../../utils/refresh';
 
 type CRONRefreshRes = {
@@ -18,6 +20,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: authorized });
    }
    if (req.method === 'POST') {
+      // This flips EVERY keyword to updating + kicks an install-wide scrape. Allow the intended
+      // APIKEY scheduler; a session member must be owner/admin (else it's a DoS/quota-burn lever).
+      const isApiKey = req.headers.authorization?.substring('Bearer '.length) === process.env.APIKEY;
+      if (!isApiKey) {
+         const userId = await getCurrentUserId(req, res);
+         if (userId) {
+            const role = await getCallerRole(String(userId)).catch(() => null);
+            if (role !== 'owner' && role !== 'admin') return res.status(403).json({ started: false, error: 'Admin only.' });
+         }
+      }
       return cronRefreshkeywords(req, res);
    }
    return res.status(502).json({ error: 'Unrecognized Route.' });
