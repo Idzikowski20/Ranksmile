@@ -10,7 +10,7 @@ import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { emitCommentChange } from '../../../../lib/commentBus';
-import { assertCommentAccess } from '../../../../lib/commentAccess';
+import { getCommentAccessKind } from '../../../../lib/commentAccess';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;
@@ -65,9 +65,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // Reachable by raw article_id, so a valid share token (anonymous reviewer) or owner
    // access is required — otherwise any guessed id would expose another tenant's comments.
    const articleId = parseInt(String(id), 10);
-   if (!(await assertCommentAccess(req, res, articleId))) {
+   const access = await getCommentAccessKind(req, res, articleId);
+   if (!access) {
       return res.status(403).json({ error: 'Access denied.' });
    }
+   // An anonymous (share-token) reviewer may not edit/delete a comment authored by the owner.
+   const isOwnerComment = async (cid: string): Promise<boolean> => {
+      const [r] = await db.query('SELECT is_owner FROM article_comments WHERE id = ? AND article_id = ?', { replacements: [cid, id] });
+      return Number((r as any[])[0]?.is_owner) === 1;
+   };
 
    try {
       if (req.method === 'GET') {
@@ -92,9 +98,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          // Replies don't carry their own anchor quote.
          const q = parentId ? '' : quote;
          await db.query(
-            `INSERT INTO article_comments (id, article_id, quote, body, images_json, author, color, avatar_url, parent_id, resolved, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
-            { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId] },
+            `INSERT INTO article_comments (id, article_id, quote, body, images_json, author, color, avatar_url, parent_id, is_owner, resolved, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId, access === 'owner' ? 1 : 0] },
          );
          emitCommentChange(String(id), { type: 'create', commentId, parentId });
          return res.status(200).json({
@@ -110,6 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                { replacements: [resolved ? 1 : 0, commentId, id] });
          }
          if (typeof text === 'string') {
+            if (access === 'token' && await isOwnerComment(commentId)) return res.status(403).json({ error: "You can't edit the owner's comment." });
             await db.query(`UPDATE article_comments SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND article_id = ?`,
                { replacements: [text, commentId, id] });
          }
@@ -130,6 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (req.method === 'DELETE') {
          const { commentId } = req.query;
          if (!commentId) return res.status(400).json({ error: 'commentId is required' });
+         if (access === 'token' && await isOwnerComment(String(commentId))) return res.status(403).json({ error: "You can't delete the owner's comment." });
          // Deleting a root removes its whole thread (replies anchored to it).
          await db.query(`DELETE FROM article_comments WHERE article_id = ? AND (id = ? OR parent_id = ?)`,
             { replacements: [id, commentId, commentId] });

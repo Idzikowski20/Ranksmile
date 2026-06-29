@@ -104,7 +104,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
               meta_url = COALESCE(?, meta_url),
               word_count = COALESCE(?, word_count),
               score_data = COALESCE(?, score_data),
-              content_score = ?,
+              content_score = CASE WHEN ? IS NOT NULL THEN ? ELSE content_score END,
               featured_image = CASE WHEN ? IS NOT NULL THEN ? ELSE featured_image END,
               internal_links_cache = CASE WHEN ? IS NOT NULL THEN ? ELSE internal_links_cache END,
               updated_at = CURRENT_TIMESTAMP
@@ -120,7 +120,10 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
                meta_url ?? null,
                word_count ?? null,
                score_data ? JSON.stringify(score_data) : null,
-               score_data ? contentScore : 0,
+               // Only (re)write content_score when score_data was sent — a partial save (title/status/
+               // meta only) must NOT zero the previously-computed score.
+               score_data ? contentScore : null,
+               score_data ? contentScore : null,
                featured_image !== undefined ? featured_image : null,
                featured_image !== undefined ? featured_image : null,
                internal_links_cache !== undefined ? JSON.stringify(internal_links_cache) : null,

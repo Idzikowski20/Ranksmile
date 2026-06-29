@@ -54,7 +54,9 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
       }
 
       if (resolvedDomainId) {
-         if (allowedIds.length > 0 && !allowedIds.includes(resolvedDomainId)) {
+         // Empty allow-list must DENY (not skip the check) — a user with no accessible domains
+         // could otherwise read any domain's articles by supplying its id.
+         if (!allowedIds.includes(resolvedDomainId)) {
             return res.status(403).json({ error: 'Access denied.' });
          }
          where = 'WHERE domain_id = ?';
