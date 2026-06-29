@@ -9,6 +9,7 @@ TARGET KEYWORD: ${ctx.keyword || '(none)'}
 
 TOOLS
 Read (inform yourself before editing):
+- get_tool_catalog — list every tool you can call (use if unsure what's available)
 - get_content_score — current word/heading/paragraph counts vs targets + per-term coverage
 - list_missing_terms — NLP terms the article under-uses
 - get_ranking_signals — ranking score + weakest signals with fix tactics

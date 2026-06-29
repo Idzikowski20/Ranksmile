@@ -51,6 +51,31 @@ function normalizeSocialPosts(d: any): string[] {
 
 export function buildTools(ctx: ToolCtx) {
   return {
+    get_tool_catalog: tool({
+      description: 'List every tool you can call, with its category and a one-line purpose. Call this if you are unsure what is available.',
+      inputSchema: z.object({}),
+      execute: async () => ({
+        tools: [
+          { category: 'read', name: 'get_content_score', description: 'word/heading counts vs targets + term coverage' },
+          { category: 'read', name: 'list_missing_terms', description: 'NLP terms the article under-uses' },
+          { category: 'read', name: 'get_ranking_signals', description: 'ranking score + weakest signals' },
+          { category: 'read', name: 'list_internal_link_targets', description: 'internal articles to link to' },
+          { category: 'read', name: 'get_ai_search_score', description: 'AI-search visibility + citation/extractability' },
+          { category: 'read', name: 'check_plagiarism', description: 'uniqueness % + flagged passages' },
+          { category: 'read', name: 'fetch_competitor_outline', description: 'PAA + competitor heading outlines' },
+          { category: 'read', name: 'get_headings_outline', description: "the article's own heading hierarchy" },
+          { category: 'navigate', name: 'get_outline', description: 'current outline (sid + tag + preview)' },
+          { category: 'navigate', name: 'read_block', description: 'exact tag/text/HTML of one sid' },
+          { category: 'write', name: 'apply_edit', description: 'edit/remove a block by sid' },
+          { category: 'write', name: 'insert_section', description: 'add a heading + body section' },
+          { category: 'write', name: 'set_meta', description: 'stage SEO meta changes' },
+          { category: 'act', name: 'generate_social_posts', description: 'draft social promo posts (posts nothing)' },
+          { category: 'act', name: 'apply_readability', description: 'rewrite body for readability (staged)' },
+          { category: 'act', name: 'publish_to_wordpress', description: 'PROPOSE publishing (user confirms)' },
+        ],
+      }),
+    }),
+
     read_block: tool({
       description: 'Get the current tag, text, and exact inner HTML of a block by its sid. Read a block before editing it so you replace the right content accurately (essential for lists and tables).',
       inputSchema: z.object({ sid: z.number().int() }),
