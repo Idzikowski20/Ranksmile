@@ -13,6 +13,7 @@ import { readContentSettings } from '../../../../lib/contentSettings';
 import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
+import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -29,6 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!(await assertArticleAccess(userId, articleIdNum))) {
     return res.status(403).json({ error: 'Access denied.' });
   }
+
+  // Org-wide AI budget: full-article generation is expensive.
+  const orgId = await resolveOrgId(req, res);
+  const over = await orgBudgetBlocked(orgId);
+  if (over) return res.status(429).json(over);
 
   const articleId = req.query.id;
   const {

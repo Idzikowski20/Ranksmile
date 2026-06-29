@@ -7,6 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/aiBudget';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 
@@ -55,6 +56,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+
+  // Org-wide AI budget (gate after the free cache return above).
+  const orgId = await resolveOrgId(req, res);
+  const over = await orgBudgetBlocked(orgId);
+  if (over) return res.status(429).json(over);
 
   // Truncate content to keep prompt reasonable (first ~12000 chars)
   const trimmedContent = content.length > 12000 ? content.slice(0, 12000) + '…' : content;
@@ -113,6 +119,7 @@ If no natural links found, return: []`;
     }
 
     const data = await response.json();
+    void recordAiTokens(orgId, data.usage?.total_tokens || 0);
     const raw: string = data.choices?.[0]?.message?.content || '[]';
 
     // Extract JSON array from response (model may wrap in ```json blocks)

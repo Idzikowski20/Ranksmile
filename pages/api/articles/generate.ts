@@ -5,6 +5,9 @@ import { QueryTypes } from 'sequelize';
 import axios from 'axios';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 
@@ -26,6 +29,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (!domainId || !keyword) {
       return res.status(400).json({ error: 'domainId and keyword are required' });
    }
+
+   // Ownership: previously any authed user could generate (LLM spend) under ANY domainId.
+   const userId = await getCurrentUserId(req, res);
+   const owns = await verifyDomainOwnershipById(Number(domainId), userId ? String(userId) : null);
+   if (owns === null) return res.status(404).json({ error: 'Domain not found' });
+   if (owns === false) return res.status(403).json({ error: 'Access denied.' });
+
+   // Org-wide AI budget: full-article generation is expensive — gate it on the shared 5h pool.
+   const orgId = await resolveOrgId(req, res);
+   const over = await orgBudgetBlocked(orgId);
+   if (over) return res.status(429).json(over);
 
    try {
       const articleIdSql = await getArticleIdSql();

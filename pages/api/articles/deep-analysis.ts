@@ -16,6 +16,7 @@ import { callSidecar, sidecarBase } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 
 /** Map an ISO country code to the SERP analysis language the sidecar supports. */
 function langForCountry(country: string): string {
@@ -207,6 +208,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       resolvedDomainId = fallback;
     }
   }
+
+  // Org-wide AI budget — block before the SSE stream starts (plain JSON 429, not an SSE frame).
+  const orgId = await resolveOrgId(req, res);
+  const over = await orgBudgetBlocked(orgId);
+  if (over) return res.status(429).json(over);
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
