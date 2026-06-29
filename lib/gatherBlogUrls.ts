@@ -2,6 +2,7 @@
 import { QueryTypes } from 'sequelize';
 import db from '../database/database';
 import { matchesBlogPath } from './blogPaths';
+import { assertPublicUrl } from './ssrfGuard';
 
 const UA = 'Mozilla/5.0 (compatible; SerpBearBot/1.0)';
 
@@ -9,6 +10,7 @@ async function sitemapUrls(domainName: string): Promise<string[]> {
    const base = domainName.startsWith('http') ? domainName : `https://${domainName}`;
    for (const path of ['/sitemap.xml', '/sitemap_index.xml']) {
       try {
+         await assertPublicUrl(`${base}${path}`); // SSRF: domainName comes from the DB/user
          const r = await fetch(`${base}${path}`, { headers: { 'User-Agent': UA } });
          if (!r.ok) continue;
          const xml = await r.text();
