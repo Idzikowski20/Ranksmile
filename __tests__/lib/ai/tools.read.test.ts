@@ -22,6 +22,7 @@ function ctxFor(html: string): ToolCtx {
       { term: 'ranking', target_count: 3 },
     ], words_target: 100, words_min: 80, words_max: 120, headings_target: 3, headings_min: 2, headings_max: 5 },
     changelog: [], htmlDirty: false, writeCount: 0, meta: null,
+    articleId: null, cache: {},
   };
 }
 
