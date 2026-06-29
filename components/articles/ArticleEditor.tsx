@@ -1821,7 +1821,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
               {/* Action buttons for latest response */}
               {surfyResponse && !surfyLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 10px 8px', marginTop: 6, borderTop: '1px solid #221e28' }}>
                   <button
                     type="button"
                     onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); setSurfyHistory([]); surfyMetaRef.current = null; }}

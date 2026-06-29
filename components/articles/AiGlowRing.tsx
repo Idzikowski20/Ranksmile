@@ -35,12 +35,15 @@ const AiGlowRing = ({ active }: { active: boolean }) => {
           inset: 0,
           borderRadius: 'inherit',
           background,
-          padding: 18, // ring thickness — the frame the mask keeps
-          filter: 'blur(14px)', // spreads the colour into a diffuse halo
+          padding: 14, // ring thickness — the frame the mask keeps
+          filter: 'blur(11px)', // spreads the colour into a diffuse halo at the edge
+          // Ring = border-box layer XOR content-box layer → only the padding frame remains.
+          // IMPORTANT: the mask SHORTHANDS must come BEFORE the *-composite props; otherwise the
+          // shorthand resets composite to "add" and the whole area fills (instead of a thin ring).
           WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+          mask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
           WebkitMaskComposite: 'xor',
           maskComposite: 'exclude',
-          mask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MotionValue bg + vendor mask-composite
         } as any}
       />
