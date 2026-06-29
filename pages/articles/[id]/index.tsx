@@ -376,8 +376,10 @@ const ArticleEditorPage: NextPage = () => {
   const editorRef = useRef<any>(null);
   const pixabayCallbackRef = useRef<((img: { url: string; alt: string }) => void) | null>(null);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedSig = useRef<string | null>(null);
   const lastVersionAt = useRef(0);
+  const flushRef = useRef<(() => void) | null>(null);
   const [article, setArticle] = useState<Article | null>(null);
   const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -658,6 +660,7 @@ const ArticleEditorPage: NextPage = () => {
     const res = await fetch(`/api/articles/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true, // lets a save started on tab-hide / unload finish (best-effort, <64KB)
       body: JSON.stringify({
         content: editorHtml,
         word_count: wordCount,
@@ -688,7 +691,9 @@ const ArticleEditorPage: NextPage = () => {
       setAutoSaveState('saved');
     } catch {
       setAutoSaveState('unsaved');
-      toast.error('Auto-save failed — retrying on next change');
+      // Self-heal transient blips: retry shortly instead of waiting for the next edit.
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(() => { void autoSave(sig); }, 3000);
     }
   };
 
@@ -708,10 +713,46 @@ const ArticleEditorPage: NextPage = () => {
     if (sig === lastSavedSig.current || isAutoOptimizing) return undefined;
     setAutoSaveState('unsaved');
     if (autoTimer.current) clearTimeout(autoTimer.current);
-    autoTimer.current = setTimeout(() => { void autoSave(sig); }, 1000);
+    autoTimer.current = setTimeout(() => { void autoSave(sig); }, 800);
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing]);
+
+  // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
+  flushRef.current = () => {
+    if (isLoading || !article || isAutoOptimizing) return;
+    const sig = JSON.stringify({
+      h: editorHtml,
+      t: article.meta_title ?? '',
+      d: article.meta_description ?? '',
+      k: article.target_keyword ?? '',
+      u: article.meta_url ?? '',
+      img: featuredImage?.url ?? null,
+    });
+    if (lastSavedSig.current === null || sig === lastSavedSig.current) return;
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    void autoSave(sig);
+  };
+
+  // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
+  // so changes are never lost to the debounce window (the main gap vs. Surfer-style autosave).
+  useEffect(() => {
+    const flush = () => flushRef.current?.();
+    const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush(); }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('keydown', onKey);
+    router.events.on('routeChangeStart', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('keydown', onKey);
+      router.events.off('routeChangeStart', flush);
+    };
+  }, [router.events]);
 
   const handleAcceptReject = async (action: 'accept' | 'reject') => {
     if (!id) return;
