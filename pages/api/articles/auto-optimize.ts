@@ -231,7 +231,7 @@ const normUrl = (u: string) => (u || '').split('#')[0].split('?')[0].replace(/^h
 
 async function suggestInternalLinks(
   content: string, keyword: string, articles: SiteLink[], apiKey: string,
-): Promise<Array<{ anchorText: string; url: string }>> {
+): Promise<{ links: Array<{ anchorText: string; url: string }>; tokens: number }> {
   const trimmed = content.length > 12000 ? `${content.slice(0, 12000)}…` : content;
   const list = articles.map((a, i) => `${i + 1}. URL: ${a.url} | Title: "${a.title}"`).join('\n');
   const prompt = `You are an SEO specialist. Find natural internal-linking opportunities in this article.
@@ -243,20 +243,22 @@ ${list}
 Rules: the anchor text must appear VERBATIM as plain text in the article; link each page at most once; prefer specific multi-word phrases; only semantically relevant matches.
 OUTPUT — JSON array only, no other text: [{"anchorText":"exact phrase from the article","url":"target page url"}]
 If none: []`;
+  let tokens = 0;
   try {
     const r = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 1500, temperature: 0.2, messages: [{ role: 'user', content: prompt }] }),
     });
-    if (!r.ok) return [];
+    if (!r.ok) return { links: [], tokens };
     const data = await r.json();
+    tokens = data.usage?.total_tokens || 0;
     const raw: string = data.choices?.[0]?.message?.content || '[]';
     const m = raw.match(/\[[\s\S]*\]/);
-    if (!m) return [];
+    if (!m) return { links: [], tokens };
     const parsed = JSON.parse(m[0]) as Array<{ anchorText?: string; url?: string }>;
-    return parsed.filter((x): x is { anchorText: string; url: string } => !!x.anchorText && !!x.url);
-  } catch { return []; }
+    return { links: parsed.filter((x): x is { anchorText: string; url: string } => !!x.anchorText && !!x.url), tokens };
+  } catch { return { links: [], tokens }; }
 }
 
 /** Insert up to `max` internal links into <p> text (never inside existing anchors/tags). */
@@ -929,7 +931,8 @@ Return the complete HTML with targeted fixes applied.`;
           for (const a of auditRows as any[]) pushCand(a.title, a.url);
           if (candidates.length) {
             sse(res, 'progress', { message: 'Adding internal links…' });
-            const links = await suggestInternalLinks(optimized, keyword || '', candidates, apiKey);
+            const { links, tokens: linkTokens } = await suggestInternalLinks(optimized, keyword || '', candidates, apiKey);
+            aiTokens += linkTokens;
             if (links.length) {
               const { html: linked, applied: linkCount } = applyInternalLinks(optimized, links, 5);
               optimized = linked;
@@ -1141,8 +1144,8 @@ Return ONLY a JSON object:
       } catch { /* ignore */ }
     }
 
-    // Charge this run against the org's shared 5h pool (best-effort; internal-links call is a small
-    // unmetered remainder). Done before `done` so the editor's next /api/ai-usage read reflects it.
+    // Charge this run against the org's shared 5h pool (sums every DeepSeek pass: rewrite, humanize,
+    // FAQ, patches, meta, internal links). Done before `done` so the next /api/ai-usage read reflects it.
     if (orgId != null && aiTokens > 0) await recordAiTokens(orgId, aiTokens);
 
     console.log('[auto-optimize] sending done event, pendingImages:', pendingImages.length);
