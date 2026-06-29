@@ -29,6 +29,7 @@ import { TIP_BUBBLE_BASE } from './tipBubble';
 import CommentComposer, { DraftComment } from './comments/CommentComposer';
 import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
 import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
+import CompareVersionsModal from './CompareVersionsModal';
 
 export interface HeadingItem {
   level: number;
@@ -980,7 +981,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyOpen, setSurfyOpen] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
-    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null } | null>(null);
+    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number } | null>(null);
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -1085,30 +1086,58 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
       try {
         const htmlContent = editor.getHTML();
-        const res = await fetch('/api/articles/ask-surfy', {
+        const useAgent = !surfySelection; // article mode → multi-step agent
+        const endpoint = useAgent ? '/api/articles/surfy-agent' : '/api/articles/ask-surfy';
+        if (useAgent) surfyOriginalRef.current = htmlContent; // remember pre-edit HTML for the diff
+
+        const ac = new AbortController();
+        surfyAbortRef.current = ac;
+
+        const body = useAgent
+          ? {
+              prompt,
+              content: htmlContent,
+              keyword: articleKeyword || keyword || '',
+              scoreData: scoreData || null,
+              internalArticles: internalArticles || [],
+              articleTitle: metaTitle || '',
+              articleMetaDescription: metaDescription || '',
+              history: surfyHistory,
+            }
+          : {
+              prompt,
+              content: htmlContent,
+              mode: 'selection',
+              selectedText: surfySelection?.text || null,
+              selectionRange: surfySelection ? { from: surfySelection.from, to: surfySelection.to } : null,
+              scoreData: scoreData || null,
+              internalArticles: internalArticles || [],
+              keyword: articleKeyword || keyword || '',
+              history: surfyHistory,
+            };
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            content: htmlContent,
-            mode: surfySelection ? 'selection' : 'article',
-            selectedText: surfySelection?.text || null,
-            selectionRange: surfySelection ? { from: surfySelection.from, to: surfySelection.to } : null,
-            scoreData: scoreData || null,
-            internalArticles: internalArticles || [],
-            keyword: articleKeyword || keyword || '',
-            history: surfyHistory,
-          }),
+          body: JSON.stringify(body),
+          signal: ac.signal,
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
-        setSurfyResponse({ action: data.action, message: data.message, content: data.content });
+
+        if (useAgent) {
+          surfyMetaRef.current = data.meta || null;
+          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: data.steps });
+        } else {
+          surfyMetaRef.current = null;
+          setSurfyResponse({ action: data.action, message: data.message, content: data.content });
+        }
         setSurfyHistory((prev) => {
-          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.content, action: data.action }];
+          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.finalHtml ?? data.content, action: data.action }];
           return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
         });
         setSurfyPrompt('');
       } catch (err: any) {
+        if (err?.name === 'AbortError') return; // user pressed Stop
         const errMsg = 'Error: ' + err.message;
         setSurfyResponse({ message: errMsg, content: null });
         setSurfyHistory((prev) => {
@@ -1117,6 +1146,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         });
       } finally {
         setSurfyLoading(false);
+        surfyAbortRef.current = null;
       }
     };
 
@@ -1147,6 +1177,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (surfyResponse.content) {
           editor.commands.setContent(surfyResponse.content);
         }
+        if (surfyMetaRef.current) {
+          if (surfyMetaRef.current.metaTitle != null) onMetaTitleChange?.(surfyMetaRef.current.metaTitle);
+          if (surfyMetaRef.current.metaDescription != null) onMetaDescriptionChange?.(surfyMetaRef.current.metaDescription);
+          surfyMetaRef.current = null;
+        }
       }
       setSurfyOpen(false);
       setSurfyPrompt('');
@@ -1160,6 +1195,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const editorLiveRef = useRef<any>(null);
     const surfyOpenRef = useRef(surfyOpen);
     surfyOpenRef.current = surfyOpen;
+    const surfyMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
+    const surfyOriginalRef = useRef<string>('');                  // pre-edit HTML, for the diff preview
+    const surfyAbortRef = useRef<AbortController | null>(null);   // for Stop/Cancel
+    const [surfyCompareOpen, setSurfyCompareOpen] = useState(false);
 
     const calcAndEmit = useCallback((ed: any) => {
       let html = ed.getHTML();
@@ -1569,9 +1608,37 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
               {/* Loading state */}
               {surfyLoading && (
-                <div style={{ padding: '1rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Thinking…</span>
+                <div style={{ padding: '0.75rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Surfy is working…</span>
+                  </div>
+                  <button type="button" onClick={() => surfyAbortRef.current?.abort()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.625rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
+                    Stop
+                  </button>
+                </div>
+              )}
+
+              {/* What Surfy did — steps / changelog (+ meta + guard) */}
+              {surfyResponse && !surfyLoading && ((surfyResponse.changelog?.length ?? 0) > 0 || Boolean(surfyMetaRef.current)) && (
+                <div style={{ padding: '0.25rem 0.625rem 0.5rem' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: 'rgba(255,255,255,0.45)', marginBottom: 4, fontFamily: 'var(--font-family-primary)' }}>
+                    WHAT SURFY DID{typeof surfyResponse.steps === 'number' ? ` · ${surfyResponse.steps} steps` : ''}
+                  </div>
+                  {(surfyResponse.changelog || []).map((c, i) => {
+                    const guard = c.tool === 'guard';
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, lineHeight: '18px', color: guard ? '#FFB454' : 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-family-primary)' }}>
+                        <span style={{ flexShrink: 0 }}>{guard ? '⚠' : '✓'}</span>
+                        <span>{c.summary}</span>
+                      </div>
+                    );
+                  })}
+                  {surfyMetaRef.current && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '2px 8px', borderRadius: 9999, background: 'rgba(120,58,251,0.18)', color: '#c4b5fd', fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
+                      ✎ Will update meta {surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description' : surfyMetaRef.current.metaTitle != null ? 'title' : 'description'}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1580,7 +1647,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.25rem' }}>
                   <button
                     type="button"
-                    onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); setSurfyHistory([]); }}
+                    onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); setSurfyHistory([]); surfyMetaRef.current = null; }}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       padding: '0.375rem 0.75rem', borderRadius: 6,
@@ -1591,24 +1658,44 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   >
                     Dismiss
                   </button>
-                  {(surfyResponse.content || surfyResponse.action === 'delete_selection') && (
-                    <button
-                      type="button"
-                      onClick={handleSurfyApply}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '0.375rem 0.75rem', borderRadius: 6,
-                        background: '#783afb', border: 'none', cursor: 'pointer',
-                        color: '#fff', fontSize: 13, fontWeight: 600,
-                        fontFamily: 'var(--font-family-primary)',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
-                    >
-                      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                      Apply changes
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {surfyResponse.content && surfyOriginalRef.current && (
+                      <button
+                        type="button"
+                        onClick={() => setSurfyCompareOpen(true)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '0.375rem 0.75rem', borderRadius: 6,
+                          background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer',
+                          color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500,
+                          fontFamily: 'var(--font-family-primary)',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                      >
+                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx={12} cy={12} r={3} /></svg>
+                        Preview
+                      </button>
+                    )}
+                    {(surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current) && (
+                      <button
+                        type="button"
+                        onClick={handleSurfyApply}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '0.375rem 0.75rem', borderRadius: 6,
+                          background: '#783afb', border: 'none', cursor: 'pointer',
+                          color: '#fff', fontSize: 13, fontWeight: 600,
+                          fontFamily: 'var(--font-family-primary)',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
+                      >
+                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                        Apply changes
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1619,6 +1706,24 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 <Chip label={articleKeyword || keyword || 'N/A'} />
                 <Chip label={`Score: ${scoreData ? `${(scoreData as any)._computed_score || '?'}/100` : 'N/A'}`} />
               </div>
+
+              {/* Suggested prompts — only on a fresh, empty input (discovery) */}
+              {!surfyPrompt.trim() && !surfyResponse && !surfyLoading && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0.25rem 0.5rem 0' }}>
+                  {['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => { setSurfyPrompt(s); surfyInputRef.current?.focus(); }}
+                      style={{ padding: '4px 10px', borderRadius: 9999, background: 'rgba(255,255,255,0.06)', border: '1px solid #221e28', color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Input row — always visible */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', paddingTop: 0 }}>
@@ -1718,6 +1823,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </svg>
                 <span>Surfy is a very early alpha and can make mistakes.</span>
               </div>
+
+              {surfyCompareOpen && surfyResponse?.content && (
+                <CompareVersionsModal
+                  original={surfyOriginalRef.current}
+                  updated={surfyResponse.content}
+                  terms={(scoreData?.terms || []).map((t) => t.term)}
+                  onClose={() => setSurfyCompareOpen(false)}
+                />
+              )}
             </div>
           </div>
         )}
