@@ -10,6 +10,9 @@ import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRule
 import { scoreContent } from '../../../lib/seo/scoreContentClient';
 import { extractJsonObject, isSurfyReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
 import { stripEmoji } from '../../../lib/ai/text';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
@@ -142,6 +145,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { prompt, content, mode = 'article', selectedText = null, selectionRange = null, scoreData, internalArticles = [], keyword = '', articleTitle = '', articleMetaDescription = '', history = [] } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
+
+  // Org-wide AI token budget (shared 5h pool).
+  let orgId: number | null = null;
+  try { const uid = await getCurrentUserId(req, res); orgId = (await ensureUserTenancy(String(uid))).orgId; } catch { orgId = null; }
+  if (orgId != null) {
+    const usage = await getOrgUsage5h(orgId);
+    if (usage.over) return res.status(429).json({ error: 'org_limit', resetsAt: usage.resetsAt, used: usage.used, limit: usage.limit });
+  }
 
   try {
     const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -290,6 +301,7 @@ RULES:
     }
 
     const data = await response.json();
+    await recordAiTokens(orgId, data.usage?.total_tokens || 0); // charge the org's shared 5h pool
     const raw = data.choices?.[0]?.message?.content || '';
 
     // Parse response — try JSON first, fall back to MESSAGE/HTML format
