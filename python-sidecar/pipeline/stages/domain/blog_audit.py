@@ -26,7 +26,11 @@ async def _spa_render(url: str) -> str | None:
     """JS-render a URL via the Next.js headless endpoint (for SPA shells)."""
     try:
         async with httpx.AsyncClient(timeout=25) as client:
-            resp = await client.post(f"{NEXTJS_URL}/api/render-page", json={"url": url, "timeout": 15000})
+            resp = await client.post(
+                f"{NEXTJS_URL}/api/render-page",
+                json={"url": url, "timeout": 15000},
+                headers={"x-internal-token": os.getenv("INTERNAL_PIPELINE_TOKEN", "")},
+            )
             resp.raise_for_status()
             html = resp.json().get("html")
             if html:

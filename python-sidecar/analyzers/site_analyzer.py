@@ -34,6 +34,7 @@ async def _fetch_via_spa_fallback(url: str, html: str) -> str | None:
             resp = await client.post(
                 f"{NEXTJS_URL}/api/render-page",
                 json={"url": url, "timeout": 15000},
+                headers={"x-internal-token": os.getenv("INTERNAL_PIPELINE_TOKEN", "")},
             )
             resp.raise_for_status()
             data = resp.json()
