@@ -92,7 +92,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
               <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10} /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
             </span>
             {helpOpen && (
-              <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', zIndex: 250, width: 220, background: '#18181b', color: '#fff', fontSize: 11.5, lineHeight: '16px', padding: '8px 10px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+              <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: -2, zIndex: 250, width: 210, background: '#18181b', color: '#fff', fontSize: 11.5, lineHeight: '16px', padding: '8px 10px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
                 <strong style={{ fontWeight: 600 }}>Pre alpha</strong> — Surfy can make mistakes; review changes before applying.
               </span>
             )}
@@ -285,12 +285,8 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
               lastInput={s.usage.lastInput} lastOutput={s.usage.lastOutput}
               totalInput={s.usage.totalInput} totalOutput={s.usage.totalOutput}
             />
-            {/* Right: model indicator + send */}
+            {/* Right: send */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 24, padding: '0 8px', borderRadius: 6, border: '1px solid #e4e4e7', background: '#fafafa', color: '#52525c', fontSize: 12, fontWeight: 500 }}>
-                <span style={{ width: 7, height: 7, borderRadius: 9999, background: '#783afb' }} />
-                DeepSeek V3
-              </span>
               <button
                 type="button" onClick={s.submit} disabled={!s.prompt.trim() || loading} aria-label="Send"
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: s.prompt.trim() && !loading ? '#783afb' : '#f4f4f5', border: 'none', color: s.prompt.trim() && !loading ? '#fff' : '#9f9fa9', cursor: s.prompt.trim() && !loading ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
