@@ -1102,6 +1102,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               articleTitle: metaTitle || '',
               articleMetaDescription: metaDescription || '',
               history: surfyHistory,
+              articleId: commentArticleId ? Number(commentArticleId) : null,
             }
           : {
               prompt,
