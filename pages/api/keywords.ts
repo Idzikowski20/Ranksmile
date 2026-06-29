@@ -97,11 +97,13 @@ const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
 const addKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>, userId?: string | null) => {
    const { keywords } = req.body;
    if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-      // Sprawdź własność domeny na podstawie pierwszego słowa kluczowego
-      const firstDomain = keywords[0]?.domain;
-      if (firstDomain) {
-         const ownership = await verifyDomainOwnership(firstDomain, userId ?? null);
-         if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
+      // Verify ownership of EVERY distinct domain in the payload — not just keywords[0].
+      // (A mixed payload [{domain:mine},{domain:victim}] previously injected keywords cross-tenant.)
+      const payloadDomains = [...new Set(keywords.map((k: KeywordAddPayload) => k?.domain))];
+      if (payloadDomains.some((d) => !d)) return res.status(400).json({ error: 'Each keyword must include a domain.' });
+      for (const d of payloadDomains) {
+         const ownership = await verifyDomainOwnership(d as string, userId ?? null);
+         if (ownership === false || ownership === null) return res.status(403).json({ error: 'Access denied.' });
       }
       // const keywordsArray = keywords.replaceAll('\n', ',').split(',').map((item:string) => item.trim());
       const keywordsToAdd: any = []; // QuickFIX for bug: https://github.com/sequelize/sequelize-typescript/issues/936
