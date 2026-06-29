@@ -9,7 +9,8 @@ import { countOccurrences } from '../../../lib/contentScore';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { logRun } from '../../../lib/optimizeLog';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { enrichTerms, getAiSearchInfo } from '../../../lib/seo/keywordData';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 
@@ -338,14 +339,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } = req.body;
   if (!content) return res.status(400).json({ error: 'content is required' });
 
+  // Resolve the caller once: needed for per-article access AND the org-wide token budget.
+  let userId: Awaited<ReturnType<typeof getCurrentUserId>> | null = null;
+  try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
+
   // Only this article's owner may optimize-and-persist it. articleId is optional —
   // when absent the handler never touches a stored row, so there is nothing to guard.
   if (articleId !== undefined) {
-    const userId = await getCurrentUserId(req, res);
-    if (!(await assertArticleAccess(userId, Number(articleId)))) {
+    if (userId == null || !(await assertArticleAccess(userId, Number(articleId)))) {
       return res.status(403).json({ error: 'Access denied.' });
     }
   }
+
+  // ── Org-wide AI token budget (shared 5h pool). Auto-Optimize draws several DeepSeek calls, so it
+  //    must respect — and charge — the same pool as Surfy. Block here before any work if exhausted. ──
+  let orgId: number | null = null;
+  if (userId != null) { try { orgId = (await ensureUserTenancy(String(userId))).orgId; } catch { orgId = null; } }
+  if (orgId != null) {
+    const usage = await getOrgUsage5h(orgId);
+    if (usage.over) return res.status(429).json({ error: 'org_limit', resetsAt: usage.resetsAt, used: usage.used, limit: usage.limit });
+  }
+  let aiTokens = 0; // summed DeepSeek usage across this run → charged to the org pool before `done`
 
   // Protect existing <img> tags from the LLM passes (models routinely drop or mangle them).
   // Swap each for a short token the model keeps verbatim, then restore the originals at the end.
@@ -663,6 +677,7 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
           });
           if (faqRes.ok) {
             const faqData = await faqRes.json();
+            aiTokens += faqData.usage?.total_tokens || 0;
             const faqHtml = (faqData.choices?.[0]?.message?.content || '').trim().replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
             if (faqHtml) return { html: faqHtml, questions: extractFaqQuestions(faqHtml) };
           } else {
@@ -697,6 +712,7 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
     }
 
     const aiData = await aiRes.json();
+    aiTokens += aiData.usage?.total_tokens || 0;
     console.log('[auto-optimize] DeepSeek finish_reason:', aiData.choices?.[0]?.finish_reason, 'usage:', JSON.stringify(aiData.usage));
     let optimized = (aiData.choices?.[0]?.message?.content || '').trim();
     optimized = optimized.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
@@ -745,6 +761,7 @@ OUTPUT FORMAT: Return ONLY the complete rewritten HTML article. No explanation, 
 
     if (humanizeRes.ok) {
       const humanizeData = await humanizeRes.json();
+      aiTokens += humanizeData.usage?.total_tokens || 0;
       const humanized = stripLlmArtifacts((humanizeData.choices?.[0]?.message?.content || '').trim()
         .replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim());
       if (humanized && humanized.length > 50) {
@@ -857,6 +874,7 @@ Return the complete HTML with targeted fixes applied.`;
 
             if (patchRes.ok) {
               const patchData = await patchRes.json();
+              aiTokens += patchData.usage?.total_tokens || 0;
               const raw = patchData.choices?.[0]?.message?.content || '';
               // The patch prompt makes the model preface its HTML with "Here is the complete HTML
               // with targeted fixes applied…" — strip that (and any placeholder) like the other passes.
@@ -974,6 +992,7 @@ Return ONLY a JSON object:
 
         if (metaRes.ok) {
           const metaData = await metaRes.json();
+          aiTokens += metaData.usage?.total_tokens || 0;
           const raw = (metaData.choices?.[0]?.message?.content || '').trim();
           try {
             const parsed = JSON.parse(raw);
@@ -1121,6 +1140,10 @@ Return ONLY a JSON object:
         if (Array.isArray(parsed.competitors) && parsed.competitors.length) competitorOutlines = parsed.competitors;
       } catch { /* ignore */ }
     }
+
+    // Charge this run against the org's shared 5h pool (best-effort; internal-links call is a small
+    // unmetered remainder). Done before `done` so the editor's next /api/ai-usage read reflects it.
+    if (orgId != null && aiTokens > 0) await recordAiTokens(orgId, aiTokens);
 
     console.log('[auto-optimize] sending done event, pendingImages:', pendingImages.length);
     sse(res, 'done', {
