@@ -4,7 +4,7 @@ import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
 import type { PendingAction } from '../../lib/ai/types';
 
-export type SurfyHistoryEntry = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string };
+export type SurfyHistoryEntry = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
 export type SurfyActivity = { tool: string; done: boolean; error?: boolean };
 export type SurfyConversation = { id: string; title: string; ts: number };
 export type SurfyResponseState = {
@@ -137,6 +137,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
   const [helpOpen, setHelpOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [atBottom, setAtBottom] = useState(true);
+  const [liveThinkOpen, setLiveThinkOpen] = useState(false);
 
   const onScroll = () => {
     const el = s.scrollRef.current;
@@ -211,7 +212,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
             )}
 
             {s.history.map((entry, i) => (
-              <SurfyMessage key={i} role={entry.role} message={entry.message} />
+              <SurfyMessage key={i} role={entry.role} message={entry.message} thinking={entry.thinking} />
             ))}
 
             {loading && (
@@ -233,7 +234,18 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   </div>
                 )}
                 {s.streamText && (
-                  <div style={{ fontSize: 14, lineHeight: 1.5, color: '#18181b', whiteSpace: 'pre-wrap' }}>{s.streamText}</div>
+                  <div>
+                    <button type="button" onClick={() => setLiveThinkOpen((o) => !o)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 4px', margin: '-2px -4px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#9f9fa9', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}>
+                      <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: liveThinkOpen ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 18l6-6-6-6" /></svg>
+                      Thinking…
+                    </button>
+                    {liveThinkOpen && (
+                      <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #f0f0f2', color: '#9f9fa9', fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{s.streamText}</div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -289,29 +301,34 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
             {/* Action row only when Surfy actually staged something to apply/review — pure advice
                 gets no Dismiss (there's nothing to dismiss; the reply stays in the conversation). */}
             {response && !loading && (s.canApply || s.canCompare) && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 8, borderTop: '1px solid #f4f4f5' }}>
-                <button type="button" onClick={s.dismiss}
-                  style={{ padding: '6px 12px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#52525c', fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
-                  Dismiss
-                </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 8, borderTop: '1px solid #f4f4f5' }}>
+                {/* Two equal-width actions on one row (no text wrap), Dismiss as a quiet link below. */}
+                <div style={{ display: 'flex', gap: 8 }}>
                   {s.canCompare && (
                     <button type="button" onClick={s.openCompare}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, background: '#f4f4f5', border: '1px solid #ececef', cursor: 'pointer', color: '#18181b', fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
-                      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx={12} cy={12} r={3} /></svg>
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, background: '#f4f4f5', border: '1px solid #ececef', cursor: 'pointer', color: '#18181b', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#ececef'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
+                      <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx={12} cy={12} r={3} /></svg>
                       See changes
                     </button>
                   )}
                   {s.canApply && (
                     <button type="button" onClick={s.apply}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 6, background: '#783afb', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, background: '#783afb', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}>
-                      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                      <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                       Apply changes
                     </button>
                   )}
                 </div>
+                <button type="button" onClick={s.dismiss}
+                  style={{ alignSelf: 'center', padding: '2px 8px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#9f9fa9', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}>
+                  Dismiss
+                </button>
               </div>
             )}
           </div>
