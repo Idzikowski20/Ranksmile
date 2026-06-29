@@ -5,6 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { renderPage } from '../../../utils/spaScraper';
+import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
 const FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -127,6 +128,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch {
     return res.status(400).json({ error: 'Invalid URL' });
   }
+  // SSRF: block fetching/rendering private/loopback/metadata hosts (covers the direct fetch,
+  // the sitemap fallback over base.origin, and the renderPage() call below — all use this host).
+  try { await assertPublicUrl(targetUrl); } catch { return res.status(400).json({ error: 'Blocked URL' }); }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15_000);

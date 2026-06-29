@@ -8,6 +8,7 @@ import { getCurrentUser } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { createConnection, mintApiKey } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
+import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
@@ -27,6 +28,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const allowed = await getAccessibleWorkspaceIds(user.id);
    if (!allowed.includes(Number(workspaceId))) return res.status(403).json({ error: 'Access denied.' });
+
+   // SSRF: siteUrl is attacker-supplied and gets fetched here AND persisted for reuse on every
+   // later publish/status call. Reject private/loopback/metadata targets up front.
+   try { await assertPublicUrl(String(siteUrl)); } catch { return res.status(400).json({ error: 'Invalid or blocked siteUrl.' }); }
 
    const apiKey = mintApiKey();
    try {
