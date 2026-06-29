@@ -12,7 +12,7 @@ const Row = ({ label, value }: { label: string; value: string }) => (
 );
 
 /** Twenty/Claude-style usage ring for the dark Surfy bar: this turn's tokens filling toward
- *  TOKEN_BUDGET, compact count in the centre. Click to open a popover with the breakdown. */
+ *  TOKEN_BUDGET (ring only, no inline number). Click to open a popover with the count + breakdown. */
 const TokenCircle = ({ tokens, inputTokens = 0, outputTokens = 0 }: { tokens: number; inputTokens?: number; outputTokens?: number }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -40,7 +40,6 @@ const TokenCircle = ({ tokens, inputTokens = 0, outputTokens = 0 }: { tokens: nu
         <svg width={32} height={32} viewBox="0 0 32 32" aria-hidden="true">
           <circle cx={16} cy={16} r={r} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={3} />
           <circle cx={16} cy={16} r={r} fill="none" stroke="#AA93FD" strokeWidth={3} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 16 16)" style={{ transition: 'stroke-dashoffset 300ms ease' }} />
-          <text x={16} y={16} textAnchor="middle" dominantBaseline="central" fontFamily="var(--font-family-primary)" fontSize={8.5} fontWeight={600} fill="rgba(255,255,255,0.9)">{formatTokens(tokens)}</text>
         </svg>
       </button>
 

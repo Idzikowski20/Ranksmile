@@ -1051,6 +1051,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (initialFeaturedImage !== undefined) setFeaturedImage(initialFeaturedImage ?? null);
     }, [initialFeaturedImage]);
     const [surfyOpen, setSurfyOpen] = useState(false);
+    const [surfyMinimized, setSurfyMinimized] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
     const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
@@ -1164,6 +1165,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setSurfySelection(null);
       }
       setSurfyOpen(true);
+      setSurfyMinimized(false);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
     };
     slashAskSurfyRef.current = handleAskSurfy;
@@ -1705,10 +1707,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
                 transformOrigin: 'bottom center',
                 animation: 'growOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                // Cap to the viewport (anchored at the bottom) so a long run never grows off the
+                // top of the screen — the conversation body scrolls instead.
+                display: 'flex', flexDirection: 'column',
+                maxHeight: 'calc(100vh - 96px)',
               }}
             >
-              {/* Header — identity + token usage + close */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderBottom: '1px solid #221e28' }}>
+              {/* Header — identity + token usage + minimize/close */}
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderBottom: '1px solid #221e28' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <IconSurfy size={18} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Surfy</span>
@@ -1716,6 +1722,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} inputTokens={surfyUsageDetail.input} outputTokens={surfyUsageDetail.output} />}
+                  <button
+                    type="button"
+                    onClick={() => setSurfyMinimized((m) => !m)}
+                    aria-label={surfyMinimized ? 'Expand' : 'Minimize'}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                  >
+                    {surfyMinimized
+                      ? <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6" /></svg>
+                      : <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /></svg>}
+                  </button>
                   <button
                     type="button"
                     onClick={() => setSurfyOpen(false)}
@@ -1729,9 +1747,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               </div>
 
-              {/* Conversation history — scrollable chat above input */}
+              {/* Conversation body — header above, composer below both stay fixed; this region
+                  scrolls and is hidden while minimized. */}
+              {!surfyMinimized && (
+              <div ref={surfyScrollRef} className="styled-scrollbar-dark" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+              {/* Conversation history */}
               {surfyHistory.length > 0 && (
-                <div ref={surfyScrollRef} style={{ padding: '0.5rem 0.5rem 0', maxHeight: 260, overflowY: 'auto' }} className="styled-scrollbar-dark">
+                <div style={{ padding: '0.5rem 0.5rem 0' }}>
                   {surfyHistory.map((entry, i) => (
                     <div key={i} style={{ marginBottom: i < surfyHistory.length - 1 ? 12 : 0 }}>
                       {/* User message */}
@@ -1929,8 +1951,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               )}
 
+              </div>
+              )}
+
               {/* ── Composer: suggestions + input ── */}
-              <div style={{ borderTop: '1px solid #221e28' }}>
+              {!surfyMinimized && (
+              <div style={{ flexShrink: 0, borderTop: '1px solid #221e28' }}>
               {/* Suggested prompts — only on a fresh, empty input (discovery) */}
               {!surfyPrompt.trim() && !surfyResponse && !surfyLoading && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '8px 10px 0' }}>
@@ -2004,6 +2030,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 Surfy can make mistakes — review changes before applying.
               </div>
               </div>
+              )}
 
               {surfyCompareOpen && surfyResponse?.content && (
                 <CompareVersionsModal
