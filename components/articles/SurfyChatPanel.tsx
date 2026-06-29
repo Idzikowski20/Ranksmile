@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import SurfyMessage from './SurfyMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
@@ -136,6 +136,22 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
   const empty = s.history.length === 0 && !loading && !response;
   const [helpOpen, setHelpOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
+  const [atBottom, setAtBottom] = useState(true);
+
+  const onScroll = () => {
+    const el = s.scrollRef.current;
+    if (el) setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 48);
+  };
+  const scrollToBottom = useCallback((smooth = true) => {
+    const el = s.scrollRef.current;
+    if (el) { el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); setAtBottom(true); }
+  }, [s.scrollRef]);
+  // Stick to the bottom as the conversation grows/streams — but only if the user is already there
+  // (so reading older messages isn't yanked away; the ↓ button appears instead).
+  useEffect(() => {
+    if (atBottom) { const el = s.scrollRef.current; if (el) el.scrollTop = el.scrollHeight; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.history, s.streamText, s.activity, s.loading, s.response]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#fff', fontFamily: 'var(--font-family-primary)' }}>
@@ -185,8 +201,9 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
         />
       ) : (
         <>
-          {/* Conversation body */}
-          <div ref={s.scrollRef} className="styled-scrollbar" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Conversation body — relative wrapper so the scroll-to-latest ↓ can float over it */}
+          <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div ref={s.scrollRef} onScroll={onScroll} className="styled-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {empty && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>What can I help you with?</div>
@@ -296,6 +313,15 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   )}
                 </div>
               </div>
+            )}
+          </div>
+            {!atBottom && (
+              <button type="button" onClick={() => scrollToBottom()} aria-label="Scroll to latest"
+                style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5, width: 30, height: 30, borderRadius: 9999, background: '#fff', border: '1px solid #e4e4e7', boxShadow: '0 4px 14px rgba(24,26,34,0.14)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#52525c', cursor: 'pointer', transition: 'background 150ms ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}>
+                <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7" /></svg>
+              </button>
             )}
           </div>
 

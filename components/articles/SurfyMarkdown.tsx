@@ -1,10 +1,17 @@
 import React, { Suspense } from 'react';
 
-// Assistant message body. Uses react-markdown (already a project dep, lazy-loaded client-side like
-// components/settings/Changelog.tsx to avoid Next 12 ESM/SSR issues). Styled to match Twenty's
-// assistant body in the app's light theme (design.md tokens). CommonMark only (no remark-gfm) —
-// covers what the agent emits: headings, bold/italic/code, links, lists, blockquotes, code, rules.
-const Markdown = React.lazy(() => import('react-markdown'));
+// Assistant message body. Lazy-loads react-markdown + remark-gfm client-side (both ESM; lazy import
+// avoids Next 12 SSR/build issues) so GFM tables/strikethrough/task-lists render. Styled to match
+// Twenty's assistant body in the app's light theme (design.md tokens).
+const Markdown = React.lazy(async () => {
+  const [{ default: ReactMarkdown }, { default: remarkGfm }] = await Promise.all([
+    import('react-markdown'),
+    import('remark-gfm'),
+  ]);
+  const Comp = ({ children }: { children: string }) => <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>;
+  Comp.displayName = 'SurfyMarkdownInner';
+  return { default: Comp };
+});
 
 const MD_CSS = `
 .surfy-md { color: #18181b; font-size: 14px; line-height: 1.55; font-family: var(--font-family-primary); word-break: break-word; }

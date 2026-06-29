@@ -1111,12 +1111,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       persistConvos([convo, ...surfyConversations].slice(0, 20));
     };
 
-    // Keep the conversation pinned to the latest message as it grows / streams in.
-    useEffect(() => {
-      const el = surfyScrollRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
-    }, [surfyHistory, surfyStreamText, surfyActivity, surfyLoading, surfyResponse]);
-
     const handleAskSurfy = () => {
       if (!editor) return;
       // Just hide/show — keep the conversation + any pending response so reopening continues it.
