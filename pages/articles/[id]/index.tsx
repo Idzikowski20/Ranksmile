@@ -17,6 +17,7 @@ import { Thread, CommentAuthor } from '../../../components/articles/comments/Com
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import AiGlowRing from '../../../components/articles/AiGlowRing';
+import IconSurfy from '../../../components/articles/IconSurfy';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
@@ -389,6 +390,9 @@ const ArticleEditorPage: NextPage = () => {
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // Surfy docks into the right panel: ArticleEditor notifies open-state; the dock <div> is the portal target.
+  const [surfyDockOpen, setSurfyDockOpen] = useState(false);
+  const [surfyDockEl, setSurfyDockEl] = useState<HTMLElement | null>(null);
   const [showCustomization, setShowCustomization] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(false);
@@ -1469,6 +1473,8 @@ const ArticleEditorPage: NextPage = () => {
           >
             <ArticleEditor
               editorRef={editorRef}
+              onSurfyOpenChange={setSurfyDockOpen}
+              surfyDockEl={surfyDockEl}
               content={article.content || ''}
               keyword={article.target_keyword}
               metaTitle={article.meta_title}
@@ -1608,6 +1614,13 @@ const ArticleEditorPage: NextPage = () => {
                   </IconBtn>
                 </span>
 
+                {/* Ask Surfy — docks the chat pane in this panel */}
+                <span style={{ display: 'inline-flex' }}>
+                  <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory(false); editorRef.current?.toggleSurfy?.(); }} title="Ask Surfy">
+                    <IconSurfy size={18} />
+                  </IconBtn>
+                </span>
+
                 {/* Version History */}
                 <span data-tour="version" style={{ display: 'inline-flex' }}>
                   <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
@@ -1668,7 +1681,10 @@ const ArticleEditorPage: NextPage = () => {
                 overflow: 'hidden',
               }}
             >
-              {showInternalLinksPanel ? (
+              {surfyDockOpen ? (
+                // Docked Surfy pane — the editor portals SurfyChatPanel into this element.
+                <div ref={setSurfyDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
+              ) : showInternalLinksPanel ? (
                 <InternalLinksPanel
                   articleId={article.id}
                   keyword={article.target_keyword || ''}
