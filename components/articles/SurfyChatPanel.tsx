@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import SurfyMessage from './SurfyMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
@@ -42,6 +42,7 @@ export interface SurfyPanelApi {
   newConversation: () => void;
   openConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
+  renameConversation: (id: string, title: string) => void;
   confirmPublish: () => void;
   cancelPublish: () => void;
   pickSuggestion: (s: string) => void;
@@ -68,9 +69,22 @@ const relTime = (ts: number) => {
 };
 
 /** Full-panel conversation picker (replaces the chat view when the history icon is active). */
-const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: () => void; onPick: (id: string) => void; onNew: () => void }) => (
+const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: () => void; onPick: (id: string) => void; onNew: () => void }) => {
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuId) return undefined;
+    const onDown = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuId(null); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [menuId]);
+  const commitRename = () => { if (editingId) s.renameConversation(editingId, editTitle); setEditingId(null); };
+
+  return (
   <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-    <style>{'.surfy-convo-row:hover { background: #f4f4f5 !important; } .surfy-convo-row:hover .surfy-del { opacity: 1 !important; } .surfy-cta:active { transform: scale(0.98); }'}</style>
+    <style>{'.surfy-convo-row:hover { background: #f4f4f5 !important; } .surfy-convo-row:hover .surfy-kebab { opacity: 1 !important; } .surfy-cta:active { transform: scale(0.98); }'}</style>
     <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 8px 0 6px', borderBottom: '1px solid #f4f4f5' }}>
       <HeaderBtn onClick={onBack} label="Back to chat">
         <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
@@ -99,35 +113,70 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
       </div>
     ) : (
       <div className="styled-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 8 }}>
-        {s.conversations.map((c) => (
+        {s.conversations.map((c) => {
+          const editing = editingId === c.id;
+          return (
           <div
             key={c.id} className="surfy-convo-row" role="button" tabIndex={0}
-            onClick={() => onPick(c.id)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onPick(c.id); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px', borderRadius: 10, cursor: 'pointer', transition: 'background 150ms ease' }}
+            onClick={() => { if (!editing) onPick(c.id); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !editing) onPick(c.id); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px 8px 10px', borderRadius: 10, cursor: editing ? 'default' : 'pointer', transition: 'background 150ms ease' }}
           >
             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: '#f4f4f5', color: '#52525c', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></svg>
             </span>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <span style={{ fontSize: 13.5, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title || 'Conversation'}</span>
-              <span style={{ fontSize: 11.5, color: '#9f9fa9' }}>{relTime(c.ts)}</span>
-            </div>
-            <button
-              type="button" aria-label="Delete conversation" className="surfy-del"
-              onClick={(e) => { e.stopPropagation(); s.deleteConversation(c.id); }}
-              style={{ opacity: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 7, background: 'transparent', border: 'none', color: '#9f9fa9', cursor: 'pointer', flexShrink: 0, transition: 'opacity 150ms ease, background 150ms ease, color 150ms ease' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9f9fa9'; }}
-            >
-              <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6" /></svg>
-            </button>
+            {editing ? (
+              <input
+                value={editTitle} autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setEditingId(null); }}
+                onBlur={commitRename}
+                style={{ flex: 1, minWidth: 0, border: '1px solid #AA93FD', borderRadius: 7, padding: '5px 8px', fontSize: 13.5, color: '#18181b', outline: 'none', boxShadow: '0 0 0 3px rgba(120,58,251,0.1)', fontFamily: 'var(--font-family-primary)' }}
+              />
+            ) : (
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span style={{ fontSize: 13.5, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title || 'Conversation'}</span>
+                <span style={{ fontSize: 11.5, color: '#9f9fa9' }}>{relTime(c.ts)}</span>
+              </div>
+            )}
+            {!editing && (
+              <div ref={menuId === c.id ? menuRef : undefined} style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  type="button" aria-label="Conversation options" className="surfy-kebab"
+                  onClick={(e) => { e.stopPropagation(); setMenuId(menuId === c.id ? null : c.id); }}
+                  style={{ opacity: menuId === c.id ? 1 : 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 7, background: menuId === c.id ? '#ececef' : 'transparent', border: 'none', color: '#52525c', cursor: 'pointer', transition: 'opacity 150ms ease, background 150ms ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#ececef'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = menuId === c.id ? '#ececef' : 'transparent'; }}>
+                  <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" aria-hidden="true"><circle cx={12} cy={5} r={1.6} /><circle cx={12} cy={12} r={1.6} /><circle cx={12} cy={19} r={1.6} /></svg>
+                </button>
+                {menuId === c.id && (
+                  <div onClick={(e) => e.stopPropagation()}
+                    style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60, width: 168, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 10, padding: 5, boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
+                    <button type="button" onClick={() => { setEditingId(c.id); setEditTitle(c.title || ''); setMenuId(null); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '7px 8px', borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181b', fontSize: 13, fontFamily: 'var(--font-family-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                      <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      Rename
+                    </button>
+                    <button type="button" onClick={() => { s.deleteConversation(c.id); setMenuId(null); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '7px 8px', borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444', fontSize: 13, fontFamily: 'var(--font-family-primary)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                      <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6" /></svg>
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     )}
   </div>
-);
+  );
+};
 
 /** Docked, light, Twenty-style Surfy chat pane for the editor's right column. Pure view — all
  *  state + behaviour come from `s` (the useSurfy hook). */
