@@ -93,21 +93,6 @@ const Sep = () => (
   </div>
 );
 
-const chipStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center',
-  borderRadius: '9999px',
-  border: '1px solid #221e28',
-  background: 'rgba(255,255,255,0.06)',
-  padding: '0.1875rem 0.625rem',
-  fontSize: 12, lineHeight: '16px',
-  color: 'rgba(255,255,255,0.72)',
-  fontFamily: 'var(--font-family-primary)',
-  cursor: 'default', userSelect: 'none',
-  whiteSpace: 'nowrap',
-};
-
-const Chip = ({ label }: { label: string }) => <div style={chipStyle}>{label}</div>;
-
 const MAX_SURFY_HISTORY = 20;
 
 const IconSurfy = ({ size = 20 }: { size?: number }) => (
@@ -1044,6 +1029,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
 
+    // Auto-grow the Surfy textarea to fit its content (capped at maxHeight, then it scrolls).
+    useEffect(() => {
+      const el = surfyInputRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    }, [surfyPrompt, surfyOpen]);
+
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
     /* Render AI message with rich formatting */
@@ -1877,18 +1870,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               )}
 
-              {/* ── Composer: context + suggestions + input ── */}
-              {/* Context chips row — always visible */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '8px 10px 6px', borderTop: '1px solid #221e28' }}>
-                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-family-primary)' }}>Context</span>
-                <Chip label={surfySelection ? `Selected (${surfySelection.text.length}c)` : 'Full article'} />
-                <Chip label={articleKeyword || keyword || 'N/A'} />
-                <Chip label={`Score: ${scoreData ? `${(scoreData as any)._computed_score || '?'}/100` : 'N/A'}`} />
-              </div>
-
+              {/* ── Composer: suggestions + input ── */}
+              <div style={{ borderTop: '1px solid #221e28' }}>
               {/* Suggested prompts — only on a fresh, empty input (discovery) */}
               {!surfyPrompt.trim() && !surfyResponse && !surfyLoading && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0.25rem 0.5rem 0' }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '8px 10px 0' }}>
                   {['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'].map((s) => (
                     <button
                       key={s}
@@ -1919,13 +1905,15 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   }}
                   placeholder="Ask Surfy…"
                   disabled={surfyLoading}
+                  className="styled-scrollbar-dark"
                   style={{
                     flex: 1,
-                    height: 24, maxHeight: 400, minHeight: 0,
+                    minHeight: 24, maxHeight: 200,
                     border: 'none', borderRadius: 0,
                     background: 'transparent', outline: 'none', padding: '0 0 2px',
                     fontSize: 14, lineHeight: '24px', color: '#fff',
                     fontFamily: 'var(--font-family-primary)', resize: 'none',
+                    overflowY: 'auto',
                   }}
                 />
                 <button
@@ -1955,6 +1943,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               {/* Footer note */}
               <div style={{ padding: '0 10px 7px', color: 'rgba(255,255,255,0.32)', fontSize: 10.5, lineHeight: '14px', fontFamily: 'var(--font-family-primary)' }}>
                 Surfy can make mistakes — review changes before applying.
+              </div>
               </div>
 
               {surfyCompareOpen && surfyResponse?.content && (
