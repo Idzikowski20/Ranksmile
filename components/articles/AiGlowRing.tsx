@@ -1,59 +1,42 @@
-import React, { useEffect } from 'react';
-import { motion, useMotionValue, useMotionTemplate, animate } from 'motion/react';
+import React from 'react';
+import { motion } from 'motion/react';
 
 /**
- * Diffuse, flowing multi-colour halo around the editor shell while Surfy / AI is working.
- * A heavily-blurred conic-gradient masked to a soft frame; the gradient ANGLE is driven by
- * Motion (continuous rotation) so the colours flow around the window — a Claude-style ambient
- * glow, spread out instead of concentrated in one spot. Animation runs only while `active`.
- *
- * The mask-composite recipe (border-box layer XOR content-box layer = ring) lives in a real CSS
- * RULE, not React inline styles: setting `mask` + `mask-composite` inline got the composite dropped,
- * so the whole conic gradient filled the area instead of a thin ring.
+ * Warm ambient glow around the editor while Surfy / AI is working — a soft, diffuse amber wash that
+ * bleeds in from the corners (strongest at the top), fading to a transparent centre so the content
+ * stays readable. No thin ring: layered radial gradients, gently breathing while active.
  */
-const RING_CSS = `
-.ai-glow-ring__frame {
+const GLOW_CSS = `
+.ai-glow-amber {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 14px;
-  filter: blur(7px) saturate(1.25);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  background:
+    radial-gradient(58% 46% at 0% 0%, rgba(255,176,102,0.62) 0%, rgba(255,138,74,0.26) 32%, transparent 62%),
+    radial-gradient(58% 46% at 100% 0%, rgba(255,158,86,0.60) 0%, rgba(255,126,68,0.24) 32%, transparent 62%),
+    radial-gradient(52% 42% at 0% 100%, rgba(255,150,82,0.30) 0%, transparent 58%),
+    radial-gradient(52% 42% at 100% 100%, rgba(255,148,80,0.28) 0%, transparent 58%);
+  filter: blur(6px) saturate(1.05);
+  animation: ai-glow-amber-breathe 4.5s ease-in-out infinite;
+}
+.ai-glow-amber.is-idle { animation-play-state: paused; }
+@keyframes ai-glow-amber-breathe {
+  0%, 100% { opacity: 0.78; }
+  50% { opacity: 1; }
 }`;
 
-const AiGlowRing = ({ active }: { active: boolean }) => {
-  const angle = useMotionValue(0);
-
-  useEffect(() => {
-    if (!active) return undefined;
-    const controls = animate(angle, 360, { duration: 7, repeat: Infinity, ease: 'linear' });
-    return () => controls.stop();
-  }, [active, angle]);
-
-  // Many vivid, distinct stops so every edge of the (wide) rectangle shows colour flow — a conic
-  // gradient gives each edge only a narrow angular slice, so few stops read as a solid wash.
-  const background = useMotionTemplate`conic-gradient(from ${angle}deg at 50% 50%, #783afb, #a855f7, #ec4899, #f472b6, #06b6d4, #22d3ee, #3b82f6, #8b5cf6, #783afb)`;
-
-  return (
-    <motion.div
-      aria-hidden="true"
-      initial={false}
-      animate={{ opacity: active ? 1 : 0 }}
-      transition={{ duration: 0.5, ease: 'easeInOut' }}
-      style={{ position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none', zIndex: 9999 }}
-    >
-      <style>{RING_CSS}</style>
-      <motion.div
-        className="ai-glow-ring__frame"
-        animate={active ? { opacity: [0.78, 1, 0.78] } : { opacity: 0.9 }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ background }}
-      />
-    </motion.div>
-  );
-};
+const AiGlowRing = ({ active }: { active: boolean }) => (
+  <motion.div
+    aria-hidden="true"
+    initial={false}
+    animate={{ opacity: active ? 1 : 0 }}
+    transition={{ duration: 0.6, ease: 'easeInOut' }}
+    style={{ position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none', zIndex: 9999 }}
+  >
+    <style>{GLOW_CSS}</style>
+    {/* Kept mounted for the fade-out; the breathe pauses (no CPU) while idle. */}
+    <div className={`ai-glow-amber${active ? '' : ' is-idle'}`} />
+  </motion.div>
+);
 
 export default AiGlowRing;
