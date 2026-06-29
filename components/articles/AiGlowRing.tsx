@@ -6,7 +6,24 @@ import { motion, useMotionValue, useMotionTemplate, animate } from 'motion/react
  * A heavily-blurred conic-gradient masked to a soft frame; the gradient ANGLE is driven by
  * Motion (continuous rotation) so the colours flow around the window — a Claude-style ambient
  * glow, spread out instead of concentrated in one spot. Animation runs only while `active`.
+ *
+ * The mask-composite recipe (border-box layer XOR content-box layer = ring) lives in a real CSS
+ * RULE, not React inline styles: setting `mask` + `mask-composite` inline got the composite dropped,
+ * so the whole conic gradient filled the area instead of a thin ring.
  */
+const RING_CSS = `
+.ai-glow-ring__frame {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 12px;
+  filter: blur(10px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}`;
+
 const AiGlowRing = ({ active }: { active: boolean }) => {
   const angle = useMotionValue(0);
 
@@ -27,25 +44,12 @@ const AiGlowRing = ({ active }: { active: boolean }) => {
       transition={{ duration: 0.5, ease: 'easeInOut' }}
       style={{ position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none', zIndex: 9999 }}
     >
+      <style>{RING_CSS}</style>
       <motion.div
+        className="ai-glow-ring__frame"
         animate={active ? { opacity: [0.78, 1, 0.78] } : { opacity: 0.9 }}
         transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 'inherit',
-          background,
-          padding: 14, // ring thickness — the frame the mask keeps
-          filter: 'blur(11px)', // spreads the colour into a diffuse halo at the edge
-          // Ring = border-box layer XOR content-box layer → only the padding frame remains.
-          // IMPORTANT: the mask SHORTHANDS must come BEFORE the *-composite props; otherwise the
-          // shorthand resets composite to "add" and the whole area fills (instead of a thin ring).
-          WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-          mask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MotionValue bg + vendor mask-composite
-        } as any}
+        style={{ background }}
       />
     </motion.div>
   );
