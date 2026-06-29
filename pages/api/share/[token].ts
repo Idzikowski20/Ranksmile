@@ -4,6 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -24,6 +25,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Not found' });
+      // This body is rendered on the PUBLIC, unauthenticated share page via dangerouslySetInnerHTML.
+      // The stored HTML comes from raw model/scraped/imported sources, so sanitize at the render
+      // boundary — strips <script>/<iframe>/on*=/javascript: (stored-XSS via AI/import).
+      article.content = sanitizeArticleHtml(article.content || '');
 
       const [visRows] = await db.query(
          `SELECT summary_json, score FROM ai_visibility_runs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`,
