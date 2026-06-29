@@ -305,18 +305,6 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
 
           {/* Composer — Twenty-style box: textarea on top, controls + context ring inside the bottom row */}
           <div style={{ flexShrink: 0, padding: 10 }}>
-            {s.selectionText && (
-              <div title={s.selectionText} style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', maxWidth: '100%', padding: '3px 5px 3px 9px', marginBottom: 8, borderRadius: 8, background: '#f4f4f5', border: '1px solid #e4e4e7' }}>
-                <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="#9f9fa9" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M7 8h10M7 12h6M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1Z" /></svg>
-                <span style={{ fontSize: 12, color: '#3f3f47', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{s.selectionText}</span>
-                <button type="button" onClick={s.clearSelection} aria-label="Clear selected text"
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: 6, background: 'transparent', border: 'none', color: '#9f9fa9', cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; e.currentTarget.style.color = '#52525c'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9f9fa9'; }}>
-                  <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-            )}
             {empty && s.suggestions.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 2px 8px' }}>
                 {s.suggestions.map((sug) => (
@@ -327,6 +315,19 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                     {sug}
                   </button>
                 ))}
+              </div>
+            )}
+            {/* Selected-text context chip — sits directly above the input box */}
+            {s.selectionText && (
+              <div title={s.selectionText} style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', maxWidth: '100%', padding: '3px 5px 3px 9px', marginBottom: 8, borderRadius: 8, background: '#f4f4f5', border: '1px solid #e4e4e7' }}>
+                <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="#9f9fa9" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M7 8h10M7 12h6M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1Z" /></svg>
+                <span style={{ fontSize: 12, color: '#3f3f47', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{s.selectionText}</span>
+                <button type="button" onClick={s.clearSelection} aria-label="Clear selected text"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: 6, background: 'transparent', border: 'none', color: '#9f9fa9', cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; e.currentTarget.style.color = '#52525c'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9f9fa9'; }}>
+                  <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
             )}
             <div className="surfy-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #d4d4d8', borderRadius: 12, background: '#fff', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
