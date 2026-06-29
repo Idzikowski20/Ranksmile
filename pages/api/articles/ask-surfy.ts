@@ -9,6 +9,7 @@ import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
 import { scoreContent } from '../../../lib/seo/scoreContentClient';
 import { extractJsonObject, isSurfyReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
+import { stripEmoji } from '../../../lib/ai/text';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
@@ -244,7 +245,8 @@ RULES:
 - For "delete_selection" action: content should be "" (empty string)
 - For "insert_after_selection" action: content is the new HTML to insert after the selection
 - NEVER change text the user didn't ask you to change
-- NEVER invent facts, statistics, author credentials, or sources`;
+- NEVER invent facts, statistics, author credentials, or sources
+- The "message" must be MINIMALIST: a few short sentences, NO emojis, NO markdown tables, minimal bold/headings. Just say plainly what you found or changed`;
 
     const systemPrompt = [
       actionUnderstandingBlock,
@@ -317,7 +319,7 @@ RULES:
     // Swap the base64 placeholders back to the real image data before applying.
     if (htmlContent && imageMap.size) htmlContent = restoreDataImages(htmlContent, imageMap);
 
-    return res.status(200).json({ action: parsedAction, message, content: htmlContent });
+    return res.status(200).json({ action: parsedAction, message: stripEmoji(message), content: htmlContent });
   } catch (error: any) {
     console.error('[ask-surfy] error:', error);
     return res.status(500).json({ error: error?.message || 'Request failed' });
