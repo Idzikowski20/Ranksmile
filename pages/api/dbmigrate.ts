@@ -3,6 +3,8 @@ import { Umzug, SequelizeStorage } from 'umzug';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { getCallerRole } from '../../lib/members';
 
 type MigrationGetResponse = {
    hasMigrations: boolean,
@@ -34,14 +36,22 @@ function getSequelizeForMigrations(): Sequelize {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
-   if (authorized === 'authorized' && req.method === 'GET') {
+   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+   if (req.method === 'GET') {
       await db.sync();
       return getMigrationStatus(req, res);
    }
-   if (authorized === 'authorized' && req.method === 'POST') {
+   if (req.method === 'POST') {
+      // Running global schema migrations is owner/admin-only for session users. A non-session
+      // install admin (basic-auth USER/PASSWORD, no userId) stays trusted as before.
+      const userId = await getCurrentUserId(req, res);
+      if (userId) {
+         const role = await getCallerRole(String(userId)).catch(() => null);
+         if (role !== 'owner' && role !== 'admin') return res.status(403).json({ migrated: false, error: 'Admin only.' });
+      }
       return migrateDatabase(req, res);
    }
-   return res.status(401).json({ error: authorized });
+   return res.status(405).json({ error: 'Method not allowed' });
 }
 
 const getMigrationStatus = async (req: NextApiRequest, res: NextApiResponse<MigrationGetResponse>) => {

@@ -5,6 +5,7 @@ import Domain from '../../database/models/domain';
 import Keyword from '../../database/models/keyword';
 import generateEmail from '../../utils/generateEmail';
 import parseKeywords from '../../utils/parseKeywords';
+import verifyUser from '../../utils/verifyUser';
 import { getAppSettings } from './settings';
 
 type NotifyResponse = {
@@ -16,11 +17,13 @@ type NotifyResponse = {
 export const config = { maxDuration: 60 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-   if (req.method === 'POST') {
-      await db.sync();
-      return notify(req, res);
-   }
-   return res.status(401).json({ success: false, error: 'Invalid Method' });
+   if (req.method !== 'POST') return res.status(401).json({ success: false, error: 'Invalid Method' });
+   // The handler triggers an email blast over all (or one) domain — it must be authenticated
+   // (APIKEY for the scheduler, or a logged-in session). Previously it ran with no auth at all.
+   const authorized = await verifyUser(req, res);
+   if (authorized !== 'authorized') return res.status(401).json({ success: false, error: authorized });
+   await db.sync();
+   return notify(req, res);
 }
 
 const notify = async (req: NextApiRequest, res: NextApiResponse<NotifyResponse>) => {
