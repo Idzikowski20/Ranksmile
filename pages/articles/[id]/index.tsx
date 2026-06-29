@@ -265,7 +265,7 @@ const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClos
 
       <ShareLinkBlock
         desc={<>Anyone with this link can <span style={{ fontWeight: 600, color: '#18181B' }}>view</span> and <span style={{ fontWeight: 600, color: '#18181B' }}>comment,</span> for an unlimited time</>}
-        link={commentLink} copyLabel="Copy comment link" onReset={resetLink}
+        link={commentLink} copyLabel="Copy comment link" onReset={resetLink} loading={!token}
       />
     </div>
   );
@@ -1741,7 +1741,7 @@ const ArticleEditorPage: NextPage = () => {
         {isAutoOptimizing && (
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 500, width: 520, maxWidth: 'calc(100vw - 40px)',
+            zIndex: 10000, width: 520, maxWidth: 'calc(100vw - 40px)',
             background: '#09090b', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
@@ -1769,7 +1769,7 @@ const ArticleEditorPage: NextPage = () => {
         {autoOptimizeBar && !isAutoOptimizing && (
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
+            zIndex: 10000, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
             background: '#09090b', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 10px 0 16px', height: 52, gap: 10,

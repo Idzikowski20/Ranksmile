@@ -32,18 +32,6 @@ interface Article {
   language?: string; created_at?: string; updated_at?: string;
 }
 
-const BC_COUNTRY: Record<string, { name: string; cc: string }> = {
-  pl: { name: 'Poland', cc: 'pl' }, en: { name: 'United States', cc: 'us' }, de: { name: 'Germany', cc: 'de' },
-  fr: { name: 'France', cc: 'fr' }, es: { name: 'Spain', cc: 'es' }, it: { name: 'Italy', cc: 'it' },
-  nl: { name: 'Netherlands', cc: 'nl' }, pt: { name: 'Portugal', cc: 'pt' },
-};
-const bcFmtDate = (iso?: string): string => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ' at');
-};
-
 const DEFAULT_SCORE: ScoreData = {
   terms: [], words_target: 2000, words_min: 1500, words_max: 2500,
   headings_target: 15, headings_min: 10, headings_max: 20,
@@ -59,10 +47,8 @@ const SharePreviewPage: NextPage = () => {
   const [nameChecked, setNameChecked] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
-  const infoRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -112,13 +98,6 @@ const SharePreviewPage: NextPage = () => {
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [shareOpen]);
-
-  useEffect(() => {
-    if (!infoOpen) return undefined;
-    const onDoc = (e: MouseEvent) => { if (infoRef.current && !infoRef.current.contains(e.target as Node)) setInfoOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [infoOpen]);
 
   // Reused in both the open toolbar and the collapsed bar (only one renders at a time).
   const shareControl = (
@@ -172,60 +151,7 @@ const SharePreviewPage: NextPage = () => {
         .preview-prose[contenteditable] *::selection { background: rgba(120,58,251,0.18); }
       `}</style>
 
-      {/* Surfer-style topbar */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', gap: 12, minHeight: 32, padding: '0.75rem 0.75rem 1rem 0.75rem', background: '#f8f8f9', borderBottom: '1px solid #ececef' }}>
-        <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', marginRight: 12 }}>
-          <span style={{ width: 22, height: 22, borderRadius: 6, background: '#F97316', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13 }}>S</span>
-          <span style={{ fontWeight: 800, fontSize: 16, color: '#18181b', letterSpacing: '-0.01em' }}>SURFER</span>
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#52525c', fontSize: 14, fontWeight: 600, minWidth: 0 }}>
-          <span>Content Editor</span>
-          <span style={{ color: '#9f9fa9' }}>/</span>
-          <span style={{ color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{article?.target_keyword || article?.title || ''}</span>
-          <div ref={infoRef} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-            <button type="button" aria-label="Article info" onClick={() => setInfoOpen((v) => !v)}
-              style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: infoOpen ? '#18181b' : '#9f9fa9', display: 'inline-flex' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = infoOpen ? '#18181b' : '#9f9fa9'; }}>
-              <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" /></svg>
-            </button>
-            {infoOpen && article && (() => {
-              const loc = BC_COUNTRY[(article.language || 'pl').toLowerCase()] || BC_COUNTRY.en;
-              const kw = article.target_keyword ? [article.target_keyword] : [];
-              return (
-                <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 200, width: 300, maxWidth: 'calc(100vw - 24px)', background: '#fff', borderRadius: 12, padding: '12px 16px', boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: F, fontWeight: 400, animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                      <span style={{ fontSize: 13, color: '#52525C' }}>Keywords{kw.length ? ` (${kw.length})` : ''}</span>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', wordBreak: 'break-word' }}>{kw.length ? kw.join(', ') : '—'}</span>
-                    </div>
-                    {kw.length > 0 && (
-                      <button type="button" aria-label="Copy keywords" onClick={() => { navigator.clipboard?.writeText(kw.join(', ')); toast.success('Keywords copied'); }}
-                        style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#3F3F47', display: 'inline-flex', flexShrink: 0 }}>
-                        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}><path d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" /></svg>
-                      </button>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={{ fontSize: 13, color: '#52525C' }}>Location</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500, color: '#18181B' }}>
-                      <img alt="" width={18} height={13} style={{ borderRadius: 2 }} src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${loc.cc}.svg`} />
-                      {loc.name}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={{ fontSize: 13, color: '#52525C' }}>Last Modified</span>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{bcFmtDate(article.updated_at)}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={{ fontSize: 13, color: '#52525C' }}>Created</span>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{bcFmtDate(article.created_at)}</span>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
+      {/* Topbar removed — the article preview shows only the content + score panel. */}
 
       {loading ? (
         <EditorLoading />
