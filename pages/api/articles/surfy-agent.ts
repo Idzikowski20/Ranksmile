@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const {
     prompt, content, keyword = '', scoreData = null, internalArticles = [],
-    articleTitle = '', articleMetaDescription = '', history = [],
+    articleTitle = '', articleMetaDescription = '', history = [], articleId = null,
   } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
   if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
@@ -31,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ctx: ToolCtx = {
       $, keyword, scoreData, internalArticles, articleTitle, articleMetaDescription,
       changelog: [], htmlDirty: false, writeCount: 0, meta: null,
+      articleId: articleId != null ? Number(articleId) : null, cache: {},
     };
 
     const priorTurns = (Array.isArray(history) ? history : [])
