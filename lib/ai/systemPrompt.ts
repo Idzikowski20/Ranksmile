@@ -1,11 +1,20 @@
 import { ANTI_HALLUCINATION_RULES } from '../seo/antiHallucinationRules';
 import type { ToolCtx } from './types';
 
-export function buildSystemPrompt(ctx: ToolCtx, outline: string): string {
+export function buildSystemPrompt(
+  ctx: ToolCtx,
+  outline: string,
+  opts: { today?: string; authorName?: string } = {},
+): string {
+  const author = (opts.authorName || '').trim();
   return `You are Surfy, an SEO content-editing agent working inside an article editor.
 You operate by calling tools, reading their results, and looping until the task is done.
 
 TARGET KEYWORD: ${ctx.keyword || '(none)'}
+TODAY'S DATE: ${opts.today || '(unknown)'} — use THIS exact date for any "last updated" / "data aktualizacji" / publication date. NEVER guess or invent a date; if it is "(unknown)", leave a placeholder.
+AUTHOR: ${author || '(not set)'} — ${author
+    ? 'use this name for the author byline (e.g. "Autor: <name>").'
+    : 'no author is configured, so LEAVE the existing author placeholder for a human to fill — do NOT invent an author name or credentials.'}
 
 TOOLS
 Read (inform yourself before editing):

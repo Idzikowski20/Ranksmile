@@ -1106,7 +1106,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     const handleAskSurfy = () => {
       if (!editor) return;
-      if (surfyOpen) { setSurfyOpen(false); setSurfyResponse(null); setSurfyHistory([]); return; }
+      // Just hide/show — keep the conversation + any pending response so reopening continues it.
+      if (surfyOpen) { setSurfyOpen(false); return; }
       const { from, to, empty } = editor.state.selection;
       if (!empty && from !== to) {
         const text = editor.state.doc.textBetween(from, to, '\n');
@@ -1115,8 +1116,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setSurfySelection(null);
       }
       setSurfyOpen(true);
-      setSurfyResponse(null);
-      setSurfyHistory([]);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
     };
 
@@ -1154,6 +1153,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               articleMetaDescription: metaDescription || '',
               history: surfyHistory,
               articleId: commentArticleId ? Number(commentArticleId) : null,
+              authorName: commentAuthor?.name || '',
             }
           : {
               prompt,
@@ -1247,7 +1247,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       } else {
         // Full article mode
         if (surfyResponse.content) {
-          editor.commands.setContent(surfyResponse.content);
+          // emitUpdate:true so the editor fires onUpdate → page onChange → AUTO-SAVE.
+          // Without it setContent is silent and the applied changes never persist.
+          editor.commands.setContent(surfyResponse.content, { emitUpdate: true });
         }
         if (surfyMetaRef.current) {
           if (surfyMetaRef.current.metaTitle != null) onMetaTitleChange?.(surfyMetaRef.current.metaTitle);
@@ -1255,7 +1257,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           surfyMetaRef.current = null;
         }
       }
-      setSurfyOpen(false);
+      // Keep the panel + conversation open so the user can continue; just clear the
+      // applied response/draft. (Closing wiped the chat — that surprised users.)
       setSurfyPrompt('');
       setSurfyResponse(null);
       setSurfySelection(null);
@@ -1659,7 +1662,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} />}
                   <button
                     type="button"
-                    onClick={() => { setSurfyOpen(false); setSurfyPrompt(''); setSurfyResponse(null); setSurfyHistory([]); }}
+                    onClick={() => setSurfyOpen(false)}
                     aria-label="Close"
                     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; e.currentTarget.style.color = '#fff'; }}
