@@ -11,6 +11,7 @@ import { buildTools } from '../../../lib/ai/tools';
 import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { sseEvent } from '../../../lib/ai/sse';
 import { extractJsonObject, isSurfyReplyShape } from '../../../lib/ai/extractJson';
+import { stripEmoji } from '../../../lib/ai/text';
 import type { ToolCtx } from '../../../lib/ai/types';
 
 // maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
@@ -99,6 +100,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           finalHtml = restoreDataImages(parsedReply.content, map);
         }
       }
+      // Minimalist, emoji-free chat reply (article HTML is left untouched).
+      message = stripEmoji(message);
 
       // Guard: never apply an article the agent accidentally emptied.
       if (finalHtml != null && finalHtml.replace(/<[^>]+>/g, '').trim().length === 0) {
