@@ -344,12 +344,22 @@ dev `.next`; Phase 1 already proved the toolchain builds and the Phase 2 changes
 **Selection-mode precise edits remain deferred** (ProseMirror↔cheerio position mapping is fragile;
 selection mode keeps using the single-shot `ask-surfy` route).
 
+**Phase 3 implemented** (commits `8f2066a`…`0cf6929` on `main`, plan
+`docs/plans/2026-06-29-surfy-tool-calling-phase3.md`). Three ACTION tools wrapping existing endpoints:
+`generate_social_posts` (in-loop, output-only via `/social-posts`), `apply_readability` (in-loop,
+`/ai-readability`→`/apply-ai-readability`, replaces the cheerio working copy → rides the existing
+diff Preview; body only, returns the refreshed outline), and `publish_to_wordpress` (**propose-only**:
+sets `ctx.pendingAction`; the client shows a confirm card → calls the existing `/api/articles/publish`;
+the agent never publishes autonomously; warns when there are unsaved edits). Added a `PendingAction`
+channel on `ToolCtx`+route, `ACTION_TIMEOUT=60s`, route `maxDuration` 60→300. Verified: 38/38 unit
+tests, `tsc --noEmit` clean. (`next build` deferred locally — dev server running; tsc+jest gate it.)
+
 ## Out of scope (future phases)
 
 - **Phase 2 (advanced read):** ✅ shipped — `get_ai_search_score`, `check_plagiarism`,
   `fetch_competitor_outline`, `get_headings_outline`. Precise **selection-mode** edits still deferred.
-- **Phase 3 (actions, with confirmation):** `publish_to_wordpress`, `generate_social_posts`,
-  `apply_readability`.
+- **Phase 3 (actions, with confirmation):** ✅ shipped — `generate_social_posts`, `apply_readability`
+  (staged via diff Preview), `publish_to_wordpress` (propose → confirm card → existing endpoint).
 - **Phase 4 (polish):** stream tool steps to the UI in real time; a meta-tool catalog
   (`get_tool_catalog`/`learn_tools`) if the tool count grows large; per-action confirmation gates.
 
