@@ -1,5 +1,6 @@
 import type * as cheerio from 'cheerio';
 import type { ScoreData } from '../contentScore';
+import type { ArticleSeoMeta } from './articleMeta';
 
 export interface InternalArticleRef {
   id?: number;
@@ -11,7 +12,7 @@ export interface InternalArticleRef {
  *  repeat the same `resolveArticleSeoMeta` query or re-run identical analyses
  *  when the model calls them twice within one agent run. */
 export interface ToolCache {
-  seoMeta?: { domain: string; language: string; targetKeyword: string; competitorDomains: string[] };
+  seoMeta?: ArticleSeoMeta;
   aiSearch?: unknown;
   plagiarism?: unknown;
   competitors?: unknown;

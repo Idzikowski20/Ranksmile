@@ -6,9 +6,20 @@ export interface ArticleSeoMeta {
   language: string;
   targetKeyword: string;
   competitorDomains: string[];
+  // Persisted scores shown in the editor's Content Score panel — so Surfy reports the SAME numbers
+  // as the UI (rather than re-computing different ones) until the article is actually edited.
+  rankingScore: number | null;
+  rankingSignals: any | null;
+  aiVisibility: any | null;
 }
 
-const DEFAULTS: ArticleSeoMeta = { domain: '', language: 'pl', targetKeyword: '', competitorDomains: [] };
+const DEFAULTS: ArticleSeoMeta = { domain: '', language: 'pl', targetKeyword: '', competitorDomains: [], rankingScore: null, rankingSignals: null, aiVisibility: null };
+
+const parseJsonish = (v: any): any | null => {
+  if (v == null) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return null; }
+};
 
 // Mirrors pages/api/articles/ai-visibility.ts (domainFromUrl / competitorDomainsFromCache).
 function domainFromUrl(url: string): string {
@@ -65,6 +76,9 @@ export async function resolveArticleSeoMeta(articleId: number): Promise<ArticleS
          language: article.language || 'pl',
          targetKeyword: article.target_keyword || article.title || '',
          competitorDomains,
+         rankingScore: article.ranking_score != null ? Number(article.ranking_score) : null,
+         rankingSignals: parseJsonish(article.ranking_signals),
+         aiVisibility: parseJsonish(article.ai_visibility_summary),
       };
    } catch {
       return { ...DEFAULTS };
