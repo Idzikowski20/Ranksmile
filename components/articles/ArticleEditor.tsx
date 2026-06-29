@@ -1067,6 +1067,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const draftRangeRef = useRef<{ from: number; to: number } | null>(null);
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
+    const surfyScrollRef = useRef<HTMLDivElement>(null);
     // The "/ask" slash item opens Surfy via this ref (the handler is defined further down).
     const slashAskSurfyRef = useRef<() => void>(() => {});
 
@@ -1144,6 +1145,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const [surfyHistory, setSurfyHistory] = useState<Array<{ role: 'user' | 'assistant'; message: string; content?: string | null; action?: string }>>([]);
+
+    // Keep the conversation pinned to the latest message as it grows / streams in.
+    useEffect(() => {
+      const el = surfyScrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, [surfyHistory, surfyStreamText, surfyActivity, surfyLoading, surfyResponse]);
 
     const handleAskSurfy = () => {
       if (!editor) return;
@@ -1721,7 +1728,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
               {/* Conversation history — scrollable chat above input */}
               {surfyHistory.length > 0 && (
-                <div style={{ padding: '0.5rem 0.5rem 0', maxHeight: 260, overflowY: 'auto' }} className="styled-scrollbar-dark">
+                <div ref={surfyScrollRef} style={{ padding: '0.5rem 0.5rem 0', maxHeight: 260, overflowY: 'auto' }} className="styled-scrollbar-dark">
                   {surfyHistory.map((entry, i) => (
                     <div key={i} style={{ marginBottom: i < surfyHistory.length - 1 ? 12 : 0 }}>
                       {/* User message */}

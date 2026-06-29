@@ -8,6 +8,7 @@ import { countOccurrences } from '../../../lib/contentScore';
 import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
 import { scoreContent } from '../../../lib/seo/scoreContentClient';
+import { extractJsonObject, isSurfyReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
@@ -294,15 +295,18 @@ RULES:
     let message = '';
     let htmlContent: string | null = null;
 
-    try {
-      const parsed = JSON.parse(raw);
-      parsedAction = parsed.action || action;
-      message = parsed.message || '';
-      htmlContent = parsed.content || null;
-    } catch {
+    // The model usually returns a JSON object, but often wraps it in a ```json fence (which breaks
+    // a bare JSON.parse). extractJsonObject handles fenced/bare/surrounded-by-prose objects.
+    const parsed = extractJsonObject(raw);
+    if (isSurfyReplyShape(parsed) && parsed) {
+      parsedAction = (typeof parsed.action === 'string' ? parsed.action : action) as SurfyAction;
+      message = typeof parsed.message === 'string' ? parsed.message : '';
+      htmlContent = typeof parsed.content === 'string' && parsed.content.trim() ? parsed.content : null;
+    } else {
       const msgMatch = raw.match(/MESSAGE\s*\n?([\s\S]*?)\n?MESSAGE_END/i);
       const htmlMatch = raw.match(/HTML\s*\n?([\s\S]*?)\n?HTML_END/i);
-      message = msgMatch?.[1]?.trim() || raw.trim();
+      // Last resort: show the de-fenced text, never the raw ```json wrapper, as the message.
+      message = msgMatch?.[1]?.trim() || stripCodeFence(raw);
       htmlContent = htmlMatch?.[1]?.trim() || null;
       if (htmlContent) {
         htmlContent = htmlContent.replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();

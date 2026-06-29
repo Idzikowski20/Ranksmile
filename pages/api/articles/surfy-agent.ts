@@ -10,6 +10,7 @@ import { makeWorkingDoc, stripDataImages, restoreDataImages, stripSids } from '.
 import { buildTools } from '../../../lib/ai/tools';
 import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { sseEvent } from '../../../lib/ai/sse';
+import { extractJsonObject, isSurfyReplyShape } from '../../../lib/ai/extractJson';
 import type { ToolCtx } from '../../../lib/ai/types';
 
 // maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
@@ -83,10 +84,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      const message = await Promise.resolve(result.text).catch(() => '');
+      let message = await Promise.resolve(result.text).catch(() => '');
       const finalUsage = await Promise.resolve(result.totalUsage).catch(() => undefined);
 
       let finalHtml = ctx.htmlDirty ? restoreDataImages(stripSids($.html()), map) : null;
+
+      // The agent should use write tools + reply in prose, but deepseek-chat sometimes ignores the
+      // tools and answers with a legacy {action,message,content} JSON blob. Normalize that: surface
+      // the prose `message`, and if it carried full-article HTML (and no tool wrote), apply it.
+      const parsedReply = extractJsonObject(message);
+      if (isSurfyReplyShape(parsedReply) && parsedReply) {
+        if (typeof parsedReply.message === 'string' && parsedReply.message.trim()) message = parsedReply.message;
+        if (finalHtml == null && typeof parsedReply.content === 'string' && parsedReply.content.trim()) {
+          finalHtml = restoreDataImages(parsedReply.content, map);
+        }
+      }
+
       // Guard: never apply an article the agent accidentally emptied.
       if (finalHtml != null && finalHtml.replace(/<[^>]+>/g, '').trim().length === 0) {
         finalHtml = null;
