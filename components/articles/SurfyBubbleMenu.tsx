@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import type { Transaction } from '@tiptap/pm/state';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 
@@ -432,17 +433,18 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
 
   // Tiptap's <BubbleMenu> owns show/hide + Floating-UI positioning. We only need
   // the (always-mounted) content to re-render when the selection or marks change
-  // so the button active-states stay accurate.
+  // so the button active-states stay accurate. Re-render ONLY on real doc/selection
+  // changes — the BubbleMenu plugin repositions itself via meta-only transactions
+  // (docChanged=false, selectionSet=false); re-rendering on those feeds back into
+  // another reposition tx and spins into an infinite update loop.
   const [, bumpTick] = useState(0);
   useEffect(() => {
     if (!editor) return undefined;
-    const refresh = () => bumpTick((t) => t + 1);
-    editor.on('selectionUpdate', refresh);
-    editor.on('transaction', refresh);
-    return () => {
-      editor.off('selectionUpdate', refresh);
-      editor.off('transaction', refresh);
+    const refresh = ({ transaction }: { transaction: Transaction }) => {
+      if (transaction.docChanged || transaction.selectionSet) bumpTick((t) => t + 1);
     };
+    editor.on('transaction', refresh);
+    return () => { editor.off('transaction', refresh); };
   }, [editor]);
 
   // The editor body scrolls inside `.art-editor-scroll`, so point Floating UI at
