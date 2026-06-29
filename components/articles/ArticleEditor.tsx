@@ -1351,6 +1351,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
         setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
       },
+      deleteConversation: (id) => persistConvos(surfyConversations.filter((c) => c.id !== id)),
       confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
       cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
       pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
