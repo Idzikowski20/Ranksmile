@@ -1,17 +1,15 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useEffect } from 'react';
+import { motion, useMotionValue, useMotionTemplate, animate } from 'motion/react';
 
 /**
  * Diffuse, flowing multi-colour halo around the editor shell while Surfy / AI is working.
+ * A heavily-blurred conic-gradient masked to a soft frame; the gradient ANGLE is driven by
+ * Motion (continuous rotation) so the colours flow around the window — a Claude-style ambient
+ * glow, spread out instead of concentrated in one spot. Animation runs only while `active`.
  *
- * Uses an animated DIAGONAL LINEAR gradient (sweeping background-position), NOT a conic one: a conic
- * gradient centred on the (very wide) editor gives the long vertical sides almost no angular range,
- * so the left/right edges always collapse to a single colour. A diagonal linear gradient with a
- * moving background-position shows multi-colour bands flowing evenly across every edge.
- *
- * The mask-composite recipe (border-box layer XOR content-box layer = ring) and the gradient flow
- * both live in a real CSS RULE, not React inline styles: setting `mask`/`mask-composite` inline got
- * the composite dropped (whole area filled instead of a ring), and CSS keyframes drive the flow.
+ * The mask-composite recipe (border-box layer XOR content-box layer = ring) lives in a real CSS
+ * RULE, not React inline styles: setting `mask` + `mask-composite` inline got the composite dropped,
+ * so the whole conic gradient filled the area instead of a thin ring.
  */
 const RING_CSS = `
 .ai-glow-ring__frame {
@@ -19,35 +17,43 @@ const RING_CSS = `
   inset: 0;
   border-radius: inherit;
   padding: 14px;
-  background: linear-gradient(115deg, #783afb, #c026d3, #ec4899, #fb7185, #22d3ee, #3b82f6, #8b5cf6, #783afb);
-  background-size: 220% 220%;
-  filter: blur(8px) saturate(1.3);
+  filter: blur(7px) saturate(1.25);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: ai-glow-flow 9s ease-in-out infinite, ai-glow-pulse 3.4s ease-in-out infinite;
-}
-.ai-glow-ring__frame.is-idle { animation-play-state: paused; }
-@keyframes ai-glow-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-@keyframes ai-glow-pulse { 0%, 100% { opacity: 0.82; } 50% { opacity: 1; } }`;
+}`;
 
-const AiGlowRing = ({ active }: { active: boolean }) => (
-  <motion.div
-    aria-hidden="true"
-    initial={false}
-    animate={{ opacity: active ? 1 : 0 }}
-    transition={{ duration: 0.5, ease: 'easeInOut' }}
-    style={{ position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none', zIndex: 9999 }}
-  >
-    <style>{RING_CSS}</style>
-    {/* Kept mounted for the fade-out; animation pauses (no CPU) while idle. */}
-    <div className={`ai-glow-ring__frame${active ? '' : ' is-idle'}`} />
-  </motion.div>
-);
+const AiGlowRing = ({ active }: { active: boolean }) => {
+  const angle = useMotionValue(0);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    const controls = animate(angle, 360, { duration: 7, repeat: Infinity, ease: 'linear' });
+    return () => controls.stop();
+  }, [active, angle]);
+
+  // Many vivid, distinct stops so every edge of the (wide) rectangle shows colour flow — a conic
+  // gradient gives each edge only a narrow angular slice, so few stops read as a solid wash.
+  const background = useMotionTemplate`conic-gradient(from ${angle}deg at 50% 50%, #783afb, #a855f7, #ec4899, #f472b6, #06b6d4, #22d3ee, #3b82f6, #8b5cf6, #783afb)`;
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      initial={false}
+      animate={{ opacity: active ? 1 : 0 }}
+      transition={{ duration: 0.5, ease: 'easeInOut' }}
+      style={{ position: 'absolute', inset: 0, borderRadius: 12, pointerEvents: 'none', zIndex: 9999 }}
+    >
+      <style>{RING_CSS}</style>
+      <motion.div
+        className="ai-glow-ring__frame"
+        animate={active ? { opacity: [0.78, 1, 0.78] } : { opacity: 0.9 }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ background }}
+      />
+    </motion.div>
+  );
+};
 
 export default AiGlowRing;
