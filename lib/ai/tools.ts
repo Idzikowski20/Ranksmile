@@ -114,5 +114,84 @@ export function buildTools(ctx: ToolCtx) {
         return { targets };
       },
     }),
+
+    apply_edit: tool({
+      description:
+        'Edit a block by its sid. op="replace" replaces the block\'s inner HTML; "append" inserts a new block AFTER it; "prepend" inserts a new block BEFORE it; "remove" deletes the block. For lists/tables, call read_block first then "replace" with the full new inner HTML. Returns the refreshed outline.',
+      inputSchema: z.object({
+        sid: z.number().int(),
+        op: z.enum(['replace', 'append', 'prepend', 'remove']),
+        html: z.string().optional(),
+      }),
+      execute: async ({ sid, op, html }) => {
+        if (ctx.writeCount >= MAX_WRITES) return { ok: false, summary: 'edit limit reached for this turn' };
+        const el = ctx.$(`[data-sid="${sid}"]`);
+        if (el.length === 0) return { ok: false, summary: `sid ${sid} not found` };
+        if (op !== 'remove' && !html) return { ok: false, summary: `html is required for op "${op}"` };
+        const safe = html ? sanitizeFragment(html) : '';
+        if (op === 'replace') {
+          const node = el.get(0) as { tagName?: string; name?: string } | undefined;
+          const tag = node?.tagName || node?.name || '';
+          if (wouldNestBlock(tag, safe)) {
+            return { ok: false, summary: `<${tag}> can't contain block-level HTML. Pass inline HTML only, or use op "append"/"prepend" to add sibling blocks, or "remove" then insert_section.` };
+          }
+        }
+        if (op === 'replace') el.html(safe);
+        else if (op === 'append') el.after(safe);
+        else if (op === 'prepend') el.before(safe);
+        else el.remove();
+        ctx.htmlDirty = true;
+        ctx.writeCount += 1;
+        ctx.changelog.push({ tool: 'apply_edit', summary: `${op} on sid ${sid}` });
+        return { ok: true, summary: `Applied ${op} to sid ${sid}`, outline: reindexSids(ctx.$) };
+      },
+    }),
+
+    insert_section: tool({
+      description:
+        'Insert a new section (a heading plus body HTML) at a position. position="start"|"end" relative to the article; "after_sid"/"before_sid" relative to a block (requires sid). level is the heading level (2–4, default 2). Returns the refreshed outline.',
+      inputSchema: z.object({
+        heading: z.string(),
+        html: z.string(),
+        position: z.enum(['start', 'end', 'after_sid', 'before_sid']),
+        sid: z.number().int().optional(),
+        level: z.number().int().min(2).max(4).optional(),
+      }),
+      execute: async ({ heading, html, position, sid, level }) => {
+        if (ctx.writeCount >= MAX_WRITES) return { ok: false, summary: 'edit limit reached for this turn' };
+        const h = level ?? 2;
+        const block = `<h${h}>${heading}</h${h}>\n${sanitizeFragment(html)}`;
+        if (position === 'start') ctx.$.root().prepend(block);
+        else if (position === 'end') ctx.$.root().append(block);
+        else {
+          if (sid == null) return { ok: false, summary: 'sid is required for after_sid/before_sid' };
+          const el = ctx.$(`[data-sid="${sid}"]`);
+          if (el.length === 0) return { ok: false, summary: `sid ${sid} not found` };
+          if (position === 'after_sid') el.after(block);
+          else el.before(block);
+        }
+        ctx.htmlDirty = true;
+        ctx.writeCount += 1;
+        ctx.changelog.push({ tool: 'insert_section', summary: `Inserted "${heading}" (${position})` });
+        return { ok: true, summary: `Inserted section "${heading}"`, outline: reindexSids(ctx.$) };
+      },
+    }),
+
+    set_meta: tool({
+      description: 'Stage updated SEO meta tags (title and/or description). Does not change the article body; the client applies these on accept.',
+      inputSchema: z.object({
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+      }),
+      execute: async ({ metaTitle, metaDescription }) => {
+        ctx.meta = {
+          ...(ctx.meta || {}),
+          ...(metaTitle != null ? { metaTitle } : {}),
+          ...(metaDescription != null ? { metaDescription } : {}),
+        };
+        ctx.changelog.push({ tool: 'set_meta', summary: 'Updated meta tags' });
+        return { ok: true, summary: 'Meta tags staged for apply' };
+      },
+    }),
   };
 }
