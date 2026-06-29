@@ -1355,6 +1355,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
       cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
       pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
+      // Selected-text context chip. Clearing it nulls the selection → the highlight effect
+      // ([surfyOpen, surfySelection]) removes the purple highlight from the article.
+      selectionText: surfySelection?.text || null,
+      clearSelection: () => setSurfySelection(null),
       close: () => setSurfyOpen(false),
     };
 
