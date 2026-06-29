@@ -73,19 +73,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
 
+      // Track the running text + where the LAST tool result landed so we can split the model's
+      // between-step narration ("thinking") from its final answer (text after the last tool).
+      let streamedText = '';
+      let thinkingLen = 0;
       for await (const part of result.fullStream) {
         if (ac.signal.aborted) break;
         switch (part.type) {
-          case 'text-delta': send('text', { delta: part.text }); break;
+          case 'text-delta': streamedText += part.text; send('text', { delta: part.text }); break;
           case 'tool-call': send('step', { phase: 'start', tool: part.toolName }); break;
-          case 'tool-result': send('step', { phase: 'end', tool: part.toolName }); break;
-          case 'tool-error': send('step', { phase: 'error', tool: part.toolName }); break;
+          case 'tool-result': thinkingLen = streamedText.length; send('step', { phase: 'end', tool: part.toolName }); break;
+          case 'tool-error': thinkingLen = streamedText.length; send('step', { phase: 'error', tool: part.toolName }); break;
           case 'error': send('error', { error: String((part as any).error?.message || (part as any).error || 'stream error') }); break;
           default: break; // start/finish-step etc. → covered by onStepFinish + totalUsage
         }
       }
 
-      let message = await Promise.resolve(result.text).catch(() => '');
+      const fullText = (await Promise.resolve(result.text).catch(() => '')) || streamedText;
+      // Answer = text after the last tool result; thinking = the narration before it (collapsed in UI).
+      let thinking = stripEmoji(streamedText.slice(0, thinkingLen).trim());
+      let message = streamedText.slice(thinkingLen).trim() || fullText;
       const finalUsage = await Promise.resolve(result.totalUsage).catch(() => undefined);
 
       let finalHtml = ctx.htmlDirty ? restoreDataImages(stripSids($.html()), map) : null;
@@ -113,6 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       send('done', {
         message,
+        thinking,
         finalHtml,
         meta: ctx.meta,
         changed: Boolean(finalHtml) || Boolean(ctx.meta),

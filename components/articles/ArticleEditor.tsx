@@ -993,7 +993,7 @@ const SlashIcon = ({ d }: { d: string }) => (
 const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() => void>): SlashItem[] => {
   const del = (editor: any, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
   const all: SlashItem[] = [
-    { title: 'Ask Surfy', hint: '/ask', icon: <SlashIcon d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
+    { title: 'Ask Surfy', hint: '/ask', icon: <IconSurfy size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
     { title: 'Add an image', hint: '/img', icon: <SlashIcon d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6" />, command: ({ editor, range }) => {
       del(editor, range).run();
       const inp = document.createElement('input');
@@ -1090,7 +1090,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-    type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string };
+    type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
     const [surfyHistory, setSurfyHistory] = useState<SurfyMsg[]>([]);
     // Saved conversations (localStorage, per article) for the header's history dropdown.
     type SurfyConvo = { id: string; title: string; ts: number; history: SurfyMsg[] };
@@ -1213,7 +1213,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setSurfyResponse({ action: data.action, message: data.message, content: data.content });
         }
         setSurfyHistory((prev) => {
-          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.finalHtml ?? data.content, action: data.action }];
+          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.finalHtml ?? data.content, action: data.action, thinking: data.thinking || '' }];
           return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
         });
         setSurfyPrompt('');
@@ -1578,7 +1578,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           /* New-line placeholder — Surfer-style: inherits the paragraph's size/line-height/spacing
              (so a fresh line sits as a normal paragraph and nothing shifts when you start typing),
              soft gray, NOT italic. */
-          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
           .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
