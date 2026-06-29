@@ -6,7 +6,7 @@ import { scoreContent } from '../seo/scoreContentClient';
 import { callSidecar } from '../sidecar';
 import { computeAiSearchScore } from '../aiSearchScore';
 import type { AiVisibilitySummary } from '../aiSearchScore';
-import { reindexSids, buildOutline, sanitizeFragment, stripSids } from './workingDoc';
+import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc } from './workingDoc';
 import { resolveArticleSeoMeta } from './articleMeta';
 import type { ToolCtx } from './types';
 
@@ -35,6 +35,18 @@ async function getSeoMeta(ctx: ToolCtx) {
     ctx.cache.seoMeta = await resolveArticleSeoMeta(ctx.articleId);
   }
   return ctx.cache.seoMeta;
+}
+
+// ms — one LLM call (same budget as the dedicated social/readability endpoints). The agent route's
+// maxDuration (300) covers DeepSeek steps plus up to two of these sequential calls (apply_readability).
+const ACTION_TIMEOUT = 60_000;
+
+// The /social-posts sidecar returns { variants: string[] } (SocialMediaModal reads data.variants).
+// Normalize to a stable { posts: string[] } so the tool result shape never depends on the sidecar.
+function normalizeSocialPosts(d: any): string[] {
+  if (Array.isArray(d?.variants)) return d.variants.filter((v: unknown) => typeof v === 'string');
+  if (Array.isArray(d?.posts)) return d.posts.filter((v: unknown) => typeof v === 'string');
+  return [];
 }
 
 export function buildTools(ctx: ToolCtx) {
@@ -236,6 +248,79 @@ export function buildTools(ctx: ToolCtx) {
           }
         }
         return { paa_questions: paa, competitors: outlines, source: outlines ? 'live_serp+paa' : 'paa' };
+      },
+    }),
+
+    generate_social_posts: tool({
+      description: 'Generate short social-media promo posts (X/LinkedIn/etc.) for this article. Returns the variants as text for the user to copy; does not post anywhere.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
+        try {
+          const d: any = await callSidecar('/social-posts', {
+            article_content: stripSids(ctx.$.html()),
+            keyword: ctx.keyword || '',
+          }, ACTION_TIMEOUT);
+          const posts = normalizeSocialPosts(d);
+          if (posts.length === 0) return { ok: false, summary: 'no social posts generated' };
+          return { posts };
+        } catch (e: any) {
+          return { ok: false, error: `social posts unavailable: ${e?.message || 'error'}` };
+        }
+      },
+    }),
+
+    apply_readability: tool({
+      description: 'Rewrite the article BODY to improve AI-readability (structure/clarity only — no new facts, and it does NOT change the title, meta description, or slug). The change is staged for the user to review and accept in the editor, exactly like your other edits. Because it rewrites the whole body, block sids change — use the refreshed outline it returns for any follow-up edit.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (ctx.writeCount >= MAX_WRITES) return { ok: false, summary: 'edit limit reached for this turn' };
+        if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
+        try {
+          const current = stripSids(ctx.$.html());
+          const kw = ctx.keyword || '';
+          const rub: any = await callSidecar('/ai-readability', {
+            article_content: `${ctx.articleTitle}\n${ctx.articleMetaDescription}\n${current}`,
+            keyword: kw,
+          }, ACTION_TIMEOUT);
+          const suggestions: string[] = (rub.criteria || [])
+            .filter((c: any) => !c.met)
+            .flatMap((c: any) => c.suggestions || []);
+          if (suggestions.length === 0) return { ok: true, summary: 'readability already strong; no changes', score: rub.score };
+          const applied: any = await callSidecar('/apply-ai-readability', { content: current, suggestions, keyword: kw }, ACTION_TIMEOUT);
+          const newHtml = (applied.content || '').trim();
+          if (!newHtml) return { ok: false, summary: 'readability rewrite returned empty' };
+          const wd = makeWorkingDoc(newHtml);    // re-annotates sids; flows into finalHtml diff
+          ctx.$ = wd.$;
+          ctx.htmlDirty = true;
+          ctx.writeCount += 1;
+          ctx.changelog.push({ tool: 'apply_readability', summary: `applied ${suggestions.length} readability fix(es)` });
+          // Return the refreshed outline (whole doc replaced → sids renumbered), like apply_edit/insert_section.
+          return { ok: true, summary: `rewrote the BODY for readability (${suggestions.length} fix(es)); staged for your review. Title/meta unchanged.`, applied: suggestions.length, outline: wd.outline };
+        } catch (e: any) {
+          return { ok: false, error: `readability rewrite unavailable: ${e?.message || 'error'}` };
+        }
+      },
+    }),
+
+    publish_to_wordpress: tool({
+      description: 'Propose publishing the article to the connected WordPress site. This does NOT publish — it asks the user to confirm; on confirm the app publishes the SAVED article. Use only when the user explicitly asks to publish.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable — cannot publish' };
+        // The publish endpoint publishes the SAVED DB article. If the agent staged edits this turn
+        // (htmlDirty), warn — otherwise the user would publish the previous saved version.
+        const warning = ctx.htmlDirty
+          ? 'You have unsaved edits — publishing uses the last SAVED version. Accept & save your changes first.'
+          : undefined;
+        ctx.pendingAction = { type: 'publish_to_wordpress', target: 'wordpress', articleId: ctx.articleId, title: ctx.articleTitle || '', warning };
+        ctx.changelog.push({ tool: 'publish_to_wordpress', summary: 'proposed publishing to WordPress (awaiting confirmation)' });
+        return {
+          proposed: true,
+          summary: warning
+            ? 'Proposed publishing to WordPress, but there are unsaved edits — tell the user to accept & save first, then confirm with the Publish button. Do not assume it is published.'
+            : 'Proposed publishing to WordPress. Ask the user to confirm with the Publish button; do not assume it is published.',
+        };
       },
     }),
 
