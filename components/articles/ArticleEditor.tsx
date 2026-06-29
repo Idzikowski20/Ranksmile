@@ -96,12 +96,14 @@ const Sep = () => (
 const chipStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center',
   borderRadius: '9999px',
-  border: '1px solid rgba(255,255,255,0.8)',
-  padding: '0.1875rem 0.75rem',
-  fontSize: 13, lineHeight: '16px',
-  color: 'rgba(255,255,255,0.8)',
+  border: '1px solid #221e28',
+  background: 'rgba(255,255,255,0.06)',
+  padding: '0.1875rem 0.625rem',
+  fontSize: 12, lineHeight: '16px',
+  color: 'rgba(255,255,255,0.72)',
   fontFamily: 'var(--font-family-primary)',
   cursor: 'default', userSelect: 'none',
+  whiteSpace: 'nowrap',
 };
 
 const Chip = ({ label }: { label: string }) => <div style={chipStyle}>{label}</div>;
@@ -1653,6 +1655,28 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 animation: 'growOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
+              {/* Header — identity + token usage + close */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderBottom: '1px solid #221e28' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <IconSurfy size={18} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Surfy</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', border: '1px solid #221e28', padding: '1px 6px', borderRadius: 9999, fontFamily: 'var(--font-family-primary)' }}>alpha</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} />}
+                  <button
+                    type="button"
+                    onClick={() => { setSurfyOpen(false); setSurfyPrompt(''); setSurfyResponse(null); setSurfyHistory([]); }}
+                    aria-label="Close"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                  >
+                    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              </div>
+
               {/* Conversation history — scrollable chat above input */}
               {surfyHistory.length > 0 && (
                 <div style={{ padding: '0.5rem 0.5rem 0', maxHeight: 260, overflowY: 'auto' }} className="styled-scrollbar-dark">
@@ -1712,12 +1736,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                       <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
                       <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Surfy is working…</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} />}
-                      <button type="button" onClick={() => surfyAbortRef.current?.abort()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.625rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
-                        Stop
-                      </button>
-                    </div>
+                    <button type="button" onClick={() => surfyAbortRef.current?.abort()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.625rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)', transition: 'background 150ms ease' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}>
+                      Stop
+                    </button>
                   </div>
                   {/* Live per-tool activity */}
                   {surfyActivity.length > 0 && (
@@ -1854,9 +1877,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               )}
 
+              {/* ── Composer: context + suggestions + input ── */}
               {/* Context chips row — always visible */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap', padding: '0.5rem 0.5rem', borderTop: '1px solid #221e28' }}>
-                <span style={{ fontSize: 12, lineHeight: '16px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)' }}>Context:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '8px 10px 6px', borderTop: '1px solid #221e28' }}>
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-family-primary)' }}>Context</span>
                 <Chip label={surfySelection ? `Selected (${surfySelection.text.length}c)` : 'Full article'} />
                 <Chip label={articleKeyword || keyword || 'N/A'} />
                 <Chip label={`Score: ${scoreData ? `${(scoreData as any)._computed_score || '?'}/100` : 'N/A'}`} />
@@ -1880,48 +1904,30 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               )}
 
-              {/* Input row — always visible */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', paddingTop: 0 }}>
-                {/* Surfy logo */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <IconSurfy size={20} />
-                </div>
-
-                {/* Textarea */}
-                <div style={{ flex: 1 }}>
-                  <textarea
-                    ref={surfyInputRef}
-                    rows={1}
-                    value={surfyPrompt}
-                    onChange={(e) => setSurfyPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSurfySubmit();
-                      }
-                    }}
-                    placeholder="Ask Surfy..."
-                    disabled={surfyLoading}
-                    style={{
-                      width: '100%',
-                      height: 24,
-                      maxHeight: 400,
-                      minHeight: 0,
-                      border: 'none',
-                      borderRadius: 0,
-                      background: 'transparent',
-                      outline: 'none',
-                      padding: 0,
-                      fontSize: 14,
-                      lineHeight: '24px',
-                      color: '#fff',
-                      fontFamily: 'var(--font-family-primary)',
-                      resize: 'none',
-                    }}
-                  />
-                </div>
-
-                {/* Send button */}
+              {/* Input row — textarea + send (identity + close live in the header) */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: '6px 8px 6px 10px' }}>
+                <textarea
+                  ref={surfyInputRef}
+                  rows={1}
+                  value={surfyPrompt}
+                  onChange={(e) => setSurfyPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSurfySubmit();
+                    }
+                  }}
+                  placeholder="Ask Surfy…"
+                  disabled={surfyLoading}
+                  style={{
+                    flex: 1,
+                    height: 24, maxHeight: 400, minHeight: 0,
+                    border: 'none', borderRadius: 0,
+                    background: 'transparent', outline: 'none', padding: '0 0 2px',
+                    fontSize: 14, lineHeight: '24px', color: '#fff',
+                    fontFamily: 'var(--font-family-primary)', resize: 'none',
+                  }}
+                />
                 <button
                   type="button"
                   onClick={handleSurfySubmit}
@@ -1929,54 +1935,26 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   aria-label="Send"
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 36, height: 36, borderRadius: 8,
-                    background: 'transparent', border: 'none',
-                    color: '#fff',
+                    width: 32, height: 32, borderRadius: 8,
+                    background: surfyPrompt.trim() && !surfyLoading ? '#783afb' : 'rgba(255,255,255,0.08)',
+                    border: 'none', color: '#fff',
                     cursor: surfyPrompt.trim() && !surfyLoading ? 'pointer' : 'not-allowed',
                     opacity: surfyPrompt.trim() && !surfyLoading ? 1 : 0.4,
-                    padding: 0,
-                    flexShrink: 0,
+                    padding: 0, flexShrink: 0,
+                    transition: 'background 150ms ease',
                   }}
+                  onMouseEnter={(e) => { if (surfyPrompt.trim() && !surfyLoading) e.currentTarget.style.background = '#8f5cff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = surfyPrompt.trim() && !surfyLoading ? '#783afb' : 'rgba(255,255,255,0.08)'; }}
                 >
-                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875zm0 0h7.5" />
-                  </svg>
-                </button>
-
-                {/* Audio/loading bars */}
-                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} style={{ width: 4, height: 12, background: '#1AB25E', borderRadius: 1, opacity: surfyLoading ? 1 : 0 }} />
-                  ))}
-                </div>
-
-                {/* Close button */}
-                <button
-                  type="button"
-                  onClick={() => { setSurfyOpen(false); setSurfyPrompt(''); setSurfyResponse(null); setSurfyHistory([]); }}
-                  aria-label="Close"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start',
-                    width: 36, height: 36, borderRadius: 8,
-                    background: 'transparent', border: 'none',
-                    color: '#fff', cursor: 'pointer', padding: '0.375rem',
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
 
-              {/* Early-alpha disclaimer */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0 0.5rem 0.5rem', color: 'rgba(255,255,255,0.4)', fontSize: 11, lineHeight: '14px', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }}>
-                <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><path d="M12 9v4M12 17h.01" />
-                </svg>
-                <span>Surfy is a very early alpha and can make mistakes.</span>
+              {/* Footer note */}
+              <div style={{ padding: '0 10px 7px', color: 'rgba(255,255,255,0.32)', fontSize: 10.5, lineHeight: '14px', fontFamily: 'var(--font-family-primary)' }}>
+                Surfy can make mistakes — review changes before applying.
               </div>
 
               {surfyCompareOpen && surfyResponse?.content && (
