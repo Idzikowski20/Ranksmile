@@ -6,7 +6,6 @@ import StarterKit from '@tiptap/starter-kit';
 import ImageExt from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
-import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import type { ScoreData } from '../../lib/contentScore';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
@@ -1231,8 +1230,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       extensions: [
         // link: false — StarterKit v3 includes Link by default; disable it so
         // our explicit Link.configure() below is the only Link extension.
+        // Underline is bundled in StarterKit v3, so it is NOT registered separately.
         StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: false }),
-        Underline,
         SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
         Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
