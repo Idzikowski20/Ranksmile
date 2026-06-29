@@ -199,15 +199,9 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
 
             {loading && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 15, height: 15, border: '2px solid #e4e4e7', borderTopColor: '#783afb', borderRadius: '50%', display: 'inline-block', animation: 'surfyspin 0.6s linear infinite' }} />
-                    <span style={{ fontSize: 13, color: '#52525c' }}>Surfy is working…</span>
-                  </div>
-                  <button type="button" onClick={s.stop}
-                    style={{ padding: '4px 10px', borderRadius: 6, background: '#f4f4f5', border: '1px solid #ececef', cursor: 'pointer', color: '#52525c', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
-                    Stop
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 15, height: 15, border: '2px solid #e4e4e7', borderTopColor: '#783afb', borderRadius: '50%', display: 'inline-block', animation: 'surfyspin 0.6s linear infinite' }} />
+                  <span style={{ fontSize: 13, color: '#52525c' }}>Surfy is working…</span>
                 </div>
                 {s.activity.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -349,11 +343,17 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   lastInput={s.usage.lastInput} lastOutput={s.usage.lastOutput}
                   totalInput={s.usage.totalInput} totalOutput={s.usage.totalOutput}
                 />
+                {/* While Surfy works this becomes a Stop button (Claude-style square); otherwise Send. */}
                 <button
-                  type="button" onClick={s.submit} disabled={!s.prompt.trim() || loading} aria-label="Send"
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: s.prompt.trim() && !loading ? '#783afb' : '#f4f4f5', border: 'none', color: s.prompt.trim() && !loading ? '#fff' : '#9f9fa9', cursor: s.prompt.trim() && !loading ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
+                  type="button"
+                  onClick={loading ? s.stop : s.submit}
+                  disabled={loading ? false : !s.prompt.trim()}
+                  aria-label={loading ? 'Stop' : 'Send'}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : s.prompt.trim() ? '#783afb' : '#f4f4f5', border: 'none', color: loading || s.prompt.trim() ? '#fff' : '#9f9fa9', cursor: loading || s.prompt.trim() ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
                 >
-                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+                  {loading
+                    ? <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true"><rect x={7.5} y={7.5} width={9} height={9} rx={2} fill="currentColor" /></svg>
+                    : <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>}
                 </button>
               </div>
             </div>
