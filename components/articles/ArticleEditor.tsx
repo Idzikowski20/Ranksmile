@@ -31,6 +31,7 @@ import CommentComposer, { DraftComment } from './comments/CommentComposer';
 import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
 import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
+import TokenCircle from './TokenCircle';
 
 export interface HeadingItem {
   level: number;
@@ -944,6 +945,51 @@ const TitleDescriptionBlock = ({
   );
 };
 
+// Friendly labels for the live activity list (tool name → human phrase).
+const SURFY_TOOL_LABELS: Record<string, string> = {
+  get_tool_catalog: 'Reviewing available tools', get_content_score: 'Checking content score',
+  list_missing_terms: 'Finding missing terms', get_ranking_signals: 'Reading ranking signals',
+  list_internal_link_targets: 'Looking up internal links', get_ai_search_score: 'Checking AI-search score',
+  check_plagiarism: 'Scanning for plagiarism', fetch_competitor_outline: 'Fetching competitor outlines',
+  get_headings_outline: 'Reading the outline', get_outline: 'Reading the outline', read_block: 'Reading a section',
+  apply_edit: 'Editing the article', insert_section: 'Adding a section', set_meta: 'Updating SEO meta',
+  generate_social_posts: 'Writing social posts', apply_readability: 'Improving readability',
+  publish_to_wordpress: 'Preparing to publish',
+};
+const surfyToolLabel = (tool: string) => SURFY_TOOL_LABELS[tool] || tool;
+
+/** Read the agent's SSE stream, forwarding live events, and resolve with the terminal `done` payload. */
+async function readSurfyAgentStream(
+  res: Response,
+  on: { text: (delta: string) => void; step: (d: { phase: string; tool: string }) => void; usage: (n: number) => void },
+): Promise<any> {
+  const reader = res.body!.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let done: any = null;
+  for (;;) {
+    const { value, done: streamDone } = await reader.read();
+    if (streamDone) break;
+    buf += dec.decode(value, { stream: true });
+    const frames = buf.split('\n\n');
+    buf = frames.pop() || '';
+    for (const f of frames) {
+      const ev = /event: (.*)/.exec(f)?.[1];
+      const dataLine = /data: (.*)/.exec(f)?.[1];
+      if (!ev || !dataLine) continue;
+      let parsed: any;
+      try { parsed = JSON.parse(dataLine); } catch { continue; }
+      if (ev === 'text') on.text(parsed.delta || '');
+      else if (ev === 'step') on.step(parsed);
+      else if (ev === 'usage') on.usage(parsed.totalTokens || 0);
+      else if (ev === 'done') done = parsed;
+      else if (ev === 'error') throw new Error(parsed.error || 'stream error');
+    }
+  }
+  if (!done) throw new Error('stream ended without result');
+  return done;
+}
+
 const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -984,6 +1030,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyLoading, setSurfyLoading] = useState(false);
     const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
     const [publishing, setPublishing] = useState(false);
+    // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
+    const [surfyActivity, setSurfyActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
+    const [surfyStreamText, setSurfyStreamText] = useState('');
+    const [surfyTokens, setSurfyTokens] = useState(0);
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -1080,6 +1130,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (!prompt || !editor) return;
       setSurfyLoading(true);
       setSurfyResponse(null);
+      setSurfyActivity([]);
+      setSurfyStreamText('');
+      setSurfyTokens(0);
 
       setSurfyHistory((prev) => {
         const next = [...prev, { role: 'user' as const, message: prompt }];
@@ -1124,12 +1177,33 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           body: JSON.stringify(body),
           signal: ac.signal,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Request failed');
+
+        let data: any;
+        if (useAgent) {
+          // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
+          if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
+          data = await readSurfyAgentStream(res, {
+            text: (delta) => setSurfyStreamText((t) => t + delta),
+            usage: (n) => setSurfyTokens(n),
+            step: (d) => setSurfyActivity((a) => {
+              if (d.phase === 'start') return [...a, { tool: d.tool, done: false }];
+              const rev = [...a].reverse().findIndex((x) => x.tool === d.tool && !x.done);
+              if (rev === -1) return a;
+              const idx = a.length - 1 - rev;
+              const copy = a.slice();
+              copy[idx] = { ...copy[idx], done: true, error: d.phase === 'error' };
+              return copy;
+            }),
+          });
+          if (data.usage?.totalTokens != null) setSurfyTokens(data.usage.totalTokens);
+        } else {
+          data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Request failed');
+        }
 
         if (useAgent) {
           surfyMetaRef.current = data.meta || null;
-          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: data.steps, pendingAction: data.pendingAction || null });
+          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: undefined, pendingAction: data.pendingAction || null });
         } else {
           surfyMetaRef.current = null;
           setSurfyResponse({ action: data.action, message: data.message, content: data.content });
@@ -1630,16 +1704,38 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 </div>
               )}
 
-              {/* Loading state */}
+              {/* Loading / live stream state */}
               {surfyLoading && (
-                <div style={{ padding: '0.75rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Surfy is working…</span>
+                <div style={{ padding: '0.625rem 0.625rem 0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: surfyActivity.length || surfyStreamText ? 8 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Surfy is working…</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} />}
+                      <button type="button" onClick={() => surfyAbortRef.current?.abort()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.625rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
+                        Stop
+                      </button>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => surfyAbortRef.current?.abort()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.625rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
-                    Stop
-                  </button>
+                  {/* Live per-tool activity */}
+                  {surfyActivity.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: surfyStreamText ? 8 : 0 }}>
+                      {surfyActivity.map((a, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, lineHeight: '18px', color: a.error ? '#FFB454' : a.done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-family-primary)' }}>
+                          <span style={{ flexShrink: 0, width: 12, textAlign: 'center' }}>
+                            {a.error ? '⚠' : a.done ? '✓' : <span style={{ display: 'inline-block', width: 9, height: 9, border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'rgba(255,255,255,0.8)', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />}
+                          </span>
+                          <span>{surfyToolLabel(a.tool)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* In-progress assistant text */}
+                  {surfyStreamText && (
+                    <div style={{ fontSize: 13, lineHeight: '19px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)', whiteSpace: 'pre-wrap' }}>{surfyStreamText}</div>
+                  )}
                 </div>
               )}
 
