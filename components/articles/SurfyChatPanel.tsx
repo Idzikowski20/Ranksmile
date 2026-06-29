@@ -269,7 +269,9 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
               </div>
             )}
 
-            {response && !loading && (
+            {/* Action row only when Surfy actually staged something to apply/review — pure advice
+                gets no Dismiss (there's nothing to dismiss; the reply stays in the conversation). */}
+            {response && !loading && (s.canApply || s.canCompare) && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 8, borderTop: '1px solid #f4f4f5' }}>
                 <button type="button" onClick={s.dismiss}
                   style={{ padding: '6px 12px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#52525c', fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
