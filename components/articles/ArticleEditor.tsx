@@ -9,6 +9,7 @@ import ImageExt from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
+import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData } from '../../lib/contentScore';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
@@ -32,6 +33,7 @@ import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
 import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
 import TokenCircle from './TokenCircle';
+import SlashCommand, { SlashItem } from './SlashCommand';
 
 export interface HeadingItem {
   level: number;
@@ -977,6 +979,42 @@ async function readSurfyAgentStream(
   return done;
 }
 
+// "/" slash-command menu items. Structural commands run on the live editor; Ask Surfy goes via a ref
+// (the handler is defined inside the component). Filtered by the text typed after "/".
+const SlashIcon = ({ d }: { d: string }) => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+);
+
+const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() => void>): SlashItem[] => {
+  const del = (editor: any, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
+  const all: SlashItem[] = [
+    { title: 'Ask Surfy', hint: '/ask', icon: <SlashIcon d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
+    { title: 'Add an image', hint: '/img', icon: <SlashIcon d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6" />, command: ({ editor, range }) => {
+      del(editor, range).run();
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.onchange = () => {
+        const f = inp.files?.[0]; if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => editor.chain().focus().setImage({ src: reader.result as string, alt: '' }).run();
+        reader.readAsDataURL(f);
+      };
+      inp.click();
+    } },
+    { section: 'HEADINGS', title: 'Set H1', hint: '/h1', icon: <SlashIcon d="M4 6v12M12 6v12M4 12h8M17 10l3-1v9" />, command: ({ editor, range }) => del(editor, range).toggleHeading({ level: 1 }).run() },
+    { section: 'HEADINGS', title: 'Set H2', hint: '/h2', icon: <SlashIcon d="M4 6v12M11 6v12M4 12h7M16 10a2 2 0 1 1 3 1.6L16 18h4" />, command: ({ editor, range }) => del(editor, range).toggleHeading({ level: 2 }).run() },
+    { section: 'HEADINGS', title: 'Set H3', hint: '/h3', icon: <SlashIcon d="M4 6v12M11 6v12M4 12h7M16 9a2 2 0 1 1 2 3 2 2 0 1 1-2 3" />, command: ({ editor, range }) => del(editor, range).toggleHeading({ level: 3 }).run() },
+    { section: 'LISTS', title: 'Toggle bulleted list', hint: '/bullet', icon: <SlashIcon d="M8 6h12M8 12h12M8 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01" />, command: ({ editor, range }) => del(editor, range).toggleBulletList().run() },
+    { section: 'LISTS', title: 'Toggle ordered list', hint: '/order', icon: <SlashIcon d="M10 6h11M10 12h11M10 18h11M4 6h1v4M4 10h2M4 14h2l-2 3h2" />, command: ({ editor, range }) => del(editor, range).toggleOrderedList().run() },
+    { section: 'OTHERS', title: 'Add blockquote', hint: '/quote', icon: <SlashIcon d="M7 7H4v6h3l-1 4M17 7h-3v6h3l-1 4" />, command: ({ editor, range }) => del(editor, range).toggleBlockquote().run() },
+    { section: 'OTHERS', title: 'Add code block', hint: '/code', icon: <SlashIcon d="M9 8l-4 4 4 4M15 8l4 4-4 4" />, command: ({ editor, range }) => del(editor, range).toggleCodeBlock().run() },
+    { section: 'OTHERS', title: 'Insert table', hint: '/table', icon: <SlashIcon d="M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14" />, command: ({ editor, range }) => del(editor, range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+  ];
+  const q = query.toLowerCase().trim();
+  if (!q) return all;
+  return all.filter((i) => i.title.toLowerCase().includes(q) || i.hint.slice(1).startsWith(q));
+};
+
 const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -1029,6 +1067,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const draftRangeRef = useRef<{ from: number; to: number } | null>(null);
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
+    // The "/ask" slash item opens Surfy via this ref (the handler is defined further down).
+    const slashAskSurfyRef = useRef<() => void>(() => {});
 
     // Auto-grow the Surfy textarea to fit its content (capped at maxHeight, then it scrolls).
     useEffect(() => {
@@ -1119,6 +1159,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       setSurfyOpen(true);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
     };
+    slashAskSurfyRef.current = handleAskSurfy;
 
   const handleSurfySubmit = async () => {
       const prompt = surfyPrompt.trim();
@@ -1362,6 +1403,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         DetailsSummary,
         DetailsContent,
         Youtube.configure({ width: 640, height: 360, nocookie: true, HTMLAttributes: { class: 'art-youtube' } }),
+        Placeholder.configure({ placeholder: 'Start writing or type a slash /', includeChildren: false }),
+        SlashCommand.configure({ items: (query: string) => filterSlashItems(query, slashAskSurfyRef) }),
       ],
       content,
       immediatelyRender: false,
@@ -1500,7 +1543,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid #e5e7eb; padding: 10px 18px; margin: 16px 0; color: #6b7280; font-style: italic; background: #f9fafb; border-radius: 0 6px 6px 0; }
           .art-editor-scroll .ProseMirror img { max-width: 100%; height: auto; }
           .art-editor-scroll .ProseMirror img.article-image.ProseMirror-selectednode { outline: 3px solid var(--color-surface-raised); }
-          .art-editor-scroll .ProseMirror p.is-editor-empty:first-child::before { color: #d1d5db; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
+          .art-editor-scroll .ProseMirror p.is-empty::before { color: #d1d5db; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
           .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
