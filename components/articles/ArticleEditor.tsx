@@ -1021,6 +1021,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyActivity, setSurfyActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
     const [surfyStreamText, setSurfyStreamText] = useState('');
     const [surfyTokens, setSurfyTokens] = useState(0);
+    const [surfyUsageDetail, setSurfyUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -1127,6 +1128,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       setSurfyActivity([]);
       setSurfyStreamText('');
       setSurfyTokens(0);
+      setSurfyUsageDetail({ input: 0, output: 0 });
 
       setSurfyHistory((prev) => {
         const next = [...prev, { role: 'user' as const, message: prompt }];
@@ -1191,6 +1193,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             }),
           });
           if (data.usage?.totalTokens != null) setSurfyTokens(data.usage.totalTokens);
+          setSurfyUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
         } else {
           data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -1659,7 +1662,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                   <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', border: '1px solid #221e28', padding: '1px 6px', borderRadius: 9999, fontFamily: 'var(--font-family-primary)' }}>alpha</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} />}
+                  {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} inputTokens={surfyUsageDetail.input} outputTokens={surfyUsageDetail.output} />}
                   <button
                     type="button"
                     onClick={() => setSurfyOpen(false)}

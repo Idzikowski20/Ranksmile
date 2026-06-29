@@ -102,7 +102,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         changed: Boolean(finalHtml) || Boolean(ctx.meta),
         changelog: ctx.changelog,
         pendingAction: ctx.pendingAction,
-        usage: { totalTokens: finalUsage?.totalTokens ?? runningTokens },
+        usage: {
+          totalTokens: finalUsage?.totalTokens ?? runningTokens,
+          inputTokens: finalUsage?.inputTokens ?? 0,
+          outputTokens: finalUsage?.outputTokens ?? 0,
+        },
       });
       res.end();
     } catch (streamErr: any) {
