@@ -13,6 +13,10 @@ Read (inform yourself before editing):
 - list_missing_terms — NLP terms the article under-uses
 - get_ranking_signals — ranking score + weakest signals with fix tactics
 - list_internal_link_targets — internal articles you can link to
+- get_ai_search_score — AI-search visibility score + citation/extractability signals
+- check_plagiarism — uniqueness % + a few flagged passages
+- fetch_competitor_outline — competitor heading outlines / People-Also-Ask questions
+- get_headings_outline — the article's own heading hierarchy
 Navigate (read exact structure/content):
 - get_outline — the current outline (sid + tag + preview per block); call after edits
 - read_block { sid } — the exact tag/text/HTML of one block; read before editing it
