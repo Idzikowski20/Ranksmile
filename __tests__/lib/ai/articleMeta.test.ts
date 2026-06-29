@@ -30,6 +30,23 @@ describe('resolveArticleSeoMeta', () => {
     expect(result.competitorDomains).toContain('c1.com');
   });
 
+  it('surfaces the persisted scores (ranking_score + parsed jsonb) the UI shows', async () => {
+    mockedQuery
+      .mockResolvedValueOnce([[{
+        domain: 'mine.com', language: 'pl', target_keyword: 'seo', title: 'T', competitor_outlines_cache: null,
+        ranking_score: 87,
+        ranking_signals: { signals: [{ name: 'E-E-A-T', score: 35 }] }, // already an object (jsonb)
+        ai_visibility_summary: '{"prompts_total":10,"prompts_cited":8}',  // string form
+      }]])
+      .mockResolvedValueOnce([[]]);
+
+    const result = await resolveArticleSeoMeta(1);
+
+    expect(result.rankingScore).toBe(87);
+    expect(result.rankingSignals).toEqual({ signals: [{ name: 'E-E-A-T', score: 35 }] });
+    expect(result.aiVisibility).toEqual({ prompts_total: 10, prompts_cited: 8 });
+  });
+
   it('returns safe defaults when the article query returns no rows', async () => {
     mockedQuery.mockResolvedValueOnce([[]]);
 
@@ -38,6 +55,9 @@ describe('resolveArticleSeoMeta', () => {
       language: 'pl',
       targetKeyword: '',
       competitorDomains: [],
+      rankingScore: null,
+      rankingSignals: null,
+      aiVisibility: null,
     });
   });
 
@@ -49,6 +69,9 @@ describe('resolveArticleSeoMeta', () => {
       language: 'pl',
       targetKeyword: '',
       competitorDomains: [],
+      rankingScore: null,
+      rankingSignals: null,
+      aiVisibility: null,
     });
   });
 });

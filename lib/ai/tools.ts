@@ -140,6 +140,19 @@ export function buildTools(ctx: ToolCtx) {
       description: 'Run the ranking-signal analysis and return the overall ranking score plus the weakest signals with fix recommendations.',
       inputSchema: z.object({}),
       execute: async () => {
+        // Until the article is actually edited, report the SAME persisted score the editor's
+        // Content Score panel shows (avoids confusing the user with a re-computed number); after
+        // any write, fall through to a fresh re-score to reflect the change.
+        if (!ctx.htmlDirty && ctx.articleId != null) {
+          const m = await getSeoMeta(ctx);
+          if (m?.rankingScore != null) {
+            const weakest = [...(m.rankingSignals?.signals || [])]
+              .sort((a: any, b: any) => a.score - b.score)
+              .slice(0, 5)
+              .map((s: any) => ({ name: s.name, score: s.score, recommendation: s.recommendation }));
+            return { ranking_score: m.rankingScore, weakest_signals: weakest };
+          }
+        }
         try {
           const r: any = await scoreContent(
             ctx.$.html(), ctx.keyword, (ctx.scoreData as any) || {}, ctx.articleTitle, ctx.articleMetaDescription,
@@ -189,6 +202,23 @@ export function buildTools(ctx: ToolCtx) {
       execute: async () => {
         if (ctx.cache.aiSearch) return ctx.cache.aiSearch;            // per-run cache
         if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
+        // Until edited, report the persisted AI-search number the UI shows (matches the panel);
+        // re-run the live sidecar check only after the article changed.
+        if (!ctx.htmlDirty) {
+          const pm = await getSeoMeta(ctx);
+          const v: any = pm?.aiVisibility;
+          if (v && (v.prompts_total || v.citations)) {
+            const out = {
+              score: computeAiSearchScore(v),
+              prompts_cited: v.prompts_cited || 0,
+              prompts_total: v.prompts_total || 0,
+              competitor_citations: v.competitor_citations || 0,
+              extractability_score: v.extractability_score || 0,
+            };
+            ctx.cache.aiSearch = out;
+            return out;
+          }
+        }
         try {
           const m = await getSeoMeta(ctx);
           const sc: any = await callSidecar('/ai-visibility', {
