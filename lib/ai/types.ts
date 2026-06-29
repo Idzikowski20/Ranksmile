@@ -17,6 +17,17 @@ export interface ToolCache {
   competitors?: unknown;
 }
 
+/** A side-effecting action the agent PROPOSES; the client confirms + executes it.
+ *  The agent never performs it autonomously. */
+export interface PendingAction {
+  type: 'publish_to_wordpress';
+  target: 'wordpress';
+  articleId: number;
+  title: string;
+  /** Non-blocking caution shown on the confirm card (e.g. unsaved edits). */
+  warning?: string;
+}
+
 /** Per-request context shared by every tool. Write tools mutate `$`, `meta`,
  *  `htmlDirty`, `writeCount`, and `changelog`. */
 export interface ToolCtx {
@@ -35,6 +46,8 @@ export interface ToolCtx {
   articleId: number | null;
   /** Per-run memo for DB/sidecar results (avoids repeat queries within one turn). */
   cache: ToolCache;
+  /** Set by a propose-only action tool; surfaced to the client to confirm + run. null otherwise. */
+  pendingAction: PendingAction | null;
 }
 
 export interface ToolResult {
