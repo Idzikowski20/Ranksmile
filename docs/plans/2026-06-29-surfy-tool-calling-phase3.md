@@ -52,15 +52,49 @@ tenancy + the WP REST publish). So the agent proposes, the user confirms, the ex
    `/ai-readability` (get suggestions on the current working copy) → `/apply-ai-readability` (rewrite)
    → replaces `ctx.$` with the rewritten HTML (`makeWorkingDoc`) and marks `htmlDirty`. The rewrite
    therefore appears in `finalHtml` and the user accepts it via the same diff Preview as any Surfy edit.
-4. **Timeout/latency:** readability + social are LLM rewrites (the endpoints use `maxDuration:60`).
-   New module constant `ACTION_TIMEOUT = 90_000` for these tool sidecar calls (vs. Phase 2's 30s read
-   timeout), and add `export const config = { maxDuration: 60 }` to `surfy-agent.ts`. **Risk:**
-   `apply_readability` is two sequential LLM calls; if it proves too slow under the route's
-   `maxDuration` in production, the fallback (a later 3b) is to make it propose-only like publish.
-   Flagging for review; default plan keeps it in-loop.
+   **Consciously accepted (review):** this REPLACES the whole working doc → all `data-sid`s and the
+   outline are regenerated. So the tool **returns the refreshed outline** (like `apply_edit`/
+   `insert_section`); combined with the existing prompt rule ("sids may shift after a write; use the
+   refreshed outline"), a later `apply_edit` in the same turn targets the new doc, not a stale one.
+   **Body-only (review pt 5):** `/apply-ai-readability` rewrites the article **content** only — it
+   never touches meta title / description / slug. The tool description + system prompt state this so
+   the model doesn't claim it "fixed the title".
+4. **Timeout/latency (reconciled per review — no self-contradiction):** the per-call sidecar budget
+   and the route's function timeout must be coherent. The existing dedicated endpoints spend one LLM
+   call under the `callSidecar` 60s default + `maxDuration:60`. So: `ACTION_TIMEOUT = 60_000` (one LLM
+   call — same budget as those endpoints, NOT 90s), and raise the agent route to
+   `export const config = { maxDuration: 300 }` so it covers the DeepSeek steps **plus** up to two
+   sequential sidecar LLM calls (`apply_readability`). `maxDuration` (route, 300) ≥ Σ tool calls
+   (≤ 2×60s) + model thinking — the route no longer dies before a tool finishes. **Plan dependency:**
+   300s needs a Vercel plan that allows it (Pro = 300s; Hobby caps at 60s — there `apply_readability`'s
+   two-call worst case may exceed it and fail gracefully via the tool's `catch` → `ok:false`). **Risk
+   fallback** (a later 3b): if too slow in production, make `apply_readability` propose-only like
+   publish (client runs the existing `/api/articles/apply-readability` + accept bar).
 5. **No new endpoints, no new sidecar routes, no DB schema changes.** Publish reuses `/api/articles/publish`;
    social/readability reuse the existing sidecar routes via `callSidecar` directly (the agent route
    already did `verifyUser`, so the tools call the sidecar, not the cookie-authed Next endpoints).
+
+---
+
+## Review responses (external review, 9.9/10)
+
+**Accepted & folded in:**
+1. **Timeout coherence** — `ACTION_TIMEOUT` dropped 90s → **60s** (one LLM-call budget, same as the
+   dedicated endpoints) and the route `maxDuration` raised to **300s** so it's ≥ Σ tool budgets; no
+   more "tool 90s vs route 60s" contradiction (Design #4, P3-T1, P3-T2).
+2. **`apply_readability` returns the refreshed outline** (whole doc replaced → sids renumbered), like
+   `apply_edit`; the description tells the model sids shift (Design #3, P3-T3).
+3. **`normalizeSocialPosts()` adapter** → tool always returns `{ posts: string[] }`; keyed on the real
+   `variants` shape (`SocialMediaModal` reads `data.variants`) (P3-T2).
+4. **Publish warns on unsaved edits** — if `ctx.htmlDirty`, `pendingAction.warning` is set and the
+   card shows a caution row, since `/publish` publishes the SAVED article (P3-T4, P3-T6).
+5. **Readability is body-only** — `/apply-ai-readability` rewrites content, never title/meta/slug;
+   stated in the tool description + system prompt so the model doesn't over-claim (Design #3, P3-T5).
+
+**Partial / optional:**
+6. **"Podgląd zmian" on the publish card** — optional secondary action opening the existing
+   `CompareVersionsModal`; included only if it wires in cleanly. The `warning` row (pt 4) already
+   covers the core "did I publish the right version" risk (P3-T6).
 
 ---
 
@@ -93,6 +127,8 @@ tenancy + the WP REST publish). So the agent proposes, the user confirms, the ex
     target: 'wordpress';
     articleId: number;
     title: string;
+    /** Non-blocking caution shown on the confirm card (e.g. unsaved edits). */
+    warning?: string;
   }
   ```
   and inside `ToolCtx` (after `meta`):
@@ -103,7 +139,9 @@ tenancy + the WP REST publish). So the agent proposes, the user confirms, the ex
 
 - [ ] **Step 2:** In `surfy-agent.ts`: add `pendingAction: null,` to the `ctx` literal; add
   `pendingAction: ctx.pendingAction,` to the JSON response object; add
-  `export const config = { maxDuration: 60 };` near the top (action tools are slow LLM calls).
+  `export const config = { maxDuration: 300 };` near the top — the route must cover the DeepSeek
+  steps PLUS up to two sequential sidecar LLM calls (`apply_readability`), so its function timeout
+  must be ≥ the sum of the tool budgets (`ACTION_TIMEOUT` 60s each). (See Design decision #4.)
 
 - [ ] **Step 3:** `npx tsc --noEmit` → it flags the 3 ctx factories missing `pendingAction`. Add
   `pendingAction: null,` to `tools.read.test.ts`, `tools.write.test.ts`, `systemPrompt.test.ts`
@@ -120,19 +158,27 @@ tenancy + the WP REST publish). So the agent proposes, the user confirms, the ex
 
 **Files:** `lib/ai/tools.ts`; Test `__tests__/lib/ai/tools.phase3.test.ts`.
 
-Add a module-level constant near `SIDECAR_TIMEOUT`:
+Add a module-level constant near `SIDECAR_TIMEOUT`, and a small normalizer (above `buildTools`):
 ```ts
-const ACTION_TIMEOUT = 90_000; // ms — social/readability are slow LLM rewrites
+const ACTION_TIMEOUT = 60_000; // ms — one LLM call (same budget as the dedicated endpoints)
+
+// The /social-posts sidecar returns { variants: string[] } (SocialMediaModal reads data.variants).
+// Normalize to a stable shape so the tool result is always { posts: string[] } regardless of sidecar.
+function normalizeSocialPosts(d: any): string[] {
+  if (Array.isArray(d?.variants)) return d.variants.filter((v: unknown) => typeof v === 'string');
+  if (Array.isArray(d?.posts)) return d.posts.filter((v: unknown) => typeof v === 'string');
+  return [];
+}
 ```
 
 - [ ] **Step 1: Write the failing test** `tools.phase3.test.ts`. Mirror the `tools.phase2.test.ts`
   setup: factory-mock `../../../lib/ai/articleMeta` (so the DB isn't loaded), `jest.mock` for
   `../../../lib/sidecar` whose `callSidecar` switches on path:
-  `/social-posts` → `{ posts: [{ network: 'x', text: 'a' }, { network: 'li', text: 'b' }] }`;
+  `/social-posts` → `{ variants: ['post A', 'post B'] }` (the real sidecar shape);
   `/ai-readability` → `{ score: 70, criteria: [{ key: 'k1', met: false, suggestions: ['split long sentence'] }, { key: 'k2', met: true }] }`;
   `/apply-ai-readability` → `{ content: '<h1>R</h1><p>improved</p>' }`.
   `ctxFor(html)` includes the full ToolCtx (`articleId:1, cache:{}, pendingAction:null, …`).
-  Assert: `generate_social_posts` returns `posts` (length 2) and calls
+  Assert: `generate_social_posts` returns `{ posts: ['post A','post B'] }` (length 2) and calls
   `callSidecar('/social-posts', expect.objectContaining({ keyword: 'seo' }), expect.any(Number))`.
 
 - [ ] **Step 2:** run → FAIL (tool undefined).
@@ -149,14 +195,15 @@ const ACTION_TIMEOUT = 90_000; // ms — social/readability are slow LLM rewrite
             article_content: stripSids(ctx.$.html()),
             keyword: ctx.keyword || '',
           }, ACTION_TIMEOUT);
-          return { posts: d.posts || d.variants || d };
+          const posts = normalizeSocialPosts(d);
+          if (posts.length === 0) return { ok: false, summary: 'no social posts generated' };
+          return { posts };
         } catch (e: any) {
           return { ok: false, error: `social posts unavailable: ${e?.message || 'error'}` };
         }
       },
     }),
   ```
-  (Return whatever the sidecar shapes — `posts`/`variants`; the agent reads it as text.)
 
 - [ ] **Step 4:** `npx jest __tests__/lib/ai/tools.phase3.test.ts` (green); `npx tsc --noEmit` (0).
 
@@ -181,7 +228,7 @@ Add `makeWorkingDoc` to the `./workingDoc` import in `tools.ts`.
 - [ ] **Step 3: Implement** (after `generate_social_posts`):
   ```ts
     apply_readability: tool({
-      description: 'Rewrite the article to improve AI-readability (structure/clarity only — no new facts). The change is staged for the user to review and accept in the editor, exactly like your other edits.',
+      description: 'Rewrite the article BODY to improve AI-readability (structure/clarity only — no new facts, and it does NOT change the title, meta description, or slug). The change is staged for the user to review and accept in the editor, exactly like your other edits. Because it rewrites the whole body, block sids change — use the refreshed outline it returns for any follow-up edit.',
       inputSchema: z.object({}),
       execute: async () => {
         if (ctx.writeCount >= MAX_WRITES) return { ok: false, summary: 'edit limit reached for this turn' };
@@ -200,11 +247,13 @@ Add `makeWorkingDoc` to the `./workingDoc` import in `tools.ts`.
           const applied: any = await callSidecar('/apply-ai-readability', { content: current, suggestions, keyword: kw }, ACTION_TIMEOUT);
           const newHtml = (applied.content || '').trim();
           if (!newHtml) return { ok: false, summary: 'readability rewrite returned empty' };
-          ctx.$ = makeWorkingDoc(newHtml).$;     // re-annotate sids; flows into finalHtml diff
+          const wd = makeWorkingDoc(newHtml);    // re-annotates sids; flows into finalHtml diff
+          ctx.$ = wd.$;
           ctx.htmlDirty = true;
           ctx.writeCount += 1;
           ctx.changelog.push({ tool: 'apply_readability', summary: `applied ${suggestions.length} readability fix(es)` });
-          return { ok: true, summary: `rewrote the article for readability (${suggestions.length} fix(es)); staged for your review`, applied: suggestions.length };
+          // Return the refreshed outline (whole doc replaced → sids renumbered), like apply_edit/insert_section.
+          return { ok: true, summary: `rewrote the BODY for readability (${suggestions.length} fix(es)); staged for your review. Title/meta unchanged.`, applied: suggestions.length, outline: wd.outline };
         } catch (e: any) {
           return { ok: false, error: `readability rewrite unavailable: ${e?.message || 'error'}` };
         }
@@ -228,7 +277,9 @@ Add `makeWorkingDoc` to the `./workingDoc` import in `tools.ts`.
 - [ ] **Step 1: Add the failing test:** `publish_to_wordpress` → returns `{ proposed: true }`,
   sets `ctx.pendingAction` to `{ type:'publish_to_wordpress', target:'wordpress', articleId:1, title:'Title' }`,
   and **does NOT call `callSidecar`** (assert `callSidecar` not called for this tool). Also: with
-  `articleId:null` → returns `{ ok:false }` and leaves `pendingAction` null.
+  `articleId:null` → returns `{ ok:false }` and leaves `pendingAction` null. Also: when the ctx has
+  `htmlDirty:true`, `ctx.pendingAction.warning` is set (unsaved-edits caution) and the result `summary`
+  mentions saving first.
 
 - [ ] **Step 2:** run → FAIL.
 
@@ -239,9 +290,19 @@ Add `makeWorkingDoc` to the `./workingDoc` import in `tools.ts`.
       inputSchema: z.object({}),
       execute: async () => {
         if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable — cannot publish' };
-        ctx.pendingAction = { type: 'publish_to_wordpress', target: 'wordpress', articleId: ctx.articleId, title: ctx.articleTitle || '' };
+        // The publish endpoint publishes the SAVED DB article. If the agent staged edits this turn
+        // (htmlDirty), warn — otherwise the user would publish the previous saved version.
+        const warning = ctx.htmlDirty
+          ? 'You have unsaved edits — publishing uses the last SAVED version. Accept & save your changes first.'
+          : undefined;
+        ctx.pendingAction = { type: 'publish_to_wordpress', target: 'wordpress', articleId: ctx.articleId, title: ctx.articleTitle || '', warning };
         ctx.changelog.push({ tool: 'publish_to_wordpress', summary: 'proposed publishing to WordPress (awaiting confirmation)' });
-        return { proposed: true, summary: 'Proposed publishing to WordPress. Ask the user to confirm with the Publish button; do not assume it is published.' };
+        return {
+          proposed: true,
+          summary: warning
+            ? 'Proposed publishing to WordPress, but there are unsaved edits — tell the user to accept & save first, then confirm with the Publish button. Do not assume it is published.'
+            : 'Proposed publishing to WordPress. Ask the user to confirm with the Publish button; do not assume it is published.',
+        };
       },
     }),
   ```
@@ -261,7 +322,7 @@ Add `makeWorkingDoc` to the `./workingDoc` import in `tools.ts`.
   ```
   Act (side effects — only when the user clearly asks):
   - generate_social_posts — draft social promo posts from the article (returns text; posts nothing)
-  - apply_readability — rewrite the article for readability; staged for the user to accept (like your edits)
+  - apply_readability — rewrite the article BODY for readability (NOT title/meta); staged for the user to accept (like your edits)
   - publish_to_wordpress — PROPOSE publishing; you do NOT publish — the user confirms with a button
   ```
   and add to the RULES list:
@@ -306,6 +367,14 @@ posts arrive in `data.message`; readability arrives in `data.finalHtml` → exis
   `#783AFB`, `var(--font-family-primary)`): a one-line "Surfy chce opublikować „{title}" do
   WordPressa. Publikowany jest zapisany artykuł." + **Publikuj** (calls `confirmPublish`, disabled
   while `publishing`) + **Anuluj** (clears pending). Inline SVG only; no icon lib.
+  - **If `pendingAction.warning` is set** (unsaved edits, review pt 4): show it above the buttons in a
+    caution row (amber text `#B45309`, no new dependency) so the user can't miss that publish uses the
+    last SAVED version.
+  - **Optional secondary action (review pt 6 — include if cheap):** when there are staged Surfy edits
+    (`surfyResponse?.content` / `surfyCompareOpen` machinery already exists from Phase 1), add a
+    tertiary **„Podgląd zmian"** text button that opens the existing `CompareVersionsModal`, so the
+    user can review what's staged before deciding. If wiring it cleanly into this card is non-trivial,
+    skip it — the `warning` row already covers the core "did I publish the right thing" risk.
 
 - [ ] **Step 4:** `npx tsc --noEmit` (0).
 
