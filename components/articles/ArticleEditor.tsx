@@ -1346,6 +1346,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
       },
       deleteConversation: (id) => persistConvos(surfyConversations.filter((c) => c.id !== id)),
+      renameConversation: (id, title) => persistConvos(surfyConversations.map((c) => (c.id === id ? { ...c, title: title.trim() || c.title } : c))),
       confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
       cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
       pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
