@@ -24,6 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const {
     prompt, content, keyword = '', scoreData = null, internalArticles = [],
     articleTitle = '', articleMetaDescription = '', history = [], articleId = null,
+    authorName = '',
   } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
   if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
@@ -56,9 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let runningTokens = 0;
     try {
+      const today = new Date().toISOString().slice(0, 10); // server clock — the model never guesses the date
       const result = streamText({
         model: deepseek('deepseek-chat'),
-        system: buildSystemPrompt(ctx, outline),
+        system: buildSystemPrompt(ctx, outline, { today, authorName: typeof authorName === 'string' ? authorName : '' }),
         messages: [...priorTurns, { role: 'user' as const, content: prompt }],
         tools: buildTools(ctx),
         stopWhen: isStepCount(8),
