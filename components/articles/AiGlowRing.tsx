@@ -16,8 +16,8 @@ const RING_CSS = `
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 12px;
-  filter: blur(10px);
+  padding: 14px;
+  filter: blur(7px) saturate(1.25);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
@@ -33,8 +33,9 @@ const AiGlowRing = ({ active }: { active: boolean }) => {
     return () => controls.stop();
   }, [active, angle]);
 
-  // Soft brand-leaning blend (purple → cyan → violet → pink), rotated by Motion.
-  const background = useMotionTemplate`conic-gradient(from ${angle}deg at 50% 50%, #783afb, #06b6d4, #8b5cf6, #ec4899, #783afb)`;
+  // Many vivid, distinct stops so every edge of the (wide) rectangle shows colour flow — a conic
+  // gradient gives each edge only a narrow angular slice, so few stops read as a solid wash.
+  const background = useMotionTemplate`conic-gradient(from ${angle}deg at 50% 50%, #783afb, #a855f7, #ec4899, #f472b6, #06b6d4, #22d3ee, #3b82f6, #8b5cf6, #783afb)`;
 
   return (
     <motion.div
