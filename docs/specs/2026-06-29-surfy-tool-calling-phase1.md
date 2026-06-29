@@ -334,10 +334,20 @@ Stop/Cancel, meta chip, suggestions, guard). **Selection mode** still uses the s
 `tsc --noEmit` clean, real-DeepSeek agent-loop smoke (5 steps, edited the article), and a full
 `next build` (Next 12 + TypeScript 5.4.5 — TS bumped because the AI SDK ships TS5 `.d.cts` types).
 
+**Phase 2 implemented** (commits `e80cdd7`…`b819162` on `main`, plan
+`docs/plans/2026-06-29-surfy-tool-calling-phase2.md`). Four DB+sidecar-backed READ tools added —
+`get_ai_search_score`, `check_plagiarism`, `fetch_competitor_outline`, `get_headings_outline` — with
+`resolveArticleSeoMeta` (DB) + a per-run `ToolCache` (memoizes seoMeta and each sidecar result),
+`articleId` threaded client→route→`ToolCtx`, and the tools advertised in the system prompt. Verified:
+31/31 unit tests, `tsc --noEmit` clean. (`next build` deferred locally to avoid clobbering the running
+dev `.next`; Phase 1 already proved the toolchain builds and the Phase 2 changes are additive TS.)
+**Selection-mode precise edits remain deferred** (ProseMirror↔cheerio position mapping is fragile;
+selection mode keeps using the single-shot `ask-surfy` route).
+
 ## Out of scope (future phases)
 
-- **Phase 2 (advanced read):** `get_ai_search_score`, `check_plagiarism`,
-  `fetch_competitor_outline`, `get_headings_outline`; precise **selection-mode** edits.
+- **Phase 2 (advanced read):** ✅ shipped — `get_ai_search_score`, `check_plagiarism`,
+  `fetch_competitor_outline`, `get_headings_outline`. Precise **selection-mode** edits still deferred.
 - **Phase 3 (actions, with confirmation):** `publish_to_wordpress`, `generate_social_posts`,
   `apply_readability`.
 - **Phase 4 (polish):** stream tool steps to the UI in real time; a meta-tool catalog
