@@ -34,6 +34,7 @@ import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
 import TokenCircle from './TokenCircle';
 import SlashCommand, { SlashItem } from './SlashCommand';
+import SurfyChatPanel, { SurfyPanelApi } from './SurfyChatPanel';
 
 export interface HeadingItem {
   level: number;
@@ -80,6 +81,11 @@ interface Props {
   onCommentsChanged?: () => void;
   /** Create a comment anchored to the selected quote; resolves to the new id. */
   onCreateComment?: (quote: string, draft: { text: string; images: string[] }) => Promise<string | undefined> | void;
+  /** Notified whenever Surfy opens/closes, so the page can swap its right panel to the docked pane. */
+  onSurfyOpenChange?: (open: boolean) => void;
+  /** When provided, the Surfy chat renders (via portal) into this docked element instead of the
+   *  floating modal — the page supplies it in the right column while Surfy is open. */
+  surfyDockEl?: HTMLElement | null;
 }
 
 interface MenuBarProps {
@@ -1015,7 +1021,7 @@ const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() 
   return all.filter((i) => i.title.toLowerCase().includes(q) || i.hint.slice(1).startsWith(q));
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1081,6 +1087,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, [surfyPrompt, surfyOpen]);
 
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Tell the page when Surfy opens/closes so it can dock the chat pane in the right column.
+    useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
     /* Render AI message with rich formatting */
     const renderSurfyMessage = (text: string) => {
@@ -1349,6 +1357,39 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     }, []);
     const [surfyCompareOpen, setSurfyCompareOpen] = useState(false);
 
+    // Contract for the docked light SurfyChatPanel (when the page provides a dock element).
+    const surfyApi: SurfyPanelApi = {
+      history: surfyHistory,
+      loading: surfyLoading,
+      activity: surfyActivity,
+      streamText: surfyStreamText,
+      response: surfyResponse,
+      metaPending: surfyMetaRef.current
+        ? (surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description'
+          : surfyMetaRef.current.metaTitle != null ? 'title' : 'description')
+        : null,
+      prompt: surfyPrompt,
+      publishing,
+      canApply: Boolean(surfyResponse && (surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current)),
+      canCompare: Boolean(surfyResponse?.content && surfyOriginalRef.current),
+      usage: { conversation: surfyUsageDetail.input, lastInput: surfyUsageDetail.input, lastOutput: surfyUsageDetail.output, totalInput: surfyUsageDetail.input, totalOutput: surfyUsageDetail.output },
+      suggestions: ['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'],
+      inputRef: surfyInputRef,
+      scrollRef: surfyScrollRef,
+      toolLabel: surfyToolLabel,
+      setPrompt: setSurfyPrompt,
+      submit: handleSurfySubmit,
+      stop: () => surfyAbortRef.current?.abort(),
+      apply: handleSurfyApply,
+      openCompare: () => setSurfyCompareOpen(true),
+      dismiss: () => { setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
+      newConversation: () => { setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
+      confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
+      cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
+      pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
+      close: () => setSurfyOpen(false),
+    };
+
     const calcAndEmit = useCallback((ed: any) => {
       let html = ed.getHTML();
       // Strip highlight marks when Surfy is open to prevent leaking into saved content
@@ -1450,6 +1491,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setSurfyPrompt(prompt);
           setTimeout(() => surfyInputRef.current?.focus(), 100);
         },
+        // Right-panel toolbar toggle (docked pane), mirrors the Version-History button.
+        toggleSurfy: () => { setSurfyOpen((o) => !o); setTimeout(() => surfyInputRef.current?.focus(), 80); },
       };
       return () => { editorRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1685,8 +1728,25 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           </div>
         </div>
 
-        {/* Ask Surfy modal — centered at bottom */}
-        {surfyOpen && (
+        {/* Docked Surfy chat — rendered (via portal) into the page's right-column dock when present. */}
+        {surfyOpen && surfyDockEl && createPortal(
+          <>
+            <SurfyChatPanel s={surfyApi} />
+            {surfyCompareOpen && surfyResponse?.content && (
+              <CompareVersionsModal
+                original={surfyOriginalRef.current}
+                updated={surfyResponse.content}
+                terms={(scoreData?.terms || []).map((t) => t.term)}
+                onClose={() => setSurfyCompareOpen(false)}
+              />
+            )}
+          </>,
+          surfyDockEl,
+        )}
+
+        {/* Ask Surfy modal — floating fallback ONLY when the page doesn't integrate docking
+            (no onSurfyOpenChange). With docking wired we wait for the portal target, no dark flash. */}
+        {surfyOpen && !surfyDockEl && !onSurfyOpenChange && (
           <div
             style={{
               position: 'absolute',
