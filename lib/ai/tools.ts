@@ -3,7 +3,11 @@ import { z } from 'zod';
 import type * as cheerio from 'cheerio';
 import { countOccurrences } from '../contentScore';
 import { scoreContent } from '../seo/scoreContentClient';
-import { reindexSids, buildOutline, sanitizeFragment } from './workingDoc';
+import { callSidecar } from '../sidecar';
+import { computeAiSearchScore } from '../aiSearchScore';
+import type { AiVisibilitySummary } from '../aiSearchScore';
+import { reindexSids, buildOutline, sanitizeFragment, stripSids } from './workingDoc';
+import { resolveArticleSeoMeta } from './articleMeta';
 import type { ToolCtx } from './types';
 
 const MAX_WRITES = 12; // cap on write-tool executions per turn
@@ -19,6 +23,18 @@ function wouldNestBlock(tag: string, html: string): boolean {
 
 function workingText($: cheerio.CheerioAPI): string {
   return $.root().text().replace(/\s+/g, ' ').trim();
+}
+
+// ms — heavy SERP/scrape ops; shorter than the 60s default, with the Stop
+// button + per-run cache as the responsiveness safety net.
+const SIDECAR_TIMEOUT = 30_000;
+
+// Resolve the article's SEO meta once per agent run (cached on ctx.cache.seoMeta).
+async function getSeoMeta(ctx: ToolCtx) {
+  if (!ctx.cache.seoMeta && ctx.articleId != null) {
+    ctx.cache.seoMeta = await resolveArticleSeoMeta(ctx.articleId);
+  }
+  return ctx.cache.seoMeta;
 }
 
 export function buildTools(ctx: ToolCtx) {
@@ -112,6 +128,114 @@ export function buildTools(ctx: ToolCtx) {
           .slice(0, 20)
           .map((a) => ({ title: a.title, url: a.url }));
         return { targets };
+      },
+    }),
+
+    get_headings_outline: tool({
+      description: 'Get the article\'s own heading hierarchy (H1–H4) as a nested outline. Pure read.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const headings: Array<{ level: number; text: string }> = [];
+        ctx.$('h1,h2,h3,h4').each((_i, el) => {
+          const tag = (el as cheerio.Element).tagName || (el as { name?: string }).name || '';
+          const level = Number(tag.replace('h', '')) || 1;
+          const text = ctx.$(el).text().trim();
+          if (text) headings.push({ level, text });
+        });
+        return { headings, outline: headings.map((h) => `${'  '.repeat(Math.max(0, h.level - 1))}${h.text}`).join('\n') };
+      },
+    }),
+
+    get_ai_search_score: tool({
+      description: 'AI-search visibility: how likely AI assistants cite this article for the keyword, plus extractability. Higher is better.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (ctx.cache.aiSearch) return ctx.cache.aiSearch;            // per-run cache
+        if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
+        try {
+          const m = await getSeoMeta(ctx);
+          const sc: any = await callSidecar('/ai-visibility', {
+            keyword: ctx.keyword || m?.targetKeyword || '',
+            own_domain: m?.domain || '',
+            competitor_domains: m?.competitorDomains || [],
+            // strip data-sid handles; AI-search uses HTML structure (headings/lists) but not our attrs
+            article_content: `${ctx.articleTitle}\n${ctx.articleMetaDescription}\n${stripSids(ctx.$.html())}`,
+          }, SIDECAR_TIMEOUT);
+          const summary: AiVisibilitySummary = {
+            prompts_total: sc.prompts_total || 0,
+            prompts_cited: sc.prompts_cited || 0,
+            competitor_citations: sc.competitor_citations || 0,
+            extractability_score: sc.extractability_score || 0,
+            citations: sc.citations || [],
+          };
+          const out = {
+            score: computeAiSearchScore(summary),
+            prompts_cited: summary.prompts_cited,
+            prompts_total: summary.prompts_total,
+            competitor_citations: summary.competitor_citations,
+            extractability_score: summary.extractability_score,
+          };
+          ctx.cache.aiSearch = out;
+          return out;
+        } catch (e: any) {
+          return { ok: false, error: `AI-search analysis unavailable: ${e?.message || 'error'}` };
+        }
+      },
+    }),
+
+    check_plagiarism: tool({
+      description: 'Scan the article for plagiarism against the web; returns uniqueness %, the total number of flagged passages, and a few examples.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (ctx.cache.plagiarism) return ctx.cache.plagiarism;        // per-run cache
+        if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
+        try {
+          const m = await getSeoMeta(ctx);
+          const d: any = await callSidecar('/plagiarism', {
+            text: ctx.$.root().text(),
+            domain: m?.domain || '',
+            language: m?.language || 'pl',
+          }, SIDECAR_TIMEOUT);
+          const out = {
+            uniqueness: d.uniqueness ?? null,
+            matched: d.matched ?? 0,        // TOTAL flagged passages (model can say "37 found, showing 3")
+            checked: d.checked ?? 0,
+            sample_matches: (d.matches || []).slice(0, 3).map((x: any) => ({ text: x.text, domain: x.domain, url: x.url })),
+          };
+          ctx.cache.plagiarism = out;
+          return out;
+        } catch (e: any) {
+          return { ok: false, error: `plagiarism scan unavailable: ${e?.message || 'error'}` };
+        }
+      },
+    }),
+
+    fetch_competitor_outline: tool({
+      description: 'People-Also-Ask questions and (optionally) competitor heading outlines for the keyword, to guide structure and coverage. PAA returns instantly; pass competitors:true to ALSO fetch live competitor outlines (slower SERP scrape).',
+      inputSchema: z.object({ competitors: z.boolean().optional() }),
+      execute: async ({ competitors }) => {
+        const paa = ctx.scoreData?.paa_questions || [];
+        const wantOutlines = competitors === true || paa.length === 0;
+        let outlines: Array<{ title: string; url: string; headings_outline: string }> | undefined;
+        if (wantOutlines) {
+          if (ctx.cache.competitors) {
+            outlines = ctx.cache.competitors as Array<{ title: string; url: string; headings_outline: string }>;
+          } else {
+            try {
+              const m = ctx.articleId != null ? await getSeoMeta(ctx) : undefined;
+              const d: any = await callSidecar('/competitor-outlines', { keyword: ctx.keyword, language: m?.language || 'pl', num: 5 }, SIDECAR_TIMEOUT);
+              outlines = (d.competitors || []).slice(0, 5).map((c: any) => ({
+                title: c.title,
+                url: c.url,
+                headings_outline: (c.headings || []).map((h: any) => `${'  '.repeat(Math.max(0, (h.level || 2) - 2))}${h.text}`).join('\n'),
+              }));
+              ctx.cache.competitors = outlines;
+            } catch {
+              outlines = undefined; // PAA still returned below; sidecar failure is non-fatal
+            }
+          }
+        }
+        return { paa_questions: paa, competitors: outlines, source: outlines ? 'live_serp+paa' : 'paa' };
       },
     }),
 
