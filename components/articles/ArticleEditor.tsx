@@ -32,7 +32,6 @@ import CommentComposer, { DraftComment } from './comments/CommentComposer';
 import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
 import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
-import TokenCircle from './TokenCircle';
 import SlashCommand, { SlashItem } from './SlashCommand';
 import SurfyChatPanel, { SurfyPanelApi } from './SurfyChatPanel';
 
@@ -1057,7 +1056,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (initialFeaturedImage !== undefined) setFeaturedImage(initialFeaturedImage ?? null);
     }, [initialFeaturedImage]);
     const [surfyOpen, setSurfyOpen] = useState(false);
-    const [surfyMinimized, setSurfyMinimized] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
     const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
@@ -1065,8 +1063,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
     const [surfyActivity, setSurfyActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
     const [surfyStreamText, setSurfyStreamText] = useState('');
-    const [surfyTokens, setSurfyTokens] = useState(0);
     const [surfyUsageDetail, setSurfyUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
+    // Running totals across all turns of the current conversation (reset on a new conversation).
+    const [surfyTotals, setSurfyTotals] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -1090,68 +1089,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // Tell the page when Surfy opens/closes so it can dock the chat pane in the right column.
     useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    /* Render AI message with rich formatting */
-    const renderSurfyMessage = (text: string) => {
-      const lines = text.split('\n');
-      const elements: React.ReactNode[] = [];
-      let i = 0;
-
-      while (i < lines.length) {
-        const line = lines[i];
-        const trimmed = line.trim();
-
-        if (!trimmed) { i++; continue; }
-
-        // Numbered list item: "1. text" or "1) text"
-        const listMatch = trimmed.match(/^(\d+)[.)]\s+(.+)/);
-        if (listMatch) {
-          elements.push(
-            <div key={`l${i}`} style={{ display: 'flex', gap: 8, marginBottom: 5, paddingLeft: 0 }}>
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, lineHeight: '22px', fontFamily: 'var(--font-family-primary)', flexShrink: 0, minWidth: 18, textAlign: 'right', fontWeight: 500 }}>{listMatch[1]}.</span>
-              <span style={{ fontSize: 13, lineHeight: '22px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)' }}>
-                {parseInlineFormatting(listMatch[2])}
-              </span>
-            </div>
-          );
-          i++; continue;
-        }
-
-        // Regular paragraph
-        elements.push(
-          <p key={`p${i}`} style={{ margin: '0 0 8px', fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)' }}>
-            {parseInlineFormatting(trimmed)}
-          </p>
-        );
-        i++;
-      }
-
-      return elements.length ? elements : <p style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)' }}>{text}</p>;
-    };
-
-    /* Parse **bold** and `code` within a text segment */
-    const parseInlineFormatting = (text: string): React.ReactNode[] => {
-      const parts: React.ReactNode[] = [];
-      const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g;
-      let last = 0;
-      let match: RegExpExecArray | null;
-      let idx = 0;
-
-      while ((match = regex.exec(text)) !== null) {
-        if (match.index > last) {
-          parts.push(<span key={`t${idx++}`}>{text.slice(last, match.index)}</span>);
-        }
-        if (match[2]) {
-          parts.push(<strong key={`b${idx++}`} style={{ fontWeight: 600, color: '#fff' }}>{match[2]}</strong>);
-        } else if (match[3]) {
-          parts.push(<code key={`c${idx++}`} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '1px 6px', fontSize: 12.25, fontFamily: '"JetBrains Mono", "Fira Code", monospace', color: '#FFC056' }}>{match[3]}</code>);
-        }
-        last = match.index + match[0].length;
-      }
-      if (last < text.length) {
-        parts.push(<span key={`t${idx++}`}>{text.slice(last)}</span>);
-      }
-      return parts;
-    };
 
     const [surfyHistory, setSurfyHistory] = useState<Array<{ role: 'user' | 'assistant'; message: string; content?: string | null; action?: string }>>([]);
 
@@ -1173,7 +1110,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setSurfySelection(null);
       }
       setSurfyOpen(true);
-      setSurfyMinimized(false);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
     };
     slashAskSurfyRef.current = handleAskSurfy;
@@ -1185,7 +1121,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       setSurfyResponse(null);
       setSurfyActivity([]);
       setSurfyStreamText('');
-      setSurfyTokens(0);
       setSurfyUsageDetail({ input: 0, output: 0 });
 
       setSurfyHistory((prev) => {
@@ -1239,7 +1174,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
           data = await readSurfyAgentStream(res, {
             text: (delta) => setSurfyStreamText((t) => t + delta),
-            usage: (n) => setSurfyTokens(n),
+            usage: () => {}, // live running count not shown; the ring updates from the final usage below
             step: (d) => setSurfyActivity((a) => {
               if (d.phase === 'start') return [...a, { tool: d.tool, done: false }];
               const rev = [...a].reverse().findIndex((x) => x.tool === d.tool && !x.done);
@@ -1250,8 +1185,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               return copy;
             }),
           });
-          if (data.usage?.totalTokens != null) setSurfyTokens(data.usage.totalTokens);
           setSurfyUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
+          setSurfyTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
         } else {
           data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -1372,7 +1307,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       publishing,
       canApply: Boolean(surfyResponse && (surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current)),
       canCompare: Boolean(surfyResponse?.content && surfyOriginalRef.current),
-      usage: { conversation: surfyUsageDetail.input, lastInput: surfyUsageDetail.input, lastOutput: surfyUsageDetail.output, totalInput: surfyUsageDetail.input, totalOutput: surfyUsageDetail.output },
+      usage: { conversation: surfyUsageDetail.input, lastInput: surfyUsageDetail.input, lastOutput: surfyUsageDetail.output, totalInput: surfyTotals.input, totalOutput: surfyTotals.output },
       suggestions: ['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'],
       inputRef: surfyInputRef,
       scrollRef: surfyScrollRef,
@@ -1383,7 +1318,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       apply: handleSurfyApply,
       openCompare: () => setSurfyCompareOpen(true),
       dismiss: () => { setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
-      newConversation: () => { setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
+      newConversation: () => { setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 }); },
       confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
       cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
       pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
@@ -1488,6 +1423,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setSurfyResponse(null);
           setSurfySelection(null);
           setSurfyHistory([]);
+          setSurfyTotals({ input: 0, output: 0 });
+          setSurfyUsageDetail({ input: 0, output: 0 });
           setSurfyPrompt(prompt);
           setTimeout(() => surfyInputRef.current?.focus(), 100);
         },
@@ -1744,365 +1681,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           surfyDockEl,
         )}
 
-        {/* Ask Surfy modal — floating fallback ONLY when the page doesn't integrate docking
-            (no onSurfyOpenChange). With docking wired we wait for the portal target, no dark flash. */}
-        {surfyOpen && !surfyDockEl && !onSurfyOpenChange && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 16,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 100,
-              width: 816,
-              maxWidth: 'calc(100% - 32px)',
-            }}
-          >
-            <div
-              style={{
-                background: '#09090b',
-                color: '#fff',
-                borderRadius: 8,
-                overflow: 'hidden',
-                boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
-                transformOrigin: 'bottom center',
-                animation: 'growOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                // Cap to the viewport (anchored at the bottom) so a long run never grows off the
-                // top of the screen — the conversation body scrolls instead.
-                display: 'flex', flexDirection: 'column',
-                maxHeight: 'calc(100vh - 96px)',
-              }}
-            >
-              {/* Header — identity + token usage + minimize/close */}
-              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderBottom: '1px solid #221e28' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <IconSurfy size={18} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Surfy</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', border: '1px solid #221e28', padding: '1px 6px', borderRadius: 9999, fontFamily: 'var(--font-family-primary)' }}>alpha</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {surfyTokens > 0 && <TokenCircle tokens={surfyTokens} inputTokens={surfyUsageDetail.input} outputTokens={surfyUsageDetail.output} />}
-                  <button
-                    type="button"
-                    onClick={() => setSurfyMinimized((m) => !m)}
-                    aria-label={surfyMinimized ? 'Expand' : 'Minimize'}
-                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; e.currentTarget.style.color = '#fff'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-                  >
-                    {surfyMinimized
-                      ? <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 15l-6-6-6 6" /></svg>
-                      : <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /></svg>}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSurfyOpen(false)}
-                    aria-label="Close"
-                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; e.currentTarget.style.color = '#fff'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-                  >
-                    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Conversation body — header above, composer below both stay fixed; this region
-                  scrolls and is hidden while minimized. */}
-              {!surfyMinimized && (
-              <div ref={surfyScrollRef} className="styled-scrollbar-dark" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-              {/* Conversation history */}
-              {surfyHistory.length > 0 && (
-                <div style={{ padding: '0.5rem 0.5rem 0' }}>
-                  {surfyHistory.map((entry, i) => (
-                    <div key={i} style={{ marginBottom: i < surfyHistory.length - 1 ? 12 : 0 }}>
-                      {/* User message */}
-                      {entry.role === 'user' && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <div style={{
-                            maxWidth: '85%', padding: '8px 12px', borderRadius: 12,
-                            borderBottomRightRadius: 4,
-                            background: '#783afb',
-                            color: '#fff', fontSize: 13, lineHeight: '20px',
-                            fontFamily: 'var(--font-family-primary)',
-                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                          }}>
-                            {entry.message}
-                          </div>
-                        </div>
-                      )}
-                      {/* Assistant message */}
-                      {entry.role === 'assistant' && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <IconSurfy size={16} />
-                            <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Surfy</span>
-                            {entry.action && entry.action !== 'analysis_only' && (
-                              <span style={{
-                                fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)',
-                                background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 9999,
-                              }}>
-                                {entry.action.replace(/_/g, ' ')}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{
-                            padding: '10px 12px', borderRadius: 8,
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid #221e28',
-                            fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)',
-                            fontFamily: 'var(--font-family-primary)',
-                          }}>
-                            {renderSurfyMessage(entry.message)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Loading / live stream state */}
-              {surfyLoading && (
-                <div style={{ padding: '0.625rem 0.625rem 0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: surfyActivity.length || surfyStreamText ? 8 : 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Surfy is working…</span>
-                    </div>
-                    <button type="button" onClick={() => surfyAbortRef.current?.abort()} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0.25rem 0.625rem', borderRadius: 6, background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-family-primary)', transition: 'background 150ms ease' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}>
-                      Stop
-                    </button>
-                  </div>
-                  {/* Live per-tool activity */}
-                  {surfyActivity.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: surfyStreamText ? 8 : 0 }}>
-                      {surfyActivity.map((a, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, lineHeight: '18px', color: a.error ? '#FFB454' : a.done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-family-primary)' }}>
-                          <span style={{ flexShrink: 0, width: 12, textAlign: 'center' }}>
-                            {a.error ? '⚠' : a.done ? '✓' : <span style={{ display: 'inline-block', width: 9, height: 9, border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'rgba(255,255,255,0.8)', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />}
-                          </span>
-                          <span>{surfyToolLabel(a.tool)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* In-progress assistant text */}
-                  {surfyStreamText && (
-                    <div style={{ fontSize: 13, lineHeight: '19px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)', whiteSpace: 'pre-wrap' }}>{surfyStreamText}</div>
-                  )}
-                </div>
-              )}
-
-              {/* What Surfy did — steps / changelog (+ meta + guard) */}
-              {surfyResponse && !surfyLoading && ((surfyResponse.changelog?.length ?? 0) > 0 || Boolean(surfyMetaRef.current)) && (
-                <div style={{ padding: '0.25rem 0.625rem 0.5rem' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: 'rgba(255,255,255,0.45)', marginBottom: 4, fontFamily: 'var(--font-family-primary)' }}>
-                    WHAT SURFY DID{typeof surfyResponse.steps === 'number' ? ` · ${surfyResponse.steps} steps` : ''}
-                  </div>
-                  {(surfyResponse.changelog || []).map((c, i) => {
-                    const guard = c.tool === 'guard';
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, lineHeight: '18px', color: guard ? '#FFB454' : 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-family-primary)' }}>
-                        <span style={{ flexShrink: 0 }}>{guard ? '⚠' : '✓'}</span>
-                        <span>{c.summary}</span>
-                      </div>
-                    );
-                  })}
-                  {surfyMetaRef.current && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '2px 8px', borderRadius: 9999, background: 'rgba(120,58,251,0.18)', color: '#c4b5fd', fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
-                      ✎ Will update meta {surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description' : surfyMetaRef.current.metaTitle != null ? 'title' : 'description'}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Publish proposal — the agent proposes; the user confirms here (calls /api/articles/publish) */}
-              {surfyResponse && !surfyLoading && surfyResponse.pendingAction?.type === 'publish_to_wordpress' && (
-                <div style={{ margin: '0.25rem 0.625rem 0.5rem', padding: '0.625rem 0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font-family-primary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#c4b5fd" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
-                    <div style={{ fontSize: 12.5, lineHeight: '18px', color: 'rgba(255,255,255,0.82)' }}>
-                      Surfy chce opublikować {surfyResponse.pendingAction.title ? `„${surfyResponse.pendingAction.title}” ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#fff' }}>zapisany</strong> artykuł.
-                    </div>
-                  </div>
-                  {surfyResponse.pendingAction.warning && (
-                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11.5, lineHeight: '17px', color: '#FFB454' }}>
-                      <span style={{ flexShrink: 0 }}>⚠</span><span>{surfyResponse.pendingAction.warning}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-                    <button
-                      type="button"
-                      onClick={() => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev))}
-                      disabled={publishing}
-                      style={{ padding: '0.375rem 0.75rem', borderRadius: 6, background: 'transparent', border: 'none', cursor: publishing ? 'default' : 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}
-                    >
-                      Anuluj
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => surfyResponse.pendingAction && confirmPublish(surfyResponse.pendingAction)}
-                      disabled={publishing}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.375rem 0.875rem', borderRadius: 6, background: '#783afb', border: 'none', cursor: publishing ? 'default' : 'pointer', opacity: publishing ? 0.65 : 1, color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}
-                    >
-                      {publishing ? 'Publikuję…' : 'Publikuj'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Action buttons for latest response */}
-              {surfyResponse && !surfyLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 10px 8px', marginTop: 6, borderTop: '1px solid #221e28' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); setSurfyHistory([]); surfyMetaRef.current = null; }}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '0.375rem 0.75rem', borderRadius: 6,
-                      background: 'transparent', border: 'none', cursor: 'pointer',
-                      color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500,
-                      fontFamily: 'var(--font-family-primary)',
-                    }}
-                  >
-                    Dismiss
-                  </button>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {surfyResponse.content && surfyOriginalRef.current && (
-                      <button
-                        type="button"
-                        onClick={() => setSurfyCompareOpen(true)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '0.375rem 0.75rem', borderRadius: 6,
-                          background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer',
-                          color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500,
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                      >
-                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx={12} cy={12} r={3} /></svg>
-                        Preview
-                      </button>
-                    )}
-                    {(surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current) && (
-                      <button
-                        type="button"
-                        onClick={handleSurfyApply}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '0.375rem 0.75rem', borderRadius: 6,
-                          background: '#783afb', border: 'none', cursor: 'pointer',
-                          color: '#fff', fontSize: 13, fontWeight: 600,
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
-                      >
-                        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                        Apply changes
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              </div>
-              )}
-
-              {/* ── Composer: suggestions + input ── */}
-              {!surfyMinimized && (
-              <div style={{ flexShrink: 0, borderTop: '1px solid #221e28' }}>
-              {/* Suggested prompts — only on a fresh, empty input (discovery) */}
-              {!surfyPrompt.trim() && !surfyResponse && !surfyLoading && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '8px 10px 0' }}>
-                  {['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => { setSurfyPrompt(s); surfyInputRef.current?.focus(); }}
-                      style={{ padding: '4px 10px', borderRadius: 9999, background: 'rgba(255,255,255,0.06)', border: '1px solid #221e28', color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Input row — textarea + send (identity + close live in the header) */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: '6px 8px 6px 10px' }}>
-                <textarea
-                  ref={surfyInputRef}
-                  rows={1}
-                  value={surfyPrompt}
-                  onChange={(e) => setSurfyPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSurfySubmit();
-                    }
-                  }}
-                  placeholder="Ask Surfy…"
-                  disabled={surfyLoading}
-                  className="styled-scrollbar-dark"
-                  style={{
-                    flex: 1,
-                    minHeight: 24, maxHeight: 200,
-                    border: 'none', borderRadius: 0,
-                    background: 'transparent', outline: 'none', padding: '0 0 2px',
-                    fontSize: 14, lineHeight: '24px', color: '#fff',
-                    fontFamily: 'var(--font-family-primary)', resize: 'none',
-                    overflowY: 'auto',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleSurfySubmit}
-                  disabled={!surfyPrompt.trim() || surfyLoading}
-                  aria-label="Send"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 32, height: 32, borderRadius: 8,
-                    background: surfyPrompt.trim() && !surfyLoading ? '#783afb' : 'rgba(255,255,255,0.08)',
-                    border: 'none', color: '#fff',
-                    cursor: surfyPrompt.trim() && !surfyLoading ? 'pointer' : 'not-allowed',
-                    opacity: surfyPrompt.trim() && !surfyLoading ? 1 : 0.4,
-                    padding: 0, flexShrink: 0,
-                    transition: 'background 150ms ease',
-                  }}
-                  onMouseEnter={(e) => { if (surfyPrompt.trim() && !surfyLoading) e.currentTarget.style.background = '#8f5cff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = surfyPrompt.trim() && !surfyLoading ? '#783afb' : 'rgba(255,255,255,0.08)'; }}
-                >
-                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875zm0 0h7.5" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Footer note */}
-              <div style={{ padding: '0 10px 7px', color: 'rgba(255,255,255,0.32)', fontSize: 10.5, lineHeight: '14px', fontFamily: 'var(--font-family-primary)' }}>
-                Surfy can make mistakes — review changes before applying.
-              </div>
-              </div>
-              )}
-
-              {surfyCompareOpen && surfyResponse?.content && (
-                <CompareVersionsModal
-                  original={surfyOriginalRef.current}
-                  updated={surfyResponse.content}
-                  terms={(scoreData?.terms || []).map((t) => t.term)}
-                  onClose={() => setSurfyCompareOpen(false)}
-                />
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
 };
