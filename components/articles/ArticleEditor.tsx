@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import toast from 'react-hot-toast';
+import type { PendingAction } from '../../lib/ai/types';
 import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -980,7 +982,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyOpen, setSurfyOpen] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
-    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number } | null>(null);
+    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
+    const [publishing, setPublishing] = useState(false);
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -1126,7 +1129,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
         if (useAgent) {
           surfyMetaRef.current = data.meta || null;
-          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: data.steps });
+          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: data.steps, pendingAction: data.pendingAction || null });
         } else {
           surfyMetaRef.current = null;
           setSurfyResponse({ action: data.action, message: data.message, content: data.content });
@@ -1198,6 +1201,27 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const surfyMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
     const surfyOriginalRef = useRef<string>('');                  // pre-edit HTML, for the diff preview
     const surfyAbortRef = useRef<AbortController | null>(null);   // for Stop/Cancel
+
+    // The agent never publishes; it PROPOSES (pendingAction). The user confirms here, and we call the
+    // existing publish endpoint, which publishes the SAVED article.
+    const confirmPublish = useCallback(async (pa: PendingAction) => {
+      setPublishing(true);
+      try {
+        const res = await fetch('/api/articles/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articleId: pa.articleId, target: pa.target }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || 'Publish failed');
+        toast.success(d.url ? `Opublikowano: ${d.url}` : 'Opublikowano');
+        setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev));
+      } catch (e: any) {
+        toast.error(e?.message || 'Publikacja nie powiodła się');
+      } finally {
+        setPublishing(false);
+      }
+    }, []);
     const [surfyCompareOpen, setSurfyCompareOpen] = useState(false);
 
     const calcAndEmit = useCallback((ed: any) => {
@@ -1639,6 +1663,41 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                       ✎ Will update meta {surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description' : surfyMetaRef.current.metaTitle != null ? 'title' : 'description'}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Publish proposal — the agent proposes; the user confirms here (calls /api/articles/publish) */}
+              {surfyResponse && !surfyLoading && surfyResponse.pendingAction?.type === 'publish_to_wordpress' && (
+                <div style={{ margin: '0.25rem 0.625rem 0.5rem', padding: '0.625rem 0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font-family-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#c4b5fd" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
+                    <div style={{ fontSize: 12.5, lineHeight: '18px', color: 'rgba(255,255,255,0.82)' }}>
+                      Surfy chce opublikować {surfyResponse.pendingAction.title ? `„${surfyResponse.pendingAction.title}” ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#fff' }}>zapisany</strong> artykuł.
+                    </div>
+                  </div>
+                  {surfyResponse.pendingAction.warning && (
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11.5, lineHeight: '17px', color: '#FFB454' }}>
+                      <span style={{ flexShrink: 0 }}>⚠</span><span>{surfyResponse.pendingAction.warning}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev))}
+                      disabled={publishing}
+                      style={{ padding: '0.375rem 0.75rem', borderRadius: 6, background: 'transparent', border: 'none', cursor: publishing ? 'default' : 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}
+                    >
+                      Anuluj
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => surfyResponse.pendingAction && confirmPublish(surfyResponse.pendingAction)}
+                      disabled={publishing}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.375rem 0.875rem', borderRadius: 6, background: '#783afb', border: 'none', cursor: publishing ? 'default' : 'pointer', opacity: publishing ? 0.65 : 1, color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}
+                    >
+                      {publishing ? 'Publikuję…' : 'Publikuj'}
+                    </button>
+                  </div>
                 </div>
               )}
 
