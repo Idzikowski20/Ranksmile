@@ -1503,7 +1503,6 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               zIndex: 100,
               width: 816,
               maxWidth: 'calc(100% - 32px)',
-              animation: 'growOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
             <div
@@ -1513,6 +1512,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                 borderRadius: 8,
                 overflow: 'hidden',
                 boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
+                transformOrigin: 'bottom center',
+                animation: 'growOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
               {/* Conversation history — scrollable chat above input */}
