@@ -1439,12 +1439,24 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // Keep the live ref in sync on every render
     editorLiveRef.current = editor;
 
+    const surfyHlRangeRef = useRef<{ from: number; to: number } | null>(null);
     useEffect(() => {
       if (!editor) return;
       if (surfyOpen && surfySelection) {
         editor.chain().unsetHighlight().setTextSelection({ from: surfySelection.from, to: surfySelection.to }).setHighlight({ color: 'rgba(120, 58, 251, 0.15)' }).run();
-      } else if (editor.isActive('highlight')) {
-        editor.chain().unsetHighlight().run();
+        surfyHlRangeRef.current = { from: surfySelection.from, to: surfySelection.to };
+      } else if (surfyHlRangeRef.current) {
+        // Remove the Surfy highlight from its EXACT range. The cursor may have moved off it, so
+        // unsetHighlight()/isActive('highlight') (which act on the current selection) miss it and
+        // the purple highlight lingers. removeMark on the stored range clears it without moving the
+        // caret or touching the user's own highlights.
+        const { from, to } = surfyHlRangeRef.current;
+        surfyHlRangeRef.current = null;
+        const markType = editor.state.schema.marks.highlight;
+        const docSize = editor.state.doc.content.size;
+        if (markType && from < to && to <= docSize) {
+          editor.view.dispatch(editor.state.tr.removeMark(from, to, markType));
+        }
       }
     }, [surfyOpen, surfySelection]);
 
