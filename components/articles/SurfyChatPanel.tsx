@@ -25,6 +25,8 @@ export interface SurfyPanelApi {
   canApply: boolean;
   canCompare: boolean;
   usage: { conversation: number; lastInput: number; lastOutput: number; totalInput: number; totalOutput: number };
+  /** Organization's shared 5h AI-token pool (drives the ring + the blocked banner). Null until loaded. */
+  orgUsage: { used: number; limit: number; resetsAt: number; over: boolean } | null;
   suggestions: string[];
   conversations: SurfyConversation[];
   /** Text the user had selected when they opened Surfy — shown as a context chip (null = none). */
@@ -182,6 +184,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
  *  state + behaviour come from `s` (the useSurfy hook). */
 const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
   const { response, loading } = s;
+  const blocked = Boolean(s.orgUsage?.over); // org spent its shared 5h budget → composer is locked
   const empty = s.history.length === 0 && !loading && !response;
   const [helpOpen, setHelpOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
@@ -418,22 +421,35 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                 </button>
               </div>
             )}
-            <div className="surfy-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #d4d4d8', borderRadius: 12, background: '#fff', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
+            {/* Org-wide budget exhausted: the whole organization shares one 5h pool. */}
+            {blocked && s.orgUsage && (
+              <div style={{ display: 'flex', gap: 9, padding: '10px 12px', marginBottom: 8, borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca' }}>
+                <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#dc2626" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></svg>
+                <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#7f1d1d' }}>
+                  <span style={{ fontWeight: 600 }}>Your organization reached its AI limit.</span>{' '}
+                  The shared budget resets every 5 hours — try again at{' '}
+                  <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{new Date(s.orgUsage.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>.
+                </div>
+              </div>
+            )}
+            <div className="surfy-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #d4d4d8', borderRadius: 12, background: blocked ? '#fafafa' : '#fff', opacity: blocked ? 0.7 : 1, transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
               <textarea
                 ref={s.inputRef}
                 rows={1}
                 value={s.prompt}
                 onChange={(e) => s.setPrompt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); s.submit(); } }}
-                placeholder="Ask, search or make anything…"
-                disabled={loading}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!blocked) s.submit(); } }}
+                placeholder={blocked ? 'AI limit reached — paused until the pool resets' : 'Ask, search or make anything…'}
+                disabled={loading || blocked}
                 className="styled-scrollbar"
                 style={{ flex: 1, minHeight: 48, maxHeight: 280, border: 'none', background: 'transparent', outline: 'none', padding: 0, fontSize: 14, lineHeight: '20px', color: '#18181b', fontFamily: 'var(--font-family-primary)', resize: 'none', overflowY: 'auto' }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <ContextUsageRing
                   placement="up"
-                  conversationTokens={s.usage.conversation}
+                  conversationTokens={s.orgUsage ? s.orgUsage.used : s.usage.conversation}
+                  contextWindow={s.orgUsage ? s.orgUsage.limit : undefined}
+                  resetsAt={s.orgUsage ? s.orgUsage.resetsAt : undefined}
                   lastInput={s.usage.lastInput} lastOutput={s.usage.lastOutput}
                   totalInput={s.usage.totalInput} totalOutput={s.usage.totalOutput}
                 />
@@ -441,9 +457,9 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                 <button
                   type="button"
                   onClick={loading ? s.stop : s.submit}
-                  disabled={loading ? false : !s.prompt.trim()}
+                  disabled={loading ? false : (blocked || !s.prompt.trim())}
                   aria-label={loading ? 'Stop' : 'Send'}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : s.prompt.trim() ? '#783afb' : '#f4f4f5', border: 'none', color: loading || s.prompt.trim() ? '#fff' : '#9f9fa9', cursor: loading || s.prompt.trim() ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#783afb' : '#f4f4f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
                 >
                   {loading
                     ? <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true"><rect x={7.5} y={7.5} width={9} height={9} rx={2} fill="currentColor" /></svg>

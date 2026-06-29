@@ -22,13 +22,21 @@ type Props = {
   totalOutput?: number;
   /** 'down' opens the card below-right (header); 'up' opens it above-left (composer footer). */
   placement?: 'down' | 'up';
+  /** When set, the ring tracks the organization's shared 5h pool; shows when it refills (epoch ms). */
+  resetsAt?: number;
+};
+
+/** "Resets at 14:30" — local time the shared org pool refills. */
+const resetLabel = (resetsAt: number) => {
+  try { return new Date(resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  catch { return ''; }
 };
 
 /** Twenty-style context-window usage ring (real tokens vs the model's context window), light theme.
  *  Hover (or click) opens a card with the % full, last-message tokens and conversation totals. */
 const ContextUsageRing = ({
   conversationTokens, contextWindow = CONTEXT_WINDOW_TOKENS,
-  lastInput = 0, lastOutput = 0, totalInput = 0, totalOutput = 0, placement = 'down',
+  lastInput = 0, lastOutput = 0, totalInput = 0, totalOutput = 0, placement = 'down', resetsAt,
 }: Props) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -78,14 +86,19 @@ const ContextUsageRing = ({
             fontFamily: 'var(--font-family-primary)',
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#18181b', marginBottom: 8 }}>Context window</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#18181b', marginBottom: 8 }}>{resetsAt ? 'Organization AI usage' : 'Context window'}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, marginBottom: 6 }}>
             <span style={{ color: '#18181b', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{pct.toFixed(1)}%</span>
             <span style={{ color: '#52525c', fontVariantNumeric: 'tabular-nums' }}>{abbr(conversationTokens)} / {abbr(contextWindow)} tokens</span>
           </div>
-          <div style={{ height: 5, borderRadius: 9999, background: '#f4f4f5', overflow: 'hidden', marginBottom: 11 }}>
+          <div style={{ height: 5, borderRadius: 9999, background: '#f4f4f5', overflow: 'hidden', marginBottom: resetsAt ? 7 : 11 }}>
             <div style={{ height: '100%', width: `${Math.round(pct)}%`, background: color, borderRadius: 9999, transition: 'width 300ms ease, background 300ms ease' }} />
           </div>
+          {resetsAt ? (
+            <div style={{ fontSize: 11, color: '#9f9fa9', marginBottom: 11, fontVariantNumeric: 'tabular-nums' }}>
+              Shared across your organization · resets at {resetLabel(resetsAt)}
+            </div>
+          ) : null}
 
           <div style={{ paddingTop: 9, borderTop: '1px solid #f4f4f5' }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: '#18181b', margin: '2px 0 6px' }}>Last message</div>
