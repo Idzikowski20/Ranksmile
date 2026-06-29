@@ -1090,7 +1090,26 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-    const [surfyHistory, setSurfyHistory] = useState<Array<{ role: 'user' | 'assistant'; message: string; content?: string | null; action?: string }>>([]);
+    type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string };
+    const [surfyHistory, setSurfyHistory] = useState<SurfyMsg[]>([]);
+    // Saved conversations (localStorage, per article) for the header's history dropdown.
+    type SurfyConvo = { id: string; title: string; ts: number; history: SurfyMsg[] };
+    const [surfyConversations, setSurfyConversations] = useState<SurfyConvo[]>([]);
+    const surfyConvoKey = `surfy-conversations-${commentArticleId || 'x'}`;
+    useEffect(() => {
+      try { const raw = localStorage.getItem(surfyConvoKey); if (raw) setSurfyConversations(JSON.parse(raw)); else setSurfyConversations([]); } catch { setSurfyConversations([]); }
+    }, [surfyConvoKey]);
+    const persistConvos = (list: SurfyConvo[]) => {
+      setSurfyConversations(list);
+      try { localStorage.setItem(surfyConvoKey, JSON.stringify(list)); } catch { /* quota/unavailable */ }
+    };
+    // Archive the current chat (if it has messages) before clearing for a new/loaded one.
+    const archiveCurrentConvo = () => {
+      if (!surfyHistory.length) return;
+      const firstUser = surfyHistory.find((m) => m.role === 'user')?.message || 'Conversation';
+      const convo: SurfyConvo = { id: `${Date.now()}`, title: firstUser.slice(0, 60), ts: Date.now(), history: surfyHistory };
+      persistConvos([convo, ...surfyConversations].slice(0, 20));
+    };
 
     // Keep the conversation pinned to the latest message as it grows / streams in.
     useEffect(() => {
@@ -1318,7 +1337,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       apply: handleSurfyApply,
       openCompare: () => setSurfyCompareOpen(true),
       dismiss: () => { setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
-      newConversation: () => { setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 }); },
+      conversations: surfyConversations.map((c) => ({ id: c.id, title: c.title, ts: c.ts })),
+      newConversation: () => {
+        archiveCurrentConvo();
+        setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
+        setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+      },
+      openConversation: (id) => {
+        const convo = surfyConversations.find((c) => c.id === id);
+        if (!convo) return;
+        archiveCurrentConvo();
+        setSurfyHistory(convo.history);
+        setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
+        setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+      },
       confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
       cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
       pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
