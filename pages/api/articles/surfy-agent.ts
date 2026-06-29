@@ -10,7 +10,9 @@ import { buildTools } from '../../../lib/ai/tools';
 import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
 import type { ToolCtx } from '../../../lib/ai/types';
 
-export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
+// maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
+// calls (apply_readability), so it must be >= the sum of the action tool budgets (ACTION_TIMEOUT).
+export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
@@ -32,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       $, keyword, scoreData, internalArticles, articleTitle, articleMetaDescription,
       changelog: [], htmlDirty: false, writeCount: 0, meta: null,
       articleId: articleId != null ? Number(articleId) : null, cache: {},
+      pendingAction: null,
     };
 
     const priorTurns = (Array.isArray(history) ? history : [])
@@ -63,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       changed: Boolean(finalHtml) || Boolean(ctx.meta),
       changelog: ctx.changelog,
       steps: result.steps.length,
+      pendingAction: ctx.pendingAction,
     });
   } catch (error: any) {
     console.error('[surfy-agent] error:', error);

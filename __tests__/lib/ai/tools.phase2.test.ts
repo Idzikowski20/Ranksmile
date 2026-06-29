@@ -35,7 +35,7 @@ function ctxFor(html: string, scoreData: any = null): ToolCtx {
   return {
     $, keyword: 'seo', articleTitle: 'Title', articleMetaDescription: 'Desc',
     internalArticles: [], scoreData, changelog: [], htmlDirty: false, writeCount: 0, meta: null,
-    articleId: 1, cache: {},
+    articleId: 1, cache: {}, pendingAction: null,
   };
 }
 

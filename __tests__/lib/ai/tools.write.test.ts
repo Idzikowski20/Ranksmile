@@ -12,7 +12,7 @@ function ctxFor(html: string): ToolCtx {
   return {
     $, keyword: 'seo', articleTitle: 't', articleMetaDescription: 'd',
     internalArticles: [], scoreData: null, changelog: [], htmlDirty: false, writeCount: 0, meta: null,
-    articleId: null, cache: {},
+    articleId: null, cache: {}, pendingAction: null,
   };
 }
 
