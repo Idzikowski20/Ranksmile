@@ -40,6 +40,38 @@ const stripLlmArtifacts = (html: string): string => {
    return out.replace(/\n{3,}/g, '\n\n').trim();
 };
 
+// The model sometimes rewrites a real author byline / update date into an "[Editor: …]" placeholder
+// (an E-E-A-T "improvement"). Capture the article's existing real bylines first, then restore them
+// over any placeholdered ones afterwards — so we never lose content the user already filled in.
+const AUTHOR_LABEL_RE = /\b(autor|author|napisał[ay]?|by)\b\s*:/i;
+const DATE_LABEL_RE = /\b(data\s+aktualizacji|ostatnia\s+aktualizacja|last\s+updated|updated|aktualizacja|published)\b\s*:/i;
+const BLOCK_RE = '<(p|h[1-6]|div|li)\\b[^>]*>([\\s\\S]*?)<\\/\\1>';
+
+function captureBylines(html: string): { author?: string; date?: string } {
+   const out: { author?: string; date?: string } = {};
+   const re = new RegExp(BLOCK_RE, 'gi');
+   let m: RegExpExecArray | null;
+   // eslint-disable-next-line no-cond-assign
+   while ((m = re.exec(html))) {
+      const text = m[2].replace(/<[^>]+>/g, ' ').trim();
+      if (!text || LLM_PLACEHOLDER_RE.test(text)) continue;
+      if (!out.author && AUTHOR_LABEL_RE.test(text)) out.author = m[0];
+      else if (!out.date && DATE_LABEL_RE.test(text)) out.date = m[0];
+   }
+   return out;
+}
+
+function restoreBylines(html: string, orig: { author?: string; date?: string }): string {
+   if (!orig.author && !orig.date) return html;
+   return html.replace(new RegExp(BLOCK_RE, 'gi'), (full, _tag, inner) => {
+      const text = String(inner).replace(/<[^>]+>/g, ' ').trim();
+      if (!LLM_PLACEHOLDER_RE.test(text)) return full;
+      if (orig.author && AUTHOR_LABEL_RE.test(text)) return orig.author;
+      if (orig.date && DATE_LABEL_RE.test(text)) return orig.date;
+      return full; // some other placeholder — leave it for stripLlmArtifacts to drop
+   });
+}
+
 // ── SSE helper ─────────────────────────────────────────────────────────
 function sse(res: NextApiResponse, event: string, data: object) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -324,6 +356,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return `@@KEEPIMG${i}@@`;
   });
   const hadImages = preservedImages.length > 0;
+  // Snapshot the article's existing real author byline / update date so the LLM passes can't
+  // silently replace them with "[Editor: …]" placeholders (restored before save, below).
+  const origBylines = captureBylines(content);
   const IMG_TOKEN_RULE = hadImages
     ? "\n- Preserve every @@KEEPIMGn@@ placeholder token EXACTLY as written (e.g. @@KEEPIMG0@@) — never remove, reorder, translate, or alter them; they mark the user's existing images."
     : '';
@@ -536,6 +571,7 @@ STRICT RULES:
 - Write ONLY in the SAME LANGUAGE as the article (auto-detect — do NOT translate)
 - Preserve ALL existing headings, links (<a> tags), images (<img>), and lists
 - Do NOT remove or shorten any existing sentences — only ADD or EXPAND
+- If the article ALREADY has an author byline ("Autor:"/"Author:") or update date ("Data aktualizacji:"/"Last updated:") with real values, KEEP THEM EXACTLY as written. NEVER replace real author/date text with a bracketed placeholder like "[Editor: insert author name]" or "[Editor: insert update date]", and never blank them out
 - Add missing NLP terms by weaving them naturally into existing or new sentences — use them in their EXACT written form, no inflection or synonyms
 - When adding headings: use H3 inside existing H2 sections only
 - Ensure the target keyword "${keyword || ''}" appears verbatim in at least one H2 heading
@@ -822,7 +858,9 @@ Return the complete HTML with targeted fixes applied.`;
             if (patchRes.ok) {
               const patchData = await patchRes.json();
               const raw = patchData.choices?.[0]?.message?.content || '';
-              const cleaned = raw.replace(/```html?\n?/g, '').replace(/```\n?/g, '').trim();
+              // The patch prompt makes the model preface its HTML with "Here is the complete HTML
+              // with targeted fixes applied…" — strip that (and any placeholder) like the other passes.
+              const cleaned = stripLlmArtifacts(raw.replace(/```html?\n?/g, '').replace(/```\n?/g, '').trim());
               if (cleaned) optimized = cleaned;
             }
           }
@@ -955,6 +993,10 @@ Return ONLY a JSON object:
         console.log('[auto-optimize] meta generation failed (non-fatal):', err.message);
       }
     }
+
+    // ── Restore the user's real author byline / update date over any placeholdered ones,
+    //    then one final artifact sweep (preamble / leftover placeholders). ──
+    optimized = stripLlmArtifacts(restoreBylines(optimized, origBylines));
 
     // ── Restore the user's original images (and re-append any the model dropped) ──
     if (hadImages) {
