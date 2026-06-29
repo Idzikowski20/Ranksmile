@@ -465,24 +465,26 @@ export const getSerp = (domainURL:string, result:SearchResult[], subdomainMatchi
  * @param {string} keywordID - The keywordID of the failed Keyword Scrape.
  * @returns {void}
  */
+const FAILED_QUEUE_PATH = `${process.cwd()}/data/failed_queue.json`;
+// Serialize every read-modify-write of failed_queue.json. Parallel refresh (refreshParallel resolves
+// many keywords at once) otherwise interleaves read→mutate→write and the last writer wins, silently
+// dropping queued/cleared keywords. Each call chains after the previous; a failure can't break the chain.
+let failedQueueChain: Promise<void> = Promise.resolve();
+const mutateFailedQueue = (mutate: (q: number[]) => number[]): Promise<void> => {
+   failedQueueChain = failedQueueChain.then(async () => {
+      let current: number[] = [];
+      const raw = await readFile(FAILED_QUEUE_PATH, { encoding: 'utf-8' }).catch(() => '[]');
+      try { current = raw ? JSON.parse(raw) : []; } catch { current = []; }
+      const next = mutate(Array.isArray(current) ? current : []);
+      await writeFile(FAILED_QUEUE_PATH, JSON.stringify(next), { encoding: 'utf-8' }).catch((err) => { console.log(err); });
+   }).catch((err) => { console.log('[WARN] failed_queue mutation error', err); });
+   return failedQueueChain;
+};
+
 export const retryScrape = async (keywordID: number) : Promise<void> => {
-   if (!keywordID && !Number.isInteger(keywordID)) { return; }
-   let currentQueue: number[] = [];
-
-   const filePath = `${process.cwd()}/data/failed_queue.json`;
-   const currentQueueRaw = await readFile(filePath, { encoding: 'utf-8' }).catch((err) => { console.log(err); return '[]'; });
-   try {
-      currentQueue = currentQueueRaw ? JSON.parse(currentQueueRaw) : [];
-   } catch (e) {
-      console.log('[WARN] Corrupt failed_queue.json, resetting queue.', e);
-      currentQueue = [];
-   }
-
-   if (!currentQueue.includes(keywordID)) {
-      currentQueue.push(Math.abs(keywordID));
-   }
-
-   await writeFile(filePath, JSON.stringify(currentQueue), { encoding: 'utf-8' }).catch((err) => { console.log(err); return '[]'; });
+   if (!keywordID || !Number.isInteger(keywordID)) { return; }
+   const kw = Math.abs(keywordID);
+   await mutateFailedQueue((q) => (q.includes(kw) ? q : [...q, kw]));
 };
 
 /**
@@ -491,18 +493,7 @@ export const retryScrape = async (keywordID: number) : Promise<void> => {
  * @returns {void}
  */
 export const removeFromRetryQueue = async (keywordID: number) : Promise<void> => {
-   if (!keywordID && !Number.isInteger(keywordID)) { return; }
-   let currentQueue: number[] = [];
-
-   const filePath = `${process.cwd()}/data/failed_queue.json`;
-   const currentQueueRaw = await readFile(filePath, { encoding: 'utf-8' }).catch((err) => { console.log(err); return '[]'; });
-   try {
-      currentQueue = currentQueueRaw ? JSON.parse(currentQueueRaw) : [];
-   } catch (e) {
-      console.log('[WARN] Corrupt failed_queue.json, resetting queue.', e);
-      currentQueue = [];
-   }
-   currentQueue = currentQueue.filter((item) => item !== Math.abs(keywordID));
-
-   await writeFile(filePath, JSON.stringify(currentQueue), { encoding: 'utf-8' }).catch((err) => { console.log(err); return '[]'; });
+   if (!keywordID || !Number.isInteger(keywordID)) { return; }
+   const kw = Math.abs(keywordID);
+   await mutateFailedQueue((q) => q.filter((item) => item !== kw));
 };
