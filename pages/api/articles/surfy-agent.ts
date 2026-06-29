@@ -12,6 +12,9 @@ import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { sseEvent } from '../../../lib/ai/sse';
 import { extractJsonObject, isSurfyReplyShape } from '../../../lib/ai/extractJson';
 import { stripEmoji } from '../../../lib/ai/text';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import type { ToolCtx } from '../../../lib/ai/types';
 
 // maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
@@ -30,6 +33,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
   if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+
+  // ── Org-wide AI token budget (shared 5h pool). Block before doing any work if exhausted. ──
+  let orgId: number | null = null;
+  try { const uid = await getCurrentUserId(req, res); orgId = (await ensureUserTenancy(String(uid))).orgId; } catch { orgId = null; }
+  if (orgId != null) {
+    const usage = await getOrgUsage5h(orgId);
+    if (usage.over) return res.status(429).json({ error: 'org_limit', resetsAt: usage.resetsAt, used: usage.used, limit: usage.limit });
+  }
 
   try {
     const { stripped, map } = stripDataImages(content as string);
@@ -117,6 +128,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       console.log(`[surfy-agent] writes=${ctx.writeCount} tokens=${finalUsage?.totalTokens ?? runningTokens}`);
+      // Charge this turn against the org's shared 5h pool (best-effort).
+      await recordAiTokens(orgId, finalUsage?.totalTokens ?? runningTokens);
 
       send('done', {
         message,
