@@ -138,7 +138,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { prompt, content, mode = 'article', selectedText = null, selectionRange = null, scoreData, internalArticles = [], keyword = '', articleTitle = '', articleMetaDescription = '' } = req.body;
+  const { prompt, content, mode = 'article', selectedText = null, selectionRange = null, scoreData, internalArticles = [], keyword = '', articleTitle = '', articleMetaDescription = '', history = [] } = req.body;
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
 
   try {
@@ -257,6 +257,12 @@ RULES:
     // the user turn only carries the instruction to avoid duplicating the article.
     const userMessage = `User: ${prompt}`;
 
+    // Prior conversation turns (text only) so Surfy has memory across the chat.
+    // The client sends history WITHOUT the current prompt, so we append it last.
+    const priorTurns = (Array.isArray(history) ? history : [])
+      .filter((h: any) => h && typeof h.message === 'string' && h.message.trim())
+      .map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.message }));
+
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -268,6 +274,7 @@ RULES:
         max_tokens: 32000,
         messages: [
           { role: 'system', content: systemPrompt },
+          ...priorTurns,
           { role: 'user', content: userMessage },
         ],
       }),
