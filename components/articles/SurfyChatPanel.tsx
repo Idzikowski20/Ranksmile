@@ -306,15 +306,14 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
           {/* Composer — Twenty-style box: textarea on top, controls + context ring inside the bottom row */}
           <div style={{ flexShrink: 0, padding: 10 }}>
             {s.selectionText && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px 5px 10px', marginBottom: 8, borderRadius: 9999, background: 'rgba(120,58,251,0.08)', border: '1px solid rgba(120,58,251,0.18)' }}>
-                <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="#783afb" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M7 8h10M7 12h6M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1Z" /></svg>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: '#783afb', flexShrink: 0 }}>Selected text</span>
-                <span style={{ fontSize: 12, color: '#52525c', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.selectionText}</span>
+              <div title={s.selectionText} style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', maxWidth: '100%', padding: '3px 5px 3px 9px', marginBottom: 8, borderRadius: 8, background: '#f4f4f5', border: '1px solid #e4e4e7' }}>
+                <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="#9f9fa9" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M7 8h10M7 12h6M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1Z" /></svg>
+                <span style={{ fontSize: 12, color: '#3f3f47', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{s.selectionText}</span>
                 <button type="button" onClick={s.clearSelection} aria-label="Clear selected text"
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 9999, background: 'transparent', border: 'none', color: '#783afb', cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(120,58,251,0.15)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                  <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: 6, background: 'transparent', border: 'none', color: '#9f9fa9', cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; e.currentTarget.style.color = '#52525c'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9f9fa9'; }}>
+                  <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
             )}
