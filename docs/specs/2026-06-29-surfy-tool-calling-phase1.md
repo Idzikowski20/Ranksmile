@@ -324,6 +324,16 @@ flag set by write tools.
 
 ---
 
+## Status
+
+**Phase 1 implemented** (commits `14cfb58`…`f4ece09` on `main`). Article-mode chat now runs the
+multi-step agent (`pages/api/articles/surfy-agent.ts`, engine = AI SDK `generateText` + tools over
+a cheerio working copy); the client (`ArticleEditor.tsx`) ships the UX (changelog, diff Preview,
+Stop/Cancel, meta chip, suggestions, guard). **Selection mode** still uses the single-shot
+`pages/api/articles/ask-surfy.ts` (to be migrated in Phase 2). Verified: 21/21 unit tests, full
+`tsc --noEmit` clean, real-DeepSeek agent-loop smoke (5 steps, edited the article), and a full
+`next build` (Next 12 + TypeScript 5.4.5 — TS bumped because the AI SDK ships TS5 `.d.cts` types).
+
 ## Out of scope (future phases)
 
 - **Phase 2 (advanced read):** `get_ai_search_score`, `check_plagiarism`,
