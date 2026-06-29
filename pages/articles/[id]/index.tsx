@@ -377,6 +377,7 @@ const ArticleEditorPage: NextPage = () => {
   const pixabayCallbackRef = useRef<((img: { url: string; alt: string }) => void) | null>(null);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingRef = useRef(false); // true while a save PUT is in flight (prevents overlapping saves)
   const lastSavedSig = useRef<string | null>(null);
   const lastVersionAt = useRef(0);
   const flushRef = useRef<(() => void) | null>(null);
@@ -619,7 +620,8 @@ const ArticleEditorPage: NextPage = () => {
 
   const handleRestoreVersion = (version: { id: number; content: string; score_data: string | null }) => {
     const editor = editorRef.current?.getEditor();
-    if (editor) editor.commands.setContent(version.content);
+    // emitUpdate:true → fires onUpdate → handleEditorChange → autosave persists the restored content.
+    if (editor) editor.commands.setContent(version.content, { emitUpdate: true });
     if (version.score_data) {
       try {
         const sd = JSON.parse(version.score_data);
@@ -686,6 +688,11 @@ const ArticleEditorPage: NextPage = () => {
   // created at most once every 2 min of editing so Version History stays useful
   // without flooding it on every keystroke. ──
   const autoSave = async (sig: string) => {
+    // Never run two saves at once. If one is already in flight, skip — the finally-block below
+    // re-checks for newer edits (flushRef) once it finishes, so nothing typed mid-save is lost.
+    if (savingRef.current) return;
+    savingRef.current = true;
+    let ok = false;
     try {
       setAutoSaveState('saving');
       const wantVersion = Date.now() - lastVersionAt.current > 120000;
@@ -693,12 +700,18 @@ const ArticleEditorPage: NextPage = () => {
       if (wantVersion) lastVersionAt.current = Date.now();
       lastSavedSig.current = sig;
       setAutoSaveState('saved');
+      ok = true;
     } catch {
       setAutoSaveState('unsaved');
       // Self-heal transient blips: retry shortly instead of waiting for the next edit.
       if (retryTimer.current) clearTimeout(retryTimer.current);
       retryTimer.current = setTimeout(() => { void autoSave(sig); }, 3000);
+    } finally {
+      savingRef.current = false;
     }
+    // Coalesce ONLY on success: persist anything edited while this save ran (flushRef reads the
+    // latest state). On failure the 3s retry handles it — re-flushing here would tight-loop.
+    if (ok) flushRef.current?.();
   };
 
   // Debounced auto-save: fires ~1s after the last edit to content / meta / image.
@@ -1109,7 +1122,9 @@ const ArticleEditorPage: NextPage = () => {
           } else if (eventType === 'done') {
             setAutoOptimizeBar({ preHtml });
             setIsAutoOptimizing(false);
-            try { editor.commands.setContent(payload.content); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
+            // emitUpdate:true syncs the page's editorHtml baseline with the applied content (so later
+            // edits + autosave build on the optimized version, not a stale snapshot).
+            try { editor.commands.setContent(payload.content, { emitUpdate: true }); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
 
             // Apply the analysis results FIRST — they ship in this `done` payload and the
             // panel (SEO entities + AI Search) should populate the instant optimize finishes.
