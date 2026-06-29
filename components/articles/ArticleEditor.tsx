@@ -1550,7 +1550,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid #e5e7eb; padding: 10px 18px; margin: 16px 0; color: #6b7280; font-style: italic; background: #f9fafb; border-radius: 0 6px 6px 0; }
           .art-editor-scroll .ProseMirror img { max-width: 100%; height: auto; }
           .art-editor-scroll .ProseMirror img.article-image.ProseMirror-selectednode { outline: 3px solid var(--color-surface-raised); }
-          .art-editor-scroll .ProseMirror p.is-empty::before { color: #d1d5db; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
+          /* New-line placeholder — Surfer-style: inherits the paragraph's size/line-height/spacing
+             (so a fresh line sits as a normal paragraph and nothing shifts when you start typing),
+             soft gray, NOT italic. */
+          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
           .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
