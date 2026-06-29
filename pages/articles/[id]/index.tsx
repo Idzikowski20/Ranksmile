@@ -380,7 +380,7 @@ const ArticleEditorPage: NextPage = () => {
   const savingRef = useRef(false); // true while a save PUT is in flight (prevents overlapping saves)
   const lastSavedSig = useRef<string | null>(null);
   const lastVersionAt = useRef(0);
-  const flushRef = useRef<(() => void) | null>(null);
+  const flushRef = useRef<((unload?: boolean) => void) | null>(null);
   const [article, setArticle] = useState<Article | null>(null);
   const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -634,7 +634,10 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   // ── Shared persistence used by both auto-save and programmatic saves ──
-  const doSave = async (versionType?: string) => {
+  // keepalive is opt-in: it lets a request survive page teardown (tab-hide / unload / nav) but caps
+  // the body at ~64KB. Normal autosaves MUST NOT use it — a long article exceeds 64KB and the
+  // browser would silently drop every save. Only the unload flush passes keepalive (small delta).
+  const doSave = async (versionType?: string, opts?: { keepalive?: boolean }) => {
     if (!id) return false;
     // Update current_count for each term + store computed score so list view stays in sync
     const updatedTerms = scoreData.terms.map((t) => ({
@@ -666,7 +669,7 @@ const ArticleEditorPage: NextPage = () => {
     const res = await fetch(`/api/articles/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      keepalive: true, // lets a save started on tab-hide / unload finish (best-effort, <64KB)
+      ...(opts?.keepalive ? { keepalive: true } : {}), // only on unload (best-effort, <64KB body cap)
       body: JSON.stringify({
         content: editorHtml,
         word_count: wordCount,
@@ -687,7 +690,7 @@ const ArticleEditorPage: NextPage = () => {
   // ── Auto-save: persist silently after edits settle. A version snapshot is
   // created at most once every 2 min of editing so Version History stays useful
   // without flooding it on every keystroke. ──
-  const autoSave = async (sig: string) => {
+  const autoSave = async (sig: string, opts?: { unload?: boolean }) => {
     // Never run two saves at once. If one is already in flight, skip — the finally-block below
     // re-checks for newer edits (flushRef) once it finishes, so nothing typed mid-save is lost.
     if (savingRef.current) return;
@@ -696,7 +699,7 @@ const ArticleEditorPage: NextPage = () => {
     try {
       setAutoSaveState('saving');
       const wantVersion = Date.now() - lastVersionAt.current > 120000;
-      await doSave(wantVersion ? 'manual_save' : undefined);
+      await doSave(wantVersion ? 'manual_save' : undefined, { keepalive: opts?.unload });
       if (wantVersion) lastVersionAt.current = Date.now();
       lastSavedSig.current = sig;
       setAutoSaveState('saved');
@@ -736,7 +739,8 @@ const ArticleEditorPage: NextPage = () => {
   }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing]);
 
   // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
-  flushRef.current = () => {
+  // unload=true → the page is going away, so the PUT must outlive it (keepalive).
+  flushRef.current = (unload?: boolean) => {
     if (isLoading || !article || isAutoOptimizing) return;
     const sig = JSON.stringify({
       h: editorHtml,
@@ -748,26 +752,28 @@ const ArticleEditorPage: NextPage = () => {
     });
     if (lastSavedSig.current === null || sig === lastSavedSig.current) return;
     if (autoTimer.current) clearTimeout(autoTimer.current);
-    void autoSave(sig);
+    void autoSave(sig, { unload });
   };
 
   // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
   // so changes are never lost to the debounce window (the main gap vs. Surfer-style autosave).
   useEffect(() => {
-    const flush = () => flushRef.current?.();
-    const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
+    // Page-teardown flushes (tab-hide / close / in-app nav) need keepalive so the PUT survives;
+    // Cmd/Ctrl+S is a manual save while the page stays, so it uses a normal (uncapped) request.
+    const flushUnload = () => flushRef.current?.(true);
+    const onVis = () => { if (document.visibilityState === 'hidden') flushUnload(); };
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flush(); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flushRef.current?.(); }
     };
     document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('beforeunload', flush);
+    window.addEventListener('beforeunload', flushUnload);
     window.addEventListener('keydown', onKey);
-    router.events.on('routeChangeStart', flush);
+    router.events.on('routeChangeStart', flushUnload);
     return () => {
       document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('beforeunload', flushUnload);
       window.removeEventListener('keydown', onKey);
-      router.events.off('routeChangeStart', flush);
+      router.events.off('routeChangeStart', flushUnload);
     };
   }, [router.events]);
 
@@ -1089,6 +1095,16 @@ const ArticleEditorPage: NextPage = () => {
           gaps: scoreGaps,
         }),
       });
+      // Org-wide budget exhausted (shared 5h pool, same as Surfy): show a clear message, not a generic fail.
+      if (res.status === 429) {
+        const ej = await res.json().catch(() => ({}));
+        if (ej.error === 'org_limit') {
+          const at = ej.resetsAt ? new Date(ej.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          toast.error(`Your organization reached its AI limit.${at ? ` Resets at ${at}.` : ''}`);
+          setIsAutoOptimizing(false);
+          return;
+        }
+      }
       if (!res.ok || !res.body) throw new Error('Auto-optimize request failed');
 
       // Read SSE stream

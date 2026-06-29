@@ -1093,8 +1093,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
     // Tell the page when Surfy opens/closes so it can dock the chat pane in the right column.
     useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-    // Pull the org's shared 5h usage whenever the panel opens (the pool can refill between sessions).
-    useEffect(() => { if (surfyOpen) void refreshOrgUsage(); }, [surfyOpen, refreshOrgUsage]);
+    // Keep the org's shared 5h usage fresh while the panel is open: on open, when the tab regains
+    // focus, and on a slow interval — so a teammate burning the pool shows up without a failed send.
+    useEffect(() => {
+      if (!surfyOpen) return undefined;
+      void refreshOrgUsage();
+      const onFocus = () => { void refreshOrgUsage(); };
+      window.addEventListener('focus', onFocus);
+      const iv = setInterval(() => { void refreshOrgUsage(); }, 60000);
+      return () => { window.removeEventListener('focus', onFocus); clearInterval(iv); };
+    }, [surfyOpen, refreshOrgUsage]);
 
 
     type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
