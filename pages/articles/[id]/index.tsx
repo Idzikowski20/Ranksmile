@@ -16,6 +16,7 @@ import EditorOnboarding from '../../../components/articles/EditorOnboarding';
 import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
+import AiGlowRing from '../../../components/articles/AiGlowRing';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
@@ -1199,21 +1200,6 @@ const ArticleEditorPage: NextPage = () => {
       hideMobileNav
     >
       <style>{`
-        @keyframes ai-glow-shift {
-          0%   { box-shadow: inset 0 0 6px  4px rgba(120,58,251,0.5), inset 0 0 18px 10px rgba(120,58,251,0.3), inset 0 0 45px 20px rgba(120,58,251,0.15), inset 0 0 90px 10px rgba(120,58,251,0.06); }
-          33%  { box-shadow: inset 0 0 6px  4px rgba(6,182,212,0.5),  inset 0 0 18px 10px rgba(6,182,212,0.3),  inset 0 0 45px 20px rgba(6,182,212,0.15),  inset 0 0 90px 10px rgba(6,182,212,0.06); }
-          66%  { box-shadow: inset 0 0 6px  4px rgba(168,85,247,0.5), inset 0 0 18px 10px rgba(168,85,247,0.3), inset 0 0 45px 20px rgba(168,85,247,0.15), inset 0 0 90px 10px rgba(168,85,247,0.06); }
-          100% { box-shadow: inset 0 0 6px  4px rgba(120,58,251,0.5), inset 0 0 18px 10px rgba(120,58,251,0.3), inset 0 0 45px 20px rgba(120,58,251,0.15), inset 0 0 90px 10px rgba(120,58,251,0.06); }
-        }
-        .ai-glow-ring {
-          position: absolute; inset: 0; border-radius: 12px;
-          pointer-events: none; z-index: 9999;
-          opacity: 0; transition: opacity 0.4s ease;
-        }
-        .ai-glow-ring.active {
-          opacity: 1;
-          animation: ai-glow-shift 2.4s ease-in-out infinite;
-        }
         @keyframes barPulse {
           0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
           50%       { transform: scaleY(1.4); opacity: 1; }
@@ -2022,7 +2008,7 @@ const ArticleEditorPage: NextPage = () => {
         <EditorOnboarding />
 
         {/* ── AI glow overlay — last child so it renders above everything ── */}
-        <div className={`ai-glow-ring${isAiActive ? ' active' : ''}`} />
+        <AiGlowRing active={isAiActive} />
       </div>
     </AppShell>
   );
