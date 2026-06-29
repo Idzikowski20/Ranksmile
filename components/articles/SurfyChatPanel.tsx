@@ -27,6 +27,9 @@ export interface SurfyPanelApi {
   usage: { conversation: number; lastInput: number; lastOutput: number; totalInput: number; totalOutput: number };
   suggestions: string[];
   conversations: SurfyConversation[];
+  /** Text the user had selected when they opened Surfy — shown as a context chip (null = none). */
+  selectionText: string | null;
+  clearSelection: () => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   scrollRef: React.RefObject<HTMLDivElement>;
   toolLabel: (t: string) => string;
@@ -302,6 +305,19 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
 
           {/* Composer — Twenty-style box: textarea on top, controls + context ring inside the bottom row */}
           <div style={{ flexShrink: 0, padding: 10 }}>
+            {s.selectionText && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px 5px 10px', marginBottom: 8, borderRadius: 9999, background: 'rgba(120,58,251,0.08)', border: '1px solid rgba(120,58,251,0.18)' }}>
+                <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="#783afb" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M7 8h10M7 12h6M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1Z" /></svg>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: '#783afb', flexShrink: 0 }}>Selected text</span>
+                <span style={{ fontSize: 12, color: '#52525c', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.selectionText}</span>
+                <button type="button" onClick={s.clearSelection} aria-label="Clear selected text"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 9999, background: 'transparent', border: 'none', color: '#783afb', cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(120,58,251,0.15)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                  <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            )}
             {empty && s.suggestions.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 2px 8px' }}>
                 {s.suggestions.map((sug) => (
