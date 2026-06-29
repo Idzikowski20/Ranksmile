@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SurfyMessage from './SurfyMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
@@ -6,6 +6,7 @@ import type { PendingAction } from '../../lib/ai/types';
 
 export type SurfyHistoryEntry = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string };
 export type SurfyActivity = { tool: string; done: boolean; error?: boolean };
+export type SurfyConversation = { id: string; title: string; ts: number };
 export type SurfyResponseState = {
   action?: string; message: string; content: string | null;
   changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null;
@@ -18,13 +19,14 @@ export interface SurfyPanelApi {
   activity: SurfyActivity[];
   streamText: string;
   response: SurfyResponseState | null;
-  metaPending: string | null; // e.g. "title + description" | "title" | "description" | null
+  metaPending: string | null;
   prompt: string;
   publishing: boolean;
   canApply: boolean;
   canCompare: boolean;
   usage: { conversation: number; lastInput: number; lastOutput: number; totalInput: number; totalOutput: number };
   suggestions: string[];
+  conversations: SurfyConversation[];
   inputRef: React.RefObject<HTMLTextAreaElement>;
   scrollRef: React.RefObject<HTMLDivElement>;
   toolLabel: (t: string) => string;
@@ -35,6 +37,7 @@ export interface SurfyPanelApi {
   openCompare: () => void;
   dismiss: () => void;
   newConversation: () => void;
+  openConversation: (id: string) => void;
   confirmPublish: () => void;
   cancelPublish: () => void;
   pickSuggestion: (s: string) => void;
@@ -52,29 +55,75 @@ const HeaderBtn = ({ onClick, label, children }: { onClick: () => void; label: s
   </button>
 );
 
+const relTime = (ts: number) => {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+};
+
 /** Docked, light, Twenty-style Surfy chat pane for the editor's right column. Pure view — all
  *  state + behaviour come from `s` (the useSurfy hook). */
 const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
   const { response, loading } = s;
   const empty = s.history.length === 0 && !loading && !response;
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#fff', fontFamily: 'var(--font-family-primary)' }}>
-      <style>{'@keyframes surfyspin { to { transform: rotate(360deg); } }'}</style>
+      <style>{`
+        @keyframes surfyspin { to { transform: rotate(360deg); } }
+        .surfy-box:focus-within { border-color: #AA93FD !important; box-shadow: 0 0 0 3px rgba(120,58,251,0.1) !important; }
+      `}</style>
 
       {/* Header — 48px, Twenty-style */}
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 48, padding: '0 8px 0 14px', borderBottom: '1px solid #f4f4f5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <IconSurfy size={18} />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>Surfy</span>
-          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#9f9fa9', background: '#f4f4f5', border: '1px solid #ececef', padding: '1px 6px', borderRadius: 9999 }}>alpha</span>
+          {/* Pre-alpha info — replaces the alpha tag */}
+          <span
+            style={{ position: 'relative', display: 'inline-flex' }}
+            onMouseEnter={() => setHelpOpen(true)} onMouseLeave={() => setHelpOpen(false)}
+          >
+            <span aria-label="About Surfy" style={{ display: 'inline-flex', color: '#9f9fa9', cursor: 'help' }}>
+              <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10} /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+            </span>
+            {helpOpen && (
+              <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', zIndex: 250, width: 220, background: '#18181b', color: '#fff', fontSize: 11.5, lineHeight: '16px', padding: '8px 10px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+                <strong style={{ fontWeight: 600 }}>Pre alpha</strong> — Surfy can make mistakes; review changes before applying.
+              </span>
+            )}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <ContextUsageRing
-            conversationTokens={s.usage.conversation}
-            lastInput={s.usage.lastInput} lastOutput={s.usage.lastOutput}
-            totalInput={s.usage.totalInput} totalOutput={s.usage.totalOutput}
-          />
+          {/* Conversation history */}
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            <HeaderBtn onClick={() => setHistOpen((o) => !o)} label="Conversation history">
+              <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-7 3.3" /><path d="M3 4v3h3" /><path d="M12 7v5l3 2" /></svg>
+            </HeaderBtn>
+            {histOpen && (
+              <div
+                style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 250, width: 260, maxHeight: 320, overflowY: 'auto', background: '#fff', border: '1px solid #e4e4e7', borderRadius: 12, padding: 6, boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)' }}
+                className="styled-scrollbar"
+              >
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9f9fa9', padding: '6px 8px 4px' }}>Conversations</div>
+                {s.conversations.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: '#9f9fa9', padding: '6px 8px 10px' }}>No saved conversations yet.</div>
+                ) : s.conversations.map((c) => (
+                  <button key={c.id} type="button" onClick={() => { s.openConversation(c.id); setHistOpen(false); }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', padding: '7px 8px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                    <span style={{ fontSize: 13, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title || 'Conversation'}</span>
+                    <span style={{ fontSize: 11, color: '#9f9fa9', flexShrink: 0 }}>{relTime(c.ts)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </span>
           <HeaderBtn onClick={s.newConversation} label="New conversation">
             <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /><path d="M16 5l3 3" /></svg>
           </HeaderBtn>
@@ -84,7 +133,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
         </div>
       </div>
 
-      {/* Conversation body — scrolls; header + composer stay pinned */}
+      {/* Conversation body */}
       <div ref={s.scrollRef} className="styled-scrollbar" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {empty && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8 }}>
@@ -96,7 +145,6 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
           <SurfyMessage key={i} role={entry.role} message={entry.message} />
         ))}
 
-        {/* Loading / live stream */}
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -127,7 +175,6 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
           </div>
         )}
 
-        {/* What Surfy did */}
         {response && !loading && ((response.changelog?.length ?? 0) > 0 || Boolean(s.metaPending)) && (
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#9f9fa9', marginBottom: 5 }}>
@@ -150,7 +197,6 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
           </div>
         )}
 
-        {/* Publish proposal */}
         {response && !loading && response.pendingAction?.type === 'publish_to_wordpress' && (
           <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f8f9ff', border: '1px solid #e4e4e7' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -177,7 +223,6 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
           </div>
         )}
 
-        {/* Action buttons */}
         {response && !loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 8, borderTop: '1px solid #f4f4f5' }}>
             <button type="button" onClick={s.dismiss}
@@ -206,8 +251,8 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
         )}
       </div>
 
-      {/* Composer */}
-      <div style={{ flexShrink: 0, borderTop: '1px solid #f4f4f5', padding: 8 }}>
+      {/* Composer — Twenty-style box: textarea on top, controls + context ring inside the bottom row */}
+      <div style={{ flexShrink: 0, padding: 10 }}>
         {empty && s.suggestions.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 2px 8px' }}>
             {s.suggestions.map((sug) => (
@@ -220,29 +265,40 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
             ))}
           </div>
         )}
-        <div className="surfy-composer" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: '8px 8px 8px 12px', border: '1px solid #d4d4d8', borderRadius: 12, background: '#fff', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
+        <div className="surfy-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #d4d4d8', borderRadius: 12, background: '#fff', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
           <textarea
             ref={s.inputRef}
             rows={1}
             value={s.prompt}
             onChange={(e) => s.setPrompt(e.target.value)}
-            onFocus={(e) => { const p = e.currentTarget.parentElement; if (p) { p.style.borderColor = '#AA93FD'; p.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; } }}
-            onBlur={(e) => { const p = e.currentTarget.parentElement; if (p) { p.style.borderColor = '#d4d4d8'; p.style.boxShadow = 'none'; } }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); s.submit(); } }}
-            placeholder="Ask, search or create anything…"
+            placeholder="Ask, search or make anything…"
             disabled={loading}
             className="styled-scrollbar"
-            style={{ flex: 1, minHeight: 24, maxHeight: 200, border: 'none', borderRadius: 0, background: 'transparent', outline: 'none', padding: '0 0 2px', fontSize: 14, lineHeight: '24px', color: '#18181b', fontFamily: 'var(--font-family-primary)', resize: 'none', overflowY: 'auto' }}
+            style={{ flex: 1, minHeight: 48, maxHeight: 280, border: 'none', background: 'transparent', outline: 'none', padding: 0, fontSize: 14, lineHeight: '20px', color: '#18181b', fontFamily: 'var(--font-family-primary)', resize: 'none', overflowY: 'auto' }}
           />
-          <button
-            type="button" onClick={s.submit} disabled={!s.prompt.trim() || loading} aria-label="Send"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 9999, background: s.prompt.trim() && !loading ? '#783afb' : '#f4f4f5', border: 'none', color: s.prompt.trim() && !loading ? '#fff' : '#9f9fa9', cursor: s.prompt.trim() && !loading ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
-          >
-            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
-          </button>
-        </div>
-        <div style={{ padding: '7px 2px 0', color: '#9f9fa9', fontSize: 10.5, lineHeight: '14px' }}>
-          Surfy can make mistakes — review changes before applying.
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* Left: context-window usage ring (opens upward) */}
+            <ContextUsageRing
+              placement="up"
+              conversationTokens={s.usage.conversation}
+              lastInput={s.usage.lastInput} lastOutput={s.usage.lastOutput}
+              totalInput={s.usage.totalInput} totalOutput={s.usage.totalOutput}
+            />
+            {/* Right: model indicator + send */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 24, padding: '0 8px', borderRadius: 6, border: '1px solid #e4e4e7', background: '#fafafa', color: '#52525c', fontSize: 12, fontWeight: 500 }}>
+                <span style={{ width: 7, height: 7, borderRadius: 9999, background: '#783afb' }} />
+                DeepSeek V3
+              </span>
+              <button
+                type="button" onClick={s.submit} disabled={!s.prompt.trim() || loading} aria-label="Send"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: s.prompt.trim() && !loading ? '#783afb' : '#f4f4f5', border: 'none', color: s.prompt.trim() && !loading ? '#fff' : '#9f9fa9', cursor: s.prompt.trim() && !loading ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
+              >
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

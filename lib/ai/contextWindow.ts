@@ -2,13 +2,14 @@
 // context window, NOT an arbitrary budget). deepseek-chat has a 64K context window.
 import { formatTokens } from './sse';
 
-export const CONTEXT_WINDOW_TOKENS = 64_000;
+export const CONTEXT_WINDOW_TOKENS = 500_000;
 
-/** Ring/bar colour by how full the context window is: accent <60%, amber 60–80%, red >80%. */
+/** Ring/bar colour by how full the context window is: green ≤50%, yellow ≤75%, orange ≤90%, red >90%. */
 export function contextUsageColor(pct: number): string {
-  if (pct > 80) return '#ef4444';
-  if (pct > 60) return '#d97706';
-  return '#783afb';
+  if (pct > 90) return '#ef4444'; // red
+  if (pct > 75) return '#f97316'; // orange
+  if (pct > 50) return '#eab308'; // yellow
+  return '#1ab25e'; // green
 }
 
 /** pct (0–100) of the context window used by the current conversation. */

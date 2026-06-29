@@ -20,13 +20,15 @@ type Props = {
   lastOutput?: number;
   totalInput?: number;
   totalOutput?: number;
+  /** 'down' opens the card below-right (header); 'up' opens it above-left (composer footer). */
+  placement?: 'down' | 'up';
 };
 
 /** Twenty-style context-window usage ring (real tokens vs the model's context window), light theme.
  *  Hover (or click) opens a card with the % full, last-message tokens and conversation totals. */
 const ContextUsageRing = ({
   conversationTokens, contextWindow = CONTEXT_WINDOW_TOKENS,
-  lastInput = 0, lastOutput = 0, totalInput = 0, totalOutput = 0,
+  lastInput = 0, lastOutput = 0, totalInput = 0, totalOutput = 0, placement = 'down',
 }: Props) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -68,10 +70,11 @@ const ContextUsageRing = ({
         <div
           role="dialog"
           style={{
-            position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200, width: 252,
+            position: 'absolute', zIndex: 200, width: 252,
+            ...(placement === 'up' ? { bottom: 'calc(100% + 8px)', left: 0 } : { top: 'calc(100% + 8px)', right: 0 }),
             background: '#fff', border: '1px solid #e4e4e7', borderRadius: 12, padding: 12,
             boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
-            transformOrigin: 'top right', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
+            transformOrigin: placement === 'up' ? 'bottom left' : 'top right', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
             fontFamily: 'var(--font-family-primary)',
           }}
         >

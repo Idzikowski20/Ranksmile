@@ -17,7 +17,6 @@ import { Thread, CommentAuthor } from '../../../components/articles/comments/Com
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import AiGlowRing from '../../../components/articles/AiGlowRing';
-import IconSurfy from '../../../components/articles/IconSurfy';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
@@ -444,7 +443,8 @@ const ArticleEditorPage: NextPage = () => {
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
-  const isAiActive = surfyAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
+  // The amber glow fires for Auto-Optimize ONLY — not while Surfy is thinking/replying.
+  const isAiActive = isAutoOptimizing;
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -1611,13 +1611,6 @@ const ArticleEditorPage: NextPage = () => {
                     <span style={{ color: article.status === 'accepted' ? '#18181b' : '#3f3f47', display: 'inline-flex' }}>
                       {article.status === 'accepted' ? <IcoDoneFilled /> : <IcoDoneOutline />}
                     </span>
-                  </IconBtn>
-                </span>
-
-                {/* Ask Surfy — docks the chat pane in this panel */}
-                <span style={{ display: 'inline-flex' }}>
-                  <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory(false); editorRef.current?.toggleSurfy?.(); }} title="Ask Surfy">
-                    <IconSurfy size={18} />
                   </IconBtn>
                 </span>
 
