@@ -246,7 +246,7 @@ RULES:
 - For "insert_after_selection" action: content is the new HTML to insert after the selection
 - NEVER change text the user didn't ask you to change
 - NEVER invent facts, statistics, author credentials, or sources
-- The "message" must be MINIMALIST: a few short sentences, NO emojis, NO markdown tables, minimal bold/headings. Just say plainly what you found or changed`;
+- Format the "message" cleanly in markdown (short paragraphs, **bold** labels, bullet lists, a table when comparing). NO emojis. Be concise — no filler`;
 
     const systemPrompt = [
       actionUnderstandingBlock,
