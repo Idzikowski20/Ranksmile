@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 
 // Obraz jako base64 może mieć 500KB+ — zwiększ limit odpowiedzi
@@ -18,6 +19,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const { keyword, title } = req.body;
    if (!keyword) return res.status(400).json({ error: 'keyword is required' });
+
+   // Org-wide AI budget: image generation is paid external spend not covered by token accounting,
+   // so at minimum block it once the shared pool is exhausted.
+   const orgId = await resolveOrgId(req, res);
+   const over = await orgBudgetBlocked(orgId);
+   if (over) return res.status(429).json(over);
 
    // Use article title as the image generation prompt — more specific than just the keyword
    const prompt = title || keyword;
