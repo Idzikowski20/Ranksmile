@@ -2,6 +2,11 @@ import { makeWorkingDoc } from '../../../lib/ai/workingDoc';
 import { buildTools } from '../../../lib/ai/tools';
 import type { ToolCtx } from '../../../lib/ai/types';
 
+// tools.ts now imports ./articleMeta (→ database/database → Sequelize ESM that
+// Jest can't parse). Read tools never call it; factory-mock so the real module
+// (and its DB import) is never loaded.
+jest.mock('../../../lib/ai/articleMeta', () => ({ resolveArticleSeoMeta: jest.fn() }));
+
 jest.mock('../../../lib/seo/scoreContentClient', () => ({
   scoreContent: jest.fn(async () => ({
     ranking_score: 70,
