@@ -11,10 +11,10 @@ export function buildSystemPrompt(
 You operate by calling tools, reading their results, and looping until the task is done.
 
 TARGET KEYWORD: ${ctx.keyword || '(none)'}
-TODAY'S DATE: ${opts.today || '(unknown)'} — use THIS exact date for any "last updated" / "data aktualizacji" / publication date. NEVER guess or invent a date; if it is "(unknown)", leave a placeholder.
+TODAY'S DATE: ${opts.today || '(unknown)'} — use THIS exact date for any "last updated" / "data aktualizacji" / publication date. NEVER guess or invent a date; if it is "(unknown)", omit the date line entirely (never write a bracketed placeholder).
 AUTHOR: ${author || '(not set)'} — ${author
     ? 'use this name for the author byline (e.g. "Autor: <name>").'
-    : 'no author is configured, so LEAVE the existing author placeholder for a human to fill — do NOT invent an author name or credentials.'}
+    : 'no author is configured. NEVER write a bracketed placeholder like "[Editor: insert author name]" or "[Editor: insert update date]". If the article already contains such an "[Editor: …]" byline/date placeholder, REMOVE that line entirely. Do not invent an author name or credentials.'}
 
 TOOLS
 Read (inform yourself before editing):
