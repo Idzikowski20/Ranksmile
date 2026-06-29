@@ -352,7 +352,17 @@ diff Preview; body only, returns the refreshed outline), and `publish_to_wordpre
 sets `ctx.pendingAction`; the client shows a confirm card → calls the existing `/api/articles/publish`;
 the agent never publishes autonomously; warns when there are unsaved edits). Added a `PendingAction`
 channel on `ToolCtx`+route, `ACTION_TIMEOUT=60s`, route `maxDuration` 60→300. Verified: 38/38 unit
-tests, `tsc --noEmit` clean. (`next build` deferred locally — dev server running; tsc+jest gate it.)
+tests, `tsc --noEmit` clean, full `next build`.
+
+**Phase 4 implemented** (commits `dd1e766`…`f6488ad` on `main`, plan
+`docs/plans/2026-06-29-surfy-tool-calling-phase4.md`). The agent route is rewritten from
+`generateText` to **`streamText`**, draining `fullStream` to **Server-Sent Events** (`lib/ai/sse.ts`):
+`text` deltas, `step` start/end per tool, running `usage`, and a terminal `done` carrying
+`finalHtml`/`meta`/`changelog`/`pendingAction` (built from the mutated `ctx`; same empty-guard).
+`req.close`→`abortSignal` so Stop halts the model. Client (`ArticleEditor`) reads the stream and shows
+a **live per-tool activity list**, streaming text, and a **`TokenCircle`** (this-turn tokens toward a
+60k budget). Added a `get_tool_catalog` meta-tool (additive discovery; advertised in the prompt).
+Selection mode stays plain JSON. Verified: 44/44 unit tests, `tsc --noEmit` clean, full `next build`.
 
 ## Out of scope (future phases)
 
