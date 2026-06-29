@@ -1066,6 +1066,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyUsageDetail, setSurfyUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
     // Running totals across all turns of the current conversation (reset on a new conversation).
     const [surfyTotals, setSurfyTotals] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
+    // The organization's shared 5h AI-token pool (drives the ring + the blocked banner).
+    const [orgUsage, setOrgUsage] = useState<{ used: number; limit: number; resetsAt: number; over: boolean } | null>(null);
+    const refreshOrgUsage = useCallback(async () => {
+      try { const r = await fetch('/api/ai-usage'); if (r.ok) setOrgUsage(await r.json()); } catch { /* never block the editor on a usage read */ }
+    }, []);
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -1088,6 +1093,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
     // Tell the page when Surfy opens/closes so it can dock the chat pane in the right column.
     useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Pull the org's shared 5h usage whenever the panel opens (the pool can refill between sessions).
+    useEffect(() => { if (surfyOpen) void refreshOrgUsage(); }, [surfyOpen, refreshOrgUsage]);
 
 
     type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
@@ -1181,6 +1188,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           signal: ac.signal,
         });
 
+        // Org-wide budget exhausted (shared 5h pool): surface the blocked banner, not a chat error.
+        if (res.status === 429) {
+          const ej = await res.json().catch(() => ({}));
+          if (ej.error === 'org_limit') {
+            setOrgUsage({ used: ej.used ?? 0, limit: ej.limit ?? 0, resetsAt: ej.resetsAt ?? 0, over: true });
+            setSurfyHistory((prev) => prev.slice(0, -1)); // drop the optimistic user bubble; keep their prompt in the box
+            return;
+          }
+        }
+
         let data: any;
         if (useAgent) {
           // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
@@ -1217,6 +1234,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
         });
         setSurfyPrompt('');
+        void refreshOrgUsage(); // this turn drew from the shared pool — refresh the ring
       } catch (err: any) {
         if (err?.name === 'AbortError') return; // user pressed Stop
         const errMsg = 'Error: ' + err.message;
@@ -1321,6 +1339,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       canApply: Boolean(surfyResponse && (surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current)),
       canCompare: Boolean(surfyResponse?.content && surfyOriginalRef.current),
       usage: { conversation: surfyUsageDetail.input, lastInput: surfyUsageDetail.input, lastOutput: surfyUsageDetail.output, totalInput: surfyTotals.input, totalOutput: surfyTotals.output },
+      orgUsage,
       suggestions: ['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'],
       inputRef: surfyInputRef,
       scrollRef: surfyScrollRef,
