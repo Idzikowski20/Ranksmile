@@ -2,9 +2,10 @@ import React from 'react';
 import { motion } from 'motion/react';
 
 /**
- * Warm ambient glow around the editor while Surfy / AI is working — a soft, diffuse amber wash that
- * bleeds in from the corners (strongest at the top), fading to a transparent centre so the content
- * stays readable. No thin ring: layered radial gradients, gently breathing while active.
+ * Warm ambient glow around the editor while Surfy / AI is working — a soft, diffuse amber frame that
+ * bleeds in from ALL FOUR edges (top, bottom, left, right), fading to a transparent centre so the
+ * content stays readable. Corners are naturally a touch brighter where adjacent edges overlap.
+ * No thin ring: layered edge gradients + blur, gently breathing while active.
  */
 const GLOW_CSS = `
 .ai-glow-amber {
@@ -12,11 +13,11 @@ const GLOW_CSS = `
   inset: 0;
   border-radius: inherit;
   background:
-    radial-gradient(58% 46% at 0% 0%, rgba(255,176,102,0.62) 0%, rgba(255,138,74,0.26) 32%, transparent 62%),
-    radial-gradient(58% 46% at 100% 0%, rgba(255,158,86,0.60) 0%, rgba(255,126,68,0.24) 32%, transparent 62%),
-    radial-gradient(52% 42% at 0% 100%, rgba(255,150,82,0.30) 0%, transparent 58%),
-    radial-gradient(52% 42% at 100% 100%, rgba(255,148,80,0.28) 0%, transparent 58%);
-  filter: blur(6px) saturate(1.05);
+    linear-gradient(to bottom, rgba(255,170,96,0.62) 0%, rgba(255,140,74,0.18) 9%, transparent 20%),
+    linear-gradient(to top,    rgba(255,152,84,0.52) 0%, rgba(255,132,70,0.15) 9%, transparent 20%),
+    linear-gradient(to right,  rgba(255,160,88,0.55) 0%, rgba(255,134,72,0.15) 7%, transparent 15%),
+    linear-gradient(to left,   rgba(255,160,88,0.55) 0%, rgba(255,134,72,0.15) 7%, transparent 15%);
+  filter: blur(7px) saturate(1.05);
   animation: ai-glow-amber-breathe 4.5s ease-in-out infinite;
 }
 .ai-glow-amber.is-idle { animation-play-state: paused; }
