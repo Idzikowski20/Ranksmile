@@ -12,6 +12,8 @@ import AppLoading from '../components/common/AppLoading';
 import TopProgressBar from '../components/common/TopProgressBar';
 import { OnboardingStatusContext } from '../lib/onboardingStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
+import { useGSAP } from '@gsap/react';
+import { registerMotionPlugins } from '../lib/motion/gsap';
 
 /** Keeps the `active_workspace` cookie in sync with the /workspace/<id>/... URL so server-side scoping matches. */
 function WorkspaceCookieSync() {
@@ -115,6 +117,8 @@ function MyApp({ Component, pageProps }: AppProps) {
         },
       },
     }));
+   // Register every GSAP plugin once, client-side (motion layer — see lib/motion/gsap.ts).
+   useGSAP(() => { registerMotionPlugins(); });
    return (
       <NeonAuthUIProvider authClient={authClient} redirectTo="/" basePath="/auth">
          <QueryClientProvider client={queryClient}>
