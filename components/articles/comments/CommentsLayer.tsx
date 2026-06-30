@@ -22,6 +22,8 @@ interface Props {
   shareUrl?: string;
   /** Opaque share token for anonymous reviewers; omitted for authenticated owners. */
   shareToken?: string;
+  /** Bump after each live content push to re-anchor comment highlights. */
+  relayoutSignal?: number;
 }
 
 /** Wrap a live Range with a comment mark. */
@@ -65,7 +67,7 @@ const anchorQuote = (container: HTMLElement, quote: string, id: string): HTMLEle
 
 const tempId = () => `tmp_${Math.random().toString(36).slice(2, 10)}`;
 
-const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, reloadSignal, shareUrl, shareToken }: Props) => {
+const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, reloadSignal, shareUrl, shareToken, relayoutSignal }: Props) => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [pill, setPill] = useState<{ top: number; left: number } | null>(null);
   const [composer, setComposer] = useState<{ top: number; quote: string } | null>(null);
@@ -117,6 +119,7 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
   }, [threads, containerRef, wrapperRef]);
 
   useEffect(() => { if (loadedRef.current) layout(); }, [threads, layout]);
+  useEffect(() => { if (loadedRef.current) layout(); }, [relayoutSignal]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const on = () => layout();
     window.addEventListener('resize', on);
