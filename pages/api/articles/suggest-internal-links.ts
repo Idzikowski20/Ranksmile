@@ -129,7 +129,10 @@ If no natural links found, return: []`;
       return res.status(200).json({ suggestions: [] });
     }
 
-    const suggestions: LinkSuggestion[] = JSON.parse(jsonMatch[0]);
+    // A truncated array (hit max_tokens) or bracket-bearing prose makes the regex match but the
+    // parse throw — degrade to empty suggestions instead of a 500.
+    let suggestions: LinkSuggestion[] = [];
+    try { suggestions = JSON.parse(jsonMatch[0]); } catch { return res.status(200).json({ suggestions: [] }); }
 
     console.log(`[internal-links] found ${suggestions.length} suggestions for article ${articleId}`);
 
