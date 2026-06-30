@@ -19,6 +19,8 @@ import CompareVersionsModal from '../../../components/articles/CompareVersionsMo
 import AiGlowRing from '../../../components/articles/AiGlowRing';
 import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
+import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
+import { computeOptimizeStats } from '../../../lib/optimizeStats';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
@@ -453,6 +455,10 @@ const ArticleEditorPage: NextPage = () => {
   const [optimizeState, setOptimizeState] = useState<'idle' | 'optimizing' | 'reviewing'>('idle');
   const preReviewHtmlRef = useRef<string>(''); // snapshot for AO-8 cancel/restore
   const optimizeMetaRef = useRef<{ changedCount: number; creditDeducted: boolean; promptVersion: string }>({ changedCount: 0, creditDeducted: false, promptVersion: '' });
+  // AO-8b: results-panel inputs captured during the SSE run — pre-optimize content score
+  // baseline (gauge/ScoreTrio delta) + the changed sections' display data (word-delta stats).
+  const preScoreRef = useRef<number>(0);
+  const changedSectionsRef = useRef<Array<{ sectionId: string; headingText: string; oldHtml: string; newHtml: string }>>([]);
   // AO-8a: review lifecycle chrome — processed counter, save-in-flight, cancel-confirm modal.
   const [optimizeProgress, setOptimizeProgress] = useState<{ processed: number; total: number }>({ processed: 0, total: 0 });
   const [optimizeRemaining, setOptimizeRemaining] = useState(0); // unresolved contentOptimizer nodes (review label)
@@ -707,6 +713,32 @@ const ArticleEditorPage: NextPage = () => {
   // that fed ContentScorePanel — a full-HTML regex and two JSON.parse of cached blobs — so it only
   // recomputes when its actual input changes (was running on every keystroke).
   const internalLinksCount = useMemo(() => (editorHtml.match(/<a\s[^>]*href=/gi) || []).length, [editorHtml]);
+
+  // AO-8b: live post-optimize content score during review. The review doc keeps changed
+  // sections as empty contentOptimizer placeholder divs (their HTML lives in optimizeStore,
+  // not in editorHtml), so substitute each unresolved placeholder's newHtml back in before
+  // scoring. Resolved (accepted/rejected) sections already carry real content, so the score
+  // climbs as the user works. seoDelta drives the gauge + ScoreTrio "↑N" badges.
+  const optimizeReview = useMemo(() => {
+    if (optimizeState !== 'reviewing' || !scoreData) return null;
+    const postHtml = editorHtml.replace(
+      /<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi,
+      (tag) => {
+        const idMatch = tag.match(/data-section-id="([^"]*)"/i);
+        const sid = idMatch ? idMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
+        return optimizeStore.get(sid)?.newHtml ?? '';
+      },
+    );
+    const postText = postHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    const postWords = postText ? postText.split(/\s+/).length : 0;
+    const postHeadings = (postHtml.match(/<h[1-6][\s>]/gi) || []).length;
+    const postParas = (postHtml.match(/<p[\s>]/gi) || []).length;
+    const postScore = computeContentScore(
+      postText, postWords, postHeadings, scoreData, postParas,
+      (postHtml.match(/<a\s[^>]*href=/gi) || []).length, postHtml, article?.target_keyword || '',
+    );
+    return { postScore, seoDelta: postScore - preScoreRef.current };
+  }, [optimizeState, editorHtml, scoreData, article?.target_keyword]);
   const initialPlagiarism = useMemo(() => {
     try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
   }, [(article as any)?.plagiarism_json]);
@@ -1330,6 +1362,13 @@ const ArticleEditorPage: NextPage = () => {
     if (!editor) return;
     const preHtml: string = editor.getHTML();
     preReviewHtmlRef.current = preHtml;
+    // AO-8b: snapshot the pre-optimize content score — baseline for the results gauge + ScoreTrio deltas.
+    const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    const preParaCount = (preHtml.match(/<p[\s>]/gi) || []).length;
+    preScoreRef.current = scoreData
+      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '')
+      : 0;
+    changedSectionsRef.current = [];
     optimizeStore.clear();
     setOptimizeState('optimizing');
     setIsAutoOptimizing(true);
@@ -1338,6 +1377,7 @@ const ArticleEditorPage: NextPage = () => {
 
     const resetIdle = () => {
       optimizeStore.clear();
+      changedSectionsRef.current = []; // AO-8b: clear results-panel data on no-op/error
       setOptimizeState('idle');
       setIsAutoOptimizing(false);
       setOptimizeProgress({ processed: 0, total: 0 }); // AO-8a
@@ -1392,6 +1432,10 @@ const ArticleEditorPage: NextPage = () => {
             const ev = payload as SectionEvent;
             orderedEvents.push(ev);
             optimizeStore.set(ev.sectionId, { oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed });
+            // AO-8b: collect changed sections' display data for the results-panel word-delta stats.
+            if (ev.changed) {
+              changedSectionsRef.current.push({ sectionId: ev.sectionId, headingText: ev.headingText, oldHtml: ev.oldHtml, newHtml: ev.newHtml });
+            }
             setOptimizeProgress((p) => ({ ...p, processed: p.processed + 1 })); // AO-8a
           } else if (eventType === 'done') {
             const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean };
@@ -1506,6 +1550,7 @@ const ArticleEditorPage: NextPage = () => {
       try { editor.commands.setContent(preReviewHtmlRef.current, { emitUpdate: false }); } catch (e) { console.error('[optimize-cancel] setContent error', e); }
     }
     optimizeStore.clear();
+    changedSectionsRef.current = []; // AO-8b: drop results-panel data on cancel
     setOptimizeState('idle');
     setIsAutoOptimizing(false);
     setOptimizeProgress({ processed: 0, total: 0 });
@@ -2113,6 +2158,19 @@ const ArticleEditorPage: NextPage = () => {
                 <>
                   {/* ContentScorePanel fills remaining height */}
                   <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
+                    {/* AO-8b: Auto-Optimize results summary (gauge + stats + per-section deltas) */}
+                    {optimizeState === 'reviewing' && optimizeMetaRef.current.changedCount > 0 && (() => {
+                      const stats = computeOptimizeStats(changedSectionsRef.current);
+                      return (
+                        <OptimizeResultsPanel
+                          preScore={preScoreRef.current}
+                          postScore={optimizeReview?.postScore ?? preScoreRef.current}
+                          changedCount={optimizeMetaRef.current.changedCount}
+                          wordsAdded={stats.wordsAdded}
+                          adjustments={stats.adjustments}
+                        />
+                      );
+                    })()}
                     <ContentScorePanel
                       plainText={plainText}
                       wordCount={wordCount}
@@ -2120,6 +2178,7 @@ const ArticleEditorPage: NextPage = () => {
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
+                      scoreDeltas={optimizeState === 'reviewing' && optimizeReview ? { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta } : undefined}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}

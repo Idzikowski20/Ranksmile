@@ -69,6 +69,8 @@ interface Props {
   readabilityAccepted?: number;
   /** Shared/preview mode — disables every mutating action. */
   readOnly?: boolean;
+  /** AO-8b: live "↑N" content-score deltas — non-undefined ONLY during Auto-Optimize review. */
+  scoreDeltas?: { seo?: number; overall?: number };
 }
 
 /* ── Small circular progress ───────────────────────────────────────── */
@@ -268,6 +270,7 @@ const ContentScorePanel = ({
   onHighlightTermsChange,
   initialPlagiarism,
   initialAiReadability,
+  scoreDeltas,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [score, setScore] = useState(0);
@@ -583,6 +586,7 @@ const ContentScorePanel = ({
       {/* ── SEO · Content Score · AI Search gauges (click → Write & Optimize) ── */}
       <ScoreTrio
         seo={score} ai={aiScore} hasAi={hasAi}
+        deltas={scoreDeltas}
         onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
         onAiClick={() => { setWriteSection('ai'); setView('write'); }}
       />
