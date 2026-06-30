@@ -9,7 +9,7 @@ import { getErrorMessage } from '../../lib/errors';
 
 function sanitizeClientId(raw: unknown): string {
   if (typeof raw !== 'string') return 'guest';
-  // Ably clientIds must be printable; strip control + angle brackets, cap length.
+  // Ably clientIds must be printable; strip angle brackets, cap length.
   const cleaned = raw.replace(/[<>]/g, '').trim().slice(0, 64);
   return cleaned || 'guest';
 }
@@ -39,6 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Returned verbatim to the Ably client SDK (authUrl expects a TokenRequest JSON).
     return res.status(200).json(tokenRequest);
   } catch (error) {
-    return res.status(500).json({ error: getErrorMessage(error) || 'Token error' });
+    return res.status(500).json({ error: getErrorMessage(error) });
   }
 }
