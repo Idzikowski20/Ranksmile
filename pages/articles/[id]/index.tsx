@@ -16,7 +16,6 @@ import EditorOnboarding from '../../../components/articles/EditorOnboarding';
 import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
-import AiGlowRing from '../../../components/articles/AiGlowRing';
 import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
 import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
@@ -469,8 +468,6 @@ const ArticleEditorPage: NextPage = () => {
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
-  // The amber glow fires for Auto-Optimize ONLY — not while Surfy is thinking/replying.
-  const isAiActive = isAutoOptimizing;
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -2223,9 +2220,6 @@ const ArticleEditorPage: NextPage = () => {
 
         {/* First-visit onboarding coachmark (Ask Surfy + Content Score) */}
         <EditorOnboarding />
-
-        {/* ── AI glow overlay — last child so it renders above everything ── */}
-        <AiGlowRing active={isAiActive} />
       </div>
     </AppShell>
   );
