@@ -493,7 +493,21 @@ const ArticleEditorPage: NextPage = () => {
     if (!ownerChannel) return undefined;
     const onComment = () => setCommentsVersion((v) => v + 1);
     ownerChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    ownerChannel.presence.enter({ role: 'owner' }).catch(() => {});
     return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
+  }, [ownerChannel]);
+
+  const [reviewers, setReviewers] = useState<string[]>([]);
+  useEffect(() => {
+    if (!ownerChannel) return undefined;
+    const refresh = () => ownerChannel.presence.get()
+      .then((members) => setReviewers(members
+        .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
+        .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest')))
+      .catch(() => {});
+    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh);
+    refresh();
+    return () => { ownerChannel.presence.unsubscribe(); };
   }, [ownerChannel]);
 
   // Live broadcast to viewers. Ably caps a single message at ~64KB; above this we
@@ -1547,6 +1561,22 @@ const ArticleEditorPage: NextPage = () => {
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
             )}
             {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
+          </div>
+          )}
+
+          {/* ── Reviewer presence indicator (floating, bottom-right) ── */}
+          {reviewers.length > 0 && (
+          <div
+            title={reviewers.join(', ')}
+            style={{
+              position: 'absolute', bottom: 12, right: 12, zIndex: 80,
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.92)', border: '1px solid #ececef', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
+              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: '#52525c',
+              fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
+            }}
+          >
+            <span>👀 {reviewers.length} reviewing</span>
           </div>
           )}
 
