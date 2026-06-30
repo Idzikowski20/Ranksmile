@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
+import { useWorkspaces } from '../../services/workspaces';
+import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
@@ -39,11 +43,26 @@ interface DashboardArticle {
   created_at?: string | null;
   source?: string;
 }
-interface DomainRec { id: number; title: string; priority: string | null }
+interface DomainRec {
+  id: number;
+  title: string;
+  priority: string | null;
+  type: string | null;
+  url: string | null;
+  score: number | null;
+  word_count: number | null;
+}
 
 const DashboardPage: NextPage = () => {
   const { data: domainsData } = useFetchDomains({} as any);
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { data: wsData } = useWorkspaces();
+  // SSR-safe active workspace id so links carry the /workspace/<id> prefix the rest of
+  // the app uses (parsed from the URL after mount; falls back to the workspaces activeId).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const activeWsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
 
@@ -68,29 +87,41 @@ const DashboardPage: NextPage = () => {
     return [...byDate.keys()].sort().map((date) => ({ date, clicks: byDate.get(date) || 0 }));
   }, [sitesData]);
 
-  const points = clickSeries.map((p) => p.clicks);
+  // Period-over-period like SurferSEO: the last 30 days vs the previous 30 days —
+  // NOT the two halves of one window. The chart + total reflect the last 30 days.
+  const recent30 = clickSeries.slice(-30);
+  const prev30 = clickSeries.slice(-60, -30);
+  const points = recent30.map((p) => p.clicks);
   const clicksTotal = points.reduce((a, b) => a + b, 0);
-  const half = Math.floor(clickSeries.length / 2);
-  const prevSum = points.slice(0, half).reduce((a, b) => a + b, 0);
-  const currSum = points.slice(half).reduce((a, b) => a + b, 0);
+  const prevSum = prev30.reduce((a, b) => a + b.clicks, 0);
+  const currSum = clicksTotal;
   const deltaPct = prevSum > 0 ? Math.round(((currSum - prevSum) / prevSum) * 100) : (currSum > 0 ? 100 : 0);
-  const hasData = clickSeries.length > 0;
+  const hasData = recent30.length > 0;
 
   const domains: DomainType[] = domainsData?.domains || [];
   const primaryDomain = domains[0];
   const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
-  const clicksHref = primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites';
-  const recommendationsHref = primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites';
+  const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
+  const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites');
+  const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
 
   // Domain-level recommendations produced by the setup pipeline (the scan output).
-  const { data: domainRecsData } = useQuery(
+  const { data: domainRecsData, isLoading: domainRecsLoading } = useQuery(
     ['domainRecs', activeDomainSlug],
     () => fetchJson(`/api/domains/${activeDomainSlug}/recommendations`, { recommendations: [] as DomainRec[] }),
     { enabled: !!activeDomainSlug, retry: false },
   );
 
+  // Whether the domain has a blog path configured — drives the empty-state message.
+  const { data: blogPathsData, isLoading: blogPathsLoading } = useQuery(
+    ['blogPaths', activeDomainSlug],
+    () => fetchJson(`/api/domains/blog-paths?slug=${activeDomainSlug}`, { blogPaths: [] as string[] }),
+    { enabled: !!activeDomainSlug, retry: false },
+  );
+  const hasBlogPath = (blogPathsData?.blogPaths?.length ?? 0) > 0;
+
   // ── Pipeline polling ──
-  const { data: setup } = useSetupStatus(activeDomainSlug);
+  const { data: setup, isLoading: setupLoading } = useSetupStatus(activeDomainSlug);
   const runSetup = useRunSetup();
 
   // Fallback kick: if no job exists yet for this domain, trigger one — but ONCE per
@@ -118,16 +149,40 @@ const DashboardPage: NextPage = () => {
 
   const pipelineActive = setup && (setup.status === 'queued' || setup.status === 'running' || setup.status === 'failed');
 
+  // Until the pipeline's state is KNOWN, don't flash the empty "set blog path" prompt.
+  // Pending = the status query is still loading, or a job is about to be kicked ('none').
+  const pipelinePending = !!activeDomainSlug && (setupLoading || setup?.status === 'none');
+  // The Recommendations card stays in its skeleton until everything that feeds it has
+  // settled: articles, the domain recs/blog-path queries, and the pipeline status. This
+  // also covers the brief refetch right after the pipeline flips to 'done'.
+  const recommendationsLoading = articlesLoading
+    || pipelinePending
+    || (!!activeDomainSlug && (domainRecsLoading || blogPathsLoading));
+
   // ── Recommendations: the domain pipeline's scan output (pages requiring optimization).
   //    Falls back to analyzed articles with a content score when the scan produced none. ──
   const recommendations: RecommendationItem[] = useMemo(() => {
     const domainRecs = domainRecsData?.recommendations ?? [];
-    if (domainRecs.length > 0) {
-      return domainRecs.map((r) => ({ id: r.id, title: r.title, priority: r.priority || 'low', href: recommendationsHref }));
-    }
+    // optimize recs carry a snapshot score (+ word count) → score-gauge row;
+    // create recs carry a priority → priority-pill row. Drop optimize recs with a
+    // 0 (or missing) score — an unscored page is noise, not a useful recommendation.
+    const mapped: RecommendationItem[] = domainRecs
+      .filter((r) => {
+        const isOptimize = r.type === 'optimize' || r.score != null;
+        return !isOptimize || (r.score ?? 0) > 0;
+      })
+      .map((r) => (
+        r.type === 'optimize' || r.score != null
+          ? { id: r.id, title: r.title, type: 'optimize', score: r.score ?? 0, wordCount: r.word_count ?? undefined, href: recommendationsHref }
+          : { id: r.id, title: r.title, type: 'create', priority: r.priority || 'low', href: recommendationsHref }
+      ));
+    // Most urgent first: optimize rows (lowest content score = highest priority) ahead of
+    // create rows. `urgency` is the content score for optimize, +∞ for create (sorted last).
+    const urgency = (it: RecommendationItem) => ('priority' in it ? Number.POSITIVE_INFINITY : it.score);
+    if (mapped.length > 0) return mapped.sort((a, b) => urgency(a) - urgency(b));
     return (articlesData?.articles ?? [])
       .filter((a) => a.source !== 'site_context' && a.title && (a.content_score ?? 0) > 0)
-      .sort((a, b) => (b.content_score || 0) - (a.content_score || 0))
+      .sort((a, b) => (a.content_score || 0) - (b.content_score || 0))
       .map((a) => ({ id: a.id, title: a.title, score: a.content_score || 0, href: recommendationsHref }));
   }, [domainRecsData, articlesData, recommendationsHref]);
 
@@ -155,8 +210,8 @@ const DashboardPage: NextPage = () => {
       }));
   }, [articlesData]);
 
-  const startLabel = formatShortDate(clickSeries[0]?.date || '');
-  const endLabel = formatShortDate(clickSeries[clickSeries.length - 1]?.date || '');
+  const startLabel = formatShortDate(recent30[0]?.date || '');
+  const endLabel = formatShortDate(recent30[recent30.length - 1]?.date || '');
 
   return (
     <DashboardLayout
@@ -192,17 +247,20 @@ const DashboardPage: NextPage = () => {
               total={recommendations.length}
               faviconDomain={primaryDomain?.domain || ''}
               viewHref={recommendationsHref}
-              loading={articlesLoading}
+              loading={recommendationsLoading}
+              coverage={setup?.auditCounts}
+              hasBlogPath={hasBlogPath}
+              settingsHref={settingsHref}
               pipeline={pipelineActive && setup ? (
                 <SetupPipeline
                   stages={setup.stages}
-                  stagePercent={setup.stagePercent}
                   status={setup.status}
                   error={setup.error}
                   onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
                 />
               ) : undefined}
             />
+            <TrafficAlertsSection />
             <LearnSection />
           </div>
         </div>

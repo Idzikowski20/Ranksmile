@@ -1,5 +1,7 @@
 import React from 'react';
+import { useRouter } from 'next/router';
 import SectionHeader from './SectionHeader';
+import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
 
 const font = 'var(--font-family-primary)';
 
@@ -35,68 +37,80 @@ const Ring = ({ pct }: { pct: number }) => {
   );
 };
 
-/** Mockup — onboarding "Next step" card. */
-const GetStartedCard = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-    <SectionHeader icon={<GetStartedIcon />} label="Get started" />
+/** Onboarding "Next step" card — driven by the real checklist; hidden once complete. */
+const GetStartedCard = () => {
+  const router = useRouter();
+  const { pct, nextStep } = useOnboardingChecklist();
+  if (!nextStep) return null; // all steps done → nothing to nudge
 
-    <div
-      className="dashboard-getstarted-card"
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 16,
-        padding: '16px 24px',
-        borderRadius: 16,
-        border: '1px solid #F4F4F5',
-        background: 'transparent',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: 1 }}>
-        <Ring pct={60} />
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 11, lineHeight: '14px', fontWeight: 600, textTransform: 'uppercase', color: '#52525C', fontFamily: font }}>Next step</span>
-          <span style={{ marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6, color: '#52525C' }}>
-            <span style={{ fontSize: 16, lineHeight: '20px', fontWeight: 600, color: '#09090B', fontFamily: font }}>See if AI mentions your brand</span>
-            <Chevron />
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, color: '#71717B', fontFamily: font }}>
-              <ClockIcon />
-              2m
-            </span>
-          </span>
-        </div>
-      </div>
+  const href = nextStep.href || '';
 
-      <a
-        href="/settings/billing_usage"
-        onClick={(e) => e.preventDefault()}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionHeader icon={<GetStartedIcon />} label="Get started" />
+
+      <div
+        className="dashboard-getstarted-card"
         style={{
-          display: 'inline-flex',
+          display: 'flex',
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          alignSelf: 'flex-start',
-          padding: '6px 16px',
-          borderRadius: 6,
-          fontSize: 14,
-          fontWeight: 600,
-          color: '#fff',
-          background: '#18181B',
-          textDecoration: 'none',
-          fontFamily: font,
-          transition: 'background 150ms ease',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          padding: '16px 24px',
+          borderRadius: 16,
+          border: '1px solid #F4F4F5',
+          background: 'transparent',
         }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#783AFB'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#18181B'; }}
       >
-        See AI Visibility
-        <span style={{ order: 1, display: 'inline-flex' }}><Chevron /></span>
-      </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0, flex: 1 }}>
+          <Ring pct={pct} />
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontSize: 11, lineHeight: '14px', fontWeight: 600, textTransform: 'uppercase', color: '#52525C', fontFamily: font }}>Next step</span>
+            <span style={{ marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6, color: '#52525C' }}>
+              <span style={{ fontSize: 16, lineHeight: '20px', fontWeight: 600, color: '#09090B', fontFamily: font }}>{nextStep.label}</span>
+              <Chevron />
+              {nextStep.time && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, color: '#71717B', fontFamily: font }}>
+                  <ClockIcon />
+                  {nextStep.time}
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+
+        {href && (
+          <a
+            href={href}
+            onClick={(e) => { e.preventDefault(); router.push(href); }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              alignSelf: 'flex-start',
+              padding: '6px 16px',
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#fff',
+              background: '#18181B',
+              textDecoration: 'none',
+              fontFamily: font,
+              transition: 'background 150ms ease',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#783AFB'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = '#18181B'; }}
+          >
+            {nextStep.cta || 'Continue'}
+            <span style={{ order: 1, display: 'inline-flex' }}><Chevron /></span>
+          </a>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default GetStartedCard;

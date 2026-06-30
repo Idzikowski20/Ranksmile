@@ -98,7 +98,7 @@ export const getKeywordsInsight = (SCData:SCDomainDataType, sortBy:string = 'cli
                countriesCount[keywordKey] = [];
             }
             if (countriesCount[keywordKey] && !countriesCount[keywordKey].includes(itm.country)) {
-               countriesCount[keywordKey].push(itm.keyword);
+               countriesCount[keywordKey].push(itm.country);
             }
             keywordCounts[keywordKey] = keywordCounts[keywordKey] ? keywordCounts[keywordKey] + 1 : 1;
          }

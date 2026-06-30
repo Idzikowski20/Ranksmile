@@ -1,10 +1,14 @@
 // GET /api/gsc/connect?redirect=/settings
 // Redirects the user to Google OAuth2 consent screen for Search Console access (account-level).
 import type { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
 import { auth } from '@googleapis/searchconsole';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { getCurrentUserId } from '../../../utils/getUser';
+
+/** Only allow same-origin relative redirect targets (blocks ?redirect=https://evil open-redirect). */
+const safeRelative = (r: unknown): string | null => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') ? r : null);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -27,9 +31,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUri);
 
+  // CSRF: bind the OAuth flow to a random nonce stored in an httpOnly cookie and echoed in `state`,
+  // verified on callback. Without it the OAuth flow has no CSRF/forced-account-linking protection.
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const secure = (process.env.NODE_ENV === 'production') ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `gsc_oauth_state=${nonce}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600${secure}`);
+
   const state = JSON.stringify({
-    redirect: typeof redirect === 'string' ? redirect : null,
+    redirect: safeRelative(redirect),
     userId,
+    nonce,
   });
 
   const authUrl = oauth2Client.generateAuthUrl({

@@ -2,22 +2,36 @@ import { randomUUID } from 'crypto';
 import { QueryTypes, type Transaction } from 'sequelize';
 import db from '../database/database';
 import { ensurePipelineTables } from './ensurePipelineTables';
+import { gatherBlogUrls } from './gatherBlogUrls';
 
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
 const STALE_MS = 10 * 60 * 1000;
 
+export interface PageAuditResult {
+   url: string; path?: string; title?: string; score?: number; word_count?: number;
+   signals?: unknown; content_hash?: string; fetch_status?: string; duration_ms?: number;
+}
 type DomainResult = {
    keywords: { keyword: string; source: string; volume?: number; position?: number }[];
    topics: { title: string; summary?: string }[];
    competitors: { competitor_domain: string; appearances?: number; avg_position?: number }[];
-   recommendations: { title: string; rationale?: string; priority?: string; type?: string; topic_index?: number }[];
+   recommendations: { title: string; rationale?: string; priority?: string; type?: string; topic_index?: number; url?: string; score?: number }[];
+   page_audits?: PageAuditResult[];
+   audit_counts?: { audited: number; skipped: number; total: number };
 };
+
+// The sidecar runs a hidden 'blog_audit' stage between 'competitors' and
+// 'recommendations' that has no UI row. Fold it into 'competitors' (whose label is
+// "…and coverage") so the in-between poll doesn't map to index -1 and reset every
+// row to pending — which blanked the checkmarks/spinner for ~2s.
+const STAGE_ALIASES: Record<string, StageKey> = { blog_audit: 'competitors' };
 
 /** Pure: maps job status/current_stage to the 5-row UI map + active stagePercent. */
 export function deriveStages(status: string, currentStage: string | null, stagePercent: number) {
    const done = status === 'done';
-   const curIdx = currentStage ? STAGE_ORDER.indexOf(currentStage as StageKey) : -1;
+   const effectiveStage = currentStage ? (STAGE_ALIASES[currentStage] ?? currentStage) : null;
+   const curIdx = effectiveStage ? STAGE_ORDER.indexOf(effectiveStage as StageKey) : -1;
    const stages = {} as Record<StageKey, 'pending' | 'running' | 'done'>;
    STAGE_ORDER.forEach((k, i) => {
       if (done) stages[k] = 'done';
@@ -93,8 +107,43 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
          await q(`INSERT INTO domain_keywords (domain_id, keyword, source, volume, position, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, k.keyword, k.source || 'suggest', k.volume ?? null, k.position ?? null]);
       for (const c of result.competitors || [])
          await q(`INSERT INTO domain_competitors (domain_id, competitor_domain, appearances, avg_position, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, c.competitor_domain, c.appearances ?? 0, c.avg_position ?? null]);
+
+      // ── page_audits: UPSERT-by-(domain_id,url), keep deep_json across scans ──
+      const existingRows = await db.query<{ url: string }>(
+         `SELECT url FROM page_audits WHERE domain_id = ?`,
+         { replacements: [domainId], type: QueryTypes.SELECT, transaction: tx },
+      );
+      const existingUrls = new Set(existingRows.map((r) => r.url));
+      const incomingUrls = new Set((result.page_audits || []).map((a) => a.url));
+      for (const a of result.page_audits || []) {
+         if (existingUrls.has(a.url)) {
+            // refresh triage columns only — deep_json/deep_content_hash/deep_generated_at/status untouched
+            await q(
+               `UPDATE page_audits SET path=?, title=?, score=?, word_count=?, signals_json=?,
+                       fetch_status=?, content_hash=?, duration_ms=?, last_audited_at=CURRENT_TIMESTAMP
+                WHERE domain_id=? AND url=?`,
+               [a.path ?? null, a.title ?? null, a.score ?? null, a.word_count ?? null,
+                a.signals ? JSON.stringify(a.signals) : null, a.fetch_status ?? null,
+                a.content_hash ?? null, a.duration_ms ?? null, domainId, a.url],
+            );
+         } else {
+            await q(
+               `INSERT INTO page_audits (domain_id, url, path, title, score, word_count, signals_json,
+                       fetch_status, content_hash, duration_ms, status, last_audited_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'triaged', CURRENT_TIMESTAMP)`,
+               [domainId, a.url, a.path ?? null, a.title ?? null, a.score ?? null, a.word_count ?? null,
+                a.signals ? JSON.stringify(a.signals) : null, a.fetch_status ?? null,
+                a.content_hash ?? null, a.duration_ms ?? null],
+            );
+         }
+      }
+      // delete ONLY rows whose URL no longer exists on the site
+      for (const url of existingUrls)
+         if (!incomingUrls.has(url))
+            await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
+
       for (const r of result.recommendations || [])
-         await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, created_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', r.priority || 'medium', r.type || 'content']);
+         await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', r.priority || 'medium', r.type || 'content', r.url ?? null, r.score ?? null]);
    });
 }
 
@@ -121,14 +170,15 @@ async function failJob(jobId: string, stage: StageKey, message: string) {
    await db.query(`UPDATE analysis_jobs SET status='failed', current_stage=?, error=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`, { replacements: [stage, message, jobId] });
 }
 
-/** Stage 1 (Node): GSC fetch + seed fallback. Returns seed keywords. */
-async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string[]> {
+/** Stage 1 (Node): GSC fetch + seed fallback. Returns seed keywords + top page URLs. */
+async function gscStageAndSeeds(jobId: string, domainId: number): Promise<{ seeds: string[]; pages: string[] }> {
    await emit(jobId, 'gsc', 10, 'Getting Search Console and site data');
    // Resolve domain + userId from the domain row.
    const drows = await selectRows<{ domain: string; userId: string }>(`SELECT domain, "userId" FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
    const domainName = drows[0]?.domain || '';
    const userId = drows[0]?.userId || '';
    let seeds: string[] = [];
+   let pages: string[] = [];
    try {
       const accounts = (await GscAccount.findAll({ where: { userId } })).map((a) => a.get({ plain: true }));
       for (const acc of accounts) {
@@ -143,6 +193,11 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string
                   const rows = r.data.rows || [];
                   if (rows.length) {
                      seeds = rows.map((x) => (x.keys || [])[0]).filter((k): k is string => typeof k === 'string');
+                     // Same property works → also pull top pages (audit fallback when no sitemap).
+                     try {
+                        const pr = await client.searchanalytics.query({ siteUrl, requestBody: { startDate: fmt(start), endDate: fmt(end), dimensions: ['page'], rowLimit: 100 } });
+                        pages = (pr.data.rows || []).map((x) => (x.keys || [])[0]).filter((k): k is string => typeof k === 'string');
+                     } catch { /* pages optional */ }
                      break;
                   }
                } catch { /* try next form */ }
@@ -159,7 +214,7 @@ async function gscStageAndSeeds(jobId: string, domainId: number): Promise<string
       seeds = text ? [domainName.split('.')[0], ...text.split(/[^a-zA-Z0-9ąćęłńóśźż]+/).filter((w) => w.length > 4)].slice(0, 8) : [domainName.split('.')[0]];
    }
    await emit(jobId, 'gsc', 100, 'Search Console and site data ready');
-   return Array.from(new Set(seeds)).slice(0, 30);
+   return { seeds: Array.from(new Set(seeds)).slice(0, 30), pages: Array.from(new Set(pages)) };
 }
 
 /** Fire-and-forget runner. Claims, runs GSC, calls sidecar; sidecar finishes via job-progress 'done'. */
@@ -170,10 +225,16 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
    const domainId = Number(jrows[0]?.domain_id);
    if (!domainId) { await failJob(jobId, 'gsc', 'missing domain_id'); return; }
    try {
-      const seedKeywords = await gscStageAndSeeds(jobId, domainId);
+      const { seeds: seedKeywords, pages: gscPages } = await gscStageAndSeeds(jobId, domainId);
       const drows = await selectRows<{ domain: string; brand_knowledge: string }>(`SELECT domain, brand_knowledge FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
-      const body = { jobId, nextjsUrl: selfUrl(), payload: { domainId, domain: drows[0]?.domain || '', seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', limits: { keywords: 20, competitorsPerKeyword: 10 } } };
-      const resp = await fetch(`${sidecarBase()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const domainName = drows[0]?.domain || '';
+      let blogUrls = await gatherBlogUrls(domainId, domainName);
+      // No sitemap (or nothing matched) → fall back to the domain's top GSC pages.
+      if (!blogUrls.length && gscPages.length) {
+         blogUrls = Array.from(new Set(gscPages.map((u) => u.split('#')[0].split('?')[0])));
+      }
+      const body = { jobId, nextjsUrl: selfUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, limits: { keywords: 20, competitorsPerKeyword: 10 } } };
+      const resp = await fetch(`${sidecarBase()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
       // On success the sidecar will POST status='done' + result to job-progress, which materializes.
    } catch (e) {
@@ -184,11 +245,19 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
 /** For setup-status: latest domain_setup job + derived stages. */
 export async function getSetupStatus(domainId: number) {
    await ensurePipelineTables();
-   const rows = await selectRows<{ status: string; current_stage: string | null; stage_progress: number | null; error: string | null }>(
-      `SELECT status, current_stage, stage_progress, error FROM analysis_jobs
+   const rows = await selectRows<{ status: string; current_stage: string | null; stage_progress: number | null; error: string | null; result: string | Record<string, unknown> | null }>(
+      `SELECT status, current_stage, stage_progress, error, result FROM analysis_jobs
        WHERE domain_id = ? AND job_type = 'domain_setup' ORDER BY created_at DESC LIMIT 1`, [domainId]);
-   if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null };
+   if (!rows.length) return { status: 'none' as const, currentStage: null, stagePercent: 0, stages: deriveStages('none', null, 0).stages, error: null, auditCounts: null };
    const j = rows[0];
    const d = deriveStages(j.status, j.current_stage, j.stage_progress ?? 0);
-   return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error };
+   // audit_counts is carried inside the job's stored result JSON (no extra column needed).
+   // result is JSONB (parsed object) on Postgres, TEXT (string) on SQLite — handle both.
+   let auditCounts: { audited: number; skipped: number; total: number } | null = null;
+   try {
+      const parsed = typeof j.result === 'string' ? JSON.parse(j.result) : j.result;
+      const ac = parsed && (parsed as Record<string, unknown>).audit_counts;
+      if (ac && typeof ac === 'object') auditCounts = ac as { audited: number; skipped: number; total: number };
+   } catch { auditCounts = null; }
+   return { status: j.status, currentStage: j.current_stage, stagePercent: d.stagePercent, stages: d.stages, error: j.error, auditCounts };
 }

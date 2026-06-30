@@ -4,7 +4,12 @@
 // Output: { headings: Array<{ level: number; text: string }> }
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/aiBudget';
 import type { CompetitorOutline } from '../../../components/articles/ResearchOutlinePanel';
+import { getErrorMessage } from '../../../lib/errors';
+
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
@@ -21,6 +26,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+
+  // Org-wide AI budget.
+  const orgId = await resolveOrgId(req, res);
+  const over = await orgBudgetBlocked(orgId);
+  if (over) return res.status(429).json(over);
 
   // Build competitor summary for the prompt
   const competitorSummary = competitors
@@ -81,6 +91,7 @@ H2: [section]
     }
 
     const data = await response.json();
+    void recordAiTokens(orgId, data.usage?.total_tokens || 0);
     const text: string = data.choices?.[0]?.message?.content || '';
 
     // Parse H1/H2/H3/H4 lines
@@ -100,8 +111,8 @@ H2: [section]
 
     console.log(`[generate-outline] generated ${headings.length} headings for "${keyword}"`);
     return res.status(200).json({ headings });
-  } catch (err: any) {
-    console.error('[generate-outline] error:', err?.message);
-    return res.status(500).json({ error: err?.message || 'Generation failed' });
+  } catch (err) {
+    console.error('[generate-outline] error:', getErrorMessage(err));
+    return res.status(500).json({ error: getErrorMessage(err) || 'Generation failed' });
   }
 }

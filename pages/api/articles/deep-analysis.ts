@@ -16,6 +16,8 @@ import { callSidecar, sidecarBase } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
+import { getErrorMessage } from '../../../lib/errors';
 
 /** Map an ISO country code to the SERP analysis language the sidecar supports. */
 function langForCountry(country: string): string {
@@ -95,8 +97,8 @@ async function runKeywordMode(
       );
       articleId = newId as unknown as number;
     }
-  } catch (err: any) {
-    console.error('[deep-analysis:keyword] skeleton insert failed:', err.message);
+  } catch (err) {
+    console.error('[deep-analysis:keyword] skeleton insert failed:', getErrorMessage(err));
     sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
     return;
   }
@@ -110,8 +112,8 @@ async function runKeywordMode(
   let serp: any = {};
   try {
     serp = await callSidecar('/analyze-serp', { keyword, language });
-  } catch (err: any) {
-    console.log('[deep-analysis:keyword] analyze-serp failed (non-fatal):', err?.message);
+  } catch (err) {
+    console.log('[deep-analysis:keyword] analyze-serp failed (non-fatal):', getErrorMessage(err));
   }
   sse(res, 'progress', { step: 'serp', status: 'done' });
 
@@ -166,6 +168,9 @@ async function runKeywordMode(
   sse(res, 'done', { articleId });
 }
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[deep-analysis] handler invoked', req.method);
   await db.sync();
@@ -204,6 +209,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       resolvedDomainId = fallback;
     }
   }
+
+  // Org-wide AI budget — block before the SSE stream starts (plain JSON 429, not an SSE frame).
+  const orgId = await resolveOrgId(req, res);
+  const over = await orgBudgetBlocked(orgId);
+  if (over) return res.status(429).json(over);
 
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -257,8 +267,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         articleId = newId as unknown as number;
       }
       sse(res, 'created', { articleId });
-    } catch (err: any) {
-      console.error('[deep-analysis] skeleton insert failed:', err.message);
+    } catch (err) {
+      console.error('[deep-analysis] skeleton insert failed:', getErrorMessage(err));
       sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
       return res.end();
     }
@@ -275,8 +285,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { replacements: [jobId, articleId, JSON.stringify(payload)] },
     );
     sse(res, 'created', { articleId, jobId });
-  } catch (err: any) {
-    console.error('[deep-analysis] job insert failed:', err.message);
+  } catch (err) {
+    console.error('[deep-analysis] job insert failed:', getErrorMessage(err));
     sse(res, 'error', { step: 'save', message: 'Failed to create analysis job' });
     return res.end();
   }
@@ -302,8 +312,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sse(res, 'error', { step: 'save', message: 'Job already claimed or max attempts reached' });
       return res.end();
     }
-  } catch (err: any) {
-    console.error('[deep-analysis] job claim failed:', err.message);
+  } catch (err) {
+    console.error('[deep-analysis] job claim failed:', getErrorMessage(err));
     sse(res, 'error', { step: 'save', message: 'Failed to claim analysis job' });
     return res.end();
   }
@@ -319,7 +329,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       sidecarResp = await fetch(`${sidecarUrl}/pipeline/deep-analysis`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
         body: JSON.stringify({ jobId, payload }),
         signal: controller.signal,
       });
@@ -477,15 +487,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await persistAiVisibilityRun(articleId, keyword || '', summary);
         console.log(`[deep-analysis] AI search stored: ${summary.prompts_cited}/${summary.prompts_total} covered`);
       }
-    } catch (err: any) {
-      console.log('[deep-analysis] AI search persist failed (non-fatal):', err?.message);
+    } catch (err) {
+      console.log('[deep-analysis] AI search persist failed (non-fatal):', getErrorMessage(err));
     }
 
     sse(res, 'done', { articleId, rankingScore });
     return res.end();
 
-  } catch (err: any) {
-    const errorMessage = err.name === 'AbortError' ? 'Pipeline timed out after 180s' : err.message;
+  } catch (err) {
+    const e = err as { name?: string };
+    const errorMessage = e.name === 'AbortError' ? 'Pipeline timed out after 180s' : getErrorMessage(err);
     console.error('[deep-analysis] sidecar error:', errorMessage);
     await db.query(
       `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,

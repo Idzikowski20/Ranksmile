@@ -8,6 +8,8 @@ import { publishToWordPress, publishToNextJs } from '../../../lib/wordpressPubli
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -33,19 +35,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    try {
       const articleIdSql = await getArticleIdSql();
       // Pobierz artykuł
-      const [articleRows] = await db.query(
+      const article = await queryOne<ArticleRow>(
          `SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (articleRows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       // Pobierz publish target konfigurację
-      const [targetRows] = await db.query(
+      const publishTarget = await queryOne<{ url: string; api_key: string }>(
          `SELECT * FROM publish_targets WHERE domain_id = ? AND type = ? LIMIT 1`,
-         { replacements: [article.domain_id, target] },
+         [article.domain_id, target],
       );
-      const publishTarget = (targetRows as any[])[0];
       if (!publishTarget) {
          return res.status(400).json({ error: `No publish target configured for ${target}. Configure it in Settings.` });
       }
@@ -56,10 +56,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const result = await publishToWordPress({
             wpUrl: publishTarget.url,
             apiKey: publishTarget.api_key,
-            title: article.meta_title || article.title,
-            content: article.content,
-            slug: article.meta_url,
-            excerpt: article.meta_description,
+            title: article.meta_title || article.title || '',
+            content: article.content || '',
+            slug: article.meta_url ?? undefined,
+            excerpt: article.meta_description ?? undefined,
             status: 'publish',
             schemaJson: article.schema_json ? JSON.parse(article.schema_json) : undefined,
          });
@@ -68,10 +68,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const result = await publishToNextJs({
             endpointUrl: publishTarget.url,
             apiKey: publishTarget.api_key,
-            title: article.meta_title || article.title,
-            content: article.content,
-            slug: article.meta_url,
-            description: article.meta_description,
+            title: article.meta_title || article.title || '',
+            content: article.content || '',
+            slug: article.meta_url ?? undefined,
+            description: article.meta_description ?? undefined,
             schema: article.schema_json ? JSON.parse(article.schema_json) : undefined,
          });
          publishedUrl = result.url;
@@ -91,11 +91,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Auto-dodaj keyword do SerpBear rank trackera (jeśli jeszcze nie istnieje)
       if (article.target_keyword) {
          try {
-            const [existing] = await db.query(
+            const existing = await queryRows<{ ID: number }>(
                `SELECT "ID" FROM keyword WHERE domain = ? AND keyword = ? LIMIT 1`,
-               { replacements: [article.domain_id?.toString() || '', article.target_keyword] },
+               [article.domain_id?.toString() || '', article.target_keyword],
             );
-            if ((existing as any[]).length === 0) {
+            if (existing.length === 0) {
                await db.query(
                   `INSERT INTO keyword (keyword, domain, device, country, position, history, added, lastUpdated)
                    VALUES (?, ?, 'desktop', 'pl', 0, '[]', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
@@ -108,8 +108,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json({ url: publishedUrl, published: true });
-   } catch (error: any) {
+   } catch (error) {
       console.error('publish error:', error);
-      return res.status(500).json({ error: error?.message || 'Publish failed' });
+      return res.status(500).json({ error: getErrorMessage(error) || 'Publish failed' });
    }
 }

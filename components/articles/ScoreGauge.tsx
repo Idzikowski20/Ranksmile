@@ -1,7 +1,17 @@
 import React from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { scoreColor } from '../../lib/scoreColor';
 
-interface Props { score: number; compact?: boolean; size?: number; pending?: boolean; }
+interface Props {
+  score: number;
+  compact?: boolean;
+  size?: number;
+  pending?: boolean;
+  /** Green "↑N" increase badge (vs a baseline) shown during/after Auto-Optimize. */
+  delta?: number;
+  /** Where the delta badge sits relative to the gauge. */
+  deltaPlacement?: 'right' | 'left' | 'below';
+}
 
 // Split dual-arc gauge (left + right half), each with a grey track and a coloured
 // fill, plus 6 outer tick marks. Geometry copied verbatim from the reference SVG.
@@ -17,7 +27,31 @@ const TICKS = [
   'M 82.6498517020224,29.59810832702161 L 85.19399599049169,28.008350534322',
 ];
 
-const ScoreGauge = ({ score, compact, size: sizeProp, pending }: Props) => {
+const UpArrow = () => (
+  <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-0.12em' }}>
+    <path fill="currentColor" fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" />
+  </svg>
+);
+
+const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 'left' | 'below' }) => {
+  const base: React.CSSProperties = {
+    position: 'absolute', display: 'inline-flex', alignItems: 'center', gap: 2,
+    color: '#1AB25E', fontSize: 13, fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap',
+    fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-family-primary)', pointerEvents: 'none',
+  };
+  const pos: React.CSSProperties = placement === 'right'
+    ? { left: 'calc(100% + 4px)', top: '50%', transform: 'translateY(-50%)' }
+    : placement === 'left'
+      ? { right: 'calc(100% + 4px)', top: '50%', transform: 'translateY(-50%)' }
+      : { left: '50%', top: '60%', transform: 'translateX(-50%)' };
+  return (
+    <motion.span initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} style={{ ...base, ...pos }}>
+      <UpArrow />{delta}
+    </motion.span>
+  );
+};
+
+const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below' }: Props) => {
   const s = Math.max(0, Math.min(100, Math.round(score || 0)));
   const color = scoreColor(s);
   // No data yet → grey track only, no coloured fill, "—" in the centre.
@@ -39,9 +73,30 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending }: Props) => {
           <path key={d} d={d} stroke="black" strokeOpacity={0.3} strokeWidth={1.5} strokeLinecap="butt" />
         ))}
       </svg>
-      <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: pending ? '#9f9fa9' : '#18181B', fontVariantNumeric: 'tabular-nums' }}>
-        {pending ? '—' : s}
-      </span>
+
+      {/* Odometer number — the new value rolls in from below when the score changes. */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {pending ? (
+          <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#9f9fa9', fontVariantNumeric: 'tabular-nums' }}>—</span>
+        ) : (
+          <span style={{ position: 'relative', display: 'inline-flex', height: numberFont * 1.1, overflow: 'hidden', lineHeight: 1 }}>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={s}
+                initial={{ y: '70%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '-70%', opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                style={{ display: 'inline-block', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}
+              >
+                {s}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        )}
+      </div>
+
+      {delta != null && delta > 0 && <DeltaBadge delta={delta} placement={deltaPlacement} />}
     </div>
   );
 };

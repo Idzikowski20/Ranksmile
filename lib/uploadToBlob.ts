@@ -10,6 +10,7 @@
 //                           or "https://pub-xxxx.r2.dev" from R2 dev subdomain)
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getErrorMessage } from './errors';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -79,8 +80,8 @@ export async function uploadImageFromUrl(
       }));
 
       return `${publicUrl}/${key}`;
-   } catch (err: any) {
-      console.error('[R2] upload error:', err?.message);
+   } catch (err) {
+      console.error('[R2] upload error:', getErrorMessage(err));
       return null;
    }
 }
@@ -129,8 +130,8 @@ export async function uploadImageBuffer(
          CacheControl: 'public, max-age=31536000',
       }));
       return `${publicUrl}/${key}`;
-   } catch (err: any) {
-      console.error('[R2] buffer upload error:', err?.message);
+   } catch (err) {
+      console.error('[R2] buffer upload error:', getErrorMessage(err));
       return null;
    }
 }

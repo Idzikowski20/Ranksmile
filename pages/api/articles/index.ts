@@ -10,6 +10,9 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
+import type { ArticleRow } from '../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -54,7 +57,9 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
       }
 
       if (resolvedDomainId) {
-         if (allowedIds.length > 0 && !allowedIds.includes(resolvedDomainId)) {
+         // Empty allow-list must DENY (not skip the check) — a user with no accessible domains
+         // could otherwise read any domain's articles by supplying its id.
+         if (!allowedIds.includes(resolvedDomainId)) {
             return res.status(403).json({ error: 'Access denied.' });
          }
          where = 'WHERE domain_id = ?';
@@ -91,7 +96,7 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
              ORDER BY sc.created_at DESC`,
             { replacements: [resolvedDomainId] },
          );
-         const merged = (scRows as any[]).map((sc: any) => ({
+         const merged = (scRows as Array<{ id: number; domain_id: number; title: string | null; publish_url: string | null; language: string | null; created_at: string | null }>).map((sc) => ({
             id: `sc_${sc.id}`,
             domain_id: sc.domain_id,
             title: sc.title,
@@ -109,12 +114,12 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
             content_score: 0,
             source: 'site_context',
          }));
-         return res.status(200).json({ articles: [...(articles as any[]), ...merged] });
+         return res.status(200).json({ articles: [...(articles as unknown[]), ...merged] });
       }
 
       return res.status(200).json({ articles });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
 
@@ -150,8 +155,8 @@ async function createArticle(req: NextApiRequest, res: NextApiResponse, userId: 
          articleId = newArticleId as unknown as number;
       }
       return res.status(200).json({ articleId, title });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
 
@@ -162,11 +167,10 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
    // Sprawdź własność artykułu przez domenę
    try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const article = await queryOne<Pick<ArticleRow, 'domain_id'>>(
          `SELECT domain_id FROM articles WHERE ${articleIdSql} = ?`,
-         { replacements: [id] },
+         [id],
       );
-      const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       const allowedIds = await getUserDomainIds(userId);
@@ -176,7 +180,7 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
 
       await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id] });
       return res.status(200).json({ deleted: true });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

@@ -14,10 +14,10 @@ const valueSerp:ScraperSettings = {
    allowsCity: true,
    scrapeURL: (keyword, settings, countryData, pagination) => {
       const country = keyword.country || 'US';
-      const countryName = countries[country][0];
+      const countryName = countries[country]?.[0] || country;
       const location = keyword.city ? `&location=${encodeURIComponent(`${keyword.city},${countryName}`)}` : '';
       const device = keyword.device === 'mobile' ? '&device=mobile' : '';
-      const lang = countryData[country][2];
+      const lang = countryData[country]?.[2] || 'en';
       const p = pagination || { start: 0, num: 10, page: 1 };
       return `https://api.valueserp.com/search?api_key=${settings.scaping_api}&q=${encodeURIComponent(keyword.keyword)}&gl=${country}&hl=${lang}${device}${location}&page=${p.page}&output=json&include_answer_box=false&include_advertiser_info=false`;
    },

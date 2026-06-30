@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { renameWorkspace, deleteWorkspace } from '../../../lib/workspaces';
+import { getErrorMessage } from '../../../lib/errors';
 
 const ERR_STATUS: Record<string, number> = {
    WORKSPACE_NOT_FOUND: 404,
-   WORKSPACE_LAST: 409,
-   WORKSPACE_NOT_EMPTY: 409,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,8 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       res.setHeader('Allow', 'PATCH, DELETE');
       return res.status(405).json({ error: 'Method not allowed' });
-   } catch (e: any) {
-      const code = ERR_STATUS[e?.message] || 500;
-      return res.status(code).json({ error: e?.message || 'Error' });
+   } catch (e) {
+      const msg = getErrorMessage(e);
+      const code = ERR_STATUS[msg] || 500;
+      return res.status(code).json({ error: msg || 'Error' });
    }
 }

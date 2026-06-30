@@ -1,0 +1,202 @@
+/*
+ * Surfer plugin admin redesign — aligns the settings screen with the app's
+ * design system (design.md tokens). Loaded after components/admin/surferseo
+ * css so equal-specificity rules win by source order.
+ *
+ * Tokens: text #18181B · muted #52525C · subtle #71717B · borders #E4E4E7/#D4D4D8
+ * card #F4F4F5 · brand #783AFB · brand-dark #4D08B5 · dark btn #18181B
+ * success #1AB25E · error #FF6F77 · focus ring rgba(120,58,251,0.1)
+ */
+
+/* ---- Typography ------------------------------------------------------- */
+div.surfer-layout h1 {
+  color: #18181B;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 30px;
+  margin-bottom: 20px;
+}
+div.surfer-layout div,
+div.surfer-layout p {
+  color: #52525C;
+}
+div.surfer-layout a {
+  color: #783AFB;
+  transition: color 0.15s ease;
+}
+div.surfer-layout a:hover {
+  color: #4D08B5;
+}
+
+/* ---- Content shell: a clean white card ------------------------------- */
+.surfer-layout .surfer-wrapper {
+  gap: 12px;
+}
+.surfer-layout .surfer-wrapper__content {
+  background: #FFFFFF;
+  border: 1px solid #E4E4E7;
+  border-radius: 12px;
+  padding: 28px 32px;
+  box-shadow: 0px 1px 2px 0px rgba(26, 29, 40, 0.06);
+  max-width: 880px;
+  box-sizing: border-box;
+}
+
+/* ---- Section + field headings ---------------------------------------- */
+.surfer-layout .surfer-admin-config-form__section-header h3,
+.surfer-layout .surfer-admin-config-form #header_core {
+  color: #18181B;
+  font-weight: 600;
+  border-top: 1px solid #E4E4E7;
+  padding-top: 24px;
+}
+.surfer-layout .surfer-admin-config-form__single-field-row h3,
+.surfer-layout .surfer-connection-box h3,
+.surfer-layout .surfer-admin-footer h3,
+.surfer-layout .surfer-debug-box h3 {
+  color: #18181B;
+  font-weight: 600;
+}
+.surfer-layout div.surfer-layout label,
+.surfer-layout label {
+  color: #3F3F47;
+}
+
+/* ---- Primary buttons (dark → purple hover) --------------------------- */
+input[type=submit].surfer-button--primary,
+button.surfer-button--primary,
+a.surfer-button--primary,
+div.surfer-layout a.surfer-button--primary {
+  background-color: #18181B;
+  color: #FFFFFF;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+input[type=submit].surfer-button--primary:hover,
+button.surfer-button--primary:hover,
+a.surfer-button--primary:hover,
+div.surfer-layout a.surfer-button--primary:hover {
+  background-color: #783AFB;
+  color: #FFFFFF;
+}
+input[type=submit].surfer-button--primary:active,
+button.surfer-button--primary:active,
+a.surfer-button--primary:active,
+div.surfer-layout a.surfer-button--primary:active {
+  background-color: #4D08B5;
+  color: #FFFFFF;
+}
+
+/* ---- Secondary buttons (white, bordered) ----------------------------- */
+input[type=submit].surfer-button--secondary,
+button.surfer-button--secondary,
+a.surfer-button--secondary,
+div.surfer-layout a.surfer-button--secondary {
+  background-color: #FFFFFF;
+  color: #18181B;
+  border: 1px solid #D4D4D8;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+input[type=submit].surfer-button--secondary:hover,
+button.surfer-button--secondary:hover,
+a.surfer-button--secondary:hover,
+div.surfer-layout a.surfer-button--secondary:hover {
+  background-color: #F4F4F5;
+  color: #18181B;
+}
+input[type=submit].surfer-button--secondary:active,
+button.surfer-button--secondary:active,
+a.surfer-button--secondary:active,
+div.surfer-layout a.surfer-button--secondary:active {
+  background-color: #E4E4E7;
+  color: #18181B;
+}
+
+/* ---- Link buttons ---------------------------------------------------- */
+input[type=submit].surfer-button--link,
+button.surfer-button--link,
+a.surfer-button--link,
+div.surfer-layout a.surfer-button--link {
+  color: #52525C;
+}
+input[type=submit].surfer-button--link:hover,
+button.surfer-button--link:hover,
+a.surfer-button--link:hover,
+div.surfer-layout a.surfer-button--link:hover {
+  color: #18181B;
+}
+
+/* ---- Inputs & selects ------------------------------------------------ */
+div.surfer-layout select,
+.surfer-admin-config-form input:not([type=submit]):not([type=checkbox]):not([type=radio]),
+.surfer-admin-config-form select {
+  border: 1px solid #D4D4D8;
+  border-radius: 8px;
+  color: #18181B;
+  background-color: #FFFFFF;
+  line-height: 24px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+div.surfer-layout select:focus,
+.surfer-admin-config-form input:not([type=submit]):not([type=checkbox]):not([type=radio]):focus,
+.surfer-admin-config-form select:focus {
+  border-color: #AA93FD;
+  box-shadow: 0 0 0 2px rgba(120, 58, 251, 0.1);
+  outline: none;
+}
+
+/* Native checkboxes / radios pick up the brand colour */
+.surfer-layout input[type=checkbox],
+.surfer-layout input[type=radio] {
+  accent-color: #783AFB;
+}
+
+/* ---- Toggle switch --------------------------------------------------- */
+.surfer-switch-box input:checked + .slider {
+  background-color: #783AFB;
+}
+.surfer-switch-box input:focus + .slider {
+  box-shadow: 0 0 0 2px rgba(120, 58, 251, 0.1);
+}
+.surfer-switch-box a {
+  color: #783AFB;
+}
+.surfer-switch-box a:hover {
+  color: #4D08B5;
+}
+
+/* ---- Sticky Save button ---------------------------------------------- */
+.surfer-layout .surfer-wrapper__submit input[type=submit] {
+  background-color: #18181B;
+  border-radius: 8px;
+  padding: 9px 20px;
+  box-sizing: border-box;
+  line-height: 20px;
+  transition: background-color 0.15s ease;
+}
+.surfer-layout .surfer-wrapper__submit input[type=submit]:hover {
+  background-color: #783AFB;
+}
+
+/* ---- Connection status colours --------------------------------------- */
+.surfer-connection-box--connected .surfer-connection-box__connection-info {
+  color: #1AB25E;
+}
+.surfer-connection-box--not-connected .surfer-connection-box__connection-info {
+  color: #FF6F77;
+}
+
+/* ---- Dividers (dashed → solid, on-brand) ----------------------------- */
+.surfer-layout .surfer-admin-footer {
+  border-top: 1px solid #E4E4E7;
+}
+
+/* ---- WP-core legacy primary button used in this layout --------------- */
+div.surfer-layout .button-primary {
+  background-color: #18181B;
+  border-radius: 8px;
+}
+div.surfer-layout .button-primary:hover {
+  background-color: #783AFB;
+}

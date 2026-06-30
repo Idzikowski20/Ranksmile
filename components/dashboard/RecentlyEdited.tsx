@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from 'react-query';
+import toast from 'react-hot-toast';
 import Gauge from '../ui/Gauge';
 import Skeleton from './Skeleton';
 import { authClient } from '../../lib/auth/client';
+
+const font = 'var(--font-family-primary)';
 
 export interface RecentlyEditedItem {
   id: string | number;
@@ -59,6 +63,34 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
     setRelTime(relativeTime(item.updatedAt));
   }, [item.updatedAt]);
 
+  const queryClient = useQueryClient();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onDown = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [menuOpen]);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (!window.confirm(`Delete "${item.title}"? This can't be undone.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/articles/${item.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      toast.success('Article deleted');
+      queryClient.invalidateQueries('dashboardArticles');
+    } catch {
+      toast.error('Could not delete article');
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="border-gray-20 gap-lg p-base hover:border-gray-40 group relative flex cursor-pointer flex-col rounded-2xl border border-solid transition-[transform,box-shadow,border-color] duration-200 ease-out hover:translate-y-[-2px] hover:shadow-md">
       {/* Full-card link overlay */}
@@ -100,15 +132,48 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
           {userInitial}
         </div>
         <span className="text-gray-60 text-sm">{relTime}</span>
-        <button
-          type="button"
-          aria-label="More options"
-          className="text-gray-60 hover:text-gray-100 ml-auto transition-colors duration-150"
-          style={{ zIndex: 2, position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DotsIcon />
-        </button>
+        <div ref={menuRef} className="ml-auto" style={{ position: 'relative', zIndex: 2 }}>
+          <button
+            type="button"
+            aria-label="More options"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            disabled={deleting}
+            className="text-gray-60 hover:text-gray-100 transition-colors duration-150"
+            style={{ background: 'none', border: 'none', cursor: deleting ? 'default' : 'pointer', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center', opacity: deleting ? 0.5 : 1 }}
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMenuOpen((v) => !v); }}
+          >
+            <DotsIcon />
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              onClick={(e) => e.stopPropagation()}
+              style={{ position: 'absolute', right: 0, top: '110%', background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, minWidth: 160, overflow: 'hidden', padding: 4, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}
+            >
+              <a
+                href={item.href}
+                role="menuitem"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6, fontSize: 13, color: '#2F2F34', background: 'transparent', textDecoration: 'none', fontFamily: font }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Open in editor
+              </a>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleDelete}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6, fontSize: 13, color: '#FF6F77', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: font }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF0F1'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

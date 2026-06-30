@@ -281,9 +281,10 @@ const DeepAnalysisPage: NextPage = () => {
           }
         }
         if (buffer.trim()) processLine(buffer.trim());
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          setOverallError(err.message || 'Connection lost');
+      } catch (err) {
+        const e = err as { name?: string; message?: string };
+        if (e.name !== 'AbortError') {
+          setOverallError(e.message || 'Connection lost');
         }
       }
     })();

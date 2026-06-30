@@ -18,20 +18,34 @@
     "release": "standard-version"
   },
   "dependencies": {
+    "@ai-sdk/deepseek": "3.0.1",
     "@auth0/nextjs-auth0": "^3.8.0",
     "@aws-sdk/client-s3": "^3.967.0",
     "@googleapis/searchconsole": "^1.0.5",
     "@isaacs/ttlcache": "^1.4.1",
     "@neondatabase/auth": "^0.4.1-beta",
     "@sparticuz/chromium-min": "^133.0.0",
-    "@tiptap-pro/extension-comments": "^3.8.3",
+    "@tiptap/extension-character-count": "3.23.4",
+    "@tiptap/extension-details": "3.23.4",
     "@tiptap/extension-highlight": "^3.23.4",
     "@tiptap/extension-image": "^3.23.4",
     "@tiptap/extension-link": "^3.23.5",
+    "@tiptap/extension-placeholder": "3.23.4",
+    "@tiptap/extension-subscript": "3.23.4",
+    "@tiptap/extension-superscript": "3.23.4",
+    "@tiptap/extension-table": "3.23.4",
+    "@tiptap/extension-task-item": "3.23.4",
+    "@tiptap/extension-task-list": "3.23.4",
     "@tiptap/extension-text-align": "^3.23.4",
+    "@tiptap/extension-text-style": "3.23.4",
+    "@tiptap/extension-typography": "3.23.4",
+    "@tiptap/extension-youtube": "3.23.4",
     "@tiptap/react": "^3.23.4",
     "@tiptap/starter-kit": "^3.23.4",
+    "@tiptap/suggestion": "3.23.4",
     "@types/react-transition-group": "^4.4.12",
+    "ably": "^2.23.0",
+    "ai": "7.0.4",
     "axios": "^1.13.5",
     "axios-retry": "^3.3.1",
     "chart.js": "^3.9.1",
@@ -65,10 +79,12 @@
     "react-transition-group": "^4.4.5",
     "react-window": "^1.8.8",
     "reflect-metadata": "^0.1.13",
+    "remark-gfm": "4.0.0",
     "sequelize": "^6.37.7",
     "sequelize-typescript": "^2.1.6",
     "sqlite3": "^5.1.7",
-    "umzug": "^3.8.2"
+    "umzug": "^3.8.2",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
@@ -102,6 +118,7 @@
     "sequelize-cli": "^6.6.5",
     "standard-version": "^9.5.0",
     "tailwindcss": "^3.4.14",
-    "typescript": "^4.8.4"
+    "tsx": "^4.22.4",
+    "typescript": "5.4.5"
   }
 }

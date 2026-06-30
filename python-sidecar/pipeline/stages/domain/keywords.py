@@ -1,10 +1,27 @@
 """KeywordsStage — expand seed keywords via Google Suggest, dedupe, return top N."""
 import asyncio
+import json
 from urllib.parse import quote
 
 import httpx
 
 from pipeline.contracts import AnalysisStage, StageContext
+
+
+def _parse_suggest_bytes(raw: bytes) -> list:
+    """Decode a Google Suggest response body and parse its JSON.
+
+    The `client=firefox` endpoint returns Central-European results in a single-byte
+    charset (Polish 'ó' = 0xF3), not UTF-8, so a plain UTF-8 decode raises and the
+    whole seed used to fail. Try UTF-8 first (correct when Google does send it), then
+    Windows-1250, then Latin-1 (which never fails) as a safety net.
+    """
+    for enc in ("utf-8", "cp1250", "latin-1"):
+        try:
+            return json.loads(raw.decode(enc))
+        except UnicodeDecodeError:
+            continue
+    return json.loads(raw.decode("utf-8", errors="replace"))
 
 
 async def _fetch_suggest(client: httpx.AsyncClient, seed: str) -> list[str]:
@@ -14,7 +31,7 @@ async def _fetch_suggest(client: httpx.AsyncClient, seed: str) -> list[str]:
         try:
             resp = await client.get(url, timeout=10)
             resp.raise_for_status()
-            data = resp.json()
+            data = _parse_suggest_bytes(resp.content)
             # Response: [query, [suggestions, ...]]
             return data[1] if isinstance(data, list) and len(data) > 1 else []
         except Exception as exc:

@@ -31,14 +31,19 @@ const GlobalTopbar = ({ breadcrumb }: Props) => (
          {breadcrumb ?? <WorkspaceSwitcher />}
       </div>
 
-      <div className="global-topbar-center" style={{ zIndex: 1 }}>
-         <TopbarSearch />
-      </div>
-
-      <div className="global-topbar-actions" style={{ gap: 16 }}>
-         <TopbarInbox />
-         <HelpButton />
-         <TopbarAccountMenu />
+      {/* Main region (right of the switcher). Equal-flex spacer + actions keep the
+          search centered over the content column, SurferSEO-style. */}
+      <div className="global-topbar-main">
+         <div className="global-topbar-spacer" aria-hidden="true" />
+         <div className="global-topbar-center" style={{ zIndex: 1 }}>
+            <TopbarSearch />
+         </div>
+         <div className="global-topbar-actions" style={{ gap: 16 }}>
+            <span className="ce-search-compact"><TopbarSearch compact /></span>
+            <TopbarInbox />
+            <HelpButton />
+            <TopbarAccountMenu />
+         </div>
       </div>
    </header>
 );

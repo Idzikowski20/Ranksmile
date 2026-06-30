@@ -9,6 +9,7 @@ import { NeonAuthUIProvider } from '@neondatabase/auth/react';
 import { authClient } from '../lib/auth/client';
 import AppToaster from '../components/common/AppToaster';
 import AppLoading from '../components/common/AppLoading';
+import TopProgressBar from '../components/common/TopProgressBar';
 import { OnboardingStatusContext } from '../lib/onboardingStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 
@@ -33,14 +34,22 @@ function WorkspaceCookieSync() {
  */
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const router = useRouter();
-   const { data: session } = authClient.useSession();
+   const { data: session, isPending } = authClient.useSession();
    const userId: string | undefined = session?.user?.id;
    const [completed, setCompleted] = React.useState<boolean | null>(null);
 
    const path = router.pathname;
    const isOnboarding = path === '/onboarding';
-   // Auth + public read-only routes are never gated.
-   const isPublic = path.startsWith('/auth') || path.startsWith('/login') || path.startsWith('/drafts');
+   // Auth + public read-only routes are never gated. /invite handles its own
+   // session (lets an anonymous invitee stash the token before signing in).
+   const isPublic = path.startsWith('/auth') || path.startsWith('/login') || path.startsWith('/drafts') || path.startsWith('/invite');
+
+   // Not signed in → send to auth login. Onboarding and every app route are for
+   // authenticated users only; public routes (auth, invite, drafts) stay open.
+   React.useEffect(() => {
+      if (isPending) return;
+      if (!userId && !isPublic) router.replace('/auth/sign-in');
+   }, [isPending, userId, isPublic, router]);
 
    // Fetch onboarding state whenever the signed-in user changes.
    React.useEffect(() => {
@@ -88,6 +97,9 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    // Only hold the route once we KNOW onboarding isn't done (→ redirecting).
    // While still resolving (completed === null) we render normally, so there's no
    // full-screen loader flash on every page load — only the sign-in transition.
+   if (!isPending && !userId && !isPublic) {
+      return <AppLoading />;
+   }
    if (userId && !isPublic && completed === false && !isOnboarding) {
       return <AppLoading />;
    }
@@ -106,6 +118,7 @@ function MyApp({ Component, pageProps }: AppProps) {
    return (
       <NeonAuthUIProvider authClient={authClient} redirectTo="/" basePath="/auth">
          <QueryClientProvider client={queryClient}>
+            <TopProgressBar />
             <WorkspaceCookieSync />
             <OnboardingGuard>
                <Component {...pageProps} />

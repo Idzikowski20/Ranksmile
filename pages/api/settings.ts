@@ -4,6 +4,7 @@ import Cryptr from 'cryptr';
 import getConfig from 'next/config';
 import verifyUser from '../../utils/verifyUser';
 import allScrapers from '../../scrapers/index';
+import { readSettingsBlob, writeSettingsBlob } from '../../lib/appSettingsStore';
 
 type SettingsGetResponse = {
    settings?: object | null,
@@ -65,7 +66,7 @@ const updateSettings = async (req: NextApiRequest, res: NextApiResponse<Settings
          search_console_private_key,
       };
 
-      await writeFile(`${process.cwd()}/data/settings.json`, JSON.stringify(securedSettings), { encoding: 'utf-8' });
+      await writeSettingsBlob(securedSettings);
       return res.status(200).json({ settings });
    } catch (error) {
       console.log('[ERROR] Updating App Settings. ', error);
@@ -77,7 +78,7 @@ const safeReadJSON = async (filePath: string, fallback: any): Promise<any> => {
    try {
       const raw = await readFile(filePath, { encoding: 'utf-8' });
       return raw ? JSON.parse(raw) : fallback;
-   } catch (error: any) {
+   } catch (error) {
       const fileExists = await stat(filePath).then(() => true).catch(() => false);
       if (fileExists) {
          // File exists but is corrupt — back it up instead of silently overwriting
@@ -133,7 +134,7 @@ export const getAppSettings = async () : Promise<SettingsType> => {
       scrape_smart_full_fallback: false,
    };
 
-   const settings: SettingsType = await safeReadJSON(`${process.cwd()}/data/settings.json`, defaultSettings);
+   const settings: SettingsType = ((await readSettingsBlob()) as SettingsType | null) || defaultSettings;
    const failedQueue: string[] = await safeReadJSON(`${process.cwd()}/data/failed_queue.json`, []);
 
    let decryptedSettings = settings;

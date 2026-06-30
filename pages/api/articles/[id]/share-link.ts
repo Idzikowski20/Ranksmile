@@ -8,6 +8,8 @@ import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
+import { getErrorMessage } from '../../../../lib/errors';
+import { queryOne } from '../../../../lib/db/query';
 
 const makeToken = () => randomBytes(24).toString('base64url');
 
@@ -36,8 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (req.method === 'GET') {
-         const [rows] = await db.query(`SELECT share_token FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, { replacements: [id] });
-         const existing = (rows as any[])[0]?.share_token;
+         const row = await queryOne<{ share_token: string | null }>(`SELECT share_token FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, [id]);
+         const existing = row?.share_token;
          if (existing) return res.status(200).json({ token: existing });
          const token = makeToken();
          await db.query(`UPDATE articles SET share_token = ? WHERE ${articleIdSql} = ?`, { replacements: [token, id] });
@@ -45,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(405).json({ error: 'Method not allowed' });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

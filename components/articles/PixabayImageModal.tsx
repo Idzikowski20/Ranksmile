@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { PixabayImage, PixabayResponse } from '../../pages/api/pixabay/search';
+import { getErrorMessage } from '../../lib/errors';
 
 interface Props {
   defaultQuery?: string;
@@ -39,8 +40,8 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
       setResults(data.hits || []);
       setTotal(data.totalHits || 0);
       if (data.totalHits === 0) setError('No images found for this query.');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
       setResults([]);
     } finally {
       setIsLoading(false);

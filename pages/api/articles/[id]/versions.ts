@@ -7,6 +7,8 @@ import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
+import { getErrorMessage } from '../../../../lib/errors';
+import { queryRows, queryOne } from '../../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -30,17 +32,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function getVersions(id: string, res: NextApiResponse) {
    try {
-      const [rows] = await db.query(
+      const rows = await queryRows<{ id: number; article_id: number; version_type: string | null; created_at: string | null; score_data: string | null; content_length: number | null }>(
          `SELECT id, article_id, version_type, created_at, score_data,
                  LENGTH(content) AS content_length
           FROM article_versions
           WHERE article_id = ?
           ORDER BY created_at DESC`,
-         { replacements: [id] },
+         [id],
       );
       // Expose each version's content score (stored in score_data._computed_score) without
       // shipping the full score_data blob to the client.
-      const versions = (rows as any[]).map((r) => {
+      const versions = rows.map((r) => {
          let score: number | null = null;
          if (r.score_data) {
             try {
@@ -52,8 +54,8 @@ async function getVersions(id: string, res: NextApiResponse) {
          return { ...rest, score };
       });
       return res.status(200).json({ versions });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
 
@@ -71,11 +73,10 @@ async function restoreVersion(id: string, req: NextApiRequest, res: NextApiRespo
       }
 
       // 2. Fetch the version to restore
-      const [rows] = await db.query(
+      const version = await queryOne<{ content: string | null; score_data: string | null }>(
          `SELECT content, score_data FROM article_versions WHERE id = ? AND article_id = ? LIMIT 1`,
-         { replacements: [versionId, id] },
+         [versionId, id],
       );
-      const version = (rows as any[])[0];
       if (!version) return res.status(404).json({ error: 'Version not found' });
 
       // 3. Update article with restored content
@@ -94,7 +95,7 @@ async function restoreVersion(id: string, req: NextApiRequest, res: NextApiRespo
          content: version.content,
          score_data: version.score_data,
       });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

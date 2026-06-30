@@ -1,4 +1,4 @@
-import { Table, Model, Column, DataType, PrimaryKey } from 'sequelize-typescript';
+import { Table, Model, Column, DataType, PrimaryKey, Index } from 'sequelize-typescript';
 
 @Table({
   timestamps: false,
@@ -25,6 +25,7 @@ class Keyword extends Model {
    @Column({ type: DataType.STRING, allowNull: true, defaultValue: '' })
    latlong!: string;
 
+   @Index('idx_keyword_domain') // hottest read filter — see migration 1749000000000
    @Column({ type: DataType.STRING, allowNull: false, defaultValue: '{}' })
    domain!: string;
 

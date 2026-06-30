@@ -82,13 +82,24 @@ export async function renameWorkspace(userId: string, wsId: number, name: string
    await db.query('UPDATE workspaces SET name = ? WHERE id = ? AND org_id = ?', { replacements: [clean, wsId, orgId] });
 }
 
-/** Throws WORKSPACE_NOT_FOUND / WORKSPACE_LAST / WORKSPACE_NOT_EMPTY. */
+/**
+ * Removes a workspace and — since workspace == domain — its domain(s) and their data
+ * (keywords, articles, site_context). The LAST workspace CAN be deleted; the caller then
+ * lands on `/`, which routes a 0-workspace owner into the new-workspace creator.
+ */
 export async function deleteWorkspace(userId: string, wsId: number): Promise<void> {
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
-   const [{ n: wsCount }] = await select('SELECT COUNT(*) AS n FROM workspaces WHERE org_id = ?', [orgId]) as Array<{ n: number }>;
-   if (Number(wsCount) <= 1) throw new Error('WORKSPACE_LAST');
-   const [{ n: domCount }] = await select('SELECT COUNT(*) AS n FROM domain WHERE workspace_id = ?', [wsId]) as Array<{ n: number }>;
-   if (Number(domCount) > 0) throw new Error('WORKSPACE_NOT_EMPTY');
-   await db.query('DELETE FROM workspaces WHERE id = ? AND org_id = ?', { replacements: [wsId, orgId] });
+
+   const domains = await select('SELECT "ID" AS id, domain FROM domain WHERE workspace_id = ?', [wsId]) as Array<{ id: number; domain: string }>;
+   await db.transaction(async (tx: import('sequelize').Transaction) => {
+      const q = (sql: string, repl: unknown[]) => db.query(sql, { replacements: repl, transaction: tx });
+      for (const d of domains) {
+         await q('DELETE FROM keyword WHERE domain = ?', [d.domain]);
+         await q('DELETE FROM articles WHERE domain_id = ?', [d.id]);
+         await q('DELETE FROM site_context WHERE domain_id = ?', [d.id]);
+         await q('DELETE FROM domain WHERE "ID" = ?', [d.id]);
+      }
+      await q('DELETE FROM workspaces WHERE id = ? AND org_id = ?', [wsId, orgId]);
+   });
 }

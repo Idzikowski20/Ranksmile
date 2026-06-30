@@ -15,6 +15,8 @@ import CustomizationPanelModal from '../../../components/articles/CustomizationP
 import EditorOnboarding from '../../../components/articles/EditorOnboarding';
 import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
 import EditorLoading from '../../../components/articles/EditorLoading';
+import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
+import AiGlowRing from '../../../components/articles/AiGlowRing';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
@@ -22,6 +24,10 @@ import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { getErrorMessage } from '../../../lib/errors';
+import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
+import { ABLY_EVENTS } from '../../../lib/ably/channel';
+import { throttle } from '../../../lib/throttle';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -263,7 +269,7 @@ const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClos
 
       <ShareLinkBlock
         desc={<>Anyone with this link can <span style={{ fontWeight: 600, color: '#18181B' }}>view</span> and <span style={{ fontWeight: 600, color: '#18181B' }}>comment,</span> for an unlimited time</>}
-        link={commentLink} copyLabel="Copy comment link" onReset={resetLink}
+        link={commentLink} copyLabel="Copy comment link" onReset={resetLink} loading={!token}
       />
     </div>
   );
@@ -312,6 +318,7 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
           <img alt="" width={20} height={20} style={{ borderRadius: 4 }} src={`https://www.google.com/s2/favicons?domain=${domain || 'serpbear'}&sz=32`} />
         </span>
       </Link>
+      <div className="ce-bc-rest" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
       <BcChevron />
       <Link href="/articles" style={{ color: '#9F9FA9', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: f, fontSize: 14 }}>Content Editor</Link>
       <BcChevron />
@@ -357,6 +364,7 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
           </div>
         )}
       </div>
+      </div>
     </div>
   );
 };
@@ -372,8 +380,11 @@ const ArticleEditorPage: NextPage = () => {
   const editorRef = useRef<any>(null);
   const pixabayCallbackRef = useRef<((img: { url: string; alt: string }) => void) | null>(null);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingRef = useRef(false); // true while a save PUT is in flight (prevents overlapping saves)
   const lastSavedSig = useRef<string | null>(null);
   const lastVersionAt = useRef(0);
+  const flushRef = useRef<((unload?: boolean) => void) | null>(null);
   const [article, setArticle] = useState<Article | null>(null);
   const [highlightTerms, setHighlightTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -383,6 +394,9 @@ const ArticleEditorPage: NextPage = () => {
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // Surfy docks into the right panel: ArticleEditor notifies open-state; the dock <div> is the portal target.
+  const [surfyDockOpen, setSurfyDockOpen] = useState(false);
+  const [surfyDockEl, setSurfyDockEl] = useState<HTMLElement | null>(null);
   const [showCustomization, setShowCustomization] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(false);
@@ -411,6 +425,20 @@ const ArticleEditorPage: NextPage = () => {
   const [linkBar, setLinkBar] = useState<{ count: number; preLinkHtml: string; positions: number[] } | null>(null);
   const [linkNavIdx, setLinkNavIdx] = useState(0);
   const [autoOptimizeBar, setAutoOptimizeBar] = useState<{ preHtml: string } | null>(null);
+  // AI Readability "Apply All" → structure-only optimize, reviewed via its own bottom bar.
+  const [isApplyingReadability, setIsApplyingReadability] = useState(false);
+  const [readabilityBar, setReadabilityBar] = useState<{ preHtml: string } | null>(null);
+  // Bumped when the readability optimize is Accepted → the panel marks its suggestions done.
+  const [readabilityAcceptKey, setReadabilityAcceptKey] = useState(0);
+  // "Compare versions" modal — ORIGINAL (pre-optimize) vs NEW (current editor) side-by-side diff.
+  const [compareVersions, setCompareVersions] = useState<{ original: string; updated: string } | null>(null);
+  // Plagiarism highlights pushed up from the Plagiarism panel → red underlines in the editor.
+  const [plagSentences, setPlagSentences] = useState<string[]>([]);
+  const [plagFocused, setPlagFocused] = useState<string | null>(null);
+  const handlePlagiarismHighlight = useCallback((sentences: string[], focused: string | null) => {
+    setPlagSentences(sentences);
+    setPlagFocused(focused);
+  }, []);
   const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
   const [autoOptimizeStatus, setAutoOptimizeStatus] = useState('Optimizing article…');
   const [pendingImageCount, setPendingImageCount] = useState(0);
@@ -420,7 +448,8 @@ const ArticleEditorPage: NextPage = () => {
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
-  const isAiActive = surfyAiActive || linksAiActive || isAutoOptimizing || isRunningAiVisibility;
+  // The amber glow fires for Auto-Optimize ONLY — not while Surfy is thinking/replying.
+  const isAiActive = isAutoOptimizing;
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -458,14 +487,55 @@ const ArticleEditorPage: NextPage = () => {
       .catch(() => {});
   }, [id, commentsVersion]);
 
-  // Live comment sync: a reviewer's note on the shared link shows up here over SSE.
+  // Owner watches the same channel so reviewer comments appear live in the editor.
+  const { channel: ownerChannel } = useArticleChannel({ articleId: article?.id ?? null });
   useEffect(() => {
-    if (!id) return undefined;
-    const es = new EventSource(`/api/articles/${id}/comments-stream`);
-    es.onmessage = () => setCommentsVersion(v => v + 1);
-    es.onerror = () => { /* EventSource auto-reconnects */ };
-    return () => es.close();
-  }, [id]);
+    if (!ownerChannel) return undefined;
+    const onComment = () => setCommentsVersion((v) => v + 1);
+    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    ownerChannel.presence.enter({ role: 'owner' }).catch(() => {});
+    return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
+  }, [ownerChannel]);
+
+  const [reviewers, setReviewers] = useState<string[]>([]);
+  useEffect(() => {
+    if (!ownerChannel) return undefined;
+    const refresh = () => ownerChannel.presence.get()
+      .then((members) => setReviewers(members
+        .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
+        .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest')))
+      .catch(() => {});
+    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh);
+    refresh();
+    return () => { ownerChannel.presence.unsubscribe(); };
+  }, [ownerChannel]);
+
+  // Live broadcast to viewers. Ably caps a single message at ~64KB; above this we
+  // signal a refetch instead of shipping the whole document inline.
+  const MAX_LIVE_HTML = 56 * 1024;
+  const ownerChannelRef = useRef<typeof ownerChannel>(null);
+  useEffect(() => { ownerChannelRef.current = ownerChannel; }, [ownerChannel]);
+
+  // Monotonic revision: bumped on every content change; caret events carry the rev
+  // of the doc they were measured against so the viewer never draws a stale caret.
+  const contentRevRef = useRef(0);
+
+  const publishContentRef = useRef(
+    throttle((html: string, rev: number) => {
+      const ch = ownerChannelRef.current;
+      if (!ch) return;
+      if (html.length > MAX_LIVE_HTML) void ch.publish(ABLY_EVENTS.content, { tooLarge: true, rev });
+      else void ch.publish(ABLY_EVENTS.content, { html, rev });
+    }, 500),
+  );
+
+  // Caret is throttled tighter than content (tiny payload, wants to feel smooth).
+  const publishCaretRef = useRef(
+    throttle((from: number, to: number, rev: number) => {
+      const ch = ownerChannelRef.current;
+      if (ch) void ch.publish(ABLY_EVENTS.caret, { from, to, rev });
+    }, 75),
+  );
 
   // Listen for Pixabay open events dispatched from TipTap image node toolbar
   useEffect(() => {
@@ -476,6 +546,15 @@ const ArticleEditorPage: NextPage = () => {
     };
     window.addEventListener('surfer:open-pixabay', handler);
     return () => window.removeEventListener('surfer:open-pixabay', handler);
+  }, []);
+
+  // The Content Editor must scroll INTERNALLY (fixed dark shell + scrollable
+  // body) at ALL widths, not just desktop. Opt <html> into the editor
+  // height-chain while this page is mounted; cleanup restores normal page
+  // scrolling for every other route.
+  useEffect(() => {
+    document.documentElement.classList.add('editor-route');
+    return () => document.documentElement.classList.remove('editor-route');
   }, []);
 
   useEffect(() => {
@@ -572,9 +651,32 @@ const ArticleEditorPage: NextPage = () => {
       setWordCount(words);
       setHeadingCount(headings);
       setParagraphCount(paragraphs);
+      contentRevRef.current += 1; // new doc revision
+      publishContentRef.current(html, contentRevRef.current); // live mirror (throttled, best-effort)
     },
     [],
   );
+
+  // Publish caret position on every selection change.
+  // The editor mounts asynchronously (dynamic import), so poll until it exists.
+  useEffect(() => {
+    let ed: ReturnType<NonNullable<typeof editorRef.current>['getEditor']> | null = null;
+    const onSel = () => {
+      if (!ed) return;
+      const { from, to } = ed.state.selection;
+      publishCaretRef.current(from, to, contentRevRef.current);
+    };
+    const tryBind = () => {
+      const e = editorRef.current?.getEditor?.();
+      if (e && !ed) { ed = e; e.on('selectionUpdate', onSel); return true; }
+      return false;
+    };
+    if (!tryBind()) {
+      const iv = setInterval(() => { if (tryBind()) clearInterval(iv); }, 200);
+      return () => { clearInterval(iv); if (ed) ed.off('selectionUpdate', onSel); };
+    }
+    return () => { if (ed) ed.off('selectionUpdate', onSel); };
+  }, [article?.id]);
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
@@ -584,9 +686,21 @@ const ArticleEditorPage: NextPage = () => {
     setArticle((prev) => prev ? { ...prev, meta_description: v } : prev);
   }, []);
 
+  // The parent re-renders on every editor keystroke (setEditorHtml). Memoize the per-render work
+  // that fed ContentScorePanel — a full-HTML regex and two JSON.parse of cached blobs — so it only
+  // recomputes when its actual input changes (was running on every keystroke).
+  const internalLinksCount = useMemo(() => (editorHtml.match(/<a\s[^>]*href=/gi) || []).length, [editorHtml]);
+  const initialPlagiarism = useMemo(() => {
+    try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
+  }, [(article as any)?.plagiarism_json]);
+  const initialAiReadability = useMemo(() => {
+    try { const v = (article as any)?.ai_readability_json; return v ? JSON.parse(v) : null; } catch { return null; }
+  }, [(article as any)?.ai_readability_json]);
+
   const handleRestoreVersion = (version: { id: number; content: string; score_data: string | null }) => {
     const editor = editorRef.current?.getEditor();
-    if (editor) editor.commands.setContent(version.content);
+    // emitUpdate:true → fires onUpdate → handleEditorChange → autosave persists the restored content.
+    if (editor) editor.commands.setContent(version.content, { emitUpdate: true });
     if (version.score_data) {
       try {
         const sd = JSON.parse(version.score_data);
@@ -599,7 +713,10 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   // ── Shared persistence used by both auto-save and programmatic saves ──
-  const doSave = async (versionType?: string) => {
+  // keepalive is opt-in: it lets a request survive page teardown (tab-hide / unload / nav) but caps
+  // the body at ~64KB. Normal autosaves MUST NOT use it — a long article exceeds 64KB and the
+  // browser would silently drop every save. Only the unload flush passes keepalive (small delta).
+  const doSave = async (versionType?: string, opts?: { keepalive?: boolean }) => {
     if (!id) return false;
     // Update current_count for each term + store computed score so list view stays in sync
     const updatedTerms = scoreData.terms.map((t) => ({
@@ -631,6 +748,7 @@ const ArticleEditorPage: NextPage = () => {
     const res = await fetch(`/api/articles/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      ...(opts?.keepalive ? { keepalive: true } : {}), // only on unload (best-effort, <64KB body cap)
       body: JSON.stringify({
         content: editorHtml,
         word_count: wordCount,
@@ -651,18 +769,31 @@ const ArticleEditorPage: NextPage = () => {
   // ── Auto-save: persist silently after edits settle. A version snapshot is
   // created at most once every 2 min of editing so Version History stays useful
   // without flooding it on every keystroke. ──
-  const autoSave = async (sig: string) => {
+  const autoSave = async (sig: string, opts?: { unload?: boolean }) => {
+    // Never run two saves at once. If one is already in flight, skip — the finally-block below
+    // re-checks for newer edits (flushRef) once it finishes, so nothing typed mid-save is lost.
+    if (savingRef.current) return;
+    savingRef.current = true;
+    let ok = false;
     try {
       setAutoSaveState('saving');
       const wantVersion = Date.now() - lastVersionAt.current > 120000;
-      await doSave(wantVersion ? 'manual_save' : undefined);
+      await doSave(wantVersion ? 'manual_save' : undefined, { keepalive: opts?.unload });
       if (wantVersion) lastVersionAt.current = Date.now();
       lastSavedSig.current = sig;
       setAutoSaveState('saved');
+      ok = true;
     } catch {
       setAutoSaveState('unsaved');
-      toast.error('Auto-save failed — retrying on next change');
+      // Self-heal transient blips: retry shortly instead of waiting for the next edit.
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(() => { void autoSave(sig); }, 3000);
+    } finally {
+      savingRef.current = false;
     }
+    // Coalesce ONLY on success: persist anything edited while this save ran (flushRef reads the
+    // latest state). On failure the 3s retry handles it — re-flushing here would tight-loop.
+    if (ok) flushRef.current?.();
   };
 
   // Debounced auto-save: fires ~1s after the last edit to content / meta / image.
@@ -681,10 +812,49 @@ const ArticleEditorPage: NextPage = () => {
     if (sig === lastSavedSig.current || isAutoOptimizing) return undefined;
     setAutoSaveState('unsaved');
     if (autoTimer.current) clearTimeout(autoTimer.current);
-    autoTimer.current = setTimeout(() => { void autoSave(sig); }, 1000);
+    autoTimer.current = setTimeout(() => { void autoSave(sig); }, 800);
     return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorHtml, featuredImage, article?.meta_title, article?.meta_description, article?.target_keyword, article?.meta_url, isLoading, isAutoOptimizing]);
+
+  // Always-fresh "save the latest state if it's dirty" — used by the flush triggers below.
+  // unload=true → the page is going away, so the PUT must outlive it (keepalive).
+  flushRef.current = (unload?: boolean) => {
+    if (isLoading || !article || isAutoOptimizing) return;
+    const sig = JSON.stringify({
+      h: editorHtml,
+      t: article.meta_title ?? '',
+      d: article.meta_description ?? '',
+      k: article.target_keyword ?? '',
+      u: article.meta_url ?? '',
+      img: featuredImage?.url ?? null,
+    });
+    if (lastSavedSig.current === null || sig === lastSavedSig.current) return;
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    void autoSave(sig, { unload });
+  };
+
+  // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
+  // so changes are never lost to the debounce window (the main gap vs. Surfer-style autosave).
+  useEffect(() => {
+    // Page-teardown flushes (tab-hide / close / in-app nav) need keepalive so the PUT survives;
+    // Cmd/Ctrl+S is a manual save while the page stays, so it uses a normal (uncapped) request.
+    const flushUnload = () => flushRef.current?.(true);
+    const onVis = () => { if (document.visibilityState === 'hidden') flushUnload(); };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); flushRef.current?.(); }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('beforeunload', flushUnload);
+    window.addEventListener('keydown', onKey);
+    router.events.on('routeChangeStart', flushUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('beforeunload', flushUnload);
+      window.removeEventListener('keydown', onKey);
+      router.events.off('routeChangeStart', flushUnload);
+    };
+  }, [router.events]);
 
   const handleAcceptReject = async (action: 'accept' | 'reject') => {
     if (!id) return;
@@ -698,8 +868,8 @@ const ArticleEditorPage: NextPage = () => {
       if (!res.ok) throw new Error(data.error);
       setArticle((prev) => prev ? { ...prev, status: data.status } : prev);
       toast.success(action === 'accept' ? 'Article accepted' : 'Article rejected');
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -716,12 +886,60 @@ const ArticleEditorPage: NextPage = () => {
       if (!res.ok) throw new Error(data.error || 'AI visibility check failed');
       setAiVisibilitySummary(data.summary);
       toast.success('AI Search checked');
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setIsRunningAiVisibility(false);
     }
   };
+
+  // "Apply All" from the AI Readability panel — send the suggestions to the sidecar, which
+  // rewrites the article HTML applying them (structure only), then show the review bar.
+  const handleApplyReadability = async (result: { criteria?: Array<{ suggestions?: string[] }> }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor || !id || isApplyingReadability) return;
+    const suggestions = (result?.criteria || []).flatMap((c) => c.suggestions || []).filter(Boolean);
+    if (!suggestions.length) return;
+    const preHtml = editor.getHTML();
+    setIsApplyingReadability(true);
+    try {
+      const res = await fetch('/api/articles/apply-readability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: id, content: preHtml, suggestions }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.content) throw new Error(data?.error || 'Could not apply suggestions');
+      if (data.warning) { toast(data.warning, { icon: '⚠️' }); return; } // content unchanged → no review bar
+      try { editor.commands.setContent(data.content); } catch { /* noop */ }
+      setReadabilityBar({ preHtml });
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Could not apply suggestions');
+    } finally {
+      setIsApplyingReadability(false);
+    }
+  };
+
+  // Open the side-by-side diff of a pre-optimize snapshot vs. the current editor content.
+  const openCompareVersions = (preHtml: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    setCompareVersions({ original: preHtml, updated: editor ? editor.getHTML() : '' });
+  };
+  // Shared "Compare versions" button for the Auto-Optimize and Optimize-AI-Readability bars.
+  const compareVersionsButton = (preHtml: string) => (
+    <button
+      type="button"
+      onClick={() => openCompareVersions(preHtml)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; }}
+    >
+      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9" /></svg>
+      Compare versions
+    </button>
+  );
 
   const handleInsertLinks = (links: Array<{ anchorText: string; url: string }>) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -956,6 +1174,16 @@ const ArticleEditorPage: NextPage = () => {
           gaps: scoreGaps,
         }),
       });
+      // Org-wide budget exhausted (shared 5h pool, same as Surfy): show a clear message, not a generic fail.
+      if (res.status === 429) {
+        const ej = await res.json().catch(() => ({}));
+        if (ej.error === 'org_limit') {
+          const at = ej.resetsAt ? new Date(ej.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          toast.error(`Your organization reached its AI limit.${at ? ` Resets at ${at}.` : ''}`);
+          setIsAutoOptimizing(false);
+          return;
+        }
+      }
       if (!res.ok || !res.body) throw new Error('Auto-optimize request failed');
 
       // Read SSE stream
@@ -989,20 +1217,14 @@ const ArticleEditorPage: NextPage = () => {
           } else if (eventType === 'done') {
             setAutoOptimizeBar({ preHtml });
             setIsAutoOptimizing(false);
-            try { editor.commands.setContent(payload.content); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
-            if (payload.pendingImages?.length && article?.target_keyword) {
-              await generatePendingImages(payload.pendingImages, article.target_keyword);
-              // Save final content with real image URLs to DB
-              const finalHtml = editor.getHTML();
-              const putId = article?.id || id;
-              if (putId) {
-                await fetch(`/api/articles/${putId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ content: finalHtml }),
-                }).catch(() => {});
-              }
-            }
+            // emitUpdate:true syncs the page's editorHtml baseline with the applied content (so later
+            // edits + autosave build on the optimized version, not a stale snapshot).
+            try { editor.commands.setContent(payload.content, { emitUpdate: true }); } catch (e) { console.error('[auto-optimize] setContent error:', e); }
+
+            // Apply the analysis results FIRST — they ship in this `done` payload and the
+            // panel (SEO entities + AI Search) should populate the instant optimize finishes.
+            // Image generation below is sequential and slow; running it before these setState
+            // calls made terms/AI-Search appear ~a minute late with no loading indicator.
 
             // Sync the FAQ questions the optimizer resolved (in the article's language) so the live
             // score credits the FAQ section.
@@ -1016,6 +1238,11 @@ const ArticleEditorPage: NextPage = () => {
             }
             if (payload.aiSummary) {
               setAiVisibilitySummary(payload.aiSummary);
+            }
+
+            // Freshly scraped competitor outlines → fill the Competitors panel immediately.
+            if (Array.isArray(payload.competitorOutlines) && payload.competitorOutlines.length) {
+              setArticle((prev) => (prev ? { ...prev, competitor_outlines_cache: JSON.stringify({ competitors: payload.competitorOutlines }) } : prev));
             }
 
             // Apply meta suggestions
@@ -1032,15 +1259,31 @@ const ArticleEditorPage: NextPage = () => {
                 `Score: ${payload.postScore}/100 (${icon}${sign}${delta})${target}`
               );
             }
+
+            // Now fill image placeholders with real images (sequential → slow). This only
+            // mutates the editor body, so the panel data above is already live.
+            if (payload.pendingImages?.length && article?.target_keyword) {
+              await generatePendingImages(payload.pendingImages, article.target_keyword);
+              // Save final content with real image URLs to DB
+              const finalHtml = editor.getHTML();
+              const putId = article?.id || id;
+              if (putId) {
+                await fetch(`/api/articles/${putId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ content: finalHtml }),
+                }).catch(() => {});
+              }
+            }
             return;
           } else if (eventType === 'error') {
             throw new Error(payload.message || 'Auto-optimize failed');
           }
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[auto-optimize] failed:', err);
-      toast.error(err.message);
+      toast.error(getErrorMessage(err));
     } finally {
       setIsAutoOptimizing(false);
     }
@@ -1067,6 +1310,7 @@ const ArticleEditorPage: NextPage = () => {
         showSidebar={false}
         topbarTitle=""
         contentClassName="article-editor-shell"
+        hideMobileNav
       >
         {/* Surfer-style loading screen inside the editor gray wrapper */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
@@ -1108,23 +1352,9 @@ const ArticleEditorPage: NextPage = () => {
         />
       )}
       contentClassName="article-editor-shell"
+      hideMobileNav
     >
       <style>{`
-        @keyframes ai-glow-shift {
-          0%   { box-shadow: inset 0 0 6px  4px rgba(120,58,251,0.5), inset 0 0 18px 10px rgba(120,58,251,0.3), inset 0 0 45px 20px rgba(120,58,251,0.15), inset 0 0 90px 10px rgba(120,58,251,0.06); }
-          33%  { box-shadow: inset 0 0 6px  4px rgba(6,182,212,0.5),  inset 0 0 18px 10px rgba(6,182,212,0.3),  inset 0 0 45px 20px rgba(6,182,212,0.15),  inset 0 0 90px 10px rgba(6,182,212,0.06); }
-          66%  { box-shadow: inset 0 0 6px  4px rgba(168,85,247,0.5), inset 0 0 18px 10px rgba(168,85,247,0.3), inset 0 0 45px 20px rgba(168,85,247,0.15), inset 0 0 90px 10px rgba(168,85,247,0.06); }
-          100% { box-shadow: inset 0 0 6px  4px rgba(120,58,251,0.5), inset 0 0 18px 10px rgba(120,58,251,0.3), inset 0 0 45px 20px rgba(120,58,251,0.15), inset 0 0 90px 10px rgba(120,58,251,0.06); }
-        }
-        .ai-glow-ring {
-          position: absolute; inset: 0; border-radius: 12px;
-          pointer-events: none; z-index: 9999;
-          opacity: 0; transition: opacity 0.4s ease;
-        }
-        .ai-glow-ring.active {
-          opacity: 1;
-          animation: ai-glow-shift 2.4s ease-in-out infinite;
-        }
         @keyframes barPulse {
           0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
           50%       { transform: scaleY(1.4); opacity: 1; }
@@ -1334,8 +1564,25 @@ const ArticleEditorPage: NextPage = () => {
           </div>
           )}
 
+          {/* ── Reviewer presence indicator (floating, bottom-right) ── */}
+          {reviewers.length > 0 && (
+          <div
+            title={reviewers.join(', ')}
+            style={{
+              position: 'absolute', bottom: 12, right: 12, zIndex: 80,
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.92)', border: '1px solid #ececef', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
+              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: '#52525c',
+              fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
+            }}
+          >
+            <span>👀 {reviewers.length} reviewing</span>
+          </div>
+          )}
+
           {/* ── Editor card (white rounded, padding-right for panel) ── */}
           <div
+            className="ce-editor-card"
             style={{
               flex: 1,
               minWidth: 0,
@@ -1352,6 +1599,8 @@ const ArticleEditorPage: NextPage = () => {
           >
             <ArticleEditor
               editorRef={editorRef}
+              onSurfyOpenChange={setSurfyDockOpen}
+              surfyDockEl={surfyDockEl}
               content={article.content || ''}
               keyword={article.target_keyword}
               metaTitle={article.meta_title}
@@ -1362,6 +1611,8 @@ const ArticleEditorPage: NextPage = () => {
               highlightTerms={highlightTerms}
               onAiActivity={setSurfyAiActive}
               articleKeyword={article?.target_keyword || ''}
+              plagiarismSentences={plagSentences}
+              plagiarismFocused={plagFocused}
               onChange={handleEditorChange}
               onMetaTitleChange={handleMetaTitleChange}
               onMetaDescriptionChange={handleMetaDescriptionChange}
@@ -1417,32 +1668,9 @@ const ArticleEditorPage: NextPage = () => {
                     />
                     <MenuRow icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowInternalLinksPanel(false); setShowHistory(true); setActionsMenu(false); }} />
                     <MenuRow icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
-                    {process.env.NODE_ENV !== 'production' && (
-                      <MenuRow
-                        icon={(
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ color: '#52525C' }}>
-                            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                        label="Dev: export debug JSON"
-                        onClick={async () => {
-                          setActionsMenu(false);
-                          try {
-                            const r = await fetch(`/api/articles/${id}/debug-export`);
-                            if (!r.ok) return;
-                            const blob = await r.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url; a.download = `article-${id}-debug.json`;
-                            document.body.appendChild(a); a.click(); a.remove();
-                            URL.revokeObjectURL(url);
-                          } catch { /* ignore */ }
-                        }}
-                      />
-                    )}
                     <div style={{ position: 'relative' }}>
                       <MenuRow icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
-                      {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 0, right: 'calc(100% + 8px)' }} />}
+                      {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
                     </div>
                   </div>
                 )}
@@ -1470,6 +1698,7 @@ const ArticleEditorPage: NextPage = () => {
           {!panelCollapsed && (
           <motion.div
             key="rightpanel"
+            className="ce-right-panel"
             initial={{ x: PANEL_W + 24, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: PANEL_W + 24, opacity: 0 }}
@@ -1571,7 +1800,10 @@ const ArticleEditorPage: NextPage = () => {
                 overflow: 'hidden',
               }}
             >
-              {showInternalLinksPanel ? (
+              {surfyDockOpen ? (
+                // Docked Surfy pane — the editor portals SurfyChatPanel into this element.
+                <div ref={setSurfyDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
+              ) : showInternalLinksPanel ? (
                 <InternalLinksPanel
                   articleId={article.id}
                   keyword={article.target_keyword || ''}
@@ -1601,12 +1833,13 @@ const ArticleEditorPage: NextPage = () => {
                       wordCount={wordCount}
                       headingCount={headingCount}
                       scoreData={scoreData}
-                      internalLinksCount={(editorHtml.match(/<a\s[^>]*href=/gi) || []).length}
+                      internalLinksCount={internalLinksCount}
                       html={editorHtml}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimize()}
                       isAutoOptimizing={isAutoOptimizing}
+                      saveState={autoSaveState}
                       articleId={article.id}
                       cachedOutlines={article.competitor_outlines_cache}
                       fallbackScore={article.content_score}
@@ -1617,8 +1850,8 @@ const ArticleEditorPage: NextPage = () => {
                       onMetaDescriptionChange={handleMetaDescriptionChange}
                       highlightTerms={highlightTerms}
                       onHighlightTermsChange={setHighlightTerms}
-                      initialPlagiarism={(() => { try { const v = (article as any).plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; } })()}
-                      initialAiReadability={(() => { try { const v = (article as any).ai_readability_json; return v ? JSON.parse(v) : null; } catch { return null; } })()}
+                      initialPlagiarism={initialPlagiarism}
+                      initialAiReadability={initialAiReadability}
                       featuredImage={featuredImage}
                       onFeaturedImageChange={setFeaturedImage}
                       isDone={article.status === 'accepted'}
@@ -1626,6 +1859,9 @@ const ArticleEditorPage: NextPage = () => {
                       aiVisibilitySummary={aiVisibilitySummary}
                       isRunningAiVisibility={isRunningAiVisibility}
                       onRunAiVisibility={handleRunAiVisibility}
+                      onApplyReadability={handleApplyReadability}
+                      onPlagiarismHighlight={handlePlagiarismHighlight}
+                      readabilityAccepted={readabilityAcceptKey}
                     />
                   </div>
                 </>
@@ -1640,7 +1876,7 @@ const ArticleEditorPage: NextPage = () => {
         {isAutoOptimizing && (
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 500, width: 520, maxWidth: 'calc(100vw - 40px)',
+            zIndex: 10000, width: 520, maxWidth: 'calc(100vw - 40px)',
             background: '#09090b', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
@@ -1668,7 +1904,7 @@ const ArticleEditorPage: NextPage = () => {
         {autoOptimizeBar && !isAutoOptimizing && (
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
+            zIndex: 10000, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
             background: '#09090b', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 10px 0 16px', height: 52, gap: 10,
@@ -1690,6 +1926,9 @@ const ArticleEditorPage: NextPage = () => {
             <div style={{ width: 1, height: 18, background: '#27272a', flexShrink: 0 }} />
 
             <div style={{ flex: 1 }} />
+
+            {/* Compare versions */}
+            {compareVersionsButton(autoOptimizeBar.preHtml)}
 
             {/* Retry */}
             <button
@@ -1767,6 +2006,88 @@ const ArticleEditorPage: NextPage = () => {
               Accept changes
             </button>
           </div>
+        )}
+
+        {/* ── AI Readability optimize: working ──────────────────────── */}
+        {isApplyingReadability && (
+          <div style={{
+            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
+            background: '#09090b', borderRadius: 10,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
+          }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)' }}>Optimize AI Readability</span>
+            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#783afb', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Working</span>
+          </div>
+        )}
+
+        {/* ── AI Readability optimize: result bar (Compare versions added in a later step) ── */}
+        {readabilityBar && !isApplyingReadability && (
+          <div style={{
+            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
+            background: '#09090b', borderRadius: 10,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
+            display: 'flex', alignItems: 'center', padding: '0 10px 0 16px', height: 52, gap: 16,
+          }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>Optimize AI Readability</span>
+
+            {/* Compare versions */}
+            {compareVersionsButton(readabilityBar.preHtml)}
+
+            {/* Cancel — revert the editor to the pre-apply state (autosave re-persists it). */}
+            <button
+              type="button"
+              onClick={() => {
+                const preHtml = readabilityBar.preHtml;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const editor = (editorRef.current as any)?.getEditor?.();
+                if (editor) editor.commands.setContent(preHtml);
+                setReadabilityBar(null);
+              }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; }}
+            >
+              Cancel
+            </button>
+
+            {/* Accept — snapshot the optimized content as a new version. */}
+            <button
+              type="button"
+              onClick={async () => {
+                setReadabilityBar(null);
+                try {
+                  setAutoSaveState('saving');
+                  await doSave('readability_optimize');
+                  lastVersionAt.current = Date.now();
+                  setAutoSaveState('saved');
+                  setReadabilityAcceptKey((k) => k + 1);
+                  toast.success('Changes accepted — version saved');
+                } catch {
+                  setAutoSaveState('unsaved');
+                  toast.error('Could not save version');
+                }
+              }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#18181b', background: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'opacity 0.15s', flexShrink: 0 }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            >
+              Accept
+            </button>
+          </div>
+        )}
+
+        {/* ── Compare versions modal (shared by Auto-Optimize + AI Readability bars) ── */}
+        {compareVersions && (
+          <CompareVersionsModal
+            original={compareVersions.original}
+            updated={compareVersions.updated}
+            terms={[article?.target_keyword, ...((scoreData?.terms || []).map((t) => t.term))].filter(Boolean) as string[]}
+            onClose={() => setCompareVersions(null)}
+          />
         )}
 
         {/* ── Link review floating modal (Surfy-style) ─────────────── */}
@@ -1863,7 +2184,7 @@ const ArticleEditorPage: NextPage = () => {
         <EditorOnboarding />
 
         {/* ── AI glow overlay — last child so it renders above everything ── */}
-        <div className={`ai-glow-ring${isAiActive ? ' active' : ''}`} />
+        <AiGlowRing active={isAiActive} />
       </div>
     </AppShell>
   );

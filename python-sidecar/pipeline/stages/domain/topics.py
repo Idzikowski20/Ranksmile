@@ -1,11 +1,10 @@
 """TopicsStage — cluster keywords into 4–8 SEO topic groups via one LLM call."""
-import json
 import os
-import re
 
 import anthropic
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.llm_json import parse_json_array
 
 _client: anthropic.AsyncAnthropic | None = None
 
@@ -20,7 +19,9 @@ def _get_client() -> anthropic.AsyncAnthropic:
     return _client
 
 
-MODEL = "deepseek-v4-flash"
+# Non-reasoning model: deepseek-v4-flash emits a 'thinking' block that ate the whole
+# max_tokens budget, leaving no 'text' output → topics=0. deepseek-chat returns clean JSON.
+MODEL = "deepseek-chat"
 
 
 async def _llm_cluster(domain: str, keywords: list[str]) -> list[dict] | None:
@@ -29,21 +30,25 @@ async def _llm_cluster(domain: str, keywords: list[str]) -> list[dict] | None:
     prompt = (
         f"Group these keywords into 4-8 SEO topic clusters for the domain {domain}. "
         f"Keywords: {kw_list}. "
-        "Return ONLY valid JSON (no markdown, no explanation): "
+        "Return ONLY valid JSON (no markdown, no explanation). Keep summaries short and "
+        "do NOT use double-quote characters inside any string value. "
         '[{"title": "...", "summary": "...", "keyword_indexes": [0, 1, 2]}]'
     )
     client = _get_client()
     response = await client.messages.create(
         model=MODEL,
         max_tokens=1024,
+        temperature=0,
         messages=[{"role": "user", "content": prompt}],
     )
     for block in response.content:
         if block.type == "text":
-            raw = block.text
-            json_match = re.search(r"\[[\s\S]*\]", raw)
-            if json_match:
-                return json.loads(json_match[0])
+            parsed = parse_json_array(block.text)
+            if not parsed:
+                # Evidence: show what the model actually returned when it doesn't parse.
+                print(f"[topics] LLM text unparseable ({len(block.text)} chars) head={block.text[:400]!r}")
+            return parsed
+    print(f"[topics] LLM response had no text block: {[b.type for b in response.content]}")
     return None
 
 
@@ -55,6 +60,10 @@ class TopicsStage(AnalysisStage):
         keywords: list[dict[str, str]] = ctx.get_state("keywords") or []
         domain: str = ctx.payload.get("domain", "")
         kw_strings = [k["keyword"] for k in keywords]
+
+        # Evidence at the keywords → topics boundary: 0 keywords ⇒ the keywords stage
+        # is the real culprit, not the topics LLM.
+        print(f"[topics] input keywords={len(kw_strings)} sample={kw_strings[:5]}")
 
         await ctx.emit_progress(self, 20, "Clustering keywords into topic groups")
 

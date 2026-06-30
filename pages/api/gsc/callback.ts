@@ -6,13 +6,17 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import { upsertAccountForUser } from '../../../lib/gscAccounts';
 
-function parseState(state: string): { domain?: string; redirect: string | null; userId?: string | null } {
+function parseState(state: string): { domain?: string; redirect: string | null; userId?: string | null; nonce?: string } {
   try {
     const parsed = JSON.parse(state);
-    return { domain: parsed.domain || undefined, redirect: parsed.redirect || null, userId: parsed.userId || null };
+    return { domain: parsed.domain || undefined, redirect: parsed.redirect || null, userId: parsed.userId || null, nonce: parsed.nonce };
   } catch { /* fall through */ }
   return { redirect: null };
 }
+
+/** Only same-origin relative redirect targets (the state value is already validated on connect, but
+ *  re-check here so a tampered/legacy state can't open-redirect). */
+const safeRelative = (r: string | null): string => (r && r.startsWith('/') && !r.startsWith('//') ? r : '/settings/google_search_console');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { code, state, error: oauthError } = req.query;
@@ -27,6 +31,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!code || !state || typeof code !== 'string' || typeof state !== 'string') {
     return res.status(400).json({ error: 'Missing code or state parameter.' });
+  }
+
+  // CSRF: the state nonce must match the httpOnly cookie set on /connect. Clear the cookie either way.
+  res.setHeader('Set-Cookie', 'gsc_oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  const { nonce: stateNonce } = parseState(state);
+  if (!stateNonce || req.cookies.gsc_oauth_state !== stateNonce) {
+    console.error('[GSC OAuth] state nonce mismatch (possible CSRF)');
+    return res.redirect(302, '/settings/google_search_console?gsc_error=invalid_state');
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -99,10 +111,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('[GSC OAuth] Connected Google Search Console for user', ownerUserId);
 
-    if (redirect) {
-      return res.redirect(302, `${redirect}?gsc_connected=1`);
-    }
-    return res.redirect(302, `/settings/google_search_console?gsc_connected=1`);
+    return res.redirect(302, `${safeRelative(redirect)}?gsc_connected=1`);
   } catch (err) {
     // The try also covers the DB write, so a Sequelize "Validation error" lands here too.
     // Dig out the specific field / constraint / underlying Google error.
@@ -116,7 +125,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fieldMsgs = Array.isArray(e.errors) ? e.errors.map((x) => x.message || x.path).filter(Boolean).join('; ') : '';
     const googleErr = e.response?.data?.error_description || e.response?.data?.error;
     const detail = fieldMsgs || googleErr || e.parent?.message || e.message || String(err);
+    // Log the specifics server-side; surface only a generic code to the client (was leaking DB
+    // field/constraint names + provider errors into the redirect URL).
     console.error('[GSC OAuth] connect failed:', e.name || 'Error', '|', detail);
-    return res.redirect(302, `/settings/google_search_console?gsc_error=${encodeURIComponent(detail)}`);
+    return res.redirect(302, '/settings/google_search_console?gsc_error=connect_failed');
   }
 }

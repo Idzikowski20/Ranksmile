@@ -7,6 +7,7 @@ import { useQuery } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { Checkbox, SearchBar } from '../../components/ui';
 import { useFetchDomains } from '../../services/domains';
+import { getErrorMessage } from '../../lib/errors';
 
 // ─── Location list ────────────────────────────────────────────────────────────
 const ALL_LOCATIONS = [
@@ -189,8 +190,8 @@ const ConfigureSite: NextPage = () => {
          }).catch(() => {});
 
          router.push(`/sites/${data.domainSlug}/performance`);
-      } catch (e: any) {
-         setError(e?.message || 'Network error');
+      } catch (e) {
+         setError(getErrorMessage(e) || 'Network error');
          setSubmitting(false);
       }
    };

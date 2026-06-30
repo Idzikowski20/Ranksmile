@@ -1,22 +1,41 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import toast from 'react-hot-toast';
+import type { PendingAction } from '../../lib/ai/types';
 import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ImageExt from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
-import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
+import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData } from '../../lib/contentScore';
+import { getErrorMessage } from '../../lib/errors';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
+import ContentOptimizer from './contentOptimizerNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
 import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
+import { TableKit } from '@tiptap/extension-table';
+import Typography from '@tiptap/extension-typography';
+import CharacterCount from '@tiptap/extension-character-count';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
+import { TextStyle, Color } from '@tiptap/extension-text-style';
+import { Details, DetailsSummary, DetailsContent } from '@tiptap/extension-details';
+import Youtube from '@tiptap/extension-youtube';
 import { TermHighlight } from './termHighlightExtension';
+import { PlagiarismHighlight } from './plagiarismHighlightExtension';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import CommentComposer, { DraftComment } from './comments/CommentComposer';
 import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
 import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
+import CompareVersionsModal from './CompareVersionsModal';
+import SlashCommand, { SlashItem } from './SlashCommand';
+import SurfyChatPanel, { SurfyPanelApi } from './SurfyChatPanel';
 
 export interface HeadingItem {
   level: number;
@@ -47,6 +66,10 @@ interface Props {
   onAiActivity?: (active: boolean) => void;
   /** Target keyword for Surfy scoring context */
   articleKeyword?: string;
+  /** Plagiarised sentences to underline in red (view-only; from the Plagiarism panel). */
+  plagiarismSentences?: string[];
+  /** The plagiarism match currently focused in the panel — highlighted stronger + scrolled into view. */
+  plagiarismFocused?: string | null;
   /** Comment anchors to highlight inline (view-only ProseMirror decorations). */
   comments?: CommentAnchor[];
   /** Full comment threads for the in-editor pins + bubbles overlay. */
@@ -59,6 +82,11 @@ interface Props {
   onCommentsChanged?: () => void;
   /** Create a comment anchored to the selected quote; resolves to the new id. */
   onCreateComment?: (quote: string, draft: { text: string; images: string[] }) => Promise<string | undefined> | void;
+  /** Notified whenever Surfy opens/closes, so the page can swap its right panel to the docked pane. */
+  onSurfyOpenChange?: (open: boolean) => void;
+  /** When provided, the Surfy chat renders (via portal) into this docked element instead of the
+   *  floating modal — the page supplies it in the right column while Surfy is open. */
+  surfyDockEl?: HTMLElement | null;
 }
 
 interface MenuBarProps {
@@ -73,19 +101,6 @@ const Sep = () => (
     <div style={{ width: 1, height: 20, background: '#E4E4E7' }} />
   </div>
 );
-
-const chipStyle: React.CSSProperties = {
-  display: 'flex', alignItems: 'center',
-  borderRadius: '9999px',
-  border: '1px solid rgba(255,255,255,0.8)',
-  padding: '0.1875rem 0.75rem',
-  fontSize: 13, lineHeight: '16px',
-  color: 'rgba(255,255,255,0.8)',
-  fontFamily: 'var(--font-family-primary)',
-  cursor: 'default', userSelect: 'none',
-};
-
-const Chip = ({ label }: { label: string }) => <div style={chipStyle}>{label}</div>;
 
 const MAX_SURFY_HISTORY = 20;
 
@@ -108,13 +123,114 @@ const IconSurfy = ({ size = 20 }: { size?: number }) => (
   </svg>
 );
 
+/**
+ * A toolbar group rendered as a single trigger button that opens a small
+ * popover (Heading / List / Align). Defined at module scope so it keeps its
+ * own `open` state across the parent toolbar's frequent re-renders (the
+ * toolbar re-renders on every editor transaction to refresh active states).
+ */
+const TOOLBAR_TRIGGER: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+  height: 28, minWidth: 28, padding: '0 4px', borderRadius: 4,
+  border: 'none', cursor: 'pointer', flexShrink: 0,
+  background: 'transparent', color: '#18181B',
+  transition: 'background-color 150ms', fontFamily: 'var(--font-family-primary)',
+};
+
+const ToolbarMenu = ({
+  title, active, trigger, children, wide = false, hideChevron = false,
+}: {
+  title: string;
+  active: boolean;
+  trigger: React.ReactNode;
+  children: (close: () => void) => React.ReactNode;
+  wide?: boolean;
+  hideChevron?: boolean;
+}) => {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number; right: number } | null>(null);
+  const open = anchor !== null;
+  const close = () => setAnchor(null);
+
+  const toggle = () => {
+    if (open) { close(); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) setAnchor({ top: r.bottom + 6, left: r.left, right: r.right });
+  };
+
+  // The toolbar clips its overflow (horizontal button scroll on mobile), which
+  // would chop off an in-flow popover. Render it in a body portal with fixed
+  // positioning to escape the clip; close on scroll/resize so the anchored
+  // position can't go stale.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onMove = () => close();
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+    return () => {
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
+  }, [open]);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        title={title}
+        onClick={toggle}
+        style={{ ...TOOLBAR_TRIGGER, color: active ? '#630DE3' : '#18181B', background: open ? '#F4F4F5' : active ? '#F3EEFF' : 'transparent' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = open ? '#F4F4F5' : active ? '#F3EEFF' : '#F4F4F5'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = open ? '#F4F4F5' : active ? '#F3EEFF' : 'transparent'; }}
+      >
+        {trigger}
+        {!hideChevron && (
+          <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}><path d="m6 9 6 6 6-6" /></svg>
+        )}
+      </button>
+      {open && anchor && createPortal(
+        (() => {
+          const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+          const MENU_W = 248;
+          // Wide menus open left-aligned (clamped into the viewport); icon-row
+          // menus stay centred under the trigger.
+          const left = wide ? Math.max(8, Math.min(anchor.left, vw - 8 - MENU_W)) : (anchor.left + anchor.right) / 2;
+          return (
+            <>
+              {/* click-outside backdrop */}
+              <div onMouseDown={close} style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
+              <div style={{ position: 'fixed', top: anchor.top, left, transform: wide ? 'none' : 'translateX(-50%)', zIndex: 1000 }}>
+                <div
+                  style={{
+                    background: '#fff', borderRadius: 8, padding: wide ? 6 : 4,
+                    boxShadow: '0px 4px 16px 0px rgba(24,26,34,0.12), 0px 1px 4px 0px rgba(24,26,34,0.08)',
+                    border: '1px solid #F4F4F5',
+                    display: 'flex', flexDirection: wide ? 'column' : 'row',
+                    alignItems: wide ? 'stretch' : 'center', gap: wide ? 2 : 4,
+                    minWidth: wide ? MENU_W : undefined,
+                    transformOrigin: wide ? 'top left' : 'top center',
+                    animation: 'growOut 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                >
+                  {children(close)}
+                </div>
+              </div>
+            </>
+          );
+        })(),
+        document.body,
+      )}
+    </div>
+  );
+};
+
 const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkInitialText, setLinkInitialText] = useState('');
   const [linkInitialHref, setLinkInitialHref] = useState('');
   const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
-  const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
 
   const openLinkModal = useCallback(() => {
     if (!editor) return;
@@ -149,39 +265,55 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
   return (
     <>
       <div
+        className="no-scrollbar ce-format-toolbar"
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          // `safe center` keeps the toolbar centred when it fits (desktop) but
+          // falls back to start-aligned + scrollable when it overflows (mobile),
+          // so narrow screens scroll the buttons instead of clipping/overlapping.
+          justifyContent: 'safe center',
           padding: '0 12px',
           height: 44,
           background: '#fff',
           flexShrink: 0,
           borderBottom: 'none',
           gap: 8,
-          overflow: 'hidden',
+          overflowX: 'auto',
+          overflowY: 'hidden',
         }}
       >
       {/* Formatting */}
-      <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+      <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
-        {/* Headings */}
-        {([1, 2, 3] as const).map((lvl) => {
-          const active = editor.isActive('heading', { level: lvl });
+        {/* Headings dropdown */}
+        {(() => {
+          const curLevel = ([1, 2, 3] as const).find((l) => editor.isActive('heading', { level: l }));
           return (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => editor.chain().focus().toggleHeading({ level: lvl }).run()}
-              title={`Heading ${lvl}`}
-              style={{ ...btnStyle, fontWeight: 600, fontSize: lvl === 1 ? 15 : lvl === 2 ? 14 : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+            <ToolbarMenu
+              title="Heading"
+              active={!!curLevel}
+              trigger={<span style={{ fontWeight: 600, fontSize: 13 }}>{curLevel ? `H${curLevel}` : 'H'}</span>}
             >
-              H{lvl}
-            </button>
+              {(close) => ([1, 2, 3] as const).map((lvl) => {
+                const active = editor.isActive('heading', { level: lvl });
+                return (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => { editor.chain().focus().toggleHeading({ level: lvl }).run(); close(); }}
+                    title={`Heading ${lvl}`}
+                    style={{ ...btnStyle, fontWeight: 600, fontSize: lvl === 1 ? 15 : lvl === 2 ? 14 : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+                  >
+                    H{lvl}
+                  </button>
+                );
+              })}
+            </ToolbarMenu>
           );
-        })}
+        })()}
 
         <Sep />
 
@@ -197,32 +329,76 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline" style={{ ...btnStyle, textDecoration: 'underline', fontSize: 14, color: editor.isActive('underline') ? '#630DE3' : '#18181B', background: editor.isActive('underline') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('underline') ? '#F3EEFF' : 'transparent'; }}>
           <span>U</span>
         </button>
+        {/* Sub / superscript dropdown */}
+        <ToolbarMenu
+          title="Sub / superscript"
+          active={editor.isActive('subscript') || editor.isActive('superscript')}
+          trigger={<span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sup style={{ fontSize: 9 }}>2</sup></span>}
+        >
+          {(close) => (
+            <>
+              <button type="button" onClick={() => { editor.chain().focus().toggleSuperscript().run(); close(); }} title="Superscript" style={{ ...btnStyle, color: editor.isActive('superscript') ? '#630DE3' : '#18181B', background: editor.isActive('superscript') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('superscript') ? '#F3EEFF' : 'transparent'; }}>
+                <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sup style={{ fontSize: 9 }}>2</sup></span>
+              </button>
+              <button type="button" onClick={() => { editor.chain().focus().toggleSubscript().run(); close(); }} title="Subscript" style={{ ...btnStyle, color: editor.isActive('subscript') ? '#630DE3' : '#18181B', background: editor.isActive('subscript') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('subscript') ? '#F3EEFF' : 'transparent'; }}>
+                <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>x<sub style={{ fontSize: 9 }}>2</sub></span>
+              </button>
+            </>
+          )}
+        </ToolbarMenu>
 
         <Sep />
 
-        {/* Bullet list */}
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list" style={{ ...btnStyle, color: editor.isActive('bulletList') ? '#630DE3' : '#18181B', background: editor.isActive('bulletList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
-        </button>
-        {/* Ordered list */}
-        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list" style={{ ...btnStyle, color: editor.isActive('orderedList') ? '#630DE3' : '#18181B', background: editor.isActive('orderedList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
-        </button>
+        {/* Lists dropdown */}
+        <ToolbarMenu
+          title="List"
+          active={editor.isActive('bulletList') || editor.isActive('orderedList')}
+          trigger={
+            editor.isActive('orderedList')
+              ? <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
+              : <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
+          }
+        >
+          {(close) => (
+            <>
+              <button type="button" onClick={() => { editor.chain().focus().toggleBulletList().run(); close(); }} title="Bullet list" style={{ ...btnStyle, color: editor.isActive('bulletList') ? '#630DE3' : '#18181B', background: editor.isActive('bulletList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('bulletList') ? '#F3EEFF' : 'transparent'; }}>
+                <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M80 64a8 8 0 0 1 8-8h128a8 8 0 0 1 0 16H88a8 8 0 0 1-8-8m136 56H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16m0 64H88a8 8 0 0 0 0 16h128a8 8 0 0 0 0-16M44 116a12 12 0 1 0 0-24a12 12 0 0 0 0 24m0 64a12 12 0 1 0 0-24a12 12 0 0 0 0 24" /></svg>
+              </button>
+              <button type="button" onClick={() => { editor.chain().focus().toggleOrderedList().run(); close(); }} title="Ordered list" style={{ ...btnStyle, color: editor.isActive('orderedList') ? '#630DE3' : '#18181B', background: editor.isActive('orderedList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('orderedList') ? '#F3EEFF' : 'transparent'; }}>
+                <svg viewBox="0 0 256 256" width={18} height={18} fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8M104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16m112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16M43.58 55.16L48 52.94V104a8 8 0 0 0 16 0V40a8 8 0 0 0-11.58-7.16l-16 8a8 8 0 0 0 7.16 14.32m36.19 101.56a23.73 23.73 0 0 0-9.6-15.95a24.86 24.86 0 0 0-34.11 4.7a23.6 23.6 0 0 0-3.57 6.46a8 8 0 1 0 15 5.47a7.8 7.8 0 0 1 1.18-2.13a8.76 8.76 0 0 1 12-1.59a7.9 7.9 0 0 1 3.26 5.32a7.64 7.64 0 0 1-1.57 5.78a1 1 0 0 0-.08.11l-28.69 38.32A8 8 0 0 0 40 216h32a8 8 0 0 0 0-16H56l19.08-25.53a23.47 23.47 0 0 0 4.69-17.75" /></svg>
+              </button>
+              <button type="button" onClick={() => { editor.chain().focus().toggleTaskList().run(); close(); }} title="Checklist" style={{ ...btnStyle, color: editor.isActive('taskList') ? '#630DE3' : '#18181B', background: editor.isActive('taskList') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.isActive('taskList') ? '#F3EEFF' : 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 6h10M11 12h10M11 18h10M3 6l1.5 1.5L7 5M3 13l1.5 1.5L7 12" /></svg>
+              </button>
+            </>
+          )}
+        </ToolbarMenu>
 
-        <Sep />
-
-        {/* Align left */}
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left" style={{ ...btnStyle, color: editor.getAttributes('paragraph').textAlign === 'left' || !editor.getAttributes('paragraph').textAlign ? '#630DE3' : '#18181B', background: (!editor.getAttributes('paragraph').textAlign || editor.getAttributes('paragraph').textAlign === 'left') ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { const a = editor.getAttributes('paragraph').textAlign; e.currentTarget.style.background = (!a || a === 'left') ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d="M3.75 6.75h12.5M3.75 12h16.5M3.75 17.25h10.5" /></svg>
-        </button>
-        {/* Align center */}
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align center" style={{ ...btnStyle, color: editor.getAttributes('paragraph').textAlign === 'center' ? '#630DE3' : '#18181B', background: editor.getAttributes('paragraph').textAlign === 'center' ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'center' ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'center' ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d="M5.25 6.75h13.5M3.75 12h16.5M7.25 17.25h9.5" /></svg>
-        </button>
-        {/* Align right */}
-        <button type="button" onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right" style={{ ...btnStyle, color: editor.getAttributes('paragraph').textAlign === 'right' ? '#630DE3' : '#18181B', background: editor.getAttributes('paragraph').textAlign === 'right' ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'right' ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = editor.getAttributes('paragraph').textAlign === 'right' ? '#F3EEFF' : 'transparent'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d="M7.75 6.75h12.5M3.75 12h16.5M9.75 17.25h10.5" /></svg>
-        </button>
+        {/* Align dropdown */}
+        {(() => {
+          const aligns = [
+            { key: 'left', title: 'Align left', d: 'M3.75 6.75h12.5M3.75 12h16.5M3.75 17.25h10.5' },
+            { key: 'center', title: 'Align center', d: 'M5.25 6.75h13.5M3.75 12h16.5M7.25 17.25h9.5' },
+            { key: 'right', title: 'Align right', d: 'M7.75 6.75h12.5M3.75 12h16.5M9.75 17.25h10.5' },
+          ] as const;
+          const cur = aligns.find((a) => editor.isActive({ textAlign: a.key })) || aligns[0];
+          return (
+            <ToolbarMenu
+              title="Text align"
+              active={cur.key !== 'left'}
+              trigger={<svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d={cur.d} /></svg>}
+            >
+              {(close) => aligns.map((a) => {
+                const active = editor.isActive({ textAlign: a.key }) || (a.key === 'left' && !editor.isActive({ textAlign: 'center' }) && !editor.isActive({ textAlign: 'right' }));
+                return (
+                  <button key={a.key} type="button" onClick={() => { editor.chain().focus().setTextAlign(a.key).run(); close(); }} title={a.title} style={{ ...btnStyle, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}>
+                    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"><path d={a.d} /></svg>
+                  </button>
+                );
+              })}
+            </ToolbarMenu>
+          );
+        })()}
 
         <Sep />
 
@@ -251,38 +427,72 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m2.25 15.75l5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5m10.5-11.25h.008v.008h-.008zm.375 0a.375.375 0 1 1-.75 0a.375.375 0 0 1 .75 0" /></svg>
         </button>
 
-        {/* Highlight color picker */}
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => setHighlightMenuOpen((v) => !v)}
-            title="Highlight color"
-            style={{
-              ...btnStyle,
-              color: editor.isActive('highlight') ? '#630DE3' : '#18181B',
-              background: highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : '#F4F4F5';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = highlightMenuOpen ? '#F4F4F5' : editor.isActive('highlight') ? '#F3EEFF' : 'transparent';
-            }}
-          >
-            <svg viewBox="0 0 256 256" width={18} height={18} style={{ display: 'inline-block', flexShrink: 0 }}>
-              <path fill="currentColor" d="M208 56v32a8 8 0 0 1-16 0V64h-56v128h24a8 8 0 0 1 0 16H96a8 8 0 0 1 0-16h24V64H64v24a8 8 0 0 1-16 0V56a8 8 0 0 1 8-8h144a8 8 0 0 1 8 8" />
-            </svg>
-          </button>
-          {highlightMenuOpen && (
-            <div
-              style={{
-                position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                marginTop: 6, background: '#fff', borderRadius: 8, padding: 4,
-                boxShadow: '0px 4px 16px 0px rgba(24,26,34,0.12), 0px 1px 4px 0px rgba(24,26,34,0.08)',
-                border: '1px solid #F4F4F5', zIndex: 200, minWidth: 172,
-                animation: 'growOut 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
+        {/* Insert table (3×3 with a header row) */}
+        <button type="button" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table" style={btnStyle} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={4} width={18} height={16} rx={1.5} /><path d="M3 9.5h18M3 15h18M9 4.5v15M15 4.5v15" /></svg>
+        </button>
+
+        {/* Insert (media / blocks) dropdown */}
+        <ToolbarMenu
+          title="Insert"
+          active={false}
+          trigger={<svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+        >
+          {(close) => (
+            <>
+              <button type="button" title="Embed YouTube video" onClick={() => { const url = window.prompt('YouTube video URL'); if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor"><path d="M21.58 7.19c-.23-.86-.91-1.54-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42c.86-.23 1.54-.91 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81M10 15V9l5 3z" /></svg>
+                <span>YouTube</span>
+              </button>
+              <button type="button" title="Collapsible details / FAQ" onClick={() => { editor.chain().focus().setDetails().run(); close(); }} style={{ ...btnStyle, width: 'auto', padding: '0 10px', gap: 8, fontSize: 13, fontFamily: 'var(--font-family-primary)' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+                <span>Details / FAQ</span>
+              </button>
+            </>
+          )}
+        </ToolbarMenu>
+
+        {/* Text color dropdown */}
+        {(() => {
+          const TEXT_COLORS = [
+            { label: 'Default', value: null, swatch: '#18181B' },
+            { label: 'Purple', value: '#783AFB', swatch: '#783AFB' },
+            { label: 'Green', value: '#1AB25E', swatch: '#1AB25E' },
+            { label: 'Red', value: '#FF6F77', swatch: '#FF6F77' },
+            { label: 'Gray', value: '#52525C', swatch: '#52525C' },
+          ] as const;
+          const cur = editor.getAttributes('textStyle').color || '#18181B';
+          return (
+            <ToolbarMenu
+              title="Text color"
+              active={!!editor.getAttributes('textStyle').color}
+              trigger={<span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1, borderBottom: `3px solid ${cur}`, paddingBottom: 1 }}>A</span>}
             >
+              {(close) => TEXT_COLORS.map((c) => {
+                const active = c.value ? editor.isActive('textStyle', { color: c.value }) : !editor.getAttributes('textStyle').color;
+                return (
+                  <button key={c.label} type="button" title={c.label} onClick={() => { if (c.value) editor.chain().focus().setColor(c.value).run(); else editor.chain().focus().unsetColor().run(); close(); }} style={{ ...btnStyle, background: active ? '#F3EEFF' : 'transparent' }} onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}>
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', background: c.swatch, border: c.value ? 'none' : '1.5px solid #D4D4D8', display: 'inline-block' }} />
+                  </button>
+                );
+              })}
+            </ToolbarMenu>
+          );
+        })()}
+
+        {/* Highlight color dropdown */}
+        <ToolbarMenu
+          title="Highlight color"
+          active={editor.isActive('highlight')}
+          wide
+          trigger={(
+            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', flexShrink: 0 }}>
+              <path d="M9.53 16.122a3 3 0 0 0-5.78 1.128a2.25 2.25 0 0 1-2.4 2.245a4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128m0 0a16 16 0 0 0 3.388-1.62m-5.043-.025a16 16 0 0 1 1.622-3.395m3.42 3.42a16 16 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a16 16 0 0 0-4.649 4.764m3.42 3.42a6.78 6.78 0 0 0-3.42-3.42" />
+            </svg>
+          )}
+        >
+          {(close) => (
+            <>
               {HIGHLIGHT_COLORS.map((item) => {
                 const active = isHighlightActive(editor, item.color);
                 return (
@@ -296,7 +506,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
                       } else {
                         editor.chain().focus().toggleHighlight({ color: item.color }).run();
                       }
-                      setHighlightMenuOpen(false);
+                      close();
                     }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
@@ -321,7 +531,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
                 onMouseDown={(e) => {
                   e.preventDefault();
                   editor.chain().focus().unsetHighlight().run();
-                  setHighlightMenuOpen(false);
+                  close();
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
@@ -339,9 +549,9 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
                 </svg>
                 Clear all highlights
               </button>
-            </div>
+            </>
           )}
-        </div>
+        </ToolbarMenu>
 
         <Sep />
 
@@ -353,6 +563,46 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
         <button type="button" onClick={() => editor.chain().focus().redo().run()} title="Redo" disabled={!canRedo} style={{ ...btnStyle, opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }} onMouseEnter={(e) => { if (canRedo) e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m15 15l6-6m0 0l-6-6m6 6H9a6 6 0 0 0 0 12h3" /></svg>
         </button>
+
+        <Sep />
+
+        {/* Overflow ("…") menu — less-common actions, keeps the toolbar narrow */}
+        <ToolbarMenu
+          title="More"
+          active={editor.isActive('codeBlock') || editor.isActive('blockquote')}
+          wide
+          hideChevron
+          trigger={<svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor"><circle cx={5} cy={12} r={1.7} /><circle cx={12} cy={12} r={1.7} /><circle cx={19} cy={12} r={1.7} /></svg>}
+        >
+          {(close) => {
+            const row = (key: string, icon: React.ReactNode, label: string, run: () => void, shortcut?: string, on = false) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => { run(); close(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: on ? '#F3EEFF' : 'transparent', color: on ? '#630DE3' : '#18181B', fontSize: 13, fontFamily: 'var(--font-family-primary)', textAlign: 'left', transition: 'background-color 120ms ease' }}
+                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = '#F4F4F5'; }}
+                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <span style={{ flexShrink: 0, color: on ? '#630DE3' : '#52525C', display: 'inline-flex' }}>{icon}</span>
+                <span style={{ flex: 1 }}>{label}</span>
+                {shortcut && <span style={{ color: '#9f9fa9', fontSize: 12, flexShrink: 0 }}>{shortcut}</span>}
+              </button>
+            );
+            const divider = <div style={{ height: 1, background: '#F4F4F5', margin: '4px 6px' }} />;
+            return (
+              <>
+                {row('code', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="m8 9l-3 3l3 3m8-6l3 3l-3 3" /></svg>, 'Toggle code block', () => editor.chain().focus().toggleCodeBlock().run(), 'Ctrl+Alt+C', editor.isActive('codeBlock'))}
+                {row('quote', <svg viewBox="0 0 24 24" width={17} height={17} fill="currentColor"><path d="M7 7h4v6c0 2.2-1.5 3.6-3.7 4l-.5-1.3c1.3-.3 2-.9 2.1-1.9H7zm7 0h4v6c0 2.2-1.5 3.6-3.7 4l-.5-1.3c1.3-.3 2-.9 2.1-1.9H14z" /></svg>, 'Toggle blockquote', () => editor.chain().focus().toggleBlockquote().run(), 'Ctrl+Shift+B', editor.isActive('blockquote'))}
+                {divider}
+                {row('hr', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round"><path d="M4 12h16" /></svg>, 'Insert horizontal rule', () => editor.chain().focus().setHorizontalRule().run())}
+                {row('break', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M20 5v6a3 3 0 0 1-3 3H5m0 0l4-4m-4 4l4 4" /></svg>, 'Insert hard break', () => editor.chain().focus().setHardBreak().run())}
+                {divider}
+                {row('clear', <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h11M9 7l-2 13m6-13l-1 6.5M5 21l14-14" /></svg>, 'Clear formatting', () => editor.chain().focus().unsetAllMarks().run())}
+              </>
+            );
+          }}
+        </ToolbarMenu>
 
       </div>
 
@@ -691,7 +941,88 @@ const TitleDescriptionBlock = ({
   );
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment }: Props) => {
+// Friendly labels for the live activity list (tool name → human phrase).
+const SURFY_TOOL_LABELS: Record<string, string> = {
+  get_tool_catalog: 'Reviewing available tools', get_content_score: 'Checking content score',
+  list_missing_terms: 'Finding missing terms', get_ranking_signals: 'Reading ranking signals',
+  list_internal_link_targets: 'Looking up internal links', get_ai_search_score: 'Checking AI-search score',
+  check_plagiarism: 'Scanning for plagiarism', fetch_competitor_outline: 'Fetching competitor outlines',
+  get_headings_outline: 'Reading the outline', get_outline: 'Reading the outline', read_block: 'Reading a section',
+  apply_edit: 'Editing the article', insert_section: 'Adding a section', set_meta: 'Updating SEO meta',
+  generate_social_posts: 'Writing social posts', apply_readability: 'Improving readability',
+  publish_to_wordpress: 'Preparing to publish',
+};
+const surfyToolLabel = (tool: string) => SURFY_TOOL_LABELS[tool] || tool;
+
+/** Read the agent's SSE stream, forwarding live events, and resolve with the terminal `done` payload. */
+async function readSurfyAgentStream(
+  res: Response,
+  on: { text: (delta: string) => void; step: (d: { phase: string; tool: string }) => void; usage: (n: number) => void },
+): Promise<any> {
+  const reader = res.body!.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let done: any = null;
+  for (;;) {
+    const { value, done: streamDone } = await reader.read();
+    if (streamDone) break;
+    buf += dec.decode(value, { stream: true });
+    const frames = buf.split('\n\n');
+    buf = frames.pop() || '';
+    for (const f of frames) {
+      const ev = /event: (.*)/.exec(f)?.[1];
+      const dataLine = /data: (.*)/.exec(f)?.[1];
+      if (!ev || !dataLine) continue;
+      let parsed: any;
+      try { parsed = JSON.parse(dataLine); } catch { continue; }
+      if (ev === 'text') on.text(parsed.delta || '');
+      else if (ev === 'step') on.step(parsed);
+      else if (ev === 'usage') on.usage(parsed.totalTokens || 0);
+      else if (ev === 'done') done = parsed;
+      else if (ev === 'error') throw new Error(parsed.error || 'stream error');
+    }
+  }
+  if (!done) throw new Error('stream ended without result');
+  return done;
+}
+
+// "/" slash-command menu items. Structural commands run on the live editor; Ask Surfy goes via a ref
+// (the handler is defined inside the component). Filtered by the text typed after "/".
+const SlashIcon = ({ d }: { d: string }) => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+);
+
+const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() => void>): SlashItem[] => {
+  const del = (editor: any, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
+  const all: SlashItem[] = [
+    { title: 'Ask Surfy', hint: '/ask', icon: <IconSurfy size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
+    { title: 'Add an image', hint: '/img', icon: <SlashIcon d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6" />, command: ({ editor, range }) => {
+      del(editor, range).run();
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'image/*';
+      inp.onchange = () => {
+        const f = inp.files?.[0]; if (!f) return;
+        const reader = new FileReader();
+        reader.onload = () => editor.chain().focus().setImage({ src: reader.result as string, alt: '' }).run();
+        reader.readAsDataURL(f);
+      };
+      inp.click();
+    } },
+    { section: 'HEADINGS', title: 'Set H1', hint: '/h1', icon: <SlashIcon d="M4 6v12M12 6v12M4 12h8M17 10l3-1v9" />, command: ({ editor, range }) => del(editor, range).toggleHeading({ level: 1 }).run() },
+    { section: 'HEADINGS', title: 'Set H2', hint: '/h2', icon: <SlashIcon d="M4 6v12M11 6v12M4 12h7M16 10a2 2 0 1 1 3 1.6L16 18h4" />, command: ({ editor, range }) => del(editor, range).toggleHeading({ level: 2 }).run() },
+    { section: 'HEADINGS', title: 'Set H3', hint: '/h3', icon: <SlashIcon d="M4 6v12M11 6v12M4 12h7M16 9a2 2 0 1 1 2 3 2 2 0 1 1-2 3" />, command: ({ editor, range }) => del(editor, range).toggleHeading({ level: 3 }).run() },
+    { section: 'LISTS', title: 'Toggle bulleted list', hint: '/bullet', icon: <SlashIcon d="M8 6h12M8 12h12M8 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01" />, command: ({ editor, range }) => del(editor, range).toggleBulletList().run() },
+    { section: 'LISTS', title: 'Toggle ordered list', hint: '/order', icon: <SlashIcon d="M10 6h11M10 12h11M10 18h11M4 6h1v4M4 10h2M4 14h2l-2 3h2" />, command: ({ editor, range }) => del(editor, range).toggleOrderedList().run() },
+    { section: 'OTHERS', title: 'Add blockquote', hint: '/quote', icon: <SlashIcon d="M7 7H4v6h3l-1 4M17 7h-3v6h3l-1 4" />, command: ({ editor, range }) => del(editor, range).toggleBlockquote().run() },
+    { section: 'OTHERS', title: 'Add code block', hint: '/code', icon: <SlashIcon d="M9 8l-4 4 4 4M15 8l4 4-4 4" />, command: ({ editor, range }) => del(editor, range).toggleCodeBlock().run() },
+    { section: 'OTHERS', title: 'Insert table', hint: '/table', icon: <SlashIcon d="M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14" />, command: ({ editor, range }) => del(editor, range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+  ];
+  const q = query.toLowerCase().trim();
+  if (!q) return all;
+  return all.filter((i) => i.title.toLowerCase().includes(q) || i.hint.slice(1).startsWith(q));
+};
+
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -702,9 +1033,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     commentsRef.current = commentAnchors;
     // Live refs for the term-highlight decorations (read inside the PM plugin).
     const termsRef = useRef<any[]>([]);
-    termsRef.current = (scoreData?.terms as any[]) || [];
+    termsRef.current = (scoreData?.terms as Array<{ term: string; current_count?: number; target_count: number }>) || [];
     const highlightTermsRef = useRef<boolean>(highlightTerms ?? true);
     highlightTermsRef.current = highlightTerms ?? true;
+    const plagSentencesRef = useRef<string[]>([]);
+    plagSentencesRef.current = plagiarismSentences ?? [];
+    const plagFocusedRef = useRef<string | null>(null);
+    plagFocusedRef.current = plagiarismFocused ?? null;
     const editorWrapRef = useRef<HTMLDivElement>(null);
     const [linkTip, setLinkTip] = useState<{ text: string; top: number; left: number } | null>(null);
     const [openCommentId, setOpenCommentId] = useState<string | null>(null);
@@ -725,7 +1060,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyOpen, setSurfyOpen] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
-    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null } | null>(null);
+    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
+    const [publishing, setPublishing] = useState(false);
+    // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
+    const [surfyActivity, setSurfyActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
+    const [surfyStreamText, setSurfyStreamText] = useState('');
+    const [surfyUsageDetail, setSurfyUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
+    // Running totals across all turns of the current conversation (reset on a new conversation).
+    const [surfyTotals, setSurfyTotals] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
+    // The organization's shared 5h AI-token pool (drives the ring + the blocked banner).
+    const [orgUsage, setOrgUsage] = useState<{ used: number; limit: number; resetsAt: number; over: boolean } | null>(null);
+    const refreshOrgUsage = useCallback(async () => {
+      try { const r = await fetch('/api/ai-usage'); if (r.ok) setOrgUsage(await r.json()); } catch { /* never block the editor on a usage read */ }
+    }, []);
     const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
@@ -733,77 +1080,58 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const draftRangeRef = useRef<{ from: number; to: number } | null>(null);
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
+    const surfyScrollRef = useRef<HTMLDivElement>(null);
+    // The "/ask" slash item opens Surfy via this ref (the handler is defined further down).
+    const slashAskSurfyRef = useRef<() => void>(() => {});
+
+    // Auto-grow the Surfy textarea to fit its content (capped at maxHeight, then it scrolls).
+    useEffect(() => {
+      const el = surfyInputRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    }, [surfyPrompt, surfyOpen]);
 
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Tell the page when Surfy opens/closes so it can dock the chat pane in the right column.
+    useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Keep the org's shared 5h usage fresh while the panel is open: on open, when the tab regains
+    // focus, and on a slow interval — so a teammate burning the pool shows up without a failed send.
+    useEffect(() => {
+      if (!surfyOpen) return undefined;
+      void refreshOrgUsage();
+      const onFocus = () => { void refreshOrgUsage(); };
+      window.addEventListener('focus', onFocus);
+      const iv = setInterval(() => { void refreshOrgUsage(); }, 60000);
+      return () => { window.removeEventListener('focus', onFocus); clearInterval(iv); };
+    }, [surfyOpen, refreshOrgUsage]);
 
-    /* Render AI message with rich formatting */
-    const renderSurfyMessage = (text: string) => {
-      const lines = text.split('\n');
-      const elements: React.ReactNode[] = [];
-      let i = 0;
 
-      while (i < lines.length) {
-        const line = lines[i];
-        const trimmed = line.trim();
-
-        if (!trimmed) { i++; continue; }
-
-        // Numbered list item: "1. text" or "1) text"
-        const listMatch = trimmed.match(/^(\d+)[.)]\s+(.+)/);
-        if (listMatch) {
-          elements.push(
-            <div key={`l${i}`} style={{ display: 'flex', gap: 8, marginBottom: 5, paddingLeft: 0 }}>
-              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, lineHeight: '22px', fontFamily: 'var(--font-family-primary)', flexShrink: 0, minWidth: 18, textAlign: 'right', fontWeight: 500 }}>{listMatch[1]}.</span>
-              <span style={{ fontSize: 13, lineHeight: '22px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)' }}>
-                {parseInlineFormatting(listMatch[2])}
-              </span>
-            </div>
-          );
-          i++; continue;
-        }
-
-        // Regular paragraph
-        elements.push(
-          <p key={`p${i}`} style={{ margin: '0 0 8px', fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)' }}>
-            {parseInlineFormatting(trimmed)}
-          </p>
-        );
-        i++;
-      }
-
-      return elements.length ? elements : <p style={{ margin: 0, fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)', fontFamily: 'var(--font-family-primary)' }}>{text}</p>;
+    type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
+    const [surfyHistory, setSurfyHistory] = useState<SurfyMsg[]>([]);
+    // Saved conversations (localStorage, per article) for the header's history dropdown.
+    type SurfyConvo = { id: string; title: string; ts: number; history: SurfyMsg[] };
+    const [surfyConversations, setSurfyConversations] = useState<SurfyConvo[]>([]);
+    const surfyConvoKey = `surfy-conversations-${commentArticleId || 'x'}`;
+    useEffect(() => {
+      try { const raw = localStorage.getItem(surfyConvoKey); if (raw) setSurfyConversations(JSON.parse(raw)); else setSurfyConversations([]); } catch { setSurfyConversations([]); }
+    }, [surfyConvoKey]);
+    const persistConvos = (list: SurfyConvo[]) => {
+      setSurfyConversations(list);
+      try { localStorage.setItem(surfyConvoKey, JSON.stringify(list)); } catch { /* quota/unavailable */ }
     };
-
-    /* Parse **bold** and `code` within a text segment */
-    const parseInlineFormatting = (text: string): React.ReactNode[] => {
-      const parts: React.ReactNode[] = [];
-      const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g;
-      let last = 0;
-      let match: RegExpExecArray | null;
-      let idx = 0;
-
-      while ((match = regex.exec(text)) !== null) {
-        if (match.index > last) {
-          parts.push(<span key={`t${idx++}`}>{text.slice(last, match.index)}</span>);
-        }
-        if (match[2]) {
-          parts.push(<strong key={`b${idx++}`} style={{ fontWeight: 600, color: '#fff' }}>{match[2]}</strong>);
-        } else if (match[3]) {
-          parts.push(<code key={`c${idx++}`} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '1px 6px', fontSize: 12.25, fontFamily: '"JetBrains Mono", "Fira Code", monospace', color: '#FFC056' }}>{match[3]}</code>);
-        }
-        last = match.index + match[0].length;
-      }
-      if (last < text.length) {
-        parts.push(<span key={`t${idx++}`}>{text.slice(last)}</span>);
-      }
-      return parts;
+    // Archive the current chat (if it has messages) before clearing for a new/loaded one.
+    const archiveCurrentConvo = () => {
+      if (!surfyHistory.length) return;
+      const firstUser = surfyHistory.find((m) => m.role === 'user')?.message || 'Conversation';
+      const convo: SurfyConvo = { id: `${Date.now()}`, title: firstUser.slice(0, 60), ts: Date.now(), history: surfyHistory };
+      persistConvos([convo, ...surfyConversations].slice(0, 20));
     };
-
-    const [surfyHistory, setSurfyHistory] = useState<Array<{ role: 'user' | 'assistant'; message: string; content?: string | null; action?: string }>>([]);
 
     const handleAskSurfy = () => {
       if (!editor) return;
-      if (surfyOpen) { setSurfyOpen(false); setSurfyResponse(null); setSurfyHistory([]); return; }
+      // Just hide/show — keep the conversation + any pending response so reopening continues it.
+      if (surfyOpen) { setSurfyOpen(false); return; }
       const { from, to, empty } = editor.state.selection;
       if (!empty && from !== to) {
         const text = editor.state.doc.textBetween(from, to, '\n');
@@ -812,16 +1140,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         setSurfySelection(null);
       }
       setSurfyOpen(true);
-      setSurfyResponse(null);
-      setSurfyHistory([]);
       setTimeout(() => surfyInputRef.current?.focus(), 50);
     };
+    slashAskSurfyRef.current = handleAskSurfy;
 
   const handleSurfySubmit = async () => {
       const prompt = surfyPrompt.trim();
       if (!prompt || !editor) return;
       setSurfyLoading(true);
       setSurfyResponse(null);
+      setSurfyActivity([]);
+      setSurfyStreamText('');
+      setSurfyUsageDetail({ input: 0, output: 0 });
 
       setSurfyHistory((prev) => {
         const next = [...prev, { role: 'user' as const, message: prompt }];
@@ -830,31 +1160,95 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
       try {
         const htmlContent = editor.getHTML();
-        const res = await fetch('/api/articles/ask-surfy', {
+        const useAgent = !surfySelection; // article mode → multi-step agent
+        const endpoint = useAgent ? '/api/articles/surfy-agent' : '/api/articles/ask-surfy';
+        if (useAgent) surfyOriginalRef.current = htmlContent; // remember pre-edit HTML for the diff
+
+        const ac = new AbortController();
+        surfyAbortRef.current = ac;
+
+        const body = useAgent
+          ? {
+              prompt,
+              content: htmlContent,
+              keyword: articleKeyword || keyword || '',
+              scoreData: scoreData || null,
+              internalArticles: internalArticles || [],
+              articleTitle: metaTitle || '',
+              articleMetaDescription: metaDescription || '',
+              history: surfyHistory,
+              articleId: commentArticleId ? Number(commentArticleId) : null,
+              authorName: commentAuthor?.name || '',
+            }
+          : {
+              prompt,
+              content: htmlContent,
+              mode: 'selection',
+              selectedText: surfySelection?.text || null,
+              selectionRange: surfySelection ? { from: surfySelection.from, to: surfySelection.to } : null,
+              scoreData: scoreData || null,
+              internalArticles: internalArticles || [],
+              keyword: articleKeyword || keyword || '',
+              history: surfyHistory,
+            };
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            content: htmlContent,
-            mode: surfySelection ? 'selection' : 'article',
-            selectedText: surfySelection?.text || null,
-            selectionRange: surfySelection ? { from: surfySelection.from, to: surfySelection.to } : null,
-            scoreData: scoreData || null,
-            internalArticles: internalArticles || [],
-            keyword: articleKeyword || keyword || '',
-            history: surfyHistory,
-          }),
+          body: JSON.stringify(body),
+          signal: ac.signal,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Request failed');
-        setSurfyResponse({ action: data.action, message: data.message, content: data.content });
+
+        // Org-wide budget exhausted (shared 5h pool): surface the blocked banner, not a chat error.
+        if (res.status === 429) {
+          const ej = await res.json().catch(() => ({}));
+          if (ej.error === 'org_limit') {
+            setOrgUsage({ used: ej.used ?? 0, limit: ej.limit ?? 0, resetsAt: ej.resetsAt ?? 0, over: true });
+            setSurfyHistory((prev) => prev.slice(0, -1)); // drop the optimistic user bubble; keep their prompt in the box
+            return;
+          }
+        }
+
+        let data: any;
+        if (useAgent) {
+          // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
+          if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
+          data = await readSurfyAgentStream(res, {
+            text: (delta) => setSurfyStreamText((t) => t + delta),
+            usage: () => {}, // live running count not shown; the ring updates from the final usage below
+            step: (d) => setSurfyActivity((a) => {
+              if (d.phase === 'start') return [...a, { tool: d.tool, done: false }];
+              const rev = [...a].reverse().findIndex((x) => x.tool === d.tool && !x.done);
+              if (rev === -1) return a;
+              const idx = a.length - 1 - rev;
+              const copy = a.slice();
+              copy[idx] = { ...copy[idx], done: true, error: d.phase === 'error' };
+              return copy;
+            }),
+          });
+          setSurfyUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
+          setSurfyTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
+        } else {
+          data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Request failed');
+        }
+
+        if (useAgent) {
+          surfyMetaRef.current = data.meta || null;
+          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: undefined, pendingAction: data.pendingAction || null });
+        } else {
+          surfyMetaRef.current = null;
+          setSurfyResponse({ action: data.action, message: data.message, content: data.content });
+        }
         setSurfyHistory((prev) => {
-          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.content, action: data.action }];
+          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.finalHtml ?? data.content, action: data.action, thinking: data.thinking || '' }];
           return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
         });
         setSurfyPrompt('');
-      } catch (err: any) {
-        const errMsg = 'Error: ' + err.message;
+        void refreshOrgUsage(); // this turn drew from the shared pool — refresh the ring
+      } catch (err) {
+        const e = err as { name?: string; message?: string };
+        if (e?.name === 'AbortError') return; // user pressed Stop
+        const errMsg = 'Error: ' + e.message;
         setSurfyResponse({ message: errMsg, content: null });
         setSurfyHistory((prev) => {
           const next = [...prev, { role: 'assistant' as const, message: errMsg }];
@@ -862,6 +1256,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         });
       } finally {
         setSurfyLoading(false);
+        surfyAbortRef.current = null;
       }
     };
 
@@ -890,10 +1285,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       } else {
         // Full article mode
         if (surfyResponse.content) {
-          editor.commands.setContent(surfyResponse.content);
+          // emitUpdate:true so the editor fires onUpdate → page onChange → AUTO-SAVE.
+          // Without it setContent is silent and the applied changes never persist.
+          editor.commands.setContent(surfyResponse.content, { emitUpdate: true });
+        }
+        if (surfyMetaRef.current) {
+          if (surfyMetaRef.current.metaTitle != null) onMetaTitleChange?.(surfyMetaRef.current.metaTitle);
+          if (surfyMetaRef.current.metaDescription != null) onMetaDescriptionChange?.(surfyMetaRef.current.metaDescription);
+          surfyMetaRef.current = null;
         }
       }
-      setSurfyOpen(false);
+      // Keep the panel + conversation open so the user can continue; just clear the
+      // applied response/draft. (Closing wiped the chat — that surprised users.)
       setSurfyPrompt('');
       setSurfyResponse(null);
       setSurfySelection(null);
@@ -905,13 +1308,93 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const editorLiveRef = useRef<any>(null);
     const surfyOpenRef = useRef(surfyOpen);
     surfyOpenRef.current = surfyOpen;
+    const surfyMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
+    const surfyOriginalRef = useRef<string>('');                  // pre-edit HTML, for the diff preview
+    const surfyAbortRef = useRef<AbortController | null>(null);   // for Stop/Cancel
+
+    // The agent never publishes; it PROPOSES (pendingAction). The user confirms here, and we call the
+    // existing publish endpoint, which publishes the SAVED article.
+    const confirmPublish = useCallback(async (pa: PendingAction) => {
+      setPublishing(true);
+      try {
+        const res = await fetch('/api/articles/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articleId: pa.articleId, target: pa.target }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || 'Publish failed');
+        toast.success(d.url ? `Opublikowano: ${d.url}` : 'Opublikowano');
+        setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev));
+      } catch (e) {
+        toast.error(getErrorMessage(e) || 'Publikacja nie powiodła się');
+      } finally {
+        setPublishing(false);
+      }
+    }, []);
+    const [surfyCompareOpen, setSurfyCompareOpen] = useState(false);
+
+    // Contract for the docked light SurfyChatPanel (when the page provides a dock element).
+    const surfyApi: SurfyPanelApi = {
+      history: surfyHistory,
+      loading: surfyLoading,
+      activity: surfyActivity,
+      streamText: surfyStreamText,
+      response: surfyResponse,
+      metaPending: surfyMetaRef.current
+        ? (surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description'
+          : surfyMetaRef.current.metaTitle != null ? 'title' : 'description')
+        : null,
+      prompt: surfyPrompt,
+      publishing,
+      canApply: Boolean(surfyResponse && (surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current)),
+      canCompare: Boolean(surfyResponse?.content && surfyOriginalRef.current),
+      usage: { conversation: surfyUsageDetail.input, lastInput: surfyUsageDetail.input, lastOutput: surfyUsageDetail.output, totalInput: surfyTotals.input, totalOutput: surfyTotals.output },
+      orgUsage,
+      suggestions: ['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'],
+      inputRef: surfyInputRef,
+      scrollRef: surfyScrollRef,
+      toolLabel: surfyToolLabel,
+      setPrompt: setSurfyPrompt,
+      submit: handleSurfySubmit,
+      stop: () => surfyAbortRef.current?.abort(),
+      apply: handleSurfyApply,
+      openCompare: () => setSurfyCompareOpen(true),
+      dismiss: () => { setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
+      conversations: surfyConversations.map((c) => ({ id: c.id, title: c.title, ts: c.ts })),
+      newConversation: () => {
+        archiveCurrentConvo();
+        setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
+        setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+      },
+      openConversation: (id) => {
+        const convo = surfyConversations.find((c) => c.id === id);
+        if (!convo) return;
+        archiveCurrentConvo();
+        setSurfyHistory(convo.history);
+        setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
+        setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+      },
+      deleteConversation: (id) => persistConvos(surfyConversations.filter((c) => c.id !== id)),
+      renameConversation: (id, title) => persistConvos(surfyConversations.map((c) => (c.id === id ? { ...c, title: title.trim() || c.title } : c))),
+      confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
+      cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
+      pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
+      // Selected-text context chip. Clearing it nulls the selection → the highlight effect
+      // ([surfyOpen, surfySelection]) removes the purple highlight from the article.
+      selectionText: surfySelection?.text || null,
+      clearSelection: () => setSurfySelection(null),
+      close: () => setSurfyOpen(false),
+    };
 
     const calcAndEmit = useCallback((ed: any) => {
       let html = ed.getHTML();
       // Strip highlight marks when Surfy is open to prevent leaking into saved content
       if (surfyOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
       const text = ed.getText();
-      const words = text.split(/\s+/).filter(Boolean).length;
+      // Word count comes from Tiptap's CharacterCount (handles unicode/whitespace
+      // more robustly than a naive split) with a split fallback if unavailable.
+      const words = ed.storage.characterCount?.words?.() ?? text.split(/\s+/).filter(Boolean).length;
       const json = ed.getJSON();
       const headings = (json.content || []).filter((n: any) => n.type === 'heading').length;
       const paragraphs = (json.content || []).filter((n: any) => n.type === 'paragraph' && n.content?.length).length;
@@ -935,9 +1418,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       extensions: [
         // link: false — StarterKit v3 includes Link by default; disable it so
         // our explicit Link.configure() below is the only Link extension.
+        // Underline is bundled in StarterKit v3, so it is NOT registered separately.
         StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: false }),
-        Underline,
         SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
+        // contentOptimizer nodes are ephemeral review markers — never persisted to the saved article.
+        // The orchestration layer (auto-optimize flow) suspends autosave while these nodes exist.
+        ContentOptimizer,
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
         Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
         Highlight.configure({ multicolor: true }),
@@ -950,6 +1436,25 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           getTerms: () => termsRef.current,
           getEnabled: () => highlightTermsRef.current,
         }),
+        PlagiarismHighlight.configure({
+          getSentences: () => plagSentencesRef.current,
+          getFocused: () => plagFocusedRef.current,
+        }),
+        TableKit.configure({ table: { resizable: true } }),
+        Typography,
+        CharacterCount,
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Subscript,
+        Superscript,
+        TextStyle,
+        Color,
+        Details.configure({ persist: true, HTMLAttributes: { class: 'art-details' } }),
+        DetailsSummary,
+        DetailsContent,
+        Youtube.configure({ width: 640, height: 360, nocookie: true, HTMLAttributes: { class: 'art-youtube' } }),
+        Placeholder.configure({ placeholder: 'Start writing or type a slash /', includeChildren: false }),
+        SlashCommand.configure({ items: (query: string) => filterSlashItems(query, slashAskSurfyRef) }),
       ],
       content,
       immediatelyRender: false,
@@ -962,12 +1467,24 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // Keep the live ref in sync on every render
     editorLiveRef.current = editor;
 
+    const surfyHlRangeRef = useRef<{ from: number; to: number } | null>(null);
     useEffect(() => {
       if (!editor) return;
       if (surfyOpen && surfySelection) {
         editor.chain().unsetHighlight().setTextSelection({ from: surfySelection.from, to: surfySelection.to }).setHighlight({ color: 'rgba(120, 58, 251, 0.15)' }).run();
-      } else if (editor.isActive('highlight')) {
-        editor.chain().unsetHighlight().run();
+        surfyHlRangeRef.current = { from: surfySelection.from, to: surfySelection.to };
+      } else if (surfyHlRangeRef.current) {
+        // Remove the Surfy highlight from its EXACT range. The cursor may have moved off it, so
+        // unsetHighlight()/isActive('highlight') (which act on the current selection) miss it and
+        // the purple highlight lingers. removeMark on the stored range clears it without moving the
+        // caret or touching the user's own highlights.
+        const { from, to } = surfyHlRangeRef.current;
+        surfyHlRangeRef.current = null;
+        const markType = editor.state.schema.marks.highlight;
+        const docSize = editor.state.doc.content.size;
+        if (markType && from < to && to <= docSize) {
+          editor.view.dispatch(editor.state.tr.removeMark(from, to, markType));
+        }
       }
     }, [surfyOpen, surfySelection]);
 
@@ -983,9 +1500,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setSurfyResponse(null);
           setSurfySelection(null);
           setSurfyHistory([]);
+          setSurfyTotals({ input: 0, output: 0 });
+          setSurfyUsageDetail({ input: 0, output: 0 });
           setSurfyPrompt(prompt);
           setTimeout(() => surfyInputRef.current?.focus(), 100);
         },
+        // Right-panel toolbar toggle (docked pane), mirrors the Version-History button.
+        toggleSurfy: () => { setSurfyOpen((o) => !o); setTimeout(() => surfyInputRef.current?.focus(), 80); },
       };
       return () => { editorRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1008,6 +1529,21 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => {
       if (editor) editor.view.dispatch(editor.state.tr);
     }, [highlightTerms, editor]);
+    // Repaint plagiarism highlights only when the active sentences / focused match actually
+    // change — `plagiarismSentences` is a fresh array each render, so key on a stable signature.
+    const plagSig = `${(plagiarismSentences ?? []).join('')} ${plagiarismFocused ?? ''}`;
+    useEffect(() => {
+      if (editor) editor.view.dispatch(editor.state.tr);
+    }, [plagSig, editor]);
+    // Scroll the focused plagiarism match into view (after the decoration repaint above).
+    useEffect(() => {
+      if (!editor || !plagiarismFocused) return undefined;
+      const t = setTimeout(() => {
+        editor.view.dom.querySelector('.plag-hl-focus')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 60);
+      return () => clearTimeout(t);
+    }, [plagiarismFocused, editor]);
+
     // While enabled, repaint as coverage changes; skipped entirely when off so the
     // findTermRangesBatch pass doesn't run on every save.
     useEffect(() => {
@@ -1020,6 +1556,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll {
             flex: 1;
             overflow-y: auto;
+            /* overflow-y:auto makes the browser compute overflow-x as auto too,
+               so absolutely-positioned overlays (comment pins, bubble menu) that
+               peek past the right edge trigger a horizontal scrollbar — which adds
+               a chunky gutter at the bottom. Article text wraps and images are
+               capped at 100%, so nothing legitimate needs horizontal scroll. */
+            overflow-x: hidden;
             background: #fff;
           }
           .art-editor-scroll .ProseMirror {
@@ -1067,7 +1609,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid #e5e7eb; padding: 10px 18px; margin: 16px 0; color: #6b7280; font-style: italic; background: #f9fafb; border-radius: 0 6px 6px 0; }
           .art-editor-scroll .ProseMirror img { max-width: 100%; height: auto; }
           .art-editor-scroll .ProseMirror img.article-image.ProseMirror-selectednode { outline: 3px solid var(--color-surface-raised); }
-          .art-editor-scroll .ProseMirror p.is-editor-empty:first-child::before { color: #d1d5db; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
+          /* New-line placeholder — Surfer-style: inherits the paragraph's size/line-height/spacing
+             (so a fresh line sits as a normal paragraph and nothing shifts when you start typing),
+             soft gray, NOT italic. */
+          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
           .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
@@ -1075,6 +1620,32 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid #e4e4e7; margin: 22px 0; }
           .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: #783AFB; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(120,58,251,0.08); cursor: pointer; }
           .art-editor-scroll .ProseMirror .comment-mark-draft { background: rgba(120,58,251,0.22); }
+          .art-editor-scroll .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 18px 0; overflow: hidden; font-size: 14px; }
+          .art-editor-scroll .ProseMirror table td, .art-editor-scroll .ProseMirror table th { border: 1px solid #e4e4e7; padding: 8px 12px; vertical-align: top; box-sizing: border-box; position: relative; min-width: 1em; color: #374151; line-height: 1.6; }
+          .art-editor-scroll .ProseMirror table th { background: #f4f4f5; font-weight: 600; color: #18181b; text-align: left; }
+          .art-editor-scroll .ProseMirror table p { margin: 0; }
+          .art-editor-scroll .ProseMirror table .selectedCell:after { content: ''; position: absolute; inset: 0; background: rgba(120,58,251,0.08); pointer-events: none; z-index: 2; }
+          .art-editor-scroll .ProseMirror table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: #783afb; pointer-events: none; }
+          .art-editor-scroll .ProseMirror.resize-cursor { cursor: col-resize; }
+          /* Task list (checklist) */
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] { list-style: none; padding: 0; margin: 10px 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 3px; user-select: none; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div > p { margin: 0; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: #783afb; cursor: pointer; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: #9f9fa9; text-decoration: line-through; }
+          /* Details / FAQ (collapsible) */
+          .art-editor-scroll .ProseMirror [data-type="details"] { display: flex; gap: 8px; border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: #fafafa; }
+          .art-editor-scroll .ProseMirror [data-type="details"] > button { flex: 0 0 auto; width: 16px; height: 22px; background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+          .art-editor-scroll .ProseMirror [data-type="details"] > button::before { content: '▶'; color: #783afb; font-size: 10px; transition: transform 0.15s ease; }
+          .art-editor-scroll .ProseMirror [data-type="details"].is-open > button::before { transform: rotate(90deg); }
+          .art-editor-scroll .ProseMirror [data-type="details"] > div { flex: 1 1 auto; min-width: 0; }
+          .art-editor-scroll .ProseMirror [data-type="detailsSummary"] { font-weight: 600; color: #18181b; }
+          .art-editor-scroll .ProseMirror [data-type="detailsContent"] > p { margin: 6px 0 0; color: #374151; }
+          /* YouTube embed */
+          .art-editor-scroll .ProseMirror div[data-youtube-video] { margin: 16px 0; }
+          .art-editor-scroll .ProseMirror div[data-youtube-video] iframe { max-width: 100%; width: 100%; aspect-ratio: 16 / 9; height: auto; border: none; border-radius: 8px; }
         `}</style>
 
         {/* Toolbar */}
@@ -1171,226 +1742,22 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           </div>
         </div>
 
-        {/* Ask Surfy modal — centered at bottom */}
-        {surfyOpen && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 16,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 100,
-              width: 816,
-              maxWidth: 'calc(100% - 32px)',
-              animation: 'growOut 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          >
-            <div
-              style={{
-                background: '#09090b',
-                color: '#fff',
-                borderRadius: 8,
-                overflow: 'hidden',
-                boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
-              }}
-            >
-              {/* Conversation history — scrollable chat above input */}
-              {surfyHistory.length > 0 && (
-                <div style={{ padding: '0.5rem 0.5rem 0', maxHeight: 260, overflowY: 'auto' }} className="styled-scrollbar-dark">
-                  {surfyHistory.map((entry, i) => (
-                    <div key={i} style={{ marginBottom: i < surfyHistory.length - 1 ? 12 : 0 }}>
-                      {/* User message */}
-                      {entry.role === 'user' && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          <div style={{
-                            maxWidth: '85%', padding: '8px 12px', borderRadius: 12,
-                            borderBottomRightRadius: 4,
-                            background: '#783afb',
-                            color: '#fff', fontSize: 13, lineHeight: '20px',
-                            fontFamily: 'var(--font-family-primary)',
-                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                          }}>
-                            {entry.message}
-                          </div>
-                        </div>
-                      )}
-                      {/* Assistant message */}
-                      {entry.role === 'assistant' && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                            <IconSurfy size={16} />
-                            <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Surfy</span>
-                            {entry.action && entry.action !== 'analysis_only' && (
-                              <span style={{
-                                fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)',
-                                background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: 9999,
-                              }}>
-                                {entry.action.replace(/_/g, ' ')}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{
-                            padding: '10px 12px', borderRadius: 8,
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid #221e28',
-                            fontSize: 13, lineHeight: '20px', color: 'rgba(255,255,255,0.82)',
-                            fontFamily: 'var(--font-family-primary)',
-                          }}>
-                            {renderSurfyMessage(entry.message)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Loading state */}
-              {surfyLoading && (
-                <div style={{ padding: '1rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-family-primary)' }}>Thinking…</span>
-                </div>
-              )}
-
-              {/* Action buttons for latest response */}
-              {surfyResponse && !surfyLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.25rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setSurfyOpen(false); setSurfyResponse(null); setSurfyPrompt(''); setSurfyHistory([]); }}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '0.375rem 0.75rem', borderRadius: 6,
-                      background: 'transparent', border: 'none', cursor: 'pointer',
-                      color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 500,
-                      fontFamily: 'var(--font-family-primary)',
-                    }}
-                  >
-                    Dismiss
-                  </button>
-                  {(surfyResponse.content || surfyResponse.action === 'delete_selection') && (
-                    <button
-                      type="button"
-                      onClick={handleSurfyApply}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '0.375rem 0.75rem', borderRadius: 6,
-                        background: '#783afb', border: 'none', cursor: 'pointer',
-                        color: '#fff', fontSize: 13, fontWeight: 600,
-                        fontFamily: 'var(--font-family-primary)',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
-                    >
-                      <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                      Apply changes
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Context chips row — always visible */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap', padding: '0.5rem 0.5rem', borderTop: '1px solid #221e28' }}>
-                <span style={{ fontSize: 12, lineHeight: '16px', color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-family-primary)' }}>Context:</span>
-                <Chip label={surfySelection ? `Selected (${surfySelection.text.length}c)` : 'Full article'} />
-                <Chip label={articleKeyword || keyword || 'N/A'} />
-                <Chip label={`Score: ${scoreData ? `${(scoreData as any)._computed_score || '?'}/100` : 'N/A'}`} />
-              </div>
-
-              {/* Input row — always visible */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', paddingTop: 0 }}>
-                {/* Surfy logo */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <IconSurfy size={20} />
-                </div>
-
-                {/* Textarea */}
-                <div style={{ flex: 1 }}>
-                  <textarea
-                    ref={surfyInputRef}
-                    rows={1}
-                    value={surfyPrompt}
-                    onChange={(e) => setSurfyPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSurfySubmit();
-                      }
-                    }}
-                    placeholder="Ask Surfy..."
-                    disabled={surfyLoading}
-                    style={{
-                      width: '100%',
-                      height: 24,
-                      maxHeight: 400,
-                      minHeight: 0,
-                      border: 'none',
-                      borderRadius: 0,
-                      background: 'transparent',
-                      outline: 'none',
-                      padding: 0,
-                      fontSize: 14,
-                      lineHeight: '24px',
-                      color: '#fff',
-                      fontFamily: 'var(--font-family-primary)',
-                      resize: 'none',
-                    }}
-                  />
-                </div>
-
-                {/* Send button */}
-                <button
-                  type="button"
-                  onClick={handleSurfySubmit}
-                  disabled={!surfyPrompt.trim() || surfyLoading}
-                  aria-label="Send"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 36, height: 36, borderRadius: 8,
-                    background: 'transparent', border: 'none',
-                    color: '#fff',
-                    cursor: surfyPrompt.trim() && !surfyLoading ? 'pointer' : 'not-allowed',
-                    opacity: surfyPrompt.trim() && !surfyLoading ? 1 : 0.4,
-                    padding: 0,
-                    flexShrink: 0,
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875zm0 0h7.5" />
-                  </svg>
-                </button>
-
-                {/* Audio/loading bars */}
-                <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} style={{ width: 4, height: 12, background: '#1AB25E', borderRadius: 1, opacity: surfyLoading ? 1 : 0 }} />
-                  ))}
-                </div>
-
-                {/* Close button */}
-                <button
-                  type="button"
-                  onClick={() => { setSurfyOpen(false); setSurfyPrompt(''); setSurfyResponse(null); setSurfyHistory([]); }}
-                  aria-label="Close"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start',
-                    width: 36, height: 36, borderRadius: 8,
-                    background: 'transparent', border: 'none',
-                    color: '#fff', cursor: 'pointer', padding: '0.375rem',
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Docked Surfy chat — rendered (via portal) into the page's right-column dock when present. */}
+        {surfyOpen && surfyDockEl && createPortal(
+          <>
+            <SurfyChatPanel s={surfyApi} />
+            {surfyCompareOpen && surfyResponse?.content && (
+              <CompareVersionsModal
+                original={surfyOriginalRef.current}
+                updated={surfyResponse.content}
+                terms={(scoreData?.terms || []).map((t) => t.term)}
+                onClose={() => setSurfyCompareOpen(false)}
+              />
+            )}
+          </>,
+          surfyDockEl,
         )}
+
       </div>
     );
 };

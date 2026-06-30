@@ -4,6 +4,14 @@ import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '.
 
 const font = 'var(--font-family-primary)';
 
+// Capitalize the first letter. All-caps names (e.g. "IDZTECH") get the rest
+// lowercased → "Idztech"; mixed-case names (e.g. "SerpBear") keep their casing.
+const capFirst = (s: string) => {
+   if (!s) return s;
+   const rest = s === s.toUpperCase() ? s.slice(1).toLowerCase() : s.slice(1);
+   return s.charAt(0).toUpperCase() + rest;
+};
+
 const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   <span
     aria-hidden="true"
@@ -68,8 +76,7 @@ const PlusIcon = () => (
   </svg>
 );
 
-function friendly(code: string | undefined): string {
-  if (code === 'WORKSPACE_LAST') return 'You must keep at least one workspace.';
+function friendly(_code?: string): string {
   return 'Something went wrong.';
 }
 
@@ -84,6 +91,19 @@ const WorkspaceSwitcher = () => {
   const setActive = useSetActiveWorkspace();
   const createSetup = useCreateSetupWorkspace();
   const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
+
+  // Cache the active workspace name+domain so a reload shows it instantly (before
+  // react-query refetches) instead of the generic "Workspace" + heart placeholder.
+  // Read AFTER mount so SSR and the first client render match (no hydration mismatch).
+  const [cached, setCached] = useState<{ name: string; domain: string | null } | null>(null);
+  useEffect(() => {
+    try { const raw = localStorage.getItem('active_workspace_cache'); if (raw) setCached(JSON.parse(raw)); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    if (!current) return;
+    try { localStorage.setItem('active_workspace_cache', JSON.stringify({ name: current.name, domain: current.domain ?? null })); } catch { /* ignore */ }
+  }, [current?.name, current?.domain]);
+  const display = current ?? cached;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -119,9 +139,9 @@ const WorkspaceSwitcher = () => {
           fontFamily: font,
         }}
       >
-        <WorkspaceAvatar domain={current?.domain} />
-        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'var(--font-family-primary)', fontSize: 16, fontWeight: 400, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-          {current?.name ?? 'Workspace'}
+        <WorkspaceAvatar domain={display?.domain} />
+        <span className="workspace-switcher-name" style={{ flex: 1, minWidth: 0, textAlign: 'left', fontFamily: 'var(--font-family-primary)', fontSize: 16, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          {display?.name ? capFirst(display.name) : 'Workspace'}
         </span>
         <ChevronUpDown />
       </button>

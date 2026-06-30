@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
 
 const font = 'var(--font-family-primary)';
 const GREEN = '#1AB25E';
@@ -9,17 +10,6 @@ interface ChecklistItem {
   done: boolean;
   time?: string;
 }
-
-const ITEMS: ChecklistItem[] = [
-  { label: 'Set up your workspace', done: true },
-  { label: 'Connect Google Search Console', done: true },
-  { label: 'Audit existing content and find quick wins', done: true },
-  { label: 'See if AI mentions your brand', done: false, time: '2m' },
-  { label: 'Create content that ranks in AI Search and SEO', done: false, time: '10m' },
-];
-
-const DONE = ITEMS.filter((i) => i.done).length;
-const PCT = Math.round((DONE / ITEMS.length) * 100);
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -115,6 +105,9 @@ const SidebarLaunchpad = () => {
   const [minHover, setMinHover] = useState(false);
   const [skipHover, setSkipHover] = useState(false);
   const [pillHover, setPillHover] = useState(false);
+
+  // Real onboarding state (shared with the dashboard "Get started" card).
+  const { steps: ITEMS, done: DONE, pct: PCT } = useOnboardingChecklist();
 
   if (dismissed) return null;
 

@@ -1,0 +1,360 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import toast from 'react-hot-toast';
+import { Checkbox } from '../ui';
+
+// WP taxonomy/term labels can carry HTML entities (e.g. "Tips &amp; Hacks") — decode for display.
+const decodeLabel = (s: string): string => {
+  if (typeof document === 'undefined') return s;
+  const el = document.createElement('textarea');
+  el.innerHTML = s ?? '';
+  return el.value;
+};
+
+const F = 'var(--font-family-primary)';
+
+type Opt = { value: string | number; label: string };
+type Options = {
+  siteUrl: string;
+  types: Opt[];
+  categories: Opt[];
+  tags: Opt[];
+  authors: Opt[];
+  statuses: Opt[];
+  wpPostId: number | null;
+  defaultTitle: string;
+  metaTitle: string;
+  metaDescription: string;
+};
+
+interface Props {
+  articleId: number;
+  onClose: () => void;
+}
+
+const IcoX = ({ size = 22 }: { size?: number }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
+);
+const IcoChevron = ({ open }: { open?: boolean }) => (
+  <svg viewBox="0 0 24 24" width={18} height={18} style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m19.5 8.25l-7.5 7.5l-7.5-7.5" /></svg>
+);
+const IcoInfo = () => (<svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor"><path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75s-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12m9.75-3a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5m-.75 2.25a.75.75 0 0 1 1.5 0v5a.75.75 0 0 1-1.5 0z" /></svg>);
+const IcoDocPlus = () => (<svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor"><path fillRule="evenodd" clipRule="evenodd" d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875M12.75 12a.75.75 0 0 0-1.5 0v2.25H9a.75.75 0 0 0 0 1.5h2.25V18a.75.75 0 0 0 1.5 0v-2.25H15a.75.75 0 0 0 0-1.5h-2.25z" /><path d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434a9.77 9.77 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375z" /></svg>);
+const IcoSync = () => (<svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M16.023 9.348h4.992M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>);
+const IcoArrowLeft = () => (<svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>);
+const IcoArrowRight = () => (<svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>);
+const IcoChevronRight = () => (<svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="m8.25 4.5l7.5 7.5l-7.5 7.5" /></svg>);
+
+const Label = ({ children }: { children: React.ReactNode }) => (
+  <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47' }}>{children}</span>
+);
+
+// Design-system input/dropdown surfaces (design.md §9 + shadows): border #D4D4D8 r8, dropdown
+// shadow + growOut animation, focus ring on inputs.
+const fieldStyle: React.CSSProperties = {
+  width: '100%', height: 40, padding: '0 12px', borderRadius: 8, border: '1px solid #d4d4d8',
+  background: '#fff', color: '#18181b', fontSize: 14, fontFamily: F, outline: 'none', boxSizing: 'border-box',
+  boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
+};
+const triggerStyle: React.CSSProperties = { ...fieldStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' };
+const popoverStyle: React.CSSProperties = {
+  position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 30, maxHeight: 240, overflowY: 'auto',
+  background: '#fff', border: '1px solid #e4e4e7', borderRadius: 10, padding: 6,
+  boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
+  animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
+};
+const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+  <input
+    {...props}
+    style={fieldStyle}
+    onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(120,58,251,0.1)'; }}
+    onBlur={(e) => { e.currentTarget.style.borderColor = '#d4d4d8'; e.currentTarget.style.boxShadow = '0px 1px 2px 0px rgba(26,29,40,0.06)'; }}
+  />
+);
+
+const Select = ({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: Opt[] }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+  const current = options.find((o) => String(o.value) === value);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen((v) => !v)} style={triggerStyle}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: current ? '#18181b' : '#9f9fa9' }}>{current ? current.label : '– Select –'}</span>
+        <span style={{ color: '#52525c', display: 'inline-flex', flexShrink: 0 }}><IcoChevron open={open} /></span>
+      </button>
+      {open && (
+        <div className="styled-scrollbar" style={popoverStyle}>
+          {options.map((o) => {
+            const sel = String(o.value) === value;
+            return (
+              <button type="button" key={String(o.value)} onClick={() => { onChange(String(o.value)); setOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 6, border: 'none', background: sel ? '#f4f4f5' : 'transparent', cursor: 'pointer', fontSize: 14, color: '#18181b', fontFamily: F }}
+                onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = sel ? '#f4f4f5' : 'transparent'; }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+                {sel && <svg width={16} height={16} viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#18181b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Multi-select dropdown for categories / tags — uses the shared design-system Checkbox.
+const MultiSelect = ({ values, onChange, options }: { values: Array<string | number>; onChange: (v: Array<string | number>) => void; options: Opt[] }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+  const toggle = (v: string | number) => onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v]);
+  const selectedLabels = options.filter((o) => values.includes(o.value)).map((o) => o.label);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen((v) => !v)} style={triggerStyle}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedLabels.length ? '#18181b' : '#9f9fa9' }}>{selectedLabels.length ? selectedLabels.join(', ') : '– Select options –'}</span>
+        <span style={{ color: '#52525c', display: 'inline-flex', flexShrink: 0 }}><IcoChevron open={open} /></span>
+      </button>
+      {open && (
+        <div className="styled-scrollbar" style={popoverStyle}>
+          {options.length === 0 && <div style={{ padding: '8px 10px', fontSize: 13, color: '#9f9fa9' }}>None available</div>}
+          {options.map((o) => (
+            <div key={String(o.value)} onClick={() => toggle(o.value)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, cursor: 'pointer' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+              <Checkbox checked={values.includes(o.value)} onChange={() => toggle(o.value)} />
+              <span style={{ fontSize: 14, color: '#18181b' }}>{o.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WordPressExportModal = ({ articleId, onClose }: Props) => {
+  const [opts, setOpts] = useState<Options | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [step, setStep] = useState<'choose' | 'details' | 'success'>('choose');
+  const [mode, setMode] = useState<'create' | 'update' | null>(null);
+  const [showBanner, setShowBanner] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ post_id?: number; edit_post_url?: string; post_url?: string } | null>(null);
+
+  // form
+  const [title, setTitle] = useState('');
+  const [status, setStatus] = useState('draft');
+  const [type, setType] = useState('post');
+  const [categories, setCategories] = useState<Array<string | number>>([]);
+  const [tags, setTags] = useState<Array<string | number>>([]);
+  const [author, setAuthor] = useState<string>('');
+  const [metaTitle, setMetaTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/wordpress/post-options?articleId=${articleId}`)
+      .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d?.error || 'Could not load options'); return d as Options; })
+      .then((d) => {
+        if (!active) return;
+        const dec = (arr: Opt[]) => (arr || []).map((o) => ({ value: o.value, label: decodeLabel(String(o.label ?? '')) }));
+        setOpts({ ...d, types: dec(d.types), categories: dec(d.categories), tags: dec(d.tags), authors: dec(d.authors), statuses: dec(d.statuses) });
+        setTitle(d.defaultTitle || '');
+        setMetaTitle(d.metaTitle || '');
+        setMetaDescription(d.metaDescription || '');
+        setType(d.types[0] ? String(d.types[0].value) : 'post');
+        setAuthor(d.authors[0] ? String(d.authors[0].value) : '');
+      })
+      .catch((e) => { if (active) setLoadError(e?.message || 'Could not load options'); });
+    return () => { active = false; };
+  }, [articleId]);
+
+  const submit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/wordpress/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId,
+          mode,
+          status,
+          title,
+          metaTitle,
+          metaDescription,
+          type: { value: type },
+          author: author ? { value: author } : undefined,
+          categories: categories.map((v) => ({ value: v })),
+          tags: tags.map((v) => ({ value: v })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'WordPress export failed');
+      setResult(data);
+      setStep('success');
+    } catch (e: any) {
+      toast.error(e?.message || 'WordPress export failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const host = useMemo(() => { try { return opts ? new URL(opts.siteUrl).host : ''; } catch { return opts?.siteUrl || ''; } }, [opts]);
+  // Edit link → https://<site>/wp-admin/post.php?post=<id>&action=edit (fall back to the plugin URL).
+  const editUrl = useMemo(() => {
+    if (result?.post_id && opts?.siteUrl) return `${opts.siteUrl.replace(/\/+$/, '')}/wp-admin/post.php?post=${result.post_id}&action=edit`;
+    return result?.edit_post_url || null;
+  }, [result, opts]);
+
+  const PrimaryBtn = ({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) => (
+    <button type="button" onClick={disabled ? undefined : onClick} disabled={disabled}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 0.15s' }}
+      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+      {children}
+    </button>
+  );
+  const GhostBtn = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
+    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, border: 'none', background: 'transparent', color: '#52525c', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}>{children}</button>
+  );
+
+  return createPortal(
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 600, maxHeight: '85vh', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.3)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 24px 12px' }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>Export to WordPress</h2>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0, marginLeft: 12 }}><IcoX /></button>
+        </div>
+
+        {/* Body */}
+        <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 24px 8px' }}>
+          {loadError && <div style={{ fontSize: 14, color: '#E5484D', padding: '12px 0' }}>{loadError}</div>}
+          {!opts && !loadError && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '4px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ width: 70, height: 12, borderRadius: 6, background: '#F0F0F4', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: 190, height: 16, borderRadius: 6, background: '#F0F0F4', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ width: 150, height: 12, borderRadius: 6, background: '#F0F0F4', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+                <div style={{ height: 52, borderRadius: 12, background: '#F5F5F9', animation: 'skeletonPulse 1.5s ease-in-out infinite' }} />
+                <div style={{ height: 52, borderRadius: 12, background: '#F5F5F9', animation: 'skeletonPulse 1.5s ease-in-out infinite', animationDelay: '0.08s' }} />
+              </div>
+            </div>
+          )}
+
+          {opts && step === 'choose' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {showBanner && (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: '#eff6ff', borderRadius: 10, padding: 14 }}>
+                  <span style={{ flexShrink: 0, color: '#2563eb', display: 'inline-flex', marginTop: 1 }}><IcoInfo /></span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Connect more domains</div>
+                    <span style={{ fontSize: 13, lineHeight: '19px', color: '#3f3f47' }}>You can connect more than one WordPress site to your account. <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ color: '#2563eb', textDecoration: 'underline' }}>Learn more</a></span>
+                  </div>
+                  <button type="button" onClick={() => setShowBanner(false)} aria-label="Dismiss" style={{ flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0 }}><IcoX size={18} /></button>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Label>Domain</Label>
+                <span style={{ fontWeight: 600, color: '#18181b' }}>{opts.siteUrl}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Label>What do you want to do?</Label>
+                {([{ k: 'create', t: 'Create new Draft', icon: <IcoDocPlus /> }, { k: 'update', t: 'Update existing Post', icon: <IcoSync /> }] as const).map(({ k, t, icon }) => {
+                  const disabled = k === 'update' && !opts.wpPostId;
+                  const sel = mode === k;
+                  return (
+                    <button type="button" key={k} disabled={disabled} onClick={() => setMode(k)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#783afb' : '#e4e4e7'}`, borderRadius: 12, background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ color: '#18181b', display: 'inline-flex' }}>{icon}</span>
+                        <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{t}{disabled && <span style={{ fontSize: 12, color: '#9f9fa9', fontWeight: 400 }}> (not published yet)</span>}</span>
+                      </span>
+                      <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#783afb' : '#d4d4d8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#783afb' }} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {opts && step === 'details' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ background: '#f4f4f5', borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 13, color: '#52525c' }}>Domain</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{opts.siteUrl}</span>
+              </div>
+              <span style={{ fontSize: 14, color: '#52525c' }}>{mode === 'create' ? 'A new post will be created with the following settings:' : 'The linked post will be updated with the following settings:'}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Title</Label><TextInput value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Status</Label><Select value={status} onChange={setStatus} options={opts.statuses} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Type</Label><Select value={type} onChange={setType} options={opts.types.length ? opts.types : [{ value: 'post', label: 'Post' }]} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Category</Label><MultiSelect values={categories} onChange={setCategories} options={opts.categories} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Tags</Label><MultiSelect values={tags} onChange={setTags} options={opts.tags} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Author</Label><Select value={author} onChange={setAuthor} options={opts.authors.length ? opts.authors : [{ value: '', label: 'Default' }]} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta title</Label><TextInput value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta description</Label><TextInput value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} /></div>
+            </div>
+          )}
+
+          {step === 'success' && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '8px 0 16px' }}>
+              <span style={{ flexShrink: 0, marginTop: 2, width: 22, height: 22, borderRadius: '50%', background: '#1AB25E', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>High five!</div>
+                <span style={{ fontSize: 14, color: '#52525c' }}>Your WordPress {host ? `(${host})` : ''} has been updated and synced.</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ borderTop: '1px solid #f4f4f5', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          {step === 'choose' && (
+            <>
+              <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: '#3f3f47', textDecoration: 'none' }}>Manage WordPress Integrations <IcoChevronRight /></a>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+                <PrimaryBtn onClick={() => setStep('details')} disabled={!opts || !mode}>Next <IcoArrowRight /></PrimaryBtn>
+              </div>
+            </>
+          )}
+          {step === 'details' && (
+            <>
+              <GhostBtn onClick={() => setStep('choose')}><IcoArrowLeft /> Back</GhostBtn>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+                <PrimaryBtn onClick={submit} disabled={submitting || !title.trim()}>
+                  {submitting ? 'Working…' : <><IcoDocPlus /> {mode === 'create' ? 'Create New Post' : 'Update Post'}</>}
+                </PrimaryBtn>
+              </div>
+            </>
+          )}
+          {step === 'success' && (
+            <>
+              <GhostBtn onClick={onClose}>Close</GhostBtn>
+              {editUrl && (
+                <PrimaryBtn onClick={() => window.open(editUrl, '_blank', 'noopener')}>Edit in WordPress <IcoArrowRight /></PrimaryBtn>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
+export default WordPressExportModal;

@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 const refresTheKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsRefreshRes>) => {
-   if (!req.query.id && typeof req.query.id !== 'string') {
+   if (!req.query.id || typeof req.query.id !== 'string') {
       return res.status(400).json({ error: 'keyword ID is Required!' });
    }
    if (req.query.id === 'all' && !req.query.domain) {
@@ -65,7 +65,7 @@ const refresTheKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywo
 
       // If Single Keyword wait for the scraping process,
       // else, Process the task in background. Do not wait.
-      if (keywordIDs && keywordIDs.length === 0) {
+      if (keywordIDs && keywordIDs.length === 1) {
          const refreshed: KeywordType[] = await refreshAndUpdateKeywords(keywordQueries, settings, domainList);
          keywords = refreshed;
       } else {

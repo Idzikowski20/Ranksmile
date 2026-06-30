@@ -9,9 +9,16 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let connection: Sequelize;
 
 if (DATABASE_URL) {
-   // Neon PostgreSQL
+   // Neon PostgreSQL.
+   // Pass `pg` explicitly: Sequelize loads the dialect via a dynamic require, which
+   // Next.js' serverless dependency tracer can't see — so `pg` is left out of the
+   // Vercel function bundle and the runtime throws "Please install pg package manually".
+   // A static require here makes the tracer include it (mirrors the sqlite3 branch below).
+   // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+   const pg = require('pg');
    connection = new Sequelize(DATABASE_URL, {
       dialect: 'postgres',
+      dialectModule: pg,
       dialectOptions: {
          ssl: {
             require: true,
@@ -39,5 +46,16 @@ if (DATABASE_URL) {
       storage: './data/database.sqlite',
    });
 }
+
+// Memoize the no-arg sync: every API route calls `await db.sync()`, but the schema only needs
+// creating once per process. Without this each request pays a metadata round-trip per model.
+// (Calls WITH options — e.g. {alter}/{force} — still run through untouched.)
+let syncPromise: Promise<unknown> | null = null;
+const originalSync = connection.sync.bind(connection);
+(connection as unknown as { sync: typeof connection.sync }).sync = ((options?: Parameters<typeof connection.sync>[0]) => {
+   if (options) return originalSync(options);
+   if (!syncPromise) syncPromise = originalSync();
+   return syncPromise;
+}) as typeof connection.sync;
 
 export default connection;

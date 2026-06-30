@@ -10,6 +10,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from bs4 import BeautifulSoup
@@ -19,7 +20,8 @@ from analyzers.serp_analyzer import analyze_serp, extract_competitor_outlines
 from analyzers.meta_generator import generate_meta
 from analyzers.image_generator import generate_article_image
 from analyzers.ai_visibility import run_ai_visibility
-from analyzers.ai_readability import run_ai_readability
+from analyzers.ai_readability import run_ai_readability, apply_ai_readability
+from analyzers.social_posts import generate_social_posts
 from analyzers.content_classifier import classify
 from analyzers.ranking_scorer import predict_ranking
 from analyzers.plagiarism import run_plagiarism
@@ -39,6 +41,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def require_internal_token(request: Request, call_next):
+    """Authorise every request with the shared secret when one is configured.
+
+    The sidecar is deployed publicly (the Next.js app calls it server-to-server),
+    so without this anyone could hit the LLM endpoints and burn API credits. When
+    INTERNAL_PIPELINE_TOKEN is unset (local dev) the check is skipped; /health and
+    CORS preflight stay open.
+    """
+    expected = os.getenv("INTERNAL_PIPELINE_TOKEN", "")
+    if expected and request.method != "OPTIONS" and request.url.path != "/health":
+        if request.headers.get("x-internal-token", "") != expected:
+            return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+    return await call_next(request)
 
 
 class ArticleRef(BaseModel):
@@ -313,6 +331,23 @@ async def ai_readability_endpoint(body: dict):
     return await run_ai_readability(article_content, keyword)
 
 
+@app.post("/apply-ai-readability")
+async def apply_ai_readability_endpoint(body: dict):
+    """Apply AI-readability suggestions to the article HTML (structure-only rewrite)."""
+    content = body.get("content", "")
+    suggestions = body.get("suggestions", []) or []
+    keyword = body.get("keyword", "")
+    return await apply_ai_readability(content, suggestions, keyword)
+
+
+@app.post("/social-posts")
+async def social_posts_endpoint(body: dict):
+    """Generate 3 social-media promo post variants from the article."""
+    content = body.get("article_content", "")
+    keyword = body.get("keyword", "")
+    return await generate_social_posts(content, keyword)
+
+
 class PipelineRequest(BaseModel):
     jobId: str
     payload: dict  # { url, keyword, language, tone, existing_articles }
@@ -334,6 +369,30 @@ async def pipeline_domain_setup(req: DomainSetupRequest):
     nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
     asyncio.create_task(run_domain_setup(req.jobId, req.payload, nextjs_url))
     return {"status": "accepted"}
+
+
+@app.post("/pipeline/generate")
+async def pipeline_generate(req: DomainSetupRequest):
+    """Async single-article generation: runs /generate in the background and POSTs a
+    terminal done/failed callback to /api/articles/job-progress with the article result.
+    Returns immediately so the caller (a Vercel function) isn't bound by the LLM duration."""
+    import asyncio
+    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    asyncio.create_task(run_generate(req.jobId, req.payload, nextjs_url))
+    return {"status": "accepted"}
+
+
+async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
+    """Generate one article and post the result to job-progress. Never raises
+    (runs as an asyncio background task) — always posts a terminal done/failed callback."""
+    from pipeline.domain_runner import post_terminal
+    try:
+        resp = await generate_article(GenerateRequest(**payload))
+        await post_terminal(nextjs_url, job_id, "done", result=resp.model_dump())
+    except Exception as exc:
+        err = f"{type(exc).__name__}: {exc}"
+        print(f"[generate_runner] failed for {job_id}: {err}")
+        await post_terminal(nextjs_url, job_id, "failed", error=err)
 
 
 @app.post("/pipeline/deep-analysis")

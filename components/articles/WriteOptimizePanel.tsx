@@ -36,6 +36,8 @@ interface Props {
   /** Toggles term highlighting in the editor (drives the TipTap decoration). */
   highlightTerms?: boolean;
   onHighlightTermsChange?: (on: boolean) => void;
+  /** Which section to expand + scroll to on open (driven by clicking a score gauge). */
+  initialSection?: 'seo' | 'ai';
 }
 
 /** One row per LLM prompt — the info that drives citations. */
@@ -223,11 +225,26 @@ type AiSort = 'missing' | 'alpha' | 'srcAsc' | 'srcDesc';
 const WriteOptimizePanel = ({
   terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange, aiSummary,
   seo, ai, hasAi, onAutoOptimize, isAutoOptimizing, readOnly, onBack, highlightTerms, onHighlightTermsChange,
+  initialSection,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
   const [seoOpen, setSeoOpen] = useState(true);
   const [aiOpen, setAiOpen] = useState(false);
   const [query, setQuery] = useState('');
+
+  // Score-gauge shortcuts: expand a section and scroll it into view. The SEO block
+  // sits at the top of the scroll area; the AI block lives further down.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const aiRef = useRef<HTMLDivElement>(null);
+  // Opening one section collapses the other (mutually exclusive focus).
+  const expandSeo = () => { setSeoOpen(true); setAiOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
+  const expandAi = () => { setAiOpen(true); setSeoOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
+  // Honour the section requested when the panel was opened from a score gauge.
+  useEffect(() => {
+    if (initialSection === 'ai') expandAi();
+    else if (initialSection === 'seo') expandSeo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // SEO entity display settings (mirrors Surfer's settings popover) — persisted.
   const [countRanges, setCountRanges] = usePersist('wo:countRanges', true);
@@ -297,7 +314,7 @@ const WriteOptimizePanel = ({
 
       {/* Gauge trio + Auto-Optimize */}
       <div style={{ paddingTop: 8 }}>
-        <ScoreTrio seo={seo} ai={ai} hasAi={hasAi} />
+        <ScoreTrio seo={seo} ai={ai} hasAi={hasAi} onSeoClick={expandSeo} onAiClick={expandAi} />
       </div>
       <div style={{ padding: '0 16px 14px' }}>
         <button
@@ -390,7 +407,7 @@ const WriteOptimizePanel = ({
       )}
 
       {/* Scrollable area */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px' }} className="styled-scrollbar">
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px' }} className="styled-scrollbar">
         {seoOpen && (
           terms.length === 0 ? (
             <p style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms yet — run deep analysis.</p>
@@ -404,7 +421,7 @@ const WriteOptimizePanel = ({
         )}
 
         {/* AI Search collapsible */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 0 4px', marginTop: 8, borderTop: '1px solid #f4f4f5' }}>
+        <div ref={aiRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 0 4px', marginTop: 8, borderTop: '1px solid #f4f4f5' }}>
           <button type="button" onClick={() => setAiOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
             <svg viewBox="0 0 20 20" width={16} height={16} style={{ flexShrink: 0, color: '#9f9fa9', transform: aiOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}><path fill="currentColor" fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>
             <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b', whiteSpace: 'nowrap' }}>AI Search</span>

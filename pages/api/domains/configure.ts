@@ -7,6 +7,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -16,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
    const userId = await getCurrentUserId(req, res);
-   const { domain: domainName, language = 'pl', pages = [] } = req.body;
+   const { domain: domainName, language = 'pl', country = null, languageName = null, pages = [] } = req.body;
 
    if (!domainName) return res.status(400).json({ error: 'domain is required' });
 
@@ -52,6 +53,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const domainId = domain.ID;
 
+      // Persist the picked location on the workspace's domain (country/language NAMES,
+      // e.g. 'Poland' / 'Polish') so Workspace settings can show the real values.
+      if (country || languageName) {
+         try {
+            await db.query('UPDATE domain SET country = ?, language = ? WHERE "ID" = ?', {
+               replacements: [country || null, languageName || null, domainId],
+            });
+         } catch {
+            // non-fatal — location is a display nicety, not required for setup
+         }
+      }
+
       // Create site_context entries + skeleton articles for each page
       const pagesToInsert: string[] = pages.length > 0
          ? (pages as string[]).filter(Boolean)
@@ -85,8 +98,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json({ domainSlug: domain.slug, domainId });
-   } catch (error: any) {
+   } catch (error) {
       console.error('[configure] Error:', error);
-      return res.status(500).json({ error: error?.message || 'Failed to configure domain' });
+      return res.status(500).json({ error: getErrorMessage(error) || 'Failed to configure domain' });
    }
 }

@@ -5,6 +5,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../../lib/gscAccounts';
+import { getErrorMessage } from '../../../lib/errors';
 
 type GscSite = {
    siteUrl: string;
@@ -54,9 +55,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             }));
 
          return res.status(200).json({ sites });
-      } catch (err: any) {
+      } catch (err) {
          // Try next account
-         console.log(`[GSC sites] Account ${account.email} failed: ${err?.message}`);
+         console.log(`[GSC sites] Account ${account.email} failed: ${getErrorMessage(err)}`);
       }
    }
 
