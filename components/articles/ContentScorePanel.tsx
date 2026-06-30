@@ -284,6 +284,12 @@ const ContentScorePanel = ({
   const [view, setView] = useState<'main' | 'write' | 'publish' | 'prepublish'>('main');
   // Which Write & Optimize section to expand when opened via a score gauge.
   const [writeSection, setWriteSection] = useState<'seo' | 'ai' | null>(null);
+  // Auto-Optimize surfaces the Write & Optimize view automatically — that's where the live
+  // ↑N score deltas and the "Auto-Optimize completed / Save" summary live (instead of leaving
+  // the user on the score grid). Fires when a run starts; the view stays after it finishes.
+  useEffect(() => {
+    if (isAutoOptimizing) { setWriteSection(null); setView('write'); }
+  }, [isAutoOptimizing]);
   const [nlpOpen, setNlpOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   const [competitorOpen, setCompetitorOpen] = useState(false);
