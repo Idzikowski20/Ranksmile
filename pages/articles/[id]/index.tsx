@@ -1386,7 +1386,7 @@ const ArticleEditorPage: NextPage = () => {
 
           if (eventType === 'meta') {
             // AO-8a: seed the "Processing X of N" counter for the toolbar.
-            const m = payload as { total: number; sections?: unknown[] };
+            const m = payload as { total: number };
             setOptimizeProgress({ processed: 0, total: m.total });
           } else if (eventType === 'section') {
             const ev = payload as SectionEvent;
@@ -1470,7 +1470,12 @@ const ArticleEditorPage: NextPage = () => {
     if (!editor) return;
     const refs = collectOptimizerPositions(editor.state.doc as PMDocLike);
     refs.forEach((ref) => {
-      const html = optimizeStore.get(ref.sectionId)?.newHtml ?? '';
+      const entry = optimizeStore.get(ref.sectionId);
+      // Prefer the optimized version; fall back to the original (reject semantics) if newHtml
+      // is empty. On a full store miss there's no safe replacement — SKIP the splice so we never
+      // blow away the section's content with an empty string.
+      const html = entry?.newHtml || entry?.oldHtml || '';
+      if (!html) return;
       editor.chain().insertContentAt({ from: ref.pos, to: ref.pos + ref.nodeSize }, html).run();
     });
   };
@@ -1535,6 +1540,21 @@ const ArticleEditorPage: NextPage = () => {
         { changes: optimizeMetaRef.current.changedCount, promptVersion: optimizeMetaRef.current.promptVersion, creditDeducted: optimizeMetaRef.current.creditDeducted },
         { html, text, words, headings, paragraphs },
       );
+      // We just persisted the resolved doc AND created a version. Mark this exact state as
+      // saved so the debounced autosave (which re-arms once isAutoOptimizing flips false and
+      // editorHtml has changed) sees no diff — preventing a redundant PUT and a spurious
+      // `manual_save` version stacked on top of this `auto_optimize` one. sig shape MUST match
+      // the autosave/flush effect's { h, t, d, k, u, img }.
+      lastSavedSig.current = JSON.stringify({
+        h: html,
+        t: article?.meta_title ?? '',
+        d: article?.meta_description ?? '',
+        k: article?.target_keyword ?? '',
+        u: article?.meta_url ?? '',
+        img: featuredImage?.url ?? null,
+      });
+      lastVersionAt.current = Date.now(); // a racing autosave must not snapshot another version
+      setAutoSaveState('saved');
       toast.success('Auto-Optimize changes saved');
     } catch (err) {
       console.error('[optimize-save] failed:', err);

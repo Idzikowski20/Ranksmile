@@ -24,6 +24,18 @@ export interface OptimizeReviewBarProps {
 
 const FONT = 'var(--font-family-primary)';
 
+// Dark-shell vocabulary (design.md §2.1 / §11.2): raised surface #2F2F34, dark border #221e28,
+// and white-alpha text tiers. Save base stays on the success token #1AB25E (darken via opacity,
+// no off-doc hex). Avoid inventing zinc hexes.
+const SURFACE_RAISED = '#2F2F34';
+const SURFACE_HOVER = 'rgba(255,255,255,0.06)';
+const BORDER_DARK = '#221e28';
+const TEXT_STRONG = 'rgba(255,255,255,0.85)';
+const TEXT_DEFAULT = 'rgba(255,255,255,0.7)';
+const TEXT_MUTED = 'rgba(255,255,255,0.55)';
+const TEXT_DISABLED = 'rgba(255,255,255,0.4)';
+const SUCCESS = '#1AB25E';
+
 const Spinner: React.FC = () => (
    <span
       aria-hidden="true"
@@ -75,8 +87,8 @@ const navBtnStyle = (disabled: boolean): React.CSSProperties => ({
    height: 28,
    borderRadius: 6,
    border: 'none',
-   background: '#1c1c1f',
-   color: disabled ? '#3f3f46' : '#a1a1aa',
+   background: SURFACE_RAISED,
+   color: disabled ? TEXT_DISABLED : TEXT_DEFAULT,
    cursor: disabled ? 'not-allowed' : 'pointer',
    opacity: disabled ? 0.5 : 1,
    transition: 'background 0.15s ease, color 0.15s ease',
@@ -86,7 +98,7 @@ const navBtnStyle = (disabled: boolean): React.CSSProperties => ({
 
 const statusTextStyle: React.CSSProperties = {
    fontSize: 13,
-   color: '#a1a1aa',
+   color: TEXT_DEFAULT,
    fontFamily: FONT,
    whiteSpace: 'nowrap',
    overflow: 'hidden',
@@ -112,7 +124,7 @@ const acceptAllStyle: React.CSSProperties = {
 const cancelStyle: React.CSSProperties = {
    fontSize: 13,
    fontWeight: 500,
-   color: '#71717a',
+   color: TEXT_MUTED,
    background: 'none',
    border: 'none',
    cursor: 'pointer',
@@ -149,14 +161,14 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
       fontSize: 13,
       fontWeight: 600,
       color: '#fff',
-      background: '#1AB25E',
+      background: SUCCESS,
       border: 'none',
       borderRadius: 6,
       cursor: saving ? 'wait' : 'pointer',
       fontFamily: FONT,
       padding: '7px 16px',
       opacity: saving ? 0.7 : 1,
-      transition: 'background 0.15s ease, opacity 0.15s ease',
+      transition: 'opacity 0.15s ease',
       flexShrink: 0,
    };
 
@@ -196,7 +208,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                         width: 6,
                         height: 6,
                         borderRadius: '50%',
-                        background: remaining === 0 ? '#1AB25E' : '#783AFB',
+                        background: remaining === 0 ? SUCCESS : '#783AFB',
                         flexShrink: 0,
                      }}
                   />
@@ -205,7 +217,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
             )}
          </div>
 
-         <div style={{ width: 1, height: 18, background: '#27272a', flexShrink: 0 }} />
+         <div style={{ width: 1, height: 18, background: BORDER_DARK, flexShrink: 0 }} />
 
          {/* ── Prev / next section nav (disabled while optimizing) ── */}
          <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
@@ -216,10 +228,10 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                onClick={navDisabled ? undefined : onPrev}
                style={navBtnStyle(navDisabled)}
                onMouseEnter={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = '#27272a'; e.currentTarget.style.color = '#fff'; }
+                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_HOVER; e.currentTarget.style.color = TEXT_STRONG; }
                }}
                onMouseLeave={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = '#1c1c1f'; e.currentTarget.style.color = '#a1a1aa'; }
+                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_RAISED; e.currentTarget.style.color = TEXT_DEFAULT; }
                }}
             >
                <ChevronUp />
@@ -231,10 +243,10 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                onClick={navDisabled ? undefined : onNext}
                style={navBtnStyle(navDisabled)}
                onMouseEnter={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = '#27272a'; e.currentTarget.style.color = '#fff'; }
+                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_HOVER; e.currentTarget.style.color = TEXT_STRONG; }
                }}
                onMouseLeave={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = '#1c1c1f'; e.currentTarget.style.color = '#a1a1aa'; }
+                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_RAISED; e.currentTarget.style.color = TEXT_DEFAULT; }
                }}
             >
                <ChevronDown />
@@ -265,8 +277,8 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                   type="button"
                   onClick={onCancel}
                   style={cancelStyle}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#71717a'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = TEXT_STRONG; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = TEXT_MUTED; }}
                >
                   Cancel
                </button>
@@ -280,8 +292,8 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                   onClick={onSave}
                   disabled={saving}
                   style={saveStyle}
-                  onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#137832'; }}
-                  onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = '#1AB25E'; }}
+                  onMouseEnter={(e) => { if (!saving) e.currentTarget.style.opacity = '0.88'; }}
+                  onMouseLeave={(e) => { if (!saving) e.currentTarget.style.opacity = '1'; }}
                >
                   {saving ? 'Saving…' : 'Save'}
                </button>
