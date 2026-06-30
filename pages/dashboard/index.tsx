@@ -8,6 +8,7 @@ import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { useStaggerReveal } from '../../lib/motion/useStaggerReveal';
 import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
@@ -128,6 +129,8 @@ const DashboardPage: NextPage = () => {
   // domain. The ref latch + isLoading guard stop a refetch (window focus, the done
   // invalidation, an enqueue race) from re-reading 'none' and spamming run-setup.
   const kickedRef = useRef<string | null>(null);
+  // Stagger-reveal the dashboard cards (direct children of the column) on scroll into view.
+  const revealRef = useStaggerReveal<HTMLDivElement>(':scope > *');
   useEffect(() => {
     if (setup && setup.status === 'none' && activeDomainSlug
         && kickedRef.current !== activeDomainSlug && !runSetup.isLoading) {
@@ -227,7 +230,7 @@ const DashboardPage: NextPage = () => {
         </Head>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
-          <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
+          <div ref={revealRef} style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
             <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
             <GetStartedCard />
             <BrandPerformance

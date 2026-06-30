@@ -126,8 +126,8 @@ const SharePreviewPage: NextPage = () => {
       if (rev > renderedRevRef.current) { pendingCaretRef.current = { from, rev }; return; }
       drawCaret(from);
     };
-    liveChannel.subscribe(ABLY_EVENTS.content, onContent);
-    liveChannel.subscribe(ABLY_EVENTS.caret, onCaret);
+    liveChannel.subscribe(ABLY_EVENTS.content, onContent).catch(() => {});
+    liveChannel.subscribe(ABLY_EVENTS.caret, onCaret).catch(() => {});
     liveChannel.presence.enter({ name: authorName || 'Guest', role: 'viewer' }).catch(() => {});
     return () => {
       liveChannel.unsubscribe(ABLY_EVENTS.content, onContent);
@@ -141,7 +141,7 @@ const SharePreviewPage: NextPage = () => {
     const refresh = () => liveChannel.presence.get()
       .then((members) => setOwnerLive(members.some((m) => (m.data as { role?: string } | undefined)?.role === 'owner')))
       .catch(() => {});
-    liveChannel.presence.subscribe(['enter', 'leave', 'update'], refresh);
+    liveChannel.presence.subscribe(['enter', 'leave', 'update'], refresh).catch(() => {});
     refresh();
     return () => { liveChannel.presence.unsubscribe(); };
   }, [liveChannel]);

@@ -1,4 +1,5 @@
 import { DURATION, EASE, prefersReducedMotion, registerMotionPlugins } from '../../lib/motion/gsap';
+import { revealVars } from '../../lib/motion/useStaggerReveal';
 
 describe('motion foundation', () => {
   it('mirrors the CSS --motion-* durations (in seconds)', () => {
@@ -22,5 +23,23 @@ describe('motion foundation', () => {
     })) as unknown as typeof window.matchMedia;
     expect(prefersReducedMotion()).toBe(true);
     window.matchMedia = orig;
+  });
+});
+
+describe('revealVars', () => {
+  it('animates from hidden when motion is allowed', () => {
+    const v = revealVars(false);
+    expect(v.from).toMatchObject({ opacity: 0, y: 16 });
+    expect(v.to.opacity).toBe(1);
+    expect(v.to.y).toBe(0);
+    expect(v.to.duration).toBeGreaterThan(0);
+    expect(v.to.stagger).toBeGreaterThan(0);
+  });
+
+  it('snaps to final state with no motion when reduced', () => {
+    const v = revealVars(true);
+    expect(v.from).toMatchObject({ opacity: 1, y: 0 });
+    expect(v.to.duration).toBe(0);
+    expect(v.to.stagger).toBe(0);
   });
 });

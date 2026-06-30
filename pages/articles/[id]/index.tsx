@@ -16,11 +16,8 @@ import EditorOnboarding from '../../../components/articles/EditorOnboarding';
 import { Thread, CommentAuthor } from '../../../components/articles/comments/CommentThreadBubble';
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
-import AiGlowRing from '../../../components/articles/AiGlowRing';
 import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
-import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
-import { computeOptimizeStats } from '../../../lib/optimizeStats';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
@@ -469,8 +466,6 @@ const ArticleEditorPage: NextPage = () => {
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
-  // The amber glow fires for Auto-Optimize ONLY — not while Surfy is thinking/replying.
-  const isAiActive = isAutoOptimizing;
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -513,7 +508,7 @@ const ArticleEditorPage: NextPage = () => {
   useEffect(() => {
     if (!ownerChannel) return undefined;
     const onComment = () => setCommentsVersion((v) => v + 1);
-    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment).catch(() => {});
     ownerChannel.presence.enter({ role: 'owner' }).catch(() => {});
     return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
   }, [ownerChannel]);
@@ -526,7 +521,7 @@ const ArticleEditorPage: NextPage = () => {
         .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
         .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest')))
       .catch(() => {});
-    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh);
+    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh).catch(() => {});
     refresh();
     return () => { ownerChannel.presence.unsubscribe(); };
   }, [ownerChannel]);
@@ -718,7 +713,8 @@ const ArticleEditorPage: NextPage = () => {
   // scoring. Resolved (accepted/rejected) sections already carry real content, so the score
   // climbs as the user works. seoDelta drives the gauge + ScoreTrio "↑N" badges.
   const optimizeReview = useMemo(() => {
-    if (optimizeState !== 'reviewing' || !scoreData) return null;
+    // Compute live during optimizing too, so the ↑N delta climbs as each section streams in.
+    if (optimizeState === 'idle' || !scoreData) return null;
     const postHtml = editorHtml.replace(
       /<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi,
       (tag) => {
@@ -1939,19 +1935,6 @@ const ArticleEditorPage: NextPage = () => {
                 <>
                   {/* ContentScorePanel fills remaining height */}
                   <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                    {/* AO-8b: Auto-Optimize results summary (gauge + stats + per-section deltas) */}
-                    {optimizeState === 'reviewing' && optimizeMetaRef.current.changedCount > 0 && (() => {
-                      const stats = computeOptimizeStats(changedSectionsRef.current);
-                      return (
-                        <OptimizeResultsPanel
-                          preScore={preScoreRef.current}
-                          postScore={optimizeReview?.postScore ?? preScoreRef.current}
-                          changedCount={optimizeMetaRef.current.changedCount}
-                          wordsAdded={stats.wordsAdded}
-                          adjustments={stats.adjustments}
-                        />
-                      );
-                    })()}
                     <ContentScorePanel
                       plainText={plainText}
                       wordCount={wordCount}
@@ -1959,11 +1942,15 @@ const ArticleEditorPage: NextPage = () => {
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
-                      scoreDeltas={optimizeState === 'reviewing' && optimizeReview ? { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta } : undefined}
+                      scoreDeltas={optimizeState !== 'idle' && optimizeReview ? { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta } : undefined}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}
                       isAutoOptimizing={isAutoOptimizing}
+                      optimizeState={optimizeState}
+                      onCancelOptimize={() => setCancelModalOpen(true)}
+                      onSaveOptimize={handleSaveOptimizeRun}
+                      optimizeSaving={optimizeSaving}
                       saveState={autoSaveState}
                       articleId={article.id}
                       cachedOutlines={article.competitor_outlines_cache}
@@ -2039,6 +2026,7 @@ const ArticleEditorPage: NextPage = () => {
             onCancel={() => setCancelModalOpen(true)}
             onSave={handleSaveOptimizeRun}
             saving={optimizeSaving}
+            rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
           />
         )}
 
@@ -2223,9 +2211,6 @@ const ArticleEditorPage: NextPage = () => {
 
         {/* First-visit onboarding coachmark (Ask Surfy + Content Score) */}
         <EditorOnboarding />
-
-        {/* ── AI glow overlay — last child so it renders above everything ── */}
-        <AiGlowRing active={isAiActive} />
       </div>
     </AppShell>
   );
