@@ -52,9 +52,11 @@ const SharePreviewPage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const editingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [relayoutEpoch, setRelayoutEpoch] = useState(0);
+
   const resyncFromShare = useCallback(() => {
     fetch(`/api/share/${token}`).then((r) => r.json())
-      .then((j) => { if (j?.article?.content) viewerRef.current?.setContent(j.article.content); })
+      .then((j) => { if (j?.article?.content) { viewerRef.current?.setContent(j.article.content); setRelayoutEpoch((n) => n + 1); } })
       .catch(() => {});
   }, [token]);
 
@@ -109,7 +111,7 @@ const SharePreviewPage: NextPage = () => {
       const rev = typeof d.rev === 'number' ? d.rev : renderedRevRef.current + 1;
       if (!d.tooLarge && rev <= renderedRevRef.current) return;
       if (d.tooLarge) { resyncFromShare(); }
-      else if (typeof d.html === 'string') { viewerRef.current?.setContent(d.html); }
+      else if (typeof d.html === 'string') { viewerRef.current?.setContent(d.html); setRelayoutEpoch((n) => n + 1); }
       renderedRevRef.current = Math.max(renderedRevRef.current, rev);
       setIsEditing(true);
       if (editingTimer.current) clearTimeout(editingTimer.current);
@@ -227,6 +229,7 @@ const SharePreviewPage: NextPage = () => {
                 author={author}
                 active
                 reloadSignal={0}
+                relayoutSignal={relayoutEpoch}
                 shareUrl={shareLink}
                 shareToken={typeof token === 'string' ? token : undefined}
               />
