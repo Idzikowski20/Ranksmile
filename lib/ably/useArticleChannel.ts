@@ -46,7 +46,6 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
       authParams,
       closeOnUnload: true,
     });
-    clientRef.current = client;
 
     let hasConnectedOnce = false;
     const onState = (change: Ably.ConnectionStateChange) => {
