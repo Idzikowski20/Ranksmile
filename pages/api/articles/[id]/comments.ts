@@ -10,6 +10,8 @@ import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { emitCommentChange } from '../../../../lib/commentBus';
+import { publishToArticle } from '../../../../lib/ably/server';
+import { ABLY_EVENTS } from '../../../../lib/ably/channel';
 import { getCommentAccessKind } from '../../../../lib/commentAccess';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne } from '../../../../lib/db/query';
@@ -105,6 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId, access === 'owner' ? 1 : 0] },
          );
          emitCommentChange(String(id), { type: 'create', commentId, parentId });
+         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'create', commentId, parentId });
          return res.status(200).json({
             comment: { id: commentId, parentId: parentId || null, quote: q, text, images, author, color, avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null },
          });
@@ -133,6 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                { replacements: [JSON.stringify(current), commentId, id] });
          }
          emitCommentChange(String(id), { type: 'update', commentId });
+         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'update', commentId });
          return res.status(200).json({ ok: true });
       }
 
@@ -144,6 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          await db.query(`DELETE FROM article_comments WHERE article_id = ? AND (id = ? OR parent_id = ?)`,
             { replacements: [id, commentId, commentId] });
          emitCommentChange(String(id), { type: 'delete', commentId });
+         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'delete', commentId: String(commentId) });
          return res.status(200).json({ ok: true });
       }
 
