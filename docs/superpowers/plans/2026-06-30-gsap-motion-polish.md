@@ -14,6 +14,13 @@
 - Project rule (CLAUDE.md): read `design.md` before any UI code; new code uses inline styles; never invent colors/tokens.
 - Tests run with `npx jest <path> --ci` (the `npm test` script is `--watch`). After code commits, run `graphify update .`.
 - GSAP touches the DOM, so the real animations are verified by **build + manual browser check**, not jsdom. Unit tests target the pure helpers only. Every animation uses `gsap.from(...)` (base state = final/visible) so a JS failure degrades to "no animation", never "invisible content".
+- **Use the installed GSAP skills** (invoke via the Skill tool) for best-practice patterns before/while implementing each phase — do not animate from memory:
+  - `gsap-core` + `gsap-timeline` — tweens/timelines (Phase 0, 2, 5)
+  - `gsap-react` — `useGSAP`, cleanup, React integration (Phase 0–5, every hook)
+  - `gsap-scrolltrigger` — batch/scroll reveals (Phase 1, 5)
+  - `gsap-plugins` — Flip and other plugins (Phase 3, 5)
+  - `gsap-performance` — will-change, batching, avoiding layout thrash (cross-cutting)
+  - `gsap-frameworks` + `gsap-utils` — framework patterns + `gsap.utils` helpers (as needed)
 
 ---
 
@@ -510,6 +517,87 @@ git commit -m "feat(motion): spring press feedback on primary buttons"
 ```
 
 > Reminder: never `git add -A`. Stage only the specific files changed in the step.
+
+---
+
+## Phase 5 — Auto-Optimize animations
+
+> Covers the auto-optimize UI added in commits `a6d8070..2d32039`. Before implementing, invoke
+> `gsap-react`, `gsap-scrolltrigger`, and `gsap-core`. Reuse Phase-0 tokens + reduced-motion guard.
+> Target files: `components/articles/ContentOptimizerNodeView.tsx`, `OptimizeResultsPanel.tsx`,
+> `OptimizeReviewBar.tsx`.
+
+### Task 5.1: Section entrance as optimized sections stream in
+
+**Files:**
+- Modify: `components/articles/ContentOptimizerNodeView.tsx`
+
+Each optimized section renders through this node-view as its SSE diff arrives. Animate each one in
+on mount so sections cascade in during optimization.
+
+- [ ] **Step 1: Import + entrance** — add a mount entrance via `useGSAP` scoped to the node wrapper:
+
+```tsx
+import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '../../lib/motion/gsap';
+// inside the component, with a ref on the NodeViewWrapper root:
+const rootRef = useRef<HTMLDivElement>(null);
+useGSAP(() => {
+  if (!rootRef.current || prefersReducedMotion()) return;
+  registerMotionPlugins();
+  gsap.from(rootRef.current, { opacity: 0, y: 12, duration: DURATION.normal, ease: EASE.out });
+}, { scope: rootRef });
+```
+
+- [ ] **Step 2: Attach** `ref={rootRef}` to the node-view's root `NodeViewWrapper`.
+
+- [ ] **Step 3: Typecheck** — `npx tsc --noEmit` → no new errors.
+
+- [ ] **Step 4: Manual verify** — run Auto-Optimize on an article; sections fade/rise in as they
+  arrive. Reduced-motion: instant. Existing accept/reject diff still works.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add components/articles/ContentOptimizerNodeView.tsx
+git commit -m "feat(motion): entrance animation for streamed Auto-Optimize sections"
+```
+
+### Task 5.2: Results panel + review bar entrance
+
+**Files:**
+- Modify: `components/articles/OptimizeResultsPanel.tsx`
+- Modify: `components/articles/OptimizeReviewBar.tsx`
+
+- [ ] **Step 1: OptimizeResultsPanel** — when the panel mounts (results ready), animate the panel
+  container in with a timeline; the score gauges keep their existing odometer animation (do not
+  duplicate). Add a `ref` to the panel root and:
+
+```tsx
+import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '../../lib/motion/gsap';
+const panelRef = useRef<HTMLDivElement>(null);
+useGSAP(() => {
+  if (!panelRef.current || prefersReducedMotion()) return;
+  registerMotionPlugins();
+  gsap.from(panelRef.current, { opacity: 0, y: 16, duration: DURATION.slow, ease: EASE.out });
+}, { scope: panelRef });
+```
+
+- [ ] **Step 2: OptimizeReviewBar** — same pattern, but slide up from the bottom edge
+  (`gsap.from(barRef.current, { yPercent: 100, opacity: 0, duration: DURATION.normal, ease: EASE.out })`)
+  when entering review mode.
+
+- [ ] **Step 3: Typecheck** — `npx tsc --noEmit` → no new errors.
+
+- [ ] **Step 4: Manual verify** — finish Auto-Optimize: results panel rises in, review bar slides
+  up. Reduced-motion: instant. Score values still animate (odometer) without double-animating.
+
+- [ ] **Step 5: Build gate + commit**
+
+```bash
+npm run build   # expect exit 0
+git add components/articles/OptimizeResultsPanel.tsx components/articles/OptimizeReviewBar.tsx
+git commit -m "feat(motion): entrance for Auto-Optimize results panel + review bar"
+```
 
 ---
 
