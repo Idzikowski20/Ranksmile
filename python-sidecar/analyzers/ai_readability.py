@@ -26,7 +26,7 @@ CRITERIA = [
 def _empty(note: str) -> dict:
     return {
         "score": 0,
-        "criteria": [{"key": k, "title": t, "met": False, "note": note} for k, t, _ in CRITERIA],
+        "criteria": [{"key": k, "title": t, "met": False, "note": note, "suggestions": []} for k, t, _ in CRITERIA],
     }
 
 
@@ -39,21 +39,26 @@ async def run_ai_readability(article_content: str, keyword: str = "") -> dict:
     prompt = f"""You are an SEO/AI-readability assessor. Judge how well the ARTICLE below is
 structured for both human readers and LLMs (AI Overviews, ChatGPT). Topic/keyword: "{keyword}".
 
-Evaluate the article against EACH criterion. For each, decide "met" (true/false) honestly based on
-the actual content, and add a short note (max 12 words) explaining why.
+Evaluate the article against EACH criterion. For each:
+- decide "met" (true/false) honestly based on the actual content,
+- add a short "note" (max 14 words, in the ARTICLE's language) explaining the verdict,
+- if NOT met, add 1-3 "suggestions": concrete, actionable edit instructions written in the
+  ARTICLE's language, each referencing the exact section/heading to change and what to add or
+  rewrite (e.g. 'Dodaj nagłówek H2 "FAQ" przed sekcją...'). When met, "suggestions" must be [].
 
 Criteria (use the exact key):
 {rubric}
 
 Return ONLY JSON, no prose:
-{{"criteria":[{{"key":"introduction","met":true,"note":"short reason"}}, ...]}}
+{{"criteria":[{{"key":"introduction","met":true,"note":"short reason","suggestions":[]}},
+{{"key":"top_headings","met":false,"note":"short reason","suggestions":["actionable fix"]}}, ...]}}
 
 ARTICLE:
 {text[:14000]}"""
 
     by_key: dict = {}
     try:
-        raw = await _chat(prompt, max_tokens=1500)
+        raw = await _chat(prompt, max_tokens=2600)
         match = re.search(r"\{[\s\S]*\}", raw)
         if match:
             data = json.loads(match.group(0))
@@ -71,7 +76,61 @@ ARTICLE:
         met = bool(c.get("met"))
         if met:
             met_count += 1
-        criteria.append({"key": k, "title": t, "met": met, "note": str(c.get("note", ""))[:140]})
+        raw_sugs = c.get("suggestions") or []
+        suggestions = [str(s).strip() for s in raw_sugs if isinstance(s, (str, int, float)) and str(s).strip()][:3]
+        if met:
+            suggestions = []
+        criteria.append({
+            "key": k,
+            "title": t,
+            "met": met,
+            "note": str(c.get("note", ""))[:300],
+            "suggestions": suggestions,
+        })
 
     score = round(met_count / len(CRITERIA) * 100)
     return {"score": score, "criteria": criteria}
+
+
+async def apply_ai_readability(content_html: str, suggestions: list[str], keyword: str = "") -> dict:
+    """Rewrite the article HTML applying the AI-readability suggestions (structure-only),
+    preserving all existing content/links/images. Returns {"content": html}."""
+    html = (content_html or "").strip()
+    sugs = [str(s).strip() for s in (suggestions or []) if str(s).strip()]
+    if not html or not sugs:
+        return {"content": content_html}
+
+    sug_list = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sugs))
+    prompt = f"""You are an expert editor improving an HTML article's STRUCTURE for AI/LLM
+readability (AI Overviews, ChatGPT) and human scanning. Topic/keyword: "{keyword}".
+
+Apply EVERY suggestion below to the ARTICLE HTML. The suggestions are structural: add or fix
+headings, split sections into clear subheadings, convert dense paragraphs into bullet/numbered
+lists, add an explicit definition sentence, etc.
+
+RULES:
+- Preserve ALL existing information, every <a> link and every <img> exactly as-is.
+- Do NOT remove content or shorten the article; only restructure / add what the suggestions ask.
+- Keep the article's original language.
+- Output valid HTML using only these tags: h1 h2 h3 p ul ol li strong em a img blockquote.
+- Return ONLY the full updated HTML body — no markdown code fences, no commentary.
+
+SUGGESTIONS:
+{sug_list}
+
+ARTICLE HTML:
+{html[:24000]}"""
+
+    try:
+        raw = await _chat(prompt, max_tokens=8000)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[ai_readability] apply failed: {exc}")
+        return {"content": content_html, "warning": "Optimization failed — content left unchanged."}
+
+    out = (raw or "").strip()
+    out = re.sub(r"^```(?:html)?\s*", "", out)
+    out = re.sub(r"\s*```$", "", out).strip()
+    # Guard against a garbage / non-HTML response — never replace good content with junk.
+    if "<" not in out or len(out) < len(html) * 0.5:
+        return {"content": content_html, "warning": "Article is too long to rewrite in one pass — content left unchanged."}
+    return {"content": out}

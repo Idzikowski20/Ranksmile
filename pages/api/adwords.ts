@@ -81,8 +81,9 @@ const getAdwordsRefreshToken = async (req: NextApiRequest, res: NextApiResponse<
                return res.status(200).send('Google Ads Integrated Successfully! You can close this window.');
             }
             return res.status(400).send('Error Getting the Google Ads Refresh Token. Please Try Again!');
-         } catch (error: any) {
-            let errorMsg = error?.response?.data?.error || '';
+         } catch (error) {
+            const e = error as { response?: { data?: { error?: string } } };
+            let errorMsg = e?.response?.data?.error || '';
             if (typeof errorMsg === 'string' && errorMsg.includes('redirect_uri_mismatch')) {
                errorMsg += ` Redirected URL: ${redirectURL}`;
             }

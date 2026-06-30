@@ -1,10 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import WordPressExportModal from './WordPressExportModal';
+import SocialMediaModal from './SocialMediaModal';
 
 const F = 'var(--font-family-primary)';
 
 interface Props {
+  articleId?: number;
   score: number;
   html: string;
   plainText: string;
@@ -20,6 +23,7 @@ interface Props {
   onMarkDone: () => void;
   readOnly?: boolean;
   onBack: () => void;
+  saveState?: 'saved' | 'saving' | 'unsaved';
 }
 
 /* ── HTML → Markdown (lightweight, browser-only) ───────────────────── */
@@ -93,11 +97,41 @@ const IcoContent = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><
 const IcoHtml = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M17 17l5-5-5-5M7 7l-5 5 5 5M14 3l-4 18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const IcoMd = <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M4 8h16M4 16h16M8 3v18M16 3v18" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-const PublishExportPanel = ({ score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack }: Props) => {
+const WpLogo = <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>;
+const IcoExternal = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" /></svg>;
+const IcoManage = <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M5 6h7M16 6h3M5 12h3M12 12h7M5 18h9M18 18h1" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" /><circle cx="14" cy="6" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="10" cy="12" r="2" stroke="currentColor" strokeWidth={1.7} /><circle cx="16" cy="18" r="2" stroke="currentColor" strokeWidth={1.7} /></svg>;
+
+const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitle, metaDescription, onMetaTitleChange, onMetaDescriptionChange, keyword, featuredImage, onFeaturedImageChange, isDone, onMarkDone, readOnly, onBack, saveState }: Props) => {
   const router = useRouter();
   const [doneCardOpen, setDoneCardOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // WordPress connection (made from the WP plugin) + one-click publish/update via the plugin.
+  type WpState = { connected: boolean; siteUrl: string | null; published: boolean; postStatus: 'publish' | 'draft' | null; postUrl: string | null };
+  const [wp, setWp] = useState<WpState>({ connected: false, siteUrl: null, published: false, postStatus: null, postUrl: null });
+  const [wpModalOpen, setWpModalOpen] = useState(false);
+  const [socialModalOpen, setSocialModalOpen] = useState(false);
+  const [wpLoading, setWpLoading] = useState(true); // skeleton until the status is known (never flash "Not connected")
+  useEffect(() => {
+    if (!articleId) { setWpLoading(false); return; }
+    setWpLoading(true);
+    fetch(`/api/wordpress/status?articleId=${articleId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        const ps = d.postStatus === 'draft' ? 'draft' : d.postStatus === 'publish' ? 'publish' : null;
+        setWp({ connected: !!d.connected, siteUrl: d.siteUrl ?? null, published: !!d.published, postStatus: ps, postUrl: d.postUrl ?? null });
+      })
+      .catch(() => {})
+      .finally(() => setWpLoading(false));
+  }, [articleId]);
+  const wpHost = (() => { try { return wp.siteUrl ? new URL(wp.siteUrl).host : ''; } catch { return wp.siteUrl || ''; } })();
+
+  // Block opening the export modal while the article has unsaved or in-flight changes — the
+  // modal publishes the last-saved content, so we'd otherwise push stale content to WordPress.
+  const wpBlocked = wp.connected && (saveState === 'saving' || saveState === 'unsaved');
+  const wpBtnDisabled = readOnly || wpBlocked;
 
   const copy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(`${label} copied`)).catch(() => toast.error('Copy failed'));
@@ -210,24 +244,54 @@ const PublishExportPanel = ({ score, html, plainText, title, metaTitle, metaDesc
         {/* Export → WordPress */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 16px' }}>
           <SectionTitle>Export</SectionTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button type="button" disabled={readOnly} onClick={readOnly ? undefined : () => router.push('/settings/wordpress')}
-              style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', opacity: readOnly ? 0.5 : 1, transition: 'background 0.15s' }}
-              onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
-              <svg width={20} height={20} viewBox="0 0 20 20" fill="none"><path d="M10 0C4.49 0 0 4.48 0 10s4.49 10 10 10 10-4.49 10-10S15.51 0 10 0ZM1.01 10c0-1.3.28-2.54.78-3.66l4.29 11.75A8.99 8.99 0 0 1 1.01 10ZM10 18.99c-.88 0-1.73-.13-2.54-.37l2.7-7.84 2.76 7.57.06.13c-.93.33-1.93.51-2.98.51Zm1.24-13.2c.54-.03 1.03-.09 1.03-.09.48-.06.43-.77-.06-.74 0 0-1.46.11-2.4.11-.88 0-2.37-.11-2.37-.11-.48-.03-.54.71-.06.74 0 0 .46.06.94.09l1.4 3.84-1.97 5.9L4.48 5.79c.55-.03 1.03-.09 1.03-.09.49-.06.43-.77-.06-.74 0 0-1.45.11-2.39.11-.17 0-.37 0-.58-.01A8.98 8.98 0 0 1 9.99 1c2.34 0 4.47.89 6.07 2.36-.04 0-.08-.01-.12-.01-.88 0-1.51.77-1.51 1.6 0 .74.43 1.37.88 2.11.34.6.74 1.37.74 2.48 0 .77-.29 1.66-.69 2.91l-.89 3-3.23-9.66Zm3.28 11.98 2.75-7.94c.51-1.28.68-2.31.68-3.22 0-.33-.02-.64-.06-.93.7 1.28 1.1 2.75 1.1 4.31a8.99 8.99 0 0 1-4.47 7.78Z" fill="currentColor" /></svg>
-              WordPress
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#e5484d', flexShrink: 0 }} />
-                Not connected to any WordPress site
-              </div>
-              <button type="button" onClick={() => router.push('/settings/wordpress')}
-                style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap' }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
-                Manage
-              </button>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {wpLoading ? (
+              /* Skeleton until the connection status resolves — never flash "Not connected". */
+              <>
+                <div style={{ height: 38, borderRadius: 6, background: '#f4f4f5' }} />
+                <div style={{ height: 14, width: 180, borderRadius: 6, background: '#f4f4f5' }} />
+              </>
+            ) : (
+              <>
+                <button type="button" disabled={wpBtnDisabled} onClick={wpBtnDisabled ? undefined : (wp.connected ? () => setWpModalOpen(true) : () => router.push('/settings/wordpress'))}
+                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: wpBtnDisabled ? 'not-allowed' : 'pointer', opacity: wpBtnDisabled ? 0.5 : 1, transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                  {WpLogo}
+                  WordPress
+                </button>
+
+                {/* Why the button is disabled — content must be saved before it ships. */}
+                {wpBlocked && (
+                  <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>
+                    {saveState === 'saving' ? 'Saving changes…' : 'Save your changes to publish to WordPress.'}
+                  </span>
+                )}
+
+                {/* Connection status, with the actions stacked beneath it */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? '#1AB25E' : '#e5484d', flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wp.connected ? `Connected to ${wpHost}` : 'Not connected to any WordPress site'}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                    {wp.connected && wp.published && wp.postUrl && (
+                      <a href={wp.postUrl} target="_blank" rel="noreferrer noopener"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, textDecoration: 'none', whiteSpace: 'nowrap', lineHeight: 1 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                        {IcoExternal}
+                        View post
+                      </a>
+                    )}
+                    <button type="button" onClick={() => router.push('/settings/wordpress')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap', lineHeight: 1 }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                      {IcoManage}
+                      Manage
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -260,9 +324,9 @@ const PublishExportPanel = ({ score, html, plainText, title, metaTitle, metaDesc
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px' }}>
           <SectionTitle>Social media</SectionTitle>
           <span style={{ fontSize: 14, color: '#18181b', fontFamily: F }}>Create a social media post from your content</span>
-          <button type="button" onClick={() => toast('Social media post — coming soon')}
-            style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer', transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          <button type="button" disabled={!articleId} onClick={() => articleId && setSocialModalOpen(true)}
+            style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: articleId ? 'pointer' : 'not-allowed', opacity: articleId ? 1 : 0.5, transition: 'background 0.15s' }}
+            onMouseEnter={(e) => { if (articleId) e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
             Create Social Media Post
           </button>
         </div>
@@ -289,6 +353,12 @@ const PublishExportPanel = ({ score, html, plainText, title, metaTitle, metaDesc
           </div>
         )}
       </div>
+      {wpModalOpen && articleId && (
+        <WordPressExportModal articleId={articleId} onClose={() => setWpModalOpen(false)} />
+      )}
+      {socialModalOpen && articleId && (
+        <SocialMediaModal articleId={articleId} onClose={() => setSocialModalOpen(false)} />
+      )}
     </div>
   );
 };

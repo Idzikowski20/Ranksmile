@@ -15,7 +15,7 @@
    --color-border-strong: #221e28;
 
    /* Typography */
-   --font-family-primary: "Inter Variable", "Inter", Arial, sans-serif;
+   --font-family-primary: "InterVariable", "Inter", Arial, sans-serif;
    --font-size-base: 14px;
    --font-weight-base: 400;
    --line-height-base: 21px;
@@ -111,6 +111,16 @@ label {
    }
 }
 
+*,
+*::before,
+*::after {
+   box-sizing: border-box;
+   font-family: var(--font-family-primary);
+   font-variant-numeric: slashed-zero tabular-nums;
+   /* -webkit-font-feature-settings: "cv01" on, "cv02" on, "cv05" on, "cv08" on, "cv09" on, "cv10" on; */
+   font-feature-settings: "cv01" on, "cv02" on, "cv05" on, "cv08" on, "cv09" on, "cv10" on;
+}
+
 body {
    background-color: var(--color-surface-strong);
    font-family: var(--font-family-primary);
@@ -158,6 +168,10 @@ body {
 .term-hl-green { box-shadow: inset 0 -2px 0 #1AB25E; background: rgba(26, 178, 94, 0.07); }
 .term-hl-yellow { box-shadow: inset 0 -2px 0 #E8A23D; background: rgba(232, 162, 61, 0.10); }
 .term-hl-red { box-shadow: inset 0 -2px 0 #FF6F77; background: rgba(255, 111, 119, 0.07); }
+
+/* Plagiarism match highlights (view-only, set by the Plagiarism panel). */
+.plag-hl { background: rgba(229, 72, 77, 0.10); box-shadow: inset 0 -2px 0 #E5484D; border-radius: 2px; }
+.plag-hl-focus { background: rgba(229, 72, 77, 0.26); }
 
 @media (min-width: 1024px) {
    .app-content {
@@ -230,7 +244,7 @@ body {
 
 .global-topbar-left {
    min-width: 0;
-   flex: 1;
+   flex: 0 0 auto;
    gap: 8px;
 }
 
@@ -259,6 +273,21 @@ body {
    opacity: 0.85;
 }
 
+/* The compact search icon (in the actions cluster) only shows on narrow screens. */
+.ce-search-compact { display: none; }
+
+/* <640px: collapse the topbar so it never overflows horizontally — the editor
+   breadcrumb shrinks to just its leading domain icon (still links to the
+   dashboard) and the full search bar is swapped for a search icon. */
+@media (max-width: 639px) {
+   .ce-bc-rest { display: none !important; }
+   .global-topbar-center { display: none !important; }
+   .ce-search-compact { display: inline-flex !important; }
+   /* The centred search slot is hidden here, so nothing was pushing the action
+      icons right — pin them to the right edge (domain icon stays on the left). */
+   .global-topbar-main { justify-content: flex-end; }
+}
+
 .global-topbar-title {
    min-width: 0;
    gap: 8px;
@@ -279,18 +308,26 @@ body {
    color: var(--topbar-muted);
 }
 
+.global-topbar-main {
+   flex: 1 1 auto;
+   min-width: 0;
+   display: flex;
+   align-items: center;
+   gap: 12px;
+}
+.global-topbar-spacer { display: none; }
 .global-topbar-actions {
-   flex: 1;
+   flex: 0 0 auto;
    justify-content: flex-end;
    gap: 8px;
 }
 
-/* ── Topbar responsive ──────────────────────────────────────────────
-   Search sits in normal flow (and shrinks) on mobile, and is absolutely
-   centered only on desktop where there's room. Below ~520px the old
-   absolute width calc went negative and collapsed the search. */
+/* ── Topbar centering ──────────────────────────────────────────────────
+   On mobile the search grows to fill its flex slot. On desktop it is pinned
+   to the TRUE centre of the topbar (the bar is position:sticky, so it is the
+   positioning context spanning the full viewport) — so it stays centred no
+   matter how wide the left slot is (workspace switcher vs. editor breadcrumb). */
 .global-topbar-center {
-   position: static;
    flex: 1 1 auto;
    min-width: 0;
    display: flex;
@@ -298,14 +335,15 @@ body {
    justify-content: center;
 }
 @media (min-width: 768px) {
+   .global-topbar-spacer { display: block; flex: 1 1 0; }
    .global-topbar-center {
       position: absolute;
       left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: min(250px, calc(100vw - 520px));
+      transform: translateX(-50%);
       flex: 0 0 auto;
+      width: min(250px, 100%);
    }
+   .global-topbar-actions { flex: 1 1 0; }
 }
 /* Workspace switcher: icon-only on mobile, full 224px on desktop */
 .workspace-switcher-btn { width: auto !important; }
@@ -318,18 +356,6 @@ body {
 .topbar-search-kbd { display: none !important; }
 @media (min-width: 768px) {
    .topbar-search-kbd { display: inline-flex !important; }
-}
-/* Sides hug their content on mobile so the search fills the middle;
-   they share the row equally again on desktop. */
-.global-topbar-left,
-.global-topbar-actions {
-   flex: 0 0 auto;
-}
-@media (min-width: 768px) {
-   .global-topbar-left,
-   .global-topbar-actions {
-      flex: 1 1 0;
-   }
 }
 
 .app-shell-body {
@@ -479,10 +505,51 @@ body {
    min-height: 0;
 }
 
+/* ── Content Editor: ONE layout at every width ─────────────────────
+   The editor is the only route that must scroll INTERNALLY (fixed dark
+   shell + scrollable content) at all widths, not just desktop. The
+   height-chain (html → body → #__next → .app-shell → .app-content) and
+   the dark body frame (body padding) are normally gated behind
+   @media(min-width:1024px). The editor opts <html> into them at ALL
+   widths via `.editor-route`, scoped so every other (body-scrolling)
+   mobile page is untouched. No width-dependent layout divergence: the
+   editor renders identically from phone to desktop, only topbar items
+   (breadcrumb rest / search bar / format toolbar) get hidden below their
+   breakpoints elsewhere in this file. */
+html.editor-route,
+html.editor-route body {
+   height: 100%;
+   overflow: hidden;
+}
+html.editor-route body {
+   padding: 8px;
+   box-sizing: border-box;
+}
+html.editor-route #__next { height: 100%; }
+html.editor-route #__next > div {
+   height: 100% !important;
+   min-height: 0 !important;
+}
+/* The editor hides the mobile bottom nav (hideMobileNav), so the <1024px
+   `.app-shell { padding-bottom: var(--mobile-nav-height) }` reservation is dead
+   space — a thick black band under the editor. Reclaim it. */
+html.editor-route .app-shell { padding-bottom: 0; }
+html.editor-route .app-content {
+   border-radius: 12px;
+   overflow-y: auto;
+   min-height: 0;
+}
+
+/* Long words / pasted URLs must wrap instead of widening the layout. */
+.article-editor-shell .ProseMirror { overflow-wrap: break-word; word-break: break-word; }
+.article-editor-shell .ProseMirror img { max-width: 100%; height: auto; }
+
+/* Phones + tablets: hide the editor's top format toolbar entirely — formatting
+   is reached by selecting text (the SurfyBubbleMenu appears on touch). The
+   right-hand actions (…, sidebar toggle, Share) live in the page header and
+   stay put. Avoids the cramped horizontal-scroll toolbar on narrow screens. */
 @media (max-width: 1023px) {
-   .app-content {
-      min-height: 100vh;
-   }
+   .ce-format-toolbar { display: none !important; }
 }
 
 /* Fully hidden scrollbar — element still scrolls (wheel / trackpad). */
@@ -915,9 +982,10 @@ body {
 }
 
 /* Dashboard recommendation row hover */
-.dashboard-rec-row:hover span {
-   color: #000 !important;
-}
+.dashboard-rec-row:hover .rec-title { color: #18181B !important; }
+.dashboard-rec-row:hover .rec-optimize-ico { color: #18181B !important; }
+.dashboard-rec-row:hover .rec-rating,
+.dashboard-rec-row:hover .rec-rating span { color: #FF6F77 !important; }
 .dashboard-rec-view:hover {
    text-decoration: underline !important;
 }
@@ -1072,19 +1140,15 @@ body {
    -webkit-backdrop-filter: blur(2px);
 }
 
+/* Full-screen drawer (covers the whole page), not a partial bottom sheet. */
 .mobile-sheet {
    position: fixed;
-   bottom: 0;
-   left: 0;
-   right: 0;
+   inset: 0;
    z-index: 220;
-   background: #18181b;
-   border-top: 1px solid var(--mobile-nav-border);
-   border-radius: 20px 20px 0 0;
-   padding: 12px 16px 24px;
-   padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-   max-height: 80vh;
-   overflow-y: auto;
+   background: #09090b;
+   display: flex;
+   flex-direction: column;
+   padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 0;
    transform: translateY(100%);
    transition: transform var(--motion-normal) cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -1093,12 +1157,30 @@ body {
    transform: translateY(0);
 }
 
-.mobile-sheet-handle {
-   width: 36px;
-   height: 4px;
-   border-radius: 999px;
-   background: rgba(255, 255, 255, 0.15);
-   margin: 0 auto 20px;
+/* Scrollable nav region — fills the screen, pushing the close button to the bottom. */
+.mobile-sheet-scroll {
+   flex: 1;
+   min-height: 0;
+   overflow-y: auto;
+}
+
+/* Full-width centred close button pinned to the bottom of the full-screen sheet. */
+.mobile-sheet-close {
+   flex-shrink: 0;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   width: 100%;
+   padding: 18px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+   background: transparent;
+   border: none;
+   cursor: pointer;
+   color: rgba(255, 255, 255, 0.45);
+   -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-sheet-close:active {
+   color: rgba(255, 255, 255, 0.85);
 }
 
 .mobile-sheet-section {
@@ -1205,3 +1287,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
    .surfer-loader-sweep { animation: none; }
 }
+
+/* Activity Log table — row hover + title link underline-on-hover */
+.activity-log-row > td { transition: background 120ms ease; }
+.activity-log-row:hover > td { background: #FAFAFA; }
+.activity-log-row:hover > td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.activity-log-row:hover > td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+.activity-log-link:hover { color: #783AFB; text-decoration-color: #783AFB !important; }

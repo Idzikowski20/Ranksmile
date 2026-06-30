@@ -6,6 +6,8 @@ import { getAdwordsCredentials, getKeywordsVolume } from '../../../../../utils/a
 import { computeRelevanceScore, checkCoverage } from '../../../../../lib/keywordEnrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
+import { queryOne } from '../../../../../lib/db/query';
+import type { ArticleRow } from '../../../../../lib/db/query';
 
 const isPostgres = !!process.env.DATABASE_URL;
 
@@ -30,19 +32,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Get article target keyword for relevance scoring
-  const [articles] = await db.query(
+  const art = await queryOne<Pick<ArticleRow, 'target_keyword' | 'domain_id'>>(
     `SELECT a.target_keyword, a.domain_id FROM articles a WHERE a.id = ?`,
-    { replacements: [id] },
+    [id],
   );
-  const art = (articles as any[])[0];
   const tk = targetKeyword || art?.target_keyword || '';
 
   // Resolve country from domain search_console if not explicitly provided
   let resolvedCountry = country;
   if (art?.domain_id && !req.body.country) {
     try {
-      const [domains] = await db.query(`SELECT search_console FROM domain WHERE "ID" = ?`, { replacements: [art.domain_id] });
-      const dom = (domains as any[])?.[0];
+      const dom = await queryOne<{ search_console: string | null }>(`SELECT search_console FROM domain WHERE "ID" = ?`, [art.domain_id]);
       if (dom?.search_console) {
         const sc = typeof dom.search_console === 'string' ? JSON.parse(dom.search_console) : dom.search_console;
         // Country from GSC: stored as alpha-2 code like 'PL', 'US'

@@ -45,6 +45,24 @@ const GeneratingPage: NextPage = () => {
       instructions = sessionStorage.getItem(`nc_instructions_${articleId}`) || '';
       voiceId = sessionStorage.getItem(`nc_voice_${articleId}`) || 'serp';
     } catch { /* ignore */ }
+    // Generation runs async on the sidecar: kick it off (returns a jobId), then poll the
+    // job until the result is written back to the article. Avoids the multi-minute
+    // synchronous wait that would exceed the serverless function limit.
+    const pollJob = (jobId: string) => new Promise<void>((resolve, reject) => {
+      const started = Date.now();
+      const tick = async () => {
+        try {
+          const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`);
+          const d = await r.json().catch(() => ({}));
+          if (d.status === 'done') { resolve(); return; }
+          if (d.status === 'failed') { reject(new Error(d.progressMessage || 'Generation failed')); return; }
+        } catch { /* transient network error — keep polling */ }
+        if (Date.now() - started > 8 * 60 * 1000) { reject(new Error('Generation timed out')); return; }
+        setTimeout(tick, 3000);
+      };
+      setTimeout(tick, 3000);
+    });
+
     fetch(`/api/articles/${articleId}/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,7 +75,12 @@ const GeneratingPage: NextPage = () => {
         reviewOutline: q.outline === '1',
       }),
     })
-      .then(async (r) => { if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || 'Generation failed'); })
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d?.error || 'Generation failed');
+        return d.jobId as string;
+      })
+      .then((jobId) => pollJob(jobId))
       .then(() => { clearWizardState(articleId); setFinished(true); })
       .catch((e) => { toast.error(e?.message || 'Generation failed'); setFinished(true); });
   }, [router.isReady, articleId, router]);

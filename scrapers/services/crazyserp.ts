@@ -32,8 +32,8 @@ const crazyserp:ScraperSettings = {
    },
    scrapeURL: (keyword, settings, countryData) => {
       const country = keyword.country || 'US';
-      const lang = countryData[country][2];
-      const countryName = countries[country][0];
+      const lang = countryData[country]?.[2] || 'en';
+      const countryName = countries[country]?.[0] || country;
       const location = keyword.city ? `${keyword.city},${countryName}` : countryName;
       const googleDomain = googleDomains[country] || 'www.google.com';
       return `https://crazyserp.com/api/search?q=${encodeURIComponent(keyword.keyword)}&page=10&pageOffset=0&location=${encodeURIComponent(location)}&googleDomain=${googleDomain}&gl=${country.toLowerCase()}&hl=${lang}&safe=off&filter=1&nfpr=0&device=${keyword.device}`;

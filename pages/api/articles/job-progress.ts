@@ -71,12 +71,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (status === 'done' || status === 'failed') {
       // terminal callback
-      const jrows = await db.query<{ job_type: string; domain_id: number | null }>(
-        `SELECT job_type, domain_id FROM analysis_jobs WHERE id = ?`,
+      const jrows = await db.query<{ job_type: string; domain_id: number | null; article_id: number | null }>(
+        `SELECT job_type, domain_id, article_id FROM analysis_jobs WHERE id = ?`,
         { replacements: [jobId], type: QueryTypes.SELECT },
       );
       const jt = jrows[0]?.job_type;
       const domainId = jrows[0]?.domain_id;
+      const genArticleId = jrows[0]?.article_id;
       if (status === 'done' && jt === 'domain_setup' && domainId) {
         const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
         try {
@@ -91,6 +92,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             { replacements: [`materialize failed: ${msg}`, jobId] },
           );
           return res.status(500).json({ error: 'materialization failed' });
+        }
+      }
+      if (jt === 'article_generate' && genArticleId) {
+        const { getArticleIdSql } = await import('../../../lib/articleSql');
+        const articleIdSql = await getArticleIdSql();
+        if (status === 'done') {
+          const html = (result?.article_html as string) || '';
+          const wordCount = html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+          await db.query(
+            `UPDATE articles SET
+               title = COALESCE(?, title), content = ?, meta_title = ?, meta_description = ?, meta_url = ?,
+               schema_json = ?, score_data = ?, internal_links_cache = ?, word_count = ?,
+               status = 'draft', updated_at = CURRENT_TIMESTAMP
+             WHERE ${articleIdSql} = ?`,
+            { replacements: [
+              result?.meta_title || null,
+              html,
+              result?.meta_title || '',
+              result?.meta_description || '',
+              result?.meta_url || '',
+              JSON.stringify(result?.article_schema || result?.schema_json || {}),
+              JSON.stringify(result?.score_data || {}),
+              JSON.stringify({ suggestions: result?.internal_links || [] }),
+              wordCount,
+              genArticleId,
+            ] },
+          );
+        } else {
+          // failed → roll the placeholder back to an editable draft so the user can retry.
+          await db.query(
+            `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+            { replacements: [genArticleId] },
+          );
         }
       }
       await db.query(

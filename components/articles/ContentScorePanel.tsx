@@ -8,6 +8,7 @@ import KeywordResearchSection from './KeywordResearchSection';
 import WriteOptimizePanel from './WriteOptimizePanel';
 import PublishExportPanel from './PublishExportPanel';
 import PrePublishPanel from './PrePublishPanel';
+import type { AiReadabilityResult } from './PrePublishPanel';
 import ScoreTrio from './ScoreTrio';
 import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
 
@@ -40,6 +41,7 @@ interface Props {
   initialAiReadability?: any;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
+  saveState?: 'saved' | 'saving' | 'unsaved';
   onInternalLinks?: () => void;
   articleId?: number;
   cachedOutlines?: string | null;
@@ -59,6 +61,12 @@ interface Props {
   aiVisibilitySummary?: AiVisibilitySummary | null;
   isRunningAiVisibility?: boolean;
   onRunAiVisibility?: () => void;
+  /** AI Readability "Apply All" — runs the structure-only optimize on the page. */
+  onApplyReadability?: (result: AiReadabilityResult) => void;
+  /** Plagiarism panel → editor red highlights (active sentences + focused one). */
+  onPlagiarismHighlight?: (sentences: string[], focused: string | null) => void;
+  /** Bumped when a readability optimize is Accepted → mark its suggestions done. */
+  readabilityAccepted?: number;
   /** Shared/preview mode — disables every mutating action. */
   readOnly?: boolean;
 }
@@ -235,6 +243,7 @@ const ContentScorePanel = ({
   keyword,
   onAutoOptimize,
   isAutoOptimizing,
+  saveState,
   onInternalLinks,
   articleId,
   cachedOutlines,
@@ -251,6 +260,9 @@ const ContentScorePanel = ({
   aiVisibilitySummary,
   isRunningAiVisibility,
   onRunAiVisibility,
+  onApplyReadability,
+  onPlagiarismHighlight,
+  readabilityAccepted,
   readOnly,
   highlightTerms,
   onHighlightTermsChange,
@@ -267,6 +279,8 @@ const ContentScorePanel = ({
     wasOptimizingRef.current = !!isAutoOptimizing;
   }, [isAutoOptimizing]);
   const [view, setView] = useState<'main' | 'write' | 'publish' | 'prepublish'>('main');
+  // Which Write & Optimize section to expand when opened via a score gauge.
+  const [writeSection, setWriteSection] = useState<'seo' | 'ai' | null>(null);
   const [nlpOpen, setNlpOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   const [competitorOpen, setCompetitorOpen] = useState(false);
@@ -496,9 +510,10 @@ const ContentScorePanel = ({
         onAutoOptimize={onAutoOptimize}
         isAutoOptimizing={isAutoOptimizing}
         readOnly={readOnly}
-        onBack={() => setView('main')}
+        onBack={() => { setView('main'); setWriteSection(null); }}
         highlightTerms={highlightTerms}
         onHighlightTermsChange={onHighlightTermsChange}
+        initialSection={writeSection ?? undefined}
       />
     );
   }
@@ -506,6 +521,7 @@ const ContentScorePanel = ({
   if (view === 'publish') {
     return (
       <PublishExportPanel
+        articleId={articleId}
         score={score}
         html={html || ''}
         plainText={plainText}
@@ -514,6 +530,7 @@ const ContentScorePanel = ({
         metaDescription={metaDescription || ''}
         onMetaTitleChange={onMetaTitleChange || (() => {})}
         onMetaDescriptionChange={onMetaDescriptionChange || (() => {})}
+        saveState={saveState}
         keyword={keyword || ''}
         featuredImage={featuredImage || null}
         onFeaturedImageChange={onFeaturedImageChange}
@@ -529,15 +546,17 @@ const ContentScorePanel = ({
     return (
       <PrePublishPanel
         score={score}
+        aiScore={aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0}
+        hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         plainText={plainText}
         articleId={articleId}
-        aiSummary={aiVisibilitySummary}
-        isAnalyzingAi={!!isRunningAiVisibility}
-        onAnalyzeAi={() => { onRunAiVisibility?.(); }}
         readOnly={readOnly}
         onBack={() => setView('main')}
         initialPlagiarism={initialPlagiarism}
         initialAiReadability={initialAiReadability}
+        onApplyReadability={onApplyReadability}
+        onPlagiarismHighlight={onPlagiarismHighlight}
+        readabilityAccepted={readabilityAccepted}
       />
     );
   }
@@ -561,8 +580,12 @@ const ContentScorePanel = ({
         </div>
       </div>
 
-      {/* ── SEO · Content Score · AI Search gauges ── */}
-      <ScoreTrio seo={score} ai={aiScore} hasAi={hasAi} />
+      {/* ── SEO · Content Score · AI Search gauges (click → Write & Optimize) ── */}
+      <ScoreTrio
+        seo={score} ai={aiScore} hasAi={hasAi}
+        onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
+        onAiClick={() => { setWriteSection('ai'); setView('write'); }}
+      />
 
       </div>
 
@@ -681,7 +704,7 @@ const ContentScorePanel = ({
 
         {/* #3 Keywords & Terms — opens the Write & Optimize view */}
         <div data-tour="keywords">
-          <SectionRow num={3} label="Write & Optimize" open={false} onToggle={() => setView('write')} />
+          <SectionRow num={3} label="Write & Optimize" open={false} onToggle={() => { setWriteSection(null); setView('write'); }} />
 
           {nlpOpen && (
             <>

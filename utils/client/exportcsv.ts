@@ -13,22 +13,19 @@ const exportCSV = (keywords: KeywordType[] | SCKeywordType[], domain:string, scD
    let csvBody = '';
    let fileName = `${domain}-keywords_serp.csv`;
 
-   console.log(keywords[0]);
-   console.log('isSCKeywords:', isSCKeywords);
-
    if (isSCKeywords) {
       csvHeader = 'ID,Keyword,Position,Impressions,Clicks,CTR,Country,Device\r\n';
       fileName = `${domain}-search-console-${scDataDuration}.csv`;
       keywords.forEach((keywordData, index) => {
          const { keyword, position, country, device, clicks, impressions, ctr } = keywordData as SCKeywordType;
          // eslint-disable-next-line max-len
-         csvBody += `${index}, ${keyword}, ${position === 0 ? '-' : position}, ${impressions}, ${clicks}, ${ctr}, ${countries[country][0]}, ${device}\r\n`;
+         csvBody += `${index}, ${keyword}, ${position === 0 ? '-' : position}, ${impressions}, ${clicks}, ${ctr}, ${countries[country]?.[0] || country || '-'}, ${device}\r\n`;
       });
    } else {
       keywords.forEach((keywordData) => {
          const { ID, keyword, position, url, country, city, device, lastUpdated, added, tags } = keywordData as KeywordType;
          // eslint-disable-next-line max-len
-         csvBody += `${ID}, ${keyword}, ${position === 0 ? '-' : position}, ${url || '-'}, ${countries[country][0]}, ${city || '-'}, ${device}, ${lastUpdated}, ${added}, ${tags.join(',')}\r\n`;
+         csvBody += `${ID}, ${keyword}, ${position === 0 ? '-' : position}, ${url || '-'}, ${countries[country]?.[0] || country || '-'}, ${city || '-'}, ${device}, ${lastUpdated}, ${added}, ${tags.join(',')}\r\n`;
       });
    }
 
@@ -50,7 +47,7 @@ export const exportKeywordIdeas = (keywords: IdeaKeyword[], domainName:string) =
       const { keyword, competition, country, domain, competitionIndex, avgMonthlySearches, added, updated, position } = keywordData;
       // eslint-disable-next-line max-len
       const addedDate = new Intl.DateTimeFormat('en-US').format(new Date(added));
-      csvBody += `${keyword}, ${avgMonthlySearches}, ${competition}, ${competitionIndex}, ${countries[country][0]}, ${addedDate}\r\n`;
+      csvBody += `${keyword}, ${avgMonthlySearches}, ${competition}, ${competitionIndex}, ${countries[country]?.[0] || country || '-'}, ${addedDate}\r\n`;
    });
    downloadCSV(csvHeader, csvBody, fileName);
 };

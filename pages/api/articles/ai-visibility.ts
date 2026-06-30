@@ -8,6 +8,8 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
 
 function domainFromUrl(url: string): string {
    try {
@@ -29,6 +31,9 @@ function competitorDomainsFromCache(cache: string | null): string[] {
    }
 }
 
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
@@ -46,22 +51,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const [articleRows] = await db.query(
+      const article = await queryOne<ArticleRow & { domain: string | null }>(
          `SELECT a.*, d.domain
           FROM articles a
           LEFT JOIN domain d ON d."ID" = a.domain_id
           WHERE a.${articleIdSql} = ?
           LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (articleRows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
-      const [competitorRows] = await db.query(
+      const competitorRows = await queryRows<{ domain: string | null; url: string | null }>(
          `SELECT domain, url FROM article_competitors WHERE article_id = ?`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const storedCompetitorDomains = (competitorRows as any[])
+      const storedCompetitorDomains = competitorRows
          .map((row) => row.domain || domainFromUrl(row.url || ''))
          .filter(Boolean);
       const cachedCompetitorDomains = competitorDomainsFromCache(article.competitor_outlines_cache);
@@ -84,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await persistAiVisibilityRun(articleId, article.target_keyword || article.title || '', summary);
 
       return res.status(200).json({ summary: { ...summary, score }, warning: sidecarData.warning || null });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'AI visibility failed' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'AI visibility failed' });
    }
 }

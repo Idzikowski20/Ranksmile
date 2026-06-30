@@ -1,8 +1,10 @@
 import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
-import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
 import { countryAlphaTwoCodes, getCountryCodeFromAlphaThree } from './countries';
 import GscAccount from '../database/models/gscAccount';
+import db from '../database/database';
+import { ensureGscDataTable } from '../lib/ensureGscDataTable';
+import { readSettingsBlob } from '../lib/appSettingsStore';
 
 export type SCDomainFetchError = {
    error: boolean,
@@ -180,12 +182,13 @@ const fetchSearchConsoleData = async (
       }
 
       return finalRows;
-   } catch (err:any) {
+   } catch (err) {
+      const e = err as { response?: { status?: number; statusText?: string; data?: { error_description?: string } }; code: string };
       const qType = type === 'stats' ? '(stats)' : `(${days}days)`;
-      const errorMsg = err?.response?.status && `${err?.response?.statusText}. ${err?.response?.data?.error_description}`;
-      console.log(`[ERROR] Search Console API Error for ${domainName} ${qType} : `, errorMsg || err?.code);
+      const errorMsg = e?.response?.status && `${e?.response?.statusText}. ${e?.response?.data?.error_description}`;
+      console.log(`[ERROR] Search Console API Error for ${domainName} ${qType} : `, errorMsg || e?.code);
       // console.log('SC ERROR :', err);
-      return { error: true, errorMsg: errorMsg || err?.code };
+      return { error: true, errorMsg: errorMsg || e?.code };
    }
 };
 
@@ -396,8 +399,7 @@ export const getSearchConsoleApiInfo = async (domain: DomainType, userId?: strin
 
    // 4. Service account — global settings
    if (!scAPIData.private_key) {
-      const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' });
-      const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
+      const settings = ((await readSettingsBlob()) as SettingsType | null) || ({} as SettingsType);
       scAPIData.client_email = settings.search_console_client_email ? cryptr.decrypt(settings.search_console_client_email) : '';
       scAPIData.private_key = settings.search_console_private_key ? cryptr.decrypt(settings.search_console_private_key) : '';
    }
@@ -432,10 +434,11 @@ export const checkSerchConsoleIntegration = async (domain: DomainType): Promise<
  */
 export const readLocalSCData = async (domain:string): Promise<SCDomainDataType|false> => {
    try {
-      const filePath = `${process.cwd()}/data/SC_${domain.replaceAll('/', '-')}.json`;
-      const currentQueueRaw = await readFile(filePath, { encoding: 'utf-8' }).catch(() => '{}');
-      const domainSCData = JSON.parse(currentQueueRaw);
-      return domainSCData;
+      await ensureGscDataTable();
+      const [rows] = await db.query('SELECT data FROM gsc_domain_data WHERE domain = ?', { replacements: [domain] });
+      const row = (rows as Array<{ data: string }>)[0];
+      if (!row) return { threeDays: [], sevenDays: [], thirtyDays: [], lastFetched: '', lastFetchError: '' };
+      return JSON.parse(row.data);
    } catch (error) {
       return false;
    }
@@ -449,12 +452,13 @@ export const readLocalSCData = async (domain:string): Promise<SCDomainDataType|f
  */
 export const updateLocalSCData = async (domain:string, scDomainData?:SCDomainDataType): Promise<SCDomainDataType|false> => {
    try {
-      const dirPath = `${process.cwd()}/data`;
-      const filePath = `${dirPath}/SC_${domain.replaceAll('/', '-')}.json`;
+      await ensureGscDataTable();
       const emptyData:SCDomainDataType = { threeDays: [], sevenDays: [], thirtyDays: [], lastFetched: '', lastFetchError: '' };
-      await mkdir(dirPath, { recursive: true }).catch(() => {});
-      await writeFile(filePath, JSON.stringify(scDomainData || emptyData), { encoding: 'utf-8' }).catch((err) => { console.log(err); });
-      return scDomainData || emptyData;
+      const data = scDomainData || emptyData;
+      // Upsert via delete+insert (dialect-agnostic; mirrors lib/gscSnapshots.ts).
+      await db.query('DELETE FROM gsc_domain_data WHERE domain = ?', { replacements: [domain] });
+      await db.query('INSERT INTO gsc_domain_data (domain, data) VALUES (?, ?)', { replacements: [domain, JSON.stringify(data)] });
+      return data;
    } catch (error) {
       return false;
    }
@@ -466,9 +470,9 @@ export const updateLocalSCData = async (domain:string, scDomainData?:SCDomainDat
  * @returns {Promise<boolean>} - Returns true if file was removed, else returns false.
  */
 export const removeLocalSCData = async (domain:string): Promise<boolean> => {
-   const filePath = `${process.cwd()}/data/SC_${domain.replaceAll('/', '-')}.json`;
    try {
-      await unlink(filePath);
+      await ensureGscDataTable();
+      await db.query('DELETE FROM gsc_domain_data WHERE domain = ?', { replacements: [domain] });
       return true;
    } catch (error) {
       return false;

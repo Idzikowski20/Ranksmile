@@ -7,6 +7,7 @@ export type SetupStatus = {
    stagePercent: number;
    stages: Record<'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations', StageState>;
    error: string | null;
+   auditCounts: { audited: number; skipped: number; total: number } | null;
 };
 
 // Domains are addressed by slug across the app (the `pages/api/domains/[slug]` +

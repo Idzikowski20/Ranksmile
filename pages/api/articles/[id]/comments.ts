@@ -10,7 +10,11 @@ import { randomBytes } from 'crypto';
 import db from '../../../../database/database';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { emitCommentChange } from '../../../../lib/commentBus';
-import { assertCommentAccess } from '../../../../lib/commentAccess';
+import { publishToArticle } from '../../../../lib/ably/server';
+import { ABLY_EVENTS } from '../../../../lib/ably/channel';
+import { getCommentAccessKind } from '../../../../lib/commentAccess';
+import { getErrorMessage } from '../../../../lib/errors';
+import { queryOne } from '../../../../lib/db/query';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;
@@ -65,9 +69,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // Reachable by raw article_id, so a valid share token (anonymous reviewer) or owner
    // access is required — otherwise any guessed id would expose another tenant's comments.
    const articleId = parseInt(String(id), 10);
-   if (!(await assertCommentAccess(req, res, articleId))) {
+   const access = await getCommentAccessKind(req, res, articleId);
+   if (!access) {
       return res.status(403).json({ error: 'Access denied.' });
    }
+   // An anonymous (share-token) reviewer may not edit/delete a comment authored by the owner.
+   const isOwnerComment = async (cid: string): Promise<boolean> => {
+      const r = await queryOne<{ is_owner: number | null }>('SELECT is_owner FROM article_comments WHERE id = ? AND article_id = ?', [cid, id]);
+      return Number(r?.is_owner) === 1;
+   };
 
    try {
       if (req.method === 'GET') {
@@ -92,11 +102,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          // Replies don't carry their own anchor quote.
          const q = parentId ? '' : quote;
          await db.query(
-            `INSERT INTO article_comments (id, article_id, quote, body, images_json, author, color, avatar_url, parent_id, resolved, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
-            { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId] },
+            `INSERT INTO article_comments (id, article_id, quote, body, images_json, author, color, avatar_url, parent_id, is_owner, resolved, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            { replacements: [commentId, id, q, text, JSON.stringify(images), author, color, avatar, parentId, access === 'owner' ? 1 : 0] },
          );
          emitCommentChange(String(id), { type: 'create', commentId, parentId });
+         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'create', commentId, parentId });
          return res.status(200).json({
             comment: { id: commentId, parentId: parentId || null, quote: q, text, images, author, color, avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null },
          });
@@ -110,13 +121,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                { replacements: [resolved ? 1 : 0, commentId, id] });
          }
          if (typeof text === 'string') {
+            if (access === 'token' && await isOwnerComment(commentId)) return res.status(403).json({ error: "You can't edit the owner's comment." });
             await db.query(`UPDATE article_comments SET body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND article_id = ?`,
                { replacements: [text, commentId, id] });
          }
          // Toggle a reactor for an emoji (read-modify-write on reactions_json).
          if (reaction && reaction.emoji && reaction.author) {
-            const [rows] = await db.query(`SELECT reactions_json FROM article_comments WHERE id = ? AND article_id = ?`, { replacements: [commentId, id] });
-            const current = parseReactions((rows as any[])[0]?.reactions_json ?? null);
+            const row = await queryOne<{ reactions_json: string | null }>(`SELECT reactions_json FROM article_comments WHERE id = ? AND article_id = ?`, [commentId, id]);
+            const current = parseReactions(row?.reactions_json ?? null);
             const who = new Set(current[reaction.emoji] || []);
             if (who.has(reaction.author)) who.delete(reaction.author); else who.add(reaction.author);
             if (who.size) current[reaction.emoji] = [...who]; else delete current[reaction.emoji];
@@ -124,21 +136,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                { replacements: [JSON.stringify(current), commentId, id] });
          }
          emitCommentChange(String(id), { type: 'update', commentId });
+         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'update', commentId });
          return res.status(200).json({ ok: true });
       }
 
       if (req.method === 'DELETE') {
          const { commentId } = req.query;
          if (!commentId) return res.status(400).json({ error: 'commentId is required' });
+         if (access === 'token' && await isOwnerComment(String(commentId))) return res.status(403).json({ error: "You can't delete the owner's comment." });
          // Deleting a root removes its whole thread (replies anchored to it).
          await db.query(`DELETE FROM article_comments WHERE article_id = ? AND (id = ? OR parent_id = ?)`,
             { replacements: [id, commentId, commentId] });
          emitCommentChange(String(id), { type: 'delete', commentId });
+         void publishToArticle(String(id), ABLY_EVENTS.comment, { type: 'delete', commentId: String(commentId) });
          return res.status(200).json({ ok: true });
       }
 
       return res.status(405).json({ error: 'Method not allowed' });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

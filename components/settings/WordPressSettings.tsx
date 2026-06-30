@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import WpConnectionsTable from '../wordpress/WpConnectionsTable';
 
 const font = 'var(--font-family-primary)';
 const DOCS_URL = 'https://docs.surferseo.com/en/articles/6328028-wordpress-plugin-explained';
@@ -6,20 +7,25 @@ const DOCS_URL = 'https://docs.surferseo.com/en/articles/6328028-wordpress-plugi
 const WordPressSettings = () => {
   const [hover, setHover] = useState(false);
 
+  const emptyState = (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: '#F8F8F9',
+        borderRadius: 6,
+      }}
+    >
+      <span style={{ fontSize: 14, color: '#3F3F47' }}>You haven&apos;t connected any accounts yet</span>
+    </div>
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 24, fontFamily: font }}>
-      {/* Empty-state box — sized to its content */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 16,
-          background: '#F8F8F9',
-          borderRadius: 6,
-        }}
-      >
-        <span style={{ fontSize: 14, color: '#3F3F47' }}>You haven&apos;t connected any accounts yet</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 24, fontFamily: font, width: '100%' }}>
+      <div style={{ width: '100%' }}>
+        <WpConnectionsTable emptyState={emptyState} />
       </div>
 
       {/* How to connect link */}

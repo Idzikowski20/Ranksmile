@@ -4,6 +4,7 @@ import Icon from './Icon';
 import { authClient } from '../../lib/auth/client';
 import { useOrganization } from '../../services/organization';
 import { useGscAccount } from '../../services/gscAccount';
+import { useProfile } from '../../services/profile';
 
 const font = 'var(--font-family-primary)';
 
@@ -11,7 +12,7 @@ const font = 'var(--font-family-primary)';
 const OrgBadge = ({ size, logo, initial }: { size: number; logo: string; initial: string }) => (
    <span
       aria-hidden="true"
-      style={{ width: size, height: size, borderRadius: 6, background: '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, overflow: 'hidden', textTransform: 'uppercase' }}
+      style={{ width: size, height: size, borderRadius: 6, background: logo ? 'transparent' : '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, overflow: 'hidden', textTransform: 'uppercase' }}
    >
       {logo ? <img alt="" src={logo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} /> : initial}
    </span>
@@ -52,16 +53,17 @@ const TopbarAccountMenu = () => {
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
    const { data: gscAccount } = useGscAccount();
+   const { data: profile } = useProfile();
    const { data: org } = useOrganization();
    const orgName = org?.name || 'Organization';
    const orgInitial = (org?.name || '').charAt(0).toUpperCase() || 'O';
    const orgLogo = org?.logoUrl || '';
    const email = mounted ? (session?.data?.user?.email ?? '') : '';
-   const name = mounted ? (session?.data?.user?.name ?? email) : '';
-   const initials = name ? name.charAt(0).toUpperCase() : '?';
-   const accountPicture = gscAccount?.picture || '';
-   const accountLabel = gscAccount?.email || email;
-   const accountInitials = accountLabel ? accountLabel.charAt(0).toUpperCase() : initials;
+   // Display name: user's saved profile name → auth name → none. Avatar: custom
+   // upload → Google (GSC) picture → initials.
+   const displayName = mounted ? (profile?.name || session?.data?.user?.name || '') : '';
+   const accountPicture = (profile?.avatarUrl || gscAccount?.picture) || '';
+   const accountInitials = (displayName || email || '?').charAt(0).toUpperCase();
 
    useEffect(() => {
       setMounted(true);
@@ -88,7 +90,7 @@ const TopbarAccountMenu = () => {
          >
             <span
                aria-hidden="true"
-               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: '#2F2F34', borderRadius: 9999, transition: 'background 150ms ease' }}
+               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: 'rgb(24, 24, 27)', borderRadius: 9999, transition: 'background 150ms ease' }}
             >
                <OrgBadge size={20} logo={orgLogo} initial={orgInitial} />
                <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo">
@@ -131,7 +133,10 @@ const TopbarAccountMenu = () => {
                      )}
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                     <span style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accountLabel}</span>
+                     {displayName && (
+                        <span style={{ fontFamily: font, fontSize: 14, fontWeight: 600, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
+                     )}
+                     <span style={{ fontFamily: font, fontSize: displayName ? 13 : 14, fontWeight: displayName ? 400 : 600, color: displayName ? '#71717B' : '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
                   </div>
                </a>
 

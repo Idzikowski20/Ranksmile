@@ -7,8 +7,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
+import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/aiBudget';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -39,22 +42,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (articleId) {
     try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const row = await queryOne<{ internal_links_cache: string | null }>(
         `SELECT internal_links_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-        { replacements: [articleId] },
+        [articleId],
       );
-      const cached = (rows as any[])[0]?.internal_links_cache;
+      const cached = row?.internal_links_cache;
       if (cached) {
         console.log(`[internal-links] serving cache for article ${articleId}`);
         return res.status(200).json(JSON.parse(cached));
       }
-    } catch (e: any) {
-      console.warn('[internal-links] cache read failed:', e.message);
+    } catch (e) {
+      console.warn('[internal-links] cache read failed:', getErrorMessage(e));
     }
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+
+  // Org-wide AI budget (gate after the free cache return above).
+  const orgId = await resolveOrgId(req, res);
+  const over = await orgBudgetBlocked(orgId);
+  if (over) return res.status(429).json(over);
 
   // Truncate content to keep prompt reasonable (first ~12000 chars)
   const trimmedContent = content.length > 12000 ? content.slice(0, 12000) + '…' : content;
@@ -113,6 +121,7 @@ If no natural links found, return: []`;
     }
 
     const data = await response.json();
+    void recordAiTokens(orgId, data.usage?.total_tokens || 0);
     const raw: string = data.choices?.[0]?.message?.content || '[]';
 
     // Extract JSON array from response (model may wrap in ```json blocks)
@@ -122,7 +131,10 @@ If no natural links found, return: []`;
       return res.status(200).json({ suggestions: [] });
     }
 
-    const suggestions: LinkSuggestion[] = JSON.parse(jsonMatch[0]);
+    // A truncated array (hit max_tokens) or bracket-bearing prose makes the regex match but the
+    // parse throw — degrade to empty suggestions instead of a 500.
+    let suggestions: LinkSuggestion[] = [];
+    try { suggestions = JSON.parse(jsonMatch[0]); } catch { return res.status(200).json({ suggestions: [] }); }
 
     console.log(`[internal-links] found ${suggestions.length} suggestions for article ${articleId}`);
 
@@ -136,14 +148,14 @@ If no natural links found, return: []`;
           `UPDATE articles SET internal_links_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(result), articleId] },
         );
-      } catch (e: any) {
-        console.warn('[internal-links] cache write failed:', e.message);
+      } catch (e) {
+        console.warn('[internal-links] cache write failed:', getErrorMessage(e));
       }
     }
 
     return res.status(200).json(result);
-  } catch (err: any) {
-    console.error('[internal-links] error:', err?.message);
-    return res.status(500).json({ error: err?.message || 'Analysis failed' });
+  } catch (err) {
+    console.error('[internal-links] error:', getErrorMessage(err));
+    return res.status(500).json({ error: getErrorMessage(err) || 'Analysis failed' });
   }
 }

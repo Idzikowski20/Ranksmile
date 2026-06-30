@@ -5,14 +5,15 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import GlobalTopbar from '../components/common/GlobalTopbar';
+import BlogPathsField from '../components/domains/BlogPathsField';
 
 // ─── Shared button classes (Surfer canonical, from invite/[token].tsx) ────────
 const btnBase =
    'gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none';
 
-const btnPrimary = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-base text-white-base w-full hover:bg-purple-base active:bg-purple-100`;
-const btnSecondary = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-10 text-gray-base hover:bg-gray-20 active:bg-gray-40`;
-const btnLink = `${btnBase} text-md rounded-none bg-transparent p-0 text-gray-100 hover:text-gray-120 active:text-gray-160`;
+const btnPrimary = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-base text-white-base w-full hover:bg-purple-base active:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-gray-base`;
+const btnSecondary = `${btnBase} px-lg py-sm rounded-lg text-base bg-gray-10 text-gray-base hover:bg-gray-20 active:bg-gray-40 disabled:cursor-not-allowed disabled:opacity-60`;
+const btnLink = `${btnBase} text-md rounded-none bg-transparent p-0 text-gray-100 hover:text-gray-120 active:text-gray-160 disabled:cursor-not-allowed disabled:opacity-50`;
 
 // ─── Domain normaliser ────────────────────────────────────────────────────────
 function normalizeDomain(raw: string): string {
@@ -153,9 +154,9 @@ const SetupShell = ({ title, children }: { title: string; children: ReactNode })
          <title>{title}</title>
          <meta name="robots" content="noindex" />
       </Head>
-      <div className="relative flex flex-col" style={{ minHeight: '100dvh' }}>
+      <div className="relative flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
          <GlobalTopbar breadcrumb={<SetupLogo />} />
-         <div className="p-sm" style={{ flex: 1 }}>
+         <div className="p-sm flex flex-col" style={{ flex: 1, minHeight: 0 }}>
             {children}
          </div>
       </div>
@@ -210,6 +211,9 @@ const SetupPage: NextPage = () => {
    const [location, setLocation] = useState<SetupLocation | null>(null);
    const [locOpen, setLocOpen] = useState(false);
    const [locFilter, setLocFilter] = useState('');
+   // blog paths (detected after a domain is chosen, editable before configure)
+   const [blogPaths, setBlogPaths] = useState<string[]>([]);
+   const [blogDetecting, setBlogDetecting] = useState(false);
 
    // Step 2
    const [brandName, setBrandName] = useState('');
@@ -221,6 +225,16 @@ const SetupPage: NextPage = () => {
    const comboRef = useRef<HTMLDivElement>(null);
    const locRef = useRef<HTMLDivElement>(null);
    const brandNameRef = useRef<HTMLInputElement>(null);
+   const brandKnowledgeRef = useRef<HTMLTextAreaElement>(null);
+
+   // Auto-grow the brand-details textarea to fit its content, so the page scrolls
+   // instead of the textarea (no nested scrollbar).
+   useEffect(() => {
+      const el = brandKnowledgeRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+   }, [brandKnowledge, loadingBrand]);
 
    // ── Fetch GSC sites on mount ───────────────────────────────────────────
    useEffect(() => {
@@ -253,6 +267,24 @@ const SetupPage: NextPage = () => {
       return () => document.removeEventListener('mousedown', handler);
    }, [comboOpen, locOpen]);
 
+   // ── Detect where the blog lives (sitemap clustering) once a domain is chosen. ──
+   const detectBlogPaths = async (domainName: string) => {
+      setBlogDetecting(true);
+      try {
+         const r = await fetch('/api/domains/detect-blog-paths', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain: domainName }),
+         });
+         const data = r.ok ? await r.json() : { blogPaths: [] };
+         setBlogPaths(Array.isArray(data.blogPaths) ? data.blogPaths : []);
+      } catch {
+         setBlogPaths([]);
+      } finally {
+         setBlogDetecting(false);
+      }
+   };
+
    // ── Choose a domain — records the selection but does NOT submit; the
    //    location/language step + Continue does (so the language is picked first). ──
    const chooseDomain = (displayValue: string) => {
@@ -263,6 +295,8 @@ const SetupPage: NextPage = () => {
       setUrlMode(false);
       setComboOpen(false);
       setStep1Error('');
+      setBlogPaths([]);
+      void detectBlogPaths(d);
    };
    const handleSiteSelect = (siteUrl: string) => chooseDomain(siteUrl);
    const handleUrlSubmit = () => { if (urlInput.trim()) chooseDomain(urlInput.trim()); };
@@ -276,9 +310,24 @@ const SetupPage: NextPage = () => {
          const res = await fetch('/api/domains/configure', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain, language: location.code }),
+            body: JSON.stringify({
+               domain,
+               language: location.code,
+               country: location.country,
+               languageName: location.language,
+               cc: location.cc,
+            }),
          });
          if (res.ok) {
+            const cfg = await res.json().catch(() => ({}));
+            const configuredSlug = cfg?.domainSlug as string | undefined;
+            if (blogPaths.length > 0 && configuredSlug) {
+               await fetch('/api/domains/blog-paths', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ slug: configuredSlug, blogPaths }),
+               }).catch(() => { /* non-fatal — paths can be edited later in domain settings */ });
+            }
             setStep(2);
             setLoadingBrand(true);
             fetch('/api/brand-knowledge', {
@@ -343,7 +392,7 @@ const SetupPage: NextPage = () => {
          <SetupShell title="Create a new workspace · SerpBear">
             <div
                data-scroll-element="true"
-               className="relative rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
+               className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
             >
                   <div className="pb-md mx-auto flex w-full flex-col items-center justify-center self-center gap-lg" style={{ maxWidth: 400, paddingTop: '3rem' }}>
                      <div className="gap-2xl flex w-full flex-col justify-center">
@@ -367,13 +416,19 @@ const SetupPage: NextPage = () => {
                                     <div className="text-md pb-xs font-medium text-gray-100">Select Search Console site</div>
                                     <button
                                        type="button"
-                                       onClick={() => { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }}
+                                       aria-expanded={comboOpen}
+                                       onClick={() => {
+                                          // Re-clicking a chosen domain reopens the GSC list to pick another.
+                                          // With no GSC sites (URL-entered domain) there's no list, so clear it.
+                                          if (gscSites.length > 0) setComboOpen((o) => !o);
+                                          else { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }
+                                       }}
                                        className="border-gray-40 bg-white-base gap-sm px-md text-md flex h-[40px] w-full cursor-pointer items-center rounded-lg border border-solid text-left font-sans hover:border-gray-60"
                                        style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
                                     >
                                        <SiteFavicon domain={domain} />
                                        <span className="min-w-0 flex-1 truncate text-gray-base">{domain}</span>
-                                       <div className="ml-auto flex items-center"><ChevronDown open={false} /></div>
+                                       <div className="ml-auto flex items-center"><ChevronDown open={comboOpen} /></div>
                                     </button>
                                  </>
                               ) : !urlMode ? (
@@ -407,51 +462,6 @@ const SetupPage: NextPage = () => {
                                              <ChevronDown open={comboOpen} />
                                           </div>
                                        </button>
-                                       {comboOpen && (
-                                          <div
-                                             className="border-gray-20 bg-white-base mt-xs rounded-lg border"
-                                             style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, overflow: 'hidden' }}
-                                          >
-                                             <div className="p-xs">
-                                                <input
-                                                   type="text"
-                                                   autoFocus
-                                                   value={siteFilter}
-                                                   onChange={(e) => setSiteFilter(e.target.value)}
-                                                   placeholder="Search sites"
-                                                   className="border-gray-40 bg-white-base text-md h-[36px] w-full rounded-lg border px-md outline-none focus:border-purple-40"
-                                                   style={{ fontFamily: 'var(--font-family-primary)' }}
-                                                />
-                                             </div>
-                                             <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                                                {gscSites
-                                                   .filter((site) => normalizeDomain(site.siteUrl).toLowerCase().includes(siteFilter.trim().toLowerCase()))
-                                                   .map((site) => {
-                                                      const dom = normalizeDomain(site.siteUrl);
-                                                      return (
-                                                         <button
-                                                            key={site.siteUrl}
-                                                            type="button"
-                                                            className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
-                                                            onClick={() => handleSiteSelect(site.siteUrl)}
-                                                         >
-                                                            <SiteFavicon domain={dom} />
-                                                            <span className="min-w-0 flex-1 truncate text-gray-base">{dom}</span>
-                                                         </button>
-                                                      );
-                                                   })}
-                                             </div>
-                                             <button
-                                                type="button"
-                                                onClick={connectGsc}
-                                                className="border-gray-20 gap-sm flex w-full items-center border-t px-md py-sm text-left text-md font-medium hover:bg-gray-10"
-                                                style={{ color: '#18181b' }}
-                                             >
-                                                <GoogleIcon />
-                                                <span>Add another Search Console account</span>
-                                             </button>
-                                          </div>
-                                       )}
                                     </>
                                  ) : (
                                     // GSC not connected → benefits + connect CTA (no combobox)
@@ -491,6 +501,55 @@ const SetupPage: NextPage = () => {
                                        style={{ fontFamily: 'var(--font-family-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
                                     />
                                  </>
+                              )}
+
+                              {/* Shared GSC site dropdown — opened by either the empty combobox
+                                  button or the already-selected-domain button, so re-clicking a
+                                  chosen domain reopens the list instead of clearing the selection. */}
+                              {comboOpen && gscSites.length > 0 && (
+                                 <div
+                                    className="border-gray-20 bg-white-base mt-xs rounded-lg border"
+                                    style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)', position: 'absolute', zIndex: 50, width: '100%', maxWidth: 400, overflow: 'hidden' }}
+                                 >
+                                    <div className="p-xs">
+                                       <input
+                                          type="text"
+                                          autoFocus
+                                          value={siteFilter}
+                                          onChange={(e) => setSiteFilter(e.target.value)}
+                                          placeholder="Search sites"
+                                          className="border-gray-40 bg-white-base text-md h-[36px] w-full rounded-lg border px-md outline-none focus:border-purple-40"
+                                          style={{ fontFamily: 'var(--font-family-primary)' }}
+                                       />
+                                    </div>
+                                    <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                                       {gscSites
+                                          .filter((site) => normalizeDomain(site.siteUrl).toLowerCase().includes(siteFilter.trim().toLowerCase()))
+                                          .map((site) => {
+                                             const dom = normalizeDomain(site.siteUrl);
+                                             return (
+                                                <button
+                                                   key={site.siteUrl}
+                                                   type="button"
+                                                   className="gap-sm flex w-full items-center px-md py-sm text-left text-md hover:bg-gray-10"
+                                                   onClick={() => handleSiteSelect(site.siteUrl)}
+                                                >
+                                                   <SiteFavicon domain={dom} />
+                                                   <span className="min-w-0 flex-1 truncate text-gray-base">{dom}</span>
+                                                </button>
+                                             );
+                                          })}
+                                    </div>
+                                    <button
+                                       type="button"
+                                       onClick={connectGsc}
+                                       className="border-gray-20 gap-sm flex w-full items-center border-t px-md py-sm text-left text-md font-medium hover:bg-gray-10"
+                                       style={{ color: '#18181b' }}
+                                    >
+                                       <GoogleIcon />
+                                       <span>Add another Search Console account</span>
+                                    </button>
+                                 </div>
                               )}
                            </div>
                         </div>
@@ -560,6 +619,21 @@ const SetupPage: NextPage = () => {
                                  )}
                               </div>
 
+                              {/* Where does your blog live? */}
+                              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                 <label style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                                    Where does your blog live? <span style={{ fontWeight: 400, color: '#71717B' }}>(optional)</span>
+                                 </label>
+                                 <span style={{ fontSize: 12, color: '#52525C' }}>Leave empty to scan your whole site. Set a path to focus the audit on a section.</span>
+                                 {blogDetecting ? (
+                                    <span className="gap-sm flex items-center" style={{ fontSize: 13, color: '#71717B' }}>
+                                       <Spinner /> Detecting your blog…
+                                    </span>
+                                 ) : (
+                                    <BlogPathsField value={blogPaths} onChange={setBlogPaths} />
+                                 )}
+                              </div>
+
                               <button
                                  type="button"
                                  className={btnPrimary}
@@ -623,7 +697,7 @@ const SetupPage: NextPage = () => {
             data-scroll-element="true"
             className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] px-base sm:px-lg bg-white-base"
          >
-               <div className="gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem', paddingBottom: 140 }}>
+               <div className="gap-2xl mx-auto flex w-full flex-col items-center justify-center self-center max-w-screen-sm" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
                   <div className="gap-2xl flex w-full flex-col justify-center">
                      <StepDots step={2} />
                      <div className="gap-md flex w-full flex-col justify-center">
@@ -684,11 +758,12 @@ const SetupPage: NextPage = () => {
                            <div className="gap-sm flex w-full flex-col">
                               <div className="border-gray-20 flex w-full flex-col overflow-hidden rounded-lg border">
                                  <textarea
+                                    ref={brandKnowledgeRef}
                                     value={brandKnowledge}
                                     onChange={(e) => setBrandKnowledge(e.target.value)}
                                     placeholder="Describe your business, target audience, key products/services, competitors, tone of voice…"
-                                    className="w-full outline-none resize-y bg-white-base text-md"
-                                    style={{ minHeight: 220, padding: '0.75rem 1rem', fontFamily: 'var(--font-family-primary)', border: 'none' }}
+                                    className="w-full outline-none resize-none bg-white-base text-md"
+                                    style={{ minHeight: 220, overflow: 'hidden', padding: '0.75rem 1rem', fontFamily: 'var(--font-family-primary)', border: 'none' }}
                                  />
                               </div>
                            </div>
@@ -699,24 +774,19 @@ const SetupPage: NextPage = () => {
                      {step2Error && (
                         <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>{step2Error}</span>
                      )}
-                  </form>
-               </div>
 
-               {/* Fixed footer — pinned to the viewport bottom, white gradient masks content under it */}
-               <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, pointerEvents: 'none' }}>
-                  <div style={{ height: 40, background: 'linear-gradient(to top, #ffffff 45%, rgba(255,255,255,0))' }} />
-                  <div className="px-base sm:px-lg pb-md sm:pb-lg bg-white-base" style={{ pointerEvents: 'auto' }}>
-                     <div className="mx-auto flex w-full items-center max-w-screen-sm" style={{ gap: 16 }}>
+                     {/* Buttons in the card flow (like step 1) — scroll the page down to reach them. */}
+                     <div className="flex w-full items-center" style={{ gap: 16 }}>
                         <button
                            type="button"
                            className={btnLink}
+                           disabled={submitting}
                            onClick={() => router.push('/')}
                         >
                            Cancel
                         </button>
                         <button
                            type="submit"
-                           form="setup-brand-kit-form"
                            disabled={submitting}
                            className={btnPrimary}
                         >
@@ -730,7 +800,7 @@ const SetupPage: NextPage = () => {
                            )}
                         </button>
                      </div>
-                  </div>
+                  </form>
                </div>
             </div>
          </SetupShell>

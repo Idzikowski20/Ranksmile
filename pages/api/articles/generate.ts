@@ -5,8 +5,16 @@ import { QueryTypes } from 'sequelize';
 import axios from 'axios';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne, queryRows } from '../../../lib/db/query';
+
+// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
+export const config = { maxDuration: 60 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -24,26 +32,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'domainId and keyword are required' });
    }
 
+   // Ownership: previously any authed user could generate (LLM spend) under ANY domainId.
+   const userId = await getCurrentUserId(req, res);
+   const owns = await verifyDomainOwnershipById(Number(domainId), userId ? String(userId) : null);
+   if (owns === null) return res.status(404).json({ error: 'Domain not found' });
+   if (owns === false) return res.status(403).json({ error: 'Access denied.' });
+
+   // Org-wide AI budget: full-article generation is expensive — gate it on the shared 5h pool.
+   const orgId = await resolveOrgId(req, res);
+   const over = await orgBudgetBlocked(orgId);
+   if (over) return res.status(429).json(over);
+
    try {
       const articleIdSql = await getArticleIdSql();
       // Pobierz URL domeny
-      const [domains] = await db.query(
+      const domain = await queryOne<{ domain: string }>(
          `SELECT * FROM domain WHERE "ID" = ? LIMIT 1`,
-         { replacements: [domainId] },
+         [domainId],
       );
-      const domain = (domains as any[])[0];
       if (!domain) return res.status(404).json({ error: 'Domain not found' });
 
       // Pobierz istniejące artykuły dla domeny (do internal linkingu)
-      const [existingArticles] = await db.query(
+      const existingArticles = await queryRows<{ id: number; title: string | null; meta_url: string | null; target_keyword: string | null }>(
          `SELECT id, title, meta_url, target_keyword
           FROM articles
           WHERE domain_id = ? AND status = 'published' AND meta_url IS NOT NULL AND meta_url != ''
           ORDER BY created_at DESC
           LIMIT 30`,
-         { replacements: [domainId] },
+         [domainId],
       );
-      const domainArticles = (existingArticles as any[]).map((a: any) => ({
+      const domainArticles = existingArticles.map((a) => ({
          id: a.id,
          title: a.title,
          url: `https://${domain.domain}/${(a.meta_url || '').replace(/^\//, '')}`,
@@ -58,13 +76,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const sidecarRes = await axios.post(
             `${sidecarUrl}/generate`,
             { url: `https://${domain.domain}`, keyword, language, tone, existing_articles: domainArticles },
-            { timeout: 300000 }, // 5 minut — generowanie artykułu jest długie
+            { timeout: 300000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } }, // 5 minut — generowanie artykułu jest długie
          );
          sidecarData = sidecarRes.data;
          console.log(`[generate] Sidecar responded OK`);
-      } catch (sidecarError: any) {
+      } catch (sidecarError) {
          // Jeśli sidecar niedostępny — stwórz placeholder draft
-         const errDetail = sidecarError?.response?.data || sidecarError?.message || 'unknown';
+         const sErr = sidecarError as { message?: string; response?: { data?: unknown } };
+         const errDetail = sErr?.response?.data || sErr?.message || 'unknown';
          console.warn('Sidecar unavailable, creating placeholder:', errDetail);
          sidecarData = {
             article_html: `<h1>${keyword}</h1><p>Artykuł zostanie wygenerowany po uruchomieniu Python sidecar.</p>`,
@@ -146,8 +165,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          articleId,
          ...sidecarData,
       });
-   } catch (error: any) {
+   } catch (error) {
       console.error('generate error:', error);
-      return res.status(500).json({ error: error?.message || 'Generation failed' });
+      return res.status(500).json({ error: getErrorMessage(error) || 'Generation failed' });
    }
 }

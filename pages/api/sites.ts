@@ -8,7 +8,8 @@ import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../lib/gscAccounts';
-import { readLocalSCData } from '../../utils/searchConsole';
+import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
+import { getErrorMessage } from '../../lib/errors';
 
 type GSCSite = {
   siteUrl: string;
@@ -70,8 +71,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const plain = d.get({ plain: true });
     const scData = await readLocalSCData(plain.domain);
     const statsArr = scData && scData.stats ? scData.stats : [];
-    // Take last 30 days of daily stats
-    const recentStats = statsArr.slice(-30);
+    // Last 60 days so the dashboard can compare the last 30d vs the previous 30d.
+    const recentStats = statsArr.slice(-60);
     domainStats[plain.domain] = {
       impressions: plain.scImpressions || 0,
       clicks: plain.scVisits || 0,
@@ -82,6 +83,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         impressions: s.impressions || 0,
       })),
     };
+
+    // Stale-while-revalidate: if we haven't refreshed in >18h, kick a background GSC
+    // fetch so the next dashboard load is current (GSC data itself lags ~2-3 days).
+    const lastFetched = (scData && (scData as { lastFetched?: string }).lastFetched) || '';
+    if (!lastFetched || Date.now() - new Date(lastFetched).getTime() > 18 * 60 * 60 * 1000) {
+      getSearchConsoleApiInfo(plain, userId)
+        .then((scApi) => (hasValidSCAuth(scApi) ? fetchDomainSCData(plain, scApi) : undefined))
+        .catch(() => {});
+    }
   }
 
   try {
@@ -102,8 +112,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             }
           }
         }
-      } catch (err: any) {
-        errors.push(`${account.email}: ${err?.message || err}`);
+      } catch (err) {
+        errors.push(`${account.email}: ${getErrorMessage(err)}`);
       }
     }
 
@@ -129,8 +139,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 }
               }
             }
-          } catch (err: any) {
-            errors.push(`${plain.domain}: ${err?.message || err}`);
+          } catch (err) {
+            errors.push(`${plain.domain}: ${getErrorMessage(err)}`);
           }
         }
       }
@@ -146,8 +156,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     return res.status(200).json({ sites: allSites, domainStats });
-  } catch (err: any) {
-    console.log('[ERROR] Fetching GSC sites:', err?.message || err);
+  } catch (err) {
+    console.log('[ERROR] Fetching GSC sites:', getErrorMessage(err));
     return res.status(500).json({ error: 'Failed to fetch sites from Search Console.' });
   }
 }

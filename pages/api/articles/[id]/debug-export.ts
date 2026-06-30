@@ -11,6 +11,9 @@ import { getArticleIdSql } from '../../../../lib/articleSql';
 import { ScoreData, computeContentScore, computeContentScoreBreakdown, updateTermsCoverage } from '../../../../lib/contentScore';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
+import { getErrorMessage } from '../../../../lib/errors';
+import { queryRows, queryOne } from '../../../../lib/db/query';
+import type { ArticleRow } from '../../../../lib/db/query';
 
 const parse = (v: any) => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 
@@ -30,8 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const articleIdSql = await getArticleIdSql();
 
    try {
-      const [rows] = await db.query(`SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, { replacements: [id] });
-      const article = (rows as any[])[0];
+      const article = await queryOne<ArticleRow>(`SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, [id]);
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       const content: string = article.content || '';
@@ -48,11 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const score = computeContentScore(plainText, wordCount, headingCount, sd, paragraphCount, internalLinks, content, keyword);
       const breakdown = computeContentScoreBreakdown(plainText, wordCount, headingCount, sd, paragraphCount, content, keyword);
 
-      const [competitors] = await db.query('SELECT * FROM article_competitors WHERE article_id = ? ORDER BY id ASC', { replacements: [id] });
-      const [jobRows] = await db.query('SELECT payload, result, status, created_at FROM analysis_jobs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', { replacements: [id] });
-      const job = (jobRows as any[])[0];
-      const [aivRows] = await db.query('SELECT summary_json, score, created_at FROM ai_visibility_runs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', { replacements: [id] });
-      const aiv = (aivRows as any[])[0];
+      const competitors = await queryRows<Record<string, unknown>>('SELECT * FROM article_competitors WHERE article_id = ? ORDER BY id ASC', [id]);
+      const job = await queryOne<{ payload: string | null; result: string | null; status: string | null; created_at: string | null }>('SELECT payload, result, status, created_at FROM analysis_jobs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', [id]);
+      const aiv = await queryOne<{ summary_json: string | null; score: number | null; created_at: string | null }>('SELECT summary_json, score, created_at FROM ai_visibility_runs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', [id]);
 
       const range = (actual: number, target: any, min: any, max: any) => ({ actual, target: target ?? null, min: min ?? null, max: max ?? null });
 
@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             headings: range(headingCount, sd.headings_target, sd.headings_min, sd.headings_max),
             paragraphs: range(paragraphCount, sd.paragraphs_target, sd.paragraphs_min, sd.paragraphs_max),
             internal_links: internalLinks,
-            competitor_count: sd.competitor_count ?? (competitors as any[]).length,
+            competitor_count: sd.competitor_count ?? competitors.length,
          },
          score: {
             our_computed_score: score,
@@ -87,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="article-${id}-debug.json"`);
       return res.status(200).send(JSON.stringify(out, null, 2));
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

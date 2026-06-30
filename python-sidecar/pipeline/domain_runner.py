@@ -16,6 +16,7 @@ TIMEOUTS: dict[str, int] = {
     "keywords": 120,
     "topics": 300,
     "competitors": 600,
+    "blog_audit": 240,
     "recommendations": 300,
 }
 
@@ -25,12 +26,14 @@ def build_domain_setup_pipeline() -> list[AnalysisStage]:
     from pipeline.stages.domain.keywords import KeywordsStage
     from pipeline.stages.domain.topics import TopicsStage
     from pipeline.stages.domain.competitors import CompetitorsStage
+    from pipeline.stages.domain.blog_audit import BlogAuditStage
     from pipeline.stages.domain.recommendations import RecommendationsStage
 
     return [
         KeywordsStage(),
         TopicsStage(),
         CompetitorsStage(),
+        BlogAuditStage(),
         RecommendationsStage(),
     ]
 
@@ -112,6 +115,8 @@ async def run_domain_setup(job_id: str, payload: dict, nextjs_url: str) -> None:
             "topics": ctx.get_state("topics") or [],
             "competitors": ctx.get_state("competitors") or [],
             "recommendations": ctx.get_state("recommendations") or [],
+            "page_audits": ctx.get_state("page_audits") or [],
+            "audit_counts": ctx.get_state("audit_counts") or {"audited": 0, "skipped": 0, "total": 0},
         }
         await post_terminal(nextjs_url, job_id, "done", result=result)
 

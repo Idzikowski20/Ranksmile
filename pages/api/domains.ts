@@ -7,6 +7,7 @@ import getdomainStats from '../../utils/domains';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getAccessibleWorkspaceIds, getActiveWorkspaceId } from '../../lib/tenancy';
+import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
 
@@ -91,6 +92,11 @@ export const addDomain = async (req: NextApiRequest, res: NextApiResponse<Domain
          });
       });
       try {
+         // Global uniqueness: several routes key off the domain NAME (verifyDomainOwnership, keyword
+         // lookups), so a duplicate name in another workspace would be a tenant-isolation hazard.
+         const names: string[] = domainsToAdd.map((d: { domain: string }) => d.domain);
+         const dup = await Domain.findOne({ where: { domain: names }, attributes: ['domain'] });
+         if (dup) return res.status(409).json({ domains: [], error: `Domain already exists: ${dup.domain}` });
          const newDomains:Domain[] = await Domain.bulkCreate(domainsToAdd);
          const formattedDomains = newDomains.map((el) => el.get({ plain: true }));
          return res.status(201).json({ domains: formattedDomains });
@@ -109,13 +115,15 @@ export const deleteDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
    }
    try {
       const { domain } = req.query || {};
-      // Sprawdź własność — userId musi pasować LUB domena jest legacy (NULL)
-      const domainRecord = await Domain.findOne({ where: { domain } });
-      if (domainRecord && domainRecord.userId && domainRecord.userId !== userId) {
-         return res.status(403).json({ domainRemoved: 0, keywordsRemoved: 0, SCDataRemoved: false, error: 'Access denied.' });
-      }
+      // Workspace-scoped ownership (NOT the legacy userId column — null-userId rows let any user
+      // delete cross-tenant). Authorization lives in verifyDomainOwnership's WHERE clause.
+      const owns = await verifyDomainOwnership(domain as string, userId ?? null);
+      if (owns === null) return res.status(404).json({ domainRemoved: 0, keywordsRemoved: 0, SCDataRemoved: false, error: 'Domain not found.' });
+      if (owns === false) return res.status(403).json({ domainRemoved: 0, keywordsRemoved: 0, SCDataRemoved: false, error: 'Access denied.' });
       await Promise.all((await Keyword.findAll({ where: { domain } })).map((keyword) => removeFromRetryQueue(keyword.ID)));
-      const removedDomCount: number = await Domain.destroy({ where: { domain } });
+      // Delete the verified domain row by its ID (not by name) so a same-named row in another
+      // workspace can never be caught by the destroy.
+      const removedDomCount: number = await Domain.destroy({ where: { ID: owns.ID } });
       const removedKeywordCount: number = await Keyword.destroy({ where: { domain } });
       const SCDataRemoved = await removeLocalSCData(domain as string);
 

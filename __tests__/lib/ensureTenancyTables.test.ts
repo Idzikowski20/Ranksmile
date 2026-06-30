@@ -27,4 +27,17 @@ describe('ensureTenancyTables', () => {
     expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_workspaces_org_name ON workspaces(org_id, name)');
     expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_org_members_user_status ON organization_members(user_id, status)');
   });
+
+  it('runs once under concurrent first calls — the unset-owner warning fires a single time', async () => {
+    jest.resetModules();
+    delete process.env.TENANCY_OWNER_USER_ID;
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    // Fresh module instance so the lazy-init guard state is reset.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    const { ensureTenancyTables: fresh } = require('../../lib/ensureTenancyTables');
+    await Promise.all([fresh(), fresh(), fresh()]);
+    const ownerWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('TENANCY_OWNER_USER_ID is unset'));
+    expect(ownerWarns).toHaveLength(1);
+    warnSpy.mockRestore();
+  });
 });

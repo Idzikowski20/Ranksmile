@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
@@ -184,11 +185,23 @@ const subNavHoverOut = (e: React.MouseEvent<HTMLElement>, active: boolean) => {
    if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }
 };
 
-const IcoFlame = () => (
-   <svg viewBox="0 0 20 20" width="16" height="16" style={{ flexShrink: 0, color: '#FB5D5D' }} aria-hidden="true">
-      <path fill="currentColor" fillRule="evenodd" d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12" clipRule="evenodd" />
-   </svg>
-);
+// Flame icon: static shape, only the fill slowly shimmers through fire colors
+// (red → orange → amber → red). Respects prefers-reduced-motion.
+const IcoFlame = () => {
+   const reduce = useReducedMotion();
+   return (
+      <svg viewBox="0 0 20 20" width="16" height="16" style={{ flexShrink: 0 }} aria-hidden="true">
+         <motion.path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12"
+            fill="#FB5D5D"
+            animate={reduce ? { fill: '#FB5D5D' } : { fill: ['#FB5D5D', '#FF8A3D', '#FB5D5D', '#FF6A3D', '#FB5D5D'] }}
+            transition={reduce ? undefined : { duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+         />
+      </svg>
+   );
+};
 
 type SubNavItemProps = { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: string; count?: number; mock?: boolean };
 const SubNavItem = ({ href, label, icon, active, badge, count, mock }: SubNavItemProps) => {
@@ -335,23 +348,23 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
       return selectedDomainSlug;
    }, [activeName, domains, selectedDomainSlug]);
 
-   const selectedDomain = activeSlug
-      ? domains.find((d) => d.slug === activeSlug) ?? null
-      : null;
-
-   // Recommendations counter — articles for the selected domain that need optimization (score < 70).
-   const { data: recArticlesData } = useQuery(
-      ['articles', selectedDomain?.ID],
-      async () => {
-         const res = await fetch(`/api/articles?domainId=${selectedDomain!.ID}`);
-         return res.json();
-      },
-      { enabled: !!selectedDomain?.ID, staleTime: 60 * 1000 },
+   // Recommendations counter — shares the dashboard's ['domainRecs', slug] query, so the
+   // pipeline's done-invalidation (and any other refresh) updates this badge immediately
+   // instead of going stale behind a separate 60s articles cache.
+   const { data: domainRecsData } = useQuery(
+      ['domainRecs', activeSlug],
+      () => fetch(`/api/domains/${activeSlug}/recommendations`).then((r) => r.json()),
+      { enabled: !!activeSlug, staleTime: 30 * 1000 },
    );
    const recommendationCount = useMemo(() => {
-      const articles: any[] = recArticlesData?.articles || [];
-      return articles.filter((a) => (a.content_score || 0) < 70).length;
-   }, [recArticlesData]);
+      type DomainRec = { type?: string | null; score?: number | null };
+      const recs = (domainRecsData?.recommendations ?? []) as DomainRec[];
+      // Match the dashboard: drop optimize recs with a 0/missing score.
+      return recs.filter((r) => {
+         const isOptimize = r.type === 'optimize' || r.score != null;
+         return !isOptimize || (r.score ?? 0) > 0;
+      }).length;
+   }, [domainRecsData]);
 
    const toolItems = [
       { href: workspaceHref(activeId, '/dashboard'), label: 'Audit', icon: <IcoAudit /> },
@@ -478,7 +491,12 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                            ? `/sites/${activeSlug}`
                            : `/sites/${activeSlug}/${item.key}`;
                         const href = workspaceHref(activeId, seoPath);
-                        const active = mounted && isActiveSuffix(seoPath);
+                        // Performance is the base `/sites/<slug>` route, so it must match exactly —
+                        // a substring check would also light up on every `/sites/<slug>/...` sub-page.
+                        const cleanPath = router.asPath.split('?')[0].split('#')[0].replace(/\/$/, '');
+                        const active = mounted && (item.key === 'performance'
+                           ? cleanPath.endsWith(`/sites/${activeSlug}`)
+                           : isActiveSuffix(seoPath));
                         return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} />;
                      })}
                   </CollapsibleGroup>

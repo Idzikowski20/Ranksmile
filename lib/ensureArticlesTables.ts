@@ -239,12 +239,20 @@ export async function ensureArticlesTables() {
    // Cached AI Readability rubric result (10-criteria LLM assessment).
    try { await db.query(`ALTER TABLE articles ADD COLUMN ai_readability_json TEXT`); } catch {}
 
+   // WordPress publish tracking: the remote post id (so re-publish UPDATES it instead
+   // of creating a duplicate) and its last-known status (draft / publish).
+   try { await db.query(`ALTER TABLE articles ADD COLUMN wp_post_id INTEGER`); } catch {}
+   try { await db.query(`ALTER TABLE articles ADD COLUMN wp_post_status TEXT`); } catch {}
+
    // Threaded comments: replies (parent_id), resolved threads, edit timestamp.
    try { await db.query(`ALTER TABLE article_comments ADD COLUMN parent_id TEXT`); } catch {}
    try { await db.query(`ALTER TABLE article_comments ADD COLUMN resolved INTEGER DEFAULT 0`); } catch {}
    try { await db.query(`ALTER TABLE article_comments ADD COLUMN updated_at TIMESTAMP`); } catch {}
    try { await db.query(`ALTER TABLE article_comments ADD COLUMN reactions_json TEXT`); } catch {}
    try { await db.query(`ALTER TABLE article_comments ADD COLUMN avatar_url TEXT`); } catch {}
+   // 1 when authored by the article owner (authenticated), 0 for anonymous share-token reviewers.
+   // Anonymous reviewers may not edit/delete owner comments — this is the non-spoofable flag for that.
+   try { await db.query(`ALTER TABLE article_comments ADD COLUMN is_owner INTEGER DEFAULT 0`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_comments_article ON article_comments(article_id)`); } catch {}
    try { await db.query(`CREATE INDEX IF NOT EXISTS idx_article_comments_parent ON article_comments(parent_id)`); } catch {}
 

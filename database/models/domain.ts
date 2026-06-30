@@ -57,6 +57,20 @@ class Domain extends Model {
    @Column({ type: DataType.TEXT, allowNull: true, defaultValue: '' })
    brand_voice!: string;
 
+   // Workspace-level settings (workspace == domain)
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
+   country!: string | null;
+
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
+   language!: string | null;
+
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
+   logo_url!: string | null;
+
+   // Per-domain Custom Voices (JSON array) — replaces the global content-settings.json store
+   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: JSON.stringify([]) })
+   voices!: string | null;
+
    // Auth0 user ID — null oznacza domenę "wspólną" (legacy / nie przypisaną)
    @Column({ type: DataType.STRING, allowNull: true, defaultValue: null })
    userId!: string | null;
@@ -68,6 +82,10 @@ class Domain extends Model {
    // Traffic goal JSON: { percentage, period, startDate, baseClicks }
    @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
    traffic_goal!: string | null;
+
+   // Blog-path segments (JSON array string, e.g. ["blog","poradnik"]) for blog-audit (P3d)
+   @Column({ type: DataType.TEXT, allowNull: true })
+   blog_paths!: string | null;
 }
 
 export default Domain;

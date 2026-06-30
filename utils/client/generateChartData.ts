@@ -45,7 +45,9 @@ export const generateTheChartData = (history: KeywordHistory, time:string = '30'
          const pastDateKey = `${pastDate.getFullYear()}-${pastDate.getMonth() + 1}-${pastDate.getDate()}`;
          const prevSerp = history[pastDateKey];
          const serpVal = prevSerp || (lastFoundSerp > 0 ? lastFoundSerp : 111);
-         if (serpVal !== 0) { lastFoundSerp = prevSerp; }
+         // Only carry forward a REAL value — assigning undefined here (missing date) broke the
+         // gap-fill so the next day jumped to the 111 sentinel instead of holding the last rank.
+         if (prevSerp) { lastFoundSerp = prevSerp; }
          chartData.labels.push(pastDateKey);
          chartData.series.push(serpVal);
       }

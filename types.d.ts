@@ -309,3 +309,12 @@ declare module '@neondatabase/auth/react' {
    export const RedirectToSignIn: React.FC<any>;
    export const RedirectToSignUp: React.FC<any>;
 }
+
+// @tiptap/react exposes its menu components only under the "./menus" subpath of
+// its package "exports" map, which TS node10 resolution can't read (same reason
+// as the Neon shims above). Re-export the real types from the physical dist path
+// so <BubbleMenu> stays fully typed. Webpack resolves the real subpath at runtime.
+declare module '@tiptap/react/menus' {
+   export { BubbleMenu, FloatingMenu } from '@tiptap/react/dist/menus';
+   export type { BubbleMenuProps, FloatingMenuProps } from '@tiptap/react/dist/menus';
+}

@@ -38,7 +38,14 @@ const EditorCommentsOverlay = ({ editor, wrapperRef, threads, author, articleId,
       seen.add(id);
       items.push({ id, top: (el as HTMLElement).getBoundingClientRect().top - wRect.top });
     });
-    setPins({ left, items });
+    // Bail when nothing moved — returning the previous object keeps the
+    // reference stable so 'transaction' (which fires for every no-op repaint tx)
+    // doesn't trigger a render on every editor event.
+    setPins((prev) => {
+      const same = prev.left === left && prev.items.length === items.length
+        && prev.items.every((p, i) => p.id === items[i].id && p.top === items[i].top);
+      return same ? prev : { left, items };
+    });
   }, [editor, wrapperRef]);
 
   useEffect(() => { layout(); }, [layout, threads]);

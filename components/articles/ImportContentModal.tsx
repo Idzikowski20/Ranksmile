@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../lib/errors';
 
 interface Props {
   domains: { ID: number; domain: string }[];
@@ -86,8 +87,8 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
       if (!res.ok) throw new Error(data.error || 'Import failed');
       toast.success('Content imported successfully!');
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || 'Import failed');
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Import failed');
     }
   };
 

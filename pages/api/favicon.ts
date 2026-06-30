@@ -2,6 +2,7 @@
 // Generuje SVG placeholder z pierwszą literą domeny + próbuje pobrać prawdziwe favicon
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
+import { assertPublicUrl } from '../../lib/ssrfGuard';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
 
@@ -32,9 +33,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    for (const url of sources) {
       try {
+         await assertPublicUrl(url); // block ?domain= pointing at private/loopback/metadata hosts
          const upstream = await axios.get(url, {
             responseType: 'arraybuffer',
             timeout: 4000,
+            maxRedirects: 2,
             headers: { 'User-Agent': 'Mozilla/5.0' },
             validateStatus: (s) => s === 200,
          });

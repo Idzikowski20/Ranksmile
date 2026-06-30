@@ -2,13 +2,16 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { Gauge, Button, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel } from '../../../components/ui';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
+import { useWorkspaces } from '../../../services/workspaces';
+import { deriveActiveId } from '../../../lib/activeWorkspace';
+import { useTrafficAlerts } from '../../../lib/useTrafficAlerts';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { kwScore } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
@@ -104,6 +107,13 @@ const ContentAuditPage: NextPage = () => {
    const domains = domainsData?.domains || [];
    const activeDomain = domains.find((d) => d.slug === slug);
 
+   // GSC weekly drop alerts → "Traffic drop" badge on pages that lost ranking this week.
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => { setMounted(true); }, []);
+   const { data: wsData } = useWorkspaces();
+   const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+   const { droppedPaths } = useTrafficAlerts(wsId);
+
    const [search, setSearch] = useState('');
    const [showUrls, setShowUrls] = useState(false);
    const [selected, setSelected] = useState<Set<string | number>>(new Set());
@@ -136,27 +146,35 @@ const ContentAuditPage: NextPage = () => {
 
    const rows = useMemo(() => {
       const articles: any[] = articlesData?.articles || [];
-      const scKeywords: any[] = scData?.data?.thirtyDays || [];
-      const scMap = new Map<string, { clicks: number; impressions: number; position: number }>();
-      scKeywords.forEach((kw: any) => {
-         if (kw.keyword) {
-            const existing = scMap.get(kw.keyword.toLowerCase());
-            if (!existing || kw.clicks > existing.clicks) {
-               scMap.set(kw.keyword.toLowerCase(), { clicks: kw.clicks, impressions: kw.impressions, position: kw.position });
-            }
-         }
+      const scItems: any[] = scData?.data?.thirtyDays || [];
+      // Aggregate the last-30-days GSC data per PAGE (not per target keyword): a page
+      // ranks for many queries, so clicks/impressions are summed across all of them and
+      // position is an impression-weighted average. Matching by keyword missed every page
+      // whose target_keyword didn't exactly equal a GSC query → "—" everywhere.
+      const pageMetrics = new Map<string, { clicks: number; impressions: number; posWeight: number }>();
+      scItems.forEach((it: any) => {
+         if (!it.page) return;
+         const path = toPath(it.page);
+         if (!path) return;
+         const e = pageMetrics.get(path) || { clicks: 0, impressions: 0, posWeight: 0 };
+         const imp = it.impressions || 0;
+         e.clicks += it.clicks || 0;
+         e.impressions += imp;
+         e.posWeight += (it.position || 0) * imp;
+         pageMetrics.set(path, e);
       });
       return articles.map((a: any) => {
-         const sc = a.target_keyword ? scMap.get(a.target_keyword.toLowerCase()) : undefined;
+         const url = a.publish_url || a.meta_url || '';
+         const m = url ? pageMetrics.get(toPath(url)) : undefined;
          return {
             id: a.id,
             title: a.title,
-            url: a.publish_url || a.meta_url || '',
+            url,
             keyword: a.target_keyword || '',
             content_score: a.content_score || 0,
-            position: sc?.position ?? 0,
-            clicks: sc?.clicks ?? 0,
-            impressions: sc?.impressions ?? 0,
+            position: m && m.impressions > 0 ? m.posWeight / m.impressions : 0,
+            clicks: m?.clicks ?? 0,
+            impressions: m?.impressions ?? 0,
             status: a.status,
             created_at: a.created_at,
             updatedAt: a.updated_at || a.created_at,
@@ -432,6 +450,9 @@ const ContentAuditPage: NextPage = () => {
                                     {row.title}
                                  </span>
                                  <StatusBadge status={row.status} />
+                                 {row.url && droppedPaths.has(toPath(row.url)) && (
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: '#B91C1C', background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 9999, padding: '1px 8px', whiteSpace: 'nowrap', fontFamily: FONT }}>Traffic drop</span>
+                                 )}
                               </div>
                               {row.keyword ? (
                                  <button type="button" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, maxWidth: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 12, color: '#71717B', overflow: 'hidden', textAlign: 'left' }}>
