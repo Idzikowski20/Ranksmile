@@ -1,6 +1,7 @@
 import React from 'react';
 import ScoreGauge from './ScoreGauge';
 import type { OptimizeAdjustment } from '../../lib/optimizeStats';
+import { useEntrance } from '../../lib/motion/useEntrance';
 
 const F = 'var(--font-family-primary)';
 const SUCCESS = '#1AB25E';
@@ -77,9 +78,11 @@ const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, a
   const VISIBLE = 8;
   const shown = adjustments.slice(0, VISIBLE);
   const extra = adjustments.length - shown.length;
+  const entranceRef = useEntrance<HTMLDivElement>({ y: 16, duration: 0.35 });
 
   return (
     <div
+      ref={entranceRef}
       style={{
         margin: 16, background: '#FFFFFF', border: '1px solid #F4F4F5',
         borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 16,

@@ -4,6 +4,7 @@ import type { NodeViewProps } from '@tiptap/react';
 import { optimizeStore } from './optimizeStore';
 import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
 import { wordDiffSegments, renderDiffHtml } from '../../lib/optimizeWordDiff';
+import { useEntrance } from '../../lib/motion/useEntrance';
 
 // React node-view for the contentOptimizer TipTap node.
 // Shows the old (removed) and new (added) versions of a section with floating
@@ -28,6 +29,8 @@ const outerTag = (html: string): string => {
 };
 
 const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPos }) => {
+  // Entrance as each optimized section streams in.
+  const entranceRef = useEntrance<HTMLDivElement>();
   const { sectionId, status } = node.attrs as { sectionId: string; status: string };
 
   const r = optimizeStore.get(sectionId);
@@ -133,7 +136,7 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   }
 
   return (
-    <NodeViewWrapper as="div" contentEditable={false} style={wrapperStyle}>
+    <NodeViewWrapper as="div" ref={entranceRef} contentEditable={false} style={wrapperStyle}>
       {/* Floating accept / reject toolbar — pinned left */}
       <div style={toolbarStyle}>
         <button
