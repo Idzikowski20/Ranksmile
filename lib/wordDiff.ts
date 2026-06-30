@@ -2,6 +2,11 @@ import { diffWordsWithSpace, diffChars } from 'diff';
 
 export type DiffSeg = { type: 'equal' | 'added' | 'removed'; text: string };
 
+// Adjacent removed+added word pairs are char-sub-diffed only when their common
+// prefix covers at least this fraction of the shorter word — keeps unrelated
+// substitutions as whole tokens while expanding near-identical inflections.
+const CHAR_SUB_DIFF_MIN_PREFIX_RATIO = 0.8;
+
 /** Longest common prefix length of two strings. */
 function commonPrefixLen(a: string, b: string): number {
    let i = 0;
@@ -32,7 +37,7 @@ export function wordDiffSegments(oldText: string, newText: string): DiffSeg[] {
          const shorter = Math.min(cur.text.length, next.text.length);
          const prefix = commonPrefixLen(cur.text, next.text);
          // Sub-diff only when prefix is substantial (≥ 80 % of shorter, ≥ 3 chars)
-         if (shorter > 0 && prefix >= 3 && prefix / shorter >= 0.8) {
+         if (shorter > 0 && prefix >= 3 && prefix / shorter >= CHAR_SUB_DIFF_MIN_PREFIX_RATIO) {
             diffChars(cur.text, next.text).forEach((p) => {
                result.push({
                   type: (p.added ? 'added' : p.removed ? 'removed' : 'equal') as DiffSeg['type'],

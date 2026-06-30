@@ -16,10 +16,15 @@ const BLOCK_COMPLEX_RE = /<(table|ul|ol|img|h2|h3)[\s>]/i;
 /** Strip all HTML tags, returning plain text. */
 const stripTags = (html: string) => html.replace(/<[^>]+>/g, '');
 
-/** Extract the outermost tag name (e.g. "p", "h1") from an HTML string. */
+// Block tags safe to host an inline diff. Anything else (or no leading tag)
+// falls back to <p> so the simple path can never emit a script/iframe/row tag.
+const SAFE_INLINE_TAGS = new Set(['p', 'h1', 'h4', 'h5', 'h6', 'div', 'blockquote', 'pre', 'section', 'article']);
+
+/** Extract the outermost tag name (e.g. "p", "h1") from an HTML string, allowlisted. */
 const outerTag = (html: string): string => {
    const m = html.match(/^<([a-z][a-z0-9]*)/i);
-   return m ? m[1].toLowerCase() : 'p';
+   const tag = m ? m[1].toLowerCase() : 'p';
+   return SAFE_INLINE_TAGS.has(tag) ? tag : 'p';
 };
 
 const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPos }) => {
@@ -98,10 +103,9 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   let diffBody: React.ReactNode;
   if (isSimple) {
     const tag = outerTag(newHtml || oldHtml);
-    // renderDiffHtml produces safe inline spans; pass through sanitizer for defense-in-depth
-    const inlineDiffHtml = sanitizeArticleHtml(
-      renderDiffHtml(wordDiffSegments(stripTags(oldHtml), stripTags(newHtml)))
-    );
+    // renderDiffHtml escapes all text and emits only styled <span>s; oldHtml/newHtml
+    // were already sanitized at read time, so no second sanitize pass is needed here.
+    const inlineDiffHtml = renderDiffHtml(wordDiffSegments(stripTags(oldHtml), stripTags(newHtml)));
     diffBody = React.createElement(tag, {
       // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML: { __html: inlineDiffHtml },
