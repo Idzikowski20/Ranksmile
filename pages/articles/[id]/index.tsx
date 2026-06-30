@@ -25,6 +25,9 @@ import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { getErrorMessage } from '../../../lib/errors';
+import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
+import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
+import { optimizeStore } from '../../../components/articles/optimizeStore';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
 import { ABLY_EVENTS } from '../../../lib/ably/channel';
 import { throttle } from '../../../lib/throttle';
@@ -441,6 +444,11 @@ const ArticleEditorPage: NextPage = () => {
   }, []);
   const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
   const [autoOptimizeStatus, setAutoOptimizeStatus] = useState('Optimizing article…');
+  // AO-7: section-by-section Auto-Optimize state machine (idle → optimizing → reviewing).
+  // `isAutoOptimizing` stays true for the whole flow so autosave + the panel button-disable hold.
+  const [optimizeState, setOptimizeState] = useState<'idle' | 'optimizing' | 'reviewing'>('idle');
+  const preReviewHtmlRef = useRef<string>(''); // snapshot for AO-8 cancel/restore
+  const optimizeMetaRef = useRef<{ changedCount: number; creditDeducted: boolean }>({ changedCount: 0, creditDeducted: false });
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [surfyAiActive, setSurfyAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
@@ -1289,6 +1297,125 @@ const ArticleEditorPage: NextPage = () => {
     }
   };
 
+  // AO-7: section-by-section Auto-Optimize. Streams /api/articles/optimize-sections, collects
+  // ordered section events, then loads a "review doc" where each CHANGED section becomes a
+  // contentOptimizer node (Accept/Reject). isAutoOptimizing spans the whole flow so autosave +
+  // the format toolbar stay suspended until every section is resolved (Step D) or we bail out.
+  const handleAutoOptimizeSections = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor) return;
+    const preHtml: string = editor.getHTML();
+    preReviewHtmlRef.current = preHtml;
+    optimizeStore.clear();
+    setOptimizeState('optimizing');
+    setIsAutoOptimizing(true);
+    setAutoOptimizeStatus('Optimizing sections…');
+
+    const resetIdle = () => {
+      optimizeStore.clear();
+      setOptimizeState('idle');
+      setIsAutoOptimizing(false);
+    };
+
+    try {
+      const res = await fetch('/api/articles/optimize-sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: preHtml, articleId: article?.id, scoreData }),
+      });
+      // Org-wide AI budget exhausted — surface the same message the legacy flow uses, then bail.
+      if (res.status === 429) {
+        const ej = await res.json().catch(() => ({}));
+        if (ej.error === 'org_limit') {
+          const at = ej.resetsAt ? new Date(ej.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          toast.error(`Your organization reached its AI limit.${at ? ` Resets at ${at}.` : ''}`);
+          resetIdle();
+          return;
+        }
+      }
+      if (!res.ok || !res.body) throw new Error('Optimize request failed');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const orderedEvents: SectionEvent[] = [];
+
+      while (true) {
+        // eslint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          if (!part.trim()) continue;
+          const eventLine = part.match(/^event: (\w+)/m);
+          const dataLine = part.match(/^data: (.+)/ms);
+          const eventType = eventLine?.[1] ?? 'message';
+          if (!dataLine) continue;
+
+          let payload: unknown;
+          try { payload = JSON.parse(dataLine[1]); } catch (e) { console.error('[optimize-sections] JSON parse error', eventType, e); continue; }
+
+          if (eventType === 'section') {
+            const ev = payload as SectionEvent;
+            orderedEvents.push(ev);
+            optimizeStore.set(ev.sectionId, { oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed });
+          } else if (eventType === 'done') {
+            const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean };
+            optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted };
+            if (meta.changedCount > 0) {
+              const reviewHtml = buildReviewDoc(orderedEvents);
+              // emitUpdate:false → entering review must NOT trigger autosave.
+              try { editor.commands.setContent(reviewHtml, { emitUpdate: false }); } catch (e) { console.error('[optimize-sections] setContent error', e); }
+              setOptimizeState('reviewing');
+              setAutoOptimizeStatus(`Review ${meta.changedCount} section${meta.changedCount === 1 ? '' : 's'}…`);
+            } else {
+              // Already well-optimized — no changes, no credit. (Toast UI is AO-8.)
+              setAutoOptimizeStatus('Already well-optimized — no changes needed.');
+              resetIdle();
+            }
+            return;
+          } else if (eventType === 'error') {
+            throw new Error((payload as { message?: string })?.message || 'Optimize failed');
+          }
+        }
+      }
+      // Stream ended without a done event — treat as no-op.
+      resetIdle();
+    } catch (err) {
+      console.error('[optimize-sections] failed:', err);
+      toast.error(getErrorMessage(err));
+      resetIdle();
+    }
+  };
+
+  // AO-7 Step D: while reviewing, count remaining contentOptimizer nodes. When the user has
+  // resolved (Accept/Reject) every section → none remain → return to idle and resume autosave,
+  // which persists the now-clean document.
+  useEffect(() => {
+    if (optimizeState !== 'reviewing') return undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor) return undefined;
+    const check = () => {
+      let count = 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      editor.state.doc.descendants((n: any) => { if (n.type.name === 'contentOptimizer') count += 1; });
+      if (count === 0) {
+        optimizeStore.clear();
+        setOptimizeState('idle');
+        setIsAutoOptimizing(false); // autosave resumes and persists the resolved content
+      }
+    };
+    editor.on('update', check);
+    check();
+    return () => { editor.off('update', check); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optimizeState]);
+
   const handlePixabaySelect = (image: { url: string; alt: string; width: number; height: number }) => {
     // If opened from image node toolbar, update that node's src; otherwise insert at cursor
     if (pixabayCallbackRef.current) {
@@ -1608,6 +1735,7 @@ const ArticleEditorPage: NextPage = () => {
               scoreData={scoreData}
               internalArticles={internalArticles}
               reviewMode={!!linkBar}
+              formattingSuspended={optimizeState === 'reviewing'}
               highlightTerms={highlightTerms}
               onAiActivity={setSurfyAiActive}
               articleKeyword={article?.target_keyword || ''}
@@ -1837,7 +1965,7 @@ const ArticleEditorPage: NextPage = () => {
                       html={editorHtml}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
-                      onAutoOptimize={() => handleAutoOptimize()}
+                      onAutoOptimize={() => handleAutoOptimizeSections()}
                       isAutoOptimizing={isAutoOptimizing}
                       saveState={autoSaveState}
                       articleId={article.id}

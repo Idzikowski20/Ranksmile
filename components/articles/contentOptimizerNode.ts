@@ -16,9 +16,21 @@ const ContentOptimizer = Node.create({
 
   addAttributes() {
     return {
-      sectionId: { default: '' },
-      status: { default: 'pending' },   // pending | active | accepted | rejected
-      index: { default: 0 },
+      sectionId: {
+        default: '',
+        parseHTML: (el) => el.getAttribute('data-section-id') || '',
+        renderHTML: (attrs) => (attrs.sectionId ? { 'data-section-id': attrs.sectionId } : {}),
+      },
+      status: {
+        default: 'pending',   // pending | active | accepted | rejected
+        parseHTML: (el) => el.getAttribute('data-status') || 'pending',
+        renderHTML: (attrs) => ({ 'data-status': attrs.status }),
+      },
+      index: {
+        default: 0,
+        parseHTML: (el) => Number(el.getAttribute('data-index')) || 0,
+        renderHTML: (attrs) => ({ 'data-index': String(attrs.index) }),
+      },
     };
   },
 
