@@ -128,11 +128,23 @@ const SharePreviewPage: NextPage = () => {
     };
     liveChannel.subscribe(ABLY_EVENTS.content, onContent);
     liveChannel.subscribe(ABLY_EVENTS.caret, onCaret);
+    liveChannel.presence.enter({ name: authorName || 'Guest', role: 'viewer' }).catch(() => {});
     return () => {
       liveChannel.unsubscribe(ABLY_EVENTS.content, onContent);
       liveChannel.unsubscribe(ABLY_EVENTS.caret, onCaret);
     };
-  }, [liveChannel, resyncFromShare, drawCaret]);
+  }, [liveChannel, resyncFromShare, drawCaret, authorName]);
+
+  const [ownerLive, setOwnerLive] = useState(false);
+  useEffect(() => {
+    if (!liveChannel) return undefined;
+    const refresh = () => liveChannel.presence.get()
+      .then((members) => setOwnerLive(members.some((m) => (m.data as { role?: string } | undefined)?.role === 'owner')))
+      .catch(() => {});
+    liveChannel.presence.subscribe(['enter', 'leave', 'update'], refresh);
+    refresh();
+    return () => { liveChannel.presence.unsubscribe(); };
+  }, [liveChannel]);
 
   // Don't let a pending editing-indicator timeout fire after unmount.
   useEffect(() => () => { if (editingTimer.current) clearTimeout(editingTimer.current); }, []);
@@ -183,6 +195,9 @@ const SharePreviewPage: NextPage = () => {
           {connectionState === 'connecting' || connectionState === 'disconnected' ? 'Reconnecting…' : connectionState === 'suspended' ? 'Offline — retrying…' : 'Connecting…'}
         </div>
       )}
+      <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 60, padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.88)', border: '1px solid #e4e4e7', fontSize: 12, fontFamily: F, color: '#52525c', pointerEvents: 'none' }}>
+        {ownerLive ? '🟢 editor live' : '⚫ editor away'}
+      </div>
       {isEditing && (
         <div style={{ position: 'fixed', bottom: 12, left: 12, zIndex: 60, padding: '4px 10px', borderRadius: 999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', fontSize: 12 }}>✏️ editing…</div>
       )}
