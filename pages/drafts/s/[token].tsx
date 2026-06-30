@@ -37,7 +37,6 @@ const SharePreviewPage: NextPage = () => {
   const { token } = router.query;
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
-  const [commentsVersion, setCommentsVersion] = useState(0);
   const [authorName, setAuthorName] = useState<string | null>(null);
   const [nameChecked, setNameChecked] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
@@ -133,6 +132,9 @@ const SharePreviewPage: NextPage = () => {
     };
   }, [liveChannel, resyncFromShare, drawCaret]);
 
+  // Don't let a pending editing-indicator timeout fire after unmount.
+  useEffect(() => () => { if (editingTimer.current) clearTimeout(editingTimer.current); }, []);
+
   useEffect(() => {
     if (!shareOpen) return undefined;
     const onDoc = (e: MouseEvent) => { if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShareOpen(false); };
@@ -212,7 +214,7 @@ const SharePreviewPage: NextPage = () => {
           {/* Content card */}
           <div className="styled-scrollbar" style={{ flex: 1, minWidth: 0, minHeight: 0, background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', overflow: 'auto' }}>
             <div ref={wrapperRef} style={{ position: 'relative', maxWidth: 820, margin: '0 auto', padding: '40px 64px 80px' }}>
-              <div style={{ position: 'relative' }}>
+              <div ref={contentRef} style={{ position: 'relative' }}>
                 <ViewerEditor ref={viewerRef} initialHtml={article.content || ''} />
                 {caretBox && (
                   <span aria-hidden style={{ position: 'fixed', left: caretBox.left, top: caretBox.top, height: caretBox.height, width: 2, background: '#783AFB', pointerEvents: 'none', animation: 'art-caret-blink 1s step-end infinite', zIndex: 50 }} />
@@ -224,7 +226,7 @@ const SharePreviewPage: NextPage = () => {
                 articleId={String(article.id)}
                 author={author}
                 active
-                reloadSignal={commentsVersion}
+                reloadSignal={0}
                 shareUrl={shareLink}
                 shareToken={typeof token === 'string' ? token : undefined}
               />
