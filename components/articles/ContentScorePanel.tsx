@@ -279,6 +279,8 @@ const ContentScorePanel = ({
     wasOptimizingRef.current = !!isAutoOptimizing;
   }, [isAutoOptimizing]);
   const [view, setView] = useState<'main' | 'write' | 'publish' | 'prepublish'>('main');
+  // Which Write & Optimize section to expand when opened via a score gauge.
+  const [writeSection, setWriteSection] = useState<'seo' | 'ai' | null>(null);
   const [nlpOpen, setNlpOpen] = useState(false);
   const [missingOpen, setMissingOpen] = useState(false);
   const [competitorOpen, setCompetitorOpen] = useState(false);
@@ -508,9 +510,10 @@ const ContentScorePanel = ({
         onAutoOptimize={onAutoOptimize}
         isAutoOptimizing={isAutoOptimizing}
         readOnly={readOnly}
-        onBack={() => setView('main')}
+        onBack={() => { setView('main'); setWriteSection(null); }}
         highlightTerms={highlightTerms}
         onHighlightTermsChange={onHighlightTermsChange}
+        initialSection={writeSection ?? undefined}
       />
     );
   }
@@ -577,8 +580,12 @@ const ContentScorePanel = ({
         </div>
       </div>
 
-      {/* ── SEO · Content Score · AI Search gauges ── */}
-      <ScoreTrio seo={score} ai={aiScore} hasAi={hasAi} />
+      {/* ── SEO · Content Score · AI Search gauges (click → Write & Optimize) ── */}
+      <ScoreTrio
+        seo={score} ai={aiScore} hasAi={hasAi}
+        onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
+        onAiClick={() => { setWriteSection('ai'); setView('write'); }}
+      />
 
       </div>
 
@@ -697,7 +704,7 @@ const ContentScorePanel = ({
 
         {/* #3 Keywords & Terms — opens the Write & Optimize view */}
         <div data-tour="keywords">
-          <SectionRow num={3} label="Write & Optimize" open={false} onToggle={() => setView('write')} />
+          <SectionRow num={3} label="Write & Optimize" open={false} onToggle={() => { setWriteSection(null); setView('write'); }} />
 
           {nlpOpen && (
             <>
