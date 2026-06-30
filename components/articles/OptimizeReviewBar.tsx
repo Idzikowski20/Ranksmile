@@ -1,308 +1,108 @@
 import React from 'react';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
-// AO-8a: fixed bottom dark toolbar driving the Auto-Optimize review lifecycle.
-// Two states:
-//   - optimizing: spinner + "Processing X of N…", nav controls present but disabled.
-//   - reviewing:  remaining-count label + Accept all / Cancel / Save actions.
-// Dark-shell aesthetic (design.md §11.1): bg #09090b, top border #221e28.
+// Auto-Optimize review bar — fixed bottom toolbar, copied 1:1 from the Surfer reference markup
+// (uses the shared design-system tokens already defined in tailwind.config.js / globals.css).
+//   - optimizing: spinner + "Processing section X of Y", nav disabled, Cancel only.
+//   - reviewing:  "All sections processed", nav enabled, Cancel + Save.
 
 export interface OptimizeReviewBarProps {
    state: 'optimizing' | 'reviewing';
    processed: number;
    total: number;
-   /** Count of unresolved contentOptimizer sections (reviewing state). */
+   /** Count of unresolved contentOptimizer sections (kept for caller compat). */
    remaining: number;
-   /** Total changed sections from the `done` event — denominator of the review label. */
+   /** Total changed sections (kept for caller compat). */
    changedCount: number;
    onPrev: () => void;
    onNext: () => void;
+   /** Kept for caller compat — bulk accept now happens per-section, not from the bar. */
    onAcceptAll: () => void;
    onCancel: () => void;
    onSave: () => void;
    saving: boolean;
 }
 
-const FONT = 'var(--font-family-primary)';
-
-// Dark-shell vocabulary (design.md §2.1 / §11.2): raised surface #2F2F34, dark border #221e28,
-// and white-alpha text tiers. Save base stays on the success token #1AB25E (darken via opacity,
-// no off-doc hex). Avoid inventing zinc hexes.
-const SURFACE_RAISED = '#2F2F34';
-const SURFACE_HOVER = 'rgba(255,255,255,0.06)';
-const BORDER_DARK = '#221e28';
-const TEXT_STRONG = 'rgba(255,255,255,0.85)';
-const TEXT_DEFAULT = 'rgba(255,255,255,0.7)';
-const TEXT_MUTED = 'rgba(255,255,255,0.55)';
-const TEXT_DISABLED = 'rgba(255,255,255,0.4)';
-const SUCCESS = '#1AB25E';
-
-const Spinner: React.FC = () => (
-   <span
-      aria-hidden="true"
-      style={{
-         width: 16,
-         height: 16,
-         border: '2px solid rgba(255,255,255,0.15)',
-         borderTopColor: '#783AFB',
-         borderRadius: '50%',
-         animation: 'spin 0.7s linear infinite',
-         flexShrink: 0,
-         display: 'inline-block',
-      }}
-   />
-);
-
-const svgProps = {
-   fill: 'none',
-   stroke: 'currentColor',
-   strokeWidth: 2,
-   strokeLinecap: 'round',
-   strokeLinejoin: 'round',
-   'aria-hidden': true,
-} as const;
-
-const ChevronUp: React.FC = () => (
-   <svg width={18} height={18} viewBox="0 0 24 24" {...svgProps}>
-      <path d="m18 15-6-6-6 6" />
+const ChevronUp = () => (
+   <svg viewBox="0 0 20 20" width="1.2em" height="1.2em" className="inline-block shrink-0 align-sub text-inherit size-[20px]">
+      <path fill="currentColor" fillRule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06z" clipRule="evenodd" />
    </svg>
 );
 
-const ChevronDown: React.FC = () => (
-   <svg width={18} height={18} viewBox="0 0 24 24" {...svgProps}>
-      <path d="m6 9 6 6 6-6" />
+const ChevronDown = () => (
+   <svg viewBox="0 0 20 20" width="1.2em" height="1.2em" className="inline-block shrink-0 align-sub text-inherit size-[20px]">
+      <path fill="currentColor" fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
    </svg>
 );
 
-const CheckIcon: React.FC = () => (
-   <svg width={16} height={16} viewBox="0 0 24 24" {...svgProps} strokeWidth={2.5}>
-      <path d="m4.5 12.75 6 6 9-13.5" />
-   </svg>
-);
-
-const navBtnStyle = (disabled: boolean): React.CSSProperties => ({
-   display: 'inline-flex',
-   alignItems: 'center',
-   justifyContent: 'center',
-   width: 28,
-   height: 28,
-   borderRadius: 6,
-   border: 'none',
-   background: SURFACE_RAISED,
-   color: disabled ? TEXT_DISABLED : TEXT_DEFAULT,
-   cursor: disabled ? 'not-allowed' : 'pointer',
-   opacity: disabled ? 0.5 : 1,
-   transition: 'background 0.15s ease, color 0.15s ease',
-   flexShrink: 0,
-   padding: 0,
-});
-
-const statusTextStyle: React.CSSProperties = {
-   fontSize: 13,
-   color: TEXT_DEFAULT,
-   fontFamily: FONT,
-   whiteSpace: 'nowrap',
-   overflow: 'hidden',
-   textOverflow: 'ellipsis',
-};
-
-const acceptAllStyle: React.CSSProperties = {
-   display: 'inline-flex',
-   alignItems: 'center',
-   gap: 6,
-   fontSize: 13,
-   fontWeight: 600,
-   color: '#fff',
-   background: '#2F2F34',
-   border: 'none',
-   borderRadius: 6,
-   cursor: 'pointer',
-   fontFamily: FONT,
-   padding: '7px 14px',
-   transition: 'background 0.15s ease',
-};
-
-const cancelStyle: React.CSSProperties = {
-   fontSize: 13,
-   fontWeight: 500,
-   color: TEXT_MUTED,
-   background: 'none',
-   border: 'none',
-   cursor: 'pointer',
-   fontFamily: FONT,
-   padding: '6px 10px',
-   borderRadius: 6,
-   transition: 'color 0.15s ease',
-};
+const NAV_BASE = 'gap-sm relative inline-flex items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] text-md rounded-md bg-gray-10 text-gray-base p-xs';
 
 const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    state,
    processed,
    total,
-   remaining,
-   changedCount,
    onPrev,
    onNext,
-   onAcceptAll,
    onCancel,
    onSave,
    saving,
 }) => {
-   const isOptimizing = state === 'optimizing';
-   // Opacity-only entrance (the bar is centered via translateX(-50%) — don't touch transform).
    const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
-   // Prev/next nav is only meaningful in reviewing state (disabled/greyed while optimizing).
-   const navDisabled = isOptimizing;
-
-   const reviewLabel = remaining === 0
-      ? 'All sections reviewed'
-      : `${remaining} of ${changedCount} section${changedCount === 1 ? '' : 's'} to review`;
-
-   const saveStyle: React.CSSProperties = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      fontSize: 13,
-      fontWeight: 600,
-      color: '#fff',
-      background: SUCCESS,
-      border: 'none',
-      borderRadius: 6,
-      cursor: saving ? 'wait' : 'pointer',
-      fontFamily: FONT,
-      padding: '7px 16px',
-      opacity: saving ? 0.7 : 1,
-      transition: 'opacity 0.15s ease',
-      flexShrink: 0,
-   };
+   const optimizing = state === 'optimizing';
+   const navState = optimizing ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-20 active:bg-gray-40';
 
    return (
       <div
          ref={barEntranceRef}
+         className="bg-gray-base gap-base px-lg py-sm flex w-5/6 max-w-[1000px] items-center justify-between rounded-xl"
          style={{
-            position: 'fixed',
-            bottom: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 10000,
-            minWidth: 560,
-            maxWidth: 'calc(100vw - 40px)',
-            background: '#09090b',
-            border: '1px solid #221e28',
-            borderRadius: 10,
-            boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 10px 0 16px',
-            height: 52,
-            gap: 12,
-            fontFamily: FONT,
+            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 10000,
+            fontFamily: 'var(--font-family-primary)', boxShadow: '0 8px 40px rgba(0,0,0,0.45)',
          }}
       >
-         {/* ── Left: status ── */}
-         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
-            {isOptimizing ? (
-               <>
-                  <Spinner />
-                  <span style={statusTextStyle}>{`Processing ${processed} of ${total}…`}</span>
-               </>
-            ) : (
-               <>
-                  <span
-                     style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        background: remaining === 0 ? SUCCESS : '#783AFB',
-                        flexShrink: 0,
-                     }}
-                  />
-                  <span style={statusTextStyle}>{reviewLabel}</span>
-               </>
-            )}
-         </div>
+         <span className="text-md text-white-base font-semibold">Auto-Optimize</span>
 
-         <div style={{ width: 1, height: 18, background: BORDER_DARK, flexShrink: 0 }} />
+         <div className="gap-lg flex items-center">
+            <div className="flex flex-col items-center">
+               <div className="gap-sm flex items-center">
+                  {optimizing && (
+                     <span
+                        role="status" aria-label="Loading"
+                        className="inline-block aspect-square animate-spin rounded-full"
+                        style={{ width: 16, height: 16, border: '1.5px solid var(--white-base)', borderBottomColor: 'transparent' }}
+                     />
+                  )}
+                  <span className="text-md text-white-base">
+                     {optimizing ? `Processing section ${processed} of ${total}` : 'All sections processed'}
+                  </span>
+               </div>
+               <span className="text-gray-60 text-sm">Accept or reject changes, edit afterwards</span>
+            </div>
 
-         {/* ── Prev / next section nav (disabled while optimizing) ── */}
-         <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-            <button
-               type="button"
-               aria-label="Previous section"
-               disabled={navDisabled}
-               onClick={navDisabled ? undefined : onPrev}
-               style={navBtnStyle(navDisabled)}
-               onMouseEnter={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_HOVER; e.currentTarget.style.color = TEXT_STRONG; }
-               }}
-               onMouseLeave={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_RAISED; e.currentTarget.style.color = TEXT_DEFAULT; }
-               }}
-            >
-               <ChevronUp />
-            </button>
-            <button
-               type="button"
-               aria-label="Next section"
-               disabled={navDisabled}
-               onClick={navDisabled ? undefined : onNext}
-               style={navBtnStyle(navDisabled)}
-               onMouseEnter={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_HOVER; e.currentTarget.style.color = TEXT_STRONG; }
-               }}
-               onMouseLeave={(e) => {
-                  if (!navDisabled) { e.currentTarget.style.background = SURFACE_RAISED; e.currentTarget.style.color = TEXT_DEFAULT; }
-               }}
-            >
-               <ChevronDown />
-            </button>
-         </div>
-
-         <div style={{ flex: 1 }} />
-
-         {/* ── Right: review actions (reviewing state only) ── */}
-         {!isOptimizing && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-               {/* Accept all — resolves every remaining section to its optimized version. */}
-               {remaining > 0 && (
-                  <button
-                     type="button"
-                     onClick={onAcceptAll}
-                     style={acceptAllStyle}
-                     onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-                  >
-                     <CheckIcon />
-                     Accept all
-                  </button>
-               )}
-
-               {/* Cancel — opens the discard-confirmation modal (ghost). */}
-               <button
-                  type="button"
-                  onClick={onCancel}
-                  style={cancelStyle}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = TEXT_STRONG; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = TEXT_MUTED; }}
-               >
-                  Cancel
+            <div className="gap-xs flex">
+               <button type="button" aria-label="Previous suggestion" disabled={optimizing}
+                  onClick={optimizing ? undefined : onPrev} className={`${NAV_BASE} ${navState}`}>
+                  <ChevronUp />
                </button>
-
-               {/* Save — persists the current doc + a version snapshot. Always enabled in
-                   reviewing state (per-section Accept/Reject is optional; Save resolves any
-                   remaining sections via Accept-all first, then persists). Disabled only
-                   while a save is in flight. */}
-               <button
-                  type="button"
-                  onClick={onSave}
-                  disabled={saving}
-                  style={saveStyle}
-                  onMouseEnter={(e) => { if (!saving) e.currentTarget.style.opacity = '0.88'; }}
-                  onMouseLeave={(e) => { if (!saving) e.currentTarget.style.opacity = '1'; }}
-               >
-                  {saving ? 'Saving…' : 'Save'}
+               <button type="button" aria-label="Next suggestion" disabled={optimizing}
+                  onClick={optimizing ? undefined : onNext} className={`${NAV_BASE} ${navState}`}>
+                  <ChevronDown />
                </button>
             </div>
-         )}
+         </div>
+
+         <div className="gap-sm flex items-center">
+            <button type="button" onClick={onCancel}
+               className="gap-sm relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100">
+               <span>Cancel</span>
+            </button>
+            {!optimizing && (
+               <button type="button" onClick={onSave} disabled={saving}
+                  className="gap-sm relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] text-md px-base py-xs rounded-md bg-gray-10 text-gray-base hover:bg-gray-20 active:bg-gray-40">
+                  <span>{saving ? 'Saving…' : 'Save'}</span>
+               </button>
+            )}
+         </div>
       </div>
    );
 };
