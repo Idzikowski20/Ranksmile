@@ -13,6 +13,7 @@ import { stripEmoji } from '../../../lib/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
+import { getErrorMessage } from '../../../lib/errors';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
@@ -194,8 +195,8 @@ ${action === 'analysis_only'
   ? 'Report these findings to the user. Do NOT modify the content.'
   : 'Use these signals to guide your optimization. Focus on improving the weakest signals.'}`;
         }
-      } catch (err: any) {
-        console.log('[ask-surfy] scoring failed (non-fatal):', err.message);
+      } catch (err) {
+        console.log('[ask-surfy] scoring failed (non-fatal):', getErrorMessage(err));
       }
     }
 
@@ -333,8 +334,8 @@ RULES:
     if (htmlContent && imageMap.size) htmlContent = restoreDataImages(htmlContent, imageMap);
 
     return res.status(200).json({ action: parsedAction, message: stripEmoji(message), content: htmlContent });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[ask-surfy] error:', error);
-    return res.status(500).json({ error: error?.message || 'Request failed' });
+    return res.status(500).json({ error: getErrorMessage(error) || 'Request failed' });
   }
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '../../lib/researchUtils';
+import { getErrorMessage } from '../../lib/errors';
 import Gauge from '../ui/Gauge';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -111,8 +112,8 @@ const ResearchOutlinePanel: React.FC<Props> = ({
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
       setGeneratedHeadings(data.headings);
-    } catch (err: any) {
-      setGenerateError(err.message || 'Generation failed');
+    } catch (err) {
+      setGenerateError(getErrorMessage(err) || 'Generation failed');
     } finally {
       setIsGenerating(false);
     }

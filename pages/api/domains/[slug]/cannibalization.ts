@@ -3,6 +3,7 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { queryRows } from '../../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -35,11 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   sql += ` ORDER BY article_count DESC, ak.keyword`;
 
-  const [rows] = await db.query(sql, { replacements });
+  const rows = await queryRows<{ keyword: string; article_id: number; title: string; article_count: number }>(sql, replacements);
 
   // Group by keyword — show articles competing for each
   const cannibalized: Record<string, { keyword: string; articles: { id: number; title: string }[] }> = {};
-  for (const r of rows as any[]) {
+  for (const r of rows) {
     if (r.article_count < 2) continue;
     if (!cannibalized[r.keyword]) {
       cannibalized[r.keyword] = { keyword: r.keyword, articles: [] };

@@ -11,6 +11,7 @@ import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData } from '../../lib/contentScore';
+import { getErrorMessage } from '../../lib/errors';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
@@ -1031,7 +1032,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     commentsRef.current = commentAnchors;
     // Live refs for the term-highlight decorations (read inside the PM plugin).
     const termsRef = useRef<any[]>([]);
-    termsRef.current = (scoreData?.terms as any[]) || [];
+    termsRef.current = (scoreData?.terms as Array<{ term: string; current_count?: number; target_count: number }>) || [];
     const highlightTermsRef = useRef<boolean>(highlightTerms ?? true);
     highlightTermsRef.current = highlightTerms ?? true;
     const plagSentencesRef = useRef<string[]>([]);
@@ -1243,9 +1244,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         });
         setSurfyPrompt('');
         void refreshOrgUsage(); // this turn drew from the shared pool — refresh the ring
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return; // user pressed Stop
-        const errMsg = 'Error: ' + err.message;
+      } catch (err) {
+        const e = err as { name?: string; message?: string };
+        if (e?.name === 'AbortError') return; // user pressed Stop
+        const errMsg = 'Error: ' + e.message;
         setSurfyResponse({ message: errMsg, content: null });
         setSurfyHistory((prev) => {
           const next = [...prev, { role: 'assistant' as const, message: errMsg }];
@@ -1323,8 +1325,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         if (!res.ok) throw new Error(d.error || 'Publish failed');
         toast.success(d.url ? `Opublikowano: ${d.url}` : 'Opublikowano');
         setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev));
-      } catch (e: any) {
-        toast.error(e?.message || 'Publikacja nie powiodła się');
+      } catch (e) {
+        toast.error(getErrorMessage(e) || 'Publikacja nie powiodła się');
       } finally {
         setPublishing(false);
       }

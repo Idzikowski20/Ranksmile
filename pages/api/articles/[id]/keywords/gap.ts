@@ -4,6 +4,8 @@ import verifyUser from '../../../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../../../lib/ensureArticlesTables';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
+import { queryRows, queryOne } from '../../../../../lib/db/query';
+import type { ArticleRow } from '../../../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -21,17 +23,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { id } = req.query;
 
   // Get article keywords + competitor outlines cache
-  const [articles] = await db.query(
+  const art = await queryOne<Pick<ArticleRow, 'competitor_outlines_cache'>>(
     `SELECT competitor_outlines_cache FROM articles WHERE id = ?`,
-    { replacements: [id] },
+    [id],
   );
-  const art = (articles as any[])[0];
 
-  const [keywords] = await db.query(
+  const keywords = await queryRows<{ keyword: string }>(
     `SELECT keyword FROM article_keywords WHERE article_id = ?`,
-    { replacements: [id] },
+    [id],
   );
-  const ourKeywords = new Set((keywords as any[]).map((r: any) => r.keyword.toLowerCase()));
+  const ourKeywords = new Set(keywords.map((r) => r.keyword.toLowerCase()));
 
   // Extract competitor keywords from cached outlines
   const gapFreq: Record<string, number> = {};

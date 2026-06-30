@@ -24,6 +24,7 @@ import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { getErrorMessage } from '../../../lib/errors';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -800,8 +801,8 @@ const ArticleEditorPage: NextPage = () => {
       if (!res.ok) throw new Error(data.error);
       setArticle((prev) => prev ? { ...prev, status: data.status } : prev);
       toast.success(action === 'accept' ? 'Article accepted' : 'Article rejected');
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -818,8 +819,8 @@ const ArticleEditorPage: NextPage = () => {
       if (!res.ok) throw new Error(data.error || 'AI visibility check failed');
       setAiVisibilitySummary(data.summary);
       toast.success('AI Search checked');
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setIsRunningAiVisibility(false);
     }
@@ -846,8 +847,8 @@ const ArticleEditorPage: NextPage = () => {
       if (data.warning) { toast(data.warning, { icon: '⚠️' }); return; } // content unchanged → no review bar
       try { editor.commands.setContent(data.content); } catch { /* noop */ }
       setReadabilityBar({ preHtml });
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not apply suggestions');
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Could not apply suggestions');
     } finally {
       setIsApplyingReadability(false);
     }
@@ -1213,9 +1214,9 @@ const ArticleEditorPage: NextPage = () => {
           }
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[auto-optimize] failed:', err);
-      toast.error(err.message);
+      toast.error(getErrorMessage(err));
     } finally {
       setIsAutoOptimizing(false);
     }

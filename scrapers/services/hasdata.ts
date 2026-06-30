@@ -19,7 +19,7 @@ const hasdata:ScraperSettings = {
    },
    scrapeURL: (keyword, settings, _countryData, pagination) => {
       const country = keyword.country || 'US';
-      const countryName = countries[country][0];
+      const countryName = countries[country]?.[0] || country;
       const location = keyword.city && countryName ? `&location=${encodeURIComponent(`${keyword.city},${countryName}`)}` : '';
       const p = pagination || { start: 0, num: 10 };
       return `https://api.scrape-it.cloud/scrape/google/serp?q=${encodeURIComponent(keyword.keyword)}${location}&num=${p.num}&start=${p.start}&gl=${country.toLowerCase()}&deviceType=${keyword.device}`;

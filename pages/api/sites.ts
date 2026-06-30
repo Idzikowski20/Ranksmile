@@ -9,6 +9,7 @@ import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../lib/gscAccounts';
 import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
+import { getErrorMessage } from '../../lib/errors';
 
 type GSCSite = {
   siteUrl: string;
@@ -111,8 +112,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             }
           }
         }
-      } catch (err: any) {
-        errors.push(`${account.email}: ${err?.message || err}`);
+      } catch (err) {
+        errors.push(`${account.email}: ${getErrorMessage(err)}`);
       }
     }
 
@@ -138,8 +139,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 }
               }
             }
-          } catch (err: any) {
-            errors.push(`${plain.domain}: ${err?.message || err}`);
+          } catch (err) {
+            errors.push(`${plain.domain}: ${getErrorMessage(err)}`);
           }
         }
       }
@@ -155,8 +156,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     return res.status(200).json({ sites: allSites, domainStats });
-  } catch (err: any) {
-    console.log('[ERROR] Fetching GSC sites:', err?.message || err);
+  } catch (err) {
+    console.log('[ERROR] Fetching GSC sites:', getErrorMessage(err));
     return res.status(500).json({ error: 'Failed to fetch sites from Search Console.' });
   }
 }

@@ -10,6 +10,8 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
 
 // Vercel: the LLM rewrite can take ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -34,11 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const article = await queryOne<{ target_keyword: string | null; title: string | null }>(
          `SELECT target_keyword, title FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       const data = await callSidecar('/apply-ai-readability', {
@@ -48,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       return res.status(200).json(data);
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'Apply readability failed' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'Apply readability failed' });
    }
 }

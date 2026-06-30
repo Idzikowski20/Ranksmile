@@ -8,6 +8,7 @@ import { computeAiSearchScore } from '../aiSearchScore';
 import type { AiVisibilitySummary } from '../aiSearchScore';
 import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc } from './workingDoc';
 import { resolveArticleSeoMeta } from './articleMeta';
+import { getErrorMessage } from '../errors';
 import type { ToolCtx } from './types';
 
 const MAX_WRITES = 12; // cap on write-tool executions per turn
@@ -162,8 +163,8 @@ export function buildTools(ctx: ToolCtx) {
             .slice(0, 5)
             .map((s: any) => ({ name: s.name, score: s.score, recommendation: s.recommendation }));
           return { ranking_score: r?.ranking_score ?? null, weakest_signals: weakest };
-        } catch (e: any) {
-          return { ok: false, error: `ranking analysis unavailable: ${e?.message || 'error'}` };
+        } catch (e) {
+          return { ok: false, error: `ranking analysis unavailable: ${getErrorMessage(e) || 'error'}` };
         }
       },
     }),
@@ -244,8 +245,8 @@ export function buildTools(ctx: ToolCtx) {
           };
           ctx.cache.aiSearch = out;
           return out;
-        } catch (e: any) {
-          return { ok: false, error: `AI-search analysis unavailable: ${e?.message || 'error'}` };
+        } catch (e) {
+          return { ok: false, error: `AI-search analysis unavailable: ${getErrorMessage(e) || 'error'}` };
         }
       },
     }),
@@ -271,8 +272,8 @@ export function buildTools(ctx: ToolCtx) {
           };
           ctx.cache.plagiarism = out;
           return out;
-        } catch (e: any) {
-          return { ok: false, error: `plagiarism scan unavailable: ${e?.message || 'error'}` };
+        } catch (e) {
+          return { ok: false, error: `plagiarism scan unavailable: ${getErrorMessage(e) || 'error'}` };
         }
       },
     }),
@@ -319,8 +320,8 @@ export function buildTools(ctx: ToolCtx) {
           const posts = normalizeSocialPosts(d);
           if (posts.length === 0) return { ok: false, summary: 'no social posts generated' };
           return { posts };
-        } catch (e: any) {
-          return { ok: false, error: `social posts unavailable: ${e?.message || 'error'}` };
+        } catch (e) {
+          return { ok: false, error: `social posts unavailable: ${getErrorMessage(e) || 'error'}` };
         }
       },
     }),
@@ -352,8 +353,8 @@ export function buildTools(ctx: ToolCtx) {
           ctx.changelog.push({ tool: 'apply_readability', summary: `applied ${suggestions.length} readability fix(es)` });
           // Return the refreshed outline (whole doc replaced → sids renumbered), like apply_edit/insert_section.
           return { ok: true, summary: `rewrote the BODY for readability (${suggestions.length} fix(es)); staged for your review. Title/meta unchanged.`, applied: suggestions.length, outline: wd.outline };
-        } catch (e: any) {
-          return { ok: false, error: `readability rewrite unavailable: ${e?.message || 'error'}` };
+        } catch (e) {
+          return { ok: false, error: `readability rewrite unavailable: ${getErrorMessage(e) || 'error'}` };
         }
       },
     }),

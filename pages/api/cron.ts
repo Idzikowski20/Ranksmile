@@ -43,7 +43,9 @@ const cronRefreshkeywords = async (req: NextApiRequest, res: NextApiResponse<CRO
       }
       await Keyword.update({ updating: true }, { where: {} });
       const keywordQueries: Keyword[] = await Keyword.findAll();
-      const allDomains: Domain[] = await Domain.findAll();
+      const allDomains: Domain[] = await Domain.findAll({
+         attributes: ['domain', 'scrape_strategy', 'scrape_pagination_limit', 'scrape_smart_full_fallback', 'subdomain_matching'],
+      });
       const domainList: DomainType[] = allDomains.map((d) => d.get({ plain: true }));
 
       refreshAndUpdateKeywords(keywordQueries, settings, domainList);

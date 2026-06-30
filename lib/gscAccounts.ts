@@ -116,8 +116,9 @@ export const verifyAccountToken = async (account: GscAccountRecord): Promise<Acc
     const oauthClient = buildOAuthClientFromAccount(account);
     await oauthClient.getAccessToken();
     return { valid: true, expired: false };
-  } catch (err: any) {
-    const detail = err?.response?.data?.error || err?.message || String(err);
+  } catch (err) {
+    const e = err as { response?: { data?: { error?: string } }; message?: string };
+    const detail = e?.response?.data?.error || e?.message || String(err);
     return { valid: false, expired: /invalid_grant/i.test(detail), reason: detail };
   }
 };

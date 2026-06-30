@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/aiBudget';
 import type { CompetitorOutline } from '../../../components/articles/ResearchOutlinePanel';
+import { getErrorMessage } from '../../../lib/errors';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -110,8 +111,8 @@ H2: [section]
 
     console.log(`[generate-outline] generated ${headings.length} headings for "${keyword}"`);
     return res.status(200).json({ headings });
-  } catch (err: any) {
-    console.error('[generate-outline] error:', err?.message);
-    return res.status(500).json({ error: err?.message || 'Generation failed' });
+  } catch (err) {
+    console.error('[generate-outline] error:', getErrorMessage(err));
+    return res.status(500).json({ error: getErrorMessage(err) || 'Generation failed' });
   }
 }

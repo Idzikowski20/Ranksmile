@@ -9,6 +9,8 @@ import { captureWeeklySnapshot, getSnapshot, weekStartFor, shiftWeek } from '../
 import { computeDrops } from '../../../lib/gscDrops';
 import { buildGscDigest, DomainDigest } from '../../../lib/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
+import { queryRows, type ArticleRow } from '../../../lib/db/query';
+import { getErrorMessage } from '../../../lib/errors';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -97,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       // Pobierz wszystkie domeny z topics w site_context
-      const [domains] = await db.query(
+      const domains = await queryRows<{ ID: number; domain: string; topics: string | null }>(
          `SELECT d."ID", d.domain, sc.topics
           FROM domain d
           JOIN site_context sc ON sc.domain_id = d."ID"
@@ -106,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const triggered: string[] = [];
 
-      for (const domain of domains as any[]) {
+      for (const domain of domains) {
          let topics: string[] = [];
          try {
             topics = JSON.parse(domain.topics || '[]');
@@ -116,11 +118,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          if (!topics.length) continue;
 
          // Pobierz już użyte keywords
-         const [usedRows] = await db.query(
+         const usedRows = await queryRows<ArticleRow>(
             `SELECT target_keyword FROM articles WHERE domain_id = ?`,
-            { replacements: [domain.ID] },
+            [domain.ID],
          );
-         const usedTopics = (usedRows as any[]).map((r) => r.target_keyword);
+         const usedTopics = usedRows.map((r) => r.target_keyword);
 
          // Znajdź następny nieużyty topic
          const nextTopic = topics.find((t: string) => !usedTopics.includes(t)) || topics[0];
@@ -144,7 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json({ triggered: triggered.length, details: triggered });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) });
    }
 }

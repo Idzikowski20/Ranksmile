@@ -8,6 +8,8 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
+import { getErrorMessage } from '../../lib/errors';
+import { queryRows } from '../../lib/db/query';
 
 export interface AuditItem {
   id: number;
@@ -50,13 +52,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const domainObj: DomainType = foundDomain.get({ plain: true });
 
     // Fetch articles
-    const [articles] = await db.query(
+    const articles = await queryRows<{
+      id: number;
+      title: string | null;
+      target_keyword: string | null;
+      meta_url: string | null;
+      content_score: number | null;
+      updated_at: string | null;
+    }>(
       `SELECT id, title, target_keyword, meta_url, content_score, updated_at
        FROM articles
        WHERE domain_id = ? AND status IN ('published', 'draft', 'accepted')
        ORDER BY updated_at DESC
        LIMIT 100`,
-      { replacements: [domainObj.ID] },
+      [domainObj.ID],
     );
 
     // Fetch SC data
@@ -97,13 +106,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Match articles with SC data
-    const items: AuditItem[] = (articles as any[]).map((a: any) => {
-      const articlePath = a.meta_url ? `/${(a.meta_url as string).replace(/^\//, '')}` : '';
+    const items: AuditItem[] = articles.map((a) => {
+      const articlePath = a.meta_url ? `/${a.meta_url.replace(/^\//, '')}` : '';
       const sc = scByUrl.get(articlePath);
 
       return {
         id: a.id,
-        title: a.title,
+        title: a.title ?? '',
         url: articlePath,
         mainKeyword: a.target_keyword || '',
         contentScore: a.content_score ?? 0,
@@ -111,13 +120,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         traffic: sc ? sc.clicks : null,
         impressions: sc ? sc.impressions : null,
         ctr: sc ? Math.round(sc.ctr * 100) / 100 : null,
-        updatedAt: a.updated_at,
+        updatedAt: a.updated_at ?? '',
       };
     });
 
     return res.status(200).json({ items, lastAnalysisAt, lastSCUpdate });
-  } catch (error: any) {
-    console.error('[audit] error:', error?.message);
-    return res.status(500).json({ error: error?.message || 'Audit failed' });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error('[audit] error:', message);
+    return res.status(500).json({ error: message || 'Audit failed' });
   }
 }

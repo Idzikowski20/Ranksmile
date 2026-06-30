@@ -1,4 +1,5 @@
 import db from '../database/database';
+import { queryOne } from './db/query';
 
 // Org-wide AI token budget. Surfy/Auto-Optimize draw from a single per-organization pool that
 // refills every 5 hours (fixed buckets). created_ms is stored as epoch milliseconds so the window
@@ -40,11 +41,11 @@ export async function getOrgUsage5h(orgId: number | null | undefined): Promise<O
   if (orgId) {
     try {
       await ensureAiTokenUsageTable();
-      const [rows] = await db.query(
+      const row = await queryOne<{ used: number | string }>(
         'SELECT COALESCE(SUM(tokens), 0) AS used FROM ai_token_usage WHERE org_id = ? AND created_ms >= ?',
-        { replacements: [orgId, start] },
+        [orgId, start],
       );
-      used = Number((rows as any[])[0]?.used || 0);
+      used = Number(row?.used || 0);
     } catch { used = 0; }
   }
   return { used, limit: AI_TOKEN_LIMIT_5H, resetsAt, over: used >= AI_TOKEN_LIMIT_5H };

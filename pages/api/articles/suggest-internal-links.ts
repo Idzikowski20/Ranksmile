@@ -10,6 +10,8 @@ import db from '../../../database/database';
 import { resolveOrgId, orgBudgetBlocked, recordAiTokens } from '../../../lib/aiBudget';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -40,17 +42,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (articleId) {
     try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const row = await queryOne<{ internal_links_cache: string | null }>(
         `SELECT internal_links_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-        { replacements: [articleId] },
+        [articleId],
       );
-      const cached = (rows as any[])[0]?.internal_links_cache;
+      const cached = row?.internal_links_cache;
       if (cached) {
         console.log(`[internal-links] serving cache for article ${articleId}`);
         return res.status(200).json(JSON.parse(cached));
       }
-    } catch (e: any) {
-      console.warn('[internal-links] cache read failed:', e.message);
+    } catch (e) {
+      console.warn('[internal-links] cache read failed:', getErrorMessage(e));
     }
   }
 
@@ -146,14 +148,14 @@ If no natural links found, return: []`;
           `UPDATE articles SET internal_links_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(result), articleId] },
         );
-      } catch (e: any) {
-        console.warn('[internal-links] cache write failed:', e.message);
+      } catch (e) {
+        console.warn('[internal-links] cache write failed:', getErrorMessage(e));
       }
     }
 
     return res.status(200).json(result);
-  } catch (err: any) {
-    console.error('[internal-links] error:', err?.message);
-    return res.status(500).json({ error: err?.message || 'Analysis failed' });
+  } catch (err) {
+    console.error('[internal-links] error:', getErrorMessage(err));
+    return res.status(500).json({ error: getErrorMessage(err) || 'Analysis failed' });
   }
 }

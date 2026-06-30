@@ -42,7 +42,9 @@ const notify = async (req: NextApiRequest, res: NextApiResponse<NotifyResponse>)
             await sendNotificationEmail(theDomain, settings);
          }
       } else {
-         const allDomains: Domain[] = await Domain.findAll();
+         const allDomains: Domain[] = await Domain.findAll({
+            attributes: ['domain', 'notification', 'notification_emails'],
+         });
          if (allDomains && allDomains.length > 0) {
             const domains = allDomains.map((el) => el.get({ plain: true }));
             for (const domain of domains) {

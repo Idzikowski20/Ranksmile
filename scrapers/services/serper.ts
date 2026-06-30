@@ -13,9 +13,9 @@ const serper:ScraperSettings = {
    allowsCity: true,
    scrapeURL: (keyword, settings, countryData, pagination) => {
       const country = keyword.country || 'US';
-      const countryName = countries[country][0];
+      const countryName = countries[country]?.[0] || country;
       const location = keyword.city ? `&location=${encodeURIComponent(`${keyword.city},${countryName}`)}` : '';
-      const lang = countryData[country][2];
+      const lang = countryData[country]?.[2] || 'en';
       const p = pagination || { start: 0, num: 10, page: 1 };
       return `https://google.serper.dev/search?q=${encodeURIComponent(keyword.keyword)}&gl=${country}&hl=${lang}${location}&page=${p.page}&apiKey=${settings.scaping_api}`;
    },

@@ -8,6 +8,9 @@ import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../../lib/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
+import { getErrorMessage } from '../../../../lib/errors';
+import { queryOne } from '../../../../lib/db/query';
+import type { ArticleRow } from '../../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -35,20 +38,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getArticle(id: string, res: NextApiResponse) {
    try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(`SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, {
-         replacements: [id],
-      });
-      const article = (rows as any[])[0];
+      const article = await queryOne<ArticleRow & { ai_visibility_summary?: unknown }>(
+         `SELECT *, ${articleIdSql} AS id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+         [id],
+      );
       if (!article) return res.status(404).json({ error: 'Article not found' });
-      const [visibilityRows] = await db.query(
+      const latestVisibility = await queryOne<{ summary_json: string | null; score: number | null }>(
          `SELECT summary_json, score
           FROM ai_visibility_runs
           WHERE article_id = ?
           ORDER BY created_at DESC, id DESC
           LIMIT 1`,
-         { replacements: [id] },
+         [id],
       );
-      const latestVisibility = (visibilityRows as any[])[0];
       if (latestVisibility?.summary_json) {
          try {
             article.ai_visibility_summary = {
@@ -60,8 +62,8 @@ async function getArticle(id: string, res: NextApiResponse) {
          }
       }
       return res.status(200).json({ article });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
 
@@ -133,8 +135,8 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
          },
       );
       return res.status(200).json({ updated: true });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
 
@@ -143,7 +145,7 @@ async function deleteArticle(id: string, res: NextApiResponse) {
       const articleIdSql = await getArticleIdSql();
       await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id] });
       return res.status(200).json({ deleted: true });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

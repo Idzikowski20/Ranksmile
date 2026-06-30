@@ -6,6 +6,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { renderPage } from '../../../utils/spaScraper';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
+import { getErrorMessage } from '../../../lib/errors';
 
 const FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -162,8 +163,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const rendered = await renderPage(targetUrl);
         links = extractLinks(rendered.html, rendered.url);
         console.log(`[fetch-site-links] puppeteer found ${links.length} links at ${rendered.url}`);
-      } catch (err: any) {
-        console.warn('[fetch-site-links] puppeteer fallback failed:', err.message);
+      } catch (err) {
+        console.warn('[fetch-site-links] puppeteer fallback failed:', getErrorMessage(err));
       }
     }
 
@@ -177,10 +178,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`[fetch-site-links] found ${links.length} internal links at ${targetUrl}${spaDetected ? ' (via sitemap fallback)' : ''}`);
     return res.status(200).json({ links });
-  } catch (err: any) {
+  } catch (err) {
     clearTimeout(timer);
-    if (err.name === 'AbortError') return res.status(408).json({ error: 'Request timed out (15 s)' });
-    console.error('[fetch-site-links]', err.message);
-    return res.status(500).json({ error: err.message || 'Failed to fetch URL' });
+    if ((err as { name?: string })?.name === 'AbortError') return res.status(408).json({ error: 'Request timed out (15 s)' });
+    const message = getErrorMessage(err);
+    console.error('[fetch-site-links]', message);
+    return res.status(500).json({ error: message || 'Failed to fetch URL' });
   }
 }

@@ -78,7 +78,7 @@ const safeReadJSON = async (filePath: string, fallback: any): Promise<any> => {
    try {
       const raw = await readFile(filePath, { encoding: 'utf-8' });
       return raw ? JSON.parse(raw) : fallback;
-   } catch (error: any) {
+   } catch (error) {
       const fileExists = await stat(filePath).then(() => true).catch(() => false);
       if (fileExists) {
          // File exists but is corrupt — back it up instead of silently overwriting
