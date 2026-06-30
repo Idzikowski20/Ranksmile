@@ -618,6 +618,17 @@ const ArticleEditorPage: NextPage = () => {
     setArticle((prev) => prev ? { ...prev, meta_description: v } : prev);
   }, []);
 
+  // The parent re-renders on every editor keystroke (setEditorHtml). Memoize the per-render work
+  // that fed ContentScorePanel — a full-HTML regex and two JSON.parse of cached blobs — so it only
+  // recomputes when its actual input changes (was running on every keystroke).
+  const internalLinksCount = useMemo(() => (editorHtml.match(/<a\s[^>]*href=/gi) || []).length, [editorHtml]);
+  const initialPlagiarism = useMemo(() => {
+    try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
+  }, [(article as any)?.plagiarism_json]);
+  const initialAiReadability = useMemo(() => {
+    try { const v = (article as any)?.ai_readability_json; return v ? JSON.parse(v) : null; } catch { return null; }
+  }, [(article as any)?.ai_readability_json]);
+
   const handleRestoreVersion = (version: { id: number; content: string; score_data: string | null }) => {
     const editor = editorRef.current?.getEditor();
     // emitUpdate:true → fires onUpdate → handleEditorChange → autosave persists the restored content.
@@ -1738,7 +1749,7 @@ const ArticleEditorPage: NextPage = () => {
                       wordCount={wordCount}
                       headingCount={headingCount}
                       scoreData={scoreData}
-                      internalLinksCount={(editorHtml.match(/<a\s[^>]*href=/gi) || []).length}
+                      internalLinksCount={internalLinksCount}
                       html={editorHtml}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
@@ -1755,8 +1766,8 @@ const ArticleEditorPage: NextPage = () => {
                       onMetaDescriptionChange={handleMetaDescriptionChange}
                       highlightTerms={highlightTerms}
                       onHighlightTermsChange={setHighlightTerms}
-                      initialPlagiarism={(() => { try { const v = (article as any).plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; } })()}
-                      initialAiReadability={(() => { try { const v = (article as any).ai_readability_json; return v ? JSON.parse(v) : null; } catch { return null; } })()}
+                      initialPlagiarism={initialPlagiarism}
+                      initialAiReadability={initialAiReadability}
                       featuredImage={featuredImage}
                       onFeaturedImageChange={setFeaturedImage}
                       isDone={article.status === 'accepted'}
