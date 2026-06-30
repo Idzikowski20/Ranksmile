@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'motion/react';
 import Confetti from './Confetti';
 import { ScoreData, NlpTerm, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../lib/contentScore';
 import { computeOpportunityScore } from '../../lib/keywordEnrichment';
@@ -41,6 +40,11 @@ interface Props {
   initialAiReadability?: any;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
+  /** Drives the 3-state Auto-Optimize control: button → running → completed box. */
+  optimizeState?: 'idle' | 'optimizing' | 'reviewing';
+  onCancelOptimize?: () => void;
+  onSaveOptimize?: () => void;
+  optimizeSaving?: boolean;
   saveState?: 'saved' | 'saving' | 'unsaved';
   onInternalLinks?: () => void;
   articleId?: number;
@@ -245,6 +249,10 @@ const ContentScorePanel = ({
   keyword,
   onAutoOptimize,
   isAutoOptimizing,
+  optimizeState = 'idle',
+  onCancelOptimize,
+  onSaveOptimize,
+  optimizeSaving,
   saveState,
   onInternalLinks,
   articleId,
@@ -601,39 +609,56 @@ const ContentScorePanel = ({
 
       <Confetti runKey={celebrateKey} />
 
-      {/* ── Auto-Optimize button (pinned above sections) ── */}
-      <div data-tour="auto-optimize" style={{ padding: '0 16px 12px', borderTop: '1px solid #f4f4f5', paddingTop: 12 }}>
-        <button
-          onClick={(isAutoOptimizing || readOnly) ? undefined : onAutoOptimize}
-          disabled={isAutoOptimizing || readOnly}
-          style={{
-            position: 'relative', overflow: 'hidden',
-            width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
-            background: '#18181b', color: '#fff', border: 'none',
-            cursor: (isAutoOptimizing || readOnly) ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-family-primary)',
-            transition: 'background 0.15s',
-            opacity: readOnly ? 0.5 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-          onMouseEnter={(e) => { if (!isAutoOptimizing && !readOnly) e.currentTarget.style.background = '#630de3'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
-        >
-          {/* Shimmer sweep while optimizing */}
-          {isAutoOptimizing && (
-            <motion.span aria-hidden
-              initial={{ x: '-120%' }} animate={{ x: '120%' }}
-              transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ position: 'absolute', top: 0, bottom: 0, width: '60%', background: 'linear-gradient(90deg, transparent, rgba(120,58,251,0.45), transparent)', pointerEvents: 'none' }} />
-          )}
-          {isAutoOptimizing ? (
-            <motion.span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, position: 'relative' }}
-              animate={{ opacity: [0.7, 1, 0.7] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}>
-              <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-              Optimizing…
-            </motion.span>
-          ) : 'Auto-Optimize'}
-        </button>
+      {/* ── Auto-Optimize control — 3 states: button → running → completed box (Surfer) ── */}
+      <div data-tour="auto-optimize" style={{ padding: '12px 16px', borderTop: '1px solid #f4f4f5', fontFamily: 'var(--font-family-primary)' }}>
+        {optimizeState === 'reviewing' ? (
+          // Completed box (1:1 from reference)
+          <div className="bg-gray-10 px-base py-xs flex items-center justify-between rounded-md">
+            <div className="gap-sm flex items-center">
+              <svg viewBox="0 0 24 24" width="1.2em" height="1.2em" className="inline-block shrink-0 align-sub size-[20px] text-gray-base">
+                <path fill="currentColor" fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75s-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12m13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094z" clipRule="evenodd" />
+              </svg>
+              <span className="text-md">Auto-Optimize completed</span>
+            </div>
+            <button
+              type="button" onClick={onSaveOptimize} disabled={optimizeSaving}
+              className="relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color] text-sm rounded-none bg-transparent p-0 text-gray-100 gap-xs hover:text-gray-120 active:text-gray-160"
+            >
+              <span>{optimizeSaving ? 'Saving…' : 'Save'}</span>
+            </button>
+          </div>
+        ) : optimizeState === 'optimizing' ? (
+          // Running row (spinner + label · Cancel)
+          <div className="flex items-center justify-between">
+            <span className="gap-sm flex items-center text-md" style={{ color: 'var(--gray-100)' }}>
+              <span style={{ width: 14, height: 14, border: '2px solid var(--gray-40)', borderTopColor: 'var(--gray-base)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+              Running Auto-Optimize
+            </span>
+            <button
+              type="button" onClick={onCancelOptimize}
+              className="cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-gray-100 transition-[color] hover:text-gray-120 active:text-gray-160"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          // Idle button
+          <button
+            onClick={readOnly ? undefined : onAutoOptimize}
+            disabled={readOnly}
+            style={{
+              width: '100%', padding: '9px 0', borderRadius: 6, fontSize: 13, fontWeight: 600,
+              background: '#18181b', color: '#fff', border: 'none',
+              cursor: readOnly ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s',
+              opacity: readOnly ? 0.5 : 1,
+            }}
+            onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#630de3'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
+          >
+            Auto-Optimize
+          </button>
+        )}
       </div>
 
       {/* ── Scrollable action area ── */}
