@@ -49,6 +49,14 @@ describe('stripFences', () => {
     expect(stripFences('<p>Hi</p>\n```')).toBe('<p>Hi</p>');
   });
 
+  it('removes a bare opening fence (no language tag)', () => {
+    expect(stripFences('```\n<p>Hi</p>\n```')).toBe('<p>Hi</p>');
+  });
+
+  it('removes an uppercase HTML language tag', () => {
+    expect(stripFences('```HTML\n<p>Hi</p>\n```')).toBe('<p>Hi</p>');
+  });
+
   it('leaves unfenced content untouched', () => {
     expect(stripFences('  <p>Hi</p>  ')).toBe('<p>Hi</p>');
   });
