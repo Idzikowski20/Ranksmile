@@ -18,8 +18,6 @@ import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
-import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
-import { computeOptimizeStats } from '../../../lib/optimizeStats';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
@@ -1936,19 +1934,6 @@ const ArticleEditorPage: NextPage = () => {
                 <>
                   {/* ContentScorePanel fills remaining height */}
                   <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                    {/* AO-8b: Auto-Optimize results summary (gauge + stats + per-section deltas) */}
-                    {optimizeState === 'reviewing' && optimizeMetaRef.current.changedCount > 0 && (() => {
-                      const stats = computeOptimizeStats(changedSectionsRef.current);
-                      return (
-                        <OptimizeResultsPanel
-                          preScore={preScoreRef.current}
-                          postScore={optimizeReview?.postScore ?? preScoreRef.current}
-                          changedCount={optimizeMetaRef.current.changedCount}
-                          wordsAdded={stats.wordsAdded}
-                          adjustments={stats.adjustments}
-                        />
-                      );
-                    })()}
                     <ContentScorePanel
                       plainText={plainText}
                       wordCount={wordCount}
