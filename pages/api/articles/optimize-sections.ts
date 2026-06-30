@@ -4,6 +4,8 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { splitSections } from '../../../lib/articleSections';
 import { buildSectionEvents } from '../../../lib/optimizeSectionEvents';
+import type { SectionResult } from '../../../components/articles/optimizeStore';
+import { getErrorMessage } from '../../../lib/errors';
 
 export const config = { api: { responseLimit: '10mb' } };
 
@@ -39,13 +41,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    try {
       const sections = splitSections(content);
       sse(res, 'meta', { total: sections.length, sections: sections.map((s) => ({ sectionId: s.id, index: s.index, headingText: s.headingText })) });
-      const results = new Map();  // passthrough — populated by the LLM stage in a later task
+      const results = new Map<string, SectionResult>();  // passthrough — populated by the LLM stage in a later task
       const events = buildSectionEvents(sections, results);
       for (const ev of events) sse(res, 'section', ev);
       const changedCount = events.filter((e) => e.changed).length;
       sse(res, 'done', { changedCount, total: events.length });
-   } catch (error: any) {
-      sse(res, 'error', { message: error?.message || 'Request failed' });
+   } catch (error) {
+      sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
    }
 
    res.end();
