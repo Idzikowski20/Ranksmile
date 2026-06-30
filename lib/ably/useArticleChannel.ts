@@ -64,7 +64,9 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
       setChannel(null);
       setConnectionState('idle');
       try { client.connection.off(onState); } catch { /* ignore */ }
-      try { ch.detach(); } catch { /* ignore */ }
+      // detach() returns a Promise that rejects with "Connection closed" during teardown —
+      // try/catch only traps a sync throw, so swallow the async rejection explicitly.
+      try { ch.detach().catch(() => {}); } catch { /* ignore */ }
       try { client.close(); } catch { /* ignore */ }
     };
   }, [articleId, shareToken, clientId]);
