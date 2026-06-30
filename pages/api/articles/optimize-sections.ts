@@ -46,7 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       content: string;
       articleId?: number;
       scoreData?: ScoreData;
-      keyword?: string;
    };
    if (!content) return res.status(400).json({ error: 'content is required' });
 
@@ -75,7 +74,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // Abort on client disconnect — stop mid-run and emit nothing further.
    const controller = new AbortController();
    let aborted = false;
-   req.on('close', () => { aborted = true; controller.abort(); });
+   const onClose = () => { aborted = true; controller.abort(); };
+   req.on('close', onClose);
 
    try {
       const sections = splitSections(content);
@@ -128,11 +128,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          sse(res, 'section', buildSectionEvent(section, result));
       }
 
-      if (aborted) return res.end();
+      if (aborted) return;
       sse(res, 'done', { changedCount, total: sections.length, promptVersion: PROMPT_VERSION });
    } catch (error) {
       if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
+   } finally {
+      req.off('close', onClose);
+      res.end();
    }
-
-   res.end();
 }

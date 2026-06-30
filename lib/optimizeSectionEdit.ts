@@ -23,12 +23,17 @@ export function computeMissingTerms(scoreData: ScoreData | undefined, articleHtm
    return out;
 }
 
-/** Remove markdown code fences the model occasionally wraps the section in, then trim. */
+/** Remove markdown code fences the model occasionally wraps the section in, then trim.
+ *  The opening fence's language tag is optional/generic (```, ```html, ```HTML, …). */
 export function stripFences(raw: string): string {
-   return raw.trim().replace(/^```html?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+   return raw.trim().replace(/^```[a-z]*\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 }
+
+// Sections are split at <h2>, so a real section is comfortably longer than this;
+// anything shorter is empty/garbage and should be skipped (keep the original).
+const MIN_USABLE_LENGTH = 20;
 
 /** A cleaned section edit is usable only if it is non-empty and not suspiciously short. */
 export function isUsableEdit(cleaned: string): boolean {
-   return cleaned.length >= 20;
+   return cleaned.length >= MIN_USABLE_LENGTH;
 }
