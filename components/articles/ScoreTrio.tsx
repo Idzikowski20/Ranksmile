@@ -1,52 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ScoreGauge from './ScoreGauge';
 
 const F = 'var(--font-family-primary)';
 
-/* Side gauge = small version of the main dual-arc gauge (fills from both sides).
-   When onClick is provided it becomes a clickable card: a hover border + soft
-   shadow signal it jumps into Write & Optimize and expands the matching section.
-   The padding/negative-margin pair keeps the resting size identical (no layout
-   shift) — the border only appears on hover. */
-const SideGauge = ({ score, label, pending, onClick }: { score: number; label: string; pending?: boolean; onClick?: () => void }) => {
-  const inner = (
-    <>
+/* Side gauge = small dual-arc gauge + its label, rendered as a clickable button
+   that jumps into the matching Write & Optimize section. The hover/focus highlight
+   is NOT drawn here — it's an overlay pill in ScoreTrio that spans this side AND the
+   centre content-score gauge (Surfer-style). This button only reports hover intent
+   and handles the click. */
+const SideGauge = ({ score, label, align, pending, onClick, onHover }: {
+  score: number; label: string; align: 'start' | 'end'; pending?: boolean;
+  onClick?: () => void; onHover?: (on: boolean) => void;
+}) => {
+  const content = (
+    <span style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'end' ? 'flex-end' : 'flex-start', gap: 6 }}>
       <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>{label}</span>
       <ScoreGauge score={score} size={48} pending={pending} />
-    </>
+    </span>
   );
-  const col: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 };
-  if (!onClick) return <div style={col}>{inner}</div>;
+  const justify = align === 'end' ? 'flex-end' : 'flex-start';
+  if (!onClick) {
+    return <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', justifyContent: justify }}>{content}</div>;
+  }
   return (
     <button
       type="button" onClick={onClick} title={`Open Write & Optimize — ${label}`}
+      onMouseEnter={() => onHover?.(true)} onMouseLeave={() => onHover?.(false)}
+      onFocus={() => onHover?.(true)} onBlur={() => onHover?.(false)}
       style={{
-        ...col, padding: 8, margin: -8, borderRadius: 12, border: '1px solid transparent',
-        background: 'transparent', cursor: 'pointer', fontFamily: F,
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
+        position: 'relative', zIndex: 10, flex: 1, display: 'flex', justifyContent: justify,
+        background: 'none', border: 'none', padding: '8px 12px', cursor: 'pointer', fontFamily: F,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#e4e4e7'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(24,26,34,0.06)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; }}
-      onFocus={(e) => { e.currentTarget.style.borderColor = '#aa93fd'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
-      onBlur={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.boxShadow = 'none'; }}
     >
-      {inner}
+      {content}
     </button>
   );
 };
 
-/** SEO · Content Score · AI Search gauge trio (center = blend of SEO + AI).
- *  onSeoClick / onAiClick make the side gauges clickable shortcuts into the
- *  matching Write & Optimize section. */
+/** SEO · Content Score · AI Search gauge trio (centre = blend of SEO + AI).
+ *  Hovering SEO or AI highlights a pill spanning that side AND the centre
+ *  content-score gauge. onSeoClick / onAiClick open the matching Write & Optimize
+ *  section. */
 const ScoreTrio = ({ seo, ai, hasAi, onSeoClick, onAiClick }: {
   seo: number; ai: number; hasAi: boolean; onSeoClick?: () => void; onAiClick?: () => void;
 }) => {
   const overall = hasAi ? Math.round((seo + ai) / 2) : seo;
+  const [hovered, setHovered] = useState<'seo' | 'ai' | null>(null);
+  const overlayBase: React.CSSProperties = {
+    position: 'absolute', top: 0, bottom: 0, width: 'calc(50% + 50px)',
+    border: '1px solid #e4e4e7', background: '#f8f8f9', pointerEvents: 'none',
+    transition: 'opacity 0.15s ease-out, background-color 0.15s ease-out',
+  };
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '6px 16px 16px' }}>
-      <SideGauge label="SEO" score={seo} onClick={onSeoClick} />
-      <ScoreGauge score={overall} />
-      <SideGauge label="AI Search" score={ai} pending={!hasAi} onClick={onAiClick} />
+    <div style={{ padding: '6px 16px 16px' }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+        {/* Left highlight pill: SEO side + centre */}
+        <div style={{ ...overlayBase, left: 0, borderRadius: '12px 50px 50px 12px', opacity: hovered === 'seo' ? 1 : 0 }} />
+        {/* Right highlight pill: centre + AI side */}
+        <div style={{ ...overlayBase, right: 0, borderRadius: '50px 12px 12px 50px', opacity: hovered === 'ai' ? 1 : 0 }} />
+        <SideGauge label="SEO" align="start" score={seo} onClick={onSeoClick} onHover={(on) => setHovered(on ? 'seo' : null)} />
+        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} /></div>
+        <SideGauge label="AI Search" align="end" score={ai} pending={!hasAi} onClick={onAiClick} onHover={(on) => setHovered(on ? 'ai' : null)} />
+      </div>
     </div>
   );
 };
