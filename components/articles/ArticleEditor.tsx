@@ -60,6 +60,8 @@ interface Props {
   editorRef?: React.MutableRefObject<any>;
   /** When true, inserted links are highlighted purple for review */
   reviewMode?: boolean;
+  /** When true, the format toolbar is visually disabled (Auto-Optimize section review). */
+  formattingSuspended?: boolean;
   /** Highlight NLP entity terms inline (Write & Optimize). */
   highlightTerms?: boolean;
   /** Fired with true when Surfy is processing, false when done */
@@ -93,6 +95,7 @@ interface MenuBarProps {
   editor: any;
   keyword?: string;
   onAskSurfy: () => void;
+  formattingSuspended?: boolean;
 }
 
 /* ── Vertical separator ─────────────────────────────────────────────── */
@@ -225,7 +228,7 @@ const ToolbarMenu = ({
   );
 };
 
-const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
+const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkInitialText, setLinkInitialText] = useState('');
@@ -266,9 +269,12 @@ const MenuBar = ({ editor, keyword, onAskSurfy }: MenuBarProps) => {
     <>
       <div
         className="no-scrollbar ce-format-toolbar"
+        aria-disabled={formattingSuspended || undefined}
         style={{
           display: 'flex',
           alignItems: 'center',
+          // Auto-Optimize review suspends formatting: dim + block interaction, keep layout stable.
+          ...(formattingSuspended ? { pointerEvents: 'none' as const, opacity: 0.5 } : null),
           // `safe center` keeps the toolbar centred when it fits (desktop) but
           // falls back to start-aligned + scrollable when it overflows (mobile),
           // so narrow screens scroll the buttons instead of clipping/overlapping.
@@ -1022,7 +1028,7 @@ const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() 
   return all.filter((i) => i.title.toLowerCase().includes(q) || i.hint.slice(1).startsWith(q));
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1649,7 +1655,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         `}</style>
 
         {/* Toolbar */}
-        <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} />
+        <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} formattingSuspended={formattingSuspended} />
 
         {/* Scrollable editor — Title/Description + Featured image now live in the
             "Publish or Export" panel, so the editor shows the article body only. */}
