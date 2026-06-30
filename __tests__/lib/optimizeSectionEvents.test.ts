@@ -1,4 +1,4 @@
-import { buildSectionEvents } from '../../lib/optimizeSectionEvents';
+import { buildSectionEvents, buildSectionEvent } from '../../lib/optimizeSectionEvents';
 import type { SectionResult } from '../../components/articles/optimizeStore';
 
 const sections = [
@@ -27,5 +27,20 @@ describe('buildSectionEvents', () => {
   it('preserves section order and index', () => {
     const ev = buildSectionEvents(sections, new Map());
     expect(ev.map((e) => e.index)).toEqual([0, 1]);
+  });
+});
+
+describe('buildSectionEvent', () => {
+  it('passes a section through unchanged when result is undefined', () => {
+    expect(buildSectionEvent(sections[0])).toEqual({
+      sectionId: 'a1', index: 0, headingText: '', oldHtml: '<p>Intro</p>', newHtml: '<p>Intro</p>', changed: false,
+    });
+  });
+
+  it('reflects a provided result', () => {
+    const r: SectionResult = { oldHtml: '<h2>Why</h2><p>Body</p>', newHtml: '<h2>Why</h2><p>New</p>', changed: true };
+    expect(buildSectionEvent(sections[1], r)).toEqual({
+      sectionId: 'b2', index: 1, headingText: 'Why', oldHtml: '<h2>Why</h2><p>Body</p>', newHtml: '<h2>Why</h2><p>New</p>', changed: true,
+    });
   });
 });
