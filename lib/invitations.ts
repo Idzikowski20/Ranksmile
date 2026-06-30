@@ -36,6 +36,12 @@ export async function revokeInvitation(userId: string, id: number): Promise<void
 export async function acceptInvitation(sessionUserId: string, sessionEmail: string | null, token: string): Promise<void> {
    const inv = await getInvitationByToken(token);
    if (!inv || inv.status !== 'pending') throw new Error('INVITE_NOT_PENDING');
+   // Expiry is enforced on the GET preview but was ignored here — an expired-but-pending token
+   // stayed redeemable forever. Reject it (and mark it expired so it can't be retried).
+   if (inv.expires_at && new Date(inv.expires_at).getTime() < Date.now()) {
+      await db.query("UPDATE invitations SET status = 'expired' WHERE id = ?", { replacements: [inv.id] }).catch(() => {});
+      throw new Error('INVITE_EXPIRED');
+   }
    if (!sessionEmail || sessionEmail.trim().toLowerCase() !== inv.email) throw new Error('INVITE_EMAIL_MISMATCH');
    const existing = await select('SELECT id FROM organization_members WHERE org_id = ? AND user_id = ? LIMIT 1', [inv.org_id, sessionUserId]);
    if (!existing.length) {

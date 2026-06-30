@@ -92,6 +92,11 @@ export const addDomain = async (req: NextApiRequest, res: NextApiResponse<Domain
          });
       });
       try {
+         // Global uniqueness: several routes key off the domain NAME (verifyDomainOwnership, keyword
+         // lookups), so a duplicate name in another workspace would be a tenant-isolation hazard.
+         const names: string[] = domainsToAdd.map((d: { domain: string }) => d.domain);
+         const dup = await Domain.findOne({ where: { domain: names }, attributes: ['domain'] });
+         if (dup) return res.status(409).json({ domains: [], error: `Domain already exists: ${dup.domain}` });
          const newDomains:Domain[] = await Domain.bulkCreate(domainsToAdd);
          const formattedDomains = newDomains.map((el) => el.get({ plain: true }));
          return res.status(201).json({ domains: formattedDomains });
