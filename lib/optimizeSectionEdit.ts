@@ -37,3 +37,9 @@ const MIN_USABLE_LENGTH = 20;
 export function isUsableEdit(cleaned: string): boolean {
    return cleaned.length >= MIN_USABLE_LENGTH;
 }
+
+/** Charge the org token pool only when the run actually produced changes (and spent tokens).
+ *  No changes ⇒ "We didn't find anything to improve — no credit deducted." */
+export function shouldChargeCredit(changedCount: number, aiTokens: number): boolean {
+   return changedCount > 0 && aiTokens > 0;
+}

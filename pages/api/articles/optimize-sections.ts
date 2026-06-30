@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { assertArticleAccess } from '../../../lib/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
 import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
-import { computeMissingTerms, stripFences, isUsableEdit } from '../../../lib/optimizeSectionEdit';
+import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
 import type { SectionResult } from '../../../components/articles/optimizeStore';
 import type { ScoreData } from '../../../lib/contentScore';
 import { getErrorMessage } from '../../../lib/errors';
@@ -49,10 +50,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    };
    if (!content) return res.status(400).json({ error: 'content is required' });
 
+   let userId: string | null = null;
+   try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
+
    if (articleId !== undefined) {
-      const userId = await getCurrentUserId(req, res);
       if (!(await assertArticleAccess(userId, Number(articleId)))) {
          return res.status(403).json({ error: 'Access denied.' });
+      }
+   }
+
+   // Credit gate: block before any SSE output if the org's 5h token pool is exhausted.
+   let orgId: number | null = null;
+   if (userId != null) {
+      try { orgId = (await ensureUserTenancy(String(userId))).orgId; } catch { orgId = null; }
+   }
+   if (orgId != null) {
+      const usage = await getOrgUsage5h(orgId);
+      if (usage.over) {
+         return res.status(429).json({ error: 'org_limit', resetsAt: usage.resetsAt, used: usage.used, limit: usage.limit });
       }
    }
 
@@ -86,6 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const systemPrompt = buildSystemPrompt(missingTerms);
 
       let changedCount = 0;
+      let aiTokens = 0;
 
       for (const section of sections) {
          if (aborted) break;
@@ -110,6 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                });
                if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
                const data = await aiRes.json();
+               aiTokens += data.usage?.total_tokens || 0;
                const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
                if (isUsableEdit(cleaned)) newHtml = cleaned; // else keep original (empty/garbage)
                break; // success — stop retrying
@@ -129,7 +146,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (aborted) return;
-      sse(res, 'done', { changedCount, total: sections.length, promptVersion: PROMPT_VERSION });
+
+      // Charge the shared pool only when the run produced changes ("no changes ⇒ no credit deducted").
+      const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
+      if (creditDeducted) await recordAiTokens(orgId, aiTokens);
+
+      sse(res, 'done', { changedCount, total: sections.length, promptVersion: PROMPT_VERSION, creditDeducted });
    } catch (error) {
       if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
    } finally {

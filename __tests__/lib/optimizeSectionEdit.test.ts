@@ -1,4 +1,4 @@
-import { computeMissingTerms, stripFences, isUsableEdit } from '../../lib/optimizeSectionEdit';
+import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../lib/contentScore';
 
 const baseScore = (terms: ScoreData['terms']): ScoreData => ({
@@ -73,5 +73,19 @@ describe('isUsableEdit', () => {
 
   it('accepts a real section of HTML', () => {
     expect(isUsableEdit('<h2>Heading</h2><p>A real paragraph of content here.</p>')).toBe(true);
+  });
+});
+
+describe('shouldChargeCredit', () => {
+  it('charges when there are changes and tokens were spent', () => {
+    expect(shouldChargeCredit(2, 1500)).toBe(true);
+  });
+
+  it('does not charge when there are no changes (no credit deducted)', () => {
+    expect(shouldChargeCredit(0, 1500)).toBe(false);
+  });
+
+  it('does not charge when no tokens were measured', () => {
+    expect(shouldChargeCredit(3, 0)).toBe(false);
   });
 });
