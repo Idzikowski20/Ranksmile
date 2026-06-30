@@ -713,7 +713,8 @@ const ArticleEditorPage: NextPage = () => {
   // scoring. Resolved (accepted/rejected) sections already carry real content, so the score
   // climbs as the user works. seoDelta drives the gauge + ScoreTrio "↑N" badges.
   const optimizeReview = useMemo(() => {
-    if (optimizeState !== 'reviewing' || !scoreData) return null;
+    // Compute live during optimizing too, so the ↑N delta climbs as each section streams in.
+    if (optimizeState === 'idle' || !scoreData) return null;
     const postHtml = editorHtml.replace(
       /<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi,
       (tag) => {
@@ -1941,7 +1942,7 @@ const ArticleEditorPage: NextPage = () => {
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
-                      scoreDeltas={optimizeState === 'reviewing' && optimizeReview ? { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta } : undefined}
+                      scoreDeltas={optimizeState !== 'idle' && optimizeReview ? { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta } : undefined}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}
