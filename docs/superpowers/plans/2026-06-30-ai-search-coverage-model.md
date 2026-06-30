@@ -2,178 +2,189 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the editor's AI Search Score reflect content coverage of an "Information to cover" list (People Also Ask + 4 fixed intents), scored by an LLM judge, replacing the citation-based score in the editor gauge.
+**Goal:** Make the editor's AI Search Score measure topic coverage — how much of the article's `CoverageItem[]` (PAA + intents now; Facts/Definitions/… later) is covered, graded by an LLM judge for quality (not mere mention) — replacing the citation-based score in the editor gauge.
 
-**Architecture:** A new pure-ish module `lib/aiCoverage.ts` holds the `InfoItem` model, a `checkCoverage(plainText, items, judge)` that calls an injected LLM judge (default = deepseek-chat) and caches by content hash, and a pure `computeCoverageScore`. PAA questions come from the existing `lib/seo/keywordData.ts` DataForSEO fetch; the 4 intents are fixed. Coverage is stored on the article (`ai_info_to_cover` JSON column) and computed event-driven (load / deep-analysis / after an Auto-Optimize section). The citation-based `lib/aiSearchScore.ts` is untouched (becomes the separate "AI Tracker").
+**Architecture:** A new module `lib/aiCoverage.ts` holds the `CoverageItem` knowledge-graph model, a `checkCoverage(plainText, items, judge)` that calls an **injected** judge `{version, run}` (default = deepseek-chat) and caches by `judge.version | item ids | content hash`, and a pure importance×quality `computeCoverageScore`. PAA comes from `lib/seo/keywordData.ts`; intents are fixed. Coverage is stored on the article (`ai_info_to_cover` JSON) and computed event-driven. Citation `lib/aiSearchScore.ts` is untouched (→ AI Tracker).
 
-**Tech Stack:** TypeScript, Next.js (pages router), Neon Postgres, deepseek-chat (via fetch, same as `pages/api/articles/optimize-sections.ts`), Jest.
+**Tech Stack:** TypeScript, Next.js (pages), Neon Postgres, deepseek-chat (via fetch, like `pages/api/articles/optimize-sections.ts`), Jest.
 
 **Spec:** `docs/superpowers/specs/2026-06-30-ai-search-coverage-model-design.md`
 
-**Prereqs/cautions:** On branch `feature/gsap-motion-polish`; a concurrent session has edited Auto-Optimize files — coordinate (one writer). Tests: `npx jest <path> --ci`. Use `deepseek-chat`, NOT a reasoning model (project memory: the reasoning model's thinking block eats max_tokens → empty output). Reuse `lib/safeJson.ts`.
+**Prereqs/cautions:** Branch `feature/gsap-motion-polish`; concurrent session edits Auto-Optimize files — one writer. Tests: `npx jest <path> --ci`. `deepseek-chat`, NOT a reasoning model (memory: thinking block eats max_tokens). Reuse `lib/safeJson.ts`. The verdict's `missing[]`/`needsExpansion` feed #2 — keep them in the stored items even though #1 doesn't consume them.
 
 ---
 
 ## File Structure
-
-- `lib/aiCoverage.ts` — **Create.** Types (`InfoItem`, `CoverageResult`, `CoverageJudge`), `intentItems()`, `checkCoverage()`, `computeCoverageScore()`, `deepseekJudge`.
-- `__tests__/lib/aiCoverage.test.ts` — **Create.** Pure-logic + stub-judge tests.
-- `lib/seo/keywordData.ts` — **Modify.** Export `paaInfoItems(questions)` that maps PAA questions → `InfoItem[]`.
-- `lib/ensureArticlesTables.ts` — **Modify.** Add `ai_info_to_cover` JSON column to `articles` (follow the existing add-column pattern).
-- `pages/api/articles/deep-analysis.ts` — **Modify.** Build info-to-cover (PAA + intents), run `checkCoverage`, persist `ai_info_to_cover` + the coverage AI score.
-- `pages/articles/[id]/index.tsx` + `components/articles/ContentScorePanel.tsx` — **Modify.** Feed the editor AI gauge from the stored coverage score instead of `computeAiSearchScore(aiVisibilitySummary)`.
+- `lib/aiCoverage.ts` — **Create.** Model types, `intentItems()`, `hashId()`, `checkCoverage()`, `computeCoverageScore()`, `deepseekJudge`.
+- `__tests__/lib/aiCoverage.test.ts` — **Create.**
+- `lib/seo/keywordData.ts` — **Modify.** `paaCoverageItems(questions)` → `CoverageItem[]` (hashed ids).
+- `lib/ensureArticlesTables.ts` — **Modify.** `ai_info_to_cover` JSONB column.
+- `pages/api/articles/deep-analysis.ts` — **Modify.** Build items, judge, persist, return score.
+- `pages/articles/[id]/index.tsx` + `components/articles/ContentScorePanel.tsx` — **Modify.** Editor AI gauge ← coverage score.
 
 ---
 
-## Task 1: Pure score + types
+## Task 1: Model types + importance×quality score
 
-**Files:**
-- Create: `lib/aiCoverage.ts`
-- Test: `__tests__/lib/aiCoverage.test.ts`
+**Files:** Create `lib/aiCoverage.ts`; Test `__tests__/lib/aiCoverage.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
 // __tests__/lib/aiCoverage.test.ts
-import { computeCoverageScore, CoverageResult } from '../../lib/aiCoverage';
+import { computeCoverageScore, CoverageItem, CoverageResult } from '../../lib/aiCoverage';
 
-const res = (covered: number, total: number, early: boolean): CoverageResult => ({
-  items: Array.from({ length: total }, (_, i) => ({ id: `i${i}`, covered: i < covered })),
-  answersMainQuestionEarly: early,
-});
+const item = (id: string, importance: CoverageItem['importance'] = 'recommended'): CoverageItem =>
+  ({ id, label: id, type: 'paa', importance, covered: false, quality: 0 });
+const v = (id: string, covered: boolean, quality: number) => ({ id, covered, quality, confidence: 1 });
+const result = (items: CoverageResult['items'], early = false): CoverageResult =>
+  ({ items, answersMainQuestionEarly: early });
 
 describe('computeCoverageScore', () => {
-  it('is 0 with no items', () => expect(computeCoverageScore(res(0, 0, false), 0)).toBe(0));
-  it('full coverage + early = 100', () => expect(computeCoverageScore(res(4, 4, true), 4)).toBe(100));
-  it('full coverage, no early = 80', () => expect(computeCoverageScore(res(4, 4, false), 4)).toBe(80));
-  it('half coverage + early = 60', () => expect(computeCoverageScore(res(2, 4, true), 4)).toBe(60));
-  it('clamps ratio to total, not verdict count', () => expect(computeCoverageScore(res(2, 2, false), 4)).toBe(40));
+  it('0 with no items', () => expect(computeCoverageScore([], result([]))).toBe(0));
+  it('all covered q5 + early = 100', () =>
+    expect(computeCoverageScore([item('a'), item('b')], result([v('a', true, 5), v('b', true, 5)], true))).toBe(100));
+  it('all covered q5, no early = 85', () =>
+    expect(computeCoverageScore([item('a'), item('b')], result([v('a', true, 5), v('b', true, 5)]))).toBe(85));
+  it('quality matters: covered q1 earns 1/5 → 17', () =>
+    expect(computeCoverageScore([item('a')], result([v('a', true, 1)]))).toBe(17));
+  it('importance matters: critical covered, optional uncovered → 64', () =>
+    expect(computeCoverageScore([item('a', 'critical'), item('b', 'optional')], result([v('a', true, 5)]))).toBe(64));
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run → fail** — `npx jest __tests__/lib/aiCoverage.test.ts --ci` → `Cannot find module`.
 
-Run: `npx jest __tests__/lib/aiCoverage.test.ts --ci`
-Expected: FAIL — `Cannot find module '../../lib/aiCoverage'`.
-
-- [ ] **Step 3: Write minimal implementation**
+- [ ] **Step 3: Implement**
 
 ```ts
 // lib/aiCoverage.ts
-export type InfoKind = 'paa' | 'intent';
+export type CoverageType =
+  | 'paa' | 'intent' | 'fact' | 'definition' | 'comparison'
+  | 'example' | 'warning' | 'entity' | 'process' | 'statistic' | 'expectation';
+export type Importance = 'critical' | 'recommended' | 'optional';
 
-export interface InfoItem {
+export interface CoverageItem {
   id: string;
   label: string;
-  kind: InfoKind;
+  type: CoverageType;
+  importance: Importance;
   covered: boolean;
-  section?: string;
+  quality: number;          // 0..5
+  needsExpansion?: boolean;
+  missing?: string[];
+  sectionId?: string;
 }
 
-export interface CoverageVerdict { id: string; covered: boolean; section?: string; }
+export interface CoverageVerdict {
+  id: string;
+  covered: boolean;
+  quality: number;          // 0..5
+  confidence: number;       // 0..1
+  needsExpansion?: boolean;
+  missing?: string[];
+  sectionId?: string;
+}
 export interface CoverageResult { items: CoverageVerdict[]; answersMainQuestionEarly: boolean; }
 
-/** AI Search Score from coverage: covered-ratio (80%) + answer-main-question-early bonus (20%). */
-export function computeCoverageScore(result: CoverageResult, total: number): number {
-  const covered = result.items.filter((v) => v.covered).length;
-  const coveredRatio = total > 0 ? covered / total : 0;
-  const earlyBonus = result.answersMainQuestionEarly ? 1 : 0;
-  return Math.round(coveredRatio * 80 + earlyBonus * 20);
+const WEIGHT: Record<Importance, number> = { critical: 3, recommended: 2, optional: 1 };
+
+/** AI Search Score: Σ(weight × quality/5) over covered items, normalized to 85, + 15 for early answer. */
+export function computeCoverageScore(items: CoverageItem[], result: CoverageResult): number {
+  const totalW = items.reduce((s, it) => s + WEIGHT[it.importance], 0) || 1;
+  const byId = new Map(result.items.map((vd) => [vd.id, vd]));
+  const earned = items.reduce((s, it) => {
+    const vd = byId.get(it.id);
+    if (!vd || !vd.covered) return s;
+    const q = Math.min(Math.max(vd.quality, 0), 5) / 5;
+    return s + WEIGHT[it.importance] * q;
+  }, 0);
+  const early = result.answersMainQuestionEarly ? 15 : 0;
+  return Math.round((earned / totalW) * 85 + early);
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `npx jest __tests__/lib/aiCoverage.test.ts --ci`
-Expected: PASS (5 tests).
+- [ ] **Step 4: Run → pass** — `npx jest __tests__/lib/aiCoverage.test.ts --ci` → 5 pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add lib/aiCoverage.ts __tests__/lib/aiCoverage.test.ts
-git commit -m "feat(ai-coverage): InfoItem types + computeCoverageScore (pure)"
+git commit -m "feat(ai-coverage): CoverageItem model + importance×quality score (pure)"
 ```
 
-## Task 2: checkCoverage with injected judge + cache
+## Task 2: checkCoverage (injected judge + versioned cache) + intentItems + hashId
 
-**Files:**
-- Modify: `lib/aiCoverage.ts`
-- Test: `__tests__/lib/aiCoverage.test.ts` (append)
+**Files:** Modify `lib/aiCoverage.ts`; append test.
 
 - [ ] **Step 1: Write the failing test** (append)
 
 ```ts
-import { checkCoverage, intentItems, InfoItem, CoverageJudge } from '../../lib/aiCoverage';
+import { checkCoverage, intentItems, hashId, CoverageItem, CoverageJudge } from '../../lib/aiCoverage';
 
-const items: InfoItem[] = [
-  { id: 'paa-1', label: 'Q1?', kind: 'paa', covered: false },
-  { id: 'intent-why', label: 'Why', kind: 'intent', covered: false },
+const items: CoverageItem[] = [
+  { id: 'paa-x', label: 'Q1?', type: 'paa', importance: 'recommended', covered: false, quality: 0 },
 ];
+const judge = (run: CoverageJudge['run']): CoverageJudge => ({ version: 'test-v1', run });
 
 describe('checkCoverage', () => {
-  it('returns empty for no items without calling the judge', async () => {
-    const judge = jest.fn();
-    const r = await checkCoverage('text', [], judge as unknown as CoverageJudge);
-    expect(r).toEqual({ items: [], answersMainQuestionEarly: false });
-    expect(judge).not.toHaveBeenCalled();
+  it('empty items → no judge call', async () => {
+    const run = jest.fn();
+    expect(await checkCoverage('t', [], judge(run as never))).toEqual({ items: [], answersMainQuestionEarly: false });
+    expect(run).not.toHaveBeenCalled();
   });
-
-  it('maps the judge verdict, dropping unknown + duplicate ids', async () => {
-    const judge: CoverageJudge = async () => ({
-      items: [
-        { id: 'paa-1', covered: true, section: 'Intro' },
-        { id: 'paa-1', covered: false },     // duplicate → dropped
-        { id: 'ghost', covered: true },      // unknown → dropped
-      ],
-      answersMainQuestionEarly: true,
-    });
-    const r = await checkCoverage('the article body', items, judge);
-    expect(r.items).toEqual([{ id: 'paa-1', covered: true, section: 'Intro' }]);
+  it('drops unknown + duplicate ids, keeps verdict fields', async () => {
+    const j = judge(async () => ({ items: [
+      { id: 'paa-x', covered: true, quality: 4, confidence: 0.9, missing: ['dosage'] },
+      { id: 'paa-x', covered: false, quality: 0, confidence: 1 },   // dup
+      { id: 'ghost', covered: true, quality: 5, confidence: 1 },    // unknown
+    ], answersMainQuestionEarly: true }));
+    const r = await checkCoverage('body', items, j);
+    expect(r.items).toEqual([{ id: 'paa-x', covered: true, quality: 4, confidence: 0.9, missing: ['dosage'] }]);
     expect(r.answersMainQuestionEarly).toBe(true);
   });
-
-  it('caches by content hash (judge called once for same text+items)', async () => {
-    const judge = jest.fn(async () => ({ items: [], answersMainQuestionEarly: false }));
-    await checkCoverage('same body', items, judge);
-    await checkCoverage('same body', items, judge);
-    expect(judge).toHaveBeenCalledTimes(1);
+  it('caches by version+ids+hash (run called once)', async () => {
+    const run = jest.fn(async () => ({ items: [], answersMainQuestionEarly: false }));
+    await checkCoverage('same', items, judge(run));
+    await checkCoverage('same', items, judge(run));
+    expect(run).toHaveBeenCalledTimes(1);
   });
-
-  it('intentItems() returns the 4 fixed intents', () => {
-    expect(intentItems().map((i) => i.id)).toEqual([
-      'intent-answer-main', 'intent-expectations', 'intent-who', 'intent-why',
-    ]);
+  it('intentItems() → 4 fixed ids, answer-main is critical', () => {
+    const it = intentItems();
+    expect(it.map((x) => x.id)).toEqual(['intent-answer-main', 'intent-expectations', 'intent-who', 'intent-why']);
+    expect(it[0].importance).toBe('critical');
+  });
+  it('hashId is stable + differs by input', () => {
+    expect(hashId('abc')).toBe(hashId('abc'));
+    expect(hashId('abc')).not.toBe(hashId('abd'));
   });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2: Run → fail.**
 
-Run: `npx jest __tests__/lib/aiCoverage.test.ts --ci`
-Expected: FAIL — `checkCoverage`/`intentItems` not exported.
-
-- [ ] **Step 3: Write minimal implementation** (append to `lib/aiCoverage.ts`)
+- [ ] **Step 3: Implement** (append to `lib/aiCoverage.ts`)
 
 ```ts
-export type CoverageJudge = (
-  plainText: string,
-  items: Array<Pick<InfoItem, 'id' | 'label' | 'kind'>>,
-) => Promise<CoverageResult>;
-
-const INTENT_ITEMS: ReadonlyArray<Omit<InfoItem, 'covered'>> = [
-  { id: 'intent-answer-main', label: 'Answer the main question', kind: 'intent' },
-  { id: 'intent-expectations', label: 'Set expectations for the content', kind: 'intent' },
-  { id: 'intent-who', label: "Identify who it's for", kind: 'intent' },
-  { id: 'intent-why', label: 'Explain why it matters to the reader', kind: 'intent' },
-];
-
-/** The 4 fixed search intents, fresh (covered:false) each call. */
-export function intentItems(): InfoItem[] {
-  return INTENT_ITEMS.map((i) => ({ ...i, covered: false }));
+export interface CoverageJudge {
+  version: string; // promptVersion|model|temperature — part of the cache key
+  run: (plainText: string, items: Array<Pick<CoverageItem, 'id' | 'label' | 'type'>>) => Promise<CoverageResult>;
 }
 
-// djb2 — cheap deterministic content hash for the per-article coverage cache.
-function hash(s: string): string {
+const INTENT_ITEMS: ReadonlyArray<Omit<CoverageItem, 'covered' | 'quality'>> = [
+  { id: 'intent-answer-main', label: 'Answer the main question', type: 'intent', importance: 'critical' },
+  { id: 'intent-expectations', label: 'Set expectations for the content', type: 'intent', importance: 'recommended' },
+  { id: 'intent-who', label: "Identify who it's for", type: 'intent', importance: 'recommended' },
+  { id: 'intent-why', label: 'Explain why it matters to the reader', type: 'intent', importance: 'recommended' },
+];
+
+/** The 4 fixed search intents, fresh each call. */
+export function intentItems(): CoverageItem[] {
+  return INTENT_ITEMS.map((i) => ({ ...i, covered: false, quality: 0 }));
+}
+
+/** djb2 — cheap deterministic hash for stable ids + the coverage cache key. */
+export function hashId(s: string): string {
   let h = 5381;
   for (let i = 0; i < s.length; i += 1) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
@@ -181,27 +192,18 @@ function hash(s: string): string {
 
 const coverageCache = new Map<string, CoverageResult>();
 
-/**
- * Run the injected judge over the article text + items, returning per-item verdicts.
- * Unknown / duplicate verdict ids are dropped. Cached by (item ids, text hash) so the same
- * content isn't re-judged. Empty items → no judge call.
- */
-export async function checkCoverage(
-  plainText: string,
-  items: InfoItem[],
-  judge: CoverageJudge,
-): Promise<CoverageResult> {
+/** Run the injected judge; drop unknown/duplicate verdict ids; cache by version+ids+content hash. */
+export async function checkCoverage(plainText: string, items: CoverageItem[], judge: CoverageJudge): Promise<CoverageResult> {
   if (!items.length) return { items: [], answersMainQuestionEarly: false };
-  const key = `${items.map((i) => i.id).join(',')}::${hash(plainText)}`;
+  const key = `${judge.version}|${items.map((i) => i.id).join(',')}::${hashId(plainText)}`;
   const cached = coverageCache.get(key);
   if (cached) return cached;
-
-  const verdict = await judge(plainText, items.map((i) => ({ id: i.id, label: i.label, kind: i.kind })));
+  const verdict = await judge.run(plainText, items.map((i) => ({ id: i.id, label: i.label, type: i.type })));
   const known = new Set(items.map((i) => i.id));
   const seen = new Set<string>();
-  const verdicts = (verdict.items || []).filter((v) => {
-    if (!known.has(v.id) || seen.has(v.id)) return false;
-    seen.add(v.id);
+  const verdicts = (verdict.items || []).filter((vd) => {
+    if (!known.has(vd.id) || seen.has(vd.id)) return false;
+    seen.add(vd.id);
     return true;
   });
   const out: CoverageResult = { items: verdicts, answersMainQuestionEarly: !!verdict.answersMainQuestionEarly };
@@ -210,129 +212,108 @@ export async function checkCoverage(
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `npx jest __tests__/lib/aiCoverage.test.ts --ci`
-Expected: PASS (9 tests total).
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Run → pass** (10 tests total). **Step 5: Commit**
 
 ```bash
 git add lib/aiCoverage.ts __tests__/lib/aiCoverage.test.ts
-git commit -m "feat(ai-coverage): checkCoverage (injected judge + cache) + intentItems"
+git commit -m "feat(ai-coverage): checkCoverage (injected judge + versioned cache), intents, hashId"
 ```
 
-## Task 3: deepseek judge (default LLM)
+## Task 3: deepseekJudge (default LLM, quality + missing + needsExpansion)
 
-**Files:**
-- Modify: `lib/aiCoverage.ts`
+**Files:** Modify `lib/aiCoverage.ts`. (No unit test — network. Mirror `optimize-sections.ts` auth.)
 
-> No unit test — it's a network call. Mirror the auth/endpoint of `pages/api/articles/optimize-sections.ts` (deepseek-chat). Verified via tsc + manual.
-
-- [ ] **Step 1: Add the judge** (append to `lib/aiCoverage.ts`)
+- [ ] **Step 1: Add the judge** (append)
 
 ```ts
 import { safeJsonParse } from './safeJson';
 
-/** Default judge: one deepseek-chat call returning a strict JSON coverage verdict. */
-export const deepseekJudge: CoverageJudge = async (plainText, items) => {
-  const list = items.map((i) => `- ${i.id} [${i.kind}]: ${i.label}`).join('\n');
-  const system = 'You are an SEO content auditor. Decide, strictly from the article, which items are '
-    + 'covered. Respond ONLY with JSON.';
-  const user = `Items to cover:\n${list}\n\n`
-    + 'For each item id decide covered (true/false) and, if covered, the heading "section" it is '
-    + 'covered under. Also decide answersMainQuestionEarly: does the FIRST paragraph directly answer '
-    + 'the main question?\n\nReturn JSON: '
-    + '{"items":[{"id":string,"covered":boolean,"section":string?}],"answersMainQuestionEarly":boolean}.\n\n'
-    + `=== ARTICLE START ===\n${plainText}\n=== ARTICLE END ===`;
+const MODEL = 'deepseek-chat';
+const TEMPERATURE = 0;
+const PROMPT_VERSION = 'v1';
 
-  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      response_format: { type: 'json_object' },
-      temperature: 0,
-      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-    }),
-  });
-  const data = await res.json().catch(() => ({}));
-  const content: string = data?.choices?.[0]?.message?.content ?? '';
-  const parsed = safeJsonParse<{ items?: CoverageVerdict[]; answersMainQuestionEarly?: boolean }>(content, {});
-  return { items: parsed.items ?? [], answersMainQuestionEarly: !!parsed.answersMainQuestionEarly };
+/** Default judge: one deepseek-chat call. Grades quality + lists what's still missing (feeds #2). */
+export const deepseekJudge: CoverageJudge = {
+  version: `${PROMPT_VERSION}|${MODEL}|${TEMPERATURE}`,
+  run: async (plainText, items) => {
+    const list = items.map((i) => `- ${i.id} [${i.type}]: ${i.label}`).join('\n');
+    const system = 'You are an SEO topic-coverage auditor. Judge ONLY from the article. Reply ONLY with JSON.';
+    const user = `Knowledge items to cover:\n${list}\n\n`
+      + 'For each id return: covered(bool), quality(0-5: 5=thorough explanation, 1=bare mention), '
+      + 'confidence(0-1), needsExpansion(bool: covered but too shallow), '
+      + 'missing(string[] of specific facts/sub-points still absent), '
+      + 'sectionId(the id/heading covering it, if covered). Also answersMainQuestionEarly(bool): '
+      + 'does the FIRST paragraph directly answer the main question?\n'
+      + 'JSON: {"items":[{"id","covered","quality","confidence","needsExpansion","missing":[],"sectionId"}],'
+      + '"answersMainQuestionEarly"}.\n\n=== ARTICLE ===\n' + plainText + '\n=== END ===';
+    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: MODEL, temperature: TEMPERATURE, seed: 7,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const parsed = safeJsonParse<{ items?: CoverageVerdict[]; answersMainQuestionEarly?: boolean }>(
+      data?.choices?.[0]?.message?.content ?? '', {});
+    return { items: parsed.items ?? [], answersMainQuestionEarly: !!parsed.answersMainQuestionEarly };
+  },
 };
 ```
 
-> If `safeJsonParse`'s signature differs, check `lib/safeJson.ts` and adapt the call (it exists per the repo).
+> Verify `process.env.DEEPSEEK_API_KEY` + the auth header match `pages/api/articles/optimize-sections.ts:113-120`; if that file uses a different env name or `seed` isn't accepted, match it / drop `seed`. Check `lib/safeJson.ts` for the exact `safeJsonParse` signature.
 
-- [ ] **Step 2: Typecheck**
-
-Run: `npx tsc --noEmit`
-Expected: no new errors. (If `DEEPSEEK_API_KEY` is the wrong env name, grep `optimize-sections.ts` for the exact key/header and match it.)
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Typecheck** — `npx tsc --noEmit` → no new errors. **Step 3: Commit**
 
 ```bash
 git add lib/aiCoverage.ts
-git commit -m "feat(ai-coverage): deepseek-chat judge (default CoverageJudge)"
+git commit -m "feat(ai-coverage): deepseek-chat judge (quality, needsExpansion, missing[])"
 ```
 
-## Task 4: PAA → InfoItem builder
+## Task 4: PAA → CoverageItem builder (stable hashed ids)
 
-**Files:**
-- Modify: `lib/seo/keywordData.ts`
+**Files:** Modify `lib/seo/keywordData.ts`
 
-The PAA fetch returns `{ questions: Array<{ question: string; ... }> }`. Expose a mapper.
-
-- [ ] **Step 1: Add the export** (near the PAA usage in `lib/seo/keywordData.ts`)
+- [ ] **Step 1: Add the export** (near the PAA usage)
 
 ```ts
-import { InfoItem } from '../aiCoverage';
+import { CoverageItem, hashId } from '../aiCoverage';
 
-/** Map People-Also-Ask questions to coverage InfoItems (stable id from index). */
-export function paaInfoItems(questions: Array<{ question: string }>): InfoItem[] {
-  return questions.map((q, i) => ({
-    id: `paa-${i}`,
+/** Map People-Also-Ask questions to coverage items with STABLE ids (hash of the question text,
+ *  not the array index — DataForSEO may reorder results between fetches). */
+export function paaCoverageItems(questions: Array<{ question: string }>): CoverageItem[] {
+  return questions.map((q) => ({
+    id: `paa-${hashId(q.question)}`,
     label: q.question,
-    kind: 'paa' as const,
+    type: 'paa' as const,
+    importance: 'recommended' as const,
     covered: false,
+    quality: 0,
   }));
 }
 ```
 
-- [ ] **Step 2: Typecheck**
-
-Run: `npx tsc --noEmit`
-Expected: no new errors.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Typecheck** → no new errors. **Step 3: Commit**
 
 ```bash
 git add lib/seo/keywordData.ts
-git commit -m "feat(ai-coverage): paaInfoItems builder from People-Also-Ask"
+git commit -m "feat(ai-coverage): paaCoverageItems builder (stable hashed ids)"
 ```
 
 ## Task 5: `ai_info_to_cover` column
 
-**Files:**
-- Modify: `lib/ensureArticlesTables.ts`
+**Files:** Modify `lib/ensureArticlesTables.ts`
 
-The `articles` table is created with `CREATE TABLE IF NOT EXISTS`. Add a nullable JSON column for the
-stored coverage, following the same add-column approach already used for other late-added article
-columns (e.g. an `ALTER TABLE articles ADD COLUMN IF NOT EXISTS ...` block).
-
-- [ ] **Step 1: Add the migration** — after the `articles` table creation, add:
+- [ ] **Step 1: Add the column** — after the `articles` table creation, following the file's existing
+  `sql` helper usage:
 
 ```ts
 await sql`ALTER TABLE articles ADD COLUMN IF NOT EXISTS ai_info_to_cover JSONB`;
 ```
 
-(Use the project's existing `sql`/query helper exactly as the surrounding statements in the file do.)
-
-- [ ] **Step 2: Typecheck + verify it runs**
-
-Run: `npx tsc --noEmit` then trigger `ensureArticlesTables` once (e.g. start the dev server / hit an
-articles API). Expected: no error; the column exists.
+- [ ] **Step 2: Typecheck + run** `ensureArticlesTables` once (hit an articles API / start dev). No error; column exists.
 
 - [ ] **Step 3: Commit**
 
@@ -343,60 +324,47 @@ git commit -m "feat(ai-coverage): ai_info_to_cover JSONB column on articles"
 
 ## Task 6: Compute + store coverage, feed the editor AI gauge
 
-**Files:**
-- Modify: `pages/api/articles/deep-analysis.ts`
-- Modify: `pages/articles/[id]/index.tsx`
-- Modify: `components/articles/ContentScorePanel.tsx`
+**Files:** Modify `pages/api/articles/deep-analysis.ts`, `pages/articles/[id]/index.tsx`, `components/articles/ContentScorePanel.tsx`
 
-- [ ] **Step 1: In `deep-analysis.ts`** — where the article text + PAA are available, build items, judge,
-  persist, and include the coverage score in the response. Add:
+- [ ] **Step 1: deep-analysis** — where plainText + `paa.questions` are known:
 
 ```ts
-import { paaInfoItems } from '../../../lib/seo/keywordData';
+import { paaCoverageItems } from '../../../lib/seo/keywordData';
 import { intentItems, checkCoverage, computeCoverageScore, deepseekJudge } from '../../../lib/aiCoverage';
 
-// after plainText + paa.questions are known:
-const items = [...paaInfoItems(paa.questions), ...intentItems()];
+const items = [...paaCoverageItems(paa.questions), ...intentItems()];
 const coverage = await checkCoverage(plainText, items, deepseekJudge);
-const aiCoverageScore = computeCoverageScore(coverage, items.length);
-const storedItems = items.map((it) => {
+const aiCoverageScore = computeCoverageScore(items, coverage);
+const graded = items.map((it) => {
   const v = coverage.items.find((x) => x.id === it.id);
-  return { ...it, covered: !!v?.covered, section: v?.section };
+  return { ...it, covered: !!v?.covered, quality: v?.quality ?? 0,
+    needsExpansion: v?.needsExpansion, missing: v?.missing, sectionId: v?.sectionId };
 });
-await sql`UPDATE articles SET ai_info_to_cover = ${JSON.stringify(storedItems)} WHERE id = ${articleId}`;
-// include aiCoverageScore + storedItems in the JSON response
+await sql`UPDATE articles SET ai_info_to_cover = ${JSON.stringify(graded)} WHERE id = ${articleId}`;
+// include aiCoverageScore + graded in the JSON response
 ```
 
-- [ ] **Step 2: In the editor (`pages/articles/[id]/index.tsx`)** — read the stored `ai_info_to_cover`
-  + coverage score from the article load, hold it in state, and pass an `aiScore` to `ContentScorePanel`
-  (replacing the citation-derived value for the gauge). Keep `aiVisibilitySummary` for the AI Tracker.
+- [ ] **Step 2: editor** (`pages/articles/[id]/index.tsx`) — read `ai_info_to_cover` + score from the
+  loaded article into state; pass `aiCoverageScore` to `ContentScorePanel`. Keep `aiVisibilitySummary`
+  for the (future) AI Tracker.
 
-```tsx
-// from the loaded article: article.ai_info_to_cover, article.ai_coverage_score (or recompute via computeCoverageScore)
-<ContentScorePanel ... aiCoverageScore={aiCoverageScore} infoToCover={infoToCover} />
-```
-
-- [ ] **Step 3: In `ContentScorePanel.tsx`** — add props `aiCoverageScore?: number` and
-  `infoToCover?: InfoItem[]`; use `aiCoverageScore` for the AI gauge value where it currently calls
-  `computeAiSearchScore(aiVisibilitySummary)`. Leave the citation path for the (future) AI Tracker.
+- [ ] **Step 3: ContentScorePanel** — add prop `aiCoverageScore?: number`; use it for the AI gauge
+  where it currently calls `computeAiSearchScore(aiVisibilitySummary)`:
 
 ```tsx
 const aiScore = aiCoverageScore ?? (hasAi ? computeAiSearchScore(aiVisibilitySummary) : 0);
 ```
 
-- [ ] **Step 4: Typecheck**
+- [ ] **Step 4: Typecheck** → no new errors.
 
-Run: `npx tsc --noEmit`
-Expected: no new errors.
-
-- [ ] **Step 5: Manual verify** — run deep-analysis on an article; the AI Search gauge reflects
-  info-to-cover coverage; `ai_info_to_cover` is populated in the DB. (Live delta during Auto-Optimize
-  + the Information-to-cover panel are sub-projects #2/#3.)
+- [ ] **Step 5: Manual verify** — deep-analysis on an article: AI gauge reflects coverage;
+  `ai_info_to_cover` populated (with `missing[]`/`needsExpansion` for #2). Live delta + the
+  Information-to-cover panel are #2/#3.
 
 - [ ] **Step 6: Build gate + commit**
 
 ```bash
-npm run build   # expect exit 0
+npm run build   # exit 0
 git add pages/api/articles/deep-analysis.ts pages/articles/[id]/index.tsx components/articles/ContentScorePanel.tsx
 git commit -m "feat(ai-coverage): compute+store coverage, feed editor AI gauge"
 ```
@@ -404,16 +372,15 @@ git commit -m "feat(ai-coverage): compute+store coverage, feed editor AI gauge"
 ---
 
 ## Final verification
-- [ ] `npx jest __tests__/lib/aiCoverage.test.ts --ci` — green (9 tests).
-- [ ] `npx tsc --noEmit` — clean.
-- [ ] `npm run build` — exit 0.
-- [ ] `graphify update .`
+- [ ] `npx jest __tests__/lib/aiCoverage.test.ts --ci` — green (10 tests).
+- [ ] `npx tsc --noEmit` — clean. `npm run build` — exit 0. `graphify update .`
 
 ## Self-review (spec coverage)
-- InfoItem model (PAA + 4 intents) → Tasks 1, 2, 4. ✓
-- LLM-judge coverage → Task 2 (injected) + Task 3 (deepseek). ✓
-- `computeCoverageScore` (ratio*80 + early*20) → Task 1. ✓
+- CoverageItem (type enum + importance + quality + needsExpansion + missing + sectionId) → Tasks 1-2. ✓
+- Stable hashed ids → Task 4 (PAA) + `hashId` Task 2. ✓
+- LLM judge, quality + missing + needsExpansion → Task 3. ✓
+- importance×quality score (85) + early (15) → Task 1. ✓
+- Versioned cache (judge.version) → Task 2. ✓
 - `ai_info_to_cover` column → Task 5. ✓
-- Event-driven compute + feed gauge → Task 6 (deep-analysis; per-section live + manual refresh are #2/#3). ✓
-- Citation `aiSearchScore.ts` untouched → confirmed (no task modifies it). ✓
-- Tests: pure score, stub-judge mapping/cache, intent ids → Tasks 1-2. ✓
+- Event-driven compute + feed gauge; `missing[]` stored for #2 → Task 6. ✓
+- `aiSearchScore.ts` untouched → no task modifies it. ✓
