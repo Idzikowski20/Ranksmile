@@ -25,6 +25,8 @@ import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { getErrorMessage } from '../../../lib/errors';
+import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
+import { ABLY_EVENTS } from '../../../lib/ably/channel';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -484,14 +486,14 @@ const ArticleEditorPage: NextPage = () => {
       .catch(() => {});
   }, [id, commentsVersion]);
 
-  // Live comment sync: a reviewer's note on the shared link shows up here over SSE.
+  // Owner watches the same channel so reviewer comments appear live in the editor.
+  const { channel: ownerChannel } = useArticleChannel({ articleId: article?.id ?? null });
   useEffect(() => {
-    if (!id) return undefined;
-    const es = new EventSource(`/api/articles/${id}/comments-stream`);
-    es.onmessage = () => setCommentsVersion(v => v + 1);
-    es.onerror = () => { /* EventSource auto-reconnects */ };
-    return () => es.close();
-  }, [id]);
+    if (!ownerChannel) return undefined;
+    const onComment = () => setCommentsVersion((v) => v + 1);
+    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
+  }, [ownerChannel]);
 
   // Listen for Pixabay open events dispatched from TipTap image node toolbar
   useEffect(() => {

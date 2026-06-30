@@ -4,6 +4,8 @@ import CommentComposer, { DraftComment } from './CommentComposer';
 import { Thread, CommentAuthor } from './CommentThreadBubble';
 import CommentPin from './CommentPin';
 import { commentsUrl } from './commentApi';
+import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
+import { ABLY_EVENTS } from '../../../lib/ably/channel';
 
 const F = 'var(--font-family-primary)';
 
@@ -79,6 +81,19 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
       .finally(() => { loadedRef.current = true; });
   }, [articleId, shareToken]);
   useEffect(() => { reload(); }, [reload, reloadSignal]);
+
+  // Live comment sync via Ably (replaces the in-process SSE, dead on serverless).
+  const { channel: liveCommentChannel } = useArticleChannel({
+    articleId: articleId ?? null,
+    shareToken: shareToken ?? null,
+    clientId: author?.name || null,
+  });
+  useEffect(() => {
+    if (!liveCommentChannel) return undefined;
+    const onComment = () => reload();
+    liveCommentChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    return () => { liveCommentChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
+  }, [liveCommentChannel, reload]);
 
   // (Re)apply highlights, drop orphaned ones, compute pin positions.
   const layout = useCallback(() => {
