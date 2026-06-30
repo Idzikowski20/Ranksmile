@@ -2,7 +2,6 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Flip } from 'gsap/Flip';
 
 /** Durations in SECONDS — mirror styles/globals.css `--motion-*` (ms ÷ 1000). */
 export const DURATION = { instant: 0.1, fast: 0.15, normal: 0.25, slow: 0.35, slower: 0.5 } as const;
@@ -25,7 +24,7 @@ let pluginsReady = false;
 export function registerMotionPlugins(): void {
   if (pluginsReady) return;
   ensureEases();
-  gsap.registerPlugin(useGSAP, ScrollTrigger, Flip);
+  gsap.registerPlugin(useGSAP, ScrollTrigger);
   pluginsReady = true;
 }
 
@@ -35,4 +34,4 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export { gsap, useGSAP };
+export { gsap, useGSAP, ScrollTrigger };
