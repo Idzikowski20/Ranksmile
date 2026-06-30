@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import * as Ably from 'ably';
 import { articleChannelName } from './channel';
 
+// Note: pass a STABLE onReconnect (e.g. wrapped in useCallback). An inline arrow
+// re-runs the ref-sync effect every parent render — harmless, but avoidable.
+
 type Params = {
   articleId: string | number | null | undefined;
   /** Share token for viewers; omit for the owner (session-authed). */
@@ -26,7 +29,6 @@ export type UseArticleChannel = {
 export function useArticleChannel({ articleId, shareToken, clientId, onReconnect }: Params): UseArticleChannel {
   const [channel, setChannel] = useState<Ably.RealtimeChannel | null>(null);
   const [connectionState, setConnectionState] = useState<Ably.ConnectionState | 'idle'>('idle');
-  const clientRef = useRef<Ably.Realtime | null>(null);
   // Keep the latest onReconnect without re-creating the connection on each render.
   const onReconnectRef = useRef(onReconnect);
   useEffect(() => { onReconnectRef.current = onReconnect; }, [onReconnect]);
@@ -65,7 +67,6 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
       try { client.connection.off(onState); } catch { /* ignore */ }
       try { ch.detach(); } catch { /* ignore */ }
       try { client.close(); } catch { /* ignore */ }
-      clientRef.current = null;
     };
   }, [articleId, shareToken, clientId]);
 
