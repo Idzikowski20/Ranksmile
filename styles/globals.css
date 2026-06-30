@@ -100,6 +100,11 @@ label {
    transition-timing-function: var(--motion-ease-standard);
 }
 
+/* Springy press feedback for primary actions — transform only (geometry isn't in the baseline
+   transition above). Reduced-motion neutralizes it via the transition-duration override below. */
+.press-spring { transition: transform var(--motion-fast) cubic-bezier(0.34, 1.56, 0.64, 1); }
+.press-spring:active { transform: scale(0.97); }
+
 /* Accessibility: respect reduced-motion (Base "Motion"). */
 @media (prefers-reduced-motion: reduce) {
    *,
