@@ -49,4 +49,13 @@ describe('lib/ably/server', () => {
       capability: JSON.stringify({ 'article:7': ['publish', 'subscribe', 'presence'] }),
     }));
   });
+
+  it('mints a viewer (token) capability WITHOUT publish', async () => {
+    const { mintArticleToken } = require('../../lib/ably/server');
+    await mintArticleToken({ articleId: 7, kind: 'token', clientId: 'guest:joe' });
+    expect(createTokenRequestMock).toHaveBeenCalledWith(expect.objectContaining({
+      clientId: 'guest:joe',
+      capability: JSON.stringify({ 'article:7': ['subscribe', 'presence'] }),
+    }));
+  });
 });
