@@ -1394,25 +1394,36 @@ const ArticleEditorPage: NextPage = () => {
 
   // AO-7 Step D: while reviewing, count remaining contentOptimizer nodes. When the user has
   // resolved (Accept/Reject) every section → none remain → return to idle and resume autosave,
-  // which persists the now-clean document.
+  // which persists the now-clean document. The editor mounts asynchronously (dynamic import) and
+  // can remount mid-review, so poll-bind the listener like the caret binder above — otherwise the
+  // review could never complete and isAutoOptimizing would stay stuck true (autosave dead).
   useEffect(() => {
     if (optimizeState !== 'reviewing') return undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
-    if (!editor) return undefined;
+    let ed: any = null;
     const check = () => {
+      if (!ed) return;
       let count = 0;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      editor.state.doc.descendants((n: any) => { if (n.type.name === 'contentOptimizer') count += 1; });
+      ed.state.doc.descendants((n: any) => { if (n.type.name === 'contentOptimizer') count += 1; });
       if (count === 0) {
+        setEditorHtml(ed.getHTML()); // sync resolved content into page state BEFORE re-enabling autosave
         optimizeStore.clear();
         setOptimizeState('idle');
         setIsAutoOptimizing(false); // autosave resumes and persists the resolved content
       }
     };
-    editor.on('update', check);
-    check();
-    return () => { editor.off('update', check); };
+    const tryBind = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = (editorRef.current as any)?.getEditor?.();
+      if (e && !ed) { ed = e; e.on('update', check); check(); return true; }
+      return false;
+    };
+    if (!tryBind()) {
+      const iv = setInterval(() => { if (tryBind()) clearInterval(iv); }, 200);
+      return () => { clearInterval(iv); if (ed) ed.off('update', check); };
+    }
+    return () => { if (ed) ed.off('update', check); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optimizeState]);
 

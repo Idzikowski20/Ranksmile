@@ -55,4 +55,12 @@ describe('buildReviewDoc', () => {
     ]);
     expect(out.indexOf('<p>Intro</p>')).toBeLessThan(out.indexOf('data-content-optimizer'));
   });
+
+  it('escapes a double-quote in sectionId so the div stays well-formed', () => {
+    const out = buildReviewDoc([
+      ev({ sectionId: 'sec"evil', index: 0, oldHtml: '<h2>A</h2>', newHtml: '<h2>A!</h2>', changed: true }),
+    ]);
+    expect(out).toContain('data-section-id="sec&quot;evil"');
+    expect(out).not.toContain('data-section-id="sec"evil"');
+  });
 });
