@@ -1,4 +1,4 @@
-import { wordDiffSegments } from '../../lib/wordDiff';
+import { wordDiffSegments } from '../../lib/optimizeWordDiff';
 
 describe('wordDiffSegments', () => {
   it('marks removed + added words between two strings', () => {
