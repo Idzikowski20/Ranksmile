@@ -21,6 +21,9 @@ export interface OptimizeReviewBarProps {
    onCancel: () => void;
    onSave: () => void;
    saving: boolean;
+   /** Right-panel width reserved by the editor column, so the bar centres on the editor
+    *  content (not the whole viewport). 0 when the panel is collapsed. */
+   rightReserve?: number;
 }
 
 const ChevronUp = () => (
@@ -46,6 +49,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    onCancel,
    onSave,
    saving,
+   rightReserve = 0,
 }) => {
    const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
    const optimizing = state === 'optimizing';
@@ -54,9 +58,13 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    return (
       <div
          ref={barEntranceRef}
-         className="bg-gray-base gap-base px-lg py-sm flex w-5/6 max-w-[1000px] items-center justify-between rounded-xl"
+         className="bg-gray-base gap-base px-lg py-sm flex items-center justify-between rounded-xl"
          style={{
-            position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 10000,
+            position: 'fixed', bottom: 32,
+            // Centre on the editor column (viewport minus the reserved right panel), width 5/6 of it.
+            left: `calc((100vw - ${rightReserve}px) / 2)`, transform: 'translateX(-50%)',
+            width: `min(calc((100vw - ${rightReserve}px) * 0.833), 1000px)`,
+            zIndex: 10000,
             fontFamily: 'var(--font-family-primary)', boxShadow: '0 8px 40px rgba(0,0,0,0.45)',
          }}
       >
