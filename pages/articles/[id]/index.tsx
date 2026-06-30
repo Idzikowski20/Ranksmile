@@ -27,6 +27,7 @@ import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { getErrorMessage } from '../../../lib/errors';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
 import { ABLY_EVENTS } from '../../../lib/ably/channel';
+import { throttle } from '../../../lib/throttle';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -495,6 +496,33 @@ const ArticleEditorPage: NextPage = () => {
     return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
   }, [ownerChannel]);
 
+  // Live broadcast to viewers. Ably caps a single message at ~64KB; above this we
+  // signal a refetch instead of shipping the whole document inline.
+  const MAX_LIVE_HTML = 56 * 1024;
+  const ownerChannelRef = useRef<typeof ownerChannel>(null);
+  useEffect(() => { ownerChannelRef.current = ownerChannel; }, [ownerChannel]);
+
+  // Monotonic revision: bumped on every content change; caret events carry the rev
+  // of the doc they were measured against so the viewer never draws a stale caret.
+  const contentRevRef = useRef(0);
+
+  const publishContentRef = useRef(
+    throttle((html: string, rev: number) => {
+      const ch = ownerChannelRef.current;
+      if (!ch) return;
+      if (html.length > MAX_LIVE_HTML) void ch.publish(ABLY_EVENTS.content, { tooLarge: true, rev });
+      else void ch.publish(ABLY_EVENTS.content, { html, rev });
+    }, 500),
+  );
+
+  // Caret is throttled tighter than content (tiny payload, wants to feel smooth).
+  const publishCaretRef = useRef(
+    throttle((from: number, to: number, rev: number) => {
+      const ch = ownerChannelRef.current;
+      if (ch) void ch.publish(ABLY_EVENTS.caret, { from, to, rev });
+    }, 75),
+  );
+
   // Listen for Pixabay open events dispatched from TipTap image node toolbar
   useEffect(() => {
     const handler = (e: Event) => {
@@ -609,9 +637,32 @@ const ArticleEditorPage: NextPage = () => {
       setWordCount(words);
       setHeadingCount(headings);
       setParagraphCount(paragraphs);
+      contentRevRef.current += 1; // new doc revision
+      publishContentRef.current(html, contentRevRef.current); // live mirror (throttled, best-effort)
     },
     [],
   );
+
+  // Publish caret position on every selection change.
+  // The editor mounts asynchronously (dynamic import), so poll until it exists.
+  useEffect(() => {
+    let ed: ReturnType<NonNullable<typeof editorRef.current>['getEditor']> | null = null;
+    const onSel = () => {
+      if (!ed) return;
+      const { from, to } = ed.state.selection;
+      publishCaretRef.current(from, to, contentRevRef.current);
+    };
+    const tryBind = () => {
+      const e = editorRef.current?.getEditor?.();
+      if (e && !ed) { ed = e; e.on('selectionUpdate', onSel); return true; }
+      return false;
+    };
+    if (!tryBind()) {
+      const iv = setInterval(() => { if (tryBind()) clearInterval(iv); }, 200);
+      return () => { clearInterval(iv); if (ed) ed.off('selectionUpdate', onSel); };
+    }
+    return () => { if (ed) ed.off('selectionUpdate', onSel); };
+  }, [article?.id]);
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
