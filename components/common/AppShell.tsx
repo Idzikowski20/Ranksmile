@@ -2,6 +2,7 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import GlobalTopbar from './GlobalTopbar';
 import MobileBottomNav from './MobileBottomNav';
+import { useRouteTransition } from '../../lib/motion/useRouteTransition';
 
 type AppShellProps = {
    domains?: DomainType[];
@@ -30,6 +31,7 @@ const AppShell = ({
    contentClassName = '',
    hideMobileNav = false,
 }: AppShellProps) => {
+   const contentRef = useRouteTransition<HTMLElement>();
    return (
       <div className="app-shell">
          <GlobalTopbar title={topbarTitle} breadcrumb={breadcrumb} />
@@ -41,7 +43,7 @@ const AppShell = ({
                   showSettings={showSettings}
                />
             ))}
-            <main className={`app-content motion-page-enter ${contentClassName}`}>
+            <main ref={contentRef} className={`app-content motion-page-enter ${contentClassName}`}>
                {children}
             </main>
          </div>

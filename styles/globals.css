@@ -79,8 +79,9 @@
 .motion-slide-up { animation: motionSlideUp var(--motion-normal) var(--motion-ease-out) both; }
 .motion-slide-in-right { animation: motionSlideInRight var(--motion-normal) var(--motion-ease-out) both; }
 
-/* Page-level entrance — main content fades/slides in on navigation. */
-.motion-page-enter { animation: motionSlideUp var(--motion-normal) var(--motion-ease-out) both; }
+/* Page-level entrance — handled by useRouteTransition (GSAP) in lib/motion; the class is kept
+   as a stable selector hook. JS-off degrades to no entrance (content is visible at rest). */
+.motion-page-enter { }
 
 /* Smooth state changes for every interactive element that doesn't define
    its own transition (hover, focus, press). Geometry props are excluded
@@ -227,7 +228,7 @@ body {
    align-items: center;
    justify-content: space-between;
    gap: 12px;
-   padding: 8px 20px 0 12px;
+   padding: 8px 20px 8px 12px;
    color: var(--topbar-text);
    background: var(--topbar-bg);
    font-family: var(--font-family-primary);
