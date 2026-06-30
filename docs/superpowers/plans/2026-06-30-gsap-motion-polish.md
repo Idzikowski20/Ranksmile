@@ -24,6 +24,31 @@
 
 ---
 
+## Motion guidelines (read first)
+
+Follow `docs/motion-guidelines.md` for every animation in this plan. Summary: animate only
+`transform`/`opacity` (height only for the one accordion panel); ≤2 props; ≤500ms; tokens from
+`lib/motion/gsap.ts`; let GSAP manage `will-change` (never permanent); reduced-motion always; calm
+over busy.
+
+## Cross-cutting GSAP practices (from plan review)
+
+These apply to every task below — bake them in, don't bolt on later:
+
+1. **Register once.** Plugins are registered a single time at app start (`pages/_app.tsx`, Task 0.2).
+   `registerMotionPlugins()` stays idempotent so hook-level calls are safe no-ops.
+2. **Cleanup is explicit.** Every hook uses `useGSAP({ scope })` and creates GSAP objects
+   **synchronously** inside the callback (no `import().then()` that creates tweens/ScrollTriggers —
+   async creation escapes the context and leaks). `useGSAP` then auto-reverts on unmount.
+3. **Kill before re-tween.** In rapidly re-triggerable spots (route changes, toggles), call
+   `gsap.killTweensOf(el)` before starting a new tween to avoid overlap.
+4. **Refresh after layout shifts.** After inserting/removing content or resizing a panel that moves
+   scroll positions (Auto-Optimize sections, accordion), call `ScrollTrigger.refresh()`.
+5. **contextSafe for handlers.** Tweens created inside event handlers use `contextSafe()` (from
+   `useGSAP`) so they're cleaned up.
+6. **No Flip.** Plan review: Flip is overkill for the two W&O accordions — use a height tween
+   (Task 3.x). `Flip` is therefore NOT registered/imported in the foundation.
+
 ## File Structure
 
 - `lib/motion/gsap.ts` — **Create.** Plugin registration (lazy), `DURATION`/`EASE` tokens, surfer eases, `prefersReducedMotion()`, re-exports `gsap` + `useGSAP`. Single source of truth.
@@ -92,7 +117,6 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Flip } from 'gsap/Flip';
 
 /** Durations in SECONDS — mirror styles/globals.css `--motion-*` (ms ÷ 1000). */
 export const DURATION = { instant: 0.1, fast: 0.15, normal: 0.25, slow: 0.35, slower: 0.5 } as const;
@@ -115,7 +139,7 @@ let pluginsReady = false;
 export function registerMotionPlugins(): void {
   if (pluginsReady) return;
   ensureEases();
-  gsap.registerPlugin(useGSAP, ScrollTrigger, Flip);
+  gsap.registerPlugin(useGSAP, ScrollTrigger);
   pluginsReady = true;
 }
 
@@ -125,7 +149,7 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export { gsap, useGSAP };
+export { gsap, useGSAP, ScrollTrigger };
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -143,6 +167,34 @@ Expected: no new errors.
 ```bash
 git add lib/motion/gsap.ts __tests__/lib/motionGsap.test.ts
 git commit -m "feat(motion): GSAP foundation — tokens, surfer eases, reduced-motion guard"
+```
+
+### Task 0.2: Register plugins once at app start
+
+**Files:**
+- Modify: `pages/_app.tsx`
+
+Per the plan review (#1): register once instead of relying on per-hook calls. `registerMotionPlugins()`
+stays idempotent so hooks calling it remain safe no-ops.
+
+- [ ] **Step 1: Add a client-only registration** in the `App` component body (GSAP must not run during SSR):
+
+```tsx
+import { useGSAP } from '@gsap/react';
+import { registerMotionPlugins } from '../lib/motion/gsap';
+// inside the App component, before return:
+useGSAP(() => { registerMotionPlugins(); });
+```
+
+- [ ] **Step 2: Typecheck** — `npx tsc --noEmit` → no new errors.
+
+- [ ] **Step 3: Manual verify** — app boots, no console errors, no SSR `window is not defined`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add pages/_app.tsx
+git commit -m "feat(motion): register GSAP plugins once at app start"
 ```
 
 ---
@@ -190,7 +242,7 @@ Expected: FAIL — `Cannot find module '../../lib/motion/useStaggerReveal'`.
 ```ts
 // lib/motion/useStaggerReveal.ts
 import { useRef, RefObject } from 'react';
-import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from './gsap';
+import { gsap, useGSAP, ScrollTrigger, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from './gsap';
 
 /** Pure config for the reveal tween. Reduced motion → base state already final, zero-duration set. */
 export function revealVars(reduced: boolean) {
@@ -210,22 +262,26 @@ export function revealVars(reduced: boolean) {
  */
 export function useStaggerReveal<T extends HTMLElement>(selector: string): RefObject<T> {
   const ref = useRef<T>(null);
+  // Created SYNCHRONOUSLY inside useGSAP so the ScrollTriggers are captured by the context and
+  // auto-reverted on unmount (an async import().then() would escape cleanup → leak).
   useGSAP(() => {
     const root = ref.current;
     if (!root) return;
-    registerMotionPlugins();
+    registerMotionPlugins(); // idempotent; plugins already registered in _app
     const items = gsap.utils.toArray<HTMLElement>(root.querySelectorAll(selector));
     if (!items.length) return;
     const { from, to } = revealVars(prefersReducedMotion());
     if (to.duration === 0) { gsap.set(items, from); return; }
-    // ScrollTrigger.batch staggers items in groups as they scroll into view.
-    import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
-      ScrollTrigger.batch(items, {
-        start: 'top 90%',
-        onEnter: (batch) => gsap.from(batch, { ...from, ...to }),
-        once: true,
-      });
+    // batchMax caps how many items animate together so long lists (e.g. 200 rows) don't
+    // stagger into one giant sweep.
+    ScrollTrigger.batch(items, {
+      start: 'top 92%',
+      batchMax: 8,
+      once: true,
+      onEnter: (batch) => gsap.from(batch, { ...from, ...to, overwrite: true }),
     });
+    // Recalculate trigger positions after this content (images/fonts) settles.
+    ScrollTrigger.refresh();
   }, { scope: ref });
   return ref;
 }
@@ -406,9 +462,30 @@ git commit -m "feat(motion): GSAP route transition for content area"
 
 ---
 
-## Phase 3 — Editor: Flip section expand/collapse
+## Phase 3 — Editor: section expand/collapse (height tween, NOT Flip)
 
-### Task 3.1: useFlipResize hook
+> **SUPERSEDES the Flip approach below (plan review #4).** Flip is overkill for two accordions.
+> Implement Phase 3 as a single task: animate the section's **height** on open, in
+> `components/articles/WriteOptimizePanel.tsx`, with `useGSAP` keyed on `seoOpen`/`aiOpen`:
+>
+> ```tsx
+> import { gsap, useGSAP, DURATION, EASE, registerMotionPlugins, prefersReducedMotion } from '../../lib/motion/gsap';
+> // ref on each collapsible section wrapper; run on open:
+> useGSAP(() => {
+>   const el = sectionRef.current;
+>   if (!el || !open || prefersReducedMotion()) return;
+>   registerMotionPlugins();
+>   gsap.killTweensOf(el);                                  // race guard (#2)
+>   gsap.from(el, { height: 0, opacity: 0, duration: DURATION.normal, ease: EASE.out,
+>     onComplete: () => gsap.set(el, { height: 'auto' }) }); // release fixed height after open
+> }, { dependencies: [open], scope: sectionRef });
+> ```
+>
+> No `lib/motion/useFlipResize.ts`, no `Flip` import. Commit: `feat(motion): height-animate
+> Write & Optimize section expand/collapse`. The Flip-based Task 3.1/3.2 below are kept only for
+> historical context — **do not implement them**.
+
+### Task 3.1 (DO NOT IMPLEMENT — superseded): useFlipResize hook
 
 **Files:**
 - Create: `lib/motion/useFlipResize.ts`
