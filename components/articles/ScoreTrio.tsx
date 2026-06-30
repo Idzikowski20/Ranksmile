@@ -8,14 +8,15 @@ const F = 'var(--font-family-primary)';
    is NOT drawn here — it's an overlay pill in ScoreTrio that spans this side AND the
    centre content-score gauge (Surfer-style). This button only reports hover intent
    and handles the click. */
-const SideGauge = ({ score, label, align, pending, onClick, onHover }: {
+const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, deltaPlacement }: {
   score: number; label: string; align: 'start' | 'end'; pending?: boolean;
   onClick?: () => void; onHover?: (on: boolean) => void;
+  delta?: number; deltaPlacement?: 'right' | 'left' | 'below';
 }) => {
   const content = (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: align === 'end' ? 'flex-end' : 'flex-start', gap: 6 }}>
       <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>{label}</span>
-      <ScoreGauge score={score} size={48} pending={pending} />
+      <ScoreGauge score={score} size={48} pending={pending} delta={delta} deltaPlacement={deltaPlacement} />
     </span>
   );
   const justify = align === 'end' ? 'flex-end' : 'flex-start';
@@ -41,8 +42,10 @@ const SideGauge = ({ score, label, align, pending, onClick, onHover }: {
  *  Hovering SEO or AI highlights a pill spanning that side AND the centre
  *  content-score gauge. onSeoClick / onAiClick open the matching Write & Optimize
  *  section. */
-const ScoreTrio = ({ seo, ai, hasAi, onSeoClick, onAiClick }: {
+const ScoreTrio = ({ seo, ai, hasAi, onSeoClick, onAiClick, deltas }: {
   seo: number; ai: number; hasAi: boolean; onSeoClick?: () => void; onAiClick?: () => void;
+  /** Green "↑N" increase badges (vs the pre-optimize baseline), shown during Auto-Optimize. */
+  deltas?: { seo?: number; overall?: number; ai?: number };
 }) => {
   const overall = hasAi ? Math.round((seo + ai) / 2) : seo;
   const [hovered, setHovered] = useState<'seo' | 'ai' | null>(null);
@@ -58,9 +61,9 @@ const ScoreTrio = ({ seo, ai, hasAi, onSeoClick, onAiClick }: {
         <div style={{ ...overlayBase, left: 0, borderRadius: '12px 50px 50px 12px', opacity: hovered === 'seo' ? 1 : 0 }} />
         {/* Right highlight pill: centre + AI side */}
         <div style={{ ...overlayBase, right: 0, borderRadius: '50px 12px 12px 50px', opacity: hovered === 'ai' ? 1 : 0 }} />
-        <SideGauge label="SEO" align="start" score={seo} onClick={onSeoClick} onHover={(on) => setHovered(on ? 'seo' : null)} />
-        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} /></div>
-        <SideGauge label="AI Search" align="end" score={ai} pending={!hasAi} onClick={onAiClick} onHover={(on) => setHovered(on ? 'ai' : null)} />
+        <SideGauge label="SEO" align="start" score={seo} delta={deltas?.seo} deltaPlacement="right" onClick={onSeoClick} onHover={(on) => setHovered(on ? 'seo' : null)} />
+        <div style={{ position: 'relative', zIndex: 10, flexShrink: 0 }}><ScoreGauge score={overall} delta={deltas?.overall} deltaPlacement="below" /></div>
+        <SideGauge label="AI Search" align="end" score={ai} pending={!hasAi} delta={deltas?.ai} deltaPlacement="left" onClick={onAiClick} onHover={(on) => setHovered(on ? 'ai' : null)} />
       </div>
     </div>
   );
