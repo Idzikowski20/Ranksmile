@@ -236,8 +236,9 @@ const WriteOptimizePanel = ({
   // sits at the top of the scroll area; the AI block lives further down.
   const scrollRef = useRef<HTMLDivElement>(null);
   const aiRef = useRef<HTMLDivElement>(null);
-  const expandSeo = () => { setSeoOpen(true); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
-  const expandAi = () => { setAiOpen(true); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
+  // Opening one section collapses the other (mutually exclusive focus).
+  const expandSeo = () => { setSeoOpen(true); setAiOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
+  const expandAi = () => { setAiOpen(true); setSeoOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
   // Honour the section requested when the panel was opened from a score gauge.
   useEffect(() => {
     if (initialSection === 'ai') expandAi();
