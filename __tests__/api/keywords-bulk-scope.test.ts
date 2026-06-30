@@ -11,6 +11,8 @@ jest.mock('../../database/models/keyword', () => {
   const bulkCreate = jest.fn();
   return { __esModule: true, default: { findAll, findOne, update, destroy, bulkCreate } };
 });
+jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { count: jest.fn(), findAll: jest.fn(), findOne: jest.fn() } }));
+jest.mock('../../lib/tenancy', () => ({ getAccessibleWorkspaceIds: jest.fn() }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/parseKeywords', () => ({ __esModule: true, default: jest.fn().mockReturnValue([]) }));
@@ -22,16 +24,19 @@ jest.mock('./settings', () => ({ getAppSettings: jest.fn().mockResolvedValue({})
 jest.mock('../../pages/api/settings', () => ({ getAppSettings: jest.fn().mockResolvedValue({}) }));
 
 import Keyword from '../../database/models/keyword';
-import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
+import Domain from '../../database/models/domain';
+import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
 import { userOwnsAllKeywords } from '../../pages/api/keywords';
 
 const mockFindAll = Keyword.findAll as jest.Mock;
-const mockVerify = verifyDomainOwnership as jest.Mock;
+const mockCount = Domain.count as jest.Mock;
+const mockWsIds = getAccessibleWorkspaceIds as jest.Mock;
 
 describe('userOwnsAllKeywords', () => {
   beforeEach(() => {
     mockFindAll.mockReset();
-    mockVerify.mockReset();
+    mockCount.mockReset();
+    mockWsIds.mockReset();
   });
 
   it('returns false when any domain is denied', async () => {
@@ -39,10 +44,9 @@ describe('userOwnsAllKeywords', () => {
       { domain: 'own.com' },
       { domain: 'victim.com' },
     ]);
-    mockVerify.mockImplementation((_domain: string, _userId: string) => {
-      if (_domain === 'victim.com') return Promise.resolve(false);
-      return Promise.resolve({ ID: 1 });
-    });
+    mockWsIds.mockResolvedValue([1]);
+    // Only one of the two distinct domains lives in an accessible workspace.
+    mockCount.mockResolvedValue(1);
 
     const result = await userOwnsAllKeywords([1, 2], 'user-1');
     expect(result).toBe(false);
@@ -52,7 +56,8 @@ describe('userOwnsAllKeywords', () => {
 
   it('returns true when all domains are owned', async () => {
     mockFindAll.mockResolvedValue([{ domain: 'own.com' }]);
-    mockVerify.mockResolvedValue({ ID: 1 });
+    mockWsIds.mockResolvedValue([1]);
+    mockCount.mockResolvedValue(1);
 
     const result = await userOwnsAllKeywords([1], 'user-1');
     expect(result).toBe(true);

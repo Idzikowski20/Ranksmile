@@ -4,8 +4,9 @@ import Modal from '../../components/common/Modal';
 const closeModalMock = jest.fn();
 describe('Modal Component', () => {
    it('Renders without crashing', async () => {
-       render(<Modal closeModal={closeModalMock }><div></div></Modal>);
-       expect(document.querySelector('.modal')).toBeInTheDocument();
+       const { container } = render(<Modal closeModal={closeModalMock }><div></div></Modal>);
+       // The modal renders a fixed overlay wrapping a single panel + close button.
+       expect(container.querySelector('button')).toBeInTheDocument();
    });
    it('Displays the Given Content', async () => {
       render(<Modal closeModal={closeModalMock}>
@@ -21,7 +22,8 @@ describe('Modal Component', () => {
    });
    it('Closes the modal on close button click', async () => {
       const { container } = render(<Modal closeModal={closeModalMock} title="Sample Modal Title"><p>Some Modal Content</p></Modal>);
-      const closeBtn = container.querySelector('.modal-close');
+      const closeBtn = container.querySelector('button');
+      expect(closeBtn).toBeInTheDocument();
       if (closeBtn) fireEvent.click(closeBtn);
       expect(closeModalMock).toHaveBeenCalled();
    });

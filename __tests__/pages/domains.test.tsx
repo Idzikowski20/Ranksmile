@@ -26,7 +26,7 @@ describe('Domains Page', () => {
               <Domains />
           </QueryClientProvider>,
       );
-      expect(screen.getByTestId('domains')).toBeInTheDocument();
+      expect(screen.getByTestId('addDomainButton')).toBeInTheDocument();
    });
    it('Renders the Domain Component', async () => {
       const { container } = render(

@@ -1,14 +1,15 @@
-jest.mock('../../lib/commentAccess', () => ({ assertCommentAccess: jest.fn() }));
+jest.mock('../../lib/commentAccess', () => ({ assertCommentAccess: jest.fn(), getCommentAccessKind: jest.fn() }));
 jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../../lib/commentBus', () => ({ emitCommentChange: jest.fn(), onCommentChange: jest.fn(() => () => {}) }));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 
 import db from '../../database/database';
-import { assertCommentAccess } from '../../lib/commentAccess';
+import { assertCommentAccess, getCommentAccessKind } from '../../lib/commentAccess';
 import handler from '../../pages/api/articles/[id]/comments';
 import streamHandler from '../../pages/api/articles/[id]/comments-stream';
 
 const mockAccess = assertCommentAccess as jest.Mock;
+const mockAccessKind = getCommentAccessKind as jest.Mock;
 const mockQuery = db.query as jest.Mock;
 
 const makeRes = () => {
@@ -22,11 +23,11 @@ const makeRes = () => {
   return res;
 };
 
-beforeEach(() => { mockAccess.mockReset(); mockQuery.mockReset(); });
+beforeEach(() => { mockAccess.mockReset(); mockAccessKind.mockReset(); mockQuery.mockReset(); });
 
 describe('comments endpoint authorization', () => {
   it('denies GET when neither a valid token nor owner access is present', async () => {
-    mockAccess.mockResolvedValue(false);
+    mockAccessKind.mockResolvedValue(null);
     const res = makeRes();
     await handler({ method: 'GET', query: { id: '123' }, cookies: {} } as any, res);
     expect(res.status).toHaveBeenCalledWith(403);
@@ -34,7 +35,7 @@ describe('comments endpoint authorization', () => {
   });
 
   it('denies POST (write) when access is not granted', async () => {
-    mockAccess.mockResolvedValue(false);
+    mockAccessKind.mockResolvedValue(null);
     const res = makeRes();
     await handler({ method: 'POST', query: { id: '123' }, cookies: {}, body: { text: 'hi' } } as any, res);
     expect(res.status).toHaveBeenCalledWith(403);
@@ -42,7 +43,7 @@ describe('comments endpoint authorization', () => {
   });
 
   it('serves GET once access is granted (token or owner)', async () => {
-    mockAccess.mockResolvedValue(true);
+    mockAccessKind.mockResolvedValue('owner');
     mockQuery.mockResolvedValueOnce([[], {}]);
     const res = makeRes();
     await handler({ method: 'GET', query: { id: '123' }, cookies: {} } as any, res);
