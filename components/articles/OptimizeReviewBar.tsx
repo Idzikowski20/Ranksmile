@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEntrance } from '../../lib/motion/useEntrance';
 
 // AO-8a: fixed bottom dark toolbar driving the Auto-Optimize review lifecycle.
 // Two states:
@@ -148,6 +149,8 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    saving,
 }) => {
    const isOptimizing = state === 'optimizing';
+   // Opacity-only entrance (the bar is centered via translateX(-50%) — don't touch transform).
+   const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
    // Prev/next nav is only meaningful in reviewing state (disabled/greyed while optimizing).
    const navDisabled = isOptimizing;
 
@@ -174,6 +177,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
 
    return (
       <div
+         ref={barEntranceRef}
          style={{
             position: 'fixed',
             bottom: 20,
