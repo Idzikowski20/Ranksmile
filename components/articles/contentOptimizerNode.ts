@@ -17,9 +17,7 @@ const ContentOptimizer = Node.create({
   addAttributes() {
     return {
       sectionId: { default: '' },
-      status: { default: 'pending' },
-      oldHtml: { default: '' },
-      newHtml: { default: '' },
+      status: { default: 'pending' },   // pending | active | accepted | rejected
       index: { default: 0 },
     };
   },

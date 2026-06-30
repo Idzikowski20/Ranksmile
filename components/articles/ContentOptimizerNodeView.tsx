@@ -1,25 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
+import { optimizeStore } from './optimizeStore';
+import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
 
 // React node-view for the contentOptimizer TipTap node.
-// Shows the old (removed) and new (added) versions of a section side-by-side
-// with floating Accept / Reject buttons. Accepting splices the new HTML back
-// into the document as real editable content; Rejecting does the same with the
-// old HTML.
-//
-// term-hl spans inside oldHtml / newHtml are intentionally preserved — they are
-// decoration classes added by TermHighlight and should render as-is inside the
-// static dangerouslySetInnerHTML blocks.
+// Shows the old (removed) and new (added) versions of a section with floating
+// Accept / Reject buttons. HTML is read from optimizeStore (not node attrs) so
+// the ProseMirror document stays light.
+// Accepting splices newHtml back as real PM content; Rejecting does the same with oldHtml.
 
 const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPos }) => {
-  const { status, oldHtml, newHtml } = node.attrs as {
-    status: string;
-    oldHtml: string;
-    newHtml: string;
-  };
+  const { sectionId, status } = node.attrs as { sectionId: string; status: string };
 
-  const [isHovered, setIsHovered] = useState(false);
+  const r = optimizeStore.get(sectionId);
+  const oldHtml = sanitizeArticleHtml(r?.oldHtml || '');
+  const newHtml = sanitizeArticleHtml(r?.newHtml || '');
+
   const isActive = status === 'active';
 
   // Replace this atom with parsed HTML content at its exact position.
@@ -38,62 +35,26 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
 
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    borderLeft: `3px solid ${isActive ? '#783AFB' : '#D4D4D8'}`,
-    borderRadius: '0 8px 8px 0',
-    margin: '12px 0',
-    padding: '12px 16px 12px 20px',
-    background: '#FAFAFA',
+    borderLeft: `3px solid ${isActive ? '#783AFB' : '#E4E4E7'}`,
+    padding: '8px 12px 8px 16px',
+    margin: '4px 0',
     fontFamily: 'var(--font-family-primary)',
   };
 
-  const diffBlockStyle: React.CSSProperties = {
-    margin: '8px 0',
-    padding: '8px 12px',
-    borderRadius: 6,
-    fontSize: 14,
-    lineHeight: 1.6,
-  };
-
-  const removedStyle: React.CSSProperties = {
-    ...diffBlockStyle,
-    color: '#9f9fa9',
-    textDecoration: 'line-through',
-    opacity: 0.7,
-    background: 'rgba(239,68,68,0.04)',
-  };
-
-  const addedStyle: React.CSSProperties = {
-    ...diffBlockStyle,
-    background: 'rgba(26,178,94,0.08)',
-    color: '#18181B',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase' as const,
-    marginBottom: 4,
-    fontFamily: 'var(--font-family-primary)',
-  };
-
-  // Floating toolbar (left-anchored, mirrors SurferImageNode toolbar pattern)
+  // Floating toolbar pinned to the LEFT of the wrapper (absolute, column layout)
   const toolbarStyle: React.CSSProperties = {
     position: 'absolute',
-    top: 12,
-    right: 16,
+    top: 8,
+    left: -14,
     display: 'flex',
+    flexDirection: 'column',
     gap: 6,
-    opacity: isHovered ? 1 : 0,
-    transform: isHovered ? 'translateY(0)' : 'translateY(-4px)',
-    transition: 'opacity 0.15s ease, transform 0.15s ease',
-    pointerEvents: isHovered ? 'auto' : 'none',
     zIndex: 10,
   };
 
   const btnBase: React.CSSProperties = {
-    width: 30,
-    height: 30,
+    width: 24,
+    height: 24,
     borderRadius: '50%',
     border: 'none',
     cursor: 'pointer',
@@ -101,7 +62,7 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    fontFamily: 'var(--font-family-primary)',
+    padding: 0,
   };
 
   const acceptBtnStyle: React.CSSProperties = {
@@ -117,14 +78,8 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   };
 
   return (
-    <NodeViewWrapper
-      as="div"
-      contentEditable={false}
-      style={wrapperStyle}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Floating accept / reject toolbar */}
+    <NodeViewWrapper as="div" contentEditable={false} style={wrapperStyle}>
+      {/* Floating accept / reject toolbar — pinned left */}
       <div style={toolbarStyle}>
         <button
           type="button"
@@ -133,9 +88,9 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
           style={acceptBtnStyle}
           onClick={handleAccept}
         >
-          {/* Checkmark */}
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
+          {/* ✓ checkmark: m4.5 12.75 6 6 9-13.5 */}
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="m4.5 12.75 6 6 9-13.5" />
           </svg>
         </button>
         <button
@@ -145,35 +100,28 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
           style={rejectBtnStyle}
           onClick={handleReject}
         >
-          {/* X */}
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
+          {/* ✗ X: M6 18 18 6M6 6l12 12 */}
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 18 18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
       {/* Old version — shown as removed */}
-      <div>
-        <div style={{ ...labelStyle, color: '#9f9fa9' }}>Original</div>
-        <div
-          data-diff-type="removed"
-          style={removedStyle}
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: oldHtml }}
-        />
-      </div>
+      <div
+        data-diff-type="removed"
+        style={{ color: '#9f9fa9', textDecoration: 'line-through', opacity: 0.7 }}
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: oldHtml }}
+      />
 
       {/* New version — shown as added */}
-      <div style={{ marginTop: 12 }}>
-        <div style={{ ...labelStyle, color: '#1AB25E' }}>Suggested</div>
-        <div
-          data-diff-type="added"
-          style={addedStyle}
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: newHtml }}
-        />
-      </div>
+      <div
+        data-diff-type="added"
+        style={{ background: 'rgba(26,178,94,0.08)', borderRadius: 4 }}
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: newHtml }}
+      />
     </NodeViewWrapper>
   );
 };
