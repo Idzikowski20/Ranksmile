@@ -2036,6 +2036,7 @@ const ArticleEditorPage: NextPage = () => {
             onCancel={() => setCancelModalOpen(true)}
             onSave={handleSaveOptimizeRun}
             saving={optimizeSaving}
+            rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
           />
         )}
 
