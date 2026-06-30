@@ -6,6 +6,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { normalizeUrlForMatch, kwScore } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
@@ -367,6 +368,8 @@ const RecommendationsPage: NextPage = () => {
    const [analyzingIds, setAnalyzingIds] = useState<Set<string | number>>(new Set());
    const [creatingKw, setCreatingKw] = useState<string | null>(null);
    const [optimizingId, setOptimizingId] = useState<string | number | null>(null);
+   // Stagger-reveal table rows (both tabs render `.rec-row`; only the active tab is in the DOM).
+   const rowsRef = useStaggerReveal<HTMLDivElement>('.rec-row');
 
    // Optimize: real articles (numeric id) open straight in the editor; scanned pages
    // (audit/site_context rows, no article yet) are scraped into a draft via the import
@@ -547,7 +550,7 @@ const RecommendationsPage: NextPage = () => {
             </div>
 
             {/* ── Table ────────────────────────────────────────────────────── */}
-            <div style={{ border: '1px solid #F4F4F5', borderRadius: 8, overflowX: 'auto' }}>
+            <div ref={rowsRef} style={{ border: '1px solid #F4F4F5', borderRadius: 8, overflowX: 'auto' }}>
 
                {/* ── Content Ideas tab — content gap from GSC ── */}
                {tab === 'ideas' && (

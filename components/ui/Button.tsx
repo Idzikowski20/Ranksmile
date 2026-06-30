@@ -14,13 +14,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
 }
 
-const Button = ({ variant = 'primary', children, disabled, style, onMouseEnter, onMouseLeave, ...rest }: ButtonProps) => {
+const Button = ({ variant = 'primary', children, disabled, style, className, onMouseEnter, onMouseLeave, ...rest }: ButtonProps) => {
   const [hover, setHover] = useState(false);
   const v = VARIANTS[variant];
   return (
     <button
       type="button"
       disabled={disabled}
+      className={`press-spring${className ? ` ${className}` : ''}`}
       onMouseEnter={(e) => { setHover(true); onMouseEnter?.(e); }}
       onMouseLeave={(e) => { setHover(false); onMouseLeave?.(e); }}
       style={{
@@ -39,7 +40,7 @@ const Button = ({ variant = 'primary', children, disabled, style, onMouseEnter, 
         color: v.color,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        transition: 'background 0.15s',
+        transition: 'background 0.15s, transform var(--motion-fast) cubic-bezier(0.34, 1.56, 0.64, 1)',
         ...style,
       }}
       {...rest}

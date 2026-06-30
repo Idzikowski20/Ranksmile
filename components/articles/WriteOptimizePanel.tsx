@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '../../lib/aiSearchScore';
@@ -236,6 +237,9 @@ const WriteOptimizePanel = ({
   // sits at the top of the scroll area; the AI block lives further down.
   const scrollRef = useRef<HTMLDivElement>(null);
   const aiRef = useRef<HTMLDivElement>(null);
+  // Height + fade reveal when a section opens (close is instant — the block unmounts).
+  const seoRevealRef = useOpenReveal<HTMLDivElement>(seoOpen);
+  const aiRevealRef = useOpenReveal<HTMLDivElement>(aiOpen);
   // Opening one section collapses the other (mutually exclusive focus).
   const expandSeo = () => { setSeoOpen(true); setAiOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
   const expandAi = () => { setAiOpen(true); setSeoOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
@@ -409,7 +413,8 @@ const WriteOptimizePanel = ({
       {/* Scrollable area */}
       <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px' }} className="styled-scrollbar">
         {seoOpen && (
-          terms.length === 0 ? (
+          <div ref={seoRevealRef}>
+            {terms.length === 0 ? (
             <p style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms yet — run deep analysis.</p>
           ) : list.length === 0 ? (
             <p style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms match the current filters.</p>
@@ -417,7 +422,8 @@ const WriteOptimizePanel = ({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {list.map((t) => <TermChip key={t.term} term={t} showCount={countRanges} showRange={showRanges} />)}
             </div>
-          )
+          )}
+          </div>
         )}
 
         {/* AI Search collapsible */}
@@ -459,7 +465,7 @@ const WriteOptimizePanel = ({
           </div>
         </div>
         {aiOpen && (
-          <div style={{ padding: '6px 0 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div ref={aiRevealRef} style={{ padding: '6px 0 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={{ fontSize: 12, color: '#71717b', margin: 0, fontFamily: F, lineHeight: '17px' }}>
               Based on LLM answers, this is the information that drives citations. Cover it to appear in AI search.
             </p>

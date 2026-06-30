@@ -79,8 +79,9 @@
 .motion-slide-up { animation: motionSlideUp var(--motion-normal) var(--motion-ease-out) both; }
 .motion-slide-in-right { animation: motionSlideInRight var(--motion-normal) var(--motion-ease-out) both; }
 
-/* Page-level entrance — main content fades/slides in on navigation. */
-.motion-page-enter { animation: motionSlideUp var(--motion-normal) var(--motion-ease-out) both; }
+/* Page-level entrance — handled by useRouteTransition (GSAP) in lib/motion; the class is kept
+   as a stable selector hook. JS-off degrades to no entrance (content is visible at rest). */
+.motion-page-enter { }
 
 /* Smooth state changes for every interactive element that doesn't define
    its own transition (hover, focus, press). Geometry props are excluded
@@ -98,6 +99,11 @@ label {
    transition-duration: var(--motion-fast);
    transition-timing-function: var(--motion-ease-standard);
 }
+
+/* Springy press feedback for primary actions — transform only (geometry isn't in the baseline
+   transition above). Reduced-motion neutralizes it via the transition-duration override below. */
+.press-spring { transition: transform var(--motion-fast) cubic-bezier(0.34, 1.56, 0.64, 1); }
+.press-spring:active { transform: scale(0.97); }
 
 /* Accessibility: respect reduced-motion (Base "Motion"). */
 @media (prefers-reduced-motion: reduce) {
@@ -197,6 +203,11 @@ body {
    --purple-70: #783afb;
    --purple-base: #783afb;
    --purple-100: #4d08b5;
+   /* Score palette (lib/scoreColor.ts) + extra surface tints — used by gauges + Auto-Optimize UI. */
+   --gray-5: #fafafa;
+   --green-60: #1ab25e;
+   --yellow-60: #efa00d;
+   --red-60: #d70028;
 }
 
 :root {
@@ -227,7 +238,7 @@ body {
    align-items: center;
    justify-content: space-between;
    gap: 12px;
-   padding: 8px 20px 0 12px;
+   padding: 8px 20px 8px 12px;
    color: var(--topbar-text);
    background: var(--topbar-bg);
    font-family: var(--font-family-primary);
