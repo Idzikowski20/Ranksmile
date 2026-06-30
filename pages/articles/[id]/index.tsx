@@ -1947,6 +1947,10 @@ const ArticleEditorPage: NextPage = () => {
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}
                       isAutoOptimizing={isAutoOptimizing}
+                      optimizeState={optimizeState}
+                      onCancelOptimize={() => setCancelModalOpen(true)}
+                      onSaveOptimize={handleSaveOptimizeRun}
+                      optimizeSaving={optimizeSaving}
                       saveState={autoSaveState}
                       articleId={article.id}
                       cachedOutlines={article.competitor_outlines_cache}
