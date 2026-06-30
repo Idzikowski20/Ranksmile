@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NextPage } from 'next';
 import Head from 'next/head';
@@ -10,18 +10,13 @@ import PreviewNameGate from '../../../components/articles/comments/PreviewNameGa
 import EditorLoading from '../../../components/articles/EditorLoading';
 import { ScoreData } from '../../../lib/contentScore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import ViewerEditor, { ViewerEditorHandle } from '../../../components/articles/ViewerEditor';
+import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
+import { ABLY_EVENTS } from '../../../lib/ably/channel';
 
 const F = 'var(--font-family-primary)';
 const NAME_KEY = 'preview-author-name';
 
-// The content is a read-only editing host (contentEditable) so the browser
-// doesn't pop its native selection toolbar over our "Add comment" pill.
-// Allow navigation + copy/select-all; block any keystroke that would mutate text.
-const EDIT_SAFE_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape', 'Shift', 'Control', 'Alt', 'Meta'];
-const blockContentEdit = (e: React.KeyboardEvent) => {
-  if (e.metaKey || e.ctrlKey) return; // let Ctrl/Cmd+C, Ctrl/Cmd+A through
-  if (!EDIT_SAFE_KEYS.includes(e.key)) e.preventDefault();
-};
 // Same panel icon as the editor toolbar.
 const ICO_PANEL = 'M15 3V21M7.8 3H16.2C17.8802 3 18.7202 3 19.362 3.32698C19.9265 3.6146 20.3854 4.07354 20.673 4.63803C21 5.27976 21 6.11984 21 7.8V16.2C21 17.8802 21 18.7202 20.673 19.362C20.3854 19.9265 19.9265 20.3854 19.362 20.673C18.7202 21 17.8802 21 16.2 21H7.8C6.11984 21 5.27976 21 4.63803 20.673C4.07354 20.3854 3.6146 19.9265 3.32698 19.362C3 18.7202 3 17.8802 3 16.2V7.8C3 6.11984 3 5.27976 3.32698 4.63803C3.6146 4.07354 4.07354 3.6146 4.63803 3.32698C5.27976 3 6.11984 3 7.8 3Z';
 
@@ -51,6 +46,23 @@ const SharePreviewPage: NextPage = () => {
   const shareRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<ViewerEditorHandle>(null);
+  const [caretBox, setCaretBox] = useState<{ left: number; top: number; height: number } | null>(null);
+  const renderedRevRef = useRef(0);
+  const pendingCaretRef = useRef<{ from: number; rev: number } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const editingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resyncFromShare = useCallback(() => {
+    fetch(`/api/share/${token}`).then((r) => r.json())
+      .then((j) => { if (j?.article?.content) viewerRef.current?.setContent(j.article.content); })
+      .catch(() => {});
+  }, [token]);
+
+  const drawCaret = useCallback((from: number) => {
+    const box = viewerRef.current?.coordsAtPos(from);
+    if (box) setCaretBox({ left: box.left, top: box.top, height: box.bottom - box.top });
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -82,15 +94,44 @@ const SharePreviewPage: NextPage = () => {
   }, []);
   const author = useMemo(() => ({ name: authorName || 'Guest', color: '#783AFB' }), [authorName]);
 
-  // Live comment sync over SSE — bump the version so the inline layer + panel refetch.
+  // Live content + caret sync via Ably.
+  // EventSource for comments-stream removed: comments now sync via Ably inside CommentsLayer (Task 6).
+  const { channel: liveChannel, connectionState } = useArticleChannel({
+    articleId: article?.id ?? null,
+    shareToken: typeof token === 'string' ? token : null,
+    clientId: authorName || null,
+    onReconnect: resyncFromShare,
+  });
+
   useEffect(() => {
-    if (!article?.id) return undefined;
-    const tokenQs = typeof token === 'string' ? `?token=${encodeURIComponent(token)}` : '';
-    const es = new EventSource(`/api/articles/${article.id}/comments-stream${tokenQs}`);
-    es.onmessage = () => setCommentsVersion((v) => v + 1);
-    es.onerror = () => { /* EventSource auto-reconnects */ };
-    return () => es.close();
-  }, [article?.id, token]);
+    if (!liveChannel) return undefined;
+    const onContent = (msg: { data?: { html?: string; tooLarge?: boolean; rev?: number } }) => {
+      const d = msg.data || {};
+      const rev = typeof d.rev === 'number' ? d.rev : renderedRevRef.current + 1;
+      if (!d.tooLarge && rev <= renderedRevRef.current) return;
+      if (d.tooLarge) { resyncFromShare(); }
+      else if (typeof d.html === 'string') { viewerRef.current?.setContent(d.html); }
+      renderedRevRef.current = Math.max(renderedRevRef.current, rev);
+      setIsEditing(true);
+      if (editingTimer.current) clearTimeout(editingTimer.current);
+      editingTimer.current = setTimeout(() => setIsEditing(false), 2000);
+      const pc = pendingCaretRef.current;
+      if (pc && pc.rev <= renderedRevRef.current) { pendingCaretRef.current = null; drawCaret(pc.from); }
+    };
+    const onCaret = (msg: { data?: { from?: number; rev?: number } }) => {
+      const from = msg.data?.from;
+      const rev = msg.data?.rev ?? 0;
+      if (typeof from !== 'number') return;
+      if (rev > renderedRevRef.current) { pendingCaretRef.current = { from, rev }; return; }
+      drawCaret(from);
+    };
+    liveChannel.subscribe(ABLY_EVENTS.content, onContent);
+    liveChannel.subscribe(ABLY_EVENTS.caret, onCaret);
+    return () => {
+      liveChannel.unsubscribe(ABLY_EVENTS.content, onContent);
+      liveChannel.unsubscribe(ABLY_EVENTS.caret, onCaret);
+    };
+  }, [liveChannel, resyncFromShare, drawCaret]);
 
   useEffect(() => {
     if (!shareOpen) return undefined;
@@ -133,6 +174,14 @@ const SharePreviewPage: NextPage = () => {
   return (
     <div style={{ height: '100vh', overflow: 'hidden', background: '#f4f4f5', fontFamily: F, display: 'flex', flexDirection: 'column' }}>
       <Head><title>{`${article?.meta_title || article?.title || 'Shared draft'} — Preview`}</title></Head>
+      {connectionState && connectionState !== 'connected' && connectionState !== 'idle' && (
+        <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 60, padding: '6px 12px', borderRadius: 8, background: '#1f2937', color: '#fff', fontSize: 13 }}>
+          {connectionState === 'connecting' || connectionState === 'disconnected' ? 'Reconnecting…' : connectionState === 'suspended' ? 'Offline — retrying…' : 'Connecting…'}
+        </div>
+      )}
+      {isEditing && (
+        <div style={{ position: 'fixed', bottom: 12, left: 12, zIndex: 60, padding: '4px 10px', borderRadius: 999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', fontSize: 12 }}>✏️ editing…</div>
+      )}
       {nameChecked && !authorName && (
         <PreviewNameGate onSubmit={(n) => { try { localStorage.setItem(NAME_KEY, n); } catch { /* ignore */ } setAuthorName(n); }} />
       )}
@@ -149,6 +198,7 @@ const SharePreviewPage: NextPage = () => {
            while keeping text selectable for comments. No caret, no edit outline. */
         .preview-prose[contenteditable] { outline: none; caret-color: transparent; -webkit-user-modify: read-only; }
         .preview-prose[contenteditable] *::selection { background: rgba(120,58,251,0.18); }
+        @keyframes art-caret-blink { 50% { opacity: 0; } }
       `}</style>
 
       {/* Topbar removed — the article preview shows only the content + score panel. */}
@@ -162,21 +212,12 @@ const SharePreviewPage: NextPage = () => {
           {/* Content card */}
           <div className="styled-scrollbar" style={{ flex: 1, minWidth: 0, minHeight: 0, background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', overflow: 'auto' }}>
             <div ref={wrapperRef} style={{ position: 'relative', maxWidth: 820, margin: '0 auto', padding: '40px 64px 80px' }}>
-              <div
-                ref={contentRef}
-                className="preview-prose"
-                contentEditable
-                suppressContentEditableWarning
-                spellCheck={false}
-                role="textbox"
-                aria-readonly="true"
-                onBeforeInput={(e) => e.preventDefault()}
-                onPaste={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
-                onDrop={(e) => e.preventDefault()}
-                onKeyDown={blockContentEdit}
-                dangerouslySetInnerHTML={{ __html: article.content || '' }}
-              />
+              <div style={{ position: 'relative' }}>
+                <ViewerEditor ref={viewerRef} initialHtml={article.content || ''} />
+                {caretBox && (
+                  <span aria-hidden style={{ position: 'fixed', left: caretBox.left, top: caretBox.top, height: caretBox.height, width: 2, background: '#783AFB', pointerEvents: 'none', animation: 'art-caret-blink 1s step-end infinite', zIndex: 50 }} />
+                )}
+              </div>
               <CommentsLayer
                 containerRef={contentRef}
                 wrapperRef={wrapperRef}
