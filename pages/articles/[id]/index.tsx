@@ -17,6 +17,10 @@ import { Thread, CommentAuthor } from '../../../components/articles/comments/Com
 import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import AiGlowRing from '../../../components/articles/AiGlowRing';
+import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
+import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
+import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
+import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
@@ -448,7 +452,12 @@ const ArticleEditorPage: NextPage = () => {
   // `isAutoOptimizing` stays true for the whole flow so autosave + the panel button-disable hold.
   const [optimizeState, setOptimizeState] = useState<'idle' | 'optimizing' | 'reviewing'>('idle');
   const preReviewHtmlRef = useRef<string>(''); // snapshot for AO-8 cancel/restore
-  const optimizeMetaRef = useRef<{ changedCount: number; creditDeducted: boolean }>({ changedCount: 0, creditDeducted: false });
+  const optimizeMetaRef = useRef<{ changedCount: number; creditDeducted: boolean; promptVersion: string }>({ changedCount: 0, creditDeducted: false, promptVersion: '' });
+  // AO-8a: review lifecycle chrome — processed counter, save-in-flight, cancel-confirm modal.
+  const [optimizeProgress, setOptimizeProgress] = useState<{ processed: number; total: number }>({ processed: 0, total: 0 });
+  const [optimizeRemaining, setOptimizeRemaining] = useState(0); // unresolved contentOptimizer nodes (review label)
+  const [optimizeSaving, setOptimizeSaving] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [pendingImageCount, setPendingImageCount] = useState(0);
   const [surfyAiActive, setSurfyAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
@@ -724,26 +733,40 @@ const ArticleEditorPage: NextPage = () => {
   // keepalive is opt-in: it lets a request survive page teardown (tab-hide / unload / nav) but caps
   // the body at ~64KB. Normal autosaves MUST NOT use it — a long article exceeds 64KB and the
   // browser would silently drop every save. Only the unload flush passes keepalive (small delta).
-  const doSave = async (versionType?: string, opts?: { keepalive?: boolean }) => {
+  const doSave = async (
+    versionType?: string,
+    opts?: { keepalive?: boolean },
+    // AO-8a: optional run metadata embedded into the snapshot's score_data (Auto-Optimize Save).
+    versionMeta?: { changes: number; promptVersion: string; creditDeducted: boolean },
+    // AO-8a: explicit content snapshot so the Auto-Optimize Save persists the freshly-resolved
+    // doc without waiting for the editor's async onChange to settle React state.
+    contentOverride?: { html: string; text: string; words: number; headings: number; paragraphs: number },
+  ) => {
     if (!id) return false;
+    const html = contentOverride?.html ?? editorHtml;
+    const text = contentOverride?.text ?? plainText;
+    const words = contentOverride?.words ?? wordCount;
+    const headings = contentOverride?.headings ?? headingCount;
+    const paragraphs = contentOverride?.paragraphs ?? paragraphCount;
     // Update current_count for each term + store computed score so list view stays in sync
     const updatedTerms = scoreData.terms.map((t) => ({
       ...t,
-      current_count: countOccurrences(plainText, t.term),
+      current_count: countOccurrences(text, t.term),
     }));
-    const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number } = {
+    const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number; _ao_meta?: { changes: number; promptVersion: string; creditDeducted: boolean } } = {
       ...scoreData,
       terms: updatedTerms,
-      _heading_count: headingCount,
-      _paragraph_count: paragraphCount,
+      _heading_count: headings,
+      _paragraph_count: paragraphs,
       _computed_score: computeContentScore(
-        plainText, wordCount, headingCount,
+        text, words, headings,
         { ...scoreData, terms: updatedTerms },
-        paragraphCount,
-        (editorHtml.match(/<a\s[^>]*href=/gi) || []).length,
-        editorHtml,
+        paragraphs,
+        (html.match(/<a\s[^>]*href=/gi) || []).length,
+        html,
         article?.target_keyword || '',
       ),
+      ...(versionMeta ? { _ao_meta: versionMeta } : {}),
     };
 
     // Persist internal links panel state from localStorage
@@ -758,8 +781,8 @@ const ArticleEditorPage: NextPage = () => {
       headers: { 'Content-Type': 'application/json' },
       ...(opts?.keepalive ? { keepalive: true } : {}), // only on unload (best-effort, <64KB body cap)
       body: JSON.stringify({
-        content: editorHtml,
-        word_count: wordCount,
+        content: html,
+        word_count: words,
         score_data: updatedScoreData,
         featured_image: featuredImage?.url ?? null,
         target_keyword: article?.target_keyword,
@@ -1310,12 +1333,14 @@ const ArticleEditorPage: NextPage = () => {
     optimizeStore.clear();
     setOptimizeState('optimizing');
     setIsAutoOptimizing(true);
+    setOptimizeProgress({ processed: 0, total: 0 }); // AO-8a: reset before this run's meta arrives
     setAutoOptimizeStatus('Optimizing sections…');
 
     const resetIdle = () => {
       optimizeStore.clear();
       setOptimizeState('idle');
       setIsAutoOptimizing(false);
+      setOptimizeProgress({ processed: 0, total: 0 }); // AO-8a
     };
 
     try {
@@ -1359,13 +1384,18 @@ const ArticleEditorPage: NextPage = () => {
           let payload: unknown;
           try { payload = JSON.parse(dataLine[1]); } catch (e) { console.error('[optimize-sections] JSON parse error', eventType, e); continue; }
 
-          if (eventType === 'section') {
+          if (eventType === 'meta') {
+            // AO-8a: seed the "Processing X of N" counter for the toolbar.
+            const m = payload as { total: number; sections?: unknown[] };
+            setOptimizeProgress({ processed: 0, total: m.total });
+          } else if (eventType === 'section') {
             const ev = payload as SectionEvent;
             orderedEvents.push(ev);
             optimizeStore.set(ev.sectionId, { oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed });
+            setOptimizeProgress((p) => ({ ...p, processed: p.processed + 1 })); // AO-8a
           } else if (eventType === 'done') {
             const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean };
-            optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted };
+            optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted, promptVersion: meta.promptVersion };
             if (meta.changedCount > 0) {
               const reviewHtml = buildReviewDoc(orderedEvents);
               // emitUpdate:false → entering review must NOT trigger autosave.
@@ -1373,8 +1403,9 @@ const ArticleEditorPage: NextPage = () => {
               setOptimizeState('reviewing');
               setAutoOptimizeStatus(`Review ${meta.changedCount} section${meta.changedCount === 1 ? '' : 's'}…`);
             } else {
-              // Already well-optimized — no changes, no credit. (Toast UI is AO-8.)
+              // AO-8a terminal outcome (b): already well-optimized — no changes, no credit.
               setAutoOptimizeStatus('Already well-optimized — no changes needed.');
+              toast('Your article is well-optimized — we didn’t find anything to improve. No credit deducted.', { icon: '✨', duration: 6000 });
               resetIdle();
             }
             return;
@@ -1406,6 +1437,7 @@ const ArticleEditorPage: NextPage = () => {
       let count = 0;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ed.state.doc.descendants((n: any) => { if (n.type.name === 'contentOptimizer') count += 1; });
+      setOptimizeRemaining(count); // AO-8a: drive the toolbar "N of M to review" label
       if (count === 0) {
         setEditorHtml(ed.getHTML()); // sync resolved content into page state BEFORE re-enabling autosave
         optimizeStore.clear();
@@ -1425,6 +1457,100 @@ const ArticleEditorPage: NextPage = () => {
     }
     return () => { if (ed) ed.off('update', check); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optimizeState]);
+
+  // ── AO-8a: review lifecycle commands ──────────────────────────────────────
+  // Resolve every remaining contentOptimizer node to its optimized (newHtml) version.
+  // Splice from HIGHEST pos to LOWEST so earlier replacements don't invalidate later
+  // positions. When the last node is resolved the review-completion effect above sees
+  // zero nodes and transitions back to idle — we never duplicate that logic here.
+  const resolveAllOptimizerNodes = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor) return;
+    const refs = collectOptimizerPositions(editor.state.doc as PMDocLike);
+    refs.forEach((ref) => {
+      const html = optimizeStore.get(ref.sectionId)?.newHtml ?? '';
+      editor.chain().insertContentAt({ from: ref.pos, to: ref.pos + ref.nodeSize }, html).run();
+    });
+  };
+
+  const handleAcceptAll = () => { resolveAllOptimizerNodes(); };
+
+  // Jump the caret to the next/prev unresolved section and scroll it into view.
+  const navigateSection = (dir: 1 | -1) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor) return;
+    // collectOptimizerPositions returns DESCENDING; reverse for document order.
+    const positions = collectOptimizerPositions(editor.state.doc as PMDocLike).map((r) => r.pos).reverse();
+    if (!positions.length) return;
+    const caret = editor.state.selection.from;
+    const target = dir === 1
+      ? (positions.find((p) => p > caret) ?? positions[0])
+      : ([...positions].reverse().find((p) => p < caret) ?? positions[positions.length - 1]);
+    editor.chain().focus().setTextSelection(target).scrollIntoView().run();
+  };
+
+  // Cancel: restore the pre-optimize article, discard all suggestions, exit review.
+  const handleConfirmCancel = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (editor) {
+      // emitUpdate:false → restoring must NOT trigger autosave of the (discarded) review doc.
+      try { editor.commands.setContent(preReviewHtmlRef.current, { emitUpdate: false }); } catch (e) { console.error('[optimize-cancel] setContent error', e); }
+    }
+    optimizeStore.clear();
+    setOptimizeState('idle');
+    setIsAutoOptimizing(false);
+    setOptimizeProgress({ processed: 0, total: 0 });
+    setOptimizeRemaining(0);
+    setCancelModalOpen(false);
+  };
+
+  // Save: resolve any remaining sections (so persisted HTML never contains placeholder
+  // divs), then persist the resolved doc as an `auto_optimize` version snapshot with run
+  // metadata embedded in score_data. The review-completion effect handles the idle exit.
+  const handleSaveOptimizeRun = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const editor = (editorRef.current as any)?.getEditor?.();
+    if (!editor) return;
+    setOptimizeSaving(true);
+    try {
+      resolveAllOptimizerNodes(); // resolve-all FIRST → no contentOptimizer atoms remain
+      const html: string = editor.getHTML();
+      setEditorHtml(html); // keep page state in sync (effect will also sync on transition)
+      const text = html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      let headings = 0;
+      let paragraphs = 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      editor.state.doc.descendants((n: any) => {
+        if (n.type.name === 'heading') headings += 1;
+        if (n.type.name === 'paragraph' && n.textContent.trim()) paragraphs += 1;
+      });
+      await doSave(
+        'auto_optimize',
+        undefined,
+        { changes: optimizeMetaRef.current.changedCount, promptVersion: optimizeMetaRef.current.promptVersion, creditDeducted: optimizeMetaRef.current.creditDeducted },
+        { html, text, words, headings, paragraphs },
+      );
+      toast.success('Auto-Optimize changes saved');
+    } catch (err) {
+      console.error('[optimize-save] failed:', err);
+      toast.error('Could not save Auto-Optimize changes');
+    } finally {
+      setOptimizeSaving(false);
+    }
+  };
+
+  // AO-8a exit-guard: warn before leaving (tab close / reload) while a review is unresolved,
+  // so suggested changes aren't silently lost. Active only during the reviewing state.
+  useEffect(() => {
+    if (optimizeState !== 'reviewing') return undefined;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [optimizeState]);
 
   const handlePixabaySelect = (image: { url: string; alt: string; width: number; height: number }) => {
@@ -2011,8 +2137,8 @@ const ArticleEditorPage: NextPage = () => {
           </AnimatePresence>
         </div>
 
-        {/* ── Auto-optimize loading indicator ──────────────────────── */}
-        {isAutoOptimizing && (
+        {/* ── Auto-optimize loading indicator (legacy flow only; AO-8a uses OptimizeReviewBar) ── */}
+        {isAutoOptimizing && optimizeState === 'idle' && (
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
             zIndex: 10000, width: 520, maxWidth: 'calc(100vw - 40px)',
@@ -2038,6 +2164,30 @@ const ArticleEditorPage: NextPage = () => {
             </div>
           </div>
         )}
+
+        {/* ── AO-8a: section-by-section Auto-Optimize review toolbar ── */}
+        {optimizeState !== 'idle' && (
+          <OptimizeReviewBar
+            state={optimizeState}
+            processed={optimizeProgress.processed}
+            total={optimizeProgress.total}
+            remaining={optimizeRemaining}
+            changedCount={optimizeMetaRef.current.changedCount}
+            onPrev={() => navigateSection(-1)}
+            onNext={() => navigateSection(1)}
+            onAcceptAll={handleAcceptAll}
+            onCancel={() => setCancelModalOpen(true)}
+            onSave={handleSaveOptimizeRun}
+            saving={optimizeSaving}
+          />
+        )}
+
+        {/* ── AO-8a: cancel-confirmation modal ── */}
+        <OptimizeCancelModal
+          open={cancelModalOpen}
+          onGoBack={() => setCancelModalOpen(false)}
+          onConfirm={handleConfirmCancel}
+        />
 
         {/* ── Auto-optimize result bar ───────────────────────────────── */}
         {autoOptimizeBar && !isAutoOptimizing && (
