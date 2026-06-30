@@ -203,6 +203,11 @@ body {
    --purple-70: #783afb;
    --purple-base: #783afb;
    --purple-100: #4d08b5;
+   /* Score palette (lib/scoreColor.ts) + extra surface tints — used by gauges + Auto-Optimize UI. */
+   --gray-5: #fafafa;
+   --green-60: #1ab25e;
+   --yellow-60: #efa00d;
+   --red-60: #d70028;
 }
 
 :root {

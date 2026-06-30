@@ -56,6 +56,10 @@ module.exports = {
             'purple-40': 'var(--purple-40)',
             'purple-base': 'var(--purple-base)',
             'purple-100': 'var(--purple-100)',
+            'gray-5': 'var(--gray-5)',
+            'green-60': 'var(--green-60)',
+            'yellow-60': 'var(--yellow-60)',
+            'red-60': 'var(--red-60)',
          },
          borderRadius: {
             'ds-xs': 'var(--radius-xs)',
@@ -74,6 +78,7 @@ module.exports = {
             'ds-7': 'var(--space-7)',
             'ds-8': 'var(--space-8)',
             /* Light design-system spacing */
+            '3xs': '0.125rem',
             '2xs': '0.25rem',
             'xs': '0.375rem',
             'sm': '0.5rem',
