@@ -13,8 +13,8 @@ import Keyword from '../database/models/keyword';
  * @returns {Promise}
  */
 const refreshAndUpdateKeywords = async (rawKeyword:Keyword[], settings:SettingsType, domains?: DomainType[]): Promise<KeywordType[]> => {
-   const keywords:KeywordType[] = rawKeyword.map((el) => el.get({ plain: true }));
    if (!rawKeyword || rawKeyword.length === 0) { return []; }
+   const keywords:KeywordType[] = rawKeyword.map((el) => el.get({ plain: true }));
    const start = performance.now();
    const updatedKeywords: KeywordType[] = [];
 
