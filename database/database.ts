@@ -47,4 +47,15 @@ if (DATABASE_URL) {
    });
 }
 
+// Memoize the no-arg sync: every API route calls `await db.sync()`, but the schema only needs
+// creating once per process. Without this each request pays a metadata round-trip per model.
+// (Calls WITH options — e.g. {alter}/{force} — still run through untouched.)
+let syncPromise: Promise<unknown> | null = null;
+const originalSync = connection.sync.bind(connection);
+(connection as unknown as { sync: typeof connection.sync }).sync = ((options?: Parameters<typeof connection.sync>[0]) => {
+   if (options) return originalSync(options);
+   if (!syncPromise) syncPromise = originalSync();
+   return syncPromise;
+}) as typeof connection.sync;
+
 export default connection;

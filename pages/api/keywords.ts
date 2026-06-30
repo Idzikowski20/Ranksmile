@@ -2,9 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
 import db from '../../database/database';
 import Keyword from '../../database/models/keyword';
+import Domain from '../../database/models/domain';
 import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
+import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import parseKeywords from '../../utils/parseKeywords';
 import { integrateKeywordSCData, readLocalSCData } from '../../utils/searchConsole';
@@ -14,14 +16,15 @@ import { removeFromRetryQueue } from '../../utils/scraper';
 
 export async function userOwnsAllKeywords(ids: Array<number | string>, userId: string | null): Promise<boolean> {
    if (!ids.length) return false;
-   const { Op } = await import('sequelize');
    const kws = await Keyword.findAll({ where: { ID: { [Op.in]: ids } }, attributes: ['domain'] });
    const domains = Array.from(new Set(kws.map((k) => k.domain)));
-   for (const d of domains) {
-      const owns = await verifyDomainOwnership(d, userId);
-      if (owns === false || owns === null) return false;
-   }
-   return true;
+   if (!domains.length) return false;
+   // Two queries instead of O(domains) × verifyDomainOwnership: resolve accessible workspaces once,
+   // then count how many of these domains live in them. All owned ⇔ count === distinct-domain count.
+   const wsIds = await getAccessibleWorkspaceIds(userId);
+   if (!wsIds.length) return false;
+   const owned = await Domain.count({ where: { domain: { [Op.in]: domains }, workspace_id: { [Op.in]: wsIds } } });
+   return owned === domains.length;
 }
 
 type KeywordsGetResponse = {
