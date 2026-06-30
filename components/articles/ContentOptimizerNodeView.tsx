@@ -3,7 +3,7 @@ import { NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import { optimizeStore } from './optimizeStore';
 import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
-import { wordDiffSegments, renderDiffHtml } from '../../lib/wordDiff';
+import { wordDiffSegments, renderDiffHtml } from '../../lib/optimizeWordDiff';
 
 // React node-view for the contentOptimizer TipTap node.
 // Shows the old (removed) and new (added) versions of a section with floating
