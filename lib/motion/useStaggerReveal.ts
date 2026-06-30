@@ -12,10 +12,23 @@ export function revealVars(reduced: boolean) {
   };
 }
 
+/** Nearest scrollable ancestor — the app scrolls inside `overflow:auto` panels, not the window,
+ *  so ScrollTrigger needs that element as its `scroller`. Returns undefined → default (window). */
+function nearestScroller(el: HTMLElement): HTMLElement | undefined {
+  let p = el.parentElement;
+  while (p) {
+    const oy = getComputedStyle(p).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+    p = p.parentElement;
+  }
+  return undefined;
+}
+
 /**
  * Stagger-reveals a container's matching children as they enter the viewport.
  * `selector` is scoped to the container (e.g. '.rec-row', ':scope > *').
- * Uses gsap.from so children are visible at rest — a JS failure degrades to no animation.
+ * Uses gsap.from so children are visible at rest — a JS failure (or wrong scroller) degrades to
+ * "no animation", never invisible content.
  *
  * ScrollTriggers are created SYNCHRONOUSLY inside useGSAP so the hook's context captures them and
  * reverts/kills them on unmount (an async import().then() would escape that cleanup → leak).
@@ -33,6 +46,7 @@ export function useStaggerReveal<T extends HTMLElement>(selector: string): RefOb
     // batchMax caps how many items animate together so long lists (e.g. 200 rows)
     // don't stagger into one giant sweep.
     ScrollTrigger.batch(items, {
+      scroller: nearestScroller(root),
       start: 'top 92%',
       batchMax: 8,
       once: true,
