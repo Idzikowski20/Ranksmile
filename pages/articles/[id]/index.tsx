@@ -508,7 +508,7 @@ const ArticleEditorPage: NextPage = () => {
   useEffect(() => {
     if (!ownerChannel) return undefined;
     const onComment = () => setCommentsVersion((v) => v + 1);
-    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment).catch(() => {});
     ownerChannel.presence.enter({ role: 'owner' }).catch(() => {});
     return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
   }, [ownerChannel]);
@@ -521,7 +521,7 @@ const ArticleEditorPage: NextPage = () => {
         .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
         .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest')))
       .catch(() => {});
-    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh);
+    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh).catch(() => {});
     refresh();
     return () => { ownerChannel.presence.unsubscribe(); };
   }, [ownerChannel]);

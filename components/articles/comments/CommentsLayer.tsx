@@ -93,7 +93,7 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
   useEffect(() => {
     if (!liveCommentChannel) return undefined;
     const onComment = () => reload();
-    liveCommentChannel.subscribe(ABLY_EVENTS.comment, onComment);
+    liveCommentChannel.subscribe(ABLY_EVENTS.comment, onComment).catch(() => {});
     return () => { liveCommentChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
   }, [liveCommentChannel, reload]);
 
