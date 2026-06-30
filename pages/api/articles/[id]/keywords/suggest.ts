@@ -6,6 +6,7 @@ import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../../../ut
 import { computeRelevanceScore } from '../../../../../lib/keywordEnrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
+import { queryRows, queryOne } from '../../../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -24,12 +25,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { targetKeyword, country = 'US' } = req.body;
 
   // Get article + domain info
-  const [articles] = await db.query(
+  const art = await queryOne<{ target_keyword: string | null; title: string | null; domain_id: number | null; domain: string | null; slug: string | null; search_console: string | null }>(
     `SELECT a.target_keyword, a.title, a.domain_id, d.domain, d.slug, d.search_console
      FROM articles a LEFT JOIN domain d ON d."ID" = a.domain_id WHERE a.id = ?`,
-    { replacements: [id] },
+    [id],
   );
-  const art = (articles as any[])[0];
   if (!art) return res.status(404).json({ error: 'Article not found' });
   const tk = targetKeyword || art.target_keyword || art.title || '';
 
@@ -43,11 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Get existing keywords to deduplicate
-  const [existing] = await db.query(
+  const existing = await queryRows<{ keyword: string | null }>(
     `SELECT keyword FROM article_keywords WHERE article_id = ?`,
-    { replacements: [id] },
+    [id],
   );
-  const existingSet = new Set((existing as any[]).map((r: any) => r.keyword?.toLowerCase()));
+  const existingSet = new Set(existing.map((r) => r.keyword?.toLowerCase()));
 
   // Fetch keyword ideas from Ads
   const creds = await getAdwordsCredentials();

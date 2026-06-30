@@ -10,6 +10,7 @@ import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
 import { computeContentScore } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { renderPage } from '../../../utils/spaScraper';
+import { getErrorMessage } from '../../../lib/errors';
 
 async function fetchWithHttp(url: string): Promise<string> {
    const res = await fetch(url, {
@@ -118,8 +119,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             console.log('[import] HTTP fetch too short, falling back to Puppeteer');
             html = '';
          }
-      } catch (e: any) {
-         console.log(`[import] HTTP fetch failed (${e?.message}), falling back to Puppeteer`);
+      } catch (e) {
+         console.log(`[import] HTTP fetch failed (${getErrorMessage(e)}), falling back to Puppeteer`);
       }
 
       // Fallback to Puppeteer for SPAs and sites requiring JS rendering
@@ -128,8 +129,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          try {
             html = await fetchWithPuppeteer(url);
             console.log(`[import] Puppeteer fetched ${html.length} chars`);
-         } catch (fetchErr: any) {
-            return res.status(400).json({ error: `Could not fetch URL: ${fetchErr?.message || 'unknown'}` });
+         } catch (fetchErr) {
+            return res.status(400).json({ error: `Could not fetch URL: ${getErrorMessage(fetchErr) || 'unknown'}` });
          }
       }
 
@@ -393,8 +394,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json({ articleId });
-   } catch (error: any) {
+   } catch (error) {
       console.error('[import] error:', error);
-      return res.status(500).json({ error: error?.message || 'Import failed' });
+      return res.status(500).json({ error: getErrorMessage(error) || 'Import failed' });
    }
 }

@@ -3,6 +3,7 @@
 // This bypasses hotlink protection (Referer checks) on source websites.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { getErrorMessage } from '../../lib/errors';
 
 // SVG intentionally excluded: served same-origin it is a script-execution vector on direct navigation.
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
@@ -68,8 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.status(200).send(Buffer.from(buffer));
-   } catch (err: any) {
-      console.error('[image-proxy] error:', err?.message);
+   } catch (err) {
+      console.error('[image-proxy] error:', getErrorMessage(err));
       return res.status(500).json({ error: 'Failed to fetch image' });
    }
 }

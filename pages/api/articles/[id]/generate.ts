@@ -14,6 +14,7 @@ import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
+import { getErrorMessage } from '../../../../lib/errors';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -110,8 +111,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await axios.post(`${sidecarUrl}/pipeline/generate`,
         { jobId, payload: sidecarPayload, nextjsUrl },
         { timeout: 15000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } });
-    } catch (kickoffErr: any) {
-      const detail = kickoffErr?.response?.data || kickoffErr?.message || 'sidecar unavailable';
+    } catch (kickoffErr) {
+      const e = kickoffErr as { response?: { data?: unknown }; message?: string };
+      const detail = e?.response?.data || e?.message || 'sidecar unavailable';
       console.error('[articles/[id]/generate] kickoff failed:', detail);
       // Couldn't start the job — fail it and roll the article back so the UI doesn't poll forever.
       await db.query(`UPDATE analysis_jobs SET status = 'failed', error = ? WHERE id = ?`, { replacements: [String(detail).slice(0, 500), jobId] });
@@ -120,8 +122,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(202).json({ jobId, articleId });
-  } catch (error: any) {
+  } catch (error) {
     console.error('[articles/[id]/generate] error:', error);
-    return res.status(500).json({ error: error?.message || 'Generation failed' });
+    return res.status(500).json({ error: getErrorMessage(error) || 'Generation failed' });
   }
 }

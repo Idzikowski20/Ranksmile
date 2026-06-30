@@ -11,6 +11,7 @@ import Settings from '../../components/settings/Settings';
 import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
 import { useQuery, useQueryClient } from 'react-query';
+import { getErrorMessage } from '../../lib/errors';
 
 const fetchArticles = async (domainId?: number) => {
   const url = domainId ? `/api/articles?domainId=${domainId}` : '/api/articles';
@@ -51,8 +52,8 @@ const ArticlesPage: NextPage = () => {
       if (!res.ok) throw new Error('Delete failed');
       toast.success('Article deleted');
       queryClient.invalidateQueries(['articles']);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -61,8 +62,8 @@ const ArticlesPage: NextPage = () => {
       await Promise.all(ids.map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' })));
       toast.success(`${ids.length} article${ids.length !== 1 ? 's' : ''} deleted`);
       queryClient.invalidateQueries(['articles']);
-    } catch (err: any) {
-      toast.error(err.message || 'Delete failed');
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Delete failed');
     }
   };
 

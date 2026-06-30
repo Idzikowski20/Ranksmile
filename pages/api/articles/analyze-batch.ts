@@ -9,6 +9,8 @@ import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership'
 import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryRows } from '../../../lib/db/query';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -37,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Find unscored draft articles for this domain. Capped so one request can't fan out an
       // unbounded number of concurrent sidecar+LLM pipelines.
-      const [articles] = await db.query(
+      const queue = await queryRows<{ id: number; meta_url: string | null; title: string | null }>(
          `SELECT ${articleIdSql} AS id, meta_url, title
           FROM articles
           WHERE domain_id = ?
@@ -46,10 +48,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             AND meta_url IS NOT NULL
           ORDER BY created_at ASC
           LIMIT 25`,
-         { replacements: [domainId] },
+         [domainId],
       );
 
-      const queue = articles as any[];
       if (queue.length === 0) {
          return res.status(200).json({ queued: 0, message: 'No pending articles to analyze' });
       }
@@ -83,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json({ queued, message: `${queued} analyses started in background` });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'Batch analysis error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'Batch analysis error' });
    }
 }

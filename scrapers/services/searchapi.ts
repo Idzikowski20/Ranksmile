@@ -20,7 +20,7 @@ const searchapi:ScraperSettings = {
   },
   scrapeURL: (keyword) => {
    const country = keyword.country || 'US';
-   const countryName = countries[country][0];
+   const countryName = countries[country]?.[0] || country;
    const location = keyword.city && countryName ? `&location=${encodeURIComponent(`${keyword.city},${countryName}`)}` : '';
      return `https://www.searchapi.io/api/v1/search?engine=google&q=${encodeURIComponent(keyword.keyword)}&num=100&gl=${country}&device=${keyword.device}${location}`;
   },

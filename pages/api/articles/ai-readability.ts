@@ -9,6 +9,8 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne, ArticleRow } from '../../../lib/db/query';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -30,11 +32,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const article = await queryOne<Pick<ArticleRow, 'content' | 'meta_title' | 'meta_description' | 'target_keyword' | 'title'>>(
          `SELECT content, meta_title, meta_description, target_keyword, title FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       const articleContent = `${article.meta_title || ''}\n${article.meta_description || ''}\n${article.content || ''}`;
@@ -47,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch { /* non-fatal */ }
 
       return res.status(200).json(data);
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'AI readability failed' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'AI readability failed' });
    }
 }

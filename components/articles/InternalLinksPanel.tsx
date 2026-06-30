@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import type { LinkSuggestion } from '../../pages/api/articles/suggest-internal-links';
+import { getErrorMessage } from '../../lib/errors';
 
 export interface InsertResult {
   url: string;
@@ -173,8 +174,8 @@ const InternalLinksPanel: React.FC<Props> = ({
       setHint(data.hint || null);
       setChecked(new Set(links.map((_, i) => i))); // all pre-checked
       setPhase('selecting');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
       setPhase('idle');
     }
   };
@@ -201,8 +202,8 @@ const InternalLinksPanel: React.FC<Props> = ({
       const nextChecked = new Set<number>();
       fetchedLinks.forEach((l, i) => { if (recommendedUrls.has(l.url)) nextChecked.add(i); });
       setChecked(nextChecked);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setIsRecommending(false);
     }
@@ -243,8 +244,8 @@ const InternalLinksPanel: React.FC<Props> = ({
         if (data.error) throw new Error(data.error);
         suggestions = data.suggestions || [];
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
       setPhase('selecting');
       return;
     }

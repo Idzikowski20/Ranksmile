@@ -182,12 +182,13 @@ const fetchSearchConsoleData = async (
       }
 
       return finalRows;
-   } catch (err:any) {
+   } catch (err) {
+      const e = err as { response?: { status?: number; statusText?: string; data?: { error_description?: string } }; code: string };
       const qType = type === 'stats' ? '(stats)' : `(${days}days)`;
-      const errorMsg = err?.response?.status && `${err?.response?.statusText}. ${err?.response?.data?.error_description}`;
-      console.log(`[ERROR] Search Console API Error for ${domainName} ${qType} : `, errorMsg || err?.code);
+      const errorMsg = e?.response?.status && `${e?.response?.statusText}. ${e?.response?.data?.error_description}`;
+      console.log(`[ERROR] Search Console API Error for ${domainName} ${qType} : `, errorMsg || e?.code);
       // console.log('SC ERROR :', err);
-      return { error: true, errorMsg: errorMsg || err?.code };
+      return { error: true, errorMsg: errorMsg || e?.code };
    }
 };
 

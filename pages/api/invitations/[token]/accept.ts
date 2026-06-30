@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUser } from '../../../../utils/getUser';
 import { acceptInvitation } from '../../../../lib/invitations';
+import { getErrorMessage } from '../../../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const user = await getCurrentUser(req, res);
@@ -10,9 +11,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    try {
       await acceptInvitation(user.id, user.email, token);
       return res.status(200).json({ ok: true });
-   } catch (e: any) {
-      if (e?.message === 'INVITE_EMAIL_MISMATCH') return res.status(409).json({ error: e.message });
-      if (e?.message === 'INVITE_NOT_PENDING') return res.status(410).json({ error: e.message });
+   } catch (e) {
+      const msg = getErrorMessage(e);
+      if (msg === 'INVITE_EMAIL_MISMATCH') return res.status(409).json({ error: msg });
+      if (msg === 'INVITE_NOT_PENDING') return res.status(410).json({ error: msg });
       return res.status(500).json({ error: 'Error' });
    }
 }

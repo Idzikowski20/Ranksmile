@@ -7,6 +7,7 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -35,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          { replacements: [newStatus, articleId] },
       );
       return res.status(200).json({ status: newStatus });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

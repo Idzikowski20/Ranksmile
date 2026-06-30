@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../utils/verifyUser';
 import { renderPage } from '../../utils/spaScraper';
 import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { getErrorMessage } from '../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -26,13 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // SSRF guard: even internal callers only ever render PUBLIC pages — block file:/private IPs/metadata.
-  try { await assertPublicUrl(url); } catch (e: any) { return res.status(400).json({ error: e?.message || 'Blocked URL' }); }
+  try { await assertPublicUrl(url); } catch (e) { return res.status(400).json({ error: getErrorMessage(e) || 'Blocked URL' }); }
 
   try {
     const result = await renderPage(url, timeout || 20_000);
     return res.status(200).json({ html: result.html, url: result.url });
-  } catch (err: any) {
-    console.error('[render-page]', err.message);
-    return res.status(500).json({ error: err.message || 'Failed to render page' });
+  } catch (err) {
+    const msg = getErrorMessage(err);
+    console.error('[render-page]', msg);
+    return res.status(500).json({ error: msg || 'Failed to render page' });
   }
 }

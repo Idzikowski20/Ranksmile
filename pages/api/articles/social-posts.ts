@@ -8,6 +8,8 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
 
 // Vercel: the LLM call can take ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -29,11 +31,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const article = await queryOne<{ content: string | null; target_keyword: string | null; title: string | null }>(
          `SELECT content, target_keyword, title FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (rows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
       if (!article.content) return res.status(400).json({ error: 'Article has no content yet.' });
 
@@ -42,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          keyword: article.target_keyword || article.title || '',
       });
       return res.status(200).json(data);
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'Could not generate social posts' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'Could not generate social posts' });
    }
 }

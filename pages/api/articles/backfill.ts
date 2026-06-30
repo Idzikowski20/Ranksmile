@@ -7,6 +7,8 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { readLocalSCData } from '../../../utils/searchConsole';
 import { kwScore, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryRows } from '../../../lib/db/query';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -55,17 +57,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          });
 
          // Find articles missing a proper target_keyword (null, empty, or fallback to title)
-         const [articles] = await db.query(
+         const articles = await queryRows<{ id: number; publish_url: string | null; meta_url: string | null; target_keyword: string | null; title: string | null }>(
             `SELECT ${articleIdSql} AS id, publish_url, meta_url, target_keyword, title
              FROM articles
              WHERE domain_id = ?
                AND (target_keyword IS NULL OR target_keyword = '' OR target_keyword = title)
                AND status != 'analyzing'`,
-            { replacements: [domainId] },
+            [domainId],
          );
 
-         for (const article of (articles as any[])) {
-            const urlsToTry = [article.publish_url, article.meta_url].filter(Boolean);
+         for (const article of articles) {
+            const urlsToTry = [article.publish_url, article.meta_url].filter((u): u is string => Boolean(u));
             let matched: { keyword: string } | undefined;
             for (const url of urlsToTry) {
                const urlKey = normalizeUrlForMatch(url);
@@ -95,22 +97,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let metaUrlFixed = (urlFixResult as any)?.affectedRows ?? (urlFixResult as any)?.changes ?? 0;
 
       // Case 2: try to match remaining article titles to site_context URLs by slug
-      const [noMetaArticles] = await db.query(
+      const noMetaArticles = await queryRows<{ id: number; title: string | null }>(
          `SELECT ${articleIdSql} AS id, title
           FROM articles
           WHERE domain_id = ?
             AND (meta_url IS NULL OR meta_url = '')
             AND (publish_url IS NULL OR publish_url = '' OR (publish_url NOT LIKE 'http://%' AND publish_url NOT LIKE 'https://%'))`,
-         { replacements: [domainId] },
+         [domainId],
       );
 
-      const [scRows] = await db.query(
+      const scRows = await queryRows<{ url: string | null }>(
          `SELECT url FROM site_context WHERE domain_id = ?`,
-         { replacements: [domainId] },
+         [domainId],
       );
-      const scUrls: string[] = (scRows as any[]).map((r: any) => r.url).filter(Boolean);
+      const scUrls: string[] = scRows.map((r) => r.url).filter((u): u is string => Boolean(u));
 
-      for (const article of (noMetaArticles as any[])) {
+      for (const article of noMetaArticles) {
          const titleSlug = (article.title || '')
             .toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
@@ -165,7 +167,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          metaUrlFixed,
          siteContextCleaned,
       });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'Backfill error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'Backfill error' });
    }
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../lib/errors';
 
 const F = 'var(--font-family-primary)';
 
@@ -38,8 +39,8 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
       if (!list.length) throw new Error('No posts were generated. Try again on a ready-to-publish article.');
       setVariants(list);
       setSelected(0);
-    } catch (e: any) {
-      toast.error(e?.message || 'Could not generate posts');
+    } catch (e) {
+      toast.error(getErrorMessage(e) || 'Could not generate posts');
       setStep('intro');
     } finally {
       setLoading(false);

@@ -2,6 +2,7 @@
 // Server-side proxy to Pixabay API — keeps the API key secret.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
+import { getErrorMessage } from '../../../lib/errors';
 
 export interface PixabayImage {
   id: number;
@@ -68,8 +69,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const data: PixabayResponse = await pixabayRes.json();
     return res.status(200).json(data);
-  } catch (err: any) {
-    console.error('[pixabay] error:', err.message);
-    return res.status(500).json({ error: err.message || 'Pixabay search failed' });
+  } catch (err) {
+    const msg = getErrorMessage(err);
+    console.error('[pixabay] error:', msg);
+    return res.status(500).json({ error: msg || 'Pixabay search failed' });
   }
 }

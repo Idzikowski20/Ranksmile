@@ -47,7 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          if (r2) data.url = r2;
       }
       return res.status(200).json(data);
-   } catch (error: any) {
+   } catch (rawError) {
+      const error = rawError as { message?: string; response?: { data?: { detail?: string } } };
       const detail = error?.response?.data?.detail || error?.message || 'Image generation failed';
       console.error('[generate-image] error:', detail);
       return res.status(500).json({ error: detail });

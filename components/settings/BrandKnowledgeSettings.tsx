@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
+import { getErrorMessage } from '../../lib/errors';
 
 const font = 'var(--font-family-primary)';
 
@@ -62,7 +63,7 @@ const BrandKnowledgeSettings = () => {
       if (d.brandName) setBrandName(d.brandName);
       setKnowledge(d.brandKnowledge || '');
       toast.success('Brand knowledge drafted — review & save');
-    } catch (e: any) { toast.error(e?.message || 'Analysis failed'); } finally { setAnalyzing(false); }
+    } catch (e) { toast.error(getErrorMessage(e) || 'Analysis failed'); } finally { setAnalyzing(false); }
   };
 
   const fieldBorder = (key: string) => (focused === key ? '#AA93FD' : '#E4E4E7');

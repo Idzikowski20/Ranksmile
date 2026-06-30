@@ -11,6 +11,8 @@ import db from '../../../../database/database';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { emitCommentChange } from '../../../../lib/commentBus';
 import { getCommentAccessKind } from '../../../../lib/commentAccess';
+import { getErrorMessage } from '../../../../lib/errors';
+import { queryOne } from '../../../../lib/db/query';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;
@@ -71,8 +73,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
    // An anonymous (share-token) reviewer may not edit/delete a comment authored by the owner.
    const isOwnerComment = async (cid: string): Promise<boolean> => {
-      const [r] = await db.query('SELECT is_owner FROM article_comments WHERE id = ? AND article_id = ?', { replacements: [cid, id] });
-      return Number((r as any[])[0]?.is_owner) === 1;
+      const r = await queryOne<{ is_owner: number | null }>('SELECT is_owner FROM article_comments WHERE id = ? AND article_id = ?', [cid, id]);
+      return Number(r?.is_owner) === 1;
    };
 
    try {
@@ -122,8 +124,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          }
          // Toggle a reactor for an emoji (read-modify-write on reactions_json).
          if (reaction && reaction.emoji && reaction.author) {
-            const [rows] = await db.query(`SELECT reactions_json FROM article_comments WHERE id = ? AND article_id = ?`, { replacements: [commentId, id] });
-            const current = parseReactions((rows as any[])[0]?.reactions_json ?? null);
+            const row = await queryOne<{ reactions_json: string | null }>(`SELECT reactions_json FROM article_comments WHERE id = ? AND article_id = ?`, [commentId, id]);
+            const current = parseReactions(row?.reactions_json ?? null);
             const who = new Set(current[reaction.emoji] || []);
             if (who.has(reaction.author)) who.delete(reaction.author); else who.add(reaction.author);
             if (who.size) current[reaction.emoji] = [...who]; else delete current[reaction.emoji];
@@ -146,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(405).json({ error: 'Method not allowed' });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

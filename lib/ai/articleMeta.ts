@@ -1,5 +1,5 @@
-import db from '../../database/database';
 import { getArticleIdSql } from '../articleSql';
+import { queryOne, queryRows, type ArticleRow } from '../db/query';
 
 export interface ArticleSeoMeta {
   domain: string;
@@ -50,22 +50,21 @@ function competitorDomainsFromCache(cache: string | null): string[] {
 export async function resolveArticleSeoMeta(articleId: number): Promise<ArticleSeoMeta> {
    try {
       const articleIdSql = await getArticleIdSql();
-      const [articleRows] = await db.query(
+      const article = await queryOne<ArticleRow & { domain: string | null; ai_visibility_summary: string | null }>(
          `SELECT a.*, a.language, d.domain
           FROM articles a
           LEFT JOIN domain d ON d."ID" = a.domain_id
           WHERE a.${articleIdSql} = ?
           LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (articleRows as any[])[0];
       if (!article) return { ...DEFAULTS };
 
-      const [competitorRows] = await db.query(
+      const competitorRows = await queryRows<{ domain: string | null; url: string | null }>(
          `SELECT domain, url FROM article_competitors WHERE article_id = ?`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const storedCompetitorDomains = (competitorRows as any[])
+      const storedCompetitorDomains = competitorRows
          .map((row) => row.domain || domainFromUrl(row.url || ''))
          .filter(Boolean);
       const cachedCompetitorDomains = competitorDomainsFromCache(article.competitor_outlines_cache);

@@ -17,15 +17,21 @@ export async function captureWeeklySnapshot(domain: string, domainId: number, we
    const agg = aggregateSevenDays(sc.sevenDays as RawItem[]);
    // Idempotent: clear this domain+week then insert (dialect-agnostic; mirrors lib/wpConnection.ts).
    await db.query('DELETE FROM gsc_page_snapshots WHERE domain_id = ? AND week_start = ?', { replacements: [domainId, weekStart] }).catch(() => {});
-   let n = 0;
-   for (const [page, s] of agg) {
+   const rows = [...agg];
+   const CHUNK = 500;
+   for (let i = 0; i < rows.length; i += CHUNK) {
+      const batch = rows.slice(i, i + CHUNK);
+      const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?)').join(', ');
+      const replacements: Array<string | number> = [];
+      for (const [page, s] of batch) {
+         replacements.push(domainId, page, weekStart, Math.round(s.clicks), Math.round(s.impressions), s.position);
+      }
       await db.query(
-         'INSERT INTO gsc_page_snapshots (domain_id, page, week_start, clicks, impressions, position) VALUES (?, ?, ?, ?, ?, ?)',
-         { replacements: [domainId, page, weekStart, Math.round(s.clicks), Math.round(s.impressions), s.position] },
+         `INSERT INTO gsc_page_snapshots (domain_id, page, week_start, clicks, impressions, position) VALUES ${placeholders}`,
+         { replacements },
       );
-      n += 1;
    }
-   return n;
+   return rows.length;
 }
 
 /** Load a week's snapshot for a domain as a page -> PageSnap map. */

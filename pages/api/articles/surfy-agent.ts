@@ -16,6 +16,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import type { ToolCtx } from '../../../lib/ai/types';
+import { getErrorMessage } from '../../../lib/errors';
 
 // maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
 // calls (apply_readability), so it must be >= the sum of the action tool budgets (ACTION_TIMEOUT).
@@ -146,13 +147,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
       res.end();
-    } catch (streamErr: any) {
-      if (!ac.signal.aborted) send('error', { error: streamErr?.message || 'agent failed' });
+    } catch (streamErr) {
+      if (!ac.signal.aborted) send('error', { error: getErrorMessage(streamErr) || 'agent failed' });
       res.end();
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('[surfy-agent] error:', error);
-    if (!res.headersSent) return res.status(500).json({ error: error?.message || 'Request failed' });
+    if (!res.headersSent) return res.status(500).json({ error: getErrorMessage(error) || 'Request failed' });
     return res.end();
   }
 }

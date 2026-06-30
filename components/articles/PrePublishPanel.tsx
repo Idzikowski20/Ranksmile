@@ -201,9 +201,10 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
       setPlag(data);
       setShowPlagPanel(true);
       toast.success(`Scan complete — ${data.uniqueness}% unique`);
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return; // user cancelled — no toast
-      toast.error(e?.message || 'Scan failed');
+    } catch (e) {
+      const err = e as { name?: string; message?: string };
+      if (err?.name === 'AbortError') return; // user cancelled — no toast
+      toast.error(err?.message || 'Scan failed');
     } finally { scanAbortRef.current = null; setScanning(false); }
   };
   const cancelScan = () => { scanAbortRef.current?.abort(); setScanning(false); };

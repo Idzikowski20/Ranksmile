@@ -13,6 +13,8 @@ import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { enrichTerms, getAiSearchInfo } from '../../../lib/seo/keywordData';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne, queryRows } from '../../../lib/db/query';
 
 const COUNTRY_FOR_LANG: Record<string, string> = { pl: 'PL', en: 'US', de: 'DE', fr: 'FR', es: 'ES', it: 'IT', nl: 'NL', pt: 'PT' };
 import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
@@ -156,8 +158,8 @@ async function scrapeCompetitor(url: string): Promise<CompetitorSummary | null> 
           console.log(`[auto-optimize] puppeteer improved: ${result.wordCount} -> ${reParsed.wordCount} words`);
           return reParsed;
         }
-      } catch (err: any) {
-        console.warn('[auto-optimize] puppeteer fallback failed:', err.message);
+      } catch (err) {
+        console.warn('[auto-optimize] puppeteer fallback failed:', getErrorMessage(err));
       }
     }
 
@@ -173,11 +175,11 @@ async function getCompetitorData(keyword: string, articleId?: number): Promise<{
   if (articleId) {
     try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const row = await queryOne<{ competitor_outlines_cache: string | null }>(
         `SELECT competitor_outlines_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-        { replacements: [articleId] },
+        [articleId],
       );
-      const cached = (rows as any[])[0]?.competitor_outlines_cache;
+      const cached = row?.competitor_outlines_cache;
       if (cached) {
         const parsed = JSON.parse(cached);
         const competitors = (parsed.competitors || []).slice(0, 5);
@@ -488,8 +490,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             `\n\nIMPORTANT: Your optimization MUST demonstrably improve these signals to reach the 90-100 target range.`;
         }
       }
-    } catch (err: any) {
-      console.log('[auto-optimize] pre-score failed (non-fatal):', err.message);
+    } catch (err) {
+      console.log('[auto-optimize] pre-score failed (non-fatal):', getErrorMessage(err));
     }
 
     // ── Step 2: Fetch competitor URLs ──────────────────────────────
@@ -534,9 +536,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (articleId && competitors.length) {
             try {
               const aidSql = await getArticleIdSql();
-              const [crows] = await db.query(`SELECT competitor_outlines_cache FROM articles WHERE ${aidSql} = ? LIMIT 1`, { replacements: [articleId] });
+              const crow = await queryOne<{ competitor_outlines_cache: string | null }>(`SELECT competitor_outlines_cache FROM articles WHERE ${aidSql} = ? LIMIT 1`, [articleId]);
               let obj: any = {};
-              try { obj = JSON.parse((crows as any[])[0]?.competitor_outlines_cache || '{}'); } catch { obj = {}; }
+              try { obj = JSON.parse(crow?.competitor_outlines_cache || '{}'); } catch { obj = {}; }
               obj._scraped = competitors;
               await db.query(`UPDATE articles SET competitor_outlines_cache = ? WHERE ${aidSql} = ?`, { replacements: [JSON.stringify(obj), articleId] }).catch(() => {});
             } catch { /* cache write is best-effort */ }
@@ -643,7 +645,7 @@ OUTPUT FORMAT: Return ONLY the complete optimized HTML article. No explanation, 
               const serperData = await serperRes.json();
               paaQuestions = (serperData.peopleAlsoAsk || []).slice(0, 5).map((item: any) => item.question as string).filter(Boolean);
             }
-          } catch (faqErr: any) { console.log('[auto-optimize] Serper PAA error (non-fatal):', faqErr?.message); }
+          } catch (faqErr) { console.log('[auto-optimize] Serper PAA error (non-fatal):', getErrorMessage(faqErr)); }
         }
         if (!paaQuestions.length) return { html: '', questions: [] };
         const faqSystemPrompt = `You are an SEO content writer adding ONE FAQ section to a web article.
@@ -686,7 +688,7 @@ Return ONLY the HTML block. No explanation, no markdown fences.${brandVoiceBlock
           } else {
             console.log('[auto-optimize] FAQ DeepSeek failed HTTP', faqRes.status);
           }
-        } catch (faqErr: any) { console.log('[auto-optimize] FAQ phase error (non-fatal):', faqErr?.message); }
+        } catch (faqErr) { console.log('[auto-optimize] FAQ phase error (non-fatal):', getErrorMessage(faqErr)); }
         return { html: '', questions: [] };
       })()
       : Promise.resolve({ html: '', questions: [] });
@@ -886,8 +888,8 @@ Return the complete HTML with targeted fixes applied.`;
             }
           }
         }
-      } catch (err: any) {
-        console.log('[auto-optimize] post-score failed (non-fatal):', err.message);
+      } catch (err) {
+        console.log('[auto-optimize] post-score failed (non-fatal):', getErrorMessage(err));
         break;
       }
       attempts++;
@@ -897,23 +899,25 @@ Return the complete HTML with targeted fixes applied.`;
     if (articleId) {
       try {
         const articleIdSql = await getArticleIdSql();
-        const [drow] = await db.query(`SELECT domain_id, publish_url, meta_url FROM articles WHERE ${articleIdSql} = ? LIMIT 1`, { replacements: [articleId] });
-        const self = (drow as any[])[0] || {};
+        const self = (await queryOne<{ domain_id: number | null; publish_url: string | null; meta_url: string | null }>(
+          `SELECT domain_id, publish_url, meta_url FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+          [articleId],
+        )) || {} as { domain_id?: number | null; publish_url?: string | null; meta_url?: string | null };
         const domainId = self.domain_id;
         if (domainId) {
           // Sibling articles that have a public URL…
-          const [artRows] = await db.query(
+          const artRows = await queryRows<{ title: string | null; publish_url: string | null; meta_url: string | null }>(
             `SELECT title, publish_url, meta_url FROM articles
              WHERE domain_id = ? AND ${articleIdSql} <> ? AND title IS NOT NULL
              ORDER BY updated_at DESC LIMIT 40`,
-            { replacements: [domainId, articleId] },
+            [domainId, articleId],
           );
           // …plus every page the scan audited (whole-site coverage, with real titles).
-          const [auditRows] = await db.query(
+          const auditRows = await queryRows<{ url: string | null; title: string | null }>(
             `SELECT url, title FROM page_audits
              WHERE domain_id = ? AND fetch_status = 'OK' AND title IS NOT NULL AND url IS NOT NULL
              ORDER BY last_audited_at DESC LIMIT 100`,
-            { replacements: [domainId] },
+            [domainId],
           );
 
           const seen = new Set<string>();
@@ -928,8 +932,8 @@ Return the complete HTML with targeted fixes applied.`;
             seen.add(key);
             candidates.push({ title: t, url: u });
           };
-          for (const a of artRows as any[]) pushCand(a.title, a.publish_url || a.meta_url);
-          for (const a of auditRows as any[]) pushCand(a.title, a.url);
+          for (const a of artRows) pushCand(a.title, a.publish_url || a.meta_url);
+          for (const a of auditRows) pushCand(a.title, a.url);
           if (candidates.length) {
             sse(res, 'progress', { message: 'Adding internal links…' });
             const { links, tokens: linkTokens } = await suggestInternalLinks(optimized, keyword || '', candidates, apiKey);
@@ -942,8 +946,8 @@ Return the complete HTML with targeted fixes applied.`;
             }
           }
         }
-      } catch (err: any) {
-        console.log('[auto-optimize] internal linking failed (non-fatal):', err?.message);
+      } catch (err) {
+        console.log('[auto-optimize] internal linking failed (non-fatal):', getErrorMessage(err));
       }
     }
 
@@ -1012,8 +1016,8 @@ Return ONLY a JSON object:
             console.log('[auto-optimize] meta suggestions:', suggestedMetaTitle.slice(0, 60), '|', suggestedMetaDescription.slice(0, 60));
           }
         }
-      } catch (err: any) {
-        console.log('[auto-optimize] meta generation failed (non-fatal):', err.message);
+      } catch (err) {
+        console.log('[auto-optimize] meta generation failed (non-fatal):', getErrorMessage(err));
       }
     }
 
@@ -1063,8 +1067,8 @@ Return ONLY a JSON object:
           { replacements: [optimizedWithImages, postScore, JSON.stringify(postSignals), articleId] }
         );
         console.log('[auto-optimize] saved content + ranking_score to article:', postScore);
-      } catch (err: any) {
-        console.log('[auto-optimize] failed to save to article:', err.message);
+      } catch (err) {
+        console.log('[auto-optimize] failed to save to article:', getErrorMessage(err));
       }
       // Best-effort before/after log (debugging "did optimize help?"). Never blocks.
       await logRun({ articleId: Number(articleId), kind: 'auto-optimize', before: content, after: optimizedWithImages, afterScore: postScore, meta: { keyword: keyword || '' } });
@@ -1078,8 +1082,8 @@ Return ONLY a JSON object:
           `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify({ ...scoreData, paa_questions: resolvedPaaQuestions }), articleId] },
         );
-      } catch (err: any) {
-        console.log('[auto-optimize] failed to persist resolved PAA questions:', err.message);
+      } catch (err) {
+        console.log('[auto-optimize] failed to persist resolved PAA questions:', getErrorMessage(err));
       }
     }
 
@@ -1091,11 +1095,10 @@ Return ONLY a JSON object:
     if (articleId && keyword) {
       try {
         const articleIdSql = await getArticleIdSql();
-        const [rows] = await db.query(
+        const meta = (await queryOne<{ language: string | null; domain: string | null }>(
           `SELECT a.language, d.domain FROM articles a LEFT JOIN domain d ON d."ID" = a.domain_id WHERE a.${articleIdSql} = ? LIMIT 1`,
-          { replacements: [articleId] },
-        );
-        const meta = (rows as any[])[0] || {};
+          [articleId],
+        )) || {} as { language?: string | null; domain?: string | null };
         const lang = meta.language || 'pl';
         const country = COUNTRY_FOR_LANG[lang] || 'US';
         const optimizedText = optimizedWithImages.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -1128,8 +1131,8 @@ Return ONLY a JSON object:
           await persistAiVisibilityRun(articleId, keyword, aiSummary);
           refreshedAiSummary = aiSummary;
         }
-      } catch (err: any) {
-        console.log('[auto-optimize] DataForSEO refresh failed (non-fatal):', err?.message);
+      } catch (err) {
+        console.log('[auto-optimize] DataForSEO refresh failed (non-fatal):', getErrorMessage(err));
       }
     }
 
@@ -1139,8 +1142,8 @@ Return ONLY a JSON object:
     if (articleId) {
       try {
         const aidSql = await getArticleIdSql();
-        const [orows] = await db.query(`SELECT competitor_outlines_cache FROM articles WHERE ${aidSql} = ? LIMIT 1`, { replacements: [articleId] });
-        const parsed = JSON.parse((orows as any[])[0]?.competitor_outlines_cache || '{}');
+        const orow = await queryOne<{ competitor_outlines_cache: string | null }>(`SELECT competitor_outlines_cache FROM articles WHERE ${aidSql} = ? LIMIT 1`, [articleId]);
+        const parsed = JSON.parse(orow?.competitor_outlines_cache || '{}');
         if (Array.isArray(parsed.competitors) && parsed.competitors.length) competitorOutlines = parsed.competitors;
       } catch { /* ignore */ }
     }
@@ -1169,9 +1172,10 @@ Return ONLY a JSON object:
       } : {}),
     });
     console.log('[auto-optimize] done event sent');
-  } catch (error: any) {
-    console.error('[auto-optimize] caught error:', error?.message, error?.stack?.slice(0, 300));
-    sse(res, 'error', { message: error?.message || 'Request failed' });
+  } catch (error) {
+    const e = error as { message?: string; stack?: string };
+    console.error('[auto-optimize] caught error:', e?.message, e?.stack?.slice(0, 300));
+    sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
   }
 
   res.end();

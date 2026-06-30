@@ -5,6 +5,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../../lib/gscAccounts';
+import { getErrorMessage } from '../../../lib/errors';
 
 type GscPage = {
    url: string;
@@ -77,9 +78,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
          pages.sort((a, b) => b.clicks - a.clicks);
 
          return res.status(200).json({ pages });
-      } catch (err: any) {
+      } catch (err) {
          // Try next account
-         console.log(`[GSC pages] Account ${account.email} failed: ${err?.message}`);
+         console.log(`[GSC pages] Account ${account.email} failed: ${getErrorMessage(err)}`);
       }
    }
 

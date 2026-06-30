@@ -8,6 +8,8 @@ import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne, ArticleRow } from '../../../lib/db/query';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -25,17 +27,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (articleId) {
     try {
       const articleIdSql = await getArticleIdSql();
-      const [rows] = await db.query(
+      const row = await queryOne<Pick<ArticleRow, 'competitor_outlines_cache'>>(
         `SELECT competitor_outlines_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-        { replacements: [articleId] },
+        [articleId],
       );
-      const cached = (rows as any[])[0]?.competitor_outlines_cache;
+      const cached = row?.competitor_outlines_cache;
       if (cached) {
         console.log(`[competitor-outlines] serving cache for article ${articleId}`);
         return res.status(200).json(JSON.parse(cached));
       }
-    } catch (e: any) {
-      console.warn('[competitor-outlines] cache read failed:', e.message);
+    } catch (e) {
+      console.warn('[competitor-outlines] cache read failed:', getErrorMessage(e));
     }
   }
 
@@ -58,13 +60,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           { replacements: [JSON.stringify(result), articleId] },
         );
         console.log(`[competitor-outlines] cached ${result.competitors.length} competitors for article ${articleId}`);
-      } catch (e: any) {
-        console.warn('[competitor-outlines] cache write failed:', e.message);
+      } catch (e) {
+        console.warn('[competitor-outlines] cache write failed:', getErrorMessage(e));
       }
     }
 
     return res.status(200).json(result);
-  } catch (error: any) {
+  } catch (rawError) {
+    const error = rawError as {
+      message?: string;
+      code?: string;
+      response?: { status?: number; data?: { detail?: string } };
+      config?: { url?: string };
+    };
     console.error('[competitor-outlines] raw error:', {
       message: error?.message,
       code: error?.code,

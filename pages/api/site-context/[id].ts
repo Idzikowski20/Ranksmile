@@ -6,6 +6,8 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getUserDomainIds } from '../articles/index';
+import { queryOne } from '../../../lib/db/query';
+import { getErrorMessage } from '../../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -21,8 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const userId = await getCurrentUserId(req, res);
-      const [rows] = await db.query('SELECT domain_id FROM site_context WHERE id = ? LIMIT 1', { replacements: [id] });
-      const row = (rows as Array<{ domain_id: number }>)[0];
+      const row = await queryOne<{ domain_id: number }>('SELECT domain_id FROM site_context WHERE id = ? LIMIT 1', [id]);
       if (!row) return res.status(404).json({ error: 'Page not found' });
 
       const allowedIds = await getUserDomainIds(userId);
@@ -30,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       await db.query('DELETE FROM site_context WHERE id = ?', { replacements: [id] });
       return res.status(200).json({ deleted: true });
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'DB error' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

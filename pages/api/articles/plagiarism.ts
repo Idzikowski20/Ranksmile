@@ -4,6 +4,8 @@ import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
+import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -20,15 +22,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const [articleRows] = await db.query(
+      const article = await queryOne<{ content: string | null; language: string | null; domain: string | null }>(
          `SELECT a.content, a.language, d.domain
           FROM articles a
           LEFT JOIN domain d ON d."ID" = a.domain_id
           WHERE a.${articleIdSql} = ?
           LIMIT 1`,
-         { replacements: [articleId] },
+         [articleId],
       );
-      const article = (articleRows as any[])[0];
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
       const text = (article.content || '').toString();
@@ -47,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          );
       } catch { /* non-fatal */ }
       return res.status(200).json(data);
-   } catch (error: any) {
-      return res.status(500).json({ error: error?.message || 'Plagiarism scan failed' });
+   } catch (error) {
+      return res.status(500).json({ error: getErrorMessage(error) || 'Plagiarism scan failed' });
    }
 }
