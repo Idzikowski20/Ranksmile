@@ -54,28 +54,32 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   const handleAccept = () => splice(newHtml);
   const handleReject = () => splice(oldHtml);
 
+  // Rounded bordered box around the changed section (Surfer reference); purple border while active.
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    borderLeft: `3px solid ${isActive ? '#783AFB' : '#E4E4E7'}`,
-    padding: '8px 12px 8px 16px',
-    margin: '4px 0',
+    border: `1px solid ${isActive ? 'var(--purple-40)' : 'var(--gray-20)'}`,
+    borderRadius: 12,
+    padding: '12px 20px',
+    margin: '8px 0',
+    background: '#fff',
     fontFamily: 'var(--font-family-primary)',
   };
 
-  // Floating toolbar pinned to the LEFT of the wrapper (absolute, column layout)
+  // Floating accept/reject toolbar — vertically centred just left of the box (Surfer reference).
   const toolbarStyle: React.CSSProperties = {
     position: 'absolute',
-    top: 8,
-    left: -14,
+    top: '50%',
+    left: -44,
+    transform: 'translateY(-50%)',
     display: 'flex',
     flexDirection: 'column',
-    gap: 6,
-    zIndex: 10,
+    gap: 8,
+    zIndex: 2,
   };
 
   const btnBase: React.CSSProperties = {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     borderRadius: '50%',
     border: 'none',
     cursor: 'pointer',
@@ -84,19 +88,11 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
     justifyContent: 'center',
     flexShrink: 0,
     padding: 0,
+    transition: 'background-color 0.15s ease',
   };
 
-  const acceptBtnStyle: React.CSSProperties = {
-    ...btnBase,
-    background: '#18181B',
-    color: '#fff',
-  };
-
-  const rejectBtnStyle: React.CSSProperties = {
-    ...btnBase,
-    background: '#F4F4F5',
-    color: '#18181B',
-  };
+  const acceptBtnStyle: React.CSSProperties = { ...btnBase, background: 'var(--gray-base)', color: 'var(--white-base)' };
+  const rejectBtnStyle: React.CSSProperties = { ...btnBase, background: 'var(--gray-10)', color: 'var(--gray-base)' };
 
   // Decide rendering mode:
   // - Simple (no block-complex markup): render ONE inline word-level diff line
@@ -145,9 +141,11 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
           title="Accept"
           style={acceptBtnStyle}
           onClick={handleAccept}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--purple-base)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--gray-base)'; }}
         >
           {/* ✓ checkmark: m4.5 12.75 6 6 9-13.5 */}
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="m4.5 12.75 6 6 9-13.5" />
           </svg>
         </button>
@@ -157,9 +155,11 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
           title="Reject"
           style={rejectBtnStyle}
           onClick={handleReject}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gray-20)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--gray-10)'; }}
         >
           {/* ✗ X: M6 18 18 6M6 6l12 12 */}
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 18 18 6M6 6l12 12" />
           </svg>
         </button>
