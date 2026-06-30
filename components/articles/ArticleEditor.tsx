@@ -14,6 +14,7 @@ import type { ScoreData } from '../../lib/contentScore';
 import { getErrorMessage } from '../../lib/errors';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
+import ContentOptimizer from './contentOptimizerNode';
 import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
 import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
 import { TableKit } from '@tiptap/extension-table';
@@ -1420,6 +1421,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         // Underline is bundled in StarterKit v3, so it is NOT registered separately.
         StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: false }),
         SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
+        // contentOptimizer nodes are ephemeral review markers — never persisted to the saved article.
+        // The orchestration layer (auto-optimize flow) suspends autosave while these nodes exist.
+        ContentOptimizer,
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
         Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
         Highlight.configure({ multicolor: true }),
