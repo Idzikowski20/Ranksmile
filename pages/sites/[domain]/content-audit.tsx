@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { Gauge, Button, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel } from '../../../components/ui';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
@@ -122,6 +123,8 @@ const ContentAuditPage: NextPage = () => {
    const [panelRow, setPanelRow] = useState<AuditRow | null>(null);
    const [kwModalRow, setKwModalRow] = useState<AuditRow | null>(null);
    const [retryingIds, setRetryingIds] = useState<Set<string | number>>(new Set());
+   // Stagger-reveal the article rows (`.audit-row`) as they scroll into view.
+   const rowsRef = useStaggerReveal<HTMLDivElement>('.audit-row');
    const queryClient = useQueryClient();
 
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('content_score');
@@ -380,7 +383,7 @@ const ContentAuditPage: NextPage = () => {
             </div>
 
             {/* Table */}
-            <div style={{ border: '1px solid #F4F4F5', borderRadius: 10, overflow: 'hidden' }}>
+            <div ref={rowsRef} style={{ border: '1px solid #F4F4F5', borderRadius: 10, overflow: 'hidden' }}>
                {/* Header */}
                <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
                   {/* Checkbox */}
