@@ -328,10 +328,12 @@ export function collectScoreSlots(
       `Add headings toward ~${scoreData.headings_target || headingsTarget} (use H3 inside H2 sections)`);
 
    // ── NLP terms — prefer activated `article_terms` entity coverage items when present,
-   // else fall back to the legacy scoreData.terms path (dual-read, zero regression). ──
+   // else fall back to the legacy scoreData.terms path (dual-read, zero regression).
+   // The entity branch scores LIVE against the current plainText (not the frozen
+   // snapshot `covered` flag) so the gauge keeps tracking edits after deep analysis. ──
    const entityItems = (coverageItems ?? []).filter((i) => i.type === 'entity');
    if (entityItems.length > 0) {
-      const covered = entityItems.filter((i) => i.covered).length;
+      const covered = entityItems.filter((i) => countOccurrences(plainText, i.label) >= 1).length;
       const earned = Math.round((covered / entityItems.length) * 25);
       push('terms', 'NLP terms', earned, 25, `${covered}/${entityItems.length} terms covered`);
    } else if (scoreData.terms?.length) {
