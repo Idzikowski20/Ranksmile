@@ -26,6 +26,7 @@ describe('collectScoreSlots — coverageItems dual-read (terms slot)', () => {
          headings_max: 5,
       };
 
+      // Both labels appear in plainText, so both are LIVE-covered regardless of the stale `covered` flag.
       const entityItems: CoverageItem[] = [entity('hooks', true), entity('state', false)];
       const withItems = collectScoreSlots(plainText, 200, 3, scoreData, 3, html, 'X', undefined, entityItems);
       const withoutItems = collectScoreSlots(plainText, 200, 3, scoreData, 3, html, 'X', undefined, undefined);
@@ -34,11 +35,39 @@ describe('collectScoreSlots — coverageItems dual-read (terms slot)', () => {
       const withEarned = slot(withItems)?.earned ?? 0;
       const withoutEarned = slot(withoutItems)?.earned ?? 0;
 
-      // 1/2 entity items covered → 13 (round(0.5*25)); legacy path scores 0 (current_count 0 < target_count 5).
-      expect(withEarned).toBe(13);
+      // 2/2 entity items live-covered (both labels appear in plainText) → 25; legacy path scores 0 (current_count 0 < target_count 5).
+      expect(withEarned).toBe(25);
       expect(withEarned).toBeGreaterThan(withoutEarned);
       expect(slot(withItems)?.max).toBe(25);
-      expect(slot(withItems)?.hint).toBe('1/2 terms covered');
+      expect(slot(withItems)?.hint).toBe('2/2 terms covered');
+   });
+
+   it('scores the terms slot from the CURRENT text, not a stale snapshot `covered` flag (regression pin)', () => {
+      const html = '<h1>X</h1><p>hooks are great</p>';
+      const plainText = 'hooks are great';
+      const scoreData: ScoreData = {
+         terms: [],
+         words_target: 200,
+         words_min: 100,
+         words_max: 400,
+         headings_target: 3,
+         headings_min: 1,
+         headings_max: 5,
+      };
+
+      // Stale snapshot: "hooks" marked covered:true but has since been deleted from the text;
+      // "state" marked covered:false but has since been typed into the text. A frozen-flag
+      // read would score this as 1/2 (hooks); a live read must score it as 1/2 (state) instead —
+      // same ratio, but driven by the opposite (current) term, proving the flag is not being read.
+      const entityItems: CoverageItem[] = [entity('hooks', true), entity('state', false)];
+      const plainTextWithState = 'state is managed carefully';
+      const slots = collectScoreSlots(plainTextWithState, 200, 3, scoreData, 3, html, 'X', undefined, entityItems);
+      const slot = slots.find((x) => x.key === 'terms');
+
+      // "hooks" no longer appears (stale covered:true must NOT count); "state" now appears
+      // (stale covered:false must NOT block it) → live coverage = 1/2 → round(0.5*25) = 13.
+      expect(slot?.earned).toBe(13);
+      expect(slot?.hint).toBe('1/2 terms covered');
    });
 
    it('falls back to legacy scoreData.terms when no coverageItems (zero regression)', () => {
