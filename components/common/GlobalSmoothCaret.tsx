@@ -21,7 +21,10 @@
 import { motion, useMotionValue, useSpring, useReducedMotion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 
-const ELIGIBLE_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', '']);
+// ONLY input types that support the text-selection API (selectionStart/End). email, url,
+// number, date, … return `null` for selectionStart, so the caret position can't be tracked
+// there — they keep the native caret. (This is why the caret worked on password but not email.)
+const ELIGIBLE_TYPES = new Set(['text', 'search', 'tel', 'password', '']);
 const CARET_COLOR = '#783AFB'; // brand purple (design.md "primary accent")
 const CARET_WIDTH = 2;
 const CARET_Z = 2147483000; // above app modals/dropdowns; pointer-events:none so it never blocks
@@ -30,7 +33,7 @@ const PASSWORD_CHAR = typeof navigator !== 'undefined' && /firefox|fxios/i.test(
   ? '●'
   : '•';
 
-function isEligibleInput(el: Element | EventTarget | null): el is HTMLInputElement {
+export function isEligibleInput(el: Element | EventTarget | null): el is HTMLInputElement {
   if (!(el instanceof HTMLInputElement)) return false;
   if (el.disabled) return false;
   const type = (el.getAttribute('type') || 'text').toLowerCase();
@@ -114,6 +117,9 @@ const GlobalSmoothCaret = () => {
       const styles = window.getComputedStyle(input);
       const rect = input.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return false; // hidden / detached
+      // Defense-in-depth: any input that doesn't expose the selection API (email/url/number/…
+      // return null even if a type slips past ELIGIBLE_TYPES) keeps its native caret.
+      if (input.selectionStart === null) return false;
 
       const padL = parseFloat(styles.paddingLeft) || 0;
       const padR = parseFloat(styles.paddingRight) || 0;
@@ -152,9 +158,14 @@ const GlobalSmoothCaret = () => {
       const input = activeRef.current;
       if (!input || document.activeElement !== input) return;
       try {
-        if (applyPosition(input, jump)) hideNativeCaret(input); // hide native only once positioned
+        if (applyPosition(input, jump)) {
+          hideNativeCaret(input); // hide native only once positioned
+        } else {
+          // Not positionable (hidden, or no selection API) → keep the native caret, hide overlay.
+          restoreNativeCaret();
+          caretOpacity.set(0);
+        }
       } catch {
-        // Any measurement failure → keep the native caret, hide our overlay.
         restoreNativeCaret();
         caretOpacity.set(0);
       }
