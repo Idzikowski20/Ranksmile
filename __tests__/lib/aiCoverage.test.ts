@@ -128,6 +128,26 @@ describe('checkCoverage', () => {
     await checkCoverage('same', paaItems, judge(run));
     expect(run).toHaveBeenCalledTimes(1);
   });
+  it('cache hits are independent copies — mutating a returned result does not poison later calls', async () => {
+    const run = jest.fn(async () => ({
+      items: [{ id: 'paa-x', covered: true, quality: 3, confidence: 0.5 }],
+      answersMainQuestionEarly: false,
+    }));
+    const j = judge(run);
+    const first = await checkCoverage('poison-me', paaItems, j);
+    first.items.push({ id: 'ghost', covered: true, quality: 5, confidence: 1 });
+    (first as { answersMainQuestionEarly: boolean }).answersMainQuestionEarly = true;
+
+    const second = await checkCoverage('poison-me', paaItems, j);
+    expect(run).toHaveBeenCalledTimes(1); // still a cache hit
+    expect(second.answersMainQuestionEarly).toBe(false);
+    expect(second.items).toEqual([{ id: 'paa-x', covered: true, quality: 3, confidence: 0.5 }]);
+  });
+  it('non-array verdict.items degrades to [] instead of throwing', async () => {
+    const j = judge(async () => ({ items: 'oops' as any, answersMainQuestionEarly: false }));
+    const result = await checkCoverage('malformed', paaItems, j);
+    expect(result).toEqual({ items: [], answersMainQuestionEarly: false });
+  });
 });
 
 describe('intentItems', () => {

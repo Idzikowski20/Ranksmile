@@ -79,6 +79,7 @@ export const deepseekIntroJudge: IntroductionJudge = {
         response_format: { type: 'json_object' },
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
       }),
+      signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) throw new Error(`deepseek intro judge failed: ${res.status}`);
     const data = await res.json().catch(() => ({}));

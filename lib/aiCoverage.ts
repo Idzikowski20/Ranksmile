@@ -177,6 +177,11 @@ export function hashId(s: string): string {
 
 const coverageCache = new Map<string, CoverageResult>();
 
+/** Independent copy so caller mutation of a returned result can't leak into the cache (or a prior caller's copy). */
+function cloneResult(r: CoverageResult): CoverageResult {
+  return { items: r.items.map((v) => ({ ...v })), answersMainQuestionEarly: r.answersMainQuestionEarly };
+}
+
 /** Run the injected judge; drop unknown/duplicate verdict ids; cache by version+ids+content hash. */
 export async function checkCoverage(
   plainText: string,
@@ -186,18 +191,19 @@ export async function checkCoverage(
   if (!items.length) return { items: [], answersMainQuestionEarly: false };
   const key = `${judge.version}|${items.map((i) => i.id).join(' ')}::${hashId(plainText)}`; //   delimiter can't appear in an id → no cross-set cache collision
   const cached = coverageCache.get(key);
-  if (cached) return cached;
+  if (cached) return cloneResult(cached);
   const verdict = await judge.run(plainText, items.map((i) => ({ id: i.id, label: i.label, type: i.type })));
   const known = new Set(items.map((i) => i.id));
   const seen = new Set<string>();
-  const verdicts = (verdict.items || []).filter((vd) => {
+  const rawItems = Array.isArray(verdict.items) ? verdict.items : [];
+  const verdicts = rawItems.filter((vd) => {
     if (!known.has(vd.id) || seen.has(vd.id)) return false;
     seen.add(vd.id);
     return true;
   });
   const out: CoverageResult = { items: verdicts, answersMainQuestionEarly: !!verdict.answersMainQuestionEarly };
   if (coverageCache.size >= 500) coverageCache.delete(coverageCache.keys().next().value);
-  coverageCache.set(key, out);
+  coverageCache.set(key, cloneResult(out));
   return out;
 }
 
@@ -238,12 +244,13 @@ export const deepseekJudge: CoverageJudge = {
           { role: 'user', content: user },
         ],
       }),
+      signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) throw new Error(`deepseek coverage judge failed: ${res.status}`);
     const data = await res.json().catch(() => ({}));
     const parsed = safeJsonParse<{ items?: CoverageVerdict[]; answersMainQuestionEarly?: boolean }>(
       data?.choices?.[0]?.message?.content ?? '', {},
     );
-    return { items: parsed.items ?? [], answersMainQuestionEarly: !!parsed.answersMainQuestionEarly };
+    return { items: Array.isArray(parsed.items) ? parsed.items : [], answersMainQuestionEarly: !!parsed.answersMainQuestionEarly };
   },
 };
