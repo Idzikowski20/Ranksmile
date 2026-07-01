@@ -19,8 +19,6 @@ const customJestConfig = {
     // `ai` SDK is pure ESM with a heavy provider tree Jest can't load; stub its
     // identity-passthrough `tool()` (see __mocks__/ai.ts).
     '^ai$': '<rootDir>/__mocks__/ai.ts',
-    // sequelize's uuid dependency is pure ESM; stub the esm-browser entry
-    '^uuid/dist/esm-browser/index\\.js$': '<rootDir>/__mocks__/uuid.js',
   },
 };
 
