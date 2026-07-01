@@ -1,8 +1,9 @@
-import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt } from '../../lib/optimizationPlanner';
+import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing } from '../../lib/optimizationPlanner';
 import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
 import type { Section } from '../../lib/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
 import type { ArticleContext } from '../../lib/articleContext';
+import type { RoutedGuideline } from '../../lib/optimizeGuidelineRouting';
 
 const sec = (html: string): Section => ({ id: 's', index: 0, headingText: '', html });
 
@@ -30,6 +31,32 @@ describe('diminishingLift', () => {
     expect(diminishingLift([10, 10, 10, 10, 10, 10])).toBe(Math.round(10 + 7 + 5 + 3 + 2 + 1)); // 28
   });
   it('empty -> 0', () => expect(diminishingLift([])).toBe(0));
+});
+
+const rgFor = (over: Partial<Guideline>): RoutedGuideline => ({
+  guideline: {
+    id: 'g', coverageItemId: 'c', group: 'knowledge', title: 'T', instruction: 'I',
+    importance: 'recommended', status: 'open', projectedLift: 10, effort: 'Easy', easyWin: false, ...over,
+  },
+  confidence: 0.8, reason: 'r', priority: 1,
+});
+
+describe('worthEditing', () => {
+  it('skips below LESS_MIN (expectedLift 5)', () => {
+    expect(worthEditing({ expectedLift: 5, rgs: [rgFor({})], secTerms: [], aiTakeover: false })).toBe(false);
+  });
+  it('keeps at/above LESS_MIN (expectedLift 6)', () => {
+    expect(worthEditing({ expectedLift: 6, rgs: [rgFor({})], secTerms: [], aiTakeover: false })).toBe(true);
+  });
+  it('term-only section (expectedLift 0, secTerms present) is worth a LESS edit (OD-2 [RATIFIED])', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: false })).toBe(true);
+  });
+  it('term-only section under AI-takeover is dropped (takeover suppresses the term path)', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: true })).toBe(false);
+  });
+  it('critical miss overrides the threshold (never skipped even at expectedLift 0)', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [rgFor({ importance: 'critical' })], secTerms: [], aiTakeover: false })).toBe(true);
+  });
 });
 
 const gl = (over: Partial<Guideline>): Guideline => ({

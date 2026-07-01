@@ -84,6 +84,28 @@ function sectionMissingTerms(secText: string, ctx: ArticleContext): string[] {
     .map((t) => t.term);
 }
 
+export function hasCriticalMiss(rgs: RoutedGuideline[]): boolean {
+  return rgs.some((r) => r.guideline.importance === 'critical');
+}
+
+interface WorthInput {
+  expectedLift: number;
+  rgs: RoutedGuideline[];
+  secTerms: string[];
+  aiTakeover: boolean;
+}
+
+/** The "good enough" gate (RCA §1/§5). Skip a section whose predicted benefit is below LESS_MIN,
+ *  unless it carries a critical coverage miss. Term-only sections (expectedLift 0) are worth a LESS
+ *  edit when NOT in AI-takeover (OD-2 [RATIFIED]); AI-takeover suppresses the term path. */
+export function worthEditing({ expectedLift, rgs, secTerms, aiTakeover }: WorthInput): boolean {
+  if (hasCriticalMiss(rgs)) return true;
+  if (expectedLift >= LESS_MIN) return true;
+  // Term-only deficit: >=1 under-target term is worth a minimal LESS weave, unless AI-takeover drops it.
+  if (!aiTakeover && secTerms.length >= TERM_WORTH_FLOOR) return true;
+  return false;
+}
+
 function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
   const top = rgs[0]?.guideline;
   if (top?.group === 'intent') return 'ai-coverage';
