@@ -1,7 +1,7 @@
 # Coverage Foundation (Sub-project A) — Design
 
 **Date:** 2026-06-30
-**Status:** Approved (v3 — 2nd tech-lead review: `reason` on the judge call, `authority` bucket, Recommendation Engine layer inserted before the Planner, Outline re-pointed at the Plan. See "Review response (v3)" at the end)
+**Status:** Approved (v3 — 2nd tech-lead review: `reason` on the judge call, `authority` bucket, Recommendation Engine layer inserted before the Planner, Outline re-pointed at the Plan. v3.1 — 3rd review: `computeCoverageScores` decomposed into swappable pure helpers. See "Review response" at the end)
 **Supersedes:** `docs/superpowers/specs/2026-06-30-ai-search-coverage-model-design.md` (the AI-search-only seed)
 **Audit:** `docs/superpowers/specs/2026-06-30-coverage-engine-audit.md` — §10.7 plug-in points, §10.9 sub-project A
 **Direction:** `[[surfy-coverage-direction]]` memory entry
@@ -51,6 +51,7 @@ The audit (§10.6 weaknesses) shows that the cost of shipping these separately i
 - **Bucket scoring, not a single number.** `computeCoverageScores(snapshot)` returns `{ overall, buckets: BucketScore[] }` where each `BucketScore = { key, label, weight, earned, max, items: number, covered: number }`. Surfer shows "Intent 95% / Facts 60% / Entities 88%" because that drives action; a single score doesn't. The `overall` number is a weighted blend of buckets (default weights: intent×3, knowledge×2, quality×2, style×1) plus the +15 early-answer bonus when `answersMainQuestionEarly`. The blend lives in the model; the UI doesn't need to know the formula.
 - **Buckets are derived from `category`, not `type`.** Scoring iterates over the 4 categories and computes per-bucket coverage. Adding a new type (`fact`, `tone`) doesn't touch scoring code — it just slots into its category's bucket.
 - **`importance × quality / 5` weighting stays inside each bucket.** Each bucket's earned/max is the importance-weighted quality sum (same formula as v1 of the spec, just applied per-bucket instead of globally). Critical items dominate; covered-but-shallow items earn ⅕ of their weight.
+- **`computeCoverageScores` is composed of small pure helpers, not one procedure (3rd-review risk).** This is the single load-bearing function — it feeds the AI gauge, recommendation priority (C), the planner (D), `projectedLift`, and Auto-Optimize. To keep weights + algorithm swappable without rebuilding consumers, it decomposes into independently-exported, independently-testable pure functions: `computeBucketScore(category, items, verdicts) → BucketScore`, `blendBuckets(buckets) → number` (the weighted base, capped 85), `earlyAnswerBonus(result) → number` (the +15). `computeCoverageScores` only orchestrates them. Weights live as module constants (`BUCKET_WEIGHT`, `IMPORTANCE_WEIGHT`) — tuning is a one-constant edit, and each helper is unit-tested in isolation so a weighting change can't silently break the blend. **Deliberately NOT done in A (YAGNI):** runtime weight-injection (weights as a parameter / config object). That's an A/B-experimentation concern for D; module constants + swappable helpers are the right level for the foundation. If D later needs live weight experiments, the injection point is a single orchestrator signature change, not a rewrite — because the helpers already isolate the math.
 - **`(seo + ai) / 2` stays in `ScoreTrio.tsx:50`.** Only the `ai` argument source changes (from `computeAiSearchScore(aiVisibilitySummary)` to `snapshot.overall`).
 
 ### Judge decisions
@@ -240,8 +241,16 @@ const IMPORTANCE_WEIGHT: Record<Importance, number> = {
   critical: 3, recommended: 2, optional: 1,
 };
 
-/** Per-bucket score (importance × quality/5 over covered items in the bucket).
- *  Overall = bucket-weighted blend, capped to 85, + 15 for answersMainQuestionEarly. */
+/** Decomposed into small swappable pure helpers (3rd-review risk mitigation). */
+export function computeBucketScore(
+  category: CoverageCategory,
+  items: CoverageItem[],
+  verdicts: Map<string, CoverageVerdict>,
+): BucketScore;                                  // importance×quality/5 over covered items in ONE bucket
+export function blendBuckets(buckets: BucketScore[]): number;   // Σ(weight×earned)/Σ(weight×max) × 85
+export function earlyAnswerBonus(result: CoverageResult): number;  // +15 | 0
+
+/** Orchestrator only — composes the three helpers above. */
 export function computeCoverageScores(items: CoverageItem[], result: CoverageResult): {
   overall: number;
   buckets: BucketScore[];
@@ -596,3 +605,7 @@ The 2nd review's central thesis — insert a **Recommendation Engine** between C
 | 8 | `optimization` metadata (retryCount, …) | ⚠️ Defer to D | Optional JSONB → adding later is not a migration; A never populates it. YAGNI. (Contrast `reason`, which A populates for free.) |
 
 **Net effect on A (this sub-project):** two additive fields (`reason` on verdict + item) and one enum entry (`authority` category + its weight/label) — everything else is roadmap. A's stored `CoverageSnapshot` shape is now final through C/D/E.
+
+### Addendum — 3rd review (v3.1)
+
+The 3rd review approved the design and raised one actionable risk: `computeCoverageScores` is the single load-bearing function (feeds AI gauge + recommendation priority + planner + `projectedLift` + Auto-Optimize), so a monolithic implementation would make weight/algorithm changes costly. **Accepted:** it decomposes into independently-exported, independently-tested pure helpers — `computeBucketScore`, `blendBuckets`, `earlyAnswerBonus` — with weights as module constants; `computeCoverageScores` only orchestrates. **Held the YAGNI line:** no runtime weight-injection / config object in A (that's D's A/B concern); the helper split already makes injection a one-signature change later, not a rewrite. No shape change, no new task — refactor lands inside Task 1.
