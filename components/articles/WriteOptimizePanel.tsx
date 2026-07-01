@@ -137,6 +137,22 @@ const InfoDot = ({ tip }: { tip: string }) => (
 
 const copy = (text: string) => { try { navigator.clipboard?.writeText(text); } catch { /* ignore */ } };
 
+/** Legacy fallback (pre-Coverage-Engine): one row per LLM prompt from AI-visibility citations.
+ *  Used only when coverageItems has no 'paa'/'fact' rows (older articles / AI-visibility-only runs).
+ *  Shape mirrors the CoverageItem fields the render actually reads, so both sources render identically. */
+type LegacyInfoItem = { id: string; label: string; covered: boolean; missing?: readonly string[]; domains: string[] };
+const buildInfoToCover = (summary?: AiVisibilitySummary | null): LegacyInfoItem[] => {
+  if (!summary?.citations?.length) return [];
+  const byPrompt = new Map<string, LegacyInfoItem>();
+  for (const c of summary.citations) {
+    if (!c.prompt) continue;
+    const item = byPrompt.get(c.prompt) || { id: c.prompt, label: c.prompt, covered: (c.answer_readiness_score ?? 0) >= 60, domains: [] };
+    if (c.cited_domain && !item.domains.includes(c.cited_domain)) item.domains.push(c.cited_domain);
+    byPrompt.set(c.prompt, item);
+  }
+  return [...byPrompt.values()];
+};
+
 /* ── Term chip ─────────────────────────────────────────────────────── */
 const TermChip = ({ term, showCount, showRange }: { term: NlpTerm; showCount: boolean; showRange: boolean }) => {
   const cur = term.current_count ?? 0;
@@ -231,7 +247,7 @@ const ICON_COPY = 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2M10 8h
 type AiSort = 'missing' | 'alpha';
 
 const WriteOptimizePanel = ({
-  terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange,
+  terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange, aiSummary,
   seo, ai, hasAi, coverageItems, coverageBuckets, onAutoOptimize, isAutoOptimizing, readOnly, onBack, highlightTerms, onHighlightTermsChange,
   initialSection,
 }: Props) => {
@@ -276,7 +292,12 @@ const WriteOptimizePanel = ({
   useEffect(() => () => { onHighlightTermsChange?.(false); }, [onHighlightTermsChange]);
 
   const intentRows = useMemo(() => (coverageItems ?? []).filter((i) => i.category === 'intent'), [coverageItems]);
-  const knowledgeRows = useMemo(() => (coverageItems ?? []).filter((i) => i.type === 'paa' || i.type === 'fact'), [coverageItems]);
+  const coverageKnowledgeRows = useMemo(() => (coverageItems ?? []).filter((i) => i.type === 'paa' || i.type === 'fact'), [coverageItems]);
+  // Backward compat: older articles (or AI-visibility-only runs) have no coverage snapshot, so
+  // coverageKnowledgeRows is empty — fall back to the legacy AI-visibility citations list so
+  // "Information to cover" still populates for them.
+  const legacyKnowledgeRows = useMemo(() => buildInfoToCover(aiSummary), [aiSummary]);
+  const knowledgeRows = coverageKnowledgeRows.length > 0 ? coverageKnowledgeRows : legacyKnowledgeRows;
   const bucketBadges = useMemo(() => (coverageBuckets ?? []).filter((b) => b.items > 0), [coverageBuckets]);
   const headingTerms = useMemo(() => terms.filter((t) => t.target_count >= 6), [terms]);
   const tabList = tab === 'headings' ? headingTerms : terms;
