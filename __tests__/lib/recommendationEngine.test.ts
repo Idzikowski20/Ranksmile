@@ -1,5 +1,5 @@
-import { buildInstruction, effortOf } from '../../lib/recommendationEngine';
-import type { CoverageItem } from '../../lib/aiCoverage';
+import { buildInstruction, effortOf, buildGuidelines, groupGuidelines } from '../../lib/recommendationEngine';
+import type { CoverageItem, CoverageSnapshot } from '../../lib/aiCoverage';
 
 const it_ = (over: Partial<CoverageItem>): CoverageItem =>
   ({ id: 'x', label: 'What is X?', type: 'paa', category: 'knowledge',
@@ -38,4 +38,45 @@ describe('effortOf', () => {
   it('3-5 missing → Medium', () => expect(effortOf(it_({ missing: ['a','b','c'] }))).toBe('Medium'));
   it('<=2 missing → Easy', () => expect(effortOf(it_({ missing: ['a','b'] }))).toBe('Easy'));
   it('entity (0 missing) → Easy', () => expect(effortOf(it_({ type: 'entity' }))).toBe('Easy'));
+});
+
+const ci = (id: string, category: CoverageItem['category'], importance: CoverageItem['importance'],
+  covered: boolean, quality: number): CoverageItem =>
+  ({ id, label: id, type: category === 'intent' ? 'intent' : 'paa', category, importance, source: 'paa', covered, quality });
+const snapOf = (items: CoverageItem[]): CoverageSnapshot => ({
+  schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'deepseek-chat', createdAt: '2026-06-30T00:00:00Z',
+  items, buckets: [{ key: 'knowledge', label: 'Knowledge', weight: 2, items: 3, covered: 1, earned: 2, max: 6, score: 50 }] as never,
+  answersMainQuestionEarly: false, overall: 40,
+});
+
+describe('buildGuidelines', () => {
+  it('only NOT-fully-covered items (covered && quality>=4 excluded); stable ids; integer lift; effort/easyWin present', () => {
+    const strong = ci('strong', 'knowledge', 'recommended', true, 5);
+    const weak = ci('weak', 'knowledge', 'critical', false, 0);
+    const shallow = ci('shallow', 'knowledge', 'recommended', true, 2);
+    const gs = buildGuidelines(snapOf([strong, weak, shallow]));
+    expect(gs.map((g) => g.coverageItemId).sort()).toEqual(['shallow', 'weak']);
+    expect(gs.every((g) => g.id === `guideline-${g.coverageItemId}`)).toBe(true);
+    expect(gs.every((g) => Number.isInteger(g.projectedLift))).toBe(true);
+    expect(gs.every((g) => ['Easy','Medium','Large'].includes(g.effort))).toBe(true);
+    expect(gs.every((g) => typeof g.easyWin === 'boolean')).toBe(true);
+  });
+});
+
+describe('groupGuidelines', () => {
+  it('maps to named groups, per-group bucket score, importance-first sort', () => {
+    const crit = ci('k-crit', 'knowledge', 'critical', false, 0);
+    const rec = ci('k-rec', 'knowledge', 'recommended', false, 0);
+    const snap = snapOf([crit, rec]);
+    const groups = groupGuidelines(buildGuidelines(snap), snap);
+    const knowledge = groups.find((g) => g.key === 'knowledge');
+    expect(knowledge?.label).toBe('Knowledge Coverage');
+    expect(knowledge?.score).toBe(50);
+    // importance-first: the critical guideline sorts before the recommended one
+    expect(knowledge?.guidelines[0].coverageItemId).toBe('k-crit');
+  });
+  it('emits all 5 group keys (empty groups included for the UI)', () => {
+    const groups = groupGuidelines([], snapOf([]));
+    expect(groups.map((g) => g.key).sort()).toEqual(['authority','intent','knowledge','quality','structure']);
+  });
 });
