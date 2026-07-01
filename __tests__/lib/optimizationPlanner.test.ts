@@ -42,7 +42,7 @@ const ctx = (over: Partial<ArticleContext> = {}): ArticleContext => ({
 } as ArticleContext);
 const input = (over: Partial<PlanInput>): PlanInput => ({
   sections: [], guidelines: [],
-  context: ctx(), budgetRemaining: 1_000_000, ...over,
+  context: ctx(), budgetRemaining: 1_000_000, seoScore: 0, aiScore: 0, ...over,
 });
 
 describe('buildOptimizationPlan focus + skip', () => {
@@ -114,7 +114,7 @@ describe('buildOptimizationPlan ROI trim', () => {
 
 const step = (over: Partial<PlanStep>): PlanStep => ({
   sectionId: 's', index: 0, headingText: 'H', html: '<p>x</p>', focus: 'seo-terms',
-  systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: '', ...over,
+  systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: '', mode: 'normal', ...over,
 });
 const rg = (title: string, instruction: string, priority: number) => ({
   guideline: gl({ title, instruction }), confidence: 1, reason: 'r', priority,
