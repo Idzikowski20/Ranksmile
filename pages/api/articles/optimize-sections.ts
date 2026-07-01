@@ -2,12 +2,17 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
-import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
+import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/aiTokenUsage';
 import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
+import type { Section } from '../../../lib/articleSections';
 import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
 import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
 import type { SectionResult } from '../../../components/articles/optimizeStore';
 import type { ScoreData } from '../../../lib/contentScore';
+import { buildArticleContext } from '../../../lib/articleContext';
+import { buildGuidelines } from '../../../lib/recommendationEngine';
+import { buildOptimizationPlan } from '../../../lib/optimizationPlanner';
+import type { Plan, PlanStep } from '../../../lib/optimizationPlanner';
 import { getErrorMessage } from '../../../lib/errors';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
@@ -36,6 +41,27 @@ RULES:
 - Keep each paragraph between ~40 and ~80 words
 
 OUTPUT: ONLY the section's raw HTML. No markdown code fences, no commentary.`;
+}
+
+/** No-articleId (unsaved draft) fallback — byte-for-byte reproduction of today's optimizer:
+ *  ONE global system prompt for every section, from article-wide missing terms, no routing/ROI/skip. */
+function legacyPlan(sections: Section[], scoreData: ScoreData | undefined, content: string): Plan {
+   const terms = computeMissingTerms(scoreData, content);
+   const sys = buildSystemPrompt(terms);
+   const steps: PlanStep[] = sections.map((s) => ({
+      sectionId: s.id,
+      index: s.index,
+      headingText: s.headingText,
+      html: s.html,
+      focus: 'seo-terms',
+      systemPrompt: sys,
+      guidelines: [],
+      missingTerms: terms,
+      estimatedTokens: 0,
+      expectedLift: 0,
+      reason: 'Legacy: no articleId',
+   }));
+   return { steps, estimatedTokens: 0, trimmed: false, ignoredLift: 0, rationale: 'legacy' };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -96,62 +122,86 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const sections = splitSections(content);
       sse(res, 'meta', { total: sections.length, sections: sections.map((s) => ({ sectionId: s.id, index: s.index, headingText: s.headingText })) });
 
-      // Article-wide missing/underused NLP terms — computed ONCE, passed into every section's prompt.
-      const missingTerms = computeMissingTerms(scoreData, content);
-      const systemPrompt = buildSystemPrompt(missingTerms);
+      // Server-side context + plan assembly. articleId present -> Planner v2; absent (unsaved draft) -> legacyPlan.
+      const ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
+      const snapshot = ctx?.coverage ?? null;
+      const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
+
+      const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
+
+      const plan: Plan = ctx
+         ? buildOptimizationPlan({ sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used })
+         : legacyPlan(sections, scoreData, content);
+
+      if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
 
       let changedCount = 0;
       let aiTokens = 0;
 
-      for (const section of sections) {
-         if (aborted) break;
+      try {
+         for (const step of plan.steps) {
+            if (aborted) break;
 
-         let newHtml = section.html;
-         const MAX_ATTEMPTS = 3; // 1 initial + 2 retries
-         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-            try {
-               const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                  body: JSON.stringify({
-                     model: 'deepseek-chat',
-                     max_tokens: 4000,
-                     temperature: 0.3,
-                     messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: `Improve this section:\n\n${section.html}` },
-                     ],
-                  }),
-                  signal: controller.signal,
-               });
-               if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-               const data = await aiRes.json();
-               aiTokens += data.usage?.total_tokens || 0;
-               const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
-               if (isUsableEdit(cleaned)) newHtml = cleaned; // else keep original (empty/garbage)
-               break; // success — stop retrying
-            } catch (error) {
-               // An aborted run is not a retriable failure — break out and stop.
-               if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
-               if (attempt === MAX_ATTEMPTS) newHtml = section.html; // all attempts failed → skip
+            const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
+
+            if (step.focus === 'skip') {
+               sse(res, 'section', buildSectionEvent(section, { oldHtml: step.html, newHtml: step.html, changed: false }));
+               continue;
             }
+
+            let newHtml = section.html;
+            const MAX_ATTEMPTS = 3; // 1 initial + 2 retries
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+               try {
+                  const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                     body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        max_tokens: 4000,
+                        temperature: 0.3,
+                        messages: [
+                           { role: 'system', content: step.systemPrompt },
+                           { role: 'user', content: `Improve this section:\n\n${section.html}` },
+                        ],
+                     }),
+                     signal: controller.signal,
+                  });
+                  if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
+                  const data = await aiRes.json();
+                  aiTokens += data.usage?.total_tokens || 0;
+                  const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
+                  if (isUsableEdit(cleaned)) newHtml = cleaned; // else keep original (empty/garbage)
+                  break; // success — stop retrying
+               } catch (error) {
+                  // An aborted run is not a retriable failure — break out and stop.
+                  if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
+                  if (attempt === MAX_ATTEMPTS) newHtml = section.html; // all attempts failed → skip
+               }
+            }
+
+            if (aborted) break;
+
+            const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
+            const result: SectionResult = { oldHtml: section.html, newHtml, changed };
+            if (changed) changedCount += 1;
+            sse(res, 'section', buildSectionEvent(section, result));
          }
-
-         if (aborted) break;
-
-         const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
-         const result: SectionResult = { oldHtml: section.html, newHtml, changed };
-         if (changed) changedCount += 1;
-         sse(res, 'section', buildSectionEvent(section, result));
+      } finally {
+         // B cubic-P1: record spend even on a mid-run throw (mirrors deep-analysis.ts finally).
+         if (!aborted && orgId != null && shouldChargeCredit(changedCount, aiTokens)) {
+            await recordAiTokens(orgId, aiTokens);
+         }
       }
 
       if (aborted) return;
 
       // Charge the shared pool only when the run produced changes ("no changes ⇒ no credit deducted").
+      // shouldChargeCredit is deterministic on changedCount/aiTokens, so this flag can't diverge
+      // from the spend already recorded in the finally above.
       const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
-      if (creditDeducted) await recordAiTokens(orgId, aiTokens);
 
-      sse(res, 'done', { changedCount, total: sections.length, promptVersion: PROMPT_VERSION, creditDeducted });
+      sse(res, 'done', { changedCount, total: plan.steps.length, promptVersion: PROMPT_VERSION, creditDeducted, trimmed: plan.trimmed, ignoredLift: plan.ignoredLift });
    } catch (error) {
       if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
    } finally {
