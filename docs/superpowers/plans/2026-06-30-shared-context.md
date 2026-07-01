@@ -45,6 +45,18 @@
 
 ---
 
+## STATUS UPDATE — cubic review of PR #9 pulled several deferred-from-A fixes forward (2026-07-01)
+
+A `cubic` review on PR #9 (sub-project A) flagged 8 valid P2s, fixed on branch `feature/coverage-foundation` BEFORE B starts. This overlaps Tasks 1–4 below — adjust when executing B:
+
+- **Task 2 (ai-readability merge preserves all non-readability types) — ✅ DONE** in commit `805ec7d` (cubic #1). It ALSO added a skip-on-empty guard (don't overwrite the snapshot when the sidecar returns no readability items). **Skip Task 2 in B.**
+- **Task 1 (verdict hardening) — PARTIAL.** cubic #7/#8 (commit `c4ccda0`) added `Array.isArray` guards on `parsed.items` (the crash fix) + clone-on-cache (poisoning fix) + AbortController timeout. **Still TODO in B:** the fuller `sanitizeVerdict` per-field coercion (strict `covered` = real `true`/`"true"` only, `confidence` clamp [0,1], `missing` filtered to strings). Shrink Task 1 to that remainder.
+- **Task 4 (budget-gate the coverage LLM calls) — STILL TODO.** cubic #4 added a request TIMEOUT (different concern); the org-budget gating + token accounting is NOT done. Keep Task 4 as written.
+- **Task 3 (`_empty()` emits `coverage_items: []`) — STILL TODO** (cosmetic; now partly moot since cubic #1 skips the merge on empty, but keep for sidecar shape consistency).
+- Also fixed on A (not B-scope): entity `current_count` recompute (cubic #5), live NLP-term scoring (cubic #6), `hasAi` includes coverage (cubic #2), Information-to-cover legacy fallback (cubic #3).
+
+---
+
 ## Task 1: Harden the judge verdict (shape-validate + surface null items)
 
 Discharges A follow-up #2. A already NaN-guards `quality` (commit `daa6a68`); this finishes per-field validation and makes a null `items` visible instead of silent.
