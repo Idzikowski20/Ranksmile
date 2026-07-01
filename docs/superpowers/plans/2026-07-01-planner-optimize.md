@@ -25,7 +25,7 @@
 
 ## Assumptions (from the spec's ratified decisions)
 
-1. Outline is OUT of D (separate "Outline Engine" sub-project — needs a new LLM call). 2. Planner consumes `Guideline[]` (not `CoverageItem[]`). 3. Server-side context via `buildArticleContext`. 4. Stateless per run; no cross-run section memory. 5. `ArticleContext.breakdown` stays null-typed (B frozen) — D computes `computeContentScoreBreakdown` locally in the endpoint. 6. No-`articleId` drafts fall back to `legacyPlanFromMissingTerms` (today's single global prompt).
+1. Outline is OUT of D (separate "Outline Engine" sub-project — needs a new LLM call). 2. Planner consumes `Guideline[]` (not `CoverageItem[]`). 3. Server-side context via `buildArticleContext`. 4. Stateless per run; no cross-run section memory. 5. `ArticleContext.breakdown` stays null-typed (B frozen) — D computes `computeContentScoreBreakdown` locally in the endpoint via a **module-private** `computePlannerContentMetrics` adapter (not exported, not a shared utility; derive-on-read, not persist-and-propagate). 6. **Two disjoint modes:** `articleId` present → Planner v2; `articleId` absent (unsaved draft) → `legacyPlan`, which MUST reproduce today's optimizer **byte-for-byte** (single global `buildSystemPrompt`/`computeMissingTerms`, article-wide terms, NO routing/ROI/skip) — zero behavioural regression for drafts.
 
 ---
 
@@ -782,7 +782,7 @@ git commit -m "feat(planner): buildStepPrompt — per-focus block + priority bul
 - Consumes: `buildArticleContext` (B), `buildGuidelines` (C), `computeContentScoreBreakdown` (`lib/contentScore.ts`), `buildOptimizationPlan`/`plainText`/`wordCount` (this sub-project), `getOrgUsage5h`/`AI_TOKEN_LIMIT_5H` (already imported for the hard gate).
 - Produces: the loop iterates `plan.steps`; each non-skip step uses `step.systemPrompt`; skip steps short-circuit to a `changed:false` SSE with no fetch. Token accounting `finally` is Task 8.
 
-- [ ] **Step 1: Read the current endpoint** (`optimize-sections.ts:95-154`) — confirm the seam is between `splitSections` (`:96`, after the `meta` SSE) and the loop (`:106`). Note the counts `computeContentScoreBreakdown` needs (`wordCount`, `headingCount`, `paragraphCount`) are NOT computed here today — add small local helpers from `content`.
+- [ ] **Step 1: Read the current endpoint** (`optimize-sections.ts:95-154`) — confirm the seam is between `splitSections` (`:96`, after the `meta` SSE) and the loop (`:106`). Note the counts `computeContentScoreBreakdown` needs (`wordCount`, `headingCount`, `paragraphCount`) are NOT computed here today. Add ONE **module-private** helper `computePlannerContentMetrics(content) → { wordCount, headingCount, paragraphCount }` defined locally in this endpoint file — it is a private adapter feeding `computeContentScoreBreakdown`, NOT exported and NOT a new shared utility (do not add it to `lib/contentScore.ts` or the planner's public surface). This is derive-on-read: D computes the counts where it needs them, it does not persist-and-propagate them through B.
 
 - [ ] **Step 2: Insert planner assembly** after the `meta` SSE (replaces `:100-101` `computeMissingTerms`/`buildSystemPrompt`).
 
@@ -799,10 +799,10 @@ const snapshot = ctx?.coverage ?? null;
 const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
 
 const plainAll = plainText(content);
-const headingCount = (content.match(/<h[1-6][ >]/gi) || []).length;
-const paragraphCount = (content.match(/<p[ >]/gi) || []).length;
+// module-private adapter (Step 1) — NOT exported, NOT a shared utility.
+const m = computePlannerContentMetrics(content);
 const breakdown = ctx?.scoreData
-  ? computeContentScoreBreakdown(plainAll, wordCount(plainAll), headingCount, ctx.scoreData, paragraphCount, content, ctx.keyword, undefined, snapshot?.items ? [...snapshot.items] : undefined)
+  ? computeContentScoreBreakdown(plainAll, m.wordCount, m.headingCount, ctx.scoreData, m.paragraphCount, content, ctx.keyword, undefined, snapshot?.items ? [...snapshot.items] : undefined)
   : { slots: [], totalPossible: 0 };
 
 const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
@@ -814,10 +814,20 @@ const plan = ctx
 if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
 ```
 
-- [ ] **Step 3: Add the `legacyPlan` fallback** (no `articleId` — unsaved draft) reproducing today's single-global-prompt behavior, so drafts still optimize.
+- [ ] **Step 3: Add the `legacyPlan` fallback + the private metrics helper.** Two completely disjoint modes: `articleId` present → Planner v2; `articleId` absent (unsaved draft) → legacy optimizer. **The legacy path MUST preserve byte-for-byte the current optimization semantics** — single global `buildSystemPrompt(computeMissingTerms(...))`, article-wide missing terms, NO routing, NO per-section prompt, NO ROI trim, NO skip — so unsaved drafts behave exactly as today (zero behavioural regression). Do NOT build a "Planner Lite" here; just wrap today's mechanism in the `Plan` shape.
 
 ```ts
+// module scope — private endpoint helper (Step 1). NOT exported.
+function computePlannerContentMetrics(content: string): { wordCount: number; headingCount: number; paragraphCount: number } {
+  return {
+    wordCount: wordCount(plainText(content)),
+    headingCount: (content.match(/<h[1-6][ >]/gi) || []).length,
+    paragraphCount: (content.match(/<p[ >]/gi) || []).length,
+  };
+}
+
 // module scope — one prompt for all sections, focus 'seo-terms', from the article-wide missing terms.
+// Byte-for-byte reproduction of today's optimizer: same buildSystemPrompt + computeMissingTerms, no routing/ROI/skip.
 function legacyPlan(sections: Section[], scoreData: ScoreData | undefined, content: string): Plan {
   const terms = computeMissingTerms(scoreData, content);
   const sys = buildSystemPrompt(terms);

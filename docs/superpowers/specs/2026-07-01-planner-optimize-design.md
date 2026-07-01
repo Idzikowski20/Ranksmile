@@ -315,15 +315,18 @@ const snapshot = ctx?.coverage ?? null;
 const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];         // C, recommendationEngine.ts:155
 
 // breakdown is null-typed on ArticleContext -> compute locally (pure, contentScore.ts:418).
+// counts via computePlannerContentMetrics: a module-PRIVATE endpoint adapter (not exported / not a shared util).
+const m = computePlannerContentMetrics(content);   // { wordCount, headingCount, paragraphCount }
 const breakdown = ctx?.scoreData
-   ? computeContentScoreBreakdown(plainText(content), wc, hc, ctx.scoreData, pc, content, ctx.keyword, undefined, snapshot?.items)
+   ? computeContentScoreBreakdown(plainText(content), m.wordCount, m.headingCount, ctx.scoreData, m.paragraphCount, content, ctx.keyword, undefined, snapshot?.items)
    : { slots: [], totalPossible: 0 };
 
 const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
 
+// Two disjoint modes: articleId present -> Planner v2; absent -> legacyPlan (byte-for-byte today's optimizer).
 const plan = ctx
    ? buildOptimizationPlan({ sections, guidelines, breakdown, context: ctx, budgetRemaining: usage.limit - usage.used })
-   : legacyPlanFromMissingTerms(sections, scoreData, content);   // fallback: draft/unsaved article w/o articleId
+   : legacyPlan(sections, scoreData, content);   // fallback: draft/unsaved article w/o articleId
 
 if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
 
@@ -375,7 +378,9 @@ The only structural edits: (1) iterate `plan.steps` not `sections`; (2) `focus==
 
 Today the endpoint receives `{ content, articleId, scoreData }` (`optimize-sections.ts:46-50`). D derives planner inputs SERVER-SIDE via `buildArticleContext(articleId)` (`articleContext.ts:38`), which aggregates `coverage` (snapshot), `keyword`, `paa`, `voiceTone`, `scoreData`, `terms`, `competitors` from the DB (`articleContext.ts:81-99`). Rationale: **security** (client cannot spoof coverage/brand to steer prompts) + **DRY** (one aggregator, merged in B).
 
-**Caveat (baked in):** `ArticleContext.breakdown` is typed `null` (`articleContext.ts:26,86`) — B left it unwired. D needs per-slot `missingPoints`, so D computes `computeContentScoreBreakdown(...)` in the endpoint from `ctx.scoreData` + `content` (pure, `contentScore.ts:418`). Do NOT extend `ArticleContext`. Keep the live editor `content` body param (may be newer than the DB) and keep `scoreData` as a fallback path when `articleId` is absent (draft/unsaved articles) -> `legacyPlanFromMissingTerms` reproduces today's single-global-prompt behavior so unsaved drafts still optimize.
+**Caveat (baked in):** `ArticleContext.breakdown` is typed `null` (`articleContext.ts:26,86`) — B left it unwired. D needs per-slot `missingPoints`, so D computes `computeContentScoreBreakdown(...)` in the endpoint from `ctx.scoreData` + `content` (pure, `contentScore.ts:418`). The three counts it needs come from `computePlannerContentMetrics(content)` — a **module-private** endpoint adapter, NOT exported and NOT a shared utility (derive-on-read, not persist-and-propagate). Do NOT extend `ArticleContext`. Keep the live editor `content` body param (may be newer than the DB) and keep `scoreData` as a fallback path when `articleId` is absent (draft/unsaved articles).
+
+**Two disjoint modes (ratified):** `articleId` present → Planner v2 (routing/ROI/skip/per-section prompt); `articleId` absent → `legacyPlan`, which MUST reproduce today's optimizer **byte-for-byte** — single global `buildSystemPrompt(computeMissingTerms(...))`, article-wide missing terms, NO routing, NO ROI trim, NO skip, NO per-section prompt. This guarantees zero behavioural regression for unsaved drafts and keeps the two paths trivially testable in isolation. It is NOT a "Planner Lite".
 
 ---
 
@@ -472,16 +477,16 @@ ROI ranking: A (0.080) before B (0.015). Keep A (cumulative 150 <= 1000). B does
 4. buildOptimizationPlan + types — focus routing, expectedLift, skip decision.
 5. ROI budget trim inside the planner — trimmed / ignoredLift.
 6. buildStepPrompt — shared + focus blocks + priority bullets + NEGATIVE CONSTRAINTS + brand voice.
-7. Endpoint wiring — buildArticleContext server-side, local computeContentScoreBreakdown, insert planner at the :96->:106 seam, iterate plan.steps, skip short-circuit, per-step prompt, legacyPlanFromMissingTerms fallback.
+7. Endpoint wiring — buildArticleContext server-side, private computePlannerContentMetrics + local computeContentScoreBreakdown, insert planner at the :96->:106 seam, iterate plan.steps, skip short-circuit, per-step prompt, byte-for-byte `legacyPlan` fallback.
 8. Per-step token accounting in finally (B cubic-P1) + done/meta trimmed/ignoredLift SSE + skip regression test.
 
 ~8 tasks (the review's ~7 split once to give the richer routing scoring + its edge cases their own tasks). Effort: **Medium** — no review-doc/Accept-Reject/TipTap changes; the loop dispatcher/retries/abort/SSE are reused unchanged; the new surface is two pure modules + endpoint rewiring.
 
 ---
 
-## Conflicts for the human to resolve
+## Conflicts — RESOLVED by tech-lead review (2026-07-01)
 
-- **computeContentScoreBreakdown argument assembly:** its signature (`contentScore.ts:418`) takes `plainText`, `wordCount`, `headingCount`, `scoreData`, plus optional `paragraphCount`/`html`/`keyword`/`keywordCoverage`/`coverageItems` — the endpoint does NOT currently compute `wordCount`/`headingCount`/`paragraphCount` at this seam (they live in the score pipeline). D must recompute those counts locally from `content` (a small local count helper, duplicating a few lines of the score pipeline). This is the one place D touches score internals — confirm the human is OK with it vs. wiring counts through B.
-- **ArticleContext.breakdown stays null-typed (B frozen):** D computes breakdown locally rather than wiring it into B. If the human prefers wiring it into `ArticleContext` instead, that reopens B — flagged, not assumed.
-- **Legacy fallback for draft articles (no articleId):** `buildArticleContext` needs an `articleId`; unsaved drafts POST without one. D falls back to `legacyPlanFromMissingTerms` (today's single global prompt). Confirm this degraded path is acceptable vs. requiring a saved article for Auto-Optimize.
-- **Planner output shape:** audit sketched `recommendations: CoverageItem[]` (audit line 440); D uses `guidelines: Guideline[]` because C owns the actionable shape. Ratified — noted for the record.
+- **computeContentScoreBreakdown counts → ✅ RESOLVED.** D computes `wordCount`/`headingCount`/`paragraphCount` locally via `computePlannerContentMetrics(content)` — a **module-private** endpoint adapter, NOT exported and NOT a shared utility. It is the one place D touches score internals; approved as an adapter, not a new public API.
+- **ArticleContext.breakdown stays null-typed (B frozen) → ✅ RESOLVED.** D computes breakdown locally (derive-on-read, not persist-and-propagate). B is NOT reopened.
+- **Legacy fallback for draft articles (no articleId) → ✅ RESOLVED.** Two disjoint modes; `legacyPlan` MUST reproduce today's optimizer **byte-for-byte** (single global prompt, article-wide missing terms, no routing/ROI/skip). Progressive enhancement: drafts optimize as today, saved articles get Planner v2.
+- **Planner output shape → ✅ RESOLVED.** D uses `guidelines: Guideline[]` (C owns the actionable shape), not the audit's older `CoverageItem[]` sketch.
