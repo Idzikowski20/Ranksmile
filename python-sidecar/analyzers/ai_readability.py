@@ -30,6 +30,30 @@ def _empty(note: str) -> dict:
     }
 
 
+def _to_coverage_items(criteria_results):
+    """Reshape rubric results into CoverageItem-compatible dicts (category=quality)."""
+    items = []
+    for c in criteria_results:
+        key = c.get("key")
+        if not key:
+            continue
+        met = bool(c.get("met"))
+        suggestions = c.get("suggestions") or []
+        items.append({
+            "id": f"readability-{key}",
+            "label": c.get("title") or key,
+            "type": "readability",
+            "category": "quality",
+            "importance": "recommended",
+            "source": "llm",
+            "covered": met,
+            "quality": 5 if met else 0,
+            "missing": [s for s in suggestions if isinstance(s, str)],
+            "needsExpansion": (not met) and bool(suggestions),
+        })
+    return items
+
+
 async def run_ai_readability(article_content: str, keyword: str = "") -> dict:
     text = (article_content or "").strip()
     if not text:
@@ -89,7 +113,11 @@ ARTICLE:
         })
 
     score = round(met_count / len(CRITERIA) * 100)
-    return {"score": score, "criteria": criteria}
+    return {
+        "score": score,
+        "criteria": criteria,
+        "coverage_items": _to_coverage_items(criteria),
+    }
 
 
 async def apply_ai_readability(content_html: str, suggestions: list[str], keyword: str = "") -> dict:
