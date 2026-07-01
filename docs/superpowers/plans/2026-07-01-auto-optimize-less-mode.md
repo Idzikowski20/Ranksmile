@@ -17,7 +17,7 @@
 - **NORMAL is byte-for-byte today's behaviour.** A section F classifies NORMAL MUST produce the exact `systemPrompt` from today's `buildStepPrompt` (`optimizationPlanner.ts:170-175`) AND `userInstruction === undefined` (so the endpoint uses `Improve this section:\n\n`+html verbatim, `optimize-sections.ts:165`). Task 7 is a dedicated regression that proves this.
 - **NO new LLM call.** `worthEditing`/`selectMode`/`buildOptimizationPlan` stay PURE - deterministic transforms of `PlanInput`. `seoScore`/`aiScore` are INPUTS read in the endpoint, never fetched in the planner.
 - **Named tunable constants** for every threshold: `LESS_MIN`, `NORMAL_MIN`, `SEO_HIGH`, `AI_GAP`, `INTENT_INTRO_MIN`, `TERM_WORTH_FLOOR`. No magic numbers inline.
-- **Term-only sections skip by default** (OD-2): a section with `rgs=[]` + `secTerms>0` has `expectedLift=0` and is SKIPPED (this reverses today's `secTerms`-defeats-skip for that class - the intentional CONFLICT flagged in the design).
+- **Term-only sections → LESS** (OD-2 [RATIFIED]): a section with `rgs=[]` + `secTerms>0` has `expectedLift=0` but is WORTH a LESS (minimal) edit — `TERM_WORTH_FLOOR = 1` makes `worthEditing` return `true` when NOT in `aiTakeover`, and `selectMode` maps it to LESS. It is dropped ONLY under the AI-search takeover (the `!aiTakeover` guard). This reclassifies today's term-only NORMAL edit into a minimal LESS patch (SurferSEO's "Less" still weaves missing terms) — the intentional [RATIFIED] change flagged in the design.
 - **Frozen (do NOT edit):** `lib/optimizeGuidelineRouting.ts`, `lib/recommendationEngine.ts`, `lib/aiCoverage.ts`, `lib/articleContext.ts`, `lib/contentScore.ts`, `lib/aiSearchScore.ts`, and the existing `buildStepPrompt`/`SHARED_RULES`/`NEGATIVE_CONSTRAINTS`/`OUTPUT_RULE`/`focusBlock` in `optimizationPlanner.ts` (REUSED unchanged by NORMAL/EXPAND).
 - No new TypeScript `any` (`[[avoid-any-type]]`). Commit each task immediately (`[[concurrent-claude-sessions-hazard]]`).
 - **Test isolation:** the pure planner tests import only A/B/C/D pure code (no DB) - no jest mock needed. The endpoint test transitively pulls DB + `fetch` -> use LOCAL `jest.mock(...)` (mirror `__tests__/api/articles-optimize-sections-guard.test.ts`); NEVER touch `jest.config.js`/`jest.setup.js`/`__mocks__/`.
@@ -27,7 +27,7 @@
 
 ## File Structure
 
-**Modify:** `lib/optimizationPlanner.ts` (new types/constants/functions); `pages/api/articles/optimize-sections.ts` (score reads + user-message line + `legacyPlan` step shape); `__tests__/lib/optimizationPlanner.test.ts` (new cases); `__tests__/api/articles-optimize-sections-guard.test.ts` (new cases).
+**Modify:** `lib/optimizationPlanner.ts` (new types/constants/functions); `pages/api/articles/optimize-sections.ts` (score reads + user-message line + `buildSectionEvent` field forwarding + `legacyPlan` step shape); `lib/optimizeSectionEvents.ts` (optional `focus`/`mode`/`reason` on `buildSectionEvent`/`SectionEvent` — UX contract); `__tests__/lib/optimizationPlanner.test.ts` (new cases); `__tests__/api/articles-optimize-sections-guard.test.ts` (new cases).
 **Untouched:** `lib/optimizeGuidelineRouting.ts`, `lib/recommendationEngine.ts`, `lib/aiCoverage.ts`, `lib/articleContext.ts`, `lib/contentScore.ts`, `lib/aiSearchScore.ts`; the loop dispatcher/retries/abort/SSE machinery; review-doc / Accept-Reject / TipTap atom.
 
 ---
@@ -51,7 +51,7 @@ const NORMAL_MIN = 12;         // LESS_MIN..NORMAL_MIN -> LESS; > NORMAL_MIN -> 
 const SEO_HIGH = 85;           // SEO score at/above which AI-takeover can fire
 const AI_GAP = 25;             // takeover when (seoScore - aiScore) > AI_GAP
 const INTENT_INTRO_MIN = 50;   // intent bucket score below which intro may expand
-const TERM_WORTH_FLOOR = 0;    // term-only sections skip by default (floor 0 = never worth on terms alone)
+const TERM_WORTH_FLOOR = 1;    // OD-2 [RATIFIED]: a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
 ```
 
 Extend the existing interfaces (do NOT reorder existing fields):
@@ -116,8 +116,11 @@ describe('worthEditing', () => {
   it('keeps at/above LESS_MIN (expectedLift 6)', () => {
     expect(worthEditing({ expectedLift: 6, rgs: [rg({})], secTerms: [], aiTakeover: false })).toBe(true);
   });
-  it('term-only section (expectedLift 0, secTerms present) skips by default (OD-2)', () => {
-    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: false })).toBe(false);
+  it('term-only section (expectedLift 0, secTerms present) is worth a LESS edit (OD-2 [RATIFIED])', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: false })).toBe(true);
+  });
+  it('term-only section under AI-takeover is dropped (takeover suppresses the term path)', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: true })).toBe(false);
   });
   it('critical miss overrides the threshold (never skipped even at expectedLift 0)', () => {
     expect(worthEditing({ expectedLift: 0, rgs: [rg({ importance: 'critical' })], secTerms: [], aiTakeover: false })).toBe(true);
@@ -144,14 +147,13 @@ interface WorthInput {
 }
 
 /** The "good enough" gate (RCA §1/§5). Skip a section whose predicted benefit is below LESS_MIN,
- *  unless it carries a critical coverage miss. Term-only sections (expectedLift 0) skip by default (OD-2). */
+ *  unless it carries a critical coverage miss. Term-only sections (expectedLift 0) are worth a LESS
+ *  edit when NOT in AI-takeover (OD-2 [RATIFIED]); AI-takeover suppresses the term path. */
 export function worthEditing({ expectedLift, rgs, secTerms, aiTakeover }: WorthInput): boolean {
   if (hasCriticalMiss(rgs)) return true;
   if (expectedLift >= LESS_MIN) return true;
-  if (!aiTakeover && secTerms.length > 0 && TERM_WORTH_FLOOR > 0) {
-    // term-worth path is inert while TERM_WORTH_FLOOR === 0; kept for future tuning (OD-2).
-    return secTerms.length >= TERM_WORTH_FLOOR;
-  }
+  // Term-only deficit: >=1 under-target term is worth a minimal LESS weave, unless AI-takeover drops it.
+  if (!aiTakeover && secTerms.length >= TERM_WORTH_FLOOR) return true;
   return false;
 }
 ```
@@ -189,6 +191,9 @@ describe('selectMode', () => {
   const healthy = snap(90, true);   // intro NOT allowed to expand
   it('LESS in the 6..12 band', () => {
     expect(selectMode({ section: sec(1), expectedLift: 9, rgs: [rg({})], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('term-only section (no guidelines, lift 0) -> LESS (OD-2 [RATIFIED])', () => {
+    expect(selectMode({ section: sec(1), expectedLift: 0, rgs: [], snapshot: healthy, aiTakeover: false })).toBe('less');
   });
   it('NORMAL above NORMAL_MIN', () => {
     expect(selectMode({ section: sec(1), expectedLift: 20, rgs: [rg({})], snapshot: healthy, aiTakeover: false })).toBe('normal');
@@ -397,10 +402,10 @@ Replace the skip predicate with `!worthEditing`, and set `mode`/`systemPrompt`/`
 
 ```ts
 // __tests__/lib/optimizationPlanner.test.ts - add
-it('term-only section (no guidelines, under-target terms) is skipped (OD-2)', () => {
+it('term-only section (no guidelines, under-target terms) gets a LESS edit, not skip (OD-2 [RATIFIED])', () => {
   const input = makePlanInput({ seoScore: 50, aiScore: 50, termOnlyEverySection: true });
   const plan = buildOptimizationPlan(input);
-  expect(plan.steps.every((s) => s.focus === 'skip')).toBe(true);
+  expect(plan.steps.every((s) => s.mode === 'less' && s.focus !== 'skip')).toBe(true);
 });
 
 it('assigns modes: high-lift -> normal, mid-lift -> less', () => {
@@ -493,9 +498,13 @@ describe('NORMAL byte-for-byte regression', () => {
 
 ---
 
-## Task 8: Endpoint wiring - score reads + mode-varying user message
+## Task 8: Endpoint wiring - score reads + mode-varying user message + `section` SSE contract
 
-**Files:** Modify `pages/api/articles/optimize-sections.ts`; extend `__tests__/api/articles-optimize-sections-guard.test.ts`
+**Files:** Modify `pages/api/articles/optimize-sections.ts`, `lib/optimizeSectionEvents.ts`; extend `__tests__/api/articles-optimize-sections-guard.test.ts`
+
+> **Ratification 2 (UX contract):** the existing `section` SSE event must carry `focus: StepFocus`, `mode: EditMode`, `reason: string` sourced VERBATIM from `PlanStep`, forwarded via `buildSectionEvent(section, result, step)` on BOTH branches — the skip branch (`optimize-sections.ts:148`) and the changed branch (`:188`). This is the ONLY consumer-facing contract the UX sub-project depends on (no score field); keep it minimal + additive (Part-8-clean for the UX side).
+
+- [ ] **Step 0: Add the optional fields to `buildSectionEvent`/`SectionEvent`** (`lib/optimizeSectionEvents.ts`) — additive only: `focus?: StepFocus`, `mode?: EditMode`, `reason?: string` on `SectionEvent`; `buildSectionEvent` gains an optional `step?: PlanStep` param and copies `step.focus`/`step.mode`/`step.reason` onto the event when provided. Existing callers that omit `step` stay byte-for-byte.
 
 - [ ] **Step 1: Write the failing test** (LOCAL mocks of `buildArticleContext`, `getOrgUsage5h`, and `fetch`; add the score reads to the mock surface)
 
@@ -514,9 +523,14 @@ it('LESS step sends step.userInstruction as the user message (not "Improve this 
   // assert: fetch user message === step.userInstruction; does NOT contain "Improve this section"
 });
 
-it('skip step makes NO fetch and emits changed:false', async () => {
-  // arrange: plan yields a skip step
-  // assert: fetch NOT called for it; a section event with changed:false is emitted
+it('skip step makes NO fetch and emits changed:false WITH focus/mode/reason from the step', async () => {
+  // arrange: plan yields a skip step (focus:'skip', mode:'normal', reason:'Skipped - below benefit threshold')
+  // assert: fetch NOT called for it; the section event has changed:false AND focus/mode/reason === the step's
+});
+
+it('changed step emits a section event carrying focus/mode/reason from the step (UX contract)', async () => {
+  // arrange: plan yields one edited step (e.g. LESS)
+  // assert: the section event has changed:true AND focus/mode/reason === the step's focus/mode/reason
 });
 ```
 
@@ -524,7 +538,7 @@ it('skip step makes NO fetch and emits changed:false', async () => {
 
 - [ ] **Step 2: Run -> fail.**
 
-- [ ] **Step 3: Implement** - two edits in `optimize-sections.ts`.
+- [ ] **Step 3: Implement** - three edits in `optimize-sections.ts` (plus the `lib/optimizeSectionEvents.ts` field additions from Step 0).
 
 (a) Read the two scores server-side and pass them into the plan (near `:130-133`):
 
@@ -552,16 +566,19 @@ messages: [
 
 (c) `legacyPlan` (`:48-65`): add `mode: 'normal'` to each step literal (and leave `userInstruction` unset) so the draft path type-checks and stays byte-for-byte legacy. `legacyPlan` does not need `seoScore`/`aiScore` (draft path, no takeover).
 
+(d) Forward `focus`/`mode`/`reason` onto BOTH `section` SSE events (Ratification 2): pass `step` into `buildSectionEvent(section, result, step)` at the skip branch (`:148`) and the changed branch (`:188`) so each emitted `section` event carries the step's `focus`/`mode`/`reason` verbatim. No score field. This is the only field the UX layer consumes.
+
 - [ ] **Step 4: Verify** - `npx tsc --noEmit` clean; `npx jest __tests__/api/articles-optimize-sections-guard.test.ts --ci` green; the D endpoint guard cases still pass. Commit.
 
 ---
 
 ## Definition of done
 
-- `worthEditing` gates on `expectedLift` tiers (skip < 6, LESS 6-12, NORMAL > 12) with a critical-miss override; term-only sections skip by default (OD-2).
+- `worthEditing` gates on `expectedLift` tiers (skip < 6, LESS 6-12, NORMAL > 12) with a critical-miss override; term-only sections get a LESS (minimal) edit when NOT in AI-takeover, dropped only by takeover (OD-2 [RATIFIED]).
 - Three modes wired: LESS (new prompt + patch-only user message), NORMAL (byte-for-byte), EXPAND (gated).
 - Intro (index 0) is LESS-only + EXPAND-blocked unless intent is weak; intro-LESS adds at most a one-sentence answer.
 - AI-takeover drops term work when `seoScore >= 85` and `seoScore - aiScore > 25`.
 - `PlanInput` carries `seoScore`/`aiScore` (threaded from the endpoint); `PlanStep` carries `mode`/`userInstruction`.
+- The `section` SSE event carries `focus`/`mode`/`reason` verbatim from `PlanStep` on both the skip and changed branches, via `buildSectionEvent(section, result, step)` (the only UX-layer contract; no score field) (Ratification 2).
 - Task 7 proves all-NORMAL is byte-for-byte; D's 26 tests + endpoint guard suite stay green.
 - `tsc --noEmit` clean. Implementers did NOT run `npm run build`.
