@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import { NeonAuthUIProvider } from '@neondatabase/auth/react';
 import { authClient } from '../lib/auth/client';
 import AppToaster from '../components/common/AppToaster';
+import GlobalSmoothCaret from '../components/common/GlobalSmoothCaret';
 import AppLoading from '../components/common/AppLoading';
 import TopProgressBar from '../components/common/TopProgressBar';
 import { OnboardingStatusContext } from '../lib/onboardingStatus';
@@ -128,6 +129,7 @@ function MyApp({ Component, pageProps }: AppProps) {
                <Component {...pageProps} />
             </OnboardingGuard>
             <AppToaster />
+            <GlobalSmoothCaret />
          </QueryClientProvider>
       </NeonAuthUIProvider>
    );
