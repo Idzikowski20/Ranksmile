@@ -28,6 +28,9 @@ function tokens(s: string): Set<string> {
 function plainText(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
 }
+function wordCount(plain: string): number {
+  return plain.split(/\s+/).filter(Boolean).length;
+}
 /** Overlap coefficient: intersection / min(size). 0 when either side empty. */
 function overlap(a: Set<string>, b: Set<string>): number {
   if (!a.size || !b.size) return 0;
@@ -60,25 +63,27 @@ function scoreSection(g: Guideline, section: Section, maxFreq: number): Scored {
   return { section, score, reason };
 }
 
-export interface RouteOpts { breakdown: { slots: Array<{ key: string; missingPoints: number }>; totalPossible: number }; }
-
-/** Section for a below-threshold guideline: intent -> intro (index 0); else highest missingPoints. */
-function fallbackSection(g: Guideline, sections: Section[], opts: RouteOpts): { section: Section; reason: string } | null {
+/**
+ * Section for a below-threshold guideline: intent -> intro (index 0); else the thinnest
+ * (lowest-word-count) section — deterministic tiebreak, ties keep array order. Per-section
+ * deficiency scoring (attributing whole-article signal gaps to a specific sectionId) doesn't
+ * exist yet — see docs/superpowers/specs/2026-07-01-planner-optimize-design.md.
+ */
+function fallbackSection(g: Guideline, sections: Section[]): { section: Section; reason: string } | null {
   if (!sections.length) return null;
   if (g.group === 'intent') {
     const intro = sections.find((s) => s.index === 0) ?? sections[0];
     return { section: intro, reason: 'Fallback — intent to intro' };
   }
-  const byMissing = [...sections].sort((a, b) => {
-    const ma = opts.breakdown.slots.find((s) => s.key === b.id)?.missingPoints ?? 0;
-    const mb = opts.breakdown.slots.find((s) => s.key === a.id)?.missingPoints ?? 0;
-    return ma - mb;
-  });
-  return { section: byMissing[0], reason: 'Fallback — highest missingPoints' };
+  // Deterministic tiebreak, NOT semantic relevance: the thinnest section is the most likely
+  // to benefit from added content when no heading/body/sectionId match exists. Real per-section
+  // deficiency scoring is deferred to E (CoverageGraph).
+  const byWordCount = [...sections].sort((a, b) => wordCount(plainText(a.html)) - wordCount(plainText(b.html)));
+  return { section: byWordCount[0], reason: 'Fallback — thinnest section' };
 }
 
 export function assignGuidelinesToSections(
-  guidelines: Guideline[], sections: Section[], opts: RouteOpts,
+  guidelines: Guideline[], sections: Section[],
 ): Map<string, RoutedGuideline[]> {
   const out = new Map<string, RoutedGuideline[]>();
   const push = (sectionId: string, rg: RoutedGuideline) => {
@@ -99,7 +104,7 @@ export function assignGuidelinesToSections(
       confidence = best.reason === 'Exact section match' ? 1 : Math.min(1, best.score / CONFIDENCE_NORM);
       reason = best.reason;
     } else {
-      const fb = fallbackSection(guideline, sections, opts);
+      const fb = fallbackSection(guideline, sections);
       if (!fb) continue;                       // no sections at all — nothing to route to
       target = fb.section;
       confidence = 0.1;                        // low — it is a guess
