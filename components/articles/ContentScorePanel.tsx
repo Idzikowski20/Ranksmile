@@ -10,7 +10,7 @@ import PrePublishPanel from './PrePublishPanel';
 import type { AiReadabilityResult } from './PrePublishPanel';
 import ScoreTrio from './ScoreTrio';
 import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
-import type { CoverageItem, BucketScore } from '../../lib/aiCoverage';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 
 interface CompetitorHeading {
   level: number;
@@ -68,6 +68,8 @@ interface Props {
   coverageItems?: CoverageItem[];
   coverageBuckets?: BucketScore[];
   aiCoverageScore?: number | null;
+  /** The parsed CoverageSnapshot itself (not reconstructed) — needed by WriteOptimizePanel to build AI Search Guidelines. */
+  coverageSnapshot?: CoverageSnapshot | null;
   isRunningAiVisibility?: boolean;
   onRunAiVisibility?: () => void;
   /** AI Readability "Apply All" — runs the structure-only optimize on the page. */
@@ -276,6 +278,7 @@ const ContentScorePanel = ({
   coverageItems,
   coverageBuckets,
   aiCoverageScore,
+  coverageSnapshot,
   isRunningAiVisibility,
   onRunAiVisibility,
   onApplyReadability,
@@ -534,6 +537,7 @@ const ContentScorePanel = ({
         hasAi={aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         coverageItems={coverageItems}
         coverageBuckets={coverageBuckets}
+        coverageSnapshot={coverageSnapshot}
         onAutoOptimize={onAutoOptimize}
         isAutoOptimizing={isAutoOptimizing}
         readOnly={readOnly}
