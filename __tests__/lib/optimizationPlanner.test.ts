@@ -1,5 +1,8 @@
-import { estimateStepTokens, diminishingLift } from '../../lib/optimizationPlanner';
+import { estimateStepTokens, diminishingLift, buildOptimizationPlan } from '../../lib/optimizationPlanner';
+import type { PlanInput } from '../../lib/optimizationPlanner';
 import type { Section } from '../../lib/articleSections';
+import type { Guideline } from '../../lib/recommendationEngine';
+import type { ArticleContext } from '../../lib/articleContext';
 
 const sec = (html: string): Section => ({ id: 's', index: 0, headingText: '', html });
 
@@ -27,4 +30,50 @@ describe('diminishingLift', () => {
     expect(diminishingLift([10, 10, 10, 10, 10, 10])).toBe(Math.round(10 + 7 + 5 + 3 + 2 + 1)); // 28
   });
   it('empty -> 0', () => expect(diminishingLift([])).toBe(0));
+});
+
+const gl = (over: Partial<Guideline>): Guideline => ({
+  id: 'guideline-x', coverageItemId: 'x', group: 'knowledge', title: 'X', instruction: 'Do X.',
+  importance: 'recommended', status: 'open', projectedLift: 10, effort: 'Easy', easyWin: false, ...over,
+});
+const ctx = (over: Partial<ArticleContext> = {}): ArticleContext => ({
+  articleId: 1, keyword: 'k', scoreData: null, breakdown: null, coverage: null,
+  paa: [], terms: [], competitors: [], ...over,
+} as ArticleContext);
+const input = (over: Partial<PlanInput>): PlanInput => ({
+  sections: [], guidelines: [], breakdown: { slots: [], totalPossible: 0 },
+  context: ctx(), budgetRemaining: 1_000_000, ...over,
+});
+
+describe('buildOptimizationPlan focus + skip', () => {
+  it('skip when nothing routed, no under-target terms, small missingPoints', () => {
+    const sections = [{ id: 's0', index: 0, headingText: 'Covered', html: '<h2>Covered</h2><p>full</p>' }];
+    const plan = buildOptimizationPlan(input({ sections }));
+    expect(plan.steps[0].focus).toBe('skip');
+    expect(plan.steps[0].estimatedTokens).toBe(0);
+    expect(plan.steps[0].expectedLift).toBe(0);
+    expect(plan.steps[0].reason).toBe('Skipped — no uncovered guidelines');
+  });
+
+  it('intent guideline -> ai-coverage focus', () => {
+    const sections = [{ id: 's0', index: 0, headingText: '', html: '<p>opening</p>' }];
+    const g = gl({ group: 'intent', title: 'Answer the main question early', sectionId: 's0' });
+    const plan = buildOptimizationPlan(input({ sections, guidelines: [g] }));
+    expect(plan.steps[0].focus).toBe('ai-coverage');
+  });
+
+  it('needsExpansion (effort Large) -> expand focus', () => {
+    const sections = [{ id: 's0', index: 0, headingText: 'Shallow', html: '<h2>Shallow</h2><p>thin</p>' }];
+    const g = gl({ effort: 'Large', title: 'Expand: Shallow', instruction: 'shallow', sectionId: 's0' });
+    const plan = buildOptimizationPlan(input({ sections, guidelines: [g] }));
+    expect(plan.steps[0].focus).toBe('expand');
+  });
+
+  it('expectedLift uses diminishing returns (18,15,12 -> 35)', () => {
+    const sections = [{ id: 's0', index: 0, headingText: 'Dosage', html: '<h2>Dosage</h2><p>dosage</p>' }];
+    const gs = [18, 15, 12].map((lift, i) =>
+      gl({ coverageItemId: `g${i}`, title: 'Cover: Dosage', instruction: 'dosage', projectedLift: lift, sectionId: 's0' }));
+    const plan = buildOptimizationPlan(input({ sections, guidelines: gs }));
+    expect(plan.steps[0].expectedLift).toBe(35);
+  });
 });
