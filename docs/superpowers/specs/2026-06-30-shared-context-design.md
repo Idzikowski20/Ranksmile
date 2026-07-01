@@ -1,7 +1,7 @@
 # Shared Context (Sub-project B) — Design
 
 **Date:** 2026-06-30
-**Status:** Approved — direction set by the audit + sub-project A's §10 roadmap (after 4 tech-lead reviews). This doc expands the A spec's "Sub-project B preview" into a full design and folds in the follow-ups deferred from A's whole-branch review.
+**Status:** Approved (v2 — plan review incorporated: explicit SELECT columns not `SELECT *`; `scoreData: ScoreData | null` with no `as unknown as` double-cast; single-parse of competitor JSON; `covered` coercion accepts only real `true`/`"true"` (not any truthy); dropped the speculative `builtAt`; documented the request-scoped multi-SELECT as intentional; Task 7 forbids request/response/sidecar-payload changes). Direction set by the audit + sub-project A's §10 roadmap (after 4 tech-lead reviews). Expands the A spec's "Sub-project B preview" and folds in the follow-ups deferred from A's whole-branch review.
 **Depends on:** Sub-project A (Coverage Foundation) — MERGED via PR #9 (branch `feature/coverage-foundation`).
 **Audit:** `docs/superpowers/specs/2026-06-30-coverage-engine-audit.md` — §6 (Outline), §10.6 weakness #4 (no shared context builder), §10.7 plug-in points.
 **Direction:** `[[surfy-coverage-direction]]` memory entry.
@@ -51,7 +51,7 @@ export interface ArticleContext {
   language?: string;
 
   // scoring (from A + existing content scoring)
-  scoreData: ScoreData;         // articles.score_data (terms, paa_questions, targets)
+  scoreData: ScoreData | null;  // articles.score_data (terms, paa_questions, targets); null when absent — no fake empty
   breakdown: ContentScoreBreakdown | null;  // computeContentScoreBreakdown(...) — the per-slot gaps
   coverage: CoverageSnapshot | null;        // articles.ai_info_to_cover (parseSnapshot); null for un-analyzed
 
@@ -65,16 +65,16 @@ export interface ArticleContext {
   voiceTone?: string;           // domain_voices for the article's domain
   customRules?: string;         // content_settings instructions
   contentType?: string;         // articles.content_type / tone
-
-  // provenance
-  builtAt: string;              // ISO timestamp
 }
 
 export async function buildArticleContext(articleId: number): Promise<ArticleContext>;
 ```
 
 Design notes:
-- **One function, many reads, no writes.** `buildArticleContext` only SELECTs. It never mutates the article or triggers LLM work.
+- **One function, many reads, no writes.** `buildArticleContext` only SELECTs. It never mutates the article or triggers LLM work. It is **request-scoped and read-only**, so issuing 4–5 separate SELECTs (article row + terms + competitors + content-settings + domain-voices) is acceptable — do NOT prematurely collapse them into a mega-join. (`ScoreData | null` + `coverage: null` mean consumers guard with `if (ctx.coverage)` / `if (ctx.scoreData)`, never against an empty sentinel object.)
+- **Select only the columns needed**, never `SELECT *` — smaller transfer, migration-independent, easier review. The article-row query lists `id, target_keyword, language, content_type, score_data, ai_info_to_cover, domain_id` explicitly.
+- **No `as unknown as` double-casts.** A missing `score_data` yields `scoreData: null` (parsed with a `null` fallback), not a fabricated empty object cast to `ScoreData`.
+- **No speculative `builtAt`/provenance field** — nothing in B consumes it (YAGNI). If C's recommendation cache needs a build timestamp later, it's added then.
 - **Reuses A + existing helpers, does not reimplement:** `parseSnapshot` (dual-dialect, from A) for `coverage`; `readArticleTerms(articleId)` (from A) for `terms`; `readContentSettings()` + `getDomainVoices(domainId)` (existing, currently inlined in `pages/api/articles/[id]/generate.ts`) for brand/voice/rules; `computeContentScoreBreakdown` (existing) for `breakdown`.
 - **Graceful partials.** Any missing input is `undefined`/`null`/`[]`, never a throw — a freshly-imported article with no analysis still yields a valid (sparse) context. Consumers already handle sparse data (C/D gate on presence).
 - **All reads parameterized** (the `db.query(..., { replacements })` + `getArticleIdSql()` pattern established in A's Tasks 10-11). No id interpolation.

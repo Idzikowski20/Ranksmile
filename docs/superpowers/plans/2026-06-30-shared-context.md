@@ -65,13 +65,24 @@ import { sanitizeVerdict } from '../../lib/aiCoverage';
 describe('sanitizeVerdict', () => {
   it('coerces bad field types to safe defaults, keeps valid rows', () => {
     const out = sanitizeVerdict([
-      { id: 'a', covered: true,  quality: 'high', confidence: 2,   missing: ['x', 3, null], sectionId: 5 },
-      { id: 'b', covered: 'yes', quality: 4,      confidence: 0.9, missing: 'nope' },
+      { id: 'a', covered: true,   quality: 'high', confidence: 2,   missing: ['x', 3, null], sectionId: 5 },
+      { id: 'b', covered: 'true', quality: 4,      confidence: 0.9, missing: 'nope' },
     ]);
     // row a: quality 'high' -> 0; confidence 2 -> clamped 1; missing filtered to ['x']; sectionId 5 (number) -> undefined
     expect(out[0]).toEqual({ id: 'a', covered: true, quality: 0, confidence: 1, missing: ['x'] });
-    // row b: covered 'yes' -> true (truthy coerced to boolean); missing 'nope' (non-array) -> undefined
+    // row b: covered 'true' (stringified bool) -> true; missing 'nope' (non-array) -> undefined
     expect(out[1]).toEqual({ id: 'b', covered: true, quality: 4, confidence: 0.9 });
+  });
+  it('covered: only real true or the string "true" -> true; "false"/"0"/{}/[] -> false (no truthy coercion)', () => {
+    const out = sanitizeVerdict([
+      { id: 't1', covered: true,    quality: 5, confidence: 1 },
+      { id: 't2', covered: 'true',  quality: 5, confidence: 1 },
+      { id: 'f1', covered: 'false', quality: 5, confidence: 1 },
+      { id: 'f2', covered: '0',     quality: 5, confidence: 1 },
+      { id: 'f3', covered: {},      quality: 5, confidence: 1 },
+      { id: 'f4', covered: [],      quality: 5, confidence: 1 },
+    ]);
+    expect(out.map((r) => r.covered)).toEqual([true, true, false, false, false, false]);
   });
   it('drops rows without a string id', () => {
     expect(sanitizeVerdict([{ covered: true, quality: 5, confidence: 1 }, { id: 7 }])).toEqual([]);
@@ -110,7 +121,9 @@ export function sanitizeVerdict(raw: unknown): CoverageVerdict[] {
     const q = Number(row.quality);
     const v: CoverageVerdict = {
       id: row.id,
-      covered: !!row.covered,
+      // deliberately NOT `!!row.covered` — that turns the string "false"/"0" and {}/[] into true.
+      // Accept only a real boolean true or the stringified "true"; everything else is false.
+      covered: row.covered === true || row.covered === 'true',
       quality: Number.isFinite(q) ? Math.min(Math.max(q, 0), 5) : 0,
       confidence: clamp01(row.confidence),
     };
@@ -357,7 +370,6 @@ describe('buildArticleContext — core fields', () => {
     expect(ctx.contentType).toBe('guide');
     expect(ctx.paa).toEqual(['What are hooks?']);
     expect(ctx.coverage).toBeNull();           // parseSnapshot(null) -> null
-    expect(typeof ctx.builtAt).toBe('string');
   });
 
   it('does not throw when the article row is missing', async () => {
@@ -400,7 +412,7 @@ export interface ArticleContext {
   articleId: number;
   keyword: string;
   language?: string;
-  scoreData: ScoreData;
+  scoreData: ScoreData | null;     // null when the article has no score_data yet — no fabricated empty
   breakdown: null;                 // wired in a later sub-project if needed; kept null-typed in B
   coverage: CoverageSnapshot | null;
   paa: string[];
@@ -410,27 +422,28 @@ export interface ArticleContext {
   voiceTone?: string;
   customRules?: string;
   contentType?: string;
-  builtAt: string;
 }
 
-const EMPTY_SCORE_DATA = { terms: [], paa_questions: [] } as unknown as ScoreData;
-
-/** Read-only aggregator: assembles one ArticleContext from all its DB sources. Never writes. Sparse on missing data. */
+/** Read-only aggregator: assembles one ArticleContext from all its DB sources. Never writes. Sparse on missing data.
+ *  Request-scoped: it issues several small SELECTs (article row + terms + competitors + settings + voices) — that is
+ *  intentional and fine; do NOT prematurely collapse them into a mega-join. */
 export async function buildArticleContext(articleId: number): Promise<ArticleContext> {
   const idSql = await getArticleIdSql();
+  // Explicit columns only — never SELECT * (smaller transfer, migration-independent, easier review).
   const [rows] = (await db.query(
-    `SELECT * FROM articles WHERE ${idSql} = ?`,
+    `SELECT id, target_keyword, language, content_type, score_data, ai_info_to_cover, domain_id
+       FROM articles WHERE ${idSql} = ?`,
     { replacements: [articleId] },
   )) as [Array<Record<string, unknown>>, unknown];
   const row = rows?.[0];
 
+  // null (not a fake empty object) when the column is absent/unparseable — consumers guard with `if (ctx.scoreData)`.
   const scoreData = row?.score_data != null
-    ? safeJsonParse<ScoreData>(row.score_data as string, EMPTY_SCORE_DATA)
-    : EMPTY_SCORE_DATA;
+    ? safeJsonParse<ScoreData | null>(row.score_data as string, null)
+    : null;
   const coverage = parseSnapshot(row?.ai_info_to_cover);
-  const paa = Array.isArray((scoreData as { paa_questions?: unknown }).paa_questions)
-    ? ((scoreData as { paa_questions: unknown[] }).paa_questions.filter((q): q is string => typeof q === 'string'))
-    : [];
+  const paaRaw = (scoreData as { paa_questions?: unknown } | null)?.paa_questions;
+  const paa = Array.isArray(paaRaw) ? paaRaw.filter((q): q is string => typeof q === 'string') : [];
 
   return {
     articleId,
@@ -443,7 +456,6 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
     terms: [],           // Task 6
     competitors: [],     // Task 6
     contentType: typeof row?.content_type === 'string' ? row.content_type : undefined,
-    builtAt: new Date().toISOString(),
   };
 }
 ```
@@ -527,15 +539,22 @@ const [compRows] = (await db.query(
   `SELECT domain, url, title, headings_json, terms_json FROM article_competitors WHERE article_id = ?`,
   { replacements: [articleId] },
 )) as [Array<Record<string, unknown>>, unknown];
-const competitors: CompetitorContext[] = (compRows ?? []).map((c) => ({
-  domain: String(c.domain ?? ''),
-  url: typeof c.url === 'string' ? c.url : undefined,
-  title: typeof c.title === 'string' ? c.title : undefined,
-  headings: safeJsonParse<string[]>(c.headings_json as string, []).filter((h): h is string => typeof h === 'string'),
-  termsCount: Array.isArray(safeJsonParse<unknown[]>(c.terms_json as string, [])) ? safeJsonParse<unknown[]>(c.terms_json as string, []).length : 0,
-}));
+const competitors: CompetitorContext[] = (compRows ?? []).map((c) => {
+  // parse each JSON column ONCE, then reuse (no double safeJsonParse):
+  const headingsRaw = safeJsonParse<unknown[]>(c.headings_json as string, []);
+  const termsRaw = safeJsonParse<unknown[]>(c.terms_json as string, []);
+  return {
+    domain: String(c.domain ?? ''),
+    url: typeof c.url === 'string' ? c.url : undefined,
+    title: typeof c.title === 'string' ? c.title : undefined,
+    headings: Array.isArray(headingsRaw) ? headingsRaw.filter((h): h is string => typeof h === 'string') : [],
+    termsCount: Array.isArray(termsRaw) ? termsRaw.length : 0,
+  };
+});
 
-// brand / voice / rules — mirror generate.ts's real accessors (names discovered in Step 1):
+// brand / voice / rules — mirror generate.ts's real accessors (names discovered in Step 1).
+// NOTE: these + the terms/competitors reads mean buildArticleContext issues ~4-5 SELECTs. That is
+// ACCEPTABLE — it is request-scoped and read-only; do NOT collapse into a mega-join (premature optimization).
 const brand = await readContentSettings().catch(() => null);
 const voices = row?.domain_id != null ? await getDomainVoices(Number(row.domain_id)).catch(() => null) : null;
 ```
@@ -575,6 +594,8 @@ Run: `grep -n "target_keyword\|competitor\|db.query\|articleId\|buildArticleCont
 Identify every place it independently re-pulls the article row / competitor domains / keyword — those are what `buildArticleContext` replaces.
 
 - [ ] **Step 2: Refactor to the shared context** — near the top of the handler (after `articleId` is validated + access-checked), add `const ctx = await buildArticleContext(articleId);` and replace the endpoint's own article/keyword/competitor reads with `ctx.keyword`, `ctx.competitors`, `ctx.coverage`, etc. Remove the now-orphaned queries/vars that YOUR change made unused (`[[avoid-any-type]]`: delete dead code, don't `any`-cast around it). Preserve all existing behavior — the sidecar call, the `AiVisibilitySummary` persist, and the response must be unchanged in output; only the SOURCE of the inputs changes.
+
+**Do NOT change the request/response schema or the sidecar payload.** This task is an input-source swap only (raw per-endpoint reads → `buildArticleContext`). The HTTP request body it accepts, the JSON it returns, and the payload it POSTs to the sidecar must be byte-for-byte identical. Any schema/payload change here is out of scope and a review-blocking regression.
 
 > This is a surgical swap of the input source, not a behavior change. If the endpoint needs a field `ArticleContext` doesn't carry, either add it to `ArticleContext` (and Task 5/6) or keep that one existing read — note which, and prefer extending the context if the field is generally useful.
 
