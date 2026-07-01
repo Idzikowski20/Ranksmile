@@ -17,6 +17,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
+import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 import { checkCoverage, deepseekJudge, CoverageItem } from '../../../lib/aiCoverage';
 import { analyzeIntroduction, introCoverageItems, deepseekIntroJudge } from '../../../lib/introductionAnalyzer';
@@ -503,48 +504,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // path (computeAiSearchScore) if this throws.
     let coverageSnapshot = null;
     try {
-      const introSection = splitSections(pageContent)[0];
-      const introPlain = introSection ? introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+      const coverageUsage = orgId != null ? await getOrgUsage5h(orgId) : null;
+      if (coverageUsage?.over) {
+        console.warn('[coverage] org over 5h token budget — skipping coverage compute');
+      } else {
+        const introSection = splitSections(pageContent)[0];
+        const introPlain = introSection ? introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
 
-      const paaItems = paaCoverageItems((serp.paa_questions || []).map((q: string) => ({ question: q })));
-      const intentResult = await analyzeIntroduction(introPlain, keyword || '', deepseekIntroJudge);
-      const baseIntent = introCoverageItems(intentResult);
+        const paaItems = paaCoverageItems((serp.paa_questions || []).map((q: string) => ({ question: q })));
+        const intentResult = await analyzeIntroduction(introPlain, keyword || '', deepseekIntroJudge);
+        const baseIntent = introCoverageItems(intentResult);
 
-      const termRows = await readArticleTerms(articleId);
-      const countedTermRows = termRows.map((r) => ({ ...r, current_count: countOccurrences(plainText, r.term) }));
-      const entityItems = articleTermsToCoverageItems(countedTermRows);
+        const termRows = await readArticleTerms(articleId);
+        const countedTermRows = termRows.map((r) => ({ ...r, current_count: countOccurrences(plainText, r.term) }));
+        const entityItems = articleTermsToCoverageItems(countedTermRows);
 
-      const readabilityItems: CoverageItem[] = []; // standalone ai-readability run (Task 11) fills these
+        const readabilityItems: CoverageItem[] = []; // standalone ai-readability run (Task 11) fills these
 
-      const items = mergeCoverageItems({
-        paa: paaItems, intent: baseIntent, readability: readabilityItems, entity: entityItems,
-      });
+        const items = mergeCoverageItems({
+          paa: paaItems, intent: baseIntent, readability: readabilityItems, entity: entityItems,
+        });
 
-      // Judge only paa + future fact/definition (intent already graded by intro analyzer; entity/readability deterministic).
-      const judgeable = items.filter((i) => i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison' || i.type === 'example');
-      const coverageResult = await checkCoverage(plainText, judgeable, deepseekJudge);
+        // Judge only paa + future fact/definition (intent already graded by intro analyzer; entity/readability deterministic).
+        const judgeable = items.filter((i) => i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison' || i.type === 'example');
+        const coverageResult = await checkCoverage(plainText, judgeable, deepseekJudge);
 
-      // Fold the intent verdict's early-answer flag into the result the snapshot scores against.
-      coverageResult.answersMainQuestionEarly = intentResult.answerStartsEarly;
-      // Intent + entity items are already "graded" on their items; include them as pre-covered
-      // verdicts so buildSnapshot's bucket math sees them.
-      for (const it of [...baseIntent, ...entityItems]) {
-        coverageResult.items.push({ id: it.id, covered: it.covered, quality: it.quality, confidence: 1 });
+        // Fold the intent verdict's early-answer flag into the result the snapshot scores against.
+        coverageResult.answersMainQuestionEarly = intentResult.answerStartsEarly;
+        // Intent + entity items are already "graded" on their items; include them as pre-covered
+        // verdicts so buildSnapshot's bucket math sees them.
+        for (const it of [...baseIntent, ...entityItems]) {
+          coverageResult.items.push({ id: it.id, covered: it.covered, quality: it.quality, confidence: 1 });
+        }
+
+        // judge.version is 'promptVersion|model|temperature' → split for the snapshot's separate version fields.
+        const [promptVersion, model] = deepseekJudge.version.split('|');
+        coverageSnapshot = buildSnapshot(items, coverageResult, {
+          judgeVersion: deepseekJudge.version,
+          promptVersion,
+          model,
+          createdAt: new Date().toISOString(),
+        });
+
+        await db.query(
+          `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(coverageSnapshot), articleId] },
+        );
+
+        // checkCoverage/analyzeIntroduction don't surface each deepseek call's usage.total_tokens
+        // (CoverageResult/IntroVerdict carry no usage field, and checkCoverage caches by content
+        // hash so a "real" count would also have to model cache hits as free). Record a documented
+        // conservative fixed estimate instead: ~3000 tokens for the intro judge (short ~500-word
+        // input) + ~6000 for the coverage judge (full article text as input), both deepseek-chat
+        // JSON-mode calls. Follow-up: thread real usage out of the judges for precise accounting.
+        if (orgId != null) {
+          const coverageTokens = 9000;
+          await recordAiTokens(orgId, coverageTokens);
+        }
       }
-
-      // judge.version is 'promptVersion|model|temperature' → split for the snapshot's separate version fields.
-      const [promptVersion, model] = deepseekJudge.version.split('|');
-      coverageSnapshot = buildSnapshot(items, coverageResult, {
-        judgeVersion: deepseekJudge.version,
-        promptVersion,
-        model,
-        createdAt: new Date().toISOString(),
-      });
-
-      await db.query(
-        `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
-        { replacements: [JSON.stringify(coverageSnapshot), articleId] },
-      );
     } catch (err) {
       console.warn('[coverage] deep-analysis snapshot compute failed', err);
       // never block deep-analysis on coverage errors; the gauge falls back to computeAiSearchScore
