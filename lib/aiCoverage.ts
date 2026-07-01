@@ -175,11 +175,11 @@ const coverageCache = new Map<string, CoverageResult>();
 /** Run the injected judge; drop unknown/duplicate verdict ids; cache by version+ids+content hash. */
 export async function checkCoverage(
   plainText: string,
-  items: CoverageItem[],
+  items: readonly CoverageItem[],
   judge: CoverageJudge,
 ): Promise<CoverageResult> {
   if (!items.length) return { items: [], answersMainQuestionEarly: false };
-  const key = `${judge.version}|${items.map((i) => i.id).join(',')}::${hashId(plainText)}`;
+  const key = `${judge.version}|${items.map((i) => i.id).join(' ')}::${hashId(plainText)}`; //   delimiter can't appear in an id → no cross-set cache collision
   const cached = coverageCache.get(key);
   if (cached) return cached;
   const verdict = await judge.run(plainText, items.map((i) => ({ id: i.id, label: i.label, type: i.type })));
