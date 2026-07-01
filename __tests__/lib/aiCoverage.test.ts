@@ -1,8 +1,18 @@
 // __tests__/lib/aiCoverage.test.ts
+// Local sequelize mock — paaCoverageItems (lib/seo/keywordData) transitively imports
+// utils/searchConsole -> database/database + database/models/gscAccount, which pull in
+// real sequelize-typescript (ESM uuid dep) and crash Jest. Kept local (not a root
+// __mocks__/) so it can't affect unrelated suites. Mirrors __tests__/lib/domainPipeline.test.ts.
+jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn() } }));
+jest.mock('sequelize', () => ({ QueryTypes: { SELECT: 'SELECT', INSERT: 'INSERT', UPDATE: 'UPDATE' } }));
+jest.mock('../../database/models/gscAccount', () => ({ __esModule: true, default: { findAll: jest.fn().mockResolvedValue([]) } }));
+jest.mock('@googleapis/searchconsole', () => ({ searchconsole_v1: { Searchconsole: jest.fn() } }));
+
 import {
   computeCoverageScores, computeBucketScore, blendBuckets, earlyAnswerBonus,
   CoverageItem,
 } from '../../lib/aiCoverage';
+import { paaCoverageItems } from '../../lib/seo/keywordData';
 
 // GRADED item factory — the scorer works on graded items (covered/quality baked in), NOT CoverageResult.
 const gi = (
@@ -130,8 +140,7 @@ describe('hashId', () => {
 });
 
 describe('paaCoverageItems', () => {
-  it('stable hashed ids regardless of order; category:knowledge', async () => {
-    const { paaCoverageItems } = await import('../../lib/seo/keywordData');
+  it('stable hashed ids regardless of order; category:knowledge', () => {
     const a = paaCoverageItems([{ question: 'What is X?' }, { question: 'How does Y work?' }]);
     const b = paaCoverageItems([{ question: 'How does Y work?' }, { question: 'What is X?' }]);
     expect(a.map((i) => i.id).sort()).toEqual(b.map((i) => i.id).sort());
@@ -140,8 +149,7 @@ describe('paaCoverageItems', () => {
     expect(a[0].source).toBe('paa');
     expect(a[0].importance).toBe('recommended');
   });
-  it('returns [] for empty input', async () => {
-    const { paaCoverageItems } = await import('../../lib/seo/keywordData');
+  it('returns [] for empty input', () => {
     expect(paaCoverageItems([])).toEqual([]);
   });
 });
