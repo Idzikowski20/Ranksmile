@@ -46,4 +46,44 @@ describe('introCoverageItems', () => {
     expect(items[4].covered).toBe(false);    // goalMentioned
     expect(items.every((i) => i.category === 'intent')).toBe(true);
   });
+
+  it('pins each verdict field to its exact intent id (one-hot)', () => {
+    const FIELD_TO_ID: Array<[keyof IntroVerdict, string]> = [
+      ['intentConfirmed', 'intent-answer-main'],
+      ['answerStartsEarly', 'intent-answer-early'],
+      ['expectationsSet', 'intent-expectations'],
+      ['audienceMentioned', 'intent-who'],
+      ['goalMentioned', 'intent-why'],
+    ];
+
+    const baseVerdict: IntroVerdict = {
+      intentConfirmed: false,
+      answerStartsEarly: false,
+      audienceMentioned: false,
+      goalMentioned: false,
+      expectationsSet: false,
+    };
+
+    FIELD_TO_ID.forEach(([field, expectedId]) => {
+      const oneHotVerdict = { ...baseVerdict, [field]: true };
+      const items = introCoverageItems(oneHotVerdict);
+
+      // Verify the expected field's ID is covered
+      const expectedItem = items.find((i) => i.id === expectedId);
+      expect(expectedItem).toBeDefined();
+      expect(expectedItem?.covered).toBe(true);
+      expect(expectedItem?.quality).toBe(5);
+
+      // Verify all other fields are NOT covered
+      const otherIds = FIELD_TO_ID
+        .filter(([_, id]) => id !== expectedId)
+        .map(([_, id]) => id);
+      otherIds.forEach((otherId) => {
+        const otherItem = items.find((i) => i.id === otherId);
+        expect(otherItem).toBeDefined();
+        expect(otherItem?.covered).toBe(false);
+        expect(otherItem?.quality).toBe(0);
+      });
+    });
+  });
 });
