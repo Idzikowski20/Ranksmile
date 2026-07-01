@@ -79,4 +79,27 @@ describe('groupGuidelines', () => {
     const groups = groupGuidelines([], snapOf([]));
     expect(groups.map((g) => g.key).sort()).toEqual(['authority','intent','knowledge','quality','structure']);
   });
+  it('groupGuidelines sorts importance-first: a critical +1 guideline beats a recommended +15 guideline', () => {
+    // Construct two manual Guidelines with asymmetric lifts to prove importance trumps projectedLift
+    const guidelines: import('../../lib/recommendationEngine').Guideline[] = [
+      {
+        id: 'guideline-rec', coverageItemId: 'k-rec', group: 'knowledge',
+        title: 'Recommended', instruction: 'x', importance: 'recommended', status: 'open',
+        projectedLift: 15, effort: 'Easy', easyWin: false,
+      },
+      {
+        id: 'guideline-crit', coverageItemId: 'k-crit', group: 'knowledge',
+        title: 'Critical', instruction: 'x', importance: 'critical', status: 'open',
+        projectedLift: 1, effort: 'Easy', easyWin: false,
+      },
+    ];
+    const snapshot = snapOf([
+      ci('k-crit', 'knowledge', 'critical', false, 0),
+      ci('k-rec', 'knowledge', 'recommended', false, 0),
+    ]);
+    const groups = groupGuidelines(guidelines, snapshot);
+    const knowledge = groups.find((g) => g.key === 'knowledge')!;
+    // Critical (+1 lift) must sort before Recommended (+15 lift) because importance is the primary sort key
+    expect(knowledge.guidelines.map((x) => x.coverageItemId)).toEqual(['k-crit', 'k-rec']);
+  });
 });
