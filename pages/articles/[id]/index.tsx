@@ -739,9 +739,10 @@ const ArticleEditorPage: NextPage = () => {
     const postScore = computeContentScore(
       postText, postWords, postHeadings, scoreData, postParas,
       (postHtml.match(/<a\s[^>]*href=/gi) || []).length, postHtml, article?.target_keyword || '',
+      undefined, coverageItems,
     );
     return { postScore, seoDelta: postScore - preScoreRef.current };
-  }, [optimizeState, editorHtml, scoreData, article?.target_keyword]);
+  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems]);
   const initialPlagiarism = useMemo(() => {
     try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
   }, [(article as any)?.plagiarism_json]);
@@ -800,6 +801,8 @@ const ArticleEditorPage: NextPage = () => {
         (html.match(/<a\s[^>]*href=/gi) || []).length,
         html,
         article?.target_keyword || '',
+        undefined,
+        coverageItems,
       ),
       ...(versionMeta ? { _ao_meta: versionMeta } : {}),
     };
@@ -1152,7 +1155,7 @@ const ArticleEditorPage: NextPage = () => {
     const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
     const preParaCount = (preHtml.match(/<p[\s>]/gi) || []).length;
     preScoreRef.current = scoreData
-      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '')
+      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '', undefined, coverageItems)
       : 0;
     changedSectionsRef.current = [];
     optimizeStore.clear();

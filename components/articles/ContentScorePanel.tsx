@@ -345,12 +345,12 @@ const ContentScorePanel = ({
       scoreTimerRef.current = null;
       const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
       const kwCov = keywords.map((k: any) => ({ keyword: k.keyword, is_covered: k.is_covered }));
-      setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov));
+      setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov, coverageItems));
     }, 400);
     return () => {
       if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     };
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore]);
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore, coverageItems]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
@@ -512,11 +512,11 @@ const ContentScorePanel = ({
     if (!scoreData) return [];
     const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
     const kwCov = keywords.map((k: any) => ({ keyword: k.keyword, is_covered: k.is_covered }));
-    const { slots } = computeContentScoreBreakdown(plainText, wordCount, headingCount, scoreData, paraCount, html, keyword, kwCov);
+    const { slots } = computeContentScoreBreakdown(plainText, wordCount, headingCount, scoreData, paraCount, html, keyword, kwCov, coverageItems);
     return slots
       .filter((s) => s.missingPoints > 0)
       .sort((a, b) => b.missingPoints - a.missingPoints);
-  }, [plainText, wordCount, headingCount, scoreData, html, keyword, keywords]);
+  }, [plainText, wordCount, headingCount, scoreData, html, keyword, keywords, coverageItems]);
 
   if (view === 'write') {
     return (
