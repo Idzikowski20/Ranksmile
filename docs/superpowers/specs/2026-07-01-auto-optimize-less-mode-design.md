@@ -35,11 +35,11 @@ Each is a real knob the tech-lead flagged. Recommendation + rationale, then the 
 
 Rationale: `expectedLift` of a single recommended guideline (`projectedLift` typically ~5–15 via `scoreContribution`) lands most low-value sections in the 6–12 LESS band and reserves NORMAL for sections with a critical or multi-guideline deficit (diminishing sum > 12). 85 matches the AI-coverage blend cap (`blendBuckets` caps the bucket-blend at 85, `lib/aiCoverage.ts:159-167`), so "SEO already maxed" is a natural takeover trigger. All four are module constants — a single-line edit re-tunes.
 
-### OD-2 — Term-only sections (`expectedLift === 0`): skip by default vs a small term-worth floor
+### OD-2 [RATIFIED] — Term-only sections (`expectedLift === 0`) → LESS (minimal weave), dropped only by AI-takeover
 
 RCA nuance: a section whose ONLY deficit is missing NLP terms has `rgs = []` → `expectedLift = diminishingLift([]) = 0` (`lib/optimizationPlanner.ts:60-63,96`), yet today it is NOT skipped because `secTerms.length > 0` defeats the skip predicate (`:92`) and `focusFor` returns `'seo-terms'` (`:78`).
 
-**Recommendation:** **skip term-only sections by default** (do not treat missing NLP terms alone as `worthEditing`). This is the explicit, documented decision — not an accidental side effect. Rationale: (a) it aligns with the "Less"/AI-takeover philosophy — term stuffing is exactly the low-value edit "Less" avoids and the AI-takeover pillar drops entirely; (b) with `expectedLift = 0`, any threshold tier puts term-only sections below `LESS_MIN` anyway, so `worthEditing` naturally returns false once it keys on `expectedLift` instead of `secTerms.length`. We do NOT add a term-worth floor in v1 (it would re-introduce the RCA §1 over-optimization); the term-only path can be revived later behind a named `TERM_WORTH_FLOOR = 0` constant if data shows value. Guard: this reverses today's `secTerms`-defeats-skip behaviour, so it is an intentional NORMAL-adjacent change — see the CONFLICT note at the end.
+**[RATIFIED] decision (tech-lead):** a term-only section (`rgs=[]`, `secTerms>0`, `expectedLift=0`) is **worth a LESS (minimal) edit — NOT skipped** — because SurferSEO's "Less" still weaves missing terms minimally. Such sections are dropped ONLY when the AI-search takeover fires (high SEO). Concretely: `TERM_WORTH_FLOOR = 1` (was 0) — a section with `>=1` under-target term (when NOT in `aiTakeover`) passes `worthEditing`, and `selectMode` maps it to **LESS** (lift 0 falls through the NORMAL tier). Rationale: (a) it matches Surfer's "Less" behaviour of minimally weaving missing terms rather than skipping them; (b) `aiTakeover === true` still suppresses the term path (the `!aiTakeover` guard), so "SEO maxed, AI lags" correctly drops term stuffing. A guideline-only section with `expectedLift < LESS_MIN` and no terms/critical still SKIPS via `worthEditing` — `LESS_MIN` keeps filtering weak guideline-only sections. Note: the current per-section 70%-target term signal (`sectionMissingTerms`, `optimizationPlanner.ts:66-71`) is noisier than Surfer's article-level term model, so an article-level term-targeting pass is a future follow-up (E / CoverageGraph territory) — but v1 keeps the per-section signal driving a LESS edit. This reverses today's `secTerms`-defeats-skip default into a deliberate term-only → LESS classification — see the [RATIFIED] note at the end.
 
 ### OD-3 — "AI low" definition for the takeover
 
@@ -112,7 +112,7 @@ Three modes on a NEW `PlanStep.mode` axis, orthogonal to the existing `focus` (w
 | mode | when | prompt intensity |
 |---|---|---|
 | **skip** | `!worthEditing` - `expectedLift < LESS_MIN` (and not a critical-miss override) | none, 0 tokens |
-| **LESS** | `LESS_MIN <= expectedLift <= NORMAL_MIN`, OR intro-guarded section | 2-5 local patches, preserve >95% wording, no new paragraphs |
+| **LESS** | `LESS_MIN <= expectedLift <= NORMAL_MIN`, OR a term-only section (`expectedLift 0`, passed `worthEditing` via terms, not in aiTakeover), OR intro-guarded section | 2-5 local patches, preserve >95% wording, no new paragraphs |
 | **NORMAL** | `expectedLift > NORMAL_MIN` and not expand-eligible | today's prompt byte-for-byte |
 | **EXPAND** | `item.needsExpansion` OR a **critical** coverage item missing - AND not intro-blocked | deepen; may add content |
 
@@ -122,14 +122,14 @@ NORMAL_MIN = 12         // OD-1
 SEO_HIGH = 85           // OD-1
 AI_GAP = 25             // OD-3
 INTENT_INTRO_MIN = 50   // OD-1
-TERM_WORTH_FLOOR = 0    // OD-2 - term-only sections skip (floor 0 = never worth on terms alone)
+TERM_WORTH_FLOOR = 1    // OD-2 [RATIFIED] - a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
 
 worthEditing({ expectedLift, rgs, secTerms, aiTakeover }) -> boolean:
   // pillar 1 + 2 + OD-2: a real "good enough" cut keyed on predicted benefit, not force-assign.
   if hasCriticalMiss(rgs): return true                     // never skip a critical coverage gap
   if expectedLift >= LESS_MIN: return true                 // LESS band or above
-  // term-only deficit (rgs empty -> expectedLift 0): skip by default (OD-2). Floor kept for future tuning.
-  if !aiTakeover && secTerms.length > 0 && TERM_WORTH_FLOOR > 0 && termWorth(secTerms) >= TERM_WORTH_FLOOR:
+  // term-only deficit (rgs empty -> expectedLift 0): worth a LESS (minimal) edit unless AI-takeover drops it (OD-2 [RATIFIED]).
+  if !aiTakeover && secTerms.length >= TERM_WORTH_FLOOR:
       return true
   return false                                             // below benefit threshold -> skip
 
@@ -143,8 +143,8 @@ selectMode({ section, expectedLift, rgs, snapshot, aiTakeover }) -> Mode:
   if section.index === 0 && !introMayExpand(snapshot):
       return 'less'                                           // never NORMAL/EXPAND on a healthy intro
   if expandEligible:  return 'expand'
-  if expectedLift > NORMAL_MIN:  return 'normal'
-  return 'less'                                               // LESS_MIN..NORMAL_MIN band
+  if expectedLift > NORMAL_MIN:  return 'normal'              // then EXPAND/intro rules as above
+  return 'less'                                               // else -> LESS: LESS_MIN..NORMAL_MIN band AND term-only sections (lift 0, passed worthEditing via terms)
 
 introMayExpand(snapshot) -> boolean:
   // pillar 4: intro may be NORMAL/EXPAND only when intent is genuinely weak.
@@ -210,7 +210,7 @@ When SEO is high and AI-search lags, drop term work and route only AI-search sig
 - **Trigger (OD-3):** `aiTakeover = seoScore >= SEO_HIGH (85) && (seoScore - aiScore) > AI_GAP (25)`.
 - **Effect:**
   1. `secTerms = []` for every section (no `sectionMissingTerms` call) -> no `focus: 'seo-terms'`, no term bullets.
-  2. `worthEditing` ignores term-only deficits entirely (the `TERM_WORTH_FLOOR` branch is already false under takeover per OD-2).
+  2. `worthEditing` ignores term-only deficits entirely — the `!aiTakeover` guard on the `TERM_WORTH_FLOOR` branch is false under takeover, so term-only sections that would otherwise get a LESS edit are DROPPED (OD-2 [RATIFIED]).
   3. Only AI-search guidelines survive as routed work: intent / direct answer / missing questions / knowledge / authority / citations - i.e. the `intent`, `knowledge`, `authority` groups (`recommendationEngine.ts` `categoryToGroup`), which drive `focus: 'ai-coverage'` via `focusFor` (`optimizationPlanner.ts:75,77`).
 - **Score sources threaded into `PlanInput`:**
   - `seoScore` = `computeContentScore(...)` -> the SEO score (`lib/contentScore.ts:386`), already persisted as `content_score` / `scoreData._computed_score` (`pages/api/articles/[id]/index.ts:78`). The endpoint reads it; it is NOT recomputed in the planner.
@@ -272,15 +272,18 @@ optimize-sections POST { content, articleId, scoreData? }                    (op
    |- userInstruction: LESS set; NORMAL/EXPAND undefined
    v
  for step of plan.steps:                                                       (:142)
-   |- focus==='skip' -> sse 'section' changed:false                           (:147-149)  [0 tokens]
+   |- focus==='skip' -> sse 'section' buildSectionEvent(section,result,step)   (:147-149)  changed:false + focus/mode/reason  [0 tokens]
    |- else -> DeepSeek: system=step.systemPrompt,                             (:164)
-   |          user = step.userInstruction ?? "Improve this section:\n\n"+html  (:165)  <- ONLY endpoint edit (OD-4)
-   |          retries/abort/stripFences/isUsableEdit/diff/SSE                  [unchanged, :152-188]
+   |          user = step.userInstruction ?? "Improve this section:\n\n"+html  (:165)  <- endpoint edit (OD-4)
+   |          retries/abort/stripFences/isUsableEdit/diff                      [unchanged, :152-186]
+   |          sse 'section' buildSectionEvent(section,result,step)            (:188)  changed:true + focus/mode/reason
    v  finally: shouldChargeCredit -> recordAiTokens                            [unchanged, :190-195]
  sse 'done'                                                                    (:204)
 ```
 
-The ONLY endpoint edits: (1) read `seoScore` + `aiScore` server-side and pass them into `buildOptimizationPlan`; (2) change the user-message line to `step.userInstruction ??` the existing `Improve this section` literal. Everything else in the loop/finally/SSE is byte-for-byte D.
+The endpoint edits: (1) read `seoScore` + `aiScore` server-side and pass them into `buildOptimizationPlan`; (2) change the user-message line to `step.userInstruction ??` the existing `Improve this section` literal; (3) forward `focus`/`mode`/`reason` from `PlanStep` onto BOTH `section` SSE events via `buildSectionEvent(section, result, step)` (skip branch `:148`, changed branch `:188`) — the UX contract (Ratification 2). Everything else in the loop/finally/SSE is byte-for-byte D.
+
+**`section` SSE event contract (UX sub-project dependency):** the existing `section` event gains three optional fields sourced verbatim from `PlanStep` — `focus: StepFocus`, `mode: EditMode`, `reason: string`. `buildSectionEvent` / `SectionEvent` (`lib/optimizeSectionEvents.ts`) must gain these optional fields. This is the ONLY consumer-facing contract the UX layer depends on (no score field); kept minimal + additive (Part-8-clean for the UX side).
 
 ---
 
@@ -288,7 +291,7 @@ The ONLY endpoint edits: (1) read `seoScore` + `aiScore` server-side and pass th
 
 **Ships (new pure code in `lib/optimizationPlanner.ts`):** `EditMode` type; `PlanStep.mode` + `PlanStep.userInstruction`; `PlanInput.seoScore` + `PlanInput.aiScore`; named constants `LESS_MIN/NORMAL_MIN/SEO_HIGH/AI_GAP/INTENT_INTRO_MIN/TERM_WORTH_FLOOR`; `worthEditing`, `selectMode`, `introMayExpand`, `hasCriticalMiss`; `LESS_RULES` + `buildLessPrompt`; `buildStepPromptForMode`; `userInstructionForMode`.
 
-**Touches (endpoint, minimal):** `pages/api/articles/optimize-sections.ts` - read `seoScore`/`aiScore`, pass into plan (`:133`); user-message line (`:165`); `legacyPlan` (`:48-65`) gets `mode: 'normal'`, `userInstruction: undefined` on each step + `seoScore/aiScore` are irrelevant to it (draft path stays byte-for-byte legacy).
+**Touches (endpoint, minimal):** `pages/api/articles/optimize-sections.ts` - read `seoScore`/`aiScore`, pass into plan (`:133`); user-message line (`:165`); forward `focus`/`mode`/`reason` via `buildSectionEvent(section, result, step)` on BOTH `section` events (skip `:148`, changed `:188`); `legacyPlan` (`:48-65`) gets `mode: 'normal'`, `userInstruction: undefined` on each step + `seoScore/aiScore` are irrelevant to it (draft path stays byte-for-byte legacy). Plus `lib/optimizeSectionEvents.ts` — `buildSectionEvent`/`SectionEvent` gain optional `focus`/`mode`/`reason` fields (additive, UX contract).
 
 **Frozen (do NOT edit):** `lib/optimizeGuidelineRouting.ts` (routing unchanged - F constrains MODE, not routing), `lib/recommendationEngine.ts`, `lib/aiCoverage.ts`, `lib/articleContext.ts`, `lib/contentScore.ts`, `lib/aiSearchScore.ts`. The existing `buildStepPrompt`/`SHARED_RULES`/`NEGATIVE_CONSTRAINTS`/`OUTPUT_RULE`/`focusBlock` (`optimizationPlanner.ts:138-175`) are REUSED unchanged by NORMAL/EXPAND - not modified.
 
@@ -296,10 +299,10 @@ The ONLY endpoint edits: (1) read `seoScore` + `aiScore` server-side and pass th
 
 ## Testing (LOCAL jest.mock only; [[avoid-any-type]]; implementers must NOT run `npm run build`)
 
-- **`worthEditing`** (pure): skip when `expectedLift < LESS_MIN`; keep at `>= LESS_MIN`; term-only section (`rgs=[]`, `secTerms>0`, `expectedLift=0`) SKIPS by default (OD-2); critical-miss overrides the threshold (never skipped).
-- **`selectMode`** (pure): tier boundaries (5->skip via worthEditing, 6->less, 12->less, 13->normal); `effort:'Large'` or critical-miss -> expand; intro index 0 -> less unless `introMayExpand`.
+- **`worthEditing`** (pure): skip when `expectedLift < LESS_MIN`; keep at `>= LESS_MIN`; term-only section (`rgs=[]`, `secTerms>0`, `expectedLift=0`, `aiTakeover:false`) is WORTH editing → `true` (OD-2 [RATIFIED]); the same term-only section under `aiTakeover:true` → `false` (takeover drops terms); critical-miss overrides the threshold (never skipped).
+- **`selectMode`** (pure): tier boundaries (5->skip via worthEditing, 6->less, 12->less, 13->normal); a term-only section (lift 0, passed via terms) -> `less`; `effort:'Large'` or critical-miss -> expand; intro index 0 -> less unless `introMayExpand`.
 - **`introMayExpand`** (pure): true when intent bucket score < 50 OR `answersMainQuestionEarly === false`; false otherwise -> intro stays LESS.
-- **AI-takeover** (pure, via `buildOptimizationPlan`): `seoScore=90, aiScore=40` -> `secTerms` dropped, no `seo-terms` focus, term-only sections skip; `seoScore=90, aiScore=80` (gap 10 <= 25) -> NO takeover.
+- **AI-takeover** (pure, via `buildOptimizationPlan`): `seoScore=90, aiScore=40` -> `secTerms` dropped, no `seo-terms` focus, term-only sections skip (takeover suppresses the term path); `seoScore=90, aiScore=80` (gap 10 <= 25) -> NO takeover, term-only sections stay LESS.
 - **LESS prompt/user-message:** `LESS_RULES` present, `SHARED_RULES` lines 145-146 ABSENT; `userInstruction` is the patch-only message (NOT "Improve this section"); intro-LESS adds the one-sentence-answer directive for index 0.
 - **NORMAL byte-for-byte regression (the required test):** an all-NORMAL run (all `expectedLift > NORMAL_MIN`, no takeover, no intro-block) produces the EXACT `systemPrompt` from today's `buildStepPrompt` AND `userInstruction === undefined` for every step - assert the section events + prompts equal the pre-F baseline. Keep D's current 26 tests (`optimizeGuidelineRouting`/`optimizationPlanner`) + the endpoint guard suite green.
 - **Endpoint** (extend `__tests__/api/articles-optimize-sections-guard.test.ts`, LOCAL mock of `buildArticleContext`/`getOrgUsage5h`/`fetch` + the two score reads): NORMAL step sends `Improve this section:\n\n` + html; LESS step sends `step.userInstruction`; skip emits `changed:false` with NO fetch.
@@ -310,15 +313,15 @@ The ONLY endpoint edits: (1) read `seoScore` + `aiScore` server-side and pass th
 ## Task breakdown (detailed TDD plan: `docs/superpowers/plans/2026-07-01-auto-optimize-less-mode.md`)
 
 1. Types + constants - `EditMode`, `PlanStep.mode`/`userInstruction`, `PlanInput.seoScore`/`aiScore`, the 6 named constants. `tsc` green with placeholders defaulting to NORMAL.
-2. `hasCriticalMiss` + `worthEditing` (pure) - benefit threshold, critical override, term-only skip (OD-2).
+2. `hasCriticalMiss` + `worthEditing` (pure) - benefit threshold, critical override, term-only → worth (OD-2 [RATIFIED]; `aiTakeover` suppresses).
 3. `introMayExpand` + `selectMode` (pure) - tiers, intro guard, expand gate (OD-5).
 4. AI-takeover in `buildOptimizationPlan` - thread `seoScore`/`aiScore`, drop `secTerms` under takeover (pillar 5, OD-3).
 5. `LESS_RULES` + `buildLessPrompt` + `buildStepPromptForMode` + `userInstructionForMode` - LESS system prompt & patch-only user message; intro-LESS one-sentence directive.
 6. Wire `mode`/`systemPrompt`/`userInstruction` into `buildOptimizationPlan` step assembly (skip predicate becomes `!worthEditing`).
 7. **All-NORMAL byte-for-byte regression test** - proves NORMAL systemPrompt + undefined userInstruction unchanged vs baseline.
-8. Endpoint wiring - read `seoScore`/`aiScore` server-side, pass into plan, `user = step.userInstruction ??` today's literal; `legacyPlan` steps get `mode:'normal'`; extend guard test.
+8. Endpoint wiring - read `seoScore`/`aiScore` server-side, pass into plan, `user = step.userInstruction ??` today's literal; forward `focus`/`mode`/`reason` via `buildSectionEvent(section, result, step)` on BOTH `section` events (skip + changed) and add those optional fields to `buildSectionEvent`/`SectionEvent` in `lib/optimizeSectionEvents.ts` (UX contract, Ratification 2); `legacyPlan` steps get `mode:'normal'`; extend guard test.
 
-~8 tasks. Effort: **Medium** - no routing/recommendation/coverage changes; all new logic is pure + additive; the endpoint edit is two lines plus two score reads.
+~8 tasks. Effort: **Medium** - no routing/recommendation/coverage changes; all new logic is pure + additive; the endpoint edit is the two score reads + the user-message line + the additive `buildSectionEvent` field forwarding.
 
 ---
 
@@ -331,6 +334,6 @@ The ONLY endpoint edits: (1) read `seoScore` + `aiScore` server-side and pass th
 
 ---
 
-## CONFLICT - flag for human resolution
+## [RATIFIED] Term-only → LESS (was CONFLICT)
 
-**Term-only skip (OD-2) vs "NORMAL byte-for-byte" (pillar 3):** Today a section whose only deficit is missing NLP terms (`rgs=[]`, `secTerms>0`) is NOT skipped - it runs `focus:'seo-terms'` with today's NORMAL prompt (`optimizationPlanner.ts:78,92`). OD-2 makes `worthEditing` SKIP it (`expectedLift=0 < LESS_MIN`). This is an intentional behaviour CHANGE for term-only sections and is therefore NOT "byte-for-byte NORMAL" for that specific class of section. The frozen-NORMAL guarantee holds for every section F classifies NORMAL, but term-only sections are RECLASSIFIED skip rather than kept NORMAL. The human must confirm this is desired (the RCA and the "Less"/AI-takeover philosophy both argue it is) - or, if a term-only NORMAL edit must be preserved for parity, set `TERM_WORTH_FLOOR` to a small positive value and define `termWorth()` so those sections route LESS instead of skip. Recommendation stands: skip by default.
+**Term-only reclassification (OD-2 [RATIFIED]) vs "NORMAL byte-for-byte" (pillar 3):** Today a section whose only deficit is missing NLP terms (`rgs=[]`, `secTerms>0`) runs `focus:'seo-terms'` with today's NORMAL prompt (`optimizationPlanner.ts:78,92`). The tech-lead ratified: such a section is worth a **LESS (minimal) edit** — `TERM_WORTH_FLOOR = 1` makes `worthEditing` return `true`, and `selectMode` maps it to LESS (lift 0 falls through the NORMAL tier). It is dropped ONLY under the AI-search takeover (high SEO), where the `!aiTakeover` guard suppresses the term path. This is an intentional behaviour CHANGE for term-only sections (they move from today's NORMAL prompt to a minimal LESS patch — SurferSEO's "Less" still weaves missing terms minimally) and is therefore NOT "byte-for-byte NORMAL" for that class; the frozen-NORMAL guarantee holds for every section F classifies NORMAL. Follow-up: the per-section 70% term signal (`sectionMissingTerms`) is noisier than Surfer's article-level term model, so a future article-level term-targeting pass (E / CoverageGraph territory) is the better long-term signal — but v1 keeps the per-section signal driving the LESS edit.
