@@ -27,7 +27,7 @@ import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, countOccurrences, computeContentScore } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
-import type { CoverageItem, BucketScore } from '../../../lib/aiCoverage';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
 import { getErrorMessage } from '../../../lib/errors';
 import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
@@ -468,6 +468,7 @@ const ArticleEditorPage: NextPage = () => {
   const [coverageItems, setCoverageItems] = useState<CoverageItem[]>([]);
   const [coverageBuckets, setCoverageBuckets] = useState<BucketScore[]>([]);
   const [aiCoverageScore, setAiCoverageScore] = useState<number | null>(null);
+  const [coverageSnapshot, setCoverageSnapshot] = useState<CoverageSnapshot | null>(null);
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
@@ -623,6 +624,7 @@ const ArticleEditorPage: NextPage = () => {
           setCoverageItems(snap ? [...snap.items] : []);
           setCoverageBuckets(snap ? [...snap.buckets] : []);
           setAiCoverageScore(snap?.overall ?? null);
+          setCoverageSnapshot(snap ?? null);
           // Restore internal links panel state from DB into localStorage (if localStorage is empty)
           if (art.internal_links_cache) {
             try {
@@ -1983,6 +1985,7 @@ const ArticleEditorPage: NextPage = () => {
                       aiVisibilitySummary={aiVisibilitySummary}
                       coverageItems={coverageItems}
                       coverageBuckets={coverageBuckets}
+                      coverageSnapshot={coverageSnapshot}
                       aiCoverageScore={aiCoverageScore}
                       isRunningAiVisibility={isRunningAiVisibility}
                       onRunAiVisibility={handleRunAiVisibility}
