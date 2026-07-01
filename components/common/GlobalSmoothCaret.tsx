@@ -82,6 +82,7 @@ const GlobalSmoothCaret = () => {
   const prevCaretColorRef = useRef<string>('');
   const nativeHiddenRef = useRef(false);
   const rafRef = useRef<number | null>(null);
+  const barRef = useRef<HTMLDivElement>(null); // the blinking bar (inner layer)
 
   useEffect(() => {
     // One offscreen span (single-line width) + one mirror div (textarea wrapping) for the app.
@@ -239,6 +240,16 @@ const GlobalSmoothCaret = () => {
       });
     };
 
+    // Restart the blink so the caret is SOLID while it moves (typing/click/focus),
+    // then resumes blinking when idle — matching native caret behaviour.
+    const resetBlink = () => {
+      const bar = barRef.current;
+      if (!bar) return;
+      bar.style.animation = 'none';
+      void bar.offsetWidth; // force reflow to restart the CSS animation
+      bar.style.animation = '';
+    };
+
     const resizeObserver = new ResizeObserver(scheduleUpdate);
 
     const setActive = (field: CaretField) => {
@@ -251,6 +262,7 @@ const GlobalSmoothCaret = () => {
       activeRef.current = field;
       resizeObserver.observe(field);
       update(true); // jump the springs to the new field (no cross-page glide)
+      resetBlink();
     };
 
     const clearActive = () => {
@@ -267,8 +279,8 @@ const GlobalSmoothCaret = () => {
     const onFocusOut = (e: FocusEvent) => {
       if (e.target === activeRef.current) clearActive();
     };
-    const onInput = (e: Event) => { if (e.target === activeRef.current) scheduleUpdate(); };
-    const onSelectionChange = () => { if (activeRef.current) scheduleUpdate(); };
+    const onInput = (e: Event) => { if (e.target === activeRef.current) { resetBlink(); scheduleUpdate(); } };
+    const onSelectionChange = () => { if (activeRef.current) { resetBlink(); scheduleUpdate(); } };
     const onScrollOrResize = () => { if (activeRef.current) scheduleUpdate(); };
     const onFontsDone = () => { if (activeRef.current) scheduleUpdate(); };
 
@@ -302,24 +314,42 @@ const GlobalSmoothCaret = () => {
   }, []);
 
   return (
-    <motion.div
-      aria-hidden
-      style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        width: CARET_WIDTH,
-        height: caretH,
-        borderRadius: 1,
-        background: CARET_COLOR,
-        x: springX,
-        y: springY,
-        opacity: caretOpacity,
-        pointerEvents: 'none',
-        zIndex: CARET_Z,
-        willChange: 'transform, opacity',
-      }}
-    />
+    <>
+      {/* Blink keyframes + class — the inner bar's opacity, independent of show/hide (outer
+          opacity). Defined as a CLASS (not inline) so resetBlink can clear the inline
+          `animation:none` and fall back to a live animation that restarts from the top. */}
+      <style>{'@keyframes smoothCaretBlink{0%,100%{opacity:1}50%{opacity:0}}.smooth-caret-bar{animation:smoothCaretBlink 1.1s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.smooth-caret-bar{animation:none}}'}</style>
+      {/* Outer: position (spring x/y) + show/hide (caretOpacity 0|1). */}
+      <motion.div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          width: CARET_WIDTH,
+          height: caretH,
+          x: springX,
+          y: springY,
+          opacity: caretOpacity,
+          pointerEvents: 'none',
+          zIndex: CARET_Z,
+          willChange: 'transform, opacity',
+        }}
+      >
+        {/* Inner: the visible bar that blinks (animation via the .smooth-caret-bar class so
+            resetBlink can restart it; reset to solid while moving via resetBlink). */}
+        <div
+          ref={barRef}
+          className="smooth-caret-bar"
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: 1,
+            background: CARET_COLOR,
+          }}
+        />
+      </motion.div>
+    </>
   );
 };
 
