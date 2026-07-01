@@ -1,3 +1,5 @@
+import type { CoverageItem } from './aiCoverage';
+
 // Content Score formula — targets derived from average of top-10 competitor pages.
 //
 // Signal slots (each 0–max, normalised to 100):
@@ -299,7 +301,7 @@ export type ScoreSlot = { key: string; label: string; earned: number; max: numbe
 
 // Single source of truth for every scoring slot — both computeContentScore (sum) and
 // computeContentScoreBreakdown (per-slot gaps) read from this so they can never diverge.
-function collectScoreSlots(
+export function collectScoreSlots(
    plainText: string,
    wordCount: number,
    headingCount: number,
@@ -308,6 +310,7 @@ function collectScoreSlots(
    html?: string,
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
+   coverageItems?: CoverageItem[],
 ): ScoreSlot[] {
    const slots: ScoreSlot[] = [];
    if (!scoreData) return slots;
@@ -324,8 +327,16 @@ function collectScoreSlots(
    push('headings', 'Headings', Math.min(headingCount / headingsTarget, 1) * 10, 10,
       `Add headings toward ~${scoreData.headings_target || headingsTarget} (use H3 inside H2 sections)`);
 
-   // ── NLP terms (only when competitor terms were extracted) ──
-   if (scoreData.terms?.length) {
+   // ── NLP terms — prefer activated `article_terms` entity coverage items when present,
+   // else fall back to the legacy scoreData.terms path (dual-read, zero regression).
+   // The entity branch scores LIVE against the current plainText (not the frozen
+   // snapshot `covered` flag) so the gauge keeps tracking edits after deep analysis. ──
+   const entityItems = (coverageItems ?? []).filter((i) => i.type === 'entity');
+   if (entityItems.length > 0) {
+      const covered = entityItems.filter((i) => countOccurrences(plainText, i.label) >= 1).length;
+      const earned = Math.round((covered / entityItems.length) * 25);
+      push('terms', 'NLP terms', earned, 25, `${covered}/${entityItems.length} terms covered`);
+   } else if (scoreData.terms?.length) {
       const totalWeight = scoreData.terms.reduce((s, t) => s + Math.max(t.target_count, 1), 0);
       const termsRatio = scoreData.terms.reduce((s, t) => {
          const actual = countOccurrences(plainText, t.term);
@@ -382,8 +393,9 @@ export function computeContentScore(
    html?: string,
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
+   coverageItems?: CoverageItem[],
 ): number {
-   const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage);
+   const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage, coverageItems);
    if (!slots.length) return 0;
 
    const earned = slots.reduce((s, x) => s + x.earned, 0);
@@ -412,8 +424,9 @@ export function computeContentScoreBreakdown(
    html?: string,
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
+   coverageItems?: CoverageItem[],
 ): { slots: Array<ScoreSlot & { missingPoints: number }>; totalPossible: number } {
-   const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage);
+   const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage, coverageItems);
    const totalPossible = slots.reduce((s, x) => s + x.max, 0);
    const scale = totalPossible > 0 ? 100 / totalPossible : 0;
    return {

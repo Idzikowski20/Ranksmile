@@ -17,6 +17,7 @@ import {
 } from '../dataforseo';
 import { readLocalSCData } from '../../utils/searchConsole';
 import { AiVisibilitySummary } from '../aiSearchScore';
+import { CoverageItem, hashId } from '../aiCoverage';
 
 export type KeywordSource = 'dataforseo' | 'gsc' | 'none';
 
@@ -244,6 +245,21 @@ export async function getOwnVisibleKeywords(opts: {
       }));
 
    return { source: 'gsc', keywords };
+}
+
+/** Map People-Also-Ask questions to coverage items with STABLE ids (hash of question text,
+ *  not array index — DataForSEO may reorder results). */
+export function paaCoverageItems(questions: Array<{ question: string }>): CoverageItem[] {
+  return questions.map((q) => ({
+    id: `paa-${hashId(q.question)}`,
+    label: q.question,
+    type: 'paa' as const,
+    category: 'knowledge' as const,
+    importance: 'recommended' as const,
+    source: 'paa' as const,
+    covered: false,
+    quality: 0,
+  }));
 }
 
 /**

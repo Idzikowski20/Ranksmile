@@ -3,6 +3,7 @@ import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '../../lib/aiSearchScore';
+import type { CoverageItem, BucketScore } from '../../lib/aiCoverage';
 import ScoreTrio from './ScoreTrio';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 
@@ -30,6 +31,9 @@ interface Props {
   seo: number;
   ai: number;
   hasAi: boolean;
+  /** Coverage Engine snapshot — drives the bucket badges, Intent, and Info-to-cover cards. */
+  coverageItems?: CoverageItem[];
+  coverageBuckets?: BucketScore[];
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
   readOnly?: boolean;
@@ -40,20 +44,6 @@ interface Props {
   /** Which section to expand + scroll to on open (driven by clicking a score gauge). */
   initialSection?: 'seo' | 'ai';
 }
-
-/** One row per LLM prompt — the info that drives citations. */
-type InfoItem = { prompt: string; covered: boolean; domains: string[] };
-const buildInfoToCover = (summary?: AiVisibilitySummary | null): InfoItem[] => {
-  if (!summary?.citations?.length) return [];
-  const byPrompt = new Map<string, InfoItem>();
-  for (const c of summary.citations) {
-    if (!c.prompt) continue;
-    const item = byPrompt.get(c.prompt) || { prompt: c.prompt, covered: (c.answer_readiness_score ?? 0) >= 60, domains: [] };
-    if (c.cited_domain && !item.domains.includes(c.cited_domain)) item.domains.push(c.cited_domain);
-    byPrompt.set(c.prompt, item);
-  }
-  return [...byPrompt.values()];
-};
 
 /* ── Coverage status ───────────────────────────────────────────────── */
 const TINT: Record<Coverage, string> = { red: '#FCE9E9', yellow: '#FBEFD6', green: '#E4F5EA' };
@@ -147,6 +137,22 @@ const InfoDot = ({ tip }: { tip: string }) => (
 
 const copy = (text: string) => { try { navigator.clipboard?.writeText(text); } catch { /* ignore */ } };
 
+/** Legacy fallback (pre-Coverage-Engine): one row per LLM prompt from AI-visibility citations.
+ *  Used only when coverageItems has no 'paa'/'fact' rows (older articles / AI-visibility-only runs).
+ *  Shape mirrors the CoverageItem fields the render actually reads, so both sources render identically. */
+type LegacyInfoItem = { id: string; label: string; covered: boolean; missing?: readonly string[]; domains: string[] };
+const buildInfoToCover = (summary?: AiVisibilitySummary | null): LegacyInfoItem[] => {
+  if (!summary?.citations?.length) return [];
+  const byPrompt = new Map<string, LegacyInfoItem>();
+  for (const c of summary.citations) {
+    if (!c.prompt) continue;
+    const item = byPrompt.get(c.prompt) || { id: c.prompt, label: c.prompt, covered: (c.answer_readiness_score ?? 0) >= 60, domains: [] };
+    if (c.cited_domain && !item.domains.includes(c.cited_domain)) item.domains.push(c.cited_domain);
+    byPrompt.set(c.prompt, item);
+  }
+  return [...byPrompt.values()];
+};
+
 /* ── Term chip ─────────────────────────────────────────────────────── */
 const TermChip = ({ term, showCount, showRange }: { term: NlpTerm; showCount: boolean; showRange: boolean }) => {
   const cur = term.current_count ?? 0;
@@ -172,9 +178,14 @@ const Chevron = ({ open, size = 16, color = '#9f9fa9' }: { open: boolean; size?:
   </svg>
 );
 
+/* Status dot — covered (#1AB25E) / uncovered (muted #D4D4D8), per design.md delta/checklist tokens. */
+const StatusDot = ({ covered }: { covered: boolean }) => (
+  <span style={{ width: 8, height: 8, borderRadius: 9999, background: covered ? '#1AB25E' : '#D4D4D8', flexShrink: 0 }} />
+);
+
 /* Grouped accordion card inside AI Search (e.g. "Upfront Intent Alignment"). */
 const InfoCard = ({ title, badge, items, defaultOpen = true }: {
-  title: string; badge?: string; items: Array<{ text: string; covered: boolean; domains?: string[] }>; defaultOpen?: boolean;
+  title: string; badge?: string; items: Array<{ text: string; covered: boolean; domains?: string[]; missing?: readonly string[] }>; defaultOpen?: boolean;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -189,16 +200,28 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {items.map((it, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
-              {it.domains && it.domains.length > 0 && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
-                  {it.domains.slice(0, 2).map((d) => (
-                    <img key={d} alt="" width={14} height={14} style={{ borderRadius: 3 }} src={`https://www.google.com/s2/favicons?domain=${d}&sz=32`} />
-                  ))}
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                  <StatusDot covered={it.covered} />
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
                 </span>
+                {it.domains && it.domains.length > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
+                    {it.domains.slice(0, 2).map((d) => (
+                      <img key={d} alt="" width={14} height={14} style={{ borderRadius: 3 }} src={`https://www.google.com/s2/favicons?domain=${d}&sz=32`} />
+                    ))}
+                  </span>
+                )}
+                <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
+              </div>
+              {!it.covered && it.missing && it.missing.length > 0 && (
+                <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {it.missing.map((m, k) => (
+                    <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
+                  ))}
+                </ul>
               )}
-              <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
             </div>
           ))}
         </div>
@@ -221,11 +244,11 @@ const MetricBottom = ({ label, value, range }: { label: string; value: number; r
 const ICON_SLIDERS = 'M3 8L15 8M15 8C15 9.65686 16.3431 11 18 11C19.6569 11 21 9.65685 21 8C21 6.34315 19.6569 5 18 5C16.3431 5 15 6.34315 15 8ZM9 16L21 16M9 16C9 17.6569 7.65685 19 6 19C4.34315 19 3 17.6569 3 16C3 14.3431 4.34315 13 6 13C7.65685 13 9 14.3431 9 16Z';
 const ICON_COPY = 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2M10 8h10c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H10c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2Z';
 
-type AiSort = 'missing' | 'alpha' | 'srcAsc' | 'srcDesc';
+type AiSort = 'missing' | 'alpha';
 
 const WriteOptimizePanel = ({
   terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange, aiSummary,
-  seo, ai, hasAi, onAutoOptimize, isAutoOptimizing, readOnly, onBack, highlightTerms, onHighlightTermsChange,
+  seo, ai, hasAi, coverageItems, coverageBuckets, onAutoOptimize, isAutoOptimizing, readOnly, onBack, highlightTerms, onHighlightTermsChange,
   initialSection,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
@@ -268,8 +291,14 @@ const WriteOptimizePanel = ({
   useEffect(() => { onHighlightTermsChange?.(hlTerms); }, [hlTerms, onHighlightTermsChange]);
   useEffect(() => () => { onHighlightTermsChange?.(false); }, [onHighlightTermsChange]);
 
-  const infoToCover = useMemo(() => buildInfoToCover(aiSummary), [aiSummary]);
-  const intentCovered = (aiSummary?.extractability_score ?? 0) >= 55 || wordCount > 400;
+  const intentRows = useMemo(() => (coverageItems ?? []).filter((i) => i.category === 'intent'), [coverageItems]);
+  const coverageKnowledgeRows = useMemo(() => (coverageItems ?? []).filter((i) => i.type === 'paa' || i.type === 'fact'), [coverageItems]);
+  // Backward compat: older articles (or AI-visibility-only runs) have no coverage snapshot, so
+  // coverageKnowledgeRows is empty — fall back to the legacy AI-visibility citations list so
+  // "Information to cover" still populates for them.
+  const legacyKnowledgeRows = useMemo(() => buildInfoToCover(aiSummary), [aiSummary]);
+  const knowledgeRows = coverageKnowledgeRows.length > 0 ? coverageKnowledgeRows : legacyKnowledgeRows;
+  const bucketBadges = useMemo(() => (coverageBuckets ?? []).filter((b) => b.items > 0), [coverageBuckets]);
   const headingTerms = useMemo(() => terms.filter((t) => t.target_count >= 6), [terms]);
   const tabList = tab === 'headings' ? headingTerms : terms;
   const q = query.trim().toLowerCase();
@@ -282,14 +311,12 @@ const WriteOptimizePanel = ({
     return true;
   }), [tabList, q, showOptimized, showPartial, showUnused]);
 
-  const aiSorted = useMemo(() => {
-    const arr = [...infoToCover];
-    if (aiSort === 'alpha') arr.sort((a, b) => a.prompt.localeCompare(b.prompt));
-    else if (aiSort === 'srcAsc') arr.sort((a, b) => a.domains.length - b.domains.length);
-    else if (aiSort === 'srcDesc') arr.sort((a, b) => b.domains.length - a.domains.length);
+  const knowledgeSorted = useMemo(() => {
+    const arr = [...knowledgeRows];
+    if (aiSort === 'alpha') arr.sort((a, b) => a.label.localeCompare(b.label));
     else arr.sort((a, b) => Number(a.covered) - Number(b.covered)); // missing first
     return arr;
-  }, [infoToCover, aiSort]);
+  }, [knowledgeRows, aiSort]);
 
   // Copy helpers
   const copyTerms = (src: NlpTerm[], which: 'all' | 'missing' | 'covered') => {
@@ -297,8 +324,8 @@ const WriteOptimizePanel = ({
     copy(sel.map((t) => t.term).join('\n'));
   };
   const copyFacts = (which: 'all' | 'missing' | 'covered') => {
-    const sel = infoToCover.filter((i) => which === 'all' || (which === 'missing' && !i.covered) || (which === 'covered' && i.covered));
-    copy(sel.map((i) => i.prompt).join('\n'));
+    const sel = knowledgeRows.filter((i) => which === 'all' || (which === 'missing' && !i.covered) || (which === 'covered' && i.covered));
+    copy(sel.map((i) => i.label).join('\n'));
   };
 
   return (
@@ -447,8 +474,6 @@ const WriteOptimizePanel = ({
                 <SecLabel>Sorting</SecLabel>
                 <MenuItem label="Missing First" onClick={() => setAiSort('missing')} checked={aiSort === 'missing'} />
                 <MenuItem label="Alphabetical" onClick={() => setAiSort('alpha')} checked={aiSort === 'alpha'} />
-                <MenuItem label="Source Count ↑" onClick={() => setAiSort('srcAsc')} checked={aiSort === 'srcAsc'} />
-                <MenuItem label="Source Count ↓" onClick={() => setAiSort('srcDesc')} checked={aiSort === 'srcDesc'} />
               </>
             )}
           </Popover>
@@ -470,36 +495,55 @@ const WriteOptimizePanel = ({
               Based on LLM answers, this is the information that drives citations. Cover it to appear in AI search.
             </p>
 
-            <InfoCard
-              title="Upfront Intent Alignment" badge="NEW"
-              items={[
-                { text: 'Answer the main question', covered: intentCovered },
-                { text: 'Set expectations for the content', covered: intentCovered },
-                { text: "Identify who it's for", covered: intentCovered },
-                { text: 'Explain why it matters to the reader', covered: intentCovered },
-              ]}
-            />
+            {/* Bucket badges — populated coverage buckets only */}
+            {bucketBadges.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {bucketBadges.map((b) => (
+                  <span key={b.key} style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 9999, background: '#f4f4f5', padding: '2px 10px', fontSize: 12, fontWeight: 500, color: '#18181b', fontFamily: F }}>
+                    {b.label} {b.score}%
+                  </span>
+                ))}
+              </div>
+            )}
 
-            {aiSorted.length === 0 ? (
+            {intentRows.length === 0 ? (
+              <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
+                Run a deep analysis to check intent alignment.
+              </p>
+            ) : (
+              <InfoCard
+                title="Upfront Intent Alignment" badge="NEW"
+                items={intentRows.map((item) => ({ text: item.label, covered: item.covered, missing: item.missing }))}
+              />
+            )}
+
+            {knowledgeSorted.length === 0 ? (
               <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
                 Run a deep analysis or AI-visibility check to populate this list.
               </p>
             ) : aiGrouping ? (
               <InfoCard
                 title="Information to cover"
-                items={aiSorted.map((item) => ({ text: item.prompt, covered: item.covered, domains: item.domains }))}
+                items={knowledgeSorted.map((item) => ({ text: item.label, covered: item.covered, missing: item.missing }))}
               />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {aiSorted.map((it, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.prompt}</span>
-                    {it.domains.length > 0 && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
-                        {it.domains.slice(0, 2).map((d) => (<img key={d} alt="" width={14} height={14} style={{ borderRadius: 3 }} src={`https://www.google.com/s2/favicons?domain=${d}&sz=32`} />))}
+                {knowledgeSorted.map((it) => (
+                  <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                        <StatusDot covered={it.covered} />
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.label}</span>
                       </span>
+                      <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
+                    </div>
+                    {!it.covered && it.missing && it.missing.length > 0 && (
+                      <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {it.missing.map((m, k) => (
+                          <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
+                        ))}
+                      </ul>
                     )}
-                    <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
                   </div>
                 ))}
               </div>
