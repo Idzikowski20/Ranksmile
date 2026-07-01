@@ -12,7 +12,7 @@ jest.mock('motion/react', () => ({
   useReducedMotion: () => false,
 }));
 
-import { isEligibleInput } from '../../components/common/GlobalSmoothCaret';
+import { isEligibleField } from '../../components/common/GlobalSmoothCaret';
 
 const inputOfType = (type?: string, disabled = false): HTMLInputElement => {
   const el = document.createElement('input');
@@ -21,30 +21,36 @@ const inputOfType = (type?: string, disabled = false): HTMLInputElement => {
   return el;
 };
 
-describe('GlobalSmoothCaret · isEligibleInput', () => {
-  it('accepts single-line types that support the selection API', () => {
+describe('GlobalSmoothCaret · isEligibleField', () => {
+  it('accepts single-line <input> types that support the selection API', () => {
     for (const t of ['text', 'search', 'tel', 'password']) {
-      expect(isEligibleInput(inputOfType(t))).toBe(true);
+      expect(isEligibleField(inputOfType(t))).toBe(true);
     }
-    expect(isEligibleInput(inputOfType(undefined))).toBe(true); // no type → defaults to text
+    expect(isEligibleField(inputOfType(undefined))).toBe(true); // no type → defaults to text
   });
 
-  it('rejects types whose selectionStart is null (email/url/number/date/…)', () => {
+  it('accepts <textarea> (handled via the mirror-div path)', () => {
+    expect(isEligibleField(document.createElement('textarea'))).toBe(true);
+    const disabled = document.createElement('textarea');
+    disabled.disabled = true;
+    expect(isEligibleField(disabled)).toBe(false);
+  });
+
+  it('rejects <input> types whose selectionStart is null (email/url/number/date/…)', () => {
     for (const t of ['email', 'url', 'number', 'date', 'datetime-local', 'month', 'time', 'week', 'color']) {
-      expect(isEligibleInput(inputOfType(t))).toBe(false);
+      expect(isEligibleField(inputOfType(t))).toBe(false);
     }
   });
 
   it('rejects non-text control types', () => {
     for (const t of ['checkbox', 'radio', 'range', 'file', 'button', 'submit']) {
-      expect(isEligibleInput(inputOfType(t))).toBe(false);
+      expect(isEligibleField(inputOfType(t))).toBe(false);
     }
   });
 
-  it('rejects disabled inputs and non-input elements', () => {
-    expect(isEligibleInput(inputOfType('text', true))).toBe(false);
-    expect(isEligibleInput(document.createElement('textarea'))).toBe(false);
-    expect(isEligibleInput(document.createElement('div'))).toBe(false);
-    expect(isEligibleInput(null)).toBe(false);
+  it('rejects disabled inputs and non-field elements', () => {
+    expect(isEligibleField(inputOfType('text', true))).toBe(false);
+    expect(isEligibleField(document.createElement('div'))).toBe(false);
+    expect(isEligibleField(null)).toBe(false);
   });
 });

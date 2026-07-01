@@ -2,50 +2,65 @@
 
 /**
  * GlobalSmoothCaret — a single overlay, mounted once in _app, that gives EVERY
- * eligible single-line text input a spring-animated caret (à la Skiper106) while
- * leaving each input's own markup/styling untouched.
+ * eligible text field a spring-animated caret (à la Skiper106) while leaving each
+ * field's own markup/styling untouched.
  *
- * How it works: on focus of an eligible input we hide the native caret (inline
+ * How it works: on focus of an eligible field we hide the native caret (inline
  * `caret-color: transparent`, only AFTER we've successfully measured a position —
  * so a measurement failure safely falls back to the native caret) and render a
- * `position: fixed` caret positioned in viewport space via the input's rect +
- * hidden-span text measurement. It springs WITHIN an input (glides along the text
- * line) but JUMPS when focus moves to a different input (no fly-across-the-page).
+ * `position: fixed` caret positioned in viewport space. Single-line `<input>` uses
+ * a hidden-span width measurement; `<textarea>` uses a mirror-div that replicates
+ * line wrapping to locate the caret's (x, y) even across wrapped lines + scroll.
+ * The caret springs WITHIN a field (glides), and JUMPS when focus moves to another
+ * field (no fly-across-the-page).
  *
- * Scope (by design): text/search/email/url/tel/password `<input>` only. textarea,
- * number/date/color/checkbox/radio/range/file and contenteditable keep the native
- * caret. Respects prefers-reduced-motion (snaps). Purely visual — never intercepts
- * typing, selection, or focus (pointer-events: none).
+ * Scope: `<input>` of a selection-capable type (text/search/tel/password) and any
+ * `<textarea>`. email/url/number/date/… inputs return null for selectionStart, so
+ * they keep the native caret; contenteditable (the editor) also keeps native.
+ * Respects prefers-reduced-motion (snaps). Purely visual — never intercepts typing,
+ * selection, or focus (pointer-events: none).
  */
 
 import { motion, useMotionValue, useSpring, useReducedMotion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 
-// ONLY input types that support the text-selection API (selectionStart/End). email, url,
+type CaretField = HTMLInputElement | HTMLTextAreaElement;
+
+// ONLY <input> types that support the text-selection API (selectionStart/End). email, url,
 // number, date, … return `null` for selectionStart, so the caret position can't be tracked
-// there — they keep the native caret. (This is why the caret worked on password but not email.)
+// there. <textarea> always supports selection and is handled via the mirror-div path.
 const ELIGIBLE_TYPES = new Set(['text', 'search', 'tel', 'password', '']);
 const CARET_COLOR = '#783AFB'; // brand purple (design.md "primary accent")
 const CARET_WIDTH = 2;
 const CARET_Z = 2147483000; // above app modals/dropdowns; pointer-events:none so it never blocks
 
+// CSS properties the mirror div must copy so its line wrapping matches the textarea exactly.
+const MIRROR_PROPS = [
+  'font-style', 'font-variant', 'font-weight', 'font-stretch', 'font-size', 'line-height',
+  'font-family', 'letter-spacing', 'word-spacing', 'text-indent', 'text-transform',
+  'text-align', 'text-rendering', 'tab-size',
+];
+
 const PASSWORD_CHAR = typeof navigator !== 'undefined' && /firefox|fxios/i.test(navigator.userAgent)
   ? '●'
   : '•';
 
-export function isEligibleInput(el: Element | EventTarget | null): el is HTMLInputElement {
-  if (!(el instanceof HTMLInputElement)) return false;
-  if (el.disabled) return false;
-  const type = (el.getAttribute('type') || 'text').toLowerCase();
-  return ELIGIBLE_TYPES.has(type);
+export function isEligibleField(el: Element | EventTarget | null): el is CaretField {
+  if (el instanceof HTMLTextAreaElement) return !el.disabled;
+  if (el instanceof HTMLInputElement) {
+    if (el.disabled) return false;
+    const type = (el.getAttribute('type') || 'text').toLowerCase();
+    return ELIGIBLE_TYPES.has(type);
+  }
+  return false;
 }
 
 /** Caret index respecting a directional selection (matches native caret placement). */
-function caretIndexOf(input: HTMLInputElement): number {
-  const start = input.selectionStart ?? 0;
-  const end = input.selectionEnd ?? 0;
+function caretIndexOf(field: CaretField): number {
+  const start = field.selectionStart ?? 0;
+  const end = field.selectionEnd ?? 0;
   if (start === end) return start;
-  return input.selectionDirection === 'backward' ? start : end;
+  return field.selectionDirection === 'backward' ? start : end;
 }
 
 const GlobalSmoothCaret = () => {
@@ -63,19 +78,23 @@ const GlobalSmoothCaret = () => {
   const springY = useSpring(caretY, spring);
 
   // Mutable state kept in refs (this component never re-renders after mount).
-  const activeRef = useRef<HTMLInputElement | null>(null);
+  const activeRef = useRef<CaretField | null>(null);
   const prevCaretColorRef = useRef<string>('');
   const nativeHiddenRef = useRef(false);
-  const measureSpanRef = useRef<HTMLSpanElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // One offscreen measuring span for the whole app.
+    // One offscreen span (single-line width) + one mirror div (textarea wrapping) for the app.
     const span = document.createElement('span');
     span.setAttribute('aria-hidden', 'true');
     span.style.cssText = 'position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;white-space:pre;';
+    const mirror = document.createElement('div');
+    mirror.setAttribute('aria-hidden', 'true');
+    mirror.style.cssText = 'position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;overflow:hidden;'
+      + 'white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;box-sizing:content-box;padding:0;border:0;margin:0;';
+    const marker = document.createElement('span');
     document.body.appendChild(span);
-    measureSpanRef.current = span;
+    document.body.appendChild(mirror);
 
     const measurePrefixWidth = (input: HTMLInputElement, text: string): number => {
       const styles = window.getComputedStyle(input);
@@ -97,48 +116,92 @@ const GlobalSmoothCaret = () => {
       return span.offsetWidth;
     };
 
-    const hideNativeCaret = (input: HTMLInputElement) => {
+    /** Caret (x, y) within a textarea's CONTENT box, via a wrapping-accurate mirror div. */
+    const textareaCaretOffset = (el: HTMLTextAreaElement, index: number) => {
+      const cs = window.getComputedStyle(el);
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padR = parseFloat(cs.paddingRight) || 0;
+      // clientWidth excludes border + scrollbar → exact content width for identical wrapping.
+      mirror.style.width = `${Math.max(0, el.clientWidth - padL - padR)}px`;
+      MIRROR_PROPS.forEach((p) => mirror.style.setProperty(p, cs.getPropertyValue(p)));
+      mirror.textContent = el.value.slice(0, index);
+      marker.textContent = el.value.slice(index) || '.';
+      mirror.appendChild(marker);
+      const left = marker.offsetLeft;
+      const top = marker.offsetTop;
+      let lineHeight = parseFloat(cs.lineHeight);
+      if (!Number.isFinite(lineHeight)) lineHeight = (parseFloat(cs.fontSize) || 16) * 1.2;
+      return { left, top, lineHeight };
+    };
+
+    const hideNativeCaret = (field: CaretField) => {
       if (nativeHiddenRef.current) return;
-      prevCaretColorRef.current = input.style.caretColor;
-      input.style.caretColor = 'transparent';
+      prevCaretColorRef.current = field.style.caretColor;
+      field.style.caretColor = 'transparent';
       nativeHiddenRef.current = true;
     };
     const restoreNativeCaret = () => {
-      const input = activeRef.current;
-      if (input && nativeHiddenRef.current) {
-        input.style.caretColor = prevCaretColorRef.current;
+      const field = activeRef.current;
+      if (field && nativeHiddenRef.current) {
+        field.style.caretColor = prevCaretColorRef.current;
       }
       nativeHiddenRef.current = false;
     };
 
-    /** Position the caret over `input`. `jump=true` snaps the springs (used when focus
-     *  moves to a DIFFERENT input, so the caret doesn't glide across the whole page). */
-    const applyPosition = (input: HTMLInputElement, jump: boolean) => {
-      const styles = window.getComputedStyle(input);
-      const rect = input.getBoundingClientRect();
+    /** Position the caret over `field`. `jump=true` snaps the springs (used when focus
+     *  moves to a DIFFERENT field, so the caret doesn't glide across the whole page). */
+    const applyPosition = (field: CaretField, jump: boolean) => {
+      const styles = window.getComputedStyle(field);
+      const rect = field.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return false; // hidden / detached
-      // Defense-in-depth: any input that doesn't expose the selection API (email/url/number/…
-      // return null even if a type slips past ELIGIBLE_TYPES) keeps its native caret.
-      if (input.selectionStart === null) return false;
+      // Defense-in-depth: a field that doesn't expose the selection API keeps its native caret.
+      if (field.selectionStart === null) return false;
 
       const padL = parseFloat(styles.paddingLeft) || 0;
       const padR = parseFloat(styles.paddingRight) || 0;
+      const padT = parseFloat(styles.paddingTop) || 0;
+      const padB = parseFloat(styles.paddingBottom) || 0;
       const bL = parseFloat(styles.borderLeftWidth) || 0;
       const bR = parseFloat(styles.borderRightWidth) || 0;
+      const bT = parseFloat(styles.borderTopWidth) || 0;
+      const bB = parseFloat(styles.borderBottomWidth) || 0;
       const fontSize = parseFloat(styles.fontSize) || 16;
 
-      const index = caretIndexOf(input);
-      const isPw = input.type === 'password';
-      const prefix = isPw ? PASSWORD_CHAR.repeat(index) : input.value.slice(0, index);
-      const textWidth = measurePrefixWidth(input, prefix);
+      const index = caretIndexOf(field);
+      const hasSelection = (field.selectionStart ?? 0) !== (field.selectionEnd ?? 0);
+
+      if (field instanceof HTMLTextAreaElement) {
+        const { left, top, lineHeight } = textareaCaretOffset(field, index);
+        const caretVpX = rect.left + bL + padL + left - field.scrollLeft;
+        const lineTop = rect.top + bT + padT + top - field.scrollTop;
+        const h = Math.min(lineHeight, fontSize * 1.15);
+        const y = lineTop + (lineHeight - h) / 2;
+
+        const visL = rect.left + bL + padL;
+        const visR = rect.right - bR - padR;
+        const visT = rect.top + bT + padT;
+        const visB = rect.bottom - bB - padB;
+        const visible = !hasSelection
+          && caretVpX >= visL - 1 && caretVpX <= visR + 1
+          && lineTop >= visT - 1 && lineTop + lineHeight <= visB + 1;
+
+        caretH.set(h);
+        caretX.set(caretVpX);
+        caretY.set(y);
+        if (jump) { springX.jump(caretVpX); springY.jump(y); }
+        caretOpacity.set(visible ? 1 : 0);
+        return true;
+      }
+
+      // Single-line <input>.
+      const isPw = field.type === 'password';
+      const prefix = isPw ? PASSWORD_CHAR.repeat(index) : field.value.slice(0, index);
+      const textWidth = measurePrefixWidth(field, prefix);
 
       const contentLeft = rect.left + bL + padL;
       const contentRight = rect.right - bR - padR;
-      const rawX = contentLeft + textWidth - input.scrollLeft;
-
-      const hasSelection = (input.selectionStart ?? 0) !== (input.selectionEnd ?? 0);
+      const rawX = contentLeft + textWidth - field.scrollLeft;
       const visible = !hasSelection && rawX >= contentLeft - 1 && rawX <= contentRight + 1;
-
       const clampedX = Math.max(contentLeft, Math.min(rawX, contentRight));
       const h = fontSize * 0.9;
       const y = rect.top + rect.height / 2 - h / 2;
@@ -146,20 +209,17 @@ const GlobalSmoothCaret = () => {
       caretH.set(h);
       caretX.set(clampedX);
       caretY.set(y);
-      if (jump) {
-        springX.jump(clampedX);
-        springY.jump(y);
-      }
+      if (jump) { springX.jump(clampedX); springY.jump(y); }
       caretOpacity.set(visible ? 1 : 0);
       return true;
     };
 
     const update = (jump = false) => {
-      const input = activeRef.current;
-      if (!input || document.activeElement !== input) return;
+      const field = activeRef.current;
+      if (!field || document.activeElement !== field) return;
       try {
-        if (applyPosition(input, jump)) {
-          hideNativeCaret(input); // hide native only once positioned
+        if (applyPosition(field, jump)) {
+          hideNativeCaret(field); // hide native only once positioned
         } else {
           // Not positionable (hidden, or no selection API) → keep the native caret, hide overlay.
           restoreNativeCaret();
@@ -181,16 +241,16 @@ const GlobalSmoothCaret = () => {
 
     const resizeObserver = new ResizeObserver(scheduleUpdate);
 
-    const setActive = (input: HTMLInputElement) => {
-      if (activeRef.current === input) return;
-      // Restore the previous input's native caret + stop observing it.
+    const setActive = (field: CaretField) => {
+      if (activeRef.current === field) return;
+      // Restore the previous field's native caret + stop observing it.
       if (activeRef.current) {
         restoreNativeCaret();
         resizeObserver.unobserve(activeRef.current);
       }
-      activeRef.current = input;
-      resizeObserver.observe(input);
-      update(true); // jump the springs to the new input (no cross-page glide)
+      activeRef.current = field;
+      resizeObserver.observe(field);
+      update(true); // jump the springs to the new field (no cross-page glide)
     };
 
     const clearActive = () => {
@@ -201,7 +261,7 @@ const GlobalSmoothCaret = () => {
     };
 
     const onFocusIn = (e: FocusEvent) => {
-      if (isEligibleInput(e.target)) setActive(e.target);
+      if (isEligibleField(e.target)) setActive(e.target);
       else clearActive();
     };
     const onFocusOut = (e: FocusEvent) => {
@@ -216,13 +276,13 @@ const GlobalSmoothCaret = () => {
     document.addEventListener('focusout', onFocusOut);
     document.addEventListener('input', onInput, true);
     document.addEventListener('selectionchange', onSelectionChange);
-    // capture: true catches scrolling of any ancestor (modals, scroll panes) + the input itself.
+    // capture: true catches scrolling of any ancestor (modals, scroll panes) + the field itself.
     window.addEventListener('scroll', onScrollOrResize, true);
     window.addEventListener('resize', onScrollOrResize);
     document.fonts?.addEventListener?.('loadingdone', onFontsDone);
 
-    // If an input is already focused when we mount (e.g. autoFocus), pick it up.
-    if (isEligibleInput(document.activeElement)) setActive(document.activeElement as HTMLInputElement);
+    // If a field is already focused when we mount (e.g. autoFocus), pick it up.
+    if (isEligibleField(document.activeElement)) setActive(document.activeElement as CaretField);
 
     return () => {
       document.removeEventListener('focusin', onFocusIn);
@@ -236,6 +296,7 @@ const GlobalSmoothCaret = () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       restoreNativeCaret();
       span.remove();
+      mirror.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
