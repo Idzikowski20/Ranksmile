@@ -85,7 +85,10 @@ const BUCKET_LABEL: Record<CoverageCategory, string> = {
 };
 const IMPORTANCE_WEIGHT: Record<Importance, number> = { critical: 3, recommended: 2, optional: 1 };
 
-const clampQuality = (q: number): number => Math.min(Math.max(q, 0), 5);
+const clampQuality = (q: number): number => {
+  const n = Number(q);
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 5) : 0;
+};
 
 /** One bucket's importance×quality/5 over covered items. Reads GRADED items (item.covered/item.quality) —
  *  it does NOT know about CoverageVerdict/CoverageResult/the judge (4th-review: LLM artifact stays in the builder). */
@@ -193,6 +196,7 @@ export async function checkCoverage(
     return true;
   });
   const out: CoverageResult = { items: verdicts, answersMainQuestionEarly: !!verdict.answersMainQuestionEarly };
+  if (coverageCache.size >= 500) coverageCache.delete(coverageCache.keys().next().value);
   coverageCache.set(key, out);
   return out;
 }

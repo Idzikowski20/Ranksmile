@@ -34,7 +34,7 @@ describe('collectScoreSlots — coverageItems dual-read (terms slot)', () => {
       const withEarned = slot(withItems)?.earned ?? 0;
       const withoutEarned = slot(withoutItems)?.earned ?? 0;
 
-      // 1/2 entity items covered → 12 (round(0.5*25)); legacy path scores 0 (current_count 0 < target_count 5).
+      // 1/2 entity items covered → 13 (round(0.5*25)); legacy path scores 0 (current_count 0 < target_count 5).
       expect(withEarned).toBe(13);
       expect(withEarned).toBeGreaterThan(withoutEarned);
       expect(slot(withItems)?.max).toBe(25);
