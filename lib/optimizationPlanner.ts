@@ -141,11 +141,12 @@ function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
 
 export function buildOptimizationPlan(input: PlanInput): Plan {
   const routed = assignGuidelinesToSections(input.guidelines, input.sections);
+  const aiTakeover = input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP;   // pillar 5 / OD-3
 
   const steps: PlanStep[] = input.sections.map((section) => {
     const rgs = routed.get(section.id) ?? [];
     const secText = plainText(section.html);
-    const secTerms = sectionMissingTerms(secText, input.context);
+    const secTerms = aiTakeover ? [] : sectionMissingTerms(secText, input.context);   // takeover drops term work
 
     const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: rgs, missingTerms: secTerms };
 

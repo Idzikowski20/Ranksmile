@@ -141,6 +141,43 @@ describe('buildOptimizationPlan focus + skip', () => {
   });
 });
 
+describe('buildOptimizationPlan AI-takeover (pillar 5 / OD-3)', () => {
+  const makePlanInput = (over: Partial<PlanInput>): PlanInput => {
+    const sections = [
+      { id: 's0', index: 0, headingText: 'Intro', html: '<h2>Intro</h2><p>short intro text</p>' },
+      { id: 's1', index: 1, headingText: 'Body', html: '<h2>Body</h2><p>short body text</p>' },
+    ];
+    const guidelines = [
+      gl({ coverageItemId: 'g0', title: 'Cover: Intro', instruction: 'intro', sectionId: 's0' }),
+      gl({ coverageItemId: 'g1', title: 'Cover: Body', instruction: 'body', sectionId: 's1' }),
+    ];
+    const context = ctx({
+      scoreData: {
+        terms: [
+          { term: 'react hooks', target_count: 5 },
+          { term: 'useEffect', target_count: 5 },
+        ],
+        words_target: 100, words_min: 50, words_max: 200,
+        headings_target: 2, headings_min: 1, headings_max: 4,
+      } as ArticleContext['scoreData'],
+    });
+    return input({ sections, guidelines, context, ...over });
+  };
+
+  it('AI-takeover drops per-section missing terms (seo 90, ai 40, gap 50 > 25)', () => {
+    const planInput = makePlanInput({ seoScore: 90, aiScore: 40 });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.every((s) => s.missingTerms.length === 0)).toBe(true);
+    expect(plan.steps.some((s) => s.focus === 'seo-terms')).toBe(false);
+  });
+
+  it('no takeover when the gap is small (seo 90, ai 80, gap 10 <= 25) - terms survive', () => {
+    const planInput = makePlanInput({ seoScore: 90, aiScore: 80 });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.some((s) => s.missingTerms.length > 0)).toBe(true);
+  });
+});
+
 describe('buildOptimizationPlan ROI trim', () => {
   const two = () => {
     const sections = [
