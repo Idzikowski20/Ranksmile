@@ -77,3 +77,37 @@ describe('buildOptimizationPlan focus + skip', () => {
     expect(plan.steps[0].expectedLift).toBe(35);
   });
 });
+
+describe('buildOptimizationPlan ROI trim', () => {
+  const two = () => {
+    const sections = [
+      { id: 'cheap', index: 0, headingText: 'Cheap', html: '<h2>Cheap</h2><p>cheap term here</p>' },
+      { id: 'pricey', index: 1, headingText: 'Pricey', html: `<h2>Pricey</h2><p>${'w '.repeat(600)}</p>` },
+    ];
+    const guidelines = [
+      gl({ coverageItemId: 'a', title: 'Cover: Cheap', instruction: 'cheap', projectedLift: 12, sectionId: 'cheap' }),
+      gl({ coverageItemId: 'b', title: 'Cover: Pricey', instruction: 'pricey', projectedLift: 18, sectionId: 'pricey' }),
+    ];
+    return { sections, guidelines };
+  };
+
+  it('keeps the high-ROI cheap step and trims the expensive one when budget is tight', () => {
+    const { sections, guidelines } = two();
+    const plan = buildOptimizationPlan(input({ sections, guidelines, budgetRemaining: 900 }));
+    const cheap = plan.steps.find((s) => s.sectionId === 'cheap')!;
+    const pricey = plan.steps.find((s) => s.sectionId === 'pricey')!;
+    expect(cheap.focus).not.toBe('skip');            // +12 @ ~small tokens — high roi, kept
+    expect(pricey.focus).toBe('skip');               // +18 @ ~1280 tokens — low roi, trimmed
+    expect(pricey.reason).toBe('Trimmed — budget');
+    expect(plan.trimmed).toBe(true);
+    expect(plan.ignoredLift).toBe(18);
+  });
+
+  it('no trim when budget is ample', () => {
+    const { sections, guidelines } = two();
+    const plan = buildOptimizationPlan(input({ sections, guidelines, budgetRemaining: 1_000_000 }));
+    expect(plan.trimmed).toBe(false);
+    expect(plan.ignoredLift).toBe(0);
+    expect(plan.steps.every((s) => s.focus !== 'skip')).toBe(true);
+  });
+});

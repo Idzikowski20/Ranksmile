@@ -109,9 +109,36 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
     return step;
   });
 
+  const { trimmed, ignoredLift } = trimToBudget(steps, input.budgetRemaining);
+  const survivingNonSkip = steps.filter((s) => s.focus !== 'skip');
+  const rationale = `${survivingNonSkip.length}/${steps.length} sections to optimize${trimmed ? ` (trimmed, ignored ${ignoredLift} lift)` : ''}`;
+  return {
+    steps,
+    estimatedTokens: survivingNonSkip.reduce((sum, s) => sum + s.estimatedTokens, 0),
+    trimmed, ignoredLift, rationale,
+  };
+}
+
+function trimToBudget(steps: PlanStep[], budgetRemaining: number): { trimmed: boolean; ignoredLift: number } {
   const nonSkip = steps.filter((s) => s.focus !== 'skip');
-  const rationale = `${nonSkip.length}/${steps.length} sections to optimize`;
-  return { steps, estimatedTokens: nonSkip.reduce((sum, s) => sum + s.estimatedTokens, 0), trimmed: false, ignoredLift: 0, rationale };
+  const total = nonSkip.reduce((sum, s) => sum + s.estimatedTokens, 0);
+  if (total <= budgetRemaining) return { trimmed: false, ignoredLift: 0 };
+
+  const ranked = [...nonSkip].sort((a, b) =>
+    (b.expectedLift / Math.max(b.estimatedTokens, 1)) - (a.expectedLift / Math.max(a.estimatedTokens, 1)));
+  const keep = new Set<string>();
+  let running = 0;
+  for (const s of ranked) {
+    if (running + s.estimatedTokens <= budgetRemaining) { keep.add(s.sectionId); running += s.estimatedTokens; }
+  }
+  let ignoredLift = 0;
+  for (const s of steps) {
+    if (s.focus !== 'skip' && !keep.has(s.sectionId)) {
+      ignoredLift += s.expectedLift;
+      s.focus = 'skip'; s.systemPrompt = ''; s.estimatedTokens = 0; s.reason = 'Trimmed — budget';
+    }
+  }
+  return { trimmed: true, ignoredLift };
 }
 
 // Temporary stub — replaced by the real per-focus builder in Task 6.
