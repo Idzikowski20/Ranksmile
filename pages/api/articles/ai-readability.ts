@@ -59,40 +59,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ? ((data as { coverage_items: CoverageItem[] }).coverage_items)
             : [];
 
-         const row = await queryOne<{ ai_info_to_cover: string | null }>(
-            `SELECT ai_info_to_cover FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
-            [articleId],
-         );
-         const rawSnapshot = row?.ai_info_to_cover;
-         const parsedSnapshot = typeof rawSnapshot === 'string' ? safeJsonParse(rawSnapshot, null) : rawSnapshot;
-         const prev = parseSnapshot(parsedSnapshot);
-         const keep = prev ? prev.items.filter((i) => i.type !== 'readability') : [];
+         if (readabilityItems.length === 0) {
+            // Sidecar returned no readability coverage items (empty/failed) — do NOT overwrite the
+            // snapshot, which would delete the prior readability assessment. Leave ai_info_to_cover untouched.
+            console.warn('[coverage] ai-readability returned no coverage_items — leaving snapshot unchanged');
+         } else {
+            const row = await queryOne<{ ai_info_to_cover: string | null }>(
+               `SELECT ai_info_to_cover FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+               [articleId],
+            );
+            const rawSnapshot = row?.ai_info_to_cover;
+            const parsedSnapshot = typeof rawSnapshot === 'string' ? safeJsonParse(rawSnapshot, null) : rawSnapshot;
+            const prev = parseSnapshot(parsedSnapshot);
+            const keep = prev ? prev.items.filter((i) => i.type !== 'readability') : [];
 
-         const items = mergeCoverageItems({
-            paa: keep.filter((i) => i.type === 'paa'),
-            intent: keep.filter((i) => i.category === 'intent'),
-            readability: readabilityItems,
-            entity: keep.filter((i) => i.type === 'entity' || i.type === 'fact'),
-         });
+            const items = mergeCoverageItems({
+               paa: keep, // ALL kept non-readability items via one bucket (forward-compat for future types)
+               intent: [],
+               readability: readabilityItems,
+               entity: [],
+            });
 
-         // Re-grade using the prior verdicts already baked into the kept items + the fresh
-         // readability items. This endpoint does NOT re-run the coverage judge, so preserve
-         // prev's version metadata.
-         const verdictItems = items.map((i) => ({ id: i.id, covered: i.covered, quality: i.quality, confidence: i.confidence ?? 1 }));
-         const snapshot = buildSnapshot(items, {
-            items: verdictItems,
-            answersMainQuestionEarly: prev?.answersMainQuestionEarly ?? false,
-         }, {
-            judgeVersion: prev?.judgeVersion ?? 'v1|deepseek-chat|0',
-            promptVersion: prev?.promptVersion ?? 'v1',
-            model: prev?.model ?? 'deepseek-chat',
-            createdAt: new Date().toISOString(),
-         });
+            // Re-grade using the prior verdicts already baked into the kept items + the fresh
+            // readability items. This endpoint does NOT re-run the coverage judge, so preserve
+            // prev's version metadata.
+            const verdictItems = items.map((i) => ({ id: i.id, covered: i.covered, quality: i.quality, confidence: i.confidence ?? 1 }));
+            const snapshot = buildSnapshot(items, {
+               items: verdictItems,
+               answersMainQuestionEarly: prev?.answersMainQuestionEarly ?? false,
+            }, {
+               judgeVersion: prev?.judgeVersion ?? 'v1|deepseek-chat|0',
+               promptVersion: prev?.promptVersion ?? 'v1',
+               model: prev?.model ?? 'deepseek-chat',
+               createdAt: new Date().toISOString(),
+            });
 
-         await db.query(
-            `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
-            { replacements: [JSON.stringify(snapshot), articleId] },
-         );
+            await db.query(
+               `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
+               { replacements: [JSON.stringify(snapshot), articleId] },
+            );
+         }
       } catch (err) {
          console.warn('[coverage] ai-readability snapshot merge failed', err);
       }
