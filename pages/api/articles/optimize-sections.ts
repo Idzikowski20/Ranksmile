@@ -154,60 +154,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let changedCount = 0;
       let aiTokens = 0;
 
-      for (const step of plan.steps) {
-         if (aborted) break;
+      try {
+         for (const step of plan.steps) {
+            if (aborted) break;
 
-         const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
+            const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
 
-         if (step.focus === 'skip') {
-            sse(res, 'section', buildSectionEvent(section, { oldHtml: step.html, newHtml: step.html, changed: false }));
-            continue;
-         }
-
-         let newHtml = section.html;
-         const MAX_ATTEMPTS = 3; // 1 initial + 2 retries
-         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-            try {
-               const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                  body: JSON.stringify({
-                     model: 'deepseek-chat',
-                     max_tokens: 4000,
-                     temperature: 0.3,
-                     messages: [
-                        { role: 'system', content: step.systemPrompt },
-                        { role: 'user', content: `Improve this section:\n\n${section.html}` },
-                     ],
-                  }),
-                  signal: controller.signal,
-               });
-               if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-               const data = await aiRes.json();
-               aiTokens += data.usage?.total_tokens || 0;
-               const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
-               if (isUsableEdit(cleaned)) newHtml = cleaned; // else keep original (empty/garbage)
-               break; // success — stop retrying
-            } catch (error) {
-               // An aborted run is not a retriable failure — break out and stop.
-               if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
-               if (attempt === MAX_ATTEMPTS) newHtml = section.html; // all attempts failed → skip
+            if (step.focus === 'skip') {
+               sse(res, 'section', buildSectionEvent(section, { oldHtml: step.html, newHtml: step.html, changed: false }));
+               continue;
             }
+
+            let newHtml = section.html;
+            const MAX_ATTEMPTS = 3; // 1 initial + 2 retries
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+               try {
+                  const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                     body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        max_tokens: 4000,
+                        temperature: 0.3,
+                        messages: [
+                           { role: 'system', content: step.systemPrompt },
+                           { role: 'user', content: `Improve this section:\n\n${section.html}` },
+                        ],
+                     }),
+                     signal: controller.signal,
+                  });
+                  if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
+                  const data = await aiRes.json();
+                  aiTokens += data.usage?.total_tokens || 0;
+                  const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
+                  if (isUsableEdit(cleaned)) newHtml = cleaned; // else keep original (empty/garbage)
+                  break; // success — stop retrying
+               } catch (error) {
+                  // An aborted run is not a retriable failure — break out and stop.
+                  if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
+                  if (attempt === MAX_ATTEMPTS) newHtml = section.html; // all attempts failed → skip
+               }
+            }
+
+            if (aborted) break;
+
+            const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
+            const result: SectionResult = { oldHtml: section.html, newHtml, changed };
+            if (changed) changedCount += 1;
+            sse(res, 'section', buildSectionEvent(section, result));
          }
-
-         if (aborted) break;
-
-         const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
-         const result: SectionResult = { oldHtml: section.html, newHtml, changed };
-         if (changed) changedCount += 1;
-         sse(res, 'section', buildSectionEvent(section, result));
+      } finally {
+         // B cubic-P1: record spend even on a mid-run throw (mirrors deep-analysis.ts finally).
+         if (!aborted && orgId != null && shouldChargeCredit(changedCount, aiTokens)) {
+            await recordAiTokens(orgId, aiTokens);
+         }
       }
 
       if (aborted) return;
 
       // Charge the shared pool only when the run produced changes ("no changes ⇒ no credit deducted").
+      // shouldChargeCredit is deterministic on changedCount/aiTokens, so this flag can't diverge
+      // from the spend already recorded in the finally above.
       const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
-      if (creditDeducted) await recordAiTokens(orgId, aiTokens);
 
       sse(res, 'done', { changedCount, total: plan.steps.length, promptVersion: PROMPT_VERSION, creditDeducted, trimmed: plan.trimmed, ignoredLift: plan.ignoredLift });
    } catch (error) {
