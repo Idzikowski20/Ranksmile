@@ -235,6 +235,7 @@ export const deepseekJudge: CoverageJudge = {
         ],
       }),
     });
+    if (!res.ok) throw new Error(`deepseek coverage judge failed: ${res.status}`);
     const data = await res.json().catch(() => ({}));
     const parsed = safeJsonParse<{ items?: CoverageVerdict[]; answersMainQuestionEarly?: boolean }>(
       data?.choices?.[0]?.message?.content ?? '', {},
