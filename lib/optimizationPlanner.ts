@@ -141,5 +141,41 @@ function trimToBudget(steps: PlanStep[], budgetRemaining: number): { trimmed: bo
   return { trimmed: true, ignoredLift };
 }
 
-// Temporary stub — replaced by the real per-focus builder in Task 6.
-function buildStepPrompt(_step: PlanStep, _context: ArticleContext): string { return 'STUB'; }
+const SHARED_RULES = `You are an expert SEO content editor making MINIMAL, surgical edits to ONE section of an HTML article.
+
+RULES:
+- Apply MINIMAL surgical edits — refine, do not rewrite
+- Tighten weak sentences and remove AI-sounding filler ("It's worth noting that", "In today's world", "Furthermore", "In conclusion", "Delve into")
+- Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
+- Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written
+- Do NOT remove or shorten existing sentences — only refine or expand
+- Keep each paragraph between ~40 and ~80 words`;
+
+const NEGATIVE_CONSTRAINTS = `NEGATIVE CONSTRAINTS — Do NOT: rewrite unrelated paragraphs, remove or alter existing links, remove tables/images/lists, duplicate or rename headings, touch other sections, translate the text, or add markdown code fences.`;
+
+const OUTPUT_RULE = `OUTPUT: ONLY the section's raw HTML. No markdown code fences, no commentary.`;
+
+function focusBlock(step: PlanStep): string {
+  const bullets = step.guidelines.map((r) => `- ${r.guideline.title}: ${r.guideline.instruction}`).join('\n');
+  switch (step.focus) {
+    case 'seo-terms': {
+      const list = step.missingTerms.map((t) => `"${t}"`).join(', ');
+      return list ? `FOCUS — weave in these MISSING NLP terms VERBATIM where natural (exact form, no inflection/synonyms): ${list}` : '';
+    }
+    case 'ai-coverage':
+      return `FOCUS — improve AI-search answer readiness. Apply these guidelines:\n${bullets}`;
+    case 'expand':
+      return `FOCUS — deepen this section; it is currently shallow. Apply:\n${bullets}`;
+    case 'readability':
+      return `FOCUS — improve readability only: tighten sentences, de-fluff, right-size paragraphs.`;
+    default:
+      return '';
+  }
+}
+
+export function buildStepPrompt(step: PlanStep, context: ArticleContext): string {
+  if (step.focus === 'skip') return '';
+  const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
+  const block = focusBlock(step);
+  return `${SHARED_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
+}
