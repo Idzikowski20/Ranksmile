@@ -24,6 +24,23 @@ describe('articleTermsToCoverageItems', () => {
     expect(items.map((i) => i.importance)).toEqual(['critical', 'recommended', 'optional']);
     expect(items.every((i) => i.type === 'entity' && i.category === 'knowledge')).toBe(true);
   });
+  it('normalizes raw target_count importance relative to the batch max (not all critical)', () => {
+    // article_terms.importance is a raw integer count (>=1), not 0..1 — a batch of 12/6/1
+    // must NOT all bucket to 'critical'. Ratios vs max(12): 1.0, 0.5, 0.083.
+    const items = articleTermsToCoverageItems([
+      row({ term: 'top', importance: 12 }),
+      row({ term: 'mid', importance: 6 }),
+      row({ term: 'low', importance: 1 }),
+    ]);
+    expect(items.map((i) => i.importance)).toEqual(['critical', 'recommended', 'optional']);
+  });
+  it('all-zero importance batch → everything optional (no divide-by-zero)', () => {
+    const items = articleTermsToCoverageItems([
+      row({ term: 'a', importance: 0 }),
+      row({ term: 'b', importance: 0 }),
+    ]);
+    expect(items.map((i) => i.importance)).toEqual(['optional', 'optional']);
+  });
   it('term_type:question → type:fact (still category:knowledge)', () => {
     const [item] = articleTermsToCoverageItems([row({ term: 'q', term_type: 'question' })]);
     expect(item.type).toBe('fact');

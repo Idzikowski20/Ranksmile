@@ -33,10 +33,10 @@ export function buildSnapshot(
       covered: !!vd.covered,
       quality: vd.quality ?? it.quality,
       confidence: vd.confidence,
-      needsExpansion: vd.needsExpansion,
-      missing: vd.missing,
-      reason: vd.reason,
-      sectionId: vd.sectionId,
+      needsExpansion: vd.needsExpansion ?? it.needsExpansion,
+      missing: vd.missing ?? it.missing,
+      reason: vd.reason ?? it.reason,
+      sectionId: vd.sectionId ?? it.sectionId,
       provenance: { judgedBy: meta.model, judgedAt: meta.createdAt, promptVersion: meta.promptVersion },
     };
   });

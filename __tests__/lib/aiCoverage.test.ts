@@ -56,6 +56,18 @@ describe('computeCoverageScores', () => {
     // earned = 3×1 = 3 ; max = 3+1 = 4 ; 3/4 = 75
     expect(computeCoverageScores(items, false).buckets.find((b) => b.key === 'knowledge')?.score).toBe(75);
   });
+  it('non-finite quality (NaN, or a string from a malformed judge reply) is guarded to 0, not NaN-poisoned', () => {
+    const nanItem = gi('a', true, NaN, 'knowledge');
+    const stringItem = { ...gi('b', true, 3, 'knowledge'), quality: 'oops' as unknown as number };
+    const { overall, buckets } = computeCoverageScores([nanItem], false);
+    expect(Number.isFinite(overall)).toBe(true);
+    expect(overall).toBe(0);
+    expect(Number.isFinite(buckets.find((b) => b.key === 'knowledge')?.score)).toBe(true);
+
+    const strResult = computeCoverageScores([stringItem], false);
+    expect(Number.isFinite(strResult.overall)).toBe(true);
+    expect(strResult.overall).toBe(0);
+  });
 });
 
 // The swappable helpers are exported + tested in isolation so weight/algorithm changes

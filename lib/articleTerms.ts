@@ -101,17 +101,21 @@ function quality(currentCount: number, targetMax: number): number {
    return Math.min(5, Math.round((currentCount / targetMax) * 5));
 }
 
-/** Map article_terms rows to CoverageItems. term_type='question' → type:'fact'; else 'entity'. */
+/** Map article_terms rows to CoverageItems. term_type='question' → type:'fact'; else 'entity'.
+ *  `importance` on the DB row is a raw target_count integer (>=1), not the 0..1 scale
+ *  `importanceBucket` expects — normalize relative to the batch max before bucketing. */
 export function articleTermsToCoverageItems(rows: ArticleTermRow[]): CoverageItem[] {
+   const maxImp = Math.max(0, ...rows.map((r) => r.importance ?? 0));
    return rows.map((r) => {
       const isFact = r.term_type === 'question';
       const covered = r.current_count >= r.target_min;
+      const normalizedImportance = maxImp > 0 ? (r.importance ?? 0) / maxImp : 0;
       return {
          id: `${isFact ? 'fact' : 'entity'}-${hashId(r.term)}`,
          label: r.term,
          type: isFact ? 'fact' : 'entity',
          category: 'knowledge' as const,
-         importance: importanceBucket(r.importance ?? 0),
+         importance: importanceBucket(normalizedImportance),
          source: r.source ?? 'serp',
          covered,
          quality: covered ? 5 : quality(r.current_count, r.target_max),

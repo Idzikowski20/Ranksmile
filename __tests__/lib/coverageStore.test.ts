@@ -40,6 +40,41 @@ describe('buildSnapshot', () => {
     expect(snap.buckets).toHaveLength(5);          // intent/knowledge/authority/quality/style
     expect(snap.overall).toBe(85);
   });
+
+  it('preserves missing/reason/needsExpansion/sectionId when a minimal verdict omits them (ai-readability re-grade)', () => {
+    const items: CoverageItem[] = [{
+      ...item('entity-1', 'entity', 'knowledge'),
+      missing: ['x'], reason: 'r', needsExpansion: true, sectionId: 'sec-1',
+    }];
+    // Minimal verdict shape, as sent by the ai-readability endpoint — no missing/reason/needsExpansion/sectionId.
+    const result: CoverageResult = { items: [{ id: 'entity-1', covered: true, quality: 4, confidence: 0.8 }], answersMainQuestionEarly: false };
+    const snap = buildSnapshot(items, result, META);
+    expect(snap.items[0].missing).toEqual(['x']);
+    expect(snap.items[0].reason).toBe('r');
+    expect(snap.items[0].needsExpansion).toBe(true);
+    expect(snap.items[0].sectionId).toBe('sec-1');
+    expect(snap.items[0].covered).toBe(true);   // covered/quality still update from the verdict
+    expect(snap.items[0].quality).toBe(4);
+  });
+
+  it('still overrides missing/reason/needsExpansion/sectionId when the verdict provides them (deep-analysis path)', () => {
+    const items: CoverageItem[] = [{
+      ...item('entity-1', 'entity', 'knowledge'),
+      missing: ['old'], reason: 'old-reason', needsExpansion: false, sectionId: 'old-sec',
+    }];
+    const result: CoverageResult = {
+      items: [{
+        id: 'entity-1', covered: true, quality: 5, confidence: 1,
+        missing: ['new'], reason: 'new-reason', needsExpansion: true, sectionId: 'new-sec',
+      }],
+      answersMainQuestionEarly: false,
+    };
+    const snap = buildSnapshot(items, result, META);
+    expect(snap.items[0].missing).toEqual(['new']);
+    expect(snap.items[0].reason).toBe('new-reason');
+    expect(snap.items[0].needsExpansion).toBe(true);
+    expect(snap.items[0].sectionId).toBe('new-sec');
+  });
 });
 
 describe('parseSnapshot', () => {
