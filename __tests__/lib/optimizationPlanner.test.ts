@@ -349,6 +349,48 @@ describe('LESS prompt', () => {
   });
 });
 
+describe('NORMAL byte-for-byte regression', () => {
+  it('all-NORMAL run: systemPrompt equals buildStepPrompt and userInstruction is undefined', () => {
+    const healthySnap = snap(90, true);   // intro NOT allowed to expand (irrelevant here — no section at index 0)
+    const context = ctx({
+      coverage: healthySnap,
+      scoreData: {
+        terms: [
+          { term: 'react hooks', target_count: 5 },
+          { term: 'useEffect', target_count: 5 },
+        ],
+        words_target: 100, words_min: 50, words_max: 200,
+        headings_target: 2, headings_min: 1, headings_max: 4,
+      } as ArticleContext['scoreData'],
+    });
+    // All sections at index >= 1 to avoid intro-protection (Task 7 brief: restrict to non-intro steps).
+    // Each section gets a single guideline with projectedLift > NORMAL_MIN(12), effort 'Easy'
+    // (not 'Large') and importance 'recommended' (not 'critical'), so selectMode -> 'normal'.
+    const sections: Section[] = [
+      { id: 'sec_a', index: 1, headingText: 'A', html: '<h2>A</h2><p>plain text here</p>' },
+      { id: 'sec_b', index: 2, headingText: 'B', html: '<h2>B</h2><p>plain text here</p>' },
+      { id: 'sec_c', index: 3, headingText: 'C', html: '<h2>C</h2><p>plain text here</p>' },
+    ];
+    const guidelines: Guideline[] = [
+      gl({ coverageItemId: 'g-a', title: 'Cover: A', instruction: 'a', projectedLift: 20, effort: 'Easy', importance: 'recommended', sectionId: 'sec_a' }),
+      gl({ coverageItemId: 'g-b', title: 'Cover: B', instruction: 'b', projectedLift: 25, effort: 'Easy', importance: 'recommended', sectionId: 'sec_b' }),
+      gl({ coverageItemId: 'g-c', title: 'Cover: C', instruction: 'c', projectedLift: 30, effort: 'Easy', importance: 'recommended', sectionId: 'sec_c' }),
+    ];
+    const planInput = input({
+      sections, guidelines, context, seoScore: 50, aiScore: 50, // no takeover: seoScore(50) < SEO_HIGH(85)
+    });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.length).toBe(3);
+    for (const step of plan.steps) {
+      if (step.focus === 'skip') continue;
+      expect(step.mode).toBe('normal');
+      // The exact prompt today's D would have produced for this step:
+      expect(step.systemPrompt).toBe(buildStepPrompt(step, planInput.context));
+      expect(step.userInstruction).toBeUndefined();
+    }
+  });
+});
+
 describe('userInstructionForMode', () => {
   it('LESS returns a patch-only instruction (NOT "Improve this section")', () => {
     const u = userInstructionForMode(step({ index: 1, mode: 'less' }), 'less');
