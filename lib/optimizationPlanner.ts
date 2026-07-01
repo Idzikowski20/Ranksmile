@@ -2,6 +2,7 @@ import type { Section } from './articleSections';
 import type { Guideline } from './recommendationEngine';
 import type { ArticleContext } from './articleContext';
 import type { RoutedGuideline } from './optimizeGuidelineRouting';
+import type { CoverageSnapshot } from './aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 
@@ -104,6 +105,29 @@ export function worthEditing({ expectedLift, rgs, secTerms, aiTakeover }: WorthI
   // Term-only deficit: >=1 under-target term is worth a minimal LESS weave, unless AI-takeover drops it.
   if (!aiTakeover && secTerms.length >= TERM_WORTH_FLOOR) return true;
   return false;
+}
+
+export function introMayExpand(snapshot: CoverageSnapshot): boolean {
+  const intentScore = snapshot.buckets.find((b) => b.key === 'intent')?.score ?? 0;
+  return intentScore < INTENT_INTRO_MIN || snapshot.answersMainQuestionEarly === false;
+}
+
+interface ModeInput {
+  section: Section;
+  expectedLift: number;
+  rgs: RoutedGuideline[];
+  snapshot: CoverageSnapshot;
+  aiTakeover: boolean;
+}
+
+/** Edit-intensity selector. Assumes worthEditing already passed (else the caller skips). */
+export function selectMode({ section, expectedLift, rgs, snapshot }: ModeInput): EditMode {
+  const expandEligible = rgs[0]?.guideline.effort === 'Large' || hasCriticalMiss(rgs);
+  // Intro protection (pillar 4): LESS-only + EXPAND blocked unless intent is genuinely weak.
+  if (section.index === 0 && !introMayExpand(snapshot)) return 'less';
+  if (expandEligible) return 'expand';
+  if (expectedLift > NORMAL_MIN) return 'normal';
+  return 'less';
 }
 
 function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {

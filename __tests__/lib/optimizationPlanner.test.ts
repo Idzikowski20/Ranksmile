@@ -1,9 +1,10 @@
-import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing } from '../../lib/optimizationPlanner';
+import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing, selectMode, introMayExpand } from '../../lib/optimizationPlanner';
 import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
 import type { Section } from '../../lib/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
 import type { ArticleContext } from '../../lib/articleContext';
 import type { RoutedGuideline } from '../../lib/optimizeGuidelineRouting';
+import type { CoverageSnapshot } from '../../lib/aiCoverage';
 
 const sec = (html: string): Section => ({ id: 's', index: 0, headingText: '', html });
 
@@ -56,6 +57,41 @@ describe('worthEditing', () => {
   });
   it('critical miss overrides the threshold (never skipped even at expectedLift 0)', () => {
     expect(worthEditing({ expectedLift: 0, rgs: [rgFor({ importance: 'critical' })], secTerms: [], aiTakeover: false })).toBe(true);
+  });
+});
+
+const snap = (intentScore: number, early: boolean): CoverageSnapshot => ({
+  schemaVersion: 1, judgeVersion: 'v', promptVersion: 'v', model: 'm', createdAt: '',
+  items: [], buckets: [{ key: 'intent', label: 'Intent', weight: 3, items: 1, covered: 1, earned: 1, max: 1, score: intentScore }],
+  answersMainQuestionEarly: early, overall: 50,
+});
+const secAt = (index: number): Section => ({ id: `sec_${index}`, index, headingText: 'H', html: '<p>x</p>' });
+
+describe('introMayExpand', () => {
+  it('true when intent bucket score < 50', () => expect(introMayExpand(snap(40, true))).toBe(true));
+  it('true when answersMainQuestionEarly is false', () => expect(introMayExpand(snap(90, false))).toBe(true));
+  it('false when intent healthy and early answer present', () => expect(introMayExpand(snap(90, true))).toBe(false));
+});
+
+describe('selectMode', () => {
+  const healthy = snap(90, true);   // intro NOT allowed to expand
+  it('LESS in the 6..12 band', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 9, rgs: [rgFor({})], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('term-only section (no guidelines, lift 0) -> LESS (OD-2 [RATIFIED])', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 0, rgs: [], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('NORMAL above NORMAL_MIN', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 20, rgs: [rgFor({})], snapshot: healthy, aiTakeover: false })).toBe('normal');
+  });
+  it('EXPAND when top guideline effort is Large', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 20, rgs: [rgFor({ effort: 'Large' })], snapshot: healthy, aiTakeover: false })).toBe('expand');
+  });
+  it('intro (index 0) is LESS even at high lift when intro may not expand', () => {
+    expect(selectMode({ section: secAt(0), expectedLift: 30, rgs: [rgFor({ effort: 'Large' })], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('intro may be EXPAND when intent is weak', () => {
+    expect(selectMode({ section: secAt(0), expectedLift: 30, rgs: [rgFor({ effort: 'Large' })], snapshot: snap(30, false), aiTakeover: false })).toBe('expand');
   });
 });
 
