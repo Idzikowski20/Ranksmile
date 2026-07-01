@@ -27,7 +27,7 @@
 ## File Structure
 
 **Create:**
-- `lib/aiCoverage.ts` — `CoverageItem` + `CoverageCategory` + `CoverageProvenance` + `BucketScore` + `CoverageSnapshot` + `CoverageJudge` + `checkCoverage()` + `computeCoverageScores()` + `intentItems()` + `hashId()` + `deepseekJudge`. **The model-and-scoring core.**
+- `lib/aiCoverage.ts` — `CoverageItem` + `CoverageCategory` + `CoverageProvenance` + `BucketScore` + `CoverageSnapshot` + `CoverageJudge` + `checkCoverage()` + swappable scoring helpers (`computeBucketScore` / `blendBuckets` / `earlyAnswerBonus`) + `computeCoverageScores()` orchestrator + `intentItems()` + `hashId()` + `deepseekJudge`. **The model-and-scoring core.**
 - `lib/introductionAnalyzer.ts` — `analyzeIntroduction()` + `introCoverageItems()` + `deepseekIntroJudge`.
 - `lib/coverageStore.ts` — `mergeCoverageItems()` + `buildSnapshot()` + `parseSnapshot()` + `parseCoverageItems()`.
 - `__tests__/lib/aiCoverage.test.ts`, `__tests__/lib/introductionAnalyzer.test.ts`, `__tests__/lib/coverageStore.test.ts`, `__tests__/lib/articleTerms.test.ts`.
@@ -58,7 +58,10 @@
 
 ```ts
 // __tests__/lib/aiCoverage.test.ts
-import { computeCoverageScores, CoverageItem, CoverageResult } from '../../lib/aiCoverage';
+import {
+  computeCoverageScores, computeBucketScore, blendBuckets, earlyAnswerBonus,
+  CoverageItem, CoverageResult, CoverageVerdict,
+} from '../../lib/aiCoverage';
 
 const item = (
   id: string,
@@ -104,6 +107,37 @@ describe('computeCoverageScores', () => {
     const { buckets } = computeCoverageScores(items, result([v('a', true, 5)]));
     // earned = 3×1 = 3 ; max = 3+1 = 4 ; 3/4 = 75
     expect(buckets.find((b) => b.key === 'knowledge')?.score).toBe(75);
+  });
+});
+
+// The swappable helpers are exported + tested in isolation so weight/algorithm changes
+// can't silently break the blend (3rd-review risk on the load-bearing scorer).
+describe('scoring helpers (isolated)', () => {
+  const verdicts = (arr: CoverageVerdict[]) => new Map(arr.map((x) => [x.id, x]));
+
+  it('computeBucketScore: only counts items in its category; empty → max 0, score 0', () => {
+    const items = [item('a', 'knowledge'), item('b', 'intent', 'critical')];
+    const empty = computeBucketScore('authority', items, verdicts([]));
+    expect(empty.items).toBe(0);
+    expect(empty.max).toBe(0);
+    expect(empty.score).toBe(0);
+    const knowledge = computeBucketScore('knowledge', items, verdicts([v('a', true, 5)]));
+    expect(knowledge.items).toBe(1);
+    expect(knowledge.covered).toBe(1);
+    expect(knowledge.score).toBe(100);
+  });
+
+  it('blendBuckets: weights buckets by BucketScore.weight; all-empty → 0', () => {
+    expect(blendBuckets([])).toBe(0);
+    const items = [item('a', 'knowledge')];
+    const buckets = computeCoverageScores(items, result([v('a', true, 5)])).buckets;
+    // knowledge fully covered, all other buckets empty (weight-0 contribution) → base 85
+    expect(Math.round(blendBuckets(buckets))).toBe(85);
+  });
+
+  it('earlyAnswerBonus: 15 when flagged, 0 otherwise', () => {
+    expect(earlyAnswerBonus(result([], true))).toBe(15);
+    expect(earlyAnswerBonus(result([], false))).toBe(0);
   });
 });
 ```
@@ -198,46 +232,64 @@ const BUCKET_LABEL: Record<CoverageCategory, string> = {
 };
 const IMPORTANCE_WEIGHT: Record<Importance, number> = { critical: 3, recommended: 2, optional: 1 };
 
-/** Per-bucket score (importance × quality/5 over covered items) + bucket-weighted overall, +15 early bonus. */
-export function computeCoverageScores(
-  items: CoverageItem[],
-  result: CoverageResult,
-): { overall: number; buckets: BucketScore[] } {
-  const byId = new Map(result.items.map((vd) => [vd.id, vd]));
-  const buckets: BucketScore[] = CATEGORIES.map((key) => {
-    const inBucket = items.filter((it) => it.category === key);
-    let earned = 0;
-    let max = 0;
-    let covered = 0;
-    for (const it of inBucket) {
-      const w = IMPORTANCE_WEIGHT[it.importance];
-      max += w;
-      const vd = byId.get(it.id);
-      if (vd?.covered) {
-        covered += 1;
-        earned += w * (Math.min(Math.max(vd.quality, 0), 5) / 5);
-      }
-    }
-    return {
-      key,
-      label: BUCKET_LABEL[key],
-      weight: BUCKET_WEIGHT[key],
-      items: inBucket.length,
-      covered,
-      earned,
-      max,
-      score: max > 0 ? Math.round((earned / max) * 100) : 0,
-    };
-  });
+const clampQuality = (q: number): number => Math.min(Math.max(q, 0), 5);
 
+/** One bucket's importance×quality/5 score over covered items. Pure + independently testable. */
+export function computeBucketScore(
+  category: CoverageCategory,
+  items: CoverageItem[],
+  verdicts: Map<string, CoverageVerdict>,
+): BucketScore {
+  const inBucket = items.filter((it) => it.category === category);
+  let earned = 0;
+  let max = 0;
+  let covered = 0;
+  for (const it of inBucket) {
+    const w = IMPORTANCE_WEIGHT[it.importance];
+    max += w;
+    const vd = verdicts.get(it.id);
+    if (vd?.covered) {
+      covered += 1;
+      earned += w * (clampQuality(vd.quality) / 5);
+    }
+  }
+  return {
+    key: category,
+    label: BUCKET_LABEL[category],
+    weight: BUCKET_WEIGHT[category],
+    items: inBucket.length,
+    covered,
+    earned,
+    max,
+    score: max > 0 ? Math.round((earned / max) * 100) : 0,
+  };
+}
+
+/** Bucket-weighted blend, capped to 85. Empty buckets contribute 0 (max 0). Pure. */
+export function blendBuckets(buckets: BucketScore[]): number {
   let weightedEarned = 0;
   let weightedMax = 0;
   for (const b of buckets) {
     weightedEarned += b.weight * b.earned;
     weightedMax += b.weight * b.max;
   }
-  const base = weightedMax > 0 ? (weightedEarned / weightedMax) * 85 : 0;
-  const overall = Math.round(base + (result.answersMainQuestionEarly ? 15 : 0));
+  return weightedMax > 0 ? (weightedEarned / weightedMax) * 85 : 0;
+}
+
+/** The +15 early-answer bonus. Pure. */
+export function earlyAnswerBonus(result: CoverageResult): number {
+  return result.answersMainQuestionEarly ? 15 : 0;
+}
+
+/** Orchestrator only — composes the three swappable helpers above.
+ *  Weights live in BUCKET_WEIGHT / IMPORTANCE_WEIGHT module constants → tuning is a one-constant edit. */
+export function computeCoverageScores(
+  items: CoverageItem[],
+  result: CoverageResult,
+): { overall: number; buckets: BucketScore[] } {
+  const verdicts = new Map(result.items.map((vd) => [vd.id, vd]));
+  const buckets = CATEGORIES.map((key) => computeBucketScore(key, items, verdicts));
+  const overall = Math.round(blendBuckets(buckets) + earlyAnswerBonus(result));
   return { overall, buckets };
 }
 ```
@@ -245,13 +297,13 @@ export function computeCoverageScores(
 - [ ] **Step 4: Run → pass**
 
 Run: `npx jest __tests__/lib/aiCoverage.test.ts --ci`
-Expected: PASS (6 tests).
+Expected: PASS (9 tests — 6 `computeCoverageScores` + 3 isolated-helper).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add lib/aiCoverage.ts __tests__/lib/aiCoverage.test.ts
-git commit -m "feat(coverage): CoverageItem + Snapshot + bucket scoring (pure)"
+git commit -m "feat(coverage): CoverageItem + Snapshot + bucket scoring (swappable pure helpers)"
 ```
 
 ---
@@ -1613,6 +1665,7 @@ git commit -m "feat(coverage): collectScoreSlots reads article_terms via coverag
 - A1 — CoverageItem (category + provenance + graph-ready + confidence + **reason**) + Snapshot + bucket scoring → Tasks 1, 2, 3. ✓
 - A1 — **`authority` 5th bucket** declared (empty in A; sources in E) → Task 1 (CoverageCategory + BUCKET maps). ✓
 - A1 — **`reason` captured on the judge call** (feeds the future Recommendation Engine, no re-judge) → Task 1 (verdict/item field) + Task 3 (prompt) + Task 10 (buildSnapshot copies it). ✓
+- A1 — **`computeCoverageScores` decomposed into swappable pure helpers** (`computeBucketScore`/`blendBuckets`/`earlyAnswerBonus`), each unit-tested in isolation (3rd-review risk on the load-bearing scorer) → Task 1. ✓
 - A1 — PAA builder (category:knowledge) → Task 4. ✓
 - A1 — `ai_info_to_cover` column → Task 5. ✓
 - A3 — IntroductionAnalyzer + 5 intent items (category:intent) → Tasks 2 + 6. ✓
