@@ -211,10 +211,11 @@ describe('buildOptimizationPlan mode wiring (Task 6)', () => {
     }
 
     // Mixed lifts: sec_hi gets a high-lift (>NORMAL_MIN=12) guideline -> NORMAL;
-    // sec_mid gets a mid-lift (6..12) guideline -> LESS.
+    // sec_mid gets a mid-lift (6..12) guideline -> LESS. Both at NON-intro indices
+    // (index >= 1) so intro-protection doesn't force the high-lift section to LESS.
     const sections = [
-      { id: 'sec_hi', index: 0, headingText: 'High', html: '<h2>High</h2><p>plain text here</p>' },
-      { id: 'sec_mid', index: 1, headingText: 'Mid', html: '<h2>Mid</h2><p>plain text here</p>' },
+      { id: 'sec_hi', index: 1, headingText: 'High', html: '<h2>High</h2><p>plain text here</p>' },
+      { id: 'sec_mid', index: 2, headingText: 'Mid', html: '<h2>Mid</h2><p>plain text here</p>' },
     ];
     const guidelines = [
       gl({ coverageItemId: 'g-hi', title: 'Cover: High', instruction: 'high', projectedLift: 20, sectionId: 'sec_hi' }),
@@ -229,11 +230,12 @@ describe('buildOptimizationPlan mode wiring (Task 6)', () => {
     expect(plan.steps.every((s) => s.mode === 'less' && s.focus !== 'skip')).toBe(true);
   });
 
-  it('assigns modes: high-lift -> normal, mid-lift -> less', () => {
-    const planInput = makePlanInput({ seoScore: 50, aiScore: 50 }); // some sections lift>12, some 6..12
+  it('assigns modes: high-lift (non-intro) -> normal, mid-lift -> less', () => {
+    const planInput = makePlanInput({ seoScore: 50, aiScore: 50 }); // sec_hi lift>12, sec_mid 6..12
     const plan = buildOptimizationPlan(planInput);
-    const modes = new Set(plan.steps.filter((s) => s.focus !== 'skip').map((s) => s.mode));
-    expect(modes.has('less') || modes.has('normal')).toBe(true);
+    const modeById = new Map(plan.steps.map((s) => [s.sectionId, s.mode]));
+    expect(modeById.get('sec_hi')).toBe('normal'); // high-lift, non-intro → NORMAL (would be LESS if intro-protected)
+    expect(modeById.get('sec_mid')).toBe('less');  // mid-lift → LESS
   });
 
   it('LESS step carries a userInstruction; NORMAL step does not', () => {
