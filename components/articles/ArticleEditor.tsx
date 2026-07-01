@@ -36,6 +36,7 @@ import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
 import SlashCommand, { SlashItem } from './SlashCommand';
 import SurfyChatPanel, { SurfyPanelApi } from './SurfyChatPanel';
+import ProgressiveBlur from '../common/ProgressiveBlur';
 
 export interface HeadingItem {
   level: number;
@@ -1658,7 +1659,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} formattingSuspended={formattingSuspended} />
 
         {/* Scrollable editor — Title/Description + Featured image now live in the
-            "Publish or Export" panel, so the editor shows the article body only. */}
+            "Publish or Export" panel, so the editor shows the article body only.
+            Wrapped in a relative container so the progressive-blur fades pin to the
+            scroll-area edges (below the toolbar) and don't scroll with the content. */}
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'}>
           <div
             ref={editorWrapRef}
@@ -1746,6 +1750,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               </div>
             )}
           </div>
+          {/* Progressive-blur fades at the top & bottom scroll edges (à la Skiper41). */}
+          <ProgressiveBlur position="top" backgroundColor="#fff" height={72} blurAmount={4} />
+          <ProgressiveBlur position="bottom" backgroundColor="#fff" height={80} blurAmount={4} />
+        </div>
         </div>
 
         {/* Docked Surfy chat — rendered (via portal) into the page's right-column dock when present. */}
