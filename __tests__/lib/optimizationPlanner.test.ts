@@ -1,5 +1,5 @@
-import { estimateStepTokens, diminishingLift, buildOptimizationPlan } from '../../lib/optimizationPlanner';
-import type { PlanInput } from '../../lib/optimizationPlanner';
+import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt } from '../../lib/optimizationPlanner';
+import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
 import type { Section } from '../../lib/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
 import type { ArticleContext } from '../../lib/articleContext';
@@ -109,5 +109,41 @@ describe('buildOptimizationPlan ROI trim', () => {
     expect(plan.trimmed).toBe(false);
     expect(plan.ignoredLift).toBe(0);
     expect(plan.steps.every((s) => s.focus !== 'skip')).toBe(true);
+  });
+});
+
+const step = (over: Partial<PlanStep>): PlanStep => ({
+  sectionId: 's', index: 0, headingText: 'H', html: '<p>x</p>', focus: 'seo-terms',
+  systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: '', ...over,
+});
+const rg = (title: string, instruction: string, priority: number) => ({
+  guideline: gl({ title, instruction }), confidence: 1, reason: 'r', priority,
+});
+
+describe('buildStepPrompt', () => {
+  it('skip -> empty string', () => {
+    expect(buildStepPrompt(step({ focus: 'skip' }), ctx())).toBe('');
+  });
+  it('always includes the NEGATIVE CONSTRAINTS block', () => {
+    const p = buildStepPrompt(step({ focus: 'readability' }), ctx());
+    expect(p).toContain('Do NOT');
+    expect(p.toLowerCase()).toContain('other sections');
+  });
+  it('seo-terms weaves per-section missingTerms verbatim (not article-wide)', () => {
+    const p = buildStepPrompt(step({ focus: 'seo-terms', missingTerms: ['react hooks', 'useEffect'] }), ctx());
+    expect(p).toContain('"react hooks"');
+    expect(p).toContain('"useEffect"');
+  });
+  it('ai-coverage renders guideline bullets in priority order', () => {
+    const p = buildStepPrompt(step({
+      focus: 'ai-coverage',
+      guidelines: [rg('Cover: A', 'Add A.', 30), rg('Cover: B', 'Add B.', 10)],
+    }), ctx());
+    expect(p.indexOf('Add A.')).toBeLessThan(p.indexOf('Add B.'));
+  });
+  it('appends brand voice when context.voiceTone present, omits when absent', () => {
+    const withVoice = buildStepPrompt(step({ focus: 'expand' }), ctx({ voiceTone: 'confident, concise' }));
+    expect(withVoice).toContain('confident, concise');
+    expect(buildStepPrompt(step({ focus: 'expand' }), ctx())).not.toContain('brand voice');
   });
 });
