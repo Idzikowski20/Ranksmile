@@ -1,7 +1,7 @@
 # Coverage Foundation (Sub-project A) — Design
 
 **Date:** 2026-06-30
-**Status:** Approved (v3 — 2nd tech-lead review: `reason` on the judge call, `authority` bucket, Recommendation Engine layer inserted before the Planner, Outline re-pointed at the Plan. v3.1 — 3rd review: `computeCoverageScores` decomposed into swappable pure helpers. See "Review response" at the end)
+**Status:** Approved (v3 — 2nd review: `reason`, `authority` bucket, Recommendation Engine layer, Outline re-pointed. v3.1 — 3rd review: `computeCoverageScores` decomposed into swappable helpers. v3.2 — 4th review: snapshot version split (`schemaVersion`/`judgeVersion`/`promptVersion`), `CoverageItem` immutable, scoring operates on the snapshot not `CoverageResult`. See "Review response" at the end)
 **Supersedes:** `docs/superpowers/specs/2026-06-30-ai-search-coverage-model-design.md` (the AI-search-only seed)
 **Audit:** `docs/superpowers/specs/2026-06-30-coverage-engine-audit.md` — §10.7 plug-in points, §10.9 sub-project A
 **Direction:** `[[surfy-coverage-direction]]` memory entry
@@ -44,7 +44,9 @@ The audit (§10.6 weaknesses) shows that the cost of shipping these separately i
   - **No rename to `Guideline`/`OptimizationItem`.** `CoverageItem` is the *analysis* unit ("this fact is/isn't covered"). A `Recommendation` is the *action* unit ("Add a comparison of X vs Y"). Merging them collapses the Coverage-vs-Recommendation separation the review's own conclusion asks for. They stay distinct types in distinct layers.
   - **No `instruction`/`applyPrompt`/`optimizationPrompt` on the item.** The optimization prompt is a `Recommendation` property, synthesized by the Recommendation Engine from `(label + missing + reason + category + importance)`. Putting it on the coverage item means Coverage decides "how to fix", which is the planner/optimize concern.
   - **No `optimization` metadata (`retryCount`, `alreadyOptimized`, `lastPromptVersion`) yet.** This is optimizer state, owned by the Planner (C). It's an *optional JSONB field* — adding it later is not a migration (old items simply lack it), and A never populates it, so YAGNI says defer. (Contrast `reason`, which A *does* populate for free on the judge call.)
-- **`CoverageSnapshot` wraps `items[]` with versioning.** Storage shape is NOT `CoverageItem[]`; it's `CoverageSnapshot { version, model, promptVersion, createdAt, items, buckets, overall }`. The version field carries `judge.version` so we can detect stale snapshots after a prompt/model change. Bucket scores + overall are stored alongside items so the UI doesn't recompute on every render.
+- **`CoverageSnapshot` wraps `items[]` with THREE orthogonal version fields (4th-review point 1).** Storage shape is NOT `CoverageItem[]`; it's `CoverageSnapshot { schemaVersion, judgeVersion, promptVersion, model, createdAt, items, buckets, answersMainQuestionEarly, overall }`. The three versions are separated deliberately: `schemaVersion` = the envelope structure (parseSnapshot rejects unknown values; a prompt tweak must NOT bump it); `judgeVersion` = full judge identity (`prompt|model|temp`) = cache key = staleness detector; `promptVersion` = the prompt tag alone. Mixing them (the v2 `version` + `promptVersion=judge.version`) meant a prompt change looked like a schema change. Bucket scores + overall are stored alongside items so the UI doesn't recompute per render.
+- **`CoverageItem` is immutable (4th-review point 2).** All fields are `readonly`; arrays are `readonly T[]`. Items are never mutated in place — no `item.covered = true` in React or a handler. New state is a new object via spread, produced only by the snapshot builder / `mergeCoverageItems`. React holds items in state and replaces the whole array. This kills a class of "stale/shared reference" bugs before they exist and makes the snapshot safe to pass across the whole app.
+- **The judge artifact (`CoverageResult`) is confined to the snapshot builder (4th-review point 3+10 — the one real layer change).** `computeCoverageScores` and every downstream consumer operate on graded `CoverageItem[]` / the `CoverageSnapshot`, never on `CoverageResult`. The builder is the sole place that maps verdicts → graded items and derives `answersMainQuestionEarly`. The rest of the system doesn't know a judge exists — scoring, UI, Recommendation Engine, planner all speak one final domain model.
 
 ### Scoring decisions
 
@@ -120,22 +122,26 @@ export interface CoverageProvenance {
   promptVersion?: string;   // e.g. 'v1'
 }
 
+// CoverageItem is IMMUTABLE (all fields `readonly`). It is NEVER mutated in place
+// (no `item.covered = true` in React or anywhere). New state is produced by returning
+// a new object (spread) — via the snapshot builder / mergeCoverageItems. React holds
+// items in state and replaces the whole array, never edits an item.
 export interface CoverageItem {
   // identity
-  id: string;                       // STABLE: `${type}-${hash(label)}` — never an array index
-  label: string;                    // a KNOWLEDGE item ("Explain when to use Hooks") or PAA question
-  type: CoverageType;
-  category: CoverageCategory;       // discriminator for bucket scoring + planner
-  importance: Importance;
-  source: CoverageSource;
+  readonly id: string;              // STABLE: `${type}-${hash(label)}` — never an array index
+  readonly label: string;           // a KNOWLEDGE item ("Explain when to use Hooks") or PAA question
+  readonly type: CoverageType;
+  readonly category: CoverageCategory;   // discriminator for bucket scoring + planner
+  readonly importance: Importance;
+  readonly source: CoverageSource;
 
-  // verdict (populated by judge)
-  covered: boolean;
-  quality: number;                  // 0..5
-  confidence?: number;              // 0..1 — judge's confidence in the verdict (planner uses it for re-judge)
-  needsExpansion?: boolean;
-  missing?: string[];               // specifics still absent → feeds the Recommendation Engine
-  reason?: string;                  // WHY covered/uncovered/low-quality ("answer hidden mid-section",
+  // verdict (populated by the snapshot builder from the judge output)
+  readonly covered: boolean;
+  readonly quality: number;         // 0..5
+  readonly confidence?: number;     // 0..1 — judge's confidence (planner re-judges the low ones)
+  readonly needsExpansion?: boolean;
+  readonly missing?: readonly string[];  // specifics still absent → feeds the Recommendation Engine
+  readonly reason?: string;         // WHY covered/uncovered/low-quality ("answer hidden mid-section",
                                     // "fact too vague", "no statistics") — captured on the judge call A
                                     // already makes, so the Recommendation Engine never re-runs the LLM.
                                     // NOTE: the actionable instruction ("Add a comparison of X vs Y") is NOT
@@ -144,15 +150,15 @@ export interface CoverageItem {
                                     // Recommendation = "what to do".
 
   // location
-  sectionId?: string;               // stable from lib/articleSections.ts:14-21
+  readonly sectionId?: string;      // stable from lib/articleSections.ts:14-21
 
-  // graph-ready (A ships flat; D populates)
-  parentId?: string | null;         // null in A; a CoverageItem.id in D
-  relatedIds?: string[];            // empty in A; cross-references in D
-  depth?: number;                   // 0 in A; tree depth in D
+  // graph-ready (A ships flat; E populates)
+  readonly parentId?: string | null;    // null in A; a CoverageItem.id in E
+  readonly relatedIds?: readonly string[];  // empty in A; cross-references in E
+  readonly depth?: number;          // 0 in A; tree depth in E
 
   // audit trail
-  provenance?: CoverageProvenance;
+  readonly provenance?: CoverageProvenance;
 }
 
 export interface CoverageVerdict {
@@ -183,13 +189,20 @@ export interface BucketScore {
 }
 
 export interface CoverageSnapshot {
-  version: 1;
-  model: string;                    // e.g. 'deepseek-chat'
-  promptVersion: string;            // judge.version
-  createdAt: string;                // ISO timestamp
-  items: CoverageItem[];
-  buckets: BucketScore[];
-  overall: number;                  // 0..100 — bucket-weighted blend + early-answer bonus
+  // versioning — three ORTHOGONAL concerns kept separate (4th-review point 1):
+  readonly schemaVersion: 1;        // the CoverageSnapshot ENVELOPE shape. Bumped only on structural change;
+                                    // parseSnapshot rejects unknown schemaVersion. A prompt tweak does NOT touch this.
+  readonly judgeVersion: string;    // full judge identity = cache key = staleness detector
+                                    //   ('promptVersion|model|temperature', e.g. 'v1|deepseek-chat|0').
+                                    //   Compare against the current judge to detect stale snapshots.
+  readonly promptVersion: string;   // just the prompt tag ('v1') — bump on prompt-only changes
+  readonly model: string;           // e.g. 'deepseek-chat'
+  readonly createdAt: string;       // ISO timestamp
+  readonly items: readonly CoverageItem[];   // ALREADY GRADED (covered/quality/reason baked in)
+  readonly buckets: readonly BucketScore[];
+  readonly answersMainQuestionEarly: boolean; // the early-answer flag, promoted onto the domain model
+                                    // so computeCoverageScores works off the snapshot alone (no CoverageResult)
+  readonly overall: number;         // 0..100 — bucket-weighted blend + early-answer bonus
 }
 ```
 
@@ -241,27 +254,27 @@ const IMPORTANCE_WEIGHT: Record<Importance, number> = {
   critical: 3, recommended: 2, optional: 1,
 };
 
-/** Decomposed into small swappable pure helpers (3rd-review risk mitigation). */
-export function computeBucketScore(
-  category: CoverageCategory,
-  items: CoverageItem[],
-  verdicts: Map<string, CoverageVerdict>,
-): BucketScore;                                  // importance×quality/5 over covered items in ONE bucket
-export function blendBuckets(buckets: BucketScore[]): number;   // Σ(weight×earned)/Σ(weight×max) × 85
-export function earlyAnswerBonus(result: CoverageResult): number;  // +15 | 0
+/** Decomposed into small swappable pure helpers (3rd-review). They read the GRADED domain items
+ *  (item.covered / item.quality) — they do NOT know about CoverageVerdict / CoverageResult / the judge
+ *  (4th-review point 3+10: the LLM artifact is confined to the snapshot builder). */
+export function computeBucketScore(category: CoverageCategory, items: readonly CoverageItem[]): BucketScore;
+export function blendBuckets(buckets: readonly BucketScore[]): number;    // Σ(weight×earned)/Σ(weight×max) × 85
+export function earlyAnswerBonus(answersMainQuestionEarly: boolean): number;  // +15 | 0
 
-/** Orchestrator only — composes the three helpers above. */
-export function computeCoverageScores(items: CoverageItem[], result: CoverageResult): {
-  overall: number;
-  buckets: BucketScore[];
-}
+/** Orchestrator — composes the three helpers over graded items + a plain boolean. No CoverageResult. */
+export function computeCoverageScores(
+  items: readonly CoverageItem[],
+  answersMainQuestionEarly: boolean,
+): { overall: number; buckets: BucketScore[] }
 ```
 
-Implementation outline:
-1. For each `CoverageCategory`, collect items where `item.category === category` AND the judge's verdict says covered.
-2. Per bucket: `earned = Σ IMPORTANCE_WEIGHT[importance] × clamp(quality,0,5)/5`; `max = Σ IMPORTANCE_WEIGHT[importance]`. `score = round(earned/max × 100)` (empty bucket → score = 0, but contributes 0 to the blend).
-3. `overall = round(Σ (BUCKET_WEIGHT[k] × bucket[k].earned) / Σ (BUCKET_WEIGHT[k] × bucket[k].max) × 85 + (early ? 15 : 0))`.
+Implementation outline (operates on **graded** items — `covered`/`quality` already baked in by the builder):
+1. For each `CoverageCategory`, collect items where `item.category === category`; a bucket item counts as covered when `item.covered`.
+2. Per bucket: `earned = Σ IMPORTANCE_WEIGHT[importance] × clamp(item.quality,0,5)/5` over covered items; `max = Σ IMPORTANCE_WEIGHT[importance]`. `score = round(earned/max × 100)` (empty bucket → score = 0, contributes 0 to the blend).
+3. `overall = round(blendBuckets(buckets) + earlyAnswerBonus(answersMainQuestionEarly))` = `round(Σ (BUCKET_WEIGHT[k] × bucket[k].earned) / Σ (BUCKET_WEIGHT[k] × bucket[k].max) × 85 + (early ? 15 : 0))`.
 4. Empty buckets (zero items) are returned with `score: 0` but contribute weight 0 to overall (so a paa-only article isn't penalized for empty intent).
+
+**Layer boundary (4th-review point 3+10):** the judge returns `CoverageResult`; the **snapshot builder** applies those verdicts onto the items (producing graded, immutable `CoverageItem`s) and derives the `answersMainQuestionEarly` boolean. From that point on, `CoverageResult` is dead — `computeCoverageScores`, the UI, the Recommendation Engine, and the planner all work off the `CoverageSnapshot` / graded items only. Nobody downstream of the builder knows a judge ever existed. Bonus: C's `projectedLift` "what-if" scoring just constructs a hypothetical graded-items array and calls `computeCoverageScores(items, early)` — no judge round-trip.
 
 ### A2 — AI Readability reshape
 
@@ -367,9 +380,13 @@ deep-analysis (or manual refresh) ─┬─ PAA from DataForSEO ─────�
                                             + Entity graded deterministically from current_count
                                                                                  │
                                                                                  ▼
-                                            computeCoverageScores(items, result) → { overall, buckets }
+                                            buildSnapshot: verdicts ─► GRADED items + answersMainQuestionEarly
+                                            (this is the LAST place CoverageResult is seen)
                                                                                  │
-                                            wrap into CoverageSnapshot { version, model, promptVersion, createdAt, items, buckets, overall }
+                                            computeCoverageScores(gradedItems, early) → { overall, buckets }
+                                                                                 │
+                                            CoverageSnapshot { schemaVersion, judgeVersion, promptVersion, model,
+                                                               createdAt, items, buckets, answersMainQuestionEarly, overall }
                                                                                  │
                                             store in articles.ai_info_to_cover JSONB
                                                                                  │
@@ -536,7 +553,7 @@ interface GuidelineGroup {         // the UI grouping Surfer shows: "AI Search G
 }
 ```
 
-**Also here:** `scoreContribution(item, snapshot)` derived helper (marginal points an item contributes to its bucket → overall), used for `projectedLift`. `AIProfile` = the `GuidelineGroup[]` view (buckets promoted to named groups). No LLM re-call — C reads `reason`/`missing` captured in A and templates the instruction.
+**Also here:** `scoreContribution(item, snapshot)` derived helper (marginal points an item contributes to its bucket → overall), used for `projectedLift`. `AIProfile` = the `GuidelineGroup[]` view (buckets promoted to named groups). No LLM re-call — C reads `reason`/`missing` captured in A and templates the instruction. **Derived values** (`projectedLift`, `priority`, `estimatedTokens`, `affectedBuckets`) — neither Coverage nor Recommendation, but *computed* from them — live under `lib/coverage/derived/` (4th-review point 9). `projectedLift` uses A's `computeCoverageScores(hypotheticalGradedItems, early)` directly — no judge round-trip, since scoring already works off graded items.
 
 **Touches:** new `lib/recommendationEngine.ts`; `WriteOptimizePanel` renders `GuidelineGroup[]` (replaces A's raw per-item cards with grouped, actionable recommendations).
 
@@ -609,3 +626,16 @@ The 2nd review's central thesis — insert a **Recommendation Engine** between C
 ### Addendum — 3rd review (v3.1)
 
 The 3rd review approved the design and raised one actionable risk: `computeCoverageScores` is the single load-bearing function (feeds AI gauge + recommendation priority + planner + `projectedLift` + Auto-Optimize), so a monolithic implementation would make weight/algorithm changes costly. **Accepted:** it decomposes into independently-exported, independently-tested pure helpers — `computeBucketScore`, `blendBuckets`, `earlyAnswerBonus` — with weights as module constants; `computeCoverageScores` only orchestrates. **Held the YAGNI line:** no runtime weight-injection / config object in A (that's D's A/B concern); the helper split already makes injection a one-signature change later, not a rewrite. No shape change, no new task — refactor lands inside Task 1.
+
+### Addendum — 4th review (v3.2)
+
+Approved the design; raised one real layer change plus two cheap storage-shape clarifications. All three accepted (each is cheap-in-A / expensive-later — the exact "fix the shape now" criterion).
+
+| # | Point | Decision |
+|---|---|---|
+| 3+10 | Scoring must operate on the finished snapshot, not `CoverageResult` | ✅ **Accept (the real change).** `computeCoverageScores(items, answersMainQuestionEarly)` + helpers read graded `CoverageItem`s. The judge artifact `CoverageResult` is confined to `buildSnapshot`; nothing downstream sees it. Also makes C's `projectedLift` what-if scoring a plain function call. |
+| 1 | Split snapshot `version` into `schemaVersion` / `judgeVersion` / `promptVersion` | ✅ **Accept.** A prompt tweak no longer looks like a schema change; `parseSnapshot` gates on `schemaVersion` only. |
+| 2 | `CoverageItem` immutable | ✅ **Accept.** `readonly` on all fields + arrays; mutate only by producing a new object via the builder / `mergeCoverageItems`. |
+| 9 | `derived/` folder for `projectedLift`/`priority`/`estimatedTokens`/`affectedBuckets` | ⏸️ **Defer (reviewer agrees "not needed now").** Those are C/D outputs, not Coverage or Recommendation. Roadmap notes a `lib/coverage/derived/` home when C lands. No A change. |
+
+**Net effect on A:** signature change on the scorer + helpers (graded items, no `CoverageResult`), snapshot version-field split, `readonly` on the item — all inside Task 1 + Task 9/10. No new task; the domain model is unchanged in *content*, only tightened in *boundaries*.

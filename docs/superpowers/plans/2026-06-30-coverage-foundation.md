@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Next.js (pages), Neon Postgres (JSONB), deepseek-chat (via `fetch`), Python sidecar (FastAPI), Jest.
 
-**Spec:** `docs/superpowers/specs/2026-06-30-coverage-foundation-design.md` (v3 — 2nd tech-lead review: `reason` field + `authority` bucket into A; Recommendation Engine + Outline-from-Plan deferred to sub-projects C/D)
+**Spec:** `docs/superpowers/specs/2026-06-30-coverage-foundation-design.md` (v3.2 — 2nd review: `reason` + `authority` bucket + Recommendation Engine layer (C); 3rd: `computeCoverageScores` swappable helpers; 4th: snapshot version split, `CoverageItem` immutable (`readonly`), scoring operates on graded items not `CoverageResult`)
 **Audit:** `docs/superpowers/specs/2026-06-30-coverage-engine-audit.md` §10.7, §10.9
 **Memory:** `[[surfy-coverage-direction]]`, `[[deepseek-chat-not-reasoning-model]]`, `[[avoid-any-type]]`, `[[sidecar-repro-script-not-user]]`, `[[concurrent-sessions-hazard]]`
 
@@ -60,68 +60,63 @@
 // __tests__/lib/aiCoverage.test.ts
 import {
   computeCoverageScores, computeBucketScore, blendBuckets, earlyAnswerBonus,
-  CoverageItem, CoverageResult, CoverageVerdict,
+  CoverageItem,
 } from '../../lib/aiCoverage';
 
-const item = (
+// GRADED item factory — the scorer works on graded items (covered/quality baked in), NOT CoverageResult.
+const gi = (
   id: string,
+  covered: boolean,
+  quality: number,
   category: CoverageItem['category'] = 'knowledge',
   importance: CoverageItem['importance'] = 'recommended',
 ): CoverageItem => ({
   id, label: id, type: 'paa', category, importance,
-  source: 'paa', covered: false, quality: 0,
+  source: 'paa', covered, quality,
 });
-const v = (id: string, covered: boolean, quality: number) => ({ id, covered, quality, confidence: 1 });
-const result = (items: CoverageResult['items'], early = false): CoverageResult =>
-  ({ items, answersMainQuestionEarly: early });
 
 describe('computeCoverageScores', () => {
   it('no items → overall 0, 5 empty buckets (intent/knowledge/authority/quality/style)', () => {
-    const { overall, buckets } = computeCoverageScores([], result([]));
+    const { overall, buckets } = computeCoverageScores([], false);
     expect(overall).toBe(0);
     expect(buckets.map((b) => b.key)).toEqual(['intent', 'knowledge', 'authority', 'quality', 'style']);
     expect(buckets.every((b) => b.score === 0 && b.items === 0)).toBe(true);
   });
   it('all covered q5 + early → overall 100', () => {
-    const items = [item('a', 'knowledge'), item('b', 'intent', 'critical')];
-    const { overall } = computeCoverageScores(items, result([v('a', true, 5), v('b', true, 5)], true));
-    expect(overall).toBe(100);
+    const items = [gi('a', true, 5, 'knowledge'), gi('b', true, 5, 'intent', 'critical')];
+    expect(computeCoverageScores(items, true).overall).toBe(100);
   });
   it('all covered q5, no early → overall 85', () => {
-    const items = [item('a', 'knowledge'), item('b', 'intent', 'critical')];
-    const { overall } = computeCoverageScores(items, result([v('a', true, 5), v('b', true, 5)]));
-    expect(overall).toBe(85);
+    const items = [gi('a', true, 5, 'knowledge'), gi('b', true, 5, 'intent', 'critical')];
+    expect(computeCoverageScores(items, false).overall).toBe(85);
   });
   it('quality matters: single knowledge item covered q1 → bucket score 20', () => {
-    const { buckets } = computeCoverageScores([item('a', 'knowledge')], result([v('a', true, 1)]));
+    const { buckets } = computeCoverageScores([gi('a', true, 1, 'knowledge')], false);
     expect(buckets.find((b) => b.key === 'knowledge')?.score).toBe(20);
   });
   it('empty bucket contributes 0 weight (paa-only article not dragged by empty intent)', () => {
-    const { overall, buckets } = computeCoverageScores([item('a', 'knowledge')], result([v('a', true, 5)]));
+    const { overall, buckets } = computeCoverageScores([gi('a', true, 5, 'knowledge')], false);
     expect(overall).toBe(85);                 // knowledge fully covered, no early
     expect(buckets.find((b) => b.key === 'intent')?.items).toBe(0);
     expect(buckets.find((b) => b.key === 'intent')?.score).toBe(0);
   });
   it('per-bucket importance weighting: critical covered + optional uncovered → knowledge bucket 75', () => {
-    const items = [item('a', 'knowledge', 'critical'), item('b', 'knowledge', 'optional')];
-    const { buckets } = computeCoverageScores(items, result([v('a', true, 5)]));
+    const items = [gi('a', true, 5, 'knowledge', 'critical'), gi('b', false, 0, 'knowledge', 'optional')];
     // earned = 3×1 = 3 ; max = 3+1 = 4 ; 3/4 = 75
-    expect(buckets.find((b) => b.key === 'knowledge')?.score).toBe(75);
+    expect(computeCoverageScores(items, false).buckets.find((b) => b.key === 'knowledge')?.score).toBe(75);
   });
 });
 
 // The swappable helpers are exported + tested in isolation so weight/algorithm changes
-// can't silently break the blend (3rd-review risk on the load-bearing scorer).
+// can't silently break the blend (3rd-review risk). They read graded items — no verdict map (4th-review).
 describe('scoring helpers (isolated)', () => {
-  const verdicts = (arr: CoverageVerdict[]) => new Map(arr.map((x) => [x.id, x]));
-
   it('computeBucketScore: only counts items in its category; empty → max 0, score 0', () => {
-    const items = [item('a', 'knowledge'), item('b', 'intent', 'critical')];
-    const empty = computeBucketScore('authority', items, verdicts([]));
+    const items = [gi('a', true, 5, 'knowledge'), gi('b', true, 5, 'intent', 'critical')];
+    const empty = computeBucketScore('authority', items);
     expect(empty.items).toBe(0);
     expect(empty.max).toBe(0);
     expect(empty.score).toBe(0);
-    const knowledge = computeBucketScore('knowledge', items, verdicts([v('a', true, 5)]));
+    const knowledge = computeBucketScore('knowledge', items);
     expect(knowledge.items).toBe(1);
     expect(knowledge.covered).toBe(1);
     expect(knowledge.score).toBe(100);
@@ -129,15 +124,14 @@ describe('scoring helpers (isolated)', () => {
 
   it('blendBuckets: weights buckets by BucketScore.weight; all-empty → 0', () => {
     expect(blendBuckets([])).toBe(0);
-    const items = [item('a', 'knowledge')];
-    const buckets = computeCoverageScores(items, result([v('a', true, 5)])).buckets;
+    const buckets = computeCoverageScores([gi('a', true, 5, 'knowledge')], false).buckets;
     // knowledge fully covered, all other buckets empty (weight-0 contribution) → base 85
     expect(Math.round(blendBuckets(buckets))).toBe(85);
   });
 
   it('earlyAnswerBonus: 15 when flagged, 0 otherwise', () => {
-    expect(earlyAnswerBonus(result([], true))).toBe(15);
-    expect(earlyAnswerBonus(result([], false))).toBe(0);
+    expect(earlyAnswerBonus(true)).toBe(15);
+    expect(earlyAnswerBonus(false)).toBe(0);
   });
 });
 ```
@@ -168,24 +162,25 @@ export interface CoverageProvenance {
   promptVersion?: string;
 }
 
+// IMMUTABLE — never mutate in place (no `item.covered = true`); produce a new object via spread.
 export interface CoverageItem {
-  id: string;
-  label: string;
-  type: CoverageType;
-  category: CoverageCategory;
-  importance: Importance;
-  source: CoverageSource;
-  covered: boolean;
-  quality: number;            // 0..5
-  confidence?: number;        // 0..1
-  needsExpansion?: boolean;
-  missing?: string[];
-  reason?: string;            // WHY uncovered/shallow — captured on the judge call, feeds the Recommendation Engine
-  sectionId?: string;
-  parentId?: string | null;   // graph-ready (flat in A)
-  relatedIds?: string[];      // graph-ready (empty in A)
-  depth?: number;             // graph-ready (0 in A)
-  provenance?: CoverageProvenance;
+  readonly id: string;
+  readonly label: string;
+  readonly type: CoverageType;
+  readonly category: CoverageCategory;
+  readonly importance: Importance;
+  readonly source: CoverageSource;
+  readonly covered: boolean;
+  readonly quality: number;            // 0..5
+  readonly confidence?: number;        // 0..1
+  readonly needsExpansion?: boolean;
+  readonly missing?: readonly string[];
+  readonly reason?: string;            // WHY uncovered/shallow — captured on the judge call, feeds the Recommendation Engine
+  readonly sectionId?: string;
+  readonly parentId?: string | null;   // graph-ready (flat in A)
+  readonly relatedIds?: readonly string[];  // graph-ready (empty in A)
+  readonly depth?: number;             // graph-ready (0 in A)
+  readonly provenance?: CoverageProvenance;
 }
 
 export interface CoverageVerdict {
@@ -216,13 +211,15 @@ export interface BucketScore {
 }
 
 export interface CoverageSnapshot {
-  version: 1;
-  model: string;
-  promptVersion: string;
-  createdAt: string;
-  items: CoverageItem[];
-  buckets: BucketScore[];
-  overall: number;            // 0..100
+  readonly schemaVersion: 1;               // envelope shape; parseSnapshot gates on this. A prompt tweak does NOT bump it.
+  readonly judgeVersion: string;           // 'promptVersion|model|temperature' — cache key + staleness detector
+  readonly promptVersion: string;          // just the prompt tag, e.g. 'v1'
+  readonly model: string;                  // e.g. 'deepseek-chat'
+  readonly createdAt: string;
+  readonly items: readonly CoverageItem[]; // ALREADY GRADED
+  readonly buckets: readonly BucketScore[];
+  readonly answersMainQuestionEarly: boolean;  // promoted onto the domain model (scorer needs no CoverageResult)
+  readonly overall: number;                // 0..100
 }
 
 const CATEGORIES: CoverageCategory[] = ['intent', 'knowledge', 'authority', 'quality', 'style'];
@@ -234,11 +231,11 @@ const IMPORTANCE_WEIGHT: Record<Importance, number> = { critical: 3, recommended
 
 const clampQuality = (q: number): number => Math.min(Math.max(q, 0), 5);
 
-/** One bucket's importance×quality/5 score over covered items. Pure + independently testable. */
+/** One bucket's importance×quality/5 over covered items. Reads GRADED items (item.covered/item.quality) —
+ *  it does NOT know about CoverageVerdict/CoverageResult/the judge (4th-review: LLM artifact stays in the builder). */
 export function computeBucketScore(
   category: CoverageCategory,
-  items: CoverageItem[],
-  verdicts: Map<string, CoverageVerdict>,
+  items: readonly CoverageItem[],
 ): BucketScore {
   const inBucket = items.filter((it) => it.category === category);
   let earned = 0;
@@ -247,10 +244,9 @@ export function computeBucketScore(
   for (const it of inBucket) {
     const w = IMPORTANCE_WEIGHT[it.importance];
     max += w;
-    const vd = verdicts.get(it.id);
-    if (vd?.covered) {
+    if (it.covered) {
       covered += 1;
-      earned += w * (clampQuality(vd.quality) / 5);
+      earned += w * (clampQuality(it.quality) / 5);
     }
   }
   return {
@@ -266,7 +262,7 @@ export function computeBucketScore(
 }
 
 /** Bucket-weighted blend, capped to 85. Empty buckets contribute 0 (max 0). Pure. */
-export function blendBuckets(buckets: BucketScore[]): number {
+export function blendBuckets(buckets: readonly BucketScore[]): number {
   let weightedEarned = 0;
   let weightedMax = 0;
   for (const b of buckets) {
@@ -276,20 +272,19 @@ export function blendBuckets(buckets: BucketScore[]): number {
   return weightedMax > 0 ? (weightedEarned / weightedMax) * 85 : 0;
 }
 
-/** The +15 early-answer bonus. Pure. */
-export function earlyAnswerBonus(result: CoverageResult): number {
-  return result.answersMainQuestionEarly ? 15 : 0;
+/** The +15 early-answer bonus. Pure — takes a plain boolean, not CoverageResult. */
+export function earlyAnswerBonus(answersMainQuestionEarly: boolean): number {
+  return answersMainQuestionEarly ? 15 : 0;
 }
 
-/** Orchestrator only — composes the three swappable helpers above.
+/** Orchestrator — composes the three swappable helpers over GRADED items + a plain boolean. No CoverageResult.
  *  Weights live in BUCKET_WEIGHT / IMPORTANCE_WEIGHT module constants → tuning is a one-constant edit. */
 export function computeCoverageScores(
-  items: CoverageItem[],
-  result: CoverageResult,
+  items: readonly CoverageItem[],
+  answersMainQuestionEarly: boolean,
 ): { overall: number; buckets: BucketScore[] } {
-  const verdicts = new Map(result.items.map((vd) => [vd.id, vd]));
-  const buckets = CATEGORIES.map((key) => computeBucketScore(key, items, verdicts));
-  const overall = Math.round(blendBuckets(buckets) + earlyAnswerBonus(result));
+  const buckets = CATEGORIES.map((key) => computeBucketScore(key, items));
+  const overall = Math.round(blendBuckets(buckets) + earlyAnswerBonus(answersMainQuestionEarly));
   return { overall, buckets };
 }
 ```
@@ -1070,16 +1065,21 @@ describe('mergeCoverageItems', () => {
   });
 });
 
+const META = { judgeVersion: 'v1|deepseek-chat|0', promptVersion: 'v1', model: 'deepseek-chat', createdAt: '2026-06-30T00:00:00Z' };
+
 describe('buildSnapshot', () => {
-  it('wraps items + buckets + overall with version metadata', () => {
+  it('grades items, derives early flag, wraps with split version fields', () => {
     const items = [item('paa-1')];
     const result: CoverageResult = { items: [{ id: 'paa-1', covered: true, quality: 5, confidence: 1 }], answersMainQuestionEarly: false };
-    const snap = buildSnapshot(items, result, { version: 'v1|deepseek-chat|0', model: 'deepseek-chat', createdAt: '2026-06-30T00:00:00Z' });
-    expect(snap.version).toBe(1);
+    const snap = buildSnapshot(items, result, META);
+    expect(snap.schemaVersion).toBe(1);
+    expect(snap.judgeVersion).toBe('v1|deepseek-chat|0');
+    expect(snap.promptVersion).toBe('v1');
     expect(snap.model).toBe('deepseek-chat');
-    expect(snap.promptVersion).toBe('v1|deepseek-chat|0');
-    expect(snap.items).toHaveLength(1);
-    expect(snap.buckets).toHaveLength(5);   // intent/knowledge/authority/quality/style
+    expect(snap.items[0].covered).toBe(true);      // graded from the verdict
+    expect(snap.items[0].quality).toBe(5);
+    expect(snap.answersMainQuestionEarly).toBe(false);
+    expect(snap.buckets).toHaveLength(5);          // intent/knowledge/authority/quality/style
     expect(snap.overall).toBe(85);
   });
 });
@@ -1087,13 +1087,14 @@ describe('buildSnapshot', () => {
 describe('parseSnapshot', () => {
   it('returns null for non-snapshot input', () => {
     expect(parseSnapshot(null)).toBeNull();
-    expect(parseSnapshot([])).toBeNull();             // legacy array, not a snapshot
-    expect(parseSnapshot({ version: 99 })).toBeNull(); // unknown version
+    expect(parseSnapshot([])).toBeNull();                    // legacy array, not a snapshot
+    expect(parseSnapshot({ schemaVersion: 99 })).toBeNull(); // unknown schema
+    expect(parseSnapshot({ version: 1, items: [], buckets: [] })).toBeNull(); // v2 field name → rejected
   });
   it('round-trips a valid snapshot', () => {
     const items = [item('paa-1')];
     const result: CoverageResult = { items: [{ id: 'paa-1', covered: true, quality: 5, confidence: 1 }], answersMainQuestionEarly: false };
-    const snap = buildSnapshot(items, result, { version: 'v1', model: 'deepseek-chat', createdAt: '2026-06-30T00:00:00Z' });
+    const snap = buildSnapshot(items, result, META);
     expect(parseSnapshot(JSON.parse(JSON.stringify(snap)))).toEqual(snap);
   });
 });
@@ -1125,11 +1126,13 @@ export function mergeCoverageItems(src: CoverageSources): CoverageItem[] {
   return Array.from(byId.values());
 }
 
-/** Apply the judge verdicts onto items, compute buckets+overall, and wrap into a versioned snapshot. */
+/** THE ONLY place CoverageResult (the judge artifact) is consumed (4th-review layer boundary).
+ *  Applies verdicts onto items → GRADED immutable items, derives the early flag, scores off the
+ *  graded items, and wraps everything into a versioned snapshot. Nothing downstream sees CoverageResult. */
 export function buildSnapshot(
   items: CoverageItem[],
   result: CoverageResult,
-  meta: { version: string; model: string; createdAt: string },
+  meta: { judgeVersion: string; promptVersion: string; model: string; createdAt: string },
 ): CoverageSnapshot {
   const byId = new Map(result.items.map((vd) => [vd.id, vd]));
   const graded: CoverageItem[] = items.map((it) => {
@@ -1144,26 +1147,29 @@ export function buildSnapshot(
       missing: vd.missing,
       reason: vd.reason,
       sectionId: vd.sectionId,
-      provenance: { judgedBy: meta.model, judgedAt: meta.createdAt, promptVersion: meta.version },
+      provenance: { judgedBy: meta.model, judgedAt: meta.createdAt, promptVersion: meta.promptVersion },
     };
   });
-  const { overall, buckets } = computeCoverageScores(graded, result);
+  const early = result.answersMainQuestionEarly;
+  const { overall, buckets } = computeCoverageScores(graded, early);   // graded items + boolean; no CoverageResult
   return {
-    version: 1,
+    schemaVersion: 1,
+    judgeVersion: meta.judgeVersion,
+    promptVersion: meta.promptVersion,
     model: meta.model,
-    promptVersion: meta.version,
     createdAt: meta.createdAt,
     items: graded,
     buckets,
+    answersMainQuestionEarly: early,
     overall,
   };
 }
 
-/** Parse a stored ai_info_to_cover value into a CoverageSnapshot, or null if absent/legacy/unknown-version. */
+/** Parse a stored ai_info_to_cover value into a CoverageSnapshot, or null if absent/legacy/unknown schema. */
 export function parseSnapshot(raw: unknown): CoverageSnapshot | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const snap = raw as Partial<CoverageSnapshot>;
-  if (snap.version !== 1 || !Array.isArray(snap.items) || !Array.isArray(snap.buckets)) return null;
+  if (snap.schemaVersion !== 1 || !Array.isArray(snap.items) || !Array.isArray(snap.buckets)) return null;
   return snap as CoverageSnapshot;
 }
 
@@ -1243,9 +1249,12 @@ try {
     coverageResult.items.push({ id: it.id, covered: it.covered, quality: it.quality, confidence: 1 });
   }
 
+  // judge.version is 'promptVersion|model|temperature' → split for the snapshot's separate version fields.
+  const [promptVersion, model] = deepseekJudge.version.split('|');
   const snapshot = buildSnapshot(items, coverageResult, {
-    version: deepseekJudge.version,
-    model: 'deepseek-chat',
+    judgeVersion: deepseekJudge.version,
+    promptVersion,
+    model,
     createdAt: new Date().toISOString(),
   });
 
@@ -1317,12 +1326,14 @@ try {
   });
 
   // Re-grade snapshot using the prior verdicts already baked into kept items + the fresh readability items.
+  // This endpoint does NOT re-run the coverage judge, so preserve prev's version metadata.
   const verdictItems = items.map((i) => ({ id: i.id, covered: i.covered, quality: i.quality, confidence: i.confidence ?? 1 }));
   const snapshot = buildSnapshot(items, {
     items: verdictItems,
-    answersMainQuestionEarly: prev?.items.find((i) => i.id === 'intent-answer-early')?.covered ?? false,
+    answersMainQuestionEarly: prev?.answersMainQuestionEarly ?? false,
   }, {
-    version: prev?.promptVersion ?? 'v1',
+    judgeVersion: prev?.judgeVersion ?? 'v1|deepseek-chat|0',
+    promptVersion: prev?.promptVersion ?? 'v1',
     model: prev?.model ?? 'deepseek-chat',
     createdAt: new Date().toISOString(),
   });
@@ -1378,8 +1389,9 @@ const [aiCoverageScore, setAiCoverageScore] = useState<number | null>(null);
 ```ts
 // hydration (near :614)
 const snap = parseSnapshot(art.ai_info_to_cover);
-setCoverageItems(snap?.items ?? []);
-setCoverageBuckets(snap?.buckets ?? []);
+// spread: snapshot arrays are `readonly` (immutable model) → widen to the mutable state type.
+setCoverageItems(snap ? [...snap.items] : []);
+setCoverageBuckets(snap ? [...snap.buckets] : []);
 setAiCoverageScore(snap?.overall ?? null);
 ```
 
@@ -1666,6 +1678,9 @@ git commit -m "feat(coverage): collectScoreSlots reads article_terms via coverag
 - A1 — **`authority` 5th bucket** declared (empty in A; sources in E) → Task 1 (CoverageCategory + BUCKET maps). ✓
 - A1 — **`reason` captured on the judge call** (feeds the future Recommendation Engine, no re-judge) → Task 1 (verdict/item field) + Task 3 (prompt) + Task 10 (buildSnapshot copies it). ✓
 - A1 — **`computeCoverageScores` decomposed into swappable pure helpers** (`computeBucketScore`/`blendBuckets`/`earlyAnswerBonus`), each unit-tested in isolation (3rd-review risk on the load-bearing scorer) → Task 1. ✓
+- A1 — **scoring operates on graded `CoverageItem[]` + a boolean, NOT `CoverageResult`** (4th-review layer boundary); `CoverageResult` confined to `buildSnapshot` → Task 1 (helper signatures) + Task 9 (builder). ✓
+- A1 — **`CoverageItem` immutable** (`readonly` fields + arrays) → Task 1. ✓
+- A1 — **snapshot version split** (`schemaVersion` / `judgeVersion` / `promptVersion` / `model`) + promoted `answersMainQuestionEarly`; `parseSnapshot` gates on `schemaVersion` → Task 1 (interface) + Task 9 (build/parse) + Tasks 10/11 (meta shape). ✓
 - A1 — PAA builder (category:knowledge) → Task 4. ✓
 - A1 — `ai_info_to_cover` column → Task 5. ✓
 - A3 — IntroductionAnalyzer + 5 intent items (category:intent) → Tasks 2 + 6. ✓
@@ -1679,4 +1694,4 @@ git commit -m "feat(coverage): collectScoreSlots reads article_terms via coverag
 - Fallback (NULL snapshot → legacy citation score) → Task 12. ✓
 - `lib/aiSearchScore.ts`, `aiVisibilityStore.ts`, `AiSearchPanel.tsx`, `ScoreTrio.tsx:50` untouched → no task modifies them. ✓
 - Out of scope (B context, **C Recommendation Engine**, D planner + Outline-from-Plan, E graph + extended sources incl. authority sources, AiReadabilityPanel carve-out, AI Tracker rebrand) → no tasks. ✓
-- Push-backs (no CoverageItem→Guideline rename; no `instruction` on item; `optimization` metadata deferred to D) → no A-level task; recorded in spec "Review response (v3)". ✓
+- Push-backs (no CoverageItem→Guideline rename; no `instruction` on item; `optimization` metadata deferred to D; `derived/` folder for projectedLift/priority deferred to C) → no A-level task; recorded in spec "Review response". ✓
