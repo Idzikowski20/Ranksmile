@@ -11,13 +11,13 @@ Insert the **Optimization Planner** — the "where + whether to act" layer betwe
 
 `Coverage (A) "what is" → Recommendation Engine (C) "what to do" → Planner (D) "where + whether to act" → Auto-Optimize "how".`
 
-**Defining constraint: the planner is DETERMINISTIC — NO new LLM call for planning.** It ROUTES C's already-computed `Guideline[]` + per-section deterministic signals (heading/body token overlap, per-section `countOccurrences`, `missingPoints`, `guideline.sectionId`) to sections via a scoring model. The LLM is still called once per non-skipped section for the actual edit, exactly as today (`optimize-sections.ts:113-126`). This mirrors C's own "NO new LLM call" constraint (`2026-06-30-recommendation-engine-design.md:14`).
+**Defining constraint: the planner is DETERMINISTIC — NO new LLM call for planning.** It ROUTES C's already-computed `Guideline[]` + per-section deterministic signals (heading/body token overlap, per-section `countOccurrences`, `guideline.sectionId`, and a thinnest-section word-count tiebreak for the fallback case) to sections via a scoring model. The LLM is still called once per non-skipped section for the actual edit, exactly as today (`optimize-sections.ts:113-126`). This mirrors C's own "NO new LLM call" constraint (`2026-06-30-recommendation-engine-design.md:14`).
 
 ## What D ships
 
 1. `lib/optimizeGuidelineRouting.ts` — the pure `assignGuidelinesToSections(guidelines, sections)` helper (deterministic per-(guideline,section) SCORING model → highest-scoring section, with fallback, confidence, and reason). A swappable seam so a semantic matcher can drop in later behind the same signature.
 2. `lib/optimizationPlanner.ts` — `buildOptimizationPlan(input): Plan` (PURE), the per-section `buildStepPrompt(step)` builder, `estimateStepTokens(section)`, the focus routing rules, diminishing-returns lift aggregation, `priority` sort, and the ROI budget trim.
-3. The wiring in `pages/api/articles/optimize-sections.ts`: derive planner inputs SERVER-SIDE via `buildArticleContext(articleId)` + local `computeContentScoreBreakdown`, insert the planner at the `splitSections()`→loop seam (`:96`→`:106`), replace the single global `buildSystemPrompt(missingTerms)` (`:101`) with per-step `step.systemPrompt`, shift `recordAiTokens` to a per-step accumulator recorded in a `finally`, and surface `trimmed`/`ignoredLift` on a `meta`/`done` SSE event.
+3. The wiring in `pages/api/articles/optimize-sections.ts`: derive planner inputs SERVER-SIDE via `buildArticleContext(articleId)`, insert the planner at the `splitSections()`→loop seam (`:96`→`:106`), replace the single global `buildSystemPrompt(missingTerms)` (`:101`) with per-step `step.systemPrompt`, shift `recordAiTokens` to a per-step accumulator recorded in a `finally`, and surface `trimmed`/`ignoredLift` on a `meta`/`done` SSE event.
 
 Untouched (reused UNCHANGED per audit §7 verdict, lines 505-507): the section loop dispatcher + retries + abort handling (`optimize-sections.ts:106-146`), SSE `meta`/`section`/`done` events (`lib/optimizeSectionEvents.ts`), the review-doc / Accept-Reject flow (`lib/optimizeReviewDoc.ts`, `components/articles/ContentOptimizerNodeView.tsx`), and the TipTap `contentOptimizer` atom (`components/articles/contentOptimizerNode.ts`). Frozen: `lib/aiCoverage.ts`, `lib/recommendationEngine.ts`, `lib/articleContext.ts`.
 
@@ -51,10 +51,6 @@ import type { Section } from './articleSections';
 import type { Guideline } from './recommendationEngine';
 import type { Importance } from './aiCoverage';
 import type { ArticleContext } from './articleContext';
-import type { computeContentScoreBreakdown } from './contentScore';
-
-type ContentScoreBreakdown = ReturnType<typeof computeContentScoreBreakdown>;
-// = { slots: Array<ScoreSlot & { missingPoints: number }>; totalPossible: number }
 
 export type StepFocus =
   | 'seo-terms'     // weave under-target NLP terms (today's only behavior — kept, per-section weighted)
@@ -97,7 +93,6 @@ export interface Plan {
 export interface PlanInput {
   sections: Section[];                       // splitSections(content)  (articleSections.ts:30)
   guidelines: Guideline[];                   // C: buildGuidelines(snapshot, ctx)  (recommendationEngine.ts:155)
-  breakdown: ContentScoreBreakdown;          // computed locally in the endpoint (ArticleContext.breakdown is null-typed)
   context: ArticleContext;                   // B: buildArticleContext(articleId)  (articleContext.ts:38)
   budgetRemaining: number;                   // usage.limit - usage.used  (aiTokenUsage.ts:37)
 }
@@ -108,8 +103,8 @@ export function buildOptimizationPlan(input: PlanInput): Plan;  // PURE — dete
 Notes:
 - `RoutedGuideline.reason` and `PlanStep.reason` + `Plan.ignoredLift`/`Plan.trimmed` are the **observability** surface (change 4). They feed a future UI line: "Skipped 37 potential points because of token budget."
 - `PlanInput.context` carries `keyword`, `voiceTone` (brand), and `scoreData` — the planner reads them off `context`, never off the request body (ratified decision 3).
-- `breakdown` is passed IN (not read off `context`) because `ArticleContext.breakdown` is typed `null` and unwired in B (`articleContext.ts:26,86`); D computes `computeContentScoreBreakdown(...)` locally in the endpoint (a pure function, `contentScore.ts:418`). Do NOT extend `ArticleContext`.
 - The planner consumes `Guideline`, not raw `CoverageItem` (ratified decision 2).
+- **No per-section `missingPoints`/`breakdown` input.** `computeContentScoreBreakdown` emits slots keyed by SIGNAL names (`'words'`, `'terms'`, `'headings'`, ...) over the WHOLE article, not by `sectionId` — there is no way to key it to a `sec_<index>_<hash>` id today, so it was dropped rather than faked. See the fallback tiebreak below and the deferred note at the end of this section.
 
 ---
 
@@ -136,8 +131,9 @@ matchScore(g, section) =
 - **headingSimilarity / bodySimilarity** use an **overlap coefficient** (|A intersect B| / min(|A|,|B|)) over lowercased word tokens (a small local tokenizer keeps routing self-contained — do NOT depend on `contentScore.tokenize`, which is Polish-stem specific). `keyTerms(g)` = distinct tokens from `g.title` + `g.instruction` (the guideline title already embeds the `CoverageItem.label`).
 - **sectionKeywordFrequency** reuses `countOccurrences(plainText, keyTerm)` (`contentScore.ts:62`) and normalizes by the max frequency of that term across all sections so a long section does not always win.
 - **Assignment:** each guideline goes to its single highest-scoring section. **Confidence in [0,1]** = `min(1, matchScore / CONFIDENCE_NORM)` where `CONFIDENCE_NORM` is a named constant (~ W_HEADING + W_BODY + W_FREQ; an exact `sectionId` hit saturates to 1.0). **Reason** records the dominant term ("Exact section match", "Matched entity React Hooks", "Heading overlap 0.62", "Body-term match").
-- **Fallback when the best score < MATCH_THRESHOLD** (named constant): intent-category guidelines (`group === 'intent'`) route to the **intro section** (index 0); otherwise to the section with the highest `missingPoints` (from `breakdown`, passed through). Fallback assignments get low confidence and reason "Fallback — intent to intro" / "Fallback — highest missingPoints".
-- **Seam:** exported behind the stable signature `assignGuidelinesToSections(guidelines, sections, opts): Map<string, RoutedGuideline[]>` so a semantic/embedding matcher can replace the scorer later WITHOUT touching the planner. No embeddings in v1.
+- **Fallback when the best score < MATCH_THRESHOLD** (named constant): intent-category guidelines (`group === 'intent'`) route to the **intro section** (index 0); otherwise to the **thinnest section** — the lowest word count via `wordCount(plainText(section.html))`, ties keep array order. Fallback assignments get low confidence and reason "Fallback — intent to intro" / "Fallback — thinnest section".
+  Fallback routing intentionally prefers the thinnest section because it is the most likely place to benefit from additional content when no deterministic semantic match exists. This is a deterministic tiebreak only, not a semantic relevance signal.
+- **Seam:** exported behind the stable signature `assignGuidelinesToSections(guidelines, sections): Map<string, RoutedGuideline[]>` so a semantic/embedding matcher can replace the scorer later WITHOUT touching the planner. No embeddings in v1.
 - **Output shape (change 4):** `Map<sectionId, RoutedGuideline[]>` (NOT `Map<sectionId, Guideline[]>`), each entry carrying `confidence` + `reason` + `priority`.
 
 **Stale-closure / heading-miss case the tech-lead raised:** when `g.sectionId` is stale (the article was edited since analysis so that id is no longer among the current split sections), `sectionIdBonus = 0` and routing falls back to heading/body/frequency scoring — never to a nonexistent section. And when NO section heading overlaps the guideline (all `headingSimilarity = 0`), the guideline still routes via body/frequency or, below threshold, via the deterministic fallback — it is never silently dropped. Both are explicitly unit-tested.
@@ -234,7 +230,7 @@ Preserve, do not regress: the Coverage->Recommendation->Planner->Optimize pipeli
 ```
 buildOptimizationPlan(input):
   routed: Map<sectionId, RoutedGuideline[]> =
-      assignGuidelinesToSections(input.guidelines, input.sections, { breakdown: input.breakdown })   // change 1
+      assignGuidelinesToSections(input.guidelines, input.sections)   // change 1
 
   steps = for each section in input.sections:
     rgs        = routed.get(section.id) ?? []                  // RoutedGuideline[], priority desc
@@ -242,10 +238,9 @@ buildOptimizationPlan(input):
     secTerms   = input.context.scoreData?.terms.filter(t =>    // per-section under-target NLP terms
                    countOccurrences(secText, t.term) < max(1, round(t.target_count * 0.7)))
                  .map(t => t.term) ?? []
-    missPts    = missingPoints attributable to this section (from input.breakdown)
 
-    // SKIP: nothing routed AND no under-target terms AND small missingPoints
-    if rgs.length == 0 AND secTerms.length == 0 AND missPts is small:
+    // SKIP: nothing routed AND no under-target terms
+    if rgs.length == 0 AND secTerms.length == 0:
         focus  = 'skip';  reason = 'Skipped — no uncovered guidelines'
 
     // FOCUS ROUTING (priority-guideline-driven)
@@ -314,18 +309,11 @@ const ctx = articleId != null ? await buildArticleContext(Number(articleId)) : n
 const snapshot = ctx?.coverage ?? null;
 const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];         // C, recommendationEngine.ts:155
 
-// breakdown is null-typed on ArticleContext -> compute locally (pure, contentScore.ts:418).
-// counts via computePlannerContentMetrics: a module-PRIVATE endpoint adapter (not exported / not a shared util).
-const m = computePlannerContentMetrics(content);   // { wordCount, headingCount, paragraphCount }
-const breakdown = ctx?.scoreData
-   ? computeContentScoreBreakdown(plainText(content), m.wordCount, m.headingCount, ctx.scoreData, m.paragraphCount, content, ctx.keyword, undefined, snapshot?.items)
-   : { slots: [], totalPossible: 0 };
-
 const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
 
 // Two disjoint modes: articleId present -> Planner v2; absent -> legacyPlan (byte-for-byte today's optimizer).
 const plan = ctx
-   ? buildOptimizationPlan({ sections, guidelines, breakdown, context: ctx, budgetRemaining: usage.limit - usage.used })
+   ? buildOptimizationPlan({ sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used })
    : legacyPlan(sections, scoreData, content);   // fallback: draft/unsaved article w/o articleId
 
 if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
@@ -378,7 +366,7 @@ The only structural edits: (1) iterate `plan.steps` not `sections`; (2) `focus==
 
 Today the endpoint receives `{ content, articleId, scoreData }` (`optimize-sections.ts:46-50`). D derives planner inputs SERVER-SIDE via `buildArticleContext(articleId)` (`articleContext.ts:38`), which aggregates `coverage` (snapshot), `keyword`, `paa`, `voiceTone`, `scoreData`, `terms`, `competitors` from the DB (`articleContext.ts:81-99`). Rationale: **security** (client cannot spoof coverage/brand to steer prompts) + **DRY** (one aggregator, merged in B).
 
-**Caveat (baked in):** `ArticleContext.breakdown` is typed `null` (`articleContext.ts:26,86`) — B left it unwired. D needs per-slot `missingPoints`, so D computes `computeContentScoreBreakdown(...)` in the endpoint from `ctx.scoreData` + `content` (pure, `contentScore.ts:418`). The three counts it needs come from `computePlannerContentMetrics(content)` — a **module-private** endpoint adapter, NOT exported and NOT a shared utility (derive-on-read, not persist-and-propagate). Do NOT extend `ArticleContext`. Keep the live editor `content` body param (may be newer than the DB) and keep `scoreData` as a fallback path when `articleId` is absent (draft/unsaved articles).
+**Caveat (baked in):** `ArticleContext.breakdown` is typed `null` (`articleContext.ts:26,86`) — B left it unwired, and D does NOT compute it locally either (see "No per-section `missingPoints`/`breakdown` input" above — `computeContentScoreBreakdown` slots are keyed by signal name over the whole article, not by `sectionId`, so there was never a real per-section `missingPoints` to read). Do NOT extend `ArticleContext`. Keep the live editor `content` body param (may be newer than the DB) and keep `scoreData` as a fallback path when `articleId` is absent (draft/unsaved articles).
 
 **Two disjoint modes (ratified):** `articleId` present → Planner v2 (routing/ROI/skip/per-section prompt); `articleId` absent → `legacyPlan`, which MUST reproduce today's optimizer **byte-for-byte** — single global `buildSystemPrompt(computeMissingTerms(...))`, article-wide missing terms, NO routing, NO ROI trim, NO skip, NO per-section prompt. This guarantees zero behavioural regression for unsaved drafts and keeps the two paths trivially testable in isolation. It is NOT a "Planner Lite".
 
@@ -401,9 +389,8 @@ optimize-sections POST { content, articleId, scoreData? }
         v
    buildGuidelines(snapshot, ctx) -> Guideline[]      (C, recommendationEngine.ts:155)   [NO LLM]
         |
-        |   computeContentScoreBreakdown(scoreData, content) -> { slots.missingPoints }  (contentScore.ts:418)  [local]
         v
-   buildOptimizationPlan({ sections, guidelines, breakdown, context, budgetRemaining })       [PURE, NO LLM]
+   buildOptimizationPlan({ sections, guidelines, context, budgetRemaining })       [PURE, NO LLM]
         |        |- assignGuidelinesToSections -> Map<sectionId, RoutedGuideline[]>  (change 1: scoring + confidence + reason)
         |        |- per-section focus + secTerms (countOccurrences)  (contentScore.ts:62)
         |        |- diminishing-returns expectedLift (change 2) + priority (change 5)
@@ -454,10 +441,10 @@ ROI ranking: A (0.080) before B (0.015). Keep A (cumulative 150 <= 1000). B does
   - **heading-miss** (no heading token overlaps any section) -> routes via body/frequency, and below threshold via fallback — never dropped;
   - entity guideline -> highest body-frequency section, reason "Matched entity <label>";
   - intent guideline below threshold -> intro (index 0);
-  - below-threshold non-intent -> highest-missingPoints section;
+  - below-threshold non-intent -> the thinnest (lowest-word-count) section, a deterministic tiebreak (reason "Fallback — thinnest section"), NOT a semantic relevance signal;
   - confidence in [0,1] always; priority = importanceWeight*lift*confidence and arrays arrive priority-sorted.
 - **buildOptimizationPlan** (`lib/optimizationPlanner.ts`, pure):
-  - skip when nothing routed + no under-target terms + small missingPoints (reason "Skipped — no uncovered guidelines");
+  - skip when nothing routed + no under-target terms (reason "Skipped — no uncovered guidelines");
   - focus routing precedence (intent->ai-coverage, needsExpansion->expand, knowledge/authority->ai-coverage, terms->seo-terms, else readability);
   - **diminishing-returns** expectedLift = the [18,15,12]->35 example (not 45);
   - estimatedTokens sums non-skip only;
@@ -477,7 +464,7 @@ ROI ranking: A (0.080) before B (0.015). Keep A (cumulative 150 <= 1000). B does
 4. buildOptimizationPlan + types — focus routing, expectedLift, skip decision.
 5. ROI budget trim inside the planner — trimmed / ignoredLift.
 6. buildStepPrompt — shared + focus blocks + priority bullets + NEGATIVE CONSTRAINTS + brand voice.
-7. Endpoint wiring — buildArticleContext server-side, private computePlannerContentMetrics + local computeContentScoreBreakdown, insert planner at the :96->:106 seam, iterate plan.steps, skip short-circuit, per-step prompt, byte-for-byte `legacyPlan` fallback.
+7. Endpoint wiring — buildArticleContext server-side, insert planner at the :96->:106 seam, iterate plan.steps, skip short-circuit, per-step prompt, byte-for-byte `legacyPlan` fallback.
 8. Per-step token accounting in finally (B cubic-P1) + done/meta trimmed/ignoredLift SSE + skip regression test.
 
 ~8 tasks (the review's ~7 split once to give the richer routing scoring + its edge cases their own tasks). Effort: **Medium** — no review-doc/Accept-Reject/TipTap changes; the loop dispatcher/retries/abort/SSE are reused unchanged; the new surface is two pure modules + endpoint rewiring.
@@ -486,7 +473,8 @@ ROI ranking: A (0.080) before B (0.015). Keep A (cumulative 150 <= 1000). B does
 
 ## Conflicts — RESOLVED by tech-lead review (2026-07-01)
 
-- **computeContentScoreBreakdown counts → ✅ RESOLVED.** D computes `wordCount`/`headingCount`/`paragraphCount` locally via `computePlannerContentMetrics(content)` — a **module-private** endpoint adapter, NOT exported and NOT a shared utility. It is the one place D touches score internals; approved as an adapter, not a new public API.
-- **ArticleContext.breakdown stays null-typed (B frozen) → ✅ RESOLVED.** D computes breakdown locally (derive-on-read, not persist-and-propagate). B is NOT reopened.
+- **computeContentScoreBreakdown counts → ✅ RESOLVED, then SUPERSEDED (final-review C1/C2, 2026-07-01, Option B).** The original plan had D compute `computeContentScoreBreakdown` locally via a module-private `computePlannerContentMetrics(content)` adapter to get per-section `missingPoints` for the routing fallback and skip predicate. The whole-branch review found this was a masking defect: `computeContentScoreBreakdown` emits slots keyed by SIGNAL names (`'words'`, `'terms'`, `'headings'`, `'faq'`, ...) over the WHOLE article — never by `sectionId` — so `breakdown.slots.find(s => s.key === section.id)` could never match a `sec_<index>_<hash>` id and `missingPoints` was always 0. The routing fallback silently always picked `sections[0]` and the skip predicate's `missPts<=2` conjunct was permanently inert. The tech-lead chose **Option B: remove the dead input entirely** rather than build fake per-section keying. `computePlannerContentMetrics`, the `computeContentScoreBreakdown` call, and `PlanInput.breakdown`/`RouteOpts` are gone; the routing fallback now uses a documented thinnest-section (lowest word count) deterministic tiebreak (see "No per-section `missingPoints`/`breakdown` input" above), and the skip predicate is exactly `rgs.length === 0 && secTerms.length === 0`.
+- **ArticleContext.breakdown stays null-typed (B frozen) → ✅ RESOLVED.** D does not compute breakdown at all (see above) — B is NOT reopened.
 - **Legacy fallback for draft articles (no articleId) → ✅ RESOLVED.** Two disjoint modes; `legacyPlan` MUST reproduce today's optimizer **byte-for-byte** (single global prompt, article-wide missing terms, no routing/ROI/skip). Progressive enhancement: drafts optimize as today, saved articles get Planner v2.
 - **Planner output shape → ✅ RESOLVED.** D uses `guidelines: Guideline[]` (C owns the actionable shape), not the audit's older `CoverageItem[]` sketch.
+- **Per-section deficiency scoring → DEFERRED to a follow-up sub-project (E / CoverageGraph territory).** Attributing whole-article signal deficits (word count, heading count, FAQ coverage, ...) to a *specific* `sectionId` doesn't exist yet — it needs entities/signals mapped to sections, which is out of scope for D. That is why D's fallback uses the thinnest-section word-count tiebreak instead of a real per-section `missingPoints`; once E ships a real `sectionMissingPoints`, the fallback in `lib/optimizeGuidelineRouting.ts` can be revisited.

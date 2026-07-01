@@ -11,6 +11,8 @@
 **Spec:** `docs/superpowers/specs/2026-07-01-planner-optimize-design.md` (v2 — tech-lead review incorporated)
 **Depends on:** A (merged) + B (`buildArticleContext`) + C (`buildGuidelines`). This branch is stacked on C; it merges cleanly once C lands.
 
+> **Amendment (final-review C1/C2, 2026-07-01, Option B):** the plan below (Tasks 1-8) originally routed the below-threshold fallback and the skip predicate through per-section `missingPoints` sourced from `computeContentScoreBreakdown`. Whole-branch review found this was dead/masking: `computeContentScoreBreakdown` keys its slots by SIGNAL name (`'words'`, `'terms'`, `'headings'`, ...) over the WHOLE article, never by `sectionId`, so `breakdown.slots.find(s => s.key === section.id)` never matched and `missingPoints` was always 0 — routing silently always fell back to `sections[0]` and the skip predicate's third conjunct was inert. Fix: `breakdown`/`RouteOpts`/`computePlannerContentMetrics`/the local `computeContentScoreBreakdown` call are all REMOVED. The routing fallback now uses a **thinnest-section (lowest word count) deterministic tiebreak** (reason "Fallback — thinnest section") instead of highest-`missingPoints`; the skip predicate is exactly `rgs.length === 0 && secTerms.length === 0`. This tiebreak is a deterministic fallback only, not a semantic relevance signal — see `lib/optimizeGuidelineRouting.ts`. Real per-section deficiency scoring (attributing whole-article signal gaps to a `sectionId`) is deferred to a follow-up sub-project (E / CoverageGraph territory). The task/code snippets below that reference `breakdown`/`missingPoints`/`computePlannerContentMetrics` are historical (as executed pre-fix); see the design doc's "Conflicts — RESOLVED... then SUPERSEDED" entry for the authoritative current model.
+
 ## Global Constraints
 
 - **NO new LLM call anywhere in the planner.** Routing/skip/budget decisions are deterministic transforms of C's already-computed `Guideline[]` + per-section signals (heading/body token overlap, `countOccurrences`, `missingPoints`, `guideline.sectionId`). D's defining constraint.
@@ -200,8 +202,10 @@ git commit -m "feat(planner): assignGuidelinesToSections scoring core — matchS
 **Files:** Modify `lib/optimizeGuidelineRouting.ts`; append to `__tests__/lib/optimizeGuidelineRouting.test.ts`
 
 **Interfaces:**
-- Consumes: same as Task 1, plus `opts.breakdown.slots[].missingPoints` for the fallback and the section index for intent->intro.
+- Consumes: same as Task 1, plus the section index for intent->intro.
 - Produces: below-threshold guidelines routed via fallback (never dropped); each section array sorted by `priority` desc.
+
+> **Amendment (Option B, see top-of-file note):** this task originally consumed `opts.breakdown.slots[].missingPoints` for the non-intent fallback. That input is REMOVED — `computeContentScoreBreakdown` slots are keyed by signal name over the whole article, not by `sectionId`, so it never actually matched. The non-intent fallback now picks the thinnest section (lowest `wordCount(plainText(section.html))`, ties keep array order), reason "Fallback — thinnest section". Fallback routing intentionally prefers the thinnest section because it is the most likely place to benefit from additional content when no deterministic semantic match exists. This is a deterministic tiebreak only, not a semantic relevance signal. Real per-section deficiency scoring is deferred to E (CoverageGraph).
 
 - [ ] **Step 1: Write the failing test (append)**
 

@@ -1,13 +1,11 @@
 import type { Section } from './articleSections';
 import type { Guideline } from './recommendationEngine';
 import type { ArticleContext } from './articleContext';
-import type { computeContentScoreBreakdown } from './contentScore';
 import type { RoutedGuideline } from './optimizeGuidelineRouting';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';
-type ContentScoreBreakdown = ReturnType<typeof computeContentScoreBreakdown>;
 
 export type StepFocus = 'seo-terms' | 'ai-coverage' | 'readability' | 'expand' | 'skip';
 
@@ -36,7 +34,6 @@ export interface Plan {
 export interface PlanInput {
   sections: Section[];
   guidelines: Guideline[];
-  breakdown: ContentScoreBreakdown;
   context: ArticleContext;
   budgetRemaining: number;
 }
@@ -65,8 +62,6 @@ export function diminishingLift(liftsDesc: number[]): number {
   return Math.round(sorted.reduce((sum, lift, i) => sum + lift * decayAt(i), 0));
 }
 
-const SMALL_MISSING_POINTS = 2;   // a section under this missingPoints with nothing routed is "covered enough"
-
 /** Per-section under-target NLP terms (per-section countOccurrences, mirrors optimizeSectionEdit.computeMissingTerms). */
 function sectionMissingTerms(secText: string, ctx: ArticleContext): string[] {
   const terms = ctx.scoreData?.terms ?? [];
@@ -85,17 +80,16 @@ function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
 }
 
 export function buildOptimizationPlan(input: PlanInput): Plan {
-  const routed = assignGuidelinesToSections(input.guidelines, input.sections, { breakdown: input.breakdown });
+  const routed = assignGuidelinesToSections(input.guidelines, input.sections);
 
   const steps: PlanStep[] = input.sections.map((section) => {
     const rgs = routed.get(section.id) ?? [];
     const secText = plainText(section.html);
     const secTerms = sectionMissingTerms(secText, input.context);
-    const missPts = input.breakdown.slots.find((s) => s.key === section.id)?.missingPoints ?? 0;
 
     const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: rgs, missingTerms: secTerms };
 
-    if (rgs.length === 0 && secTerms.length === 0 && missPts <= SMALL_MISSING_POINTS) {
+    if (rgs.length === 0 && secTerms.length === 0) {
       return { ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift: 0, reason: 'Skipped — no uncovered guidelines' };
     }
     const focus = focusFor(rgs, secTerms);

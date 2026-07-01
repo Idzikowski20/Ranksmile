@@ -41,12 +41,12 @@ const ctx = (over: Partial<ArticleContext> = {}): ArticleContext => ({
   paa: [], terms: [], competitors: [], ...over,
 } as ArticleContext);
 const input = (over: Partial<PlanInput>): PlanInput => ({
-  sections: [], guidelines: [], breakdown: { slots: [], totalPossible: 0 },
+  sections: [], guidelines: [],
   context: ctx(), budgetRemaining: 1_000_000, ...over,
 });
 
 describe('buildOptimizationPlan focus + skip', () => {
-  it('skip when nothing routed, no under-target terms, small missingPoints', () => {
+  it('skip when nothing routed and no under-target terms', () => {
     const sections = [{ id: 's0', index: 0, headingText: 'Covered', html: '<h2>Covered</h2><p>full</p>' }];
     const plan = buildOptimizationPlan(input({ sections }));
     expect(plan.steps[0].focus).toBe('skip');

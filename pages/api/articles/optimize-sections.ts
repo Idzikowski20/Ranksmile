@@ -9,10 +9,9 @@ import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
 import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
 import type { SectionResult } from '../../../components/articles/optimizeStore';
 import type { ScoreData } from '../../../lib/contentScore';
-import { computeContentScoreBreakdown } from '../../../lib/contentScore';
 import { buildArticleContext } from '../../../lib/articleContext';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
-import { buildOptimizationPlan, plainText, wordCount } from '../../../lib/optimizationPlanner';
+import { buildOptimizationPlan } from '../../../lib/optimizationPlanner';
 import type { Plan, PlanStep } from '../../../lib/optimizationPlanner';
 import { getErrorMessage } from '../../../lib/errors';
 
@@ -42,15 +41,6 @@ RULES:
 - Keep each paragraph between ~40 and ~80 words
 
 OUTPUT: ONLY the section's raw HTML. No markdown code fences, no commentary.`;
-}
-
-/** Private adapter feeding `computeContentScoreBreakdown` — derive-on-read, NOT a shared utility. */
-function computePlannerContentMetrics(content: string): { wordCount: number; headingCount: number; paragraphCount: number } {
-   return {
-      wordCount: wordCount(plainText(content)),
-      headingCount: (content.match(/<h[1-6][ >]/gi) || []).length,
-      paragraphCount: (content.match(/<p[ >]/gi) || []).length,
-   };
 }
 
 /** No-articleId (unsaved draft) fallback — byte-for-byte reproduction of today's optimizer:
@@ -137,16 +127,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const snapshot = ctx?.coverage ?? null;
       const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
 
-      const plainAll = plainText(content);
-      const m = computePlannerContentMetrics(content);
-      const breakdown = ctx?.scoreData
-         ? computeContentScoreBreakdown(plainAll, m.wordCount, m.headingCount, ctx.scoreData, m.paragraphCount, content, ctx.keyword, undefined, snapshot?.items ? [...snapshot.items] : undefined)
-         : { slots: [], totalPossible: 0 };
-
       const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
 
       const plan: Plan = ctx
-         ? buildOptimizationPlan({ sections, guidelines, breakdown, context: ctx, budgetRemaining: usage.limit - usage.used })
+         ? buildOptimizationPlan({ sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used })
          : legacyPlan(sections, scoreData, content);
 
       if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
