@@ -1,8 +1,13 @@
-import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt } from '../../lib/optimizationPlanner';
+import {
+  estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing, selectMode,
+  introMayExpand, buildStepPromptForMode, userInstructionForMode,
+} from '../../lib/optimizationPlanner';
 import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
 import type { Section } from '../../lib/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
 import type { ArticleContext } from '../../lib/articleContext';
+import type { RoutedGuideline } from '../../lib/optimizeGuidelineRouting';
+import type { CoverageSnapshot } from '../../lib/aiCoverage';
 
 const sec = (html: string): Section => ({ id: 's', index: 0, headingText: '', html });
 
@@ -32,6 +37,67 @@ describe('diminishingLift', () => {
   it('empty -> 0', () => expect(diminishingLift([])).toBe(0));
 });
 
+const rgFor = (over: Partial<Guideline>): RoutedGuideline => ({
+  guideline: {
+    id: 'g', coverageItemId: 'c', group: 'knowledge', title: 'T', instruction: 'I',
+    importance: 'recommended', status: 'open', projectedLift: 10, effort: 'Easy', easyWin: false, ...over,
+  },
+  confidence: 0.8, reason: 'r', priority: 1,
+});
+
+describe('worthEditing', () => {
+  it('skips below LESS_MIN (expectedLift 5)', () => {
+    expect(worthEditing({ expectedLift: 5, rgs: [rgFor({})], secTerms: [], aiTakeover: false })).toBe(false);
+  });
+  it('keeps at/above LESS_MIN (expectedLift 6)', () => {
+    expect(worthEditing({ expectedLift: 6, rgs: [rgFor({})], secTerms: [], aiTakeover: false })).toBe(true);
+  });
+  it('term-only section (expectedLift 0, secTerms present) is worth a LESS edit (OD-2 [RATIFIED])', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: false })).toBe(true);
+  });
+  it('term-only section under AI-takeover is dropped (takeover suppresses the term path)', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [], secTerms: ['foo', 'bar'], aiTakeover: true })).toBe(false);
+  });
+  it('critical miss overrides the threshold (never skipped even at expectedLift 0)', () => {
+    expect(worthEditing({ expectedLift: 0, rgs: [rgFor({ importance: 'critical' })], secTerms: [], aiTakeover: false })).toBe(true);
+  });
+});
+
+const snap = (intentScore: number, early: boolean): CoverageSnapshot => ({
+  schemaVersion: 1, judgeVersion: 'v', promptVersion: 'v', model: 'm', createdAt: '',
+  items: [], buckets: [{ key: 'intent', label: 'Intent', weight: 3, items: 1, covered: 1, earned: 1, max: 1, score: intentScore }],
+  answersMainQuestionEarly: early, overall: 50,
+});
+const secAt = (index: number): Section => ({ id: `sec_${index}`, index, headingText: 'H', html: '<p>x</p>' });
+
+describe('introMayExpand', () => {
+  it('true when intent bucket score < 50', () => expect(introMayExpand(snap(40, true))).toBe(true));
+  it('true when answersMainQuestionEarly is false', () => expect(introMayExpand(snap(90, false))).toBe(true));
+  it('false when intent healthy and early answer present', () => expect(introMayExpand(snap(90, true))).toBe(false));
+});
+
+describe('selectMode', () => {
+  const healthy = snap(90, true);   // intro NOT allowed to expand
+  it('LESS in the 6..12 band', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 9, rgs: [rgFor({})], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('term-only section (no guidelines, lift 0) -> LESS (OD-2 [RATIFIED])', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 0, rgs: [], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('NORMAL above NORMAL_MIN', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 20, rgs: [rgFor({})], snapshot: healthy, aiTakeover: false })).toBe('normal');
+  });
+  it('EXPAND when top guideline effort is Large', () => {
+    expect(selectMode({ section: secAt(1), expectedLift: 20, rgs: [rgFor({ effort: 'Large' })], snapshot: healthy, aiTakeover: false })).toBe('expand');
+  });
+  it('intro (index 0) is LESS even at high lift when intro may not expand', () => {
+    expect(selectMode({ section: secAt(0), expectedLift: 30, rgs: [rgFor({ effort: 'Large' })], snapshot: healthy, aiTakeover: false })).toBe('less');
+  });
+  it('intro may be EXPAND when intent is weak', () => {
+    expect(selectMode({ section: secAt(0), expectedLift: 30, rgs: [rgFor({ effort: 'Large' })], snapshot: snap(30, false), aiTakeover: false })).toBe('expand');
+  });
+});
+
 const gl = (over: Partial<Guideline>): Guideline => ({
   id: 'guideline-x', coverageItemId: 'x', group: 'knowledge', title: 'X', instruction: 'Do X.',
   importance: 'recommended', status: 'open', projectedLift: 10, effort: 'Easy', easyWin: false, ...over,
@@ -42,7 +108,7 @@ const ctx = (over: Partial<ArticleContext> = {}): ArticleContext => ({
 } as ArticleContext);
 const input = (over: Partial<PlanInput>): PlanInput => ({
   sections: [], guidelines: [],
-  context: ctx(), budgetRemaining: 1_000_000, ...over,
+  context: ctx(), budgetRemaining: 1_000_000, seoScore: 0, aiScore: 0, ...over,
 });
 
 describe('buildOptimizationPlan focus + skip', () => {
@@ -52,7 +118,7 @@ describe('buildOptimizationPlan focus + skip', () => {
     expect(plan.steps[0].focus).toBe('skip');
     expect(plan.steps[0].estimatedTokens).toBe(0);
     expect(plan.steps[0].expectedLift).toBe(0);
-    expect(plan.steps[0].reason).toBe('Skipped — no uncovered guidelines');
+    expect(plan.steps[0].reason).toBe('Skipped - below benefit threshold');
   });
 
   it('intent guideline -> ai-coverage focus', () => {
@@ -75,6 +141,110 @@ describe('buildOptimizationPlan focus + skip', () => {
       gl({ coverageItemId: `g${i}`, title: 'Cover: Dosage', instruction: 'dosage', projectedLift: lift, sectionId: 's0' }));
     const plan = buildOptimizationPlan(input({ sections, guidelines: gs }));
     expect(plan.steps[0].expectedLift).toBe(35);
+  });
+});
+
+describe('buildOptimizationPlan AI-takeover (pillar 5 / OD-3)', () => {
+  const makePlanInput = (over: Partial<PlanInput>): PlanInput => {
+    const sections = [
+      { id: 's0', index: 0, headingText: 'Intro', html: '<h2>Intro</h2><p>short intro text</p>' },
+      { id: 's1', index: 1, headingText: 'Body', html: '<h2>Body</h2><p>short body text</p>' },
+    ];
+    const guidelines = [
+      gl({ coverageItemId: 'g0', title: 'Cover: Intro', instruction: 'intro', sectionId: 's0' }),
+      gl({ coverageItemId: 'g1', title: 'Cover: Body', instruction: 'body', sectionId: 's1' }),
+    ];
+    const context = ctx({
+      scoreData: {
+        terms: [
+          { term: 'react hooks', target_count: 5 },
+          { term: 'useEffect', target_count: 5 },
+        ],
+        words_target: 100, words_min: 50, words_max: 200,
+        headings_target: 2, headings_min: 1, headings_max: 4,
+      } as ArticleContext['scoreData'],
+    });
+    return input({ sections, guidelines, context, ...over });
+  };
+
+  it('AI-takeover drops per-section missing terms (seo 90, ai 40, gap 50 > 25)', () => {
+    const planInput = makePlanInput({ seoScore: 90, aiScore: 40 });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.every((s) => s.missingTerms.length === 0)).toBe(true);
+    expect(plan.steps.some((s) => s.focus === 'seo-terms')).toBe(false);
+  });
+
+  it('no takeover when the gap is small (seo 90, ai 80, gap 10 <= 25) - terms survive', () => {
+    const planInput = makePlanInput({ seoScore: 90, aiScore: 80 });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.some((s) => s.missingTerms.length > 0)).toBe(true);
+  });
+});
+
+describe('buildOptimizationPlan mode wiring (Task 6)', () => {
+  const healthySnap = snap(90, true);   // intro NOT allowed to expand
+
+  const makePlanInput = (over: {
+    seoScore: number;
+    aiScore: number;
+    termOnlyEverySection?: boolean;
+  }): PlanInput => {
+    const context = ctx({
+      coverage: healthySnap,
+      scoreData: {
+        terms: [
+          { term: 'react hooks', target_count: 5 },
+          { term: 'useEffect', target_count: 5 },
+        ],
+        words_target: 100, words_min: 50, words_max: 200,
+        headings_target: 2, headings_min: 1, headings_max: 4,
+      } as ArticleContext['scoreData'],
+    });
+
+    if (over.termOnlyEverySection) {
+      // No guidelines at all; every section has under-target terms (empty body -> 0 occurrences).
+      const sections = [
+        { id: 's0', index: 0, headingText: 'Intro', html: '<h2>Intro</h2><p>plain text</p>' },
+        { id: 's1', index: 1, headingText: 'Body', html: '<h2>Body</h2><p>plain text</p>' },
+      ];
+      return input({ sections, guidelines: [], context, seoScore: over.seoScore, aiScore: over.aiScore });
+    }
+
+    // Mixed lifts: sec_hi gets a high-lift (>NORMAL_MIN=12) guideline -> NORMAL;
+    // sec_mid gets a mid-lift (6..12) guideline -> LESS. Both at NON-intro indices
+    // (index >= 1) so intro-protection doesn't force the high-lift section to LESS.
+    const sections = [
+      { id: 'sec_hi', index: 1, headingText: 'High', html: '<h2>High</h2><p>plain text here</p>' },
+      { id: 'sec_mid', index: 2, headingText: 'Mid', html: '<h2>Mid</h2><p>plain text here</p>' },
+    ];
+    const guidelines = [
+      gl({ coverageItemId: 'g-hi', title: 'Cover: High', instruction: 'high', projectedLift: 20, sectionId: 'sec_hi' }),
+      gl({ coverageItemId: 'g-mid', title: 'Cover: Mid', instruction: 'mid', projectedLift: 9, sectionId: 'sec_mid' }),
+    ];
+    return input({ sections, guidelines, context, seoScore: over.seoScore, aiScore: over.aiScore });
+  };
+
+  it('term-only section (no guidelines, under-target terms) gets a LESS edit, not skip (OD-2 [RATIFIED])', () => {
+    const planInput = makePlanInput({ seoScore: 50, aiScore: 50, termOnlyEverySection: true });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.every((s) => s.mode === 'less' && s.focus !== 'skip')).toBe(true);
+  });
+
+  it('assigns modes: high-lift (non-intro) -> normal, mid-lift -> less', () => {
+    const planInput = makePlanInput({ seoScore: 50, aiScore: 50 }); // sec_hi lift>12, sec_mid 6..12
+    const plan = buildOptimizationPlan(planInput);
+    const modeById = new Map(plan.steps.map((s) => [s.sectionId, s.mode]));
+    expect(modeById.get('sec_hi')).toBe('normal'); // high-lift, non-intro → NORMAL (would be LESS if intro-protected)
+    expect(modeById.get('sec_mid')).toBe('less');  // mid-lift → LESS
+  });
+
+  it('LESS step carries a userInstruction; NORMAL step does not', () => {
+    const planInput = makePlanInput({ seoScore: 50, aiScore: 50 });
+    const plan = buildOptimizationPlan(planInput);
+    const less = plan.steps.find((s) => s.mode === 'less' && s.focus !== 'skip');
+    const normal = plan.steps.find((s) => s.mode === 'normal' && s.focus !== 'skip');
+    if (less) expect(less.userInstruction).toBeDefined();
+    if (normal) expect(normal.userInstruction).toBeUndefined();
   });
 });
 
@@ -114,7 +284,7 @@ describe('buildOptimizationPlan ROI trim', () => {
 
 const step = (over: Partial<PlanStep>): PlanStep => ({
   sectionId: 's', index: 0, headingText: 'H', html: '<p>x</p>', focus: 'seo-terms',
-  systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: '', ...over,
+  systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: '', mode: 'normal', ...over,
 });
 const rg = (title: string, instruction: string, priority: number) => ({
   guideline: gl({ title, instruction }), confidence: 1, reason: 'r', priority,
@@ -145,5 +315,99 @@ describe('buildStepPrompt', () => {
     const withVoice = buildStepPrompt(step({ focus: 'expand' }), ctx({ voiceTone: 'confident, concise' }));
     expect(withVoice).toContain('confident, concise');
     expect(buildStepPrompt(step({ focus: 'expand' }), ctx())).not.toContain('brand voice');
+  });
+});
+
+describe('LESS prompt', () => {
+  it('uses LESS_RULES and OMITS the growth ratchets (no "only refine or expand", no "40 and ~80 words")', () => {
+    const p = buildStepPromptForMode(step({ focus: 'ai-coverage', guidelines: [rgFor({})], mode: 'less' }), ctx(), 'less');
+    expect(p).toContain('MINIMAL PATCH');
+    expect(p).toContain('MAXIMUM of 2-5 local edits');
+    expect(p).not.toContain('only refine or expand');
+    expect(p).not.toContain('40 and ~80');
+  });
+
+  it("NORMAL delegates to today's buildStepPrompt byte-for-byte", () => {
+    const s = step({ focus: 'ai-coverage', guidelines: [rgFor({})], mode: 'normal' });
+    expect(buildStepPromptForMode(s, ctx(), 'normal')).toBe(buildStepPrompt(s, ctx()));
+  });
+
+  it('skip focus -> empty string regardless of mode', () => {
+    expect(buildStepPromptForMode(step({ focus: 'skip', mode: 'less' }), ctx(), 'less')).toBe('');
+  });
+
+  it('LESS step with focus "expand" does NOT deepen (intro-protection consistency) — no "deepen this section", carries MINIMAL PATCH rules', () => {
+    const p = buildStepPromptForMode(step({ focus: 'expand', guidelines: [rgFor({ effort: 'Large' })], mode: 'less' }), ctx(), 'less');
+    expect(p).not.toContain('deepen this section');
+    expect(p).toContain('MINIMAL PATCH');
+  });
+
+  it('EXPAND-mode (or NORMAL) step with focus "expand" still gets the deepen language — unchanged', () => {
+    const s = step({ focus: 'expand', guidelines: [rgFor({ effort: 'Large' })], mode: 'expand' });
+    const p = buildStepPromptForMode(s, ctx(), 'expand');
+    expect(p).toContain('deepen this section');
+  });
+});
+
+describe('NORMAL byte-for-byte regression', () => {
+  it('all-NORMAL run: systemPrompt equals buildStepPrompt and userInstruction is undefined', () => {
+    const healthySnap = snap(90, true);   // intro NOT allowed to expand (irrelevant here — no section at index 0)
+    const context = ctx({
+      coverage: healthySnap,
+      scoreData: {
+        terms: [
+          { term: 'react hooks', target_count: 5 },
+          { term: 'useEffect', target_count: 5 },
+        ],
+        words_target: 100, words_min: 50, words_max: 200,
+        headings_target: 2, headings_min: 1, headings_max: 4,
+      } as ArticleContext['scoreData'],
+    });
+    // All sections at index >= 1 to avoid intro-protection (Task 7 brief: restrict to non-intro steps).
+    // Each section gets a single guideline with projectedLift > NORMAL_MIN(12), effort 'Easy'
+    // (not 'Large') and importance 'recommended' (not 'critical'), so selectMode -> 'normal'.
+    const sections: Section[] = [
+      { id: 'sec_a', index: 1, headingText: 'A', html: '<h2>A</h2><p>plain text here</p>' },
+      { id: 'sec_b', index: 2, headingText: 'B', html: '<h2>B</h2><p>plain text here</p>' },
+      { id: 'sec_c', index: 3, headingText: 'C', html: '<h2>C</h2><p>plain text here</p>' },
+    ];
+    const guidelines: Guideline[] = [
+      gl({ coverageItemId: 'g-a', title: 'Cover: A', instruction: 'a', projectedLift: 20, effort: 'Easy', importance: 'recommended', sectionId: 'sec_a' }),
+      gl({ coverageItemId: 'g-b', title: 'Cover: B', instruction: 'b', projectedLift: 25, effort: 'Easy', importance: 'recommended', sectionId: 'sec_b' }),
+      gl({ coverageItemId: 'g-c', title: 'Cover: C', instruction: 'c', projectedLift: 30, effort: 'Easy', importance: 'recommended', sectionId: 'sec_c' }),
+    ];
+    const planInput = input({
+      sections, guidelines, context, seoScore: 50, aiScore: 50, // no takeover: seoScore(50) < SEO_HIGH(85)
+    });
+    const plan = buildOptimizationPlan(planInput);
+    expect(plan.steps.length).toBe(3);
+    for (const step of plan.steps) {
+      if (step.focus === 'skip') continue;
+      expect(step.mode).toBe('normal');
+      // The exact prompt today's D would have produced for this step:
+      expect(step.systemPrompt).toBe(buildStepPrompt(step, planInput.context));
+      expect(step.userInstruction).toBeUndefined();
+    }
+  });
+});
+
+describe('userInstructionForMode', () => {
+  it('LESS returns a patch-only instruction (NOT "Improve this section")', () => {
+    const u = userInstructionForMode(step({ index: 1, mode: 'less' }), 'less');
+    expect(u).toBeDefined();
+    expect(u).not.toContain('Improve this section');
+    expect(u).toContain('minimal number of local edits');
+  });
+
+  it('LESS on intro (index 0) adds the one-sentence-answer directive', () => {
+    expect(userInstructionForMode(step({ index: 0, mode: 'less' }), 'less')).toContain('at most one short sentence');
+  });
+
+  it('NORMAL returns undefined (endpoint uses today\'s literal)', () => {
+    expect(userInstructionForMode(step({ mode: 'normal' }), 'normal')).toBeUndefined();
+  });
+
+  it('EXPAND returns undefined', () => {
+    expect(userInstructionForMode(step({ mode: 'expand' }), 'expand')).toBeUndefined();
   });
 });

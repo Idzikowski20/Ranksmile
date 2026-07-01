@@ -14,6 +14,7 @@ import { buildGuidelines } from '../../../lib/recommendationEngine';
 import { buildOptimizationPlan } from '../../../lib/optimizationPlanner';
 import type { Plan, PlanStep } from '../../../lib/optimizationPlanner';
 import { getErrorMessage } from '../../../lib/errors';
+import { queryOne } from '../../../lib/db/query';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
@@ -43,6 +44,24 @@ RULES:
 OUTPUT: ONLY the section's raw HTML. No markdown code fences, no commentary.`;
 }
 
+/** Latest AI-visibility score for an article — same query as pages/api/articles/[id]/index.ts:46-52.
+ *  A failed score read must NOT break optimize (worst case: no AI-takeover), so any error -> 0. */
+async function readLatestAiScore(articleId: number): Promise<number> {
+   try {
+      const row = await queryOne<{ score: number | null }>(
+         `SELECT score
+          FROM ai_visibility_runs
+          WHERE article_id = ?
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1`,
+         [articleId],
+      );
+      return row?.score ?? 0;
+   } catch {
+      return 0;
+   }
+}
+
 /** No-articleId (unsaved draft) fallback — byte-for-byte reproduction of today's optimizer:
  *  ONE global system prompt for every section, from article-wide missing terms, no routing/ROI/skip. */
 function legacyPlan(sections: Section[], scoreData: ScoreData | undefined, content: string): Plan {
@@ -60,6 +79,7 @@ function legacyPlan(sections: Section[], scoreData: ScoreData | undefined, conte
       estimatedTokens: 0,
       expectedLift: 0,
       reason: 'Legacy: no articleId',
+      mode: 'normal',
    }));
    return { steps, estimatedTokens: 0, trimmed: false, ignoredLift: 0, rationale: 'legacy' };
 }
@@ -129,8 +149,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
 
+      // seoScore: already-computed score persisted alongside score_data (pages/api/articles/[id]/index.ts:78).
+      // Not typed on ScoreData (added dynamically) — absent -> 0 (no takeover; PURE constraint: never recompute here).
+      const seoScore = (scoreData as (ScoreData & { _computed_score?: number }) | undefined)?._computed_score
+         ?? (ctx?.scoreData as (ScoreData & { _computed_score?: number }) | null)?._computed_score
+         ?? 0;
+      const aiScore = ctx ? await readLatestAiScore(Number(articleId)) : 0;
+
       const plan: Plan = ctx
-         ? buildOptimizationPlan({ sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used })
+         ? buildOptimizationPlan({
+            sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used, seoScore, aiScore,
+         })
          : legacyPlan(sections, scoreData, content);
 
       if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
@@ -145,7 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
 
             if (step.focus === 'skip') {
-               sse(res, 'section', buildSectionEvent(section, { oldHtml: step.html, newHtml: step.html, changed: false }));
+               sse(res, 'section', buildSectionEvent(section, { oldHtml: step.html, newHtml: step.html, changed: false }, step));
                continue;
             }
 
@@ -162,7 +191,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         temperature: 0.3,
                         messages: [
                            { role: 'system', content: step.systemPrompt },
-                           { role: 'user', content: `Improve this section:\n\n${section.html}` },
+                           { role: 'user', content: step.userInstruction ?? `Improve this section:\n\n${section.html}` },
                         ],
                      }),
                      signal: controller.signal,
@@ -185,7 +214,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
             const result: SectionResult = { oldHtml: section.html, newHtml, changed };
             if (changed) changedCount += 1;
-            sse(res, 'section', buildSectionEvent(section, result));
+            sse(res, 'section', buildSectionEvent(section, result, step));
          }
       } finally {
          // B cubic-P1: record spend even on a mid-run throw (mirrors deep-analysis.ts finally).

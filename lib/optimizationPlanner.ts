@@ -2,12 +2,23 @@ import type { Section } from './articleSections';
 import type { Guideline } from './recommendationEngine';
 import type { ArticleContext } from './articleContext';
 import type { RoutedGuideline } from './optimizeGuidelineRouting';
+import type { CoverageSnapshot } from './aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';
 
 export type StepFocus = 'seo-terms' | 'ai-coverage' | 'readability' | 'expand' | 'skip';
+
+export type EditMode = 'less' | 'normal' | 'expand';
+
+// --- F: benefit-threshold + takeover constants (tunable; 0..100 AI-score scale) ---
+const LESS_MIN = 6;            // expectedLift < LESS_MIN -> skip
+const NORMAL_MIN = 12;         // LESS_MIN..NORMAL_MIN -> LESS; > NORMAL_MIN -> NORMAL
+const SEO_HIGH = 85;           // SEO score at/above which AI-takeover can fire
+const AI_GAP = 25;             // takeover when (seoScore - aiScore) > AI_GAP
+const INTENT_INTRO_MIN = 50;   // intent bucket score below which intro may expand
+const TERM_WORTH_FLOOR = 1;    // OD-2 [RATIFIED]: a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
 
 export interface PlanStep {
   sectionId: string;
@@ -21,6 +32,8 @@ export interface PlanStep {
   estimatedTokens: number;
   expectedLift: number;
   reason: string;
+  mode: EditMode;
+  userInstruction?: string;
 }
 
 export interface Plan {
@@ -36,6 +49,8 @@ export interface PlanInput {
   guidelines: Guideline[];
   context: ArticleContext;
   budgetRemaining: number;
+  seoScore: number;
+  aiScore: number;
 }
 
 const PROMPT_CONSTANT = 500;   // system-prompt + user-wrapper overhead (~400-600)
@@ -70,6 +85,51 @@ function sectionMissingTerms(secText: string, ctx: ArticleContext): string[] {
     .map((t) => t.term);
 }
 
+export function hasCriticalMiss(rgs: RoutedGuideline[]): boolean {
+  return rgs.some((r) => r.guideline.importance === 'critical');
+}
+
+interface WorthInput {
+  expectedLift: number;
+  rgs: RoutedGuideline[];
+  secTerms: string[];
+  aiTakeover: boolean;
+}
+
+/** The "good enough" gate (RCA §1/§5). Skip a section whose predicted benefit is below LESS_MIN,
+ *  unless it carries a critical coverage miss. Term-only sections (expectedLift 0) are worth a LESS
+ *  edit when NOT in AI-takeover (OD-2 [RATIFIED]); AI-takeover suppresses the term path. */
+export function worthEditing({ expectedLift, rgs, secTerms, aiTakeover }: WorthInput): boolean {
+  if (hasCriticalMiss(rgs)) return true;
+  if (expectedLift >= LESS_MIN) return true;
+  // Term-only deficit: >=1 under-target term is worth a minimal LESS weave, unless AI-takeover drops it.
+  if (!aiTakeover && secTerms.length >= TERM_WORTH_FLOOR) return true;
+  return false;
+}
+
+export function introMayExpand(snapshot: CoverageSnapshot): boolean {
+  const intentScore = snapshot.buckets.find((b) => b.key === 'intent')?.score ?? 0;
+  return intentScore < INTENT_INTRO_MIN || snapshot.answersMainQuestionEarly === false;
+}
+
+interface ModeInput {
+  section: Section;
+  expectedLift: number;
+  rgs: RoutedGuideline[];
+  snapshot: CoverageSnapshot;
+  aiTakeover: boolean;
+}
+
+/** Edit-intensity selector. Assumes worthEditing already passed (else the caller skips). */
+export function selectMode({ section, expectedLift, rgs, snapshot }: ModeInput): EditMode {
+  const expandEligible = rgs[0]?.guideline.effort === 'Large' || hasCriticalMiss(rgs);
+  // Intro protection (pillar 4): LESS-only + EXPAND blocked unless intent is genuinely weak.
+  if (section.index === 0 && !introMayExpand(snapshot)) return 'less';
+  if (expandEligible) return 'expand';
+  if (expectedLift > NORMAL_MIN) return 'normal';
+  return 'less';
+}
+
 function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
   const top = rgs[0]?.guideline;
   if (top?.group === 'intent') return 'ai-coverage';
@@ -81,26 +141,41 @@ function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
 
 export function buildOptimizationPlan(input: PlanInput): Plan {
   const routed = assignGuidelinesToSections(input.guidelines, input.sections);
+  const aiTakeover = input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP;   // pillar 5 / OD-3
+  const snapshot = input.context.coverage;   // non-null in the planner path (endpoint gates on ctx)
 
   const steps: PlanStep[] = input.sections.map((section) => {
     const rgs = routed.get(section.id) ?? [];
     const secText = plainText(section.html);
-    const secTerms = sectionMissingTerms(secText, input.context);
+    const secTerms = aiTakeover ? [] : sectionMissingTerms(secText, input.context);   // takeover drops term work
+    const expectedLift = diminishingLift(rgs.map((r) => r.guideline.projectedLift));
 
     const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: rgs, missingTerms: secTerms };
 
-    if (rgs.length === 0 && secTerms.length === 0) {
-      return { ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift: 0, reason: 'Skipped — no uncovered guidelines' };
+    // Skip gate (replaces rgs.length===0 && secTerms.length===0): benefit-threshold + critical-miss + takeover aware.
+    if (!worthEditing({ expectedLift, rgs, secTerms, aiTakeover })) {
+      return {
+        ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift,
+        reason: 'Skipped - below benefit threshold', mode: 'normal',
+      };
     }
+
     const focus = focusFor(rgs, secTerms);
-    const expectedLift = diminishingLift(rgs.map((r) => r.guideline.projectedLift));
-    const step: PlanStep = {
+    const mode = snapshot
+      ? selectMode({ section, expectedLift, rgs, snapshot, aiTakeover })
+      : 'normal';   // defensive: if no snapshot, behave as NORMAL
+    const draft: PlanStep = {
       ...base, focus, expectedLift,
       estimatedTokens: estimateStepTokens(section),
-      systemPrompt: buildStepPrompt({ ...base, focus, expectedLift, estimatedTokens: 0, reason: '', systemPrompt: '' }, input.context),
+      systemPrompt: '',
       reason: rgs.length ? `Optimize: ${rgs.length} guidelines` : 'Optimize: under-target terms',
+      mode,
     };
-    return step;
+    return {
+      ...draft,
+      systemPrompt: buildStepPromptForMode(draft, input.context, mode),
+      userInstruction: userInstructionForMode(draft, mode),
+    };
   });
 
   const { trimmed, ignoredLift } = trimToBudget(steps, input.budgetRemaining);
@@ -172,4 +247,45 @@ export function buildStepPrompt(step: PlanStep, context: ArticleContext): string
   const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
   const block = focusBlock(step);
   return `${SHARED_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
+}
+
+const LESS_RULES = `You are an expert SEO content editor making a MINIMAL PATCH to ONE section of an HTML article.
+
+RULES:
+- Make a MAXIMUM of 2-5 local edits. Preserve MORE THAN 95% of the original wording verbatim.
+- Do NOT add paragraphs. Do NOT rewrite. Do NOT expand or lengthen the section.
+- Only patch the specific uncovered AI-search signals listed below — change nothing else.
+- Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
+- Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written`;
+
+function buildLessPrompt(step: PlanStep, context: ArticleContext): string {
+  const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
+  // LESS never deepens/expands (intro protection depends on this): a step with focus 'expand' would
+  // otherwise render "deepen this section; it is currently shallow", which contradicts LESS_RULES'
+  // "Do NOT expand or lengthen". Map 'expand' -> 'ai-coverage' framing for the LESS block only —
+  // NORMAL/EXPAND keep the real focusBlock(step) call untouched.
+  const lessStep = step.focus === 'expand' ? { ...step, focus: 'ai-coverage' as const } : step;
+  const block = focusBlock(lessStep);
+  return `${LESS_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
+}
+
+/** Mode -> system prompt. NORMAL/EXPAND delegate to the existing buildStepPrompt byte-for-byte. */
+export function buildStepPromptForMode(step: PlanStep, context: ArticleContext, mode: EditMode): string {
+  if (step.focus === 'skip') return '';
+  return mode === 'less' ? buildLessPrompt(step, context) : buildStepPrompt(step, context);
+}
+
+const LESS_USER_BASE =
+  'Patch this section with the minimal number of local edits. Do not rewrite it, do not add '
+  + 'paragraphs, and preserve more than 95% of the wording. Only fix the signals in the instructions.';
+const LESS_INTRO_EXTRA =
+  ' If the intro does not directly answer the main question, add at most one short sentence that does '
+  + '— never a new paragraph.';
+
+/** Mode -> user message. LESS carries a patch-only instruction; NORMAL/EXPAND stay undefined so the
+ *  endpoint uses today's "Improve this section:\n\n"+html literal (byte-for-byte). */
+export function userInstructionForMode(step: PlanStep, mode: EditMode): string | undefined {
+  if (mode !== 'less') return undefined;
+  const extra = step.index === 0 ? LESS_INTRO_EXTRA : '';
+  return `${LESS_USER_BASE}${extra}\n\n${step.html}`;
 }
