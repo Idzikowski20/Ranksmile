@@ -12,9 +12,14 @@ jobs:
   bugbot:
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
+    env:
+      CLAUDE_SETUP_TOKEN: ${{ secrets.CLAUDE_SETUP_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      # Skip (green) when the token isn't configured instead of failing every PR.
+      # Once the CLAUDE_SETUP_TOKEN secret is set in repo settings, the review runs normally.
       - uses: rekpero/claude-bugbot-github-action@main
+        if: ${{ env.CLAUDE_SETUP_TOKEN != '' }}
         with:
           claude-setup-token: ${{ secrets.CLAUDE_SETUP_TOKEN }}
           # model: sonnet        # sonnet (default) | opus | haiku
