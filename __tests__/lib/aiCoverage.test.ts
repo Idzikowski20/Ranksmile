@@ -75,3 +75,56 @@ describe('scoring helpers (isolated)', () => {
     expect(earlyAnswerBonus(false)).toBe(0);
   });
 });
+
+// checkCoverage + intentItems + hashId tests
+import { checkCoverage, intentItems, hashId, CoverageJudge } from '../../lib/aiCoverage';
+
+const paaItems: CoverageItem[] = [
+  { id: 'paa-x', label: 'Q1?', type: 'paa', category: 'knowledge', importance: 'recommended', source: 'paa', covered: false, quality: 0 },
+];
+const judge = (run: CoverageJudge['run']): CoverageJudge => ({ version: 'test-v1', run });
+
+describe('checkCoverage', () => {
+  it('empty items → no judge call', async () => {
+    const run = jest.fn();
+    expect(await checkCoverage('t', [], judge(run as never))).toEqual({ items: [], answersMainQuestionEarly: false });
+    expect(run).not.toHaveBeenCalled();
+  });
+  it('drops unknown + duplicate ids, keeps verdict fields', async () => {
+    const j = judge(async () => ({ items: [
+      { id: 'paa-x', covered: true, quality: 4, confidence: 0.9, missing: ['dosage'] },
+      { id: 'paa-x', covered: false, quality: 0, confidence: 1 },
+      { id: 'ghost', covered: true, quality: 5, confidence: 1 },
+    ], answersMainQuestionEarly: true }));
+    const r = await checkCoverage('body', paaItems, j);
+    expect(r.items).toEqual([{ id: 'paa-x', covered: true, quality: 4, confidence: 0.9, missing: ['dosage'] }]);
+    expect(r.answersMainQuestionEarly).toBe(true);
+  });
+  it('caches by version+ids+hash (run called once)', async () => {
+    const run = jest.fn(async () => ({ items: [], answersMainQuestionEarly: false }));
+    await checkCoverage('same', paaItems, judge(run));
+    await checkCoverage('same', paaItems, judge(run));
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('intentItems', () => {
+  it('returns 5 fixed ids with category:intent; answer-main + answer-early are critical', () => {
+    const it = intentItems();
+    expect(it.map((x) => x.id)).toEqual([
+      'intent-answer-main', 'intent-answer-early',
+      'intent-expectations', 'intent-who', 'intent-why',
+    ]);
+    expect(it[0].importance).toBe('critical');
+    expect(it[1].importance).toBe('critical');
+    expect(it.slice(2).every((x) => x.importance === 'recommended')).toBe(true);
+    expect(it.every((x) => x.type === 'intent' && x.category === 'intent' && x.source === 'llm')).toBe(true);
+  });
+});
+
+describe('hashId', () => {
+  it('is stable + differs by input', () => {
+    expect(hashId('abc')).toBe(hashId('abc'));
+    expect(hashId('abc')).not.toBe(hashId('abd'));
+  });
+});
