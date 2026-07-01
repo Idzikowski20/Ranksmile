@@ -531,7 +531,7 @@ const ContentScorePanel = ({
         aiSummary={aiVisibilitySummary}
         seo={score}
         ai={aiCoverageScore ?? (aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0)}
-        hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
+        hasAi={aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         coverageItems={coverageItems}
         coverageBuckets={coverageBuckets}
         onAutoOptimize={onAutoOptimize}
@@ -574,7 +574,7 @@ const ContentScorePanel = ({
       <PrePublishPanel
         score={score}
         aiScore={aiCoverageScore ?? (aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0)}
-        hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
+        hasAi={aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         plainText={plainText}
         articleId={articleId}
         readOnly={readOnly}
@@ -589,7 +589,7 @@ const ContentScorePanel = ({
   }
 
   // SEO (= content score) on the left, AI Search on the right; center = blend.
-  const hasAi = !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
+  const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
   const aiScore = aiCoverageScore ?? (hasAi ? computeAiSearchScore(aiVisibilitySummary) : 0);
 
   return (
