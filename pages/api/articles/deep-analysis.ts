@@ -503,6 +503,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Never blocks or fails deep-analysis; the gauge falls back to the AI-visibility
     // path (computeAiSearchScore) if this throws.
     let coverageSnapshot = null;
+    let coverageTokens = 0;
     try {
       const coverageUsage = orgId != null ? await getOrgUsage5h(orgId) : null;
       if (coverageUsage?.over) {
@@ -513,6 +514,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const paaItems = paaCoverageItems((serp.paa_questions || []).map((q: string) => ({ question: q })));
         const intentResult = await analyzeIntroduction(introPlain, keyword || '', deepseekIntroJudge);
+        // checkCoverage/analyzeIntroduction don't surface each deepseek call's usage.total_tokens
+        // (CoverageResult/IntroVerdict carry no usage field, and checkCoverage caches by content
+        // hash so a "real" count would also have to model cache hits as free). Record a documented
+        // conservative fixed estimate instead: ~3000 tokens for the intro judge (short ~500-word
+        // input) + ~6000 for the coverage judge (full article text as input), both deepseek-chat
+        // JSON-mode calls. Follow-up: thread real usage out of the judges for precise accounting.
+        coverageTokens += 3000;
         const baseIntent = introCoverageItems(intentResult);
 
         const termRows = await readArticleTerms(articleId);
@@ -528,6 +536,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Judge only paa + future fact/definition (intent already graded by intro analyzer; entity/readability deterministic).
         const judgeable = items.filter((i) => i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison' || i.type === 'example');
         const coverageResult = await checkCoverage(plainText, judgeable, deepseekJudge);
+        coverageTokens += 6000;
 
         // Fold the intent verdict's early-answer flag into the result the snapshot scores against.
         coverageResult.answersMainQuestionEarly = intentResult.answerStartsEarly;
@@ -550,21 +559,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(coverageSnapshot), articleId] },
         );
-
-        // checkCoverage/analyzeIntroduction don't surface each deepseek call's usage.total_tokens
-        // (CoverageResult/IntroVerdict carry no usage field, and checkCoverage caches by content
-        // hash so a "real" count would also have to model cache hits as free). Record a documented
-        // conservative fixed estimate instead: ~3000 tokens for the intro judge (short ~500-word
-        // input) + ~6000 for the coverage judge (full article text as input), both deepseek-chat
-        // JSON-mode calls. Follow-up: thread real usage out of the judges for precise accounting.
-        if (orgId != null) {
-          const coverageTokens = 9000;
-          await recordAiTokens(orgId, coverageTokens);
-        }
       }
     } catch (err) {
       console.warn('[coverage] deep-analysis snapshot compute failed', err);
       // never block deep-analysis on coverage errors; the gauge falls back to computeAiSearchScore
+    } finally {
+      // Record tokens actually spent even if a later step (buildSnapshot/UPDATE) throws,
+      // so the org's 5h budget isn't silently undercounted by a partial failure.
+      if (orgId != null && coverageTokens > 0) {
+        await recordAiTokens(orgId, coverageTokens);
+      }
     }
 
     sse(res, 'done', {
