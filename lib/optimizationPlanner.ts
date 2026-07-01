@@ -142,27 +142,40 @@ function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
 export function buildOptimizationPlan(input: PlanInput): Plan {
   const routed = assignGuidelinesToSections(input.guidelines, input.sections);
   const aiTakeover = input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP;   // pillar 5 / OD-3
+  const snapshot = input.context.coverage;   // non-null in the planner path (endpoint gates on ctx)
 
   const steps: PlanStep[] = input.sections.map((section) => {
     const rgs = routed.get(section.id) ?? [];
     const secText = plainText(section.html);
     const secTerms = aiTakeover ? [] : sectionMissingTerms(secText, input.context);   // takeover drops term work
+    const expectedLift = diminishingLift(rgs.map((r) => r.guideline.projectedLift));
 
     const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: rgs, missingTerms: secTerms };
 
-    if (rgs.length === 0 && secTerms.length === 0) {
-      return { ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift: 0, reason: 'Skipped — no uncovered guidelines', mode: 'normal' };
+    // Skip gate (replaces rgs.length===0 && secTerms.length===0): benefit-threshold + critical-miss + takeover aware.
+    if (!worthEditing({ expectedLift, rgs, secTerms, aiTakeover })) {
+      return {
+        ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift,
+        reason: 'Skipped - below benefit threshold', mode: 'normal',
+      };
     }
+
     const focus = focusFor(rgs, secTerms);
-    const expectedLift = diminishingLift(rgs.map((r) => r.guideline.projectedLift));
-    const step: PlanStep = {
+    const mode = snapshot
+      ? selectMode({ section, expectedLift, rgs, snapshot, aiTakeover })
+      : 'normal';   // defensive: if no snapshot, behave as NORMAL
+    const draft: PlanStep = {
       ...base, focus, expectedLift,
       estimatedTokens: estimateStepTokens(section),
-      systemPrompt: buildStepPrompt({ ...base, focus, expectedLift, estimatedTokens: 0, reason: '', systemPrompt: '', mode: 'normal' }, input.context),
+      systemPrompt: '',
       reason: rgs.length ? `Optimize: ${rgs.length} guidelines` : 'Optimize: under-target terms',
-      mode: 'normal',
+      mode,
     };
-    return step;
+    return {
+      ...draft,
+      systemPrompt: buildStepPromptForMode(draft, input.context, mode),
+      userInstruction: userInstructionForMode(draft, mode),
+    };
   });
 
   const { trimmed, ignoredLift } = trimToBudget(steps, input.budgetRemaining);
@@ -247,7 +260,12 @@ RULES:
 
 function buildLessPrompt(step: PlanStep, context: ArticleContext): string {
   const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
-  const block = focusBlock(step);   // same focus block as NORMAL — reuse
+  // LESS never deepens/expands (intro protection depends on this): a step with focus 'expand' would
+  // otherwise render "deepen this section; it is currently shallow", which contradicts LESS_RULES'
+  // "Do NOT expand or lengthen". Map 'expand' -> 'ai-coverage' framing for the LESS block only —
+  // NORMAL/EXPAND keep the real focusBlock(step) call untouched.
+  const lessStep = step.focus === 'expand' ? { ...step, focus: 'ai-coverage' as const } : step;
+  const block = focusBlock(lessStep);
   return `${LESS_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
 }
 
