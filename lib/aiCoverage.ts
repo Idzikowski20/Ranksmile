@@ -90,6 +90,41 @@ const clampQuality = (q: number): number => {
   return Number.isFinite(n) ? Math.min(Math.max(n, 0), 5) : 0;
 };
 
+const clamp01 = (n: unknown): number => {
+  const x = Number(n);
+  return Number.isFinite(x) ? Math.min(Math.max(x, 0), 1) : 0;
+};
+
+/** Coerce a raw LLM `items` payload into well-typed CoverageVerdicts. Non-array -> []. Bad fields -> safe defaults.
+ *  Rows without a string id are dropped (an id-less verdict can't be matched to an item anyway). */
+export function sanitizeVerdict(raw: unknown): CoverageVerdict[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CoverageVerdict[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== 'object') continue;
+    const row = r as Record<string, unknown>;
+    if (typeof row.id !== 'string') continue;
+    const q = Number(row.quality);
+    const v: CoverageVerdict = {
+      id: row.id,
+      // deliberately NOT `!!row.covered` — that turns the string "false"/"0" and {}/[] into true.
+      // Accept only a real boolean true or the stringified "true"; everything else is false.
+      covered: row.covered === true || row.covered === 'true',
+      quality: Number.isFinite(q) ? Math.min(Math.max(q, 0), 5) : 0,
+      confidence: clamp01(row.confidence),
+    };
+    if (typeof row.needsExpansion === 'boolean') v.needsExpansion = row.needsExpansion;
+    if (Array.isArray(row.missing)) {
+      const m = row.missing.filter((s): s is string => typeof s === 'string');
+      if (m.length) v.missing = m;
+    }
+    if (typeof row.reason === 'string') v.reason = row.reason;
+    if (typeof row.sectionId === 'string') v.sectionId = row.sectionId;
+    out.push(v);
+  }
+  return out;
+}
+
 /** One bucket's importance×quality/5 over covered items. Reads GRADED items (item.covered/item.quality) —
  *  it does NOT know about CoverageVerdict/CoverageResult/the judge (4th-review: LLM artifact stays in the builder). */
 export function computeBucketScore(
@@ -251,6 +286,6 @@ export const deepseekJudge: CoverageJudge = {
     const parsed = safeJsonParse<{ items?: CoverageVerdict[]; answersMainQuestionEarly?: boolean }>(
       data?.choices?.[0]?.message?.content ?? '', {},
     );
-    return { items: Array.isArray(parsed.items) ? parsed.items : [], answersMainQuestionEarly: !!parsed.answersMainQuestionEarly };
+    return { items: sanitizeVerdict(parsed.items), answersMainQuestionEarly: !!parsed.answersMainQuestionEarly };
   },
 };

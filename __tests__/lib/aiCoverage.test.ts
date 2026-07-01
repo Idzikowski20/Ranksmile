@@ -99,7 +99,7 @@ describe('scoring helpers (isolated)', () => {
 });
 
 // checkCoverage + intentItems + hashId tests
-import { checkCoverage, intentItems, hashId, CoverageJudge } from '../../lib/aiCoverage';
+import { checkCoverage, intentItems, hashId, CoverageJudge, sanitizeVerdict } from '../../lib/aiCoverage';
 
 const paaItems: CoverageItem[] = [
   { id: 'paa-x', label: 'Q1?', type: 'paa', category: 'knowledge', importance: 'recommended', source: 'paa', covered: false, quality: 0 },
@@ -147,6 +147,38 @@ describe('checkCoverage', () => {
     const j = judge(async () => ({ items: 'oops' as any, answersMainQuestionEarly: false }));
     const result = await checkCoverage('malformed', paaItems, j);
     expect(result).toEqual({ items: [], answersMainQuestionEarly: false });
+  });
+});
+
+describe('sanitizeVerdict', () => {
+  it('coerces bad field types to safe defaults, keeps valid rows', () => {
+    const out = sanitizeVerdict([
+      { id: 'a', covered: true,   quality: 'high', confidence: 2,   missing: ['x', 3, null], sectionId: 5 },
+      { id: 'b', covered: 'true', quality: 4,      confidence: 0.9, missing: 'nope' },
+    ]);
+    // row a: quality 'high' -> 0; confidence 2 -> clamped 1; missing filtered to ['x']; sectionId 5 (number) -> undefined
+    expect(out[0]).toEqual({ id: 'a', covered: true, quality: 0, confidence: 1, missing: ['x'] });
+    // row b: covered 'true' (stringified bool) -> true; missing 'nope' (non-array) -> undefined
+    expect(out[1]).toEqual({ id: 'b', covered: true, quality: 4, confidence: 0.9 });
+  });
+  it('covered: only real true or the string "true" -> true; "false"/"0"/{}/[] -> false (no truthy coercion)', () => {
+    const out = sanitizeVerdict([
+      { id: 't1', covered: true,    quality: 5, confidence: 1 },
+      { id: 't2', covered: 'true',  quality: 5, confidence: 1 },
+      { id: 'f1', covered: 'false', quality: 5, confidence: 1 },
+      { id: 'f2', covered: '0',     quality: 5, confidence: 1 },
+      { id: 'f3', covered: {},      quality: 5, confidence: 1 },
+      { id: 'f4', covered: [],      quality: 5, confidence: 1 },
+    ]);
+    expect(out.map((r) => r.covered)).toEqual([true, true, false, false, false, false]);
+  });
+  it('drops rows without a string id', () => {
+    expect(sanitizeVerdict([{ covered: true, quality: 5, confidence: 1 }, { id: 7 }])).toEqual([]);
+  });
+  it('non-array input -> [] (does not throw)', () => {
+    expect(sanitizeVerdict(null)).toEqual([]);
+    expect(sanitizeVerdict({ items: [] })).toEqual([]);
+    expect(sanitizeVerdict('nope')).toEqual([]);
   });
 });
 
