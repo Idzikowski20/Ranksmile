@@ -13,7 +13,7 @@ describe('buildArticleContext — core fields', () => {
   it('assembles keyword/scoreData/coverage/paa from the article row; sparse when columns null', async () => {
     // 1st query = article row (Task 5 reads this). Return a minimal row.
     mockQuery.mockResolvedValueOnce([[{
-      id: 1, target_keyword: 'react hooks', language: 'en', content_type: 'guide',
+      id: 1, target_keyword: 'react hooks', language: 'en',
       score_data: JSON.stringify({ terms: [], paa_questions: ['What are hooks?'] }),
       ai_info_to_cover: null,        // un-analyzed -> coverage null
     }]]);
@@ -24,7 +24,7 @@ describe('buildArticleContext — core fields', () => {
     expect(ctx.articleId).toBe(1);
     expect(ctx.keyword).toBe('react hooks');
     expect(ctx.language).toBe('en');
-    expect(ctx.contentType).toBe('guide');
+    expect(ctx.contentType).toBeUndefined(); // no content_type column on articles yet
     expect(ctx.paa).toEqual(['What are hooks?']);
     expect(ctx.coverage).toBeNull();           // parseSnapshot(null) -> null
   });
