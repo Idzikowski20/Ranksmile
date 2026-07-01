@@ -11,6 +11,9 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { CoverageItem } from '../../../lib/aiCoverage';
+import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
+import { safeJsonParse } from '../../../lib/safeJson';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -46,6 +49,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             { replacements: [JSON.stringify(data), articleId] },
          );
       } catch { /* non-fatal */ }
+
+      // Merge fresh readability CoverageItems into the shared ai_info_to_cover snapshot so a
+      // standalone "Analyze Content" run updates the Content Score gauge's coverage breakdown,
+      // while preserving the paa/intent/entity items from the last deep-analysis run.
+      // Additive + non-fatal — never blocks the ai_readability_json write or the response above.
+      try {
+         const readabilityItems: CoverageItem[] = Array.isArray((data as { coverage_items?: unknown })?.coverage_items)
+            ? ((data as { coverage_items: CoverageItem[] }).coverage_items)
+            : [];
+
+         const row = await queryOne<{ ai_info_to_cover: string | null }>(
+            `SELECT ai_info_to_cover FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+            [articleId],
+         );
+         const rawSnapshot = row?.ai_info_to_cover;
+         const parsedSnapshot = typeof rawSnapshot === 'string' ? safeJsonParse(rawSnapshot, null) : rawSnapshot;
+         const prev = parseSnapshot(parsedSnapshot);
+         const keep = prev ? prev.items.filter((i) => i.type !== 'readability') : [];
+
+         const items = mergeCoverageItems({
+            paa: keep.filter((i) => i.type === 'paa'),
+            intent: keep.filter((i) => i.category === 'intent'),
+            readability: readabilityItems,
+            entity: keep.filter((i) => i.type === 'entity' || i.type === 'fact'),
+         });
+
+         // Re-grade using the prior verdicts already baked into the kept items + the fresh
+         // readability items. This endpoint does NOT re-run the coverage judge, so preserve
+         // prev's version metadata.
+         const verdictItems = items.map((i) => ({ id: i.id, covered: i.covered, quality: i.quality, confidence: i.confidence ?? 1 }));
+         const snapshot = buildSnapshot(items, {
+            items: verdictItems,
+            answersMainQuestionEarly: prev?.answersMainQuestionEarly ?? false,
+         }, {
+            judgeVersion: prev?.judgeVersion ?? 'v1|deepseek-chat|0',
+            promptVersion: prev?.promptVersion ?? 'v1',
+            model: prev?.model ?? 'deepseek-chat',
+            createdAt: new Date().toISOString(),
+         });
+
+         await db.query(
+            `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
+            { replacements: [JSON.stringify(snapshot), articleId] },
+         );
+      } catch (err) {
+         console.warn('[coverage] ai-readability snapshot merge failed', err);
+      }
 
       return res.status(200).json(data);
    } catch (error) {
