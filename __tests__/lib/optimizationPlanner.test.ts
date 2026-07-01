@@ -1,4 +1,7 @@
-import { estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing, selectMode, introMayExpand } from '../../lib/optimizationPlanner';
+import {
+  estimateStepTokens, diminishingLift, buildOptimizationPlan, buildStepPrompt, worthEditing, selectMode,
+  introMayExpand, buildStepPromptForMode, userInstructionForMode,
+} from '../../lib/optimizationPlanner';
 import type { PlanInput, PlanStep } from '../../lib/optimizationPlanner';
 import type { Section } from '../../lib/articleSections';
 import type { Guideline } from '../../lib/recommendationEngine';
@@ -245,5 +248,45 @@ describe('buildStepPrompt', () => {
     const withVoice = buildStepPrompt(step({ focus: 'expand' }), ctx({ voiceTone: 'confident, concise' }));
     expect(withVoice).toContain('confident, concise');
     expect(buildStepPrompt(step({ focus: 'expand' }), ctx())).not.toContain('brand voice');
+  });
+});
+
+describe('LESS prompt', () => {
+  it('uses LESS_RULES and OMITS the growth ratchets (no "only refine or expand", no "40 and ~80 words")', () => {
+    const p = buildStepPromptForMode(step({ focus: 'ai-coverage', guidelines: [rgFor({})], mode: 'less' }), ctx(), 'less');
+    expect(p).toContain('MINIMAL PATCH');
+    expect(p).toContain('MAXIMUM of 2-5 local edits');
+    expect(p).not.toContain('only refine or expand');
+    expect(p).not.toContain('40 and ~80');
+  });
+
+  it("NORMAL delegates to today's buildStepPrompt byte-for-byte", () => {
+    const s = step({ focus: 'ai-coverage', guidelines: [rgFor({})], mode: 'normal' });
+    expect(buildStepPromptForMode(s, ctx(), 'normal')).toBe(buildStepPrompt(s, ctx()));
+  });
+
+  it('skip focus -> empty string regardless of mode', () => {
+    expect(buildStepPromptForMode(step({ focus: 'skip', mode: 'less' }), ctx(), 'less')).toBe('');
+  });
+});
+
+describe('userInstructionForMode', () => {
+  it('LESS returns a patch-only instruction (NOT "Improve this section")', () => {
+    const u = userInstructionForMode(step({ index: 1, mode: 'less' }), 'less');
+    expect(u).toBeDefined();
+    expect(u).not.toContain('Improve this section');
+    expect(u).toContain('minimal number of local edits');
+  });
+
+  it('LESS on intro (index 0) adds the one-sentence-answer directive', () => {
+    expect(userInstructionForMode(step({ index: 0, mode: 'less' }), 'less')).toContain('at most one short sentence');
+  });
+
+  it('NORMAL returns undefined (endpoint uses today\'s literal)', () => {
+    expect(userInstructionForMode(step({ mode: 'normal' }), 'normal')).toBeUndefined();
+  });
+
+  it('EXPAND returns undefined', () => {
+    expect(userInstructionForMode(step({ mode: 'expand' }), 'expand')).toBeUndefined();
   });
 });
