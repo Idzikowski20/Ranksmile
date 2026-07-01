@@ -23,7 +23,7 @@ const inputOfType = (type?: string, disabled = false): HTMLInputElement => {
 
 describe('GlobalSmoothCaret · isEligibleField', () => {
   it('accepts single-line <input> types that support the selection API', () => {
-    for (const t of ['text', 'search', 'tel', 'password']) {
+    for (const t of ['text', 'search', 'url', 'tel', 'password']) {
       expect(isEligibleField(inputOfType(t))).toBe(true);
     }
     expect(isEligibleField(inputOfType(undefined))).toBe(true); // no type → defaults to text
@@ -36,8 +36,8 @@ describe('GlobalSmoothCaret · isEligibleField', () => {
     expect(isEligibleField(disabled)).toBe(false);
   });
 
-  it('rejects <input> types whose selectionStart is null (email/url/number/date/…)', () => {
-    for (const t of ['email', 'url', 'number', 'date', 'datetime-local', 'month', 'time', 'week', 'color']) {
+  it('rejects <input> types whose selectionStart is null (email/number/date/…)', () => {
+    for (const t of ['email', 'number', 'date', 'datetime-local', 'month', 'time', 'week', 'color']) {
       expect(isEligibleField(inputOfType(t))).toBe(false);
     }
   });

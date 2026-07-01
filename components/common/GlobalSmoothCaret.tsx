@@ -26,19 +26,27 @@ import { useEffect, useRef } from 'react';
 
 type CaretField = HTMLInputElement | HTMLTextAreaElement;
 
-// ONLY <input> types that support the text-selection API (selectionStart/End). email, url,
-// number, date, … return `null` for selectionStart, so the caret position can't be tracked
-// there. <textarea> always supports selection and is handled via the mirror-div path.
-const ELIGIBLE_TYPES = new Set(['text', 'search', 'tel', 'password', '']);
+// ONLY <input> types that support the text-selection API (selectionStart/End). email, number,
+// date, … return `null` for selectionStart, so the caret position can't be tracked there.
+// text/search/url/tel/password DO support it (per the HTML spec); <textarea> is handled via
+// the mirror-div path. A runtime `selectionStart === null` guard backs this up defensively.
+const ELIGIBLE_TYPES = new Set(['text', 'search', 'url', 'tel', 'password', '']);
 const CARET_COLOR = '#783AFB'; // brand purple (design.md "primary accent")
 const CARET_WIDTH = 2;
 const CARET_Z = 2147483000; // above app modals/dropdowns; pointer-events:none so it never blocks
 
-// CSS properties the mirror div must copy so its line wrapping matches the textarea exactly.
+// CSS properties the mirror div must copy so its line wrapping matches the textarea EXACTLY.
+// font-variation-settings / font-feature-settings are essential for variable fonts (InterVariable):
+// without them the mirror renders glyphs at a slightly different width and wraps at a different
+// point, drifting the caret at borderline line lengths.
 const MIRROR_PROPS = [
   'font-style', 'font-variant', 'font-weight', 'font-stretch', 'font-size', 'line-height',
-  'font-family', 'letter-spacing', 'word-spacing', 'text-indent', 'text-transform',
-  'text-align', 'text-rendering', 'tab-size',
+  'font-family', 'font-variation-settings', 'font-feature-settings', 'font-kerning',
+  'letter-spacing', 'word-spacing', 'text-indent', 'text-transform', 'text-align',
+  'text-rendering', 'tab-size', 'word-break',
+  // Copy the exact wrapping behaviour from the real field (do NOT hardcode) so the mirror
+  // breaks lines identically — the textarea may compute a different white-space/overflow-wrap.
+  'white-space', 'overflow-wrap', 'word-wrap',
 ];
 
 const PASSWORD_CHAR = typeof navigator !== 'undefined' && /firefox|fxios/i.test(navigator.userAgent)
@@ -91,8 +99,10 @@ const GlobalSmoothCaret = () => {
     span.style.cssText = 'position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;white-space:pre;';
     const mirror = document.createElement('div');
     mirror.setAttribute('aria-hidden', 'true');
+    // white-space / overflow-wrap / word-wrap are copied per-field from computed style (MIRROR_PROPS),
+    // not hardcoded, so the mirror wraps exactly like the target textarea.
     mirror.style.cssText = 'position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;overflow:hidden;'
-      + 'white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;box-sizing:content-box;padding:0;border:0;margin:0;';
+      + 'box-sizing:content-box;padding:0;border:0;margin:0;';
     const marker = document.createElement('span');
     document.body.appendChild(span);
     document.body.appendChild(mirror);
