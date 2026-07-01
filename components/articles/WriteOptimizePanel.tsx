@@ -3,7 +3,9 @@ import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '../../lib/aiSearchScore';
-import type { CoverageItem, BucketScore } from '../../lib/aiCoverage';
+import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
+import { buildGuidelines, groupGuidelines, isFullyCovered } from '../../lib/recommendationEngine';
+import type { Guideline, GuidelineEffort } from '../../lib/recommendationEngine';
 import ScoreTrio from './ScoreTrio';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 
@@ -34,6 +36,8 @@ interface Props {
   /** Coverage Engine snapshot — drives the bucket badges, Intent, and Info-to-cover cards. */
   coverageItems?: CoverageItem[];
   coverageBuckets?: BucketScore[];
+  /** The parsed CoverageSnapshot (NOT reconstructed) — drives the AI Search Guidelines (Priority strip + groups). */
+  coverageSnapshot?: CoverageSnapshot | null;
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
   readOnly?: boolean;
@@ -230,6 +234,116 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
   );
 };
 
+/* ── AI Search Guidelines (Recommendation Engine UI) ──────────────────
+ * Priority strip (top ~3-5 guidelines by projectedLift across all groups) + value-ordered
+ * groups (weakest score first), each with sorted guideline rows. Reuses StatusDot, pill
+ * (borderRadius:9999) and card-border (#F4F4F5) conventions already used above. */
+const EFFORT_TINT: Record<GuidelineEffort, string> = { Easy: '#E4F5EA', Medium: '#FBEFD6', Large: '#FCE9E9' };
+const EFFORT_TEXT: Record<GuidelineEffort, string> = { Easy: '#0F7A3D', Medium: '#8A6116', Large: '#B23A3A' };
+
+const EffortChip = ({ effort }: { effort: GuidelineEffort }) => (
+  <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, borderRadius: 9999, background: EFFORT_TINT[effort], color: EFFORT_TEXT[effort], fontSize: 11, fontWeight: 600, padding: '2px 8px', fontFamily: F }}>
+    {effort}
+  </span>
+);
+
+const EasyWinBadge = () => (
+  <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #AA93FD', color: '#783AFB', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: F }}>
+    Easy win
+  </span>
+);
+
+/** Renders `**text**` markdown emphasis as <strong> (and strips the markers) — instruction/title
+ *  templates embed `**keyword**`/`**label**`, which must not surface as literal asterisks. */
+const renderEmphasis = (text: string): React.ReactNode => {
+  const parts = text.split(/\*\*(.+?)\*\*/g); // odd indices are the emphasized captures
+  return parts.map((part, i) => (i % 2 === 1
+    ? <strong key={i} style={{ fontWeight: 600 }}>{part}</strong>
+    : part));
+};
+
+/** Splits a Guideline's `instruction` into a leading non-bulleted sentence (if any) plus the
+ *  `• `-prefixed checklist lines (rendered as a real <ul>). */
+const splitInstruction = (instruction: string): { lead: string | null; bullets: string[] } => {
+  const lines = instruction.split('\n');
+  const bullets: string[] = [];
+  const lead: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith('• ')) bullets.push(line.slice(2));
+    else if (line.trim()) lead.push(line);
+  }
+  return { lead: lead.length ? lead.join(' ') : null, bullets };
+};
+
+const GuidelineRow = ({ guideline, covered }: { guideline: Guideline; covered: boolean }) => {
+  const { lead, bullets } = splitInstruction(guideline.instruction);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 0', borderTop: '1px solid #F4F4F5' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+          <StatusDot covered={covered} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', fontWeight: 500, color: '#18181b' }}>{renderEmphasis(guideline.title)}</span>
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#1AB25E' }}>+{guideline.projectedLift}</span>
+          <EffortChip effort={guideline.effort} />
+          {guideline.easyWin && <EasyWinBadge />}
+        </span>
+      </div>
+      {lead && <p style={{ margin: 0, marginLeft: 16, fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{renderEmphasis(lead)}</p>}
+      {bullets.length > 0 && (
+        <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {bullets.map((b, k) => (
+            <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{renderEmphasis(b)}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+/** Top ~3-5 guidelines across ALL groups, sorted by projectedLift desc. */
+const PriorityStrip = ({ groups, coveredById }: { groups: import('../../lib/recommendationEngine').GuidelineGroup[]; coveredById: Map<string, boolean> }) => {
+  const top = useMemo(() => (
+    groups
+      .flatMap((g) => g.guidelines)
+      .slice()
+      .sort((a, b) => b.projectedLift - a.projectedLift)
+      .slice(0, 5)
+  ), [groups]);
+  if (top.length === 0) return null;
+  return (
+    <div style={{ background: '#f4f4f5', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Priority</span>
+      <div>
+        {top.map((g) => (
+          <GuidelineRow key={g.id} guideline={g} covered={coveredById.get(g.coverageItemId) ?? false} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** One value-ordered group (weakest score first): header (label + score% pill + covered/total) + rows. */
+const GuidelineGroupCard = ({ group, coveredById }: { group: import('../../lib/recommendationEngine').GuidelineGroup; coveredById: Map<string, boolean> }) => (
+  <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>{group.label}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 9999, background: '#f4f4f5', padding: '2px 10px', fontSize: 12, fontWeight: 500, color: '#18181b', fontFamily: F }}>{group.score}%</span>
+      <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9f9fa9' }}>{group.covered}/{group.total} covered</span>
+    </div>
+    {group.guidelines.length === 0 ? (
+      <p style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '8px 0', margin: 0 }}>—</p>
+    ) : (
+      <div>
+        {group.guidelines.map((g) => (
+          <GuidelineRow key={g.id} guideline={g} covered={coveredById.get(g.coverageItemId) ?? false} />
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 /* ── Bottom metric ─────────────────────────────────────────────────── */
 const MetricBottom = ({ label, value, range }: { label: string; value: number; range: string }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2 }}>
@@ -248,7 +362,7 @@ type AiSort = 'missing' | 'alpha';
 
 const WriteOptimizePanel = ({
   terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange, aiSummary,
-  seo, ai, hasAi, coverageItems, coverageBuckets, onAutoOptimize, isAutoOptimizing, readOnly, onBack, highlightTerms, onHighlightTermsChange,
+  seo, ai, hasAi, coverageItems, coverageBuckets, coverageSnapshot, onAutoOptimize, isAutoOptimizing, readOnly, onBack, highlightTerms, onHighlightTermsChange,
   initialSection,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
@@ -317,6 +431,25 @@ const WriteOptimizePanel = ({
     else arr.sort((a, b) => Number(a.covered) - Number(b.covered)); // missing first
     return arr;
   }, [knowledgeRows, aiSort]);
+
+  // AI Search Guidelines — built from the real parsed CoverageSnapshot (never reconstructed; see
+  // task-4 cross-task resolution). Groups are ordered weakest-score-first so the highest-value
+  // work surfaces first; empty groups still render (muted "—").
+  const guidelineGroups = useMemo(
+    () => (coverageSnapshot ? groupGuidelines(buildGuidelines(coverageSnapshot), coverageSnapshot) : []),
+    [coverageSnapshot],
+  );
+  const orderedGuidelineGroups = useMemo(
+    () => [...guidelineGroups].sort((a, b) => a.score - b.score),
+    [guidelineGroups],
+  );
+  // Status dots use the SAME "fully covered" predicate as buildGuidelines' filter (isFullyCovered),
+  // so a shallow/needs-expansion guideline (covered but quality<4) doesn't look already done.
+  const coveredById = useMemo(() => {
+    const map = new Map<string, boolean>();
+    (coverageSnapshot?.items ?? []).forEach((item) => map.set(item.id, isFullyCovered(item)));
+    return map;
+  }, [coverageSnapshot]);
 
   // Copy helpers
   const copyTerms = (src: NlpTerm[], which: 'all' | 'missing' | 'covered') => {
@@ -506,47 +639,61 @@ const WriteOptimizePanel = ({
               </div>
             )}
 
-            {intentRows.length === 0 ? (
-              <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
-                Run a deep analysis to check intent alignment.
-              </p>
-            ) : (
-              <InfoCard
-                title="Upfront Intent Alignment" badge="NEW"
-                items={intentRows.map((item) => ({ text: item.label, covered: item.covered, missing: item.missing }))}
-              />
-            )}
-
-            {knowledgeSorted.length === 0 ? (
-              <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
-                Run a deep analysis or AI-visibility check to populate this list.
-              </p>
-            ) : aiGrouping ? (
-              <InfoCard
-                title="Information to cover"
-                items={knowledgeSorted.map((item) => ({ text: item.label, covered: item.covered, missing: item.missing }))}
-              />
-            ) : (
+            {coverageSnapshot ? (
+              /* AI Search Guidelines — Priority strip + value-ordered groups (weakest score first). */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {knowledgeSorted.map((it) => (
-                  <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                        <StatusDot covered={it.covered} />
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.label}</span>
-                      </span>
-                      <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
-                    </div>
-                    {!it.covered && it.missing && it.missing.length > 0 && (
-                      <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {it.missing.map((m, k) => (
-                          <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                <PriorityStrip groups={guidelineGroups} coveredById={coveredById} />
+                {orderedGuidelineGroups.map((group) => (
+                  <GuidelineGroupCard key={group.key} group={group} coveredById={coveredById} />
                 ))}
               </div>
+            ) : (
+              /* Legacy fallback (pre-Coverage-Engine / un-analyzed articles) — keeps the old
+               * intent + info-to-cover cards driven by the raw citations list. */
+              <>
+                {intentRows.length === 0 ? (
+                  <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
+                    Run a deep analysis to check intent alignment.
+                  </p>
+                ) : (
+                  <InfoCard
+                    title="Upfront Intent Alignment" badge="NEW"
+                    items={intentRows.map((item) => ({ text: item.label, covered: item.covered, missing: item.missing }))}
+                  />
+                )}
+
+                {knowledgeSorted.length === 0 ? (
+                  <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
+                    Run a deep analysis or AI-visibility check to populate this list.
+                  </p>
+                ) : aiGrouping ? (
+                  <InfoCard
+                    title="Information to cover"
+                    items={knowledgeSorted.map((item) => ({ text: item.label, covered: item.covered, missing: item.missing }))}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {knowledgeSorted.map((it) => (
+                      <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                            <StatusDot covered={it.covered} />
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.label}</span>
+                          </span>
+                          <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
+                        </div>
+                        {!it.covered && it.missing && it.missing.length > 0 && (
+                          <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {it.missing.map((m, k) => (
+                              <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

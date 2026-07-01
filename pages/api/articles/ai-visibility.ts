@@ -10,7 +10,6 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
-import { buildArticleContext } from '../../../lib/articleContext';
 
 function domainFromUrl(url: string): string {
    try {
@@ -75,9 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const cachedCompetitorDomains = competitorDomainsFromCache(article.competitor_outlines_cache);
       const competitorDomains = Array.from(new Set([...storedCompetitorDomains, ...cachedCompetitorDomains]));
 
-      // ctx.keyword mirrors article.target_keyword (both '' when unset) — same OR-fallback result.
-      const ctx = await buildArticleContext(Number(articleId));
-      const keyword = ctx.keyword || article.title || '';
+      const keyword = article.target_keyword || article.title || '';
 
       const sidecarData = await callSidecar('/ai-visibility', {
          keyword,
