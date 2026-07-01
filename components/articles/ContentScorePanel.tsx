@@ -10,6 +10,7 @@ import PrePublishPanel from './PrePublishPanel';
 import type { AiReadabilityResult } from './PrePublishPanel';
 import ScoreTrio from './ScoreTrio';
 import { AiVisibilitySummary, computeAiSearchScore } from '../../lib/aiSearchScore';
+import type { CoverageItem, BucketScore } from '../../lib/aiCoverage';
 
 interface CompetitorHeading {
   level: number;
@@ -63,6 +64,10 @@ interface Props {
   onMarkDone?: () => void;
   /** Pre-Publish Review panel */
   aiVisibilitySummary?: AiVisibilitySummary | null;
+  /** Coverage Engine snapshot (parsed from ai_info_to_cover) — preferred over the legacy citation score when present. */
+  coverageItems?: CoverageItem[];
+  coverageBuckets?: BucketScore[];
+  aiCoverageScore?: number | null;
   isRunningAiVisibility?: boolean;
   onRunAiVisibility?: () => void;
   /** AI Readability "Apply All" — runs the structure-only optimize on the page. */
@@ -268,6 +273,9 @@ const ContentScorePanel = ({
   isDone,
   onMarkDone,
   aiVisibilitySummary,
+  coverageItems,
+  coverageBuckets,
+  aiCoverageScore,
   isRunningAiVisibility,
   onRunAiVisibility,
   onApplyReadability,
@@ -522,8 +530,10 @@ const ContentScorePanel = ({
         parasRange={parasRange}
         aiSummary={aiVisibilitySummary}
         seo={score}
-        ai={aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0}
+        ai={aiCoverageScore ?? (aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0)}
         hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
+        coverageItems={coverageItems}
+        coverageBuckets={coverageBuckets}
         onAutoOptimize={onAutoOptimize}
         isAutoOptimizing={isAutoOptimizing}
         readOnly={readOnly}
@@ -563,7 +573,7 @@ const ContentScorePanel = ({
     return (
       <PrePublishPanel
         score={score}
-        aiScore={aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0}
+        aiScore={aiCoverageScore ?? (aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0 ? computeAiSearchScore(aiVisibilitySummary) : 0)}
         hasAi={!!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         plainText={plainText}
         articleId={articleId}
@@ -580,7 +590,7 @@ const ContentScorePanel = ({
 
   // SEO (= content score) on the left, AI Search on the right; center = blend.
   const hasAi = !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
-  const aiScore = hasAi ? computeAiSearchScore(aiVisibilitySummary) : 0;
+  const aiScore = aiCoverageScore ?? (hasAi ? computeAiSearchScore(aiVisibilitySummary) : 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>

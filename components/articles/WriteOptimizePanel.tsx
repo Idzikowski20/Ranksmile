@@ -3,6 +3,7 @@ import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '../../lib/aiSearchScore';
+import type { CoverageItem, BucketScore } from '../../lib/aiCoverage';
 import ScoreTrio from './ScoreTrio';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 
@@ -30,6 +31,9 @@ interface Props {
   seo: number;
   ai: number;
   hasAi: boolean;
+  /** Coverage Engine snapshot (Task 13 will render these; unused here for now). */
+  coverageItems?: CoverageItem[];
+  coverageBuckets?: BucketScore[];
   onAutoOptimize?: () => void;
   isAutoOptimizing?: boolean;
   readOnly?: boolean;
