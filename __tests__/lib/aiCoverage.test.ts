@@ -128,3 +128,20 @@ describe('hashId', () => {
     expect(hashId('abc')).not.toBe(hashId('abd'));
   });
 });
+
+describe('paaCoverageItems', () => {
+  it('stable hashed ids regardless of order; category:knowledge', async () => {
+    const { paaCoverageItems } = await import('../../lib/seo/keywordData');
+    const a = paaCoverageItems([{ question: 'What is X?' }, { question: 'How does Y work?' }]);
+    const b = paaCoverageItems([{ question: 'How does Y work?' }, { question: 'What is X?' }]);
+    expect(a.map((i) => i.id).sort()).toEqual(b.map((i) => i.id).sort());
+    expect(a[0].type).toBe('paa');
+    expect(a[0].category).toBe('knowledge');
+    expect(a[0].source).toBe('paa');
+    expect(a[0].importance).toBe('recommended');
+  });
+  it('returns [] for empty input', async () => {
+    const { paaCoverageItems } = await import('../../lib/seo/keywordData');
+    expect(paaCoverageItems([])).toEqual([]);
+  });
+});
