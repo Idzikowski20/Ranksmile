@@ -1,8 +1,9 @@
 // lib/recommendationEngine.ts
 // Deterministic (no-LLM) recommendation model: Guideline/GuidelineGroup types,
 // buildInstruction (checklist-style instruction synthesis), and effortOf (effort heuristic).
-import type { CoverageItem, CoverageType, Importance } from './aiCoverage';
+import type { CoverageItem, CoverageSnapshot, CoverageType, Importance } from './aiCoverage';
 import type { ArticleContext } from './articleContext';
+import { scoreContribution } from './coverage/derived/scoreContribution';
 
 export type GuidelineGroupKey = 'intent' | 'knowledge' | 'authority' | 'quality' | 'structure';
 export type GuidelineEffort = 'Easy' | 'Medium' | 'Large';
@@ -118,4 +119,79 @@ export function buildInstruction(item: CoverageItem, context?: ArticleContext): 
   const result = template ? template(item, context) : fallbackTemplate(item);
   if (!result.instruction) return fallbackTemplate(item);
   return result;
+}
+
+/** CoverageCategory → GuidelineGroupKey. `structure`-typed items are pulled out of `quality`
+ *  into their own group so the UI can show structure issues separately. */
+export function categoryToGroup(item: CoverageItem): GuidelineGroupKey {
+  if (item.type === 'structure') return 'structure';
+  switch (item.category) {
+    case 'intent': return 'intent';
+    case 'knowledge': return 'knowledge';
+    case 'authority': return 'authority';
+    default: return 'quality'; // 'quality' | 'style'
+  }
+}
+
+/** All snapshot items not already fully covered (covered && quality>=4), turned into actionable Guidelines. */
+export function buildGuidelines(snapshot: CoverageSnapshot, context?: ArticleContext): Guideline[] {
+  return snapshot.items
+    .filter((item) => !(item.covered && item.quality >= 4))
+    .map((item) => {
+      const lift = scoreContribution(item, snapshot);
+      return {
+        id: `guideline-${item.id}`,
+        coverageItemId: item.id,
+        group: categoryToGroup(item),
+        ...buildInstruction(item, context),
+        importance: item.importance,
+        status: 'open' as const,
+        projectedLift: lift,
+        effort: effortOf(item),
+        easyWin: lift >= 8 && (item.missing?.length ?? 0) <= 2,
+        sectionId: item.sectionId,
+      };
+    });
+}
+
+const GROUP_KEYS: GuidelineGroupKey[] = ['intent', 'knowledge', 'authority', 'quality', 'structure'];
+const GROUP_LABEL: Record<GuidelineGroupKey, string> = {
+  intent: 'Intent Alignment',
+  knowledge: 'Knowledge Coverage',
+  authority: 'Authority',
+  quality: 'Content Quality',
+  structure: 'Structure',
+};
+const IMPORTANCE_SORT_WEIGHT: Record<Importance, number> = { critical: 3, recommended: 2, optional: 1 };
+
+/** GuidelineGroupKey → the snapshot bucket (CoverageCategory) it scores against.
+ *  `structure` has no bucket of its own — it rides on the `quality` bucket. */
+export function bucketForGroup(key: GuidelineGroupKey): CoverageItem['category'] {
+  return key === 'structure' ? 'quality' : key;
+}
+
+/** Buckets guidelines into the 5 named groups (always all 5, even empty) with per-group bucket
+ *  score + covered/total, and sorts each group's guidelines importance-first. */
+export function groupGuidelines(guidelines: Guideline[], snapshot: CoverageSnapshot): GuidelineGroup[] {
+  return GROUP_KEYS.map((key) => {
+    const groupItems = snapshot.items.filter((item) => categoryToGroup(item) === key);
+    const groupGuidelinesList = guidelines
+      .filter((g) => g.group === key)
+      .slice()
+      .sort((a, b) => (
+        IMPORTANCE_SORT_WEIGHT[b.importance] - IMPORTANCE_SORT_WEIGHT[a.importance]
+        || b.projectedLift - a.projectedLift
+        || (snapshot.items.find((it) => it.id === a.coverageItemId)?.quality ?? 0)
+          - (snapshot.items.find((it) => it.id === b.coverageItemId)?.quality ?? 0)
+        || a.title.localeCompare(b.title)
+      ));
+    return {
+      key,
+      label: GROUP_LABEL[key],
+      score: snapshot.buckets.find((b) => b.key === bucketForGroup(key))?.score ?? 0,
+      guidelines: groupGuidelinesList,
+      covered: groupItems.filter((item) => item.covered).length,
+      total: groupItems.length,
+    };
+  });
 }
