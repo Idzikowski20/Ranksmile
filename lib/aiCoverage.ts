@@ -141,3 +141,56 @@ export function computeCoverageScores(
   const overall = Math.round(blendBuckets(buckets) + earlyAnswerBonus(answersMainQuestionEarly));
   return { overall, buckets };
 }
+
+export interface CoverageJudge {
+  version: string;
+  run: (
+    plainText: string,
+    items: Array<Pick<CoverageItem, 'id' | 'label' | 'type'>>,
+  ) => Promise<CoverageResult>;
+}
+
+const INTENT_ITEMS: ReadonlyArray<Omit<CoverageItem, 'covered' | 'quality'>> = [
+  { id: 'intent-answer-main',  label: 'Answer the main question',             type: 'intent', category: 'intent', importance: 'critical',    source: 'llm' },
+  { id: 'intent-answer-early', label: 'Answer the main question early',       type: 'intent', category: 'intent', importance: 'critical',    source: 'llm' },
+  { id: 'intent-expectations', label: 'Set expectations for the content',     type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
+  { id: 'intent-who',          label: "Identify who it's for",                type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
+  { id: 'intent-why',          label: 'Explain why it matters to the reader', type: 'intent', category: 'intent', importance: 'recommended', source: 'llm' },
+];
+
+/** The 5 fixed search intents, fresh each call. */
+export function intentItems(): CoverageItem[] {
+  return INTENT_ITEMS.map((i) => ({ ...i, covered: false, quality: 0 }));
+}
+
+/** djb2 — cheap deterministic hash for stable ids + the coverage cache key. */
+export function hashId(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 1) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+const coverageCache = new Map<string, CoverageResult>();
+
+/** Run the injected judge; drop unknown/duplicate verdict ids; cache by version+ids+content hash. */
+export async function checkCoverage(
+  plainText: string,
+  items: CoverageItem[],
+  judge: CoverageJudge,
+): Promise<CoverageResult> {
+  if (!items.length) return { items: [], answersMainQuestionEarly: false };
+  const key = `${judge.version}|${items.map((i) => i.id).join(',')}::${hashId(plainText)}`;
+  const cached = coverageCache.get(key);
+  if (cached) return cached;
+  const verdict = await judge.run(plainText, items.map((i) => ({ id: i.id, label: i.label, type: i.type })));
+  const known = new Set(items.map((i) => i.id));
+  const seen = new Set<string>();
+  const verdicts = (verdict.items || []).filter((vd) => {
+    if (!known.has(vd.id) || seen.has(vd.id)) return false;
+    seen.add(vd.id);
+    return true;
+  });
+  const out: CoverageResult = { items: verdicts, answersMainQuestionEarly: !!verdict.answersMainQuestionEarly };
+  coverageCache.set(key, out);
+  return out;
+}
