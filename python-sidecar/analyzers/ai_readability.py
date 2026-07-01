@@ -27,6 +27,7 @@ def _empty(note: str) -> dict:
     return {
         "score": 0,
         "criteria": [{"key": k, "title": t, "met": False, "note": note, "suggestions": []} for k, t, _ in CRITERIA],
+        "coverage_items": [],
     }
 
 

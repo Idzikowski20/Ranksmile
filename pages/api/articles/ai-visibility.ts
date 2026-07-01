@@ -10,6 +10,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
+import { buildArticleContext } from '../../../lib/articleContext';
 
 function domainFromUrl(url: string): string {
    try {
@@ -61,6 +62,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       if (!article) return res.status(404).json({ error: 'Article not found' });
 
+      // article_competitors' `domain` column isn't guaranteed populated (defensive fallback to
+      // domainFromUrl(url)); ArticleContext.competitors doesn't carry that fallback, so this one
+      // read is kept as-is rather than sourced from ctx (would silently drop domains on old rows).
       const competitorRows = await queryRows<{ domain: string | null; url: string | null }>(
          `SELECT domain, url FROM article_competitors WHERE article_id = ?`,
          [articleId],
@@ -71,8 +75,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const cachedCompetitorDomains = competitorDomainsFromCache(article.competitor_outlines_cache);
       const competitorDomains = Array.from(new Set([...storedCompetitorDomains, ...cachedCompetitorDomains]));
 
+      // ctx.keyword mirrors article.target_keyword (both '' when unset) — same OR-fallback result.
+      const ctx = await buildArticleContext(Number(articleId));
+      const keyword = ctx.keyword || article.title || '';
+
       const sidecarData = await callSidecar('/ai-visibility', {
-         keyword: article.target_keyword || article.title,
+         keyword,
          own_domain: article.domain || '',
          competitor_domains: competitorDomains,
          article_content: `${article.meta_title || ''}\n${article.meta_description || ''}\n${article.content || ''}`,
@@ -85,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          citations: sidecarData.citations || [],
       };
       const score = computeAiSearchScore(summary);
-      await persistAiVisibilityRun(articleId, article.target_keyword || article.title || '', summary);
+      await persistAiVisibilityRun(articleId, keyword, summary);
 
       return res.status(200).json({ summary: { ...summary, score }, warning: sidecarData.warning || null });
    } catch (error) {
