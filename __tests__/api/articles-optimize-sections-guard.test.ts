@@ -29,14 +29,26 @@ jest.mock('../../lib/aiTokenUsage', () => ({
   recordAiTokens: (orgId: number | null | undefined, tokens: number) => recordAiTokens(orgId, tokens),
 }));
 
+// LOCAL mock for the planner-path tests below (b/d): full control over PlanStep.mode/focus/reason
+// so tests don't depend on the real routing/threshold logic. requireActual keeps the real StepFocus/
+// EditMode/PlanStep types + userInstructionForMode etc. available where a test needs them directly.
+jest.mock('../../lib/optimizationPlanner', () => ({
+  __esModule: true,
+  ...jest.requireActual('../../lib/optimizationPlanner'),
+  buildOptimizationPlan: jest.fn(),
+}));
+
 import handler from '../../pages/api/articles/optimize-sections';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../lib/tenancy';
 import { getOrgUsage5h } from '../../lib/aiTokenUsage';
 import { buildArticleContext } from '../../lib/articleContext';
+import { buildOptimizationPlan } from '../../lib/optimizationPlanner';
+import type { Plan, PlanStep } from '../../lib/optimizationPlanner';
 
 const mockBuildArticleContext = buildArticleContext as jest.MockedFunction<typeof buildArticleContext>;
+const mockBuildOptimizationPlan = buildOptimizationPlan as jest.MockedFunction<typeof buildOptimizationPlan>;
 const mockVerifyUser = verifyUser as jest.MockedFunction<typeof verifyUser>;
 const mockGetCurrentUserId = getCurrentUserId as jest.MockedFunction<typeof getCurrentUserId>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;
@@ -81,6 +93,8 @@ async function runHandler(bodyOverrides: Record<string, unknown> = {}): Promise<
   return frames;
 }
 
+const realBuildOptimizationPlan = jest.requireActual('../../lib/optimizationPlanner').buildOptimizationPlan as typeof buildOptimizationPlan;
+
 beforeEach(() => {
   jest.clearAllMocks();
   recordAiTokens.mockClear();
@@ -90,6 +104,9 @@ beforeEach(() => {
   mockEnsureUserTenancy.mockResolvedValue({ orgId: 1 } as any);
   mockGetOrgUsage5h.mockResolvedValue({ over: false, used: 0, limit: 500000, resetsAt: 0 } as any);
   (global.fetch as unknown) = jest.fn();
+  // Default: delegate to the real planner so pre-existing tests keep exercising real routing logic.
+  // Tests below that need a specific mode/focus override via mockBuildOptimizationPlan.mockReturnValueOnce.
+  mockBuildOptimizationPlan.mockImplementation(realBuildOptimizationPlan);
 });
 
 it('rejects an unauthenticated caller with 401 before any work', async () => {
@@ -148,5 +165,71 @@ it('done event carries trimmed + ignoredLift', async () => {
   const done = events.find((e) => e.event === 'done');
   expect(done?.data).toHaveProperty('trimmed');
   expect(done?.data).toHaveProperty('ignoredLift');
+});
+
+// --- Task 8: mode-varying user message + section SSE focus/mode/reason (UX contract) ---
+
+/** A single-step Plan for one section (index 0, headingText 'A'), overriding just what each test cares about. */
+function planWith(step: Partial<PlanStep>): Plan {
+  const base: PlanStep = {
+    sectionId: 's0', index: 0, headingText: 'A', html: '<p>aaa</p>',
+    focus: 'seo-terms', systemPrompt: 'sys', guidelines: [], missingTerms: [],
+    estimatedTokens: 10, expectedLift: 20, reason: 'Optimize: test', mode: 'normal',
+  };
+  const merged = { ...base, ...step };
+  return { steps: [merged], estimatedTokens: 10, trimmed: false, ignoredLift: 0, rationale: 'test' };
+}
+
+it('NORMAL step sends the "Improve this section" user message (byte-for-byte)', async () => {
+  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ mode: 'normal', userInstruction: undefined }));
+  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true, json: async () => ({ usage: { total_tokens: 1 }, choices: [{ message: { content: '<p>edited enough to be usable here</p>' } }] }),
+  });
+  await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
+  const body = JSON.parse(opts.body);
+  expect(body.messages[1].content).toBe('Improve this section:\n\n<p>aaa</p>');
+});
+
+it('LESS step sends step.userInstruction as the user message (not "Improve this section")', async () => {
+  const userInstruction = 'Patch this section with the minimal number of local edits.';
+  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ mode: 'less', userInstruction }));
+  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true, json: async () => ({ usage: { total_tokens: 1 }, choices: [{ message: { content: '<p>edited enough to be usable here</p>' } }] }),
+  });
+  await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
+  const body = JSON.parse(opts.body);
+  expect(body.messages[1].content).toBe(userInstruction);
+  expect(body.messages[1].content).not.toContain('Improve this section');
+});
+
+it('skip step makes NO fetch and emits changed:false WITH focus/mode/reason from the step', async () => {
+  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({
+    focus: 'skip', mode: 'normal', reason: 'Skipped - below benefit threshold', systemPrompt: '',
+  }));
+  const fetchSpy = jest.spyOn(global, 'fetch');
+  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  const sectionEvt = events.find((e) => e.event === 'section');
+  expect(fetchSpy).not.toHaveBeenCalled();
+  expect(sectionEvt?.data.changed).toBe(false);
+  expect(sectionEvt?.data.focus).toBe('skip');
+  expect(sectionEvt?.data.mode).toBe('normal');
+  expect(sectionEvt?.data.reason).toBe('Skipped - below benefit threshold');
+});
+
+it('changed step emits a section event carrying focus/mode/reason from the step (UX contract)', async () => {
+  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({
+    focus: 'ai-coverage', mode: 'less', reason: 'Optimize: 1 guidelines', userInstruction: 'Patch this section.',
+  }));
+  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true, json: async () => ({ usage: { total_tokens: 1 }, choices: [{ message: { content: '<p>edited enough to be usable here</p>' } }] }),
+  });
+  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  const sectionEvt = events.find((e) => e.event === 'section');
+  expect(sectionEvt?.data.changed).toBe(true);
+  expect(sectionEvt?.data.focus).toBe('ai-coverage');
+  expect(sectionEvt?.data.mode).toBe('less');
+  expect(sectionEvt?.data.reason).toBe('Optimize: 1 guidelines');
 });
 
