@@ -60,6 +60,7 @@ function legacyPlan(sections: Section[], scoreData: ScoreData | undefined, conte
       estimatedTokens: 0,
       expectedLift: 0,
       reason: 'Legacy: no articleId',
+      mode: 'normal',
    }));
    return { steps, estimatedTokens: 0, trimmed: false, ignoredLift: 0, rationale: 'legacy' };
 }
@@ -130,7 +131,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
 
       const plan: Plan = ctx
-         ? buildOptimizationPlan({ sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used })
+         ? buildOptimizationPlan({
+            sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used, seoScore: 0, aiScore: 0,
+         })
          : legacyPlan(sections, scoreData, content);
 
       if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });

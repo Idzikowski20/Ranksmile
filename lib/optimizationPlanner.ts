@@ -9,6 +9,16 @@ export type { RoutedGuideline } from './optimizeGuidelineRouting';
 
 export type StepFocus = 'seo-terms' | 'ai-coverage' | 'readability' | 'expand' | 'skip';
 
+export type EditMode = 'less' | 'normal' | 'expand';
+
+// --- F: benefit-threshold + takeover constants (tunable; 0..100 AI-score scale) ---
+const LESS_MIN = 6;            // expectedLift < LESS_MIN -> skip
+const NORMAL_MIN = 12;         // LESS_MIN..NORMAL_MIN -> LESS; > NORMAL_MIN -> NORMAL
+const SEO_HIGH = 85;           // SEO score at/above which AI-takeover can fire
+const AI_GAP = 25;             // takeover when (seoScore - aiScore) > AI_GAP
+const INTENT_INTRO_MIN = 50;   // intent bucket score below which intro may expand
+const TERM_WORTH_FLOOR = 1;    // OD-2 [RATIFIED]: a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
+
 export interface PlanStep {
   sectionId: string;
   index: number;
@@ -21,6 +31,8 @@ export interface PlanStep {
   estimatedTokens: number;
   expectedLift: number;
   reason: string;
+  mode: EditMode;
+  userInstruction?: string;
 }
 
 export interface Plan {
@@ -36,6 +48,8 @@ export interface PlanInput {
   guidelines: Guideline[];
   context: ArticleContext;
   budgetRemaining: number;
+  seoScore: number;
+  aiScore: number;
 }
 
 const PROMPT_CONSTANT = 500;   // system-prompt + user-wrapper overhead (~400-600)
@@ -90,15 +104,16 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
     const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: rgs, missingTerms: secTerms };
 
     if (rgs.length === 0 && secTerms.length === 0) {
-      return { ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift: 0, reason: 'Skipped — no uncovered guidelines' };
+      return { ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift: 0, reason: 'Skipped — no uncovered guidelines', mode: 'normal' };
     }
     const focus = focusFor(rgs, secTerms);
     const expectedLift = diminishingLift(rgs.map((r) => r.guideline.projectedLift));
     const step: PlanStep = {
       ...base, focus, expectedLift,
       estimatedTokens: estimateStepTokens(section),
-      systemPrompt: buildStepPrompt({ ...base, focus, expectedLift, estimatedTokens: 0, reason: '', systemPrompt: '' }, input.context),
+      systemPrompt: buildStepPrompt({ ...base, focus, expectedLift, estimatedTokens: 0, reason: '', systemPrompt: '', mode: 'normal' }, input.context),
       reason: rgs.length ? `Optimize: ${rgs.length} guidelines` : 'Optimize: under-target terms',
+      mode: 'normal',
     };
     return step;
   });
