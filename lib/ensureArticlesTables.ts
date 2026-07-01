@@ -214,9 +214,11 @@ export async function ensureArticlesTables() {
    if (isPostgres) {
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals JSONB`); } catch {}
+      try { await db.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS ai_info_to_cover JSONB`); } catch {}
    } else {
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_score INTEGER`); } catch {}
       try { await db.query(`ALTER TABLE articles ADD COLUMN ranking_signals TEXT`); } catch {}
+      try { await db.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS ai_info_to_cover TEXT`); } catch {}
    }
 
    // Wizard language (used by generation to write in the analysed language)
