@@ -235,3 +235,39 @@ export function buildStepPrompt(step: PlanStep, context: ArticleContext): string
   const block = focusBlock(step);
   return `${SHARED_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
 }
+
+const LESS_RULES = `You are an expert SEO content editor making a MINIMAL PATCH to ONE section of an HTML article.
+
+RULES:
+- Make a MAXIMUM of 2-5 local edits. Preserve MORE THAN 95% of the original wording verbatim.
+- Do NOT add paragraphs. Do NOT rewrite. Do NOT expand or lengthen the section.
+- Only patch the specific uncovered AI-search signals listed below — change nothing else.
+- Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
+- Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written`;
+
+function buildLessPrompt(step: PlanStep, context: ArticleContext): string {
+  const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
+  const block = focusBlock(step);   // same focus block as NORMAL — reuse
+  return `${LESS_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
+}
+
+/** Mode -> system prompt. NORMAL/EXPAND delegate to the existing buildStepPrompt byte-for-byte. */
+export function buildStepPromptForMode(step: PlanStep, context: ArticleContext, mode: EditMode): string {
+  if (step.focus === 'skip') return '';
+  return mode === 'less' ? buildLessPrompt(step, context) : buildStepPrompt(step, context);
+}
+
+const LESS_USER_BASE =
+  'Patch this section with the minimal number of local edits. Do not rewrite it, do not add '
+  + 'paragraphs, and preserve more than 95% of the wording. Only fix the signals in the instructions.';
+const LESS_INTRO_EXTRA =
+  ' If the intro does not directly answer the main question, add at most one short sentence that does '
+  + '— never a new paragraph.';
+
+/** Mode -> user message. LESS carries a patch-only instruction; NORMAL/EXPAND stay undefined so the
+ *  endpoint uses today's "Improve this section:\n\n"+html literal (byte-for-byte). */
+export function userInstructionForMode(step: PlanStep, mode: EditMode): string | undefined {
+  if (mode !== 'less') return undefined;
+  const extra = step.index === 0 ? LESS_INTRO_EXTRA : '';
+  return `${LESS_USER_BASE}${extra}\n\n${step.html}`;
+}
