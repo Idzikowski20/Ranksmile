@@ -9,7 +9,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { computeContentScore } from '../../../lib/contentScore';
-import { getAiSearchInfo } from '../../../lib/seo/keywordData';
+import { getAiSearchInfo, paaCoverageItems } from '../../../lib/seo/keywordData';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { callSidecar, sidecarBase } from '../../../lib/sidecar';
@@ -18,6 +18,11 @@ import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { getErrorMessage } from '../../../lib/errors';
+import { checkCoverage, deepseekJudge, CoverageItem } from '../../../lib/aiCoverage';
+import { analyzeIntroduction, introCoverageItems, deepseekIntroJudge } from '../../../lib/introductionAnalyzer';
+import { readArticleTerms, articleTermsToCoverageItems } from '../../../lib/articleTerms';
+import { mergeCoverageItems, buildSnapshot } from '../../../lib/coverageStore';
+import { splitSections } from '../../../lib/articleSections';
 
 /** Map an ISO country code to the SERP analysis language the sidecar supports. */
 function langForCountry(country: string): string {
@@ -491,7 +496,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('[deep-analysis] AI search persist failed (non-fatal):', getErrorMessage(err));
     }
 
-    sse(res, 'done', { articleId, rankingScore });
+    // Coverage snapshot — builds CoverageItems from PAA + intro-intent + article_terms
+    // (entity/fact), judges the judgeable subset, and persists ai_info_to_cover so the
+    // Content Score gauge has a real coverage breakdown ready without a manual run.
+    // Never blocks or fails deep-analysis; the gauge falls back to the AI-visibility
+    // path (computeAiSearchScore) if this throws.
+    let coverageSnapshot = null;
+    try {
+      const introSection = splitSections(pageContent)[0];
+      const introPlain = introSection ? introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+
+      const paaItems = paaCoverageItems((serp.paa_questions || []).map((q: string) => ({ question: q })));
+      const intentResult = await analyzeIntroduction(introPlain, keyword || '', deepseekIntroJudge);
+      const baseIntent = introCoverageItems(intentResult);
+
+      const termRows = await readArticleTerms(articleId);
+      const entityItems = articleTermsToCoverageItems(termRows);
+
+      const readabilityItems: CoverageItem[] = []; // standalone ai-readability run (Task 11) fills these
+
+      const items = mergeCoverageItems({
+        paa: paaItems, intent: baseIntent, readability: readabilityItems, entity: entityItems,
+      });
+
+      // Judge only paa + future fact/definition (intent already graded by intro analyzer; entity/readability deterministic).
+      const judgeable = items.filter((i) => i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison' || i.type === 'example');
+      const coverageResult = await checkCoverage(plainText, judgeable, deepseekJudge);
+
+      // Fold the intent verdict's early-answer flag into the result the snapshot scores against.
+      coverageResult.answersMainQuestionEarly = intentResult.answerStartsEarly;
+      // Intent + entity items are already "graded" on their items; include them as pre-covered
+      // verdicts so buildSnapshot's bucket math sees them.
+      for (const it of [...baseIntent, ...entityItems]) {
+        coverageResult.items.push({ id: it.id, covered: it.covered, quality: it.quality, confidence: 1 });
+      }
+
+      // judge.version is 'promptVersion|model|temperature' → split for the snapshot's separate version fields.
+      const [promptVersion, model] = deepseekJudge.version.split('|');
+      coverageSnapshot = buildSnapshot(items, coverageResult, {
+        judgeVersion: deepseekJudge.version,
+        promptVersion,
+        model,
+        createdAt: new Date().toISOString(),
+      });
+
+      await db.query(
+        `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
+        { replacements: [JSON.stringify(coverageSnapshot), articleId] },
+      );
+    } catch (err) {
+      console.warn('[coverage] deep-analysis snapshot compute failed', err);
+      // never block deep-analysis on coverage errors; the gauge falls back to computeAiSearchScore
+    }
+
+    sse(res, 'done', {
+      articleId,
+      rankingScore,
+      ai_info_to_cover: coverageSnapshot,
+      ai_coverage_score: coverageSnapshot?.overall ?? null,
+    });
     return res.end();
 
   } catch (err) {
