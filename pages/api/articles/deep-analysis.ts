@@ -8,7 +8,7 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
-import { computeContentScore } from '../../../lib/contentScore';
+import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
 import { getAiSearchInfo, paaCoverageItems } from '../../../lib/seo/keywordData';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
@@ -511,7 +511,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const baseIntent = introCoverageItems(intentResult);
 
       const termRows = await readArticleTerms(articleId);
-      const entityItems = articleTermsToCoverageItems(termRows);
+      const countedTermRows = termRows.map((r) => ({ ...r, current_count: countOccurrences(plainText, r.term) }));
+      const entityItems = articleTermsToCoverageItems(countedTermRows);
 
       const readabilityItems: CoverageItem[] = []; // standalone ai-readability run (Task 11) fills these
 
