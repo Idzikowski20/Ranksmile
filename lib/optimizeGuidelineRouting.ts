@@ -62,6 +62,21 @@ function scoreSection(g: Guideline, section: Section, maxFreq: number): Scored {
 
 export interface RouteOpts { breakdown: { slots: Array<{ key: string; missingPoints: number }>; totalPossible: number }; }
 
+/** Section for a below-threshold guideline: intent -> intro (index 0); else highest missingPoints. */
+function fallbackSection(g: Guideline, sections: Section[], opts: RouteOpts): { section: Section; reason: string } | null {
+  if (!sections.length) return null;
+  if (g.group === 'intent') {
+    const intro = sections.find((s) => s.index === 0) ?? sections[0];
+    return { section: intro, reason: 'Fallback — intent to intro' };
+  }
+  const byMissing = [...sections].sort((a, b) => {
+    const ma = opts.breakdown.slots.find((s) => s.key === b.id)?.missingPoints ?? 0;
+    const mb = opts.breakdown.slots.find((s) => s.key === a.id)?.missingPoints ?? 0;
+    return ma - mb;
+  });
+  return { section: byMissing[0], reason: 'Fallback — highest missingPoints' };
+}
+
 export function assignGuidelinesToSections(
   guidelines: Guideline[], sections: Section[], opts: RouteOpts,
 ): Map<string, RoutedGuideline[]> {
@@ -76,10 +91,24 @@ export function assignGuidelinesToSections(
     const maxFreq = Math.max(1, ...sections.map((s) => countOccurrences(plainText(s.html), term)));
     const scored = sections.map((s) => scoreSection(guideline, s, maxFreq)).sort((a, b) => b.score - a.score);
     const best = scored[0];
-    if (!best || best.score < MATCH_THRESHOLD) continue; // Task 2 wires the fallback here
-    const confidence = best.reason === 'Exact section match' ? 1 : Math.min(1, best.score / CONFIDENCE_NORM);
+    let target: Section;
+    let confidence: number;
+    let reason: string;
+    if (best && best.score >= MATCH_THRESHOLD) {
+      target = best.section;
+      confidence = best.reason === 'Exact section match' ? 1 : Math.min(1, best.score / CONFIDENCE_NORM);
+      reason = best.reason;
+    } else {
+      const fb = fallbackSection(guideline, sections, opts);
+      if (!fb) continue;                       // no sections at all — nothing to route to
+      target = fb.section;
+      confidence = 0.1;                        // low — it is a guess
+      reason = fb.reason;
+    }
     const priority = importanceWeight(guideline.importance) * guideline.projectedLift * confidence;
-    push(best.section.id, { guideline, confidence, reason: best.reason, priority });
+    push(target.id, { guideline, confidence, reason, priority });
   }
+  // Priority sort inside each section (drives prompt bullet order + step focus).
+  for (const arr of out.values()) arr.sort((a, b) => b.priority - a.priority);
   return out;
 }
