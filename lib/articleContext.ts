@@ -37,7 +37,7 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
   const idSql = await getArticleIdSql();
   // Explicit columns only — never SELECT * (smaller transfer, migration-independent, easier review).
   const [rows] = (await db.query(
-    `SELECT id, target_keyword, language, content_type, score_data, ai_info_to_cover, domain_id
+    `SELECT id, target_keyword, language, score_data, ai_info_to_cover, domain_id
        FROM articles WHERE ${idSql} = ?`,
     { replacements: [articleId] },
   )) as [Array<Record<string, unknown>>, unknown];
@@ -61,6 +61,8 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
     paa,
     terms: [],           // Task 6
     competitors: [],     // Task 6
-    contentType: typeof row?.content_type === 'string' ? row.content_type : undefined,
+    // `articles` has no content_type column yet — selecting it would throw ("column does not exist").
+    // Field kept optional (always undefined) until a migration adds the column.
+    contentType: undefined,
   };
 }
