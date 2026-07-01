@@ -55,4 +55,21 @@ describe('parseSnapshot', () => {
     const snap = buildSnapshot(items, result, META);
     expect(parseSnapshot(JSON.parse(JSON.stringify(snap)))).toEqual(snap);
   });
+  it('parses a valid snapshot serialized as a JSON string (SQLite TEXT dialect)', () => {
+    const items = [item('paa-1')];
+    const result: CoverageResult = { items: [{ id: 'paa-1', covered: true, quality: 5, confidence: 1 }], answersMainQuestionEarly: false };
+    const snap = buildSnapshot(items, result, META);
+    const serialized = JSON.stringify(snap);
+    const parsed = parseSnapshot(serialized);
+    expect(parsed).toEqual(snap);
+  });
+  it('returns null for a malformed JSON string', () => {
+    expect(parseSnapshot('{not json')).toBeNull();
+    expect(parseSnapshot('{"incomplete')).toBeNull();
+  });
+  it('returns null for a string that parses to an array or wrong-schema object', () => {
+    expect(parseSnapshot(JSON.stringify([{ schemaVersion: 1 }]))).toBeNull(); // parses to array
+    expect(parseSnapshot(JSON.stringify({ schemaVersion: 2, items: [], buckets: [] }))).toBeNull(); // wrong version
+    expect(parseSnapshot(JSON.stringify({ schemaVersion: 1, items: 'not-array' }))).toBeNull(); // items not array
+  });
 });

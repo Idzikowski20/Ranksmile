@@ -1,4 +1,5 @@
 import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from './aiCoverage';
+import { safeJsonParse } from './safeJson';
 
 export interface CoverageSources {
   paa: CoverageItem[];
@@ -54,10 +55,19 @@ export function buildSnapshot(
   };
 }
 
-/** Parse a stored ai_info_to_cover value into a CoverageSnapshot, or null if absent/legacy/unknown schema. */
+/** Parse a stored ai_info_to_cover value into a CoverageSnapshot, or null if absent/legacy/unknown schema.
+ *  Handles both object input (Postgres JSONB) and JSON string input (SQLite TEXT). */
 export function parseSnapshot(raw: unknown): CoverageSnapshot | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const snap = raw as Partial<CoverageSnapshot>;
+  // Handle string input (SQLite TEXT dialect): parse it first, then validate.
+  let toValidate = raw;
+  if (typeof raw === 'string') {
+    toValidate = safeJsonParse(raw, null);
+    if (toValidate === null) return null;
+  }
+
+  // Validate the object form.
+  if (!toValidate || typeof toValidate !== 'object' || Array.isArray(toValidate)) return null;
+  const snap = toValidate as Partial<CoverageSnapshot>;
   if (snap.schemaVersion !== 1 || !Array.isArray(snap.items) || !Array.isArray(snap.buckets)) return null;
   return snap as CoverageSnapshot;
 }
