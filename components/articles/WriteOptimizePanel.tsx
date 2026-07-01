@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
 import { AiVisibilitySummary } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
-import { buildGuidelines, groupGuidelines } from '../../lib/recommendationEngine';
+import { buildGuidelines, groupGuidelines, isFullyCovered } from '../../lib/recommendationEngine';
 import type { Guideline, GuidelineEffort } from '../../lib/recommendationEngine';
 import ScoreTrio from './ScoreTrio';
 import { TIP_BUBBLE_BASE } from './tipBubble';
@@ -253,6 +253,15 @@ const EasyWinBadge = () => (
   </span>
 );
 
+/** Renders `**text**` markdown emphasis as <strong> (and strips the markers) — instruction/title
+ *  templates embed `**keyword**`/`**label**`, which must not surface as literal asterisks. */
+const renderEmphasis = (text: string): React.ReactNode => {
+  const parts = text.split(/\*\*(.+?)\*\*/g); // odd indices are the emphasized captures
+  return parts.map((part, i) => (i % 2 === 1
+    ? <strong key={i} style={{ fontWeight: 600 }}>{part}</strong>
+    : part));
+};
+
 /** Splits a Guideline's `instruction` into a leading non-bulleted sentence (if any) plus the
  *  `• `-prefixed checklist lines (rendered as a real <ul>). */
 const splitInstruction = (instruction: string): { lead: string | null; bullets: string[] } => {
@@ -273,7 +282,7 @@ const GuidelineRow = ({ guideline, covered }: { guideline: Guideline; covered: b
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           <StatusDot covered={covered} />
-          <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', fontWeight: 500, color: '#18181b' }}>{guideline.title}</span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', fontWeight: 500, color: '#18181b' }}>{renderEmphasis(guideline.title)}</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#1AB25E' }}>+{guideline.projectedLift}</span>
@@ -281,11 +290,11 @@ const GuidelineRow = ({ guideline, covered }: { guideline: Guideline; covered: b
           {guideline.easyWin && <EasyWinBadge />}
         </span>
       </div>
-      {lead && <p style={{ margin: 0, marginLeft: 16, fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{lead}</p>}
+      {lead && <p style={{ margin: 0, marginLeft: 16, fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{renderEmphasis(lead)}</p>}
       {bullets.length > 0 && (
         <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {bullets.map((b, k) => (
-            <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{b}</li>
+            <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{renderEmphasis(b)}</li>
           ))}
         </ul>
       )}
@@ -434,9 +443,11 @@ const WriteOptimizePanel = ({
     () => [...guidelineGroups].sort((a, b) => a.score - b.score),
     [guidelineGroups],
   );
+  // Status dots use the SAME "fully covered" predicate as buildGuidelines' filter (isFullyCovered),
+  // so a shallow/needs-expansion guideline (covered but quality<4) doesn't look already done.
   const coveredById = useMemo(() => {
     const map = new Map<string, boolean>();
-    (coverageSnapshot?.items ?? []).forEach((item) => map.set(item.id, item.covered));
+    (coverageSnapshot?.items ?? []).forEach((item) => map.set(item.id, isFullyCovered(item)));
     return map;
   }, [coverageSnapshot]);
 

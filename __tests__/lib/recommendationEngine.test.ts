@@ -1,4 +1,4 @@
-import { buildInstruction, effortOf, buildGuidelines, groupGuidelines } from '../../lib/recommendationEngine';
+import { buildInstruction, effortOf, buildGuidelines, groupGuidelines, isFullyCovered } from '../../lib/recommendationEngine';
 import type { CoverageItem, CoverageSnapshot } from '../../lib/aiCoverage';
 
 const it_ = (over: Partial<CoverageItem>): CoverageItem =>
@@ -27,6 +27,23 @@ describe('buildInstruction', () => {
       { keyword: 'react hooks' } as never);
     expect(r.instruction.toLowerCase()).toContain('react hooks');
   });
+  it('each intent id gets a distinct, id-appropriate instruction (not the early-answer copy)', () => {
+    const intent = (id: string, label: string) => buildInstruction(
+      { ...it_({}), id, label, type: 'intent', category: 'intent' }, { keyword: 'k' } as never);
+    const early = intent('intent-answer-early', 'Answer the main question early');
+    const expectations = intent('intent-expectations', 'Set expectations for the content');
+    const who = intent('intent-who', "Identify who it's for");
+    const why = intent('intent-why', 'Explain why it matters to the reader');
+    // title mirrors the item label (not a hardcoded "answer early" for all)
+    expect(expectations.title).toBe('Set expectations for the content');
+    expect(who.title).toBe("Identify who it's for");
+    // instructions are all different from each other
+    const instructions = [early, expectations, who, why].map((r) => r.instruction);
+    expect(new Set(instructions).size).toBe(4);
+    // only the early-answer item mentions the first paragraph
+    expect(early.instruction.toLowerCase()).toContain('first paragraph');
+    expect(expectations.instruction.toLowerCase()).not.toContain('first paragraph');
+  });
   it('never blank even with no missing/reason', () => {
     expect(buildInstruction(it_({ type: 'entity', label: 'X' })).instruction.length).toBeGreaterThan(0);
   });
@@ -38,6 +55,12 @@ describe('effortOf', () => {
   it('3-5 missing → Medium', () => expect(effortOf(it_({ missing: ['a','b','c'] }))).toBe('Medium'));
   it('<=2 missing → Easy', () => expect(effortOf(it_({ missing: ['a','b'] }))).toBe('Easy'));
   it('entity (0 missing) → Easy', () => expect(effortOf(it_({ type: 'entity' }))).toBe('Easy'));
+});
+
+describe('isFullyCovered', () => {
+  it('covered && quality>=4 → true', () => expect(isFullyCovered(it_({ covered: true, quality: 4 }))).toBe(true));
+  it('covered but shallow (quality<4) → false (still actionable)', () => expect(isFullyCovered(it_({ covered: true, quality: 2 }))).toBe(false));
+  it('not covered → false', () => expect(isFullyCovered(it_({ covered: false, quality: 5 }))).toBe(false));
 });
 
 const ci = (id: string, category: CoverageItem['category'], importance: CoverageItem['importance'],

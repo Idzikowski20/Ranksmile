@@ -48,14 +48,25 @@ const fallbackTemplate: TemplateFn = (item) => ({
   instruction: item.reason || bullets(item.missing) || `Review and improve **${item.label}** to strengthen AI search coverage.`,
 });
 
+// Per-intent copy keyed on the fixed INTENT_ITEMS ids (lib/aiCoverage.ts). Without this every
+// intent item rendered the "answer early" instruction, so expectations/who/why looked wrong.
+const INTENT_INSTRUCTIONS: Record<string, (subject: string) => string> = {
+  'intent-answer-main': (s) => `Make sure the article clearly and directly answers ${s}.`,
+  'intent-answer-early': (s) => `Rewrite the first paragraph to directly answer ${s}.`,
+  'intent-expectations': () => 'In the introduction, set expectations: tell the reader what the article covers and what they will take away.',
+  'intent-who': () => "State early who this content is for, so the target reader immediately sees it's relevant to them.",
+  'intent-why': (s) => `Explain why ${s} matters to the reader — the stakes, benefit, or payoff.`,
+};
+
 const intentTemplate: TemplateFn = (item, context) => {
   const keyword = context?.keyword;
-  const title = 'Answer the main question early';
   const subject = keyword ? `**${keyword}**` : 'the main question';
   const reasonSuffix = item.reason ? ` — currently: ${item.reason}` : '';
+  const build = INTENT_INSTRUCTIONS[item.id];
+  if (!build) return fallbackTemplate(item);
   return {
-    title,
-    instruction: `Rewrite the first paragraph to directly answer ${subject}${reasonSuffix}.`,
+    title: item.label,
+    instruction: `${build(subject)}${reasonSuffix}`,
   };
 };
 
@@ -133,10 +144,17 @@ export function categoryToGroup(item: CoverageItem): GuidelineGroupKey {
   }
 }
 
-/** All snapshot items not already fully covered (covered && quality>=4), turned into actionable Guidelines. */
+/** An item is "fully covered" only when present AND graded well (quality>=4). Shallow/needs-expansion
+ *  items (covered but low quality) are still actionable. Single source of truth so the guideline
+ *  filter and the UI status dot cannot drift apart. */
+export function isFullyCovered(item: CoverageItem): boolean {
+  return item.covered && item.quality >= 4;
+}
+
+/** All snapshot items not already fully covered, turned into actionable Guidelines. */
 export function buildGuidelines(snapshot: CoverageSnapshot, context?: ArticleContext): Guideline[] {
   return snapshot.items
-    .filter((item) => !(item.covered && item.quality >= 4))
+    .filter((item) => !isFullyCovered(item))
     .map((item) => {
       const lift = scoreContribution(item, snapshot);
       return {
