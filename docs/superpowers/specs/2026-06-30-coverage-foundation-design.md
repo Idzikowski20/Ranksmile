@@ -1,14 +1,14 @@
 # Coverage Foundation (Sub-project A) — Design
 
 **Date:** 2026-06-30
-**Status:** Approved (v2 — incorporates tech-lead review: bucket scoring, CoverageSnapshot wrapper, graph-ready fields, provenance split, category discriminator, persisted confidence)
+**Status:** Approved (v3 — 2nd tech-lead review: `reason` on the judge call, `authority` bucket, Recommendation Engine layer inserted before the Planner, Outline re-pointed at the Plan. See "Review response (v3)" at the end)
 **Supersedes:** `docs/superpowers/specs/2026-06-30-ai-search-coverage-model-design.md` (the AI-search-only seed)
 **Audit:** `docs/superpowers/specs/2026-06-30-coverage-engine-audit.md` — §10.7 plug-in points, §10.9 sub-project A
 **Direction:** `[[surfy-coverage-direction]]` memory entry
 
 ## Goal
 
-Ship the **shared coverage foundation** that all subsequent Coverage-Engine features (B "shared context", C "planner", D "graph + extended sources") will consume. The foundation is one item shape, one snapshot wrapper, one storage column, one LLM judge call site, one read helper, one bucket-scoring function, one UI swap.
+Ship the **shared coverage foundation** that all subsequent Coverage-Engine features consume. Post-A pipeline (2nd-review structure): `Coverage (A) → Shared Context (B) → Recommendation Engine (C) → Planner (D) → Auto-Optimize → Score Update`, with `CoverageGraph + extended sources (E)` running underneath. Coverage answers **what is**, Recommendation **what to do**, Planner **where**, Optimize **how**. The foundation is one item shape, one snapshot wrapper, one storage column, one LLM judge call site, one read helper, one bucket-scoring function, one UI swap.
 
 Concretely, this sub-project:
 1. Introduces `lib/aiCoverage.ts` with the `CoverageItem` model, an injected `CoverageJudge`, a `checkCoverage(plainText, items, judge)` runner with versioned cache, **bucket-aware `computeCoverageScores`** returning `{ overall, buckets }`, and the `CoverageSnapshot` wrapper.
@@ -17,9 +17,9 @@ Concretely, this sub-project:
 4. Reshapes the existing AI Readability rubric to emit `CoverageItem[]` (`type:'readability'`) and merges them into the same snapshot.
 5. Swaps the editor's AI gauge + Write/Optimize "info to cover" + Pre-Publish AI Score to read snapshot-shaped data.
 6. Activates the `article_terms` table reads in the scoring path (it's shadow data today — written but never read).
-7. **Bakes in graph-ready fields** (`parentId?`, `relatedIds?`, `depth?`) on every `CoverageItem` so Sub-project D can add a graph builder without a column migration.
+7. **Bakes in graph-ready fields** (`parentId?`, `relatedIds?`, `depth?`) on every `CoverageItem` so Sub-project E can add a graph builder without a column migration.
 
-Sub-projects B (`buildArticleContext`), C (`OptimizationPlanner`), and D (`CoverageGraph` builder + extended sources) are scoped in §10 below. They are NOT in scope here.
+Sub-projects B (`buildArticleContext`), C (`RecommendationEngine` — NEW, from the 2nd review), D (`OptimizationPlanner`), and E (`CoverageGraph` builder + extended sources) are scoped in §10 below. They are NOT in scope here.
 
 ## Why one sub-project, not five
 
@@ -35,9 +35,15 @@ The audit (§10.6 weaknesses) shows that the cost of shipping these separately i
 ### Model decisions
 
 - **One TypeScript `CoverageItem` interface, with explicit `category` discriminator.** Knowledge items (`paa | fact | definition | comparison | example | entity | process | statistic | expectation`), quality items (`readability | structure`), intent items (`intent`), and style items (future: `tone | grammar | voice`) all share the SAME shape on storage and the same serialization. The `category: 'knowledge' | 'quality' | 'style' | 'intent'` field is the machine-readable bucket discriminator — scoring iterates buckets (not types), planner reasons over buckets (not types). The flat single-type approach keeps storage + JSON parsing simple; the category field keeps scoring/planner code generic. **Push back on splitting into separate `KnowledgeItem | QualityItem | StyleItem` types**: that fragments consumers (every UI render, every storage parse, every planner step would handle 3+ shapes); category-discriminated single type is the right level of unification for a JSONB store.
-- **Graph-ready fields baked in from day one.** Every `CoverageItem` has optional `parentId?: string | null`, `relatedIds?: string[]`, `depth?: number`. Sub-project A populates them as flat (`depth: 0`, `parentId: null`, no `relatedIds`). Sub-project D builds the actual edges. **Push back on shipping full graph in A**: the LLM judge prompt for paa+intent isn't graph-aware today, and making it graph-aware adds variance to the judge output. Better to ship flat + graph-ready, build the graph in a separate pass when extended item sources (facts, definitions) land in D.
+- **Graph-ready fields baked in from day one.** Every `CoverageItem` has optional `parentId?: string | null`, `relatedIds?: string[]`, `depth?: number`. Sub-project A populates them as flat (`depth: 0`, `parentId: null`, no `relatedIds`). Sub-project E builds the actual edges. **Push back on shipping full graph in A**: the LLM judge prompt for paa+intent isn't graph-aware today, and making it graph-aware adds variance to the judge output. Better to ship flat + graph-ready, build the graph in a separate pass when extended item sources (facts, definitions) land in E.
 - **`source` stays flat; deep metadata moves to `provenance`.** `source: 'serp' | 'competitors' | 'paa' | 'llm' | 'manual'` is a finite trust bucket used everywhere (planner priority, UI label) — keeping it flat is the high-frequency-access argument. The deeper per-judge metadata that WILL grow (which model, when, with which prompt version) moves into `provenance?: { judgedBy?: string; judgedAt?: string; promptVersion?: string }`. This is the right split: trust = flat, audit-trail = nested.
-- **`confidence` persisted on `CoverageItem`.** The judge already returns `confidence ∈ [0,1]` on each `CoverageVerdict`. A persists it onto the stored item so the planner (C) can decide to re-judge low-confidence items with a stronger model.
+- **`confidence` persisted on `CoverageItem`.** The judge already returns `confidence ∈ [0,1]` on each `CoverageVerdict`. A persists it onto the stored item so the planner can decide to re-judge low-confidence items with a stronger model.
+- **`reason` persisted on `CoverageItem` — captured on the judge call A already makes.** WHY an item is uncovered / shallow ("answer hidden mid-section", "fact too vague", "no statistics", "too generic"). The discriminator for putting this in A (vs. deferring): it rides the LLM call the deep-analysis path *already pays for*. Deferring it forces the future Recommendation Engine to re-run the judge on every article — the exact waste the 2nd review flagged. This is different from optional-JSONB fields that A wouldn't populate (those defer for free — see push-backs).
+- **`authority` is the 5th bucket, declared now, empty in A.** Surfer's AI Search separates topic Knowledge from Authority (citations / statistics / sources / expert wording). Declared in `CoverageCategory` + `BUCKET_WEIGHT`/`LABEL` now so the taxonomy and the overall-score denominator are final and downstream code (planner focus tokens, UI GuidelineGroups) targets a stable set. No analyzer produces authority items in A → the bucket is empty (weight 0 in the blend, score-neutral) until D adds authority sources. Buckets are derived generically from `category`, so this is three one-liners + zero speculative machinery (YAGNI-safe).
+- **What is deliberately NOT on `CoverageItem` (2nd-review push-backs):**
+  - **No rename to `Guideline`/`OptimizationItem`.** `CoverageItem` is the *analysis* unit ("this fact is/isn't covered"). A `Recommendation` is the *action* unit ("Add a comparison of X vs Y"). Merging them collapses the Coverage-vs-Recommendation separation the review's own conclusion asks for. They stay distinct types in distinct layers.
+  - **No `instruction`/`applyPrompt`/`optimizationPrompt` on the item.** The optimization prompt is a `Recommendation` property, synthesized by the Recommendation Engine from `(label + missing + reason + category + importance)`. Putting it on the coverage item means Coverage decides "how to fix", which is the planner/optimize concern.
+  - **No `optimization` metadata (`retryCount`, `alreadyOptimized`, `lastPromptVersion`) yet.** This is optimizer state, owned by the Planner (C). It's an *optional JSONB field* — adding it later is not a migration (old items simply lack it), and A never populates it, so YAGNI says defer. (Contrast `reason`, which A *does* populate for free on the judge call.)
 - **`CoverageSnapshot` wraps `items[]` with versioning.** Storage shape is NOT `CoverageItem[]`; it's `CoverageSnapshot { version, model, promptVersion, createdAt, items, buckets, overall }`. The version field carries `judge.version` so we can detect stale snapshots after a prompt/model change. Bucket scores + overall are stored alongside items so the UI doesn't recompute on every render.
 
 ### Scoring decisions
@@ -49,7 +55,7 @@ The audit (§10.6 weaknesses) shows that the cost of shipping these separately i
 
 ### Judge decisions
 
-- **One LLM judge call per deep-analysis run, returning per-id verdicts including confidence.** The judge accepts a `CoverageItem[]` of mixed types (paa + intent + readability + entity in A; fact + definition + ... later) and returns per-id `{covered, quality, confidence, missing[], needsExpansion?, sectionId?}` + `answersMainQuestionEarly`. Cost stays bounded; cache invalidates on prompt/model/temperature change via `judge.version`. Entity rows from `article_terms` are NOT sent to the judge (their `current_count` already grades them deterministically); the judge handles paa + intent (and future fact/definition/comparison/example).
+- **One LLM judge call per deep-analysis run, returning per-id verdicts including confidence AND reason.** The judge accepts a `CoverageItem[]` of mixed types (paa + intent + readability + entity in A; fact + definition + ... later) and returns per-id `{covered, quality, confidence, missing[], reason?, needsExpansion?, sectionId?}` + `answersMainQuestionEarly`. `reason` is captured on this call (not a second pass) precisely so the future Recommendation Engine turns coverage into actionable recommendations without re-invoking the LLM. Cost stays bounded; cache invalidates on prompt/model/temperature change via `judge.version`. Entity rows from `article_terms` are NOT sent to the judge (their `current_count` already grades them deterministically); the judge handles paa + intent (and future fact/definition/comparison/example).
 - **`deepseek-chat`, not the reasoning model.** Memory `[[deepseek-chat-not-reasoning-model]]`: the thinking block ate `max_tokens` and produced empty output. `temperature: 0`, `seed: 7`, `response_format: json_object`.
 - **`IntroductionAnalyzer` is a separate module with its own judge.** Different prompt (5 fixed yes/no checks against the first ~500 words vs. variable knowledge-item grading against the whole article), different cost profile (smaller input). Sharing the `CoverageJudge` interface keeps it composable later.
 - **Compute event-driven in Node.** Triggers: load, deep-analysis, after each Auto-Optimize section (via C), manual refresh. **Not per-keystroke** — LLM cost. SEO scoring stays keystroke-live (deterministic).
@@ -72,9 +78,10 @@ The audit (§10.6 weaknesses) shows that the cost of shipping these separately i
 - Snapshot versioning enables stale detection + future history view.
 
 **A defers (later sub-projects):**
-- **B (shared context)** — `buildArticleContext(articleId)` consumed by Outline + AI Visibility + future planner. **Outline refactor reads coverage primarily** (knowledge gaps drive headings), not competitors. Competitors become one INPUT to coverage discovery, not the outline source. Brief-style outline output.
-- **C (planner)** — `OptimizationPlanner` between recommendations and the LLM in Auto-Optimize. Reasons over **bucket scores + per-item confidence**: "knowledge bucket 60%, definitions+examples weak → skip entities (88%), focus prompts on definitions+examples." Per-item `confidence < 0.5` triggers re-judge with stronger model.
-- **D (graph + extended sources)** — Populates `parentId`/`relatedIds`/`depth` via a graph-builder pass. Adds Fact/Definition/Comparison item sources (extracted from competitor analysis + LLM topic decomposition). Enables Auto Expand, Internal Link suggestions, hierarchical Outline. The graph-aware judge prompt (asking the LLM to discover relations) lands here, not in A.
+- **B (shared context)** — `buildArticleContext(articleId)` consumed by AI Visibility + the Recommendation Engine (C) + the planner (D).
+- **C (Recommendation Engine, NEW)** — turns the raw `CoverageSnapshot` into actionable `Recommendation[]` + `GuidelineGroup[]` (the "AI Search Guidelines" UI). Synthesizes each `instruction` from `label + missing + reason + category` — no LLM re-call, because A captured `reason` on the judge pass. `scoreContribution` explainability ("+N") lives here.
+- **D (planner + Outline)** — `OptimizationPlanner` between **recommendations (from C)** and the LLM in Auto-Optimize. Reasons over **bucket scores + per-item confidence**: "knowledge bucket 60%, definitions+examples weak → skip entities (88%), focus prompts on definitions+examples." Per-item `confidence < 0.5` triggers re-judge with a stronger model. **Outline generation lives here** — it consumes the ordered Plan, not raw coverage/SERP.
+- **E (graph + extended sources)** — Populates `parentId`/`relatedIds`/`depth` via a graph-builder pass. Adds Fact/Definition/Comparison **and Authority** item sources (the latter fill the A-declared, empty `authority` bucket). Enables Auto Expand, Internal Link suggestions, hierarchical Outline. The graph-aware judge prompt (asking the LLM to discover relations) lands here, not in A.
 - **Standalone `AiReadabilityPanel` component** — carve-out from `PrePublishPanel.tsx:301-383`. Cosmetic; deferred.
 - **`AiSearchPanel` → "AI Tracker" rebrand** — nav + label change only; deferred.
 
@@ -96,7 +103,11 @@ export type CoverageType =
   | 'intent';
   // (style: 'tone' | 'grammar' | 'voice' — added in later sub-project, not in this type yet)
 
-export type CoverageCategory = 'knowledge' | 'quality' | 'style' | 'intent';
+export type CoverageCategory = 'knowledge' | 'authority' | 'quality' | 'style' | 'intent';
+// 'authority' (citations / statistics / sources / expert wording) is declared now to lock the
+// bucket taxonomy + overall-score denominator; it is EMPTY in A (no analyzer produces authority
+// items yet) and gets its item sources in D. Empty buckets contribute weight 0, so declaring it
+// early is score-neutral until populated — the benefit is a stable set for the planner/UI to target.
 
 export type Importance = 'critical' | 'recommended' | 'optional';
 
@@ -122,7 +133,14 @@ export interface CoverageItem {
   quality: number;                  // 0..5
   confidence?: number;              // 0..1 — judge's confidence in the verdict (planner uses it for re-judge)
   needsExpansion?: boolean;
-  missing?: string[];               // specifics still absent → feeds C's planner
+  missing?: string[];               // specifics still absent → feeds the Recommendation Engine
+  reason?: string;                  // WHY covered/uncovered/low-quality ("answer hidden mid-section",
+                                    // "fact too vague", "no statistics") — captured on the judge call A
+                                    // already makes, so the Recommendation Engine never re-runs the LLM.
+                                    // NOTE: the actionable instruction ("Add a comparison of X vs Y") is NOT
+                                    // stored here — that is a Recommendation property, synthesized downstream
+                                    // from (label + missing + reason + category). Keeps Coverage = "what is",
+                                    // Recommendation = "what to do".
 
   // location
   sectionId?: string;               // stable from lib/articleSections.ts:14-21
@@ -143,6 +161,7 @@ export interface CoverageVerdict {
   confidence: number;               // 0..1
   needsExpansion?: boolean;
   missing?: string[];
+  reason?: string;                  // WHY — same LLM call, feeds the Recommendation Engine (no re-judge)
   sectionId?: string;
 }
 
@@ -153,7 +172,7 @@ export interface CoverageResult {
 
 export interface BucketScore {
   key: CoverageCategory;
-  label: string;                    // 'Intent' | 'Knowledge' | 'Quality' | 'Style'
+  label: string;                    // 'Intent' | 'Knowledge' | 'Authority' | 'Quality' | 'Style'
   weight: number;                   // bucket weight in the overall blend
   items: number;                    // total items in the bucket
   covered: number;                  // covered items in the bucket
@@ -212,10 +231,10 @@ export async function checkCoverage(
 
 ```ts
 const BUCKET_WEIGHT: Record<CoverageCategory, number> = {
-  intent: 3, knowledge: 2, quality: 2, style: 1,
+  intent: 3, knowledge: 2, authority: 2, quality: 2, style: 1,
 };
 const BUCKET_LABEL: Record<CoverageCategory, string> = {
-  intent: 'Intent', knowledge: 'Knowledge', quality: 'Quality', style: 'Style',
+  intent: 'Intent', knowledge: 'Knowledge', authority: 'Authority', quality: 'Quality', style: 'Style',
 };
 const IMPORTANCE_WEIGHT: Record<Importance, number> = {
   critical: 3, recommended: 2, optional: 1,
@@ -351,7 +370,7 @@ load article ─► parseSnapshot(articles.ai_info_to_cover) ─► snapshot sta
                                           snapshot.overall ────► ScoreTrio AI gauge
                                           snapshot.buckets ────► bucket badges + UI groupings
                                                                                  │
-                                          (Sub-project C consumes `missing[]` + `confidence` per section)
+                                          (C's Recommendation Engine consumes `missing[]` + `reason`; D's planner consumes `confidence` per section)
 ```
 
 ## Storage
@@ -396,7 +415,7 @@ Existing storage **untouched**:
 - `CoverageSnapshot` serialize/parse round-trip; `version` validation; graceful failure on unknown version.
 - `python-sidecar/analyzers/ai_readability.py` reshape returns `coverage_items` field with `category:'quality'` set.
 - `collectScoreSlots` — identical SEO score from `article_terms` rows vs. `score_data.terms` legacy on the same input.
-- Integration: deep-analysis populates `ai_info_to_cover` snapshot with PAA + intent + readability + entity items; gauge reads `snapshot.overall`; UI cards render real per-item state; bucket badges show 4 buckets.
+- Integration: deep-analysis populates `ai_info_to_cover` snapshot with PAA + intent + readability + entity items; gauge reads `snapshot.overall`; UI cards render real per-item state; bucket badges show the populated buckets (intent / knowledge / quality in A; authority + style are declared but empty until E).
 - `tsc --noEmit` clean; `npm run build` succeeds; `graphify update .` runs.
 
 ## Files
@@ -433,25 +452,31 @@ Existing storage **untouched**:
 - **Snapshot version**: A ships `version: 1`. Future shape changes bump the version + add a `migrateSnapshot(v1, v2)` helper. Unknown version → ignored snapshot (fallback to legacy gauge).
 - **`ai_readability_json` continues to feed Pre-Publish UI**; in parallel, deep-analysis merges readability into the snapshot.
 
-## Out of scope (B, C, D and later)
+## Out of scope (B, C, D, E and later)
 
 - `buildArticleContext(articleId)` shared builder → **B**.
-- Outline brief-style refactor (reads coverage primarily, not competitors) → **B**.
-- `OptimizationPlanner` (bucket-aware, confidence-aware) → **C**.
-- Auto-Optimize per-step prompts + per-step token charging → **C**.
-- `CoverageGraph` builder + graph traversal helpers + edge population → **D**.
-- Fact / Definition / Comparison / Example item sources → **D**.
-- Auto Expand / Internal Link suggestions / hierarchical Outline (graph-dependent) → **D**.
-- Style category (`tone`/`grammar`/`voice` types) → **D or later**.
+- `RecommendationEngine` (Coverage snapshot → actionable `Recommendation[]`) + `GuidelineGroup` UI model → **C**.
+- `Recommendation.instruction` / `applyPrompt` synthesis (from `label + missing + reason + category`) → **C**.
+- `scoreContribution(item, snapshot)` derived helper ("Adding this gives +N") → **C** (where projected-lift is shown).
+- `AIProfile` normalized model (Intent / Coverage / Authority / Evidence / Structure / Readability) — richer than A's `buckets` → **C** (buckets = AIProfile v1).
+- `OptimizationPlanner` (bucket-aware, confidence-aware; consumes `Recommendation[]`, NOT raw coverage) → **D**.
+- `optimization` per-item state (`retryCount`, `alreadyOptimized`, `lastPromptVersion`) — optional JSONB, no migration → **D**.
+- Auto-Optimize per-step prompts + per-step token charging → **D**.
+- **Outline generator consumes the Plan (Recommendations), NOT raw Coverage** (2nd-review Problem 10) → **D** (needs the planner's ordered recommendations to produce briefs).
+- `CoverageGraph` builder + graph traversal helpers + edge population → **E**.
+- Fact / Definition / Comparison / Example item sources → **E**.
+- **Authority item sources** (citations / statistics / sources / expert-wording detectors) that populate the (A-declared, empty) `authority` bucket → **E**.
+- Auto Expand / Internal Link suggestions / hierarchical Outline (graph-dependent) → **E**.
+- Style category (`tone`/`grammar`/`voice` types) → **E or later**.
 - Standalone `AiReadabilityPanel` component → **deferred polish**.
 - `AiSearchPanel` → "AI Tracker" rebrand → **deferred polish**.
 - `article_keywords` table absorption → **later, with target-keyword UX**.
-- Cross-run coverage memory (`(articleId, normalizedHeading)` mapping) → **C** (planner needs it).
+- Cross-run coverage memory (`(articleId, normalizedHeading)` mapping) → **D** (planner needs it).
 - Snapshot history table (`coverage_snapshots` for rollback / diff) → **later, when UX needs it**.
 
 ## Sub-project B preview — Shared context (1 week)
 
-**Goal:** One `buildArticleContext(articleId)` helper consumed by Outline + AI Visibility + (in C) the planner. Eliminates per-feature context rebuilds (audit §10.6 weakness #4). **Outline refactor reads coverage primarily** — knowledge gaps drive headings; competitors become one input to coverage discovery, not the outline source.
+**Goal:** One `buildArticleContext(articleId)` helper consumed by AI Visibility, the Recommendation Engine (C), and the planner (D). Eliminates per-feature context rebuilds (audit §10.6 weakness #4). (The Outline refactor moves to D — Outline consumes the *Plan*, not raw context/coverage, per 2nd-review Problem 10.)
 
 **Shape:**
 ```ts
@@ -470,13 +495,47 @@ interface ArticleContext {
 }
 ```
 
-**Touches:** new `lib/articleContext.ts`; refactor `pages/api/articles/generate-outline.ts:14-118` to consume context + read coverage primarily; refactor `pages/api/articles/ai-visibility.ts` to consume context; expose to client for the Outline brief UI.
+**Touches:** new `lib/articleContext.ts`; refactor `pages/api/articles/ai-visibility.ts` to consume context; expose to client + to C.
 
 **Effort:** 2–3 days.
 
-## Sub-project C preview — OptimizationPlanner (2 weeks)
+## Sub-project C preview — Recommendation Engine (NEW, 2nd review) (1–1.5 weeks)
 
-**Goal:** Decision layer between recommendations and the Auto-Optimize LLM. **Reasons over bucket scores + per-item confidence**, not a single AI score. Picks the subset that will actually move the score, routes per-section, supports cost-aware planning.
+**Goal (the 2nd review's headline change):** turn a raw `CoverageSnapshot` into a list of **actionable, user-facing recommendations** — the layer between Coverage and the Planner. `Coverage (A) → RecommendationEngine (C) → Planner (D)`. Every consumer (Auto-Optimize, Outline, AI Search Guidelines UI, future features) reads ONE shared recommendation source instead of re-interpreting coverage on its own.
+
+**Why it's a distinct layer, not part of A:** it's a transformation *layer*, not a storage-shape change. A's job is to capture the raw signal (`covered/quality/missing/reason/confidence`) cheaply on the judge call. C's job is to phrase it as an instruction. Keeping them separate means the stored coverage shape is stable (A) while the recommendation phrasing/prompts can evolve (C) without re-analysis.
+
+**Shape:**
+```ts
+interface Recommendation {
+  id: string;
+  coverageItemId: string;         // provenance back to the CoverageItem
+  group: GuidelineGroupKey;       // 'intent' | 'knowledge' | 'authority' | 'quality' | 'structure'
+  title: string;                  // "Add a comparison of wooden vs plastic toys"
+  instruction: string;            // the applyPrompt Auto-Optimize consumes directly
+  importance: Importance;
+  status: 'open' | 'applied' | 'dismissed';
+  projectedLift?: number;         // from scoreContribution(item, snapshot)
+  sectionId?: string;
+}
+
+interface GuidelineGroup {         // the UI grouping Surfer shows: "AI Search Guidelines"
+  key: GuidelineGroupKey;
+  label: string;                  // 'Intent Alignment' | 'Knowledge Coverage' | 'Authority' | ...
+  score: number;                  // from the matching bucket
+  recommendations: Recommendation[];
+}
+```
+
+**Also here:** `scoreContribution(item, snapshot)` derived helper (marginal points an item contributes to its bucket → overall), used for `projectedLift`. `AIProfile` = the `GuidelineGroup[]` view (buckets promoted to named groups). No LLM re-call — C reads `reason`/`missing` captured in A and templates the instruction.
+
+**Touches:** new `lib/recommendationEngine.ts`; `WriteOptimizePanel` renders `GuidelineGroup[]` (replaces A's raw per-item cards with grouped, actionable recommendations).
+
+**Effort:** 3–5 days.
+
+## Sub-project D preview — OptimizationPlanner + Outline (2 weeks)
+
+**Goal:** Decision layer between **recommendations** (from C, not raw coverage) and the Auto-Optimize LLM. **Reasons over bucket scores + per-item confidence**, not a single AI score. Picks the subset that will actually move the score, routes per-section, supports cost-aware planning. **Outline generation also lives here** — it consumes the ordered Plan/recommendations to produce Surfer-style briefs (2nd-review Problem 10: Outline ← Planner, not Coverage/SERP).
 
 **Plug-in seam:** `pages/api/articles/optimize-sections.ts:96-106`, between `splitSections()` and the section loop.
 
@@ -484,36 +543,56 @@ interface ArticleContext {
 ```ts
 type PlanStep = {
   sectionId: string;
-  systemPrompt: string;           // PER-SECTION
-  focus: 'definitions' | 'examples' | 'facts' | 'entities' | 'intent' | 'readability' | 'expand' | 'skip';
+  systemPrompt: string;           // PER-SECTION, built from Recommendation.instruction
+  focus: 'definitions' | 'examples' | 'facts' | 'entities' | 'authority' | 'intent' | 'readability' | 'expand' | 'skip';
   budgetTokens: number;
-  recommendations: CoverageItem[];
+  recommendations: Recommendation[];   // ← from C, already actionable
 };
 type Plan = { steps: PlanStep[]; estimatedTokens: number; rationale: string };
 ```
 
 **Decision rules (bucket-aware):**
 - Iterate buckets weakest-first by `bucket.score`. Top-weak bucket drives `focus` token.
-- Within the weak bucket: skip items where `covered && quality >= 4` (already strong); prioritize `!covered` over `needsExpansion`; tie-break by `importance`.
-- Per-item `confidence < 0.5` → flag for re-judge with stronger model (separate sub-call); don't optimize until re-judged.
+- Within the weak bucket: skip recommendations whose item is `covered && quality >= 4`; prioritize `!covered` over `needsExpansion`; tie-break by `importance` then `projectedLift`.
+- Per-item `confidence < 0.5` → flag for re-judge with a stronger model; don't optimize until re-judged.
 - Section-assignment via heading↔label overlap.
 - Budget-aware top-N when `getOrgUsage5h().used` near cap.
 
-**Touches:** new `lib/optimizationPlanner.ts`; `optimize-sections.ts:96-106` (insert plan), `:101` (per-step prompt builder), `:150-152` (per-step token accumulator).
+**Touches:** new `lib/optimizationPlanner.ts`; refactor `pages/api/articles/generate-outline.ts:14-118` to consume the Plan; `optimize-sections.ts:96-106` (insert plan), `:101` (per-step prompt builder), `:150-152` (per-step token accumulator).
 
-**Effort:** 3–5 days. Feature-flagged + A/B against current uniform-prompt behavior.
+**Effort:** 4–6 days. Feature-flagged + A/B against current uniform-prompt behavior.
 
-## Sub-project D preview — CoverageGraph + extended sources (2–3 weeks)
+## Sub-project E preview — CoverageGraph + extended sources (2–3 weeks)
 
-**Goal:** Populate `parentId`/`relatedIds`/`depth` on `CoverageItem`s. Add Fact/Definition/Comparison/Example item sources. Enable graph-dependent features.
+**Goal:** Populate `parentId`/`relatedIds`/`depth` on `CoverageItem`s. Add Fact/Definition/Comparison/Example **and Authority** item sources (the latter fill the A-declared, empty `authority` bucket). Enable graph-dependent features.
 
 **Components:**
 - `lib/coverageGraph.ts` — graph builder (post-judge pass; takes `CoverageItem[]` and produces `(parentId, relatedIds, depth)` annotations).
 - Graph-aware judge prompt extension (asks the LLM for relations alongside coverage).
-- New sidecar analyzers: fact extraction (LLM over competitor content), definition extraction, comparison detection.
+- New sidecar analyzers: fact extraction, definition extraction, comparison detection, **authority detection** (citations / statistics / sources / expert wording).
 - Graph traversal helpers: `findChildren`, `findRelated`, `walkHierarchy`.
+- Graph-dependent features: Auto Expand, Internal Links, hierarchical Outline.
 - Auto Expand (suggest sub-topics from uncovered children).
 - Internal Link suggestions (cross-article via `relatedIds`).
 - Hierarchical outline rendering (depth-aware indentation).
 
 **Effort:** 2–3 weeks. Builds on A's snapshot — no migration needed.
+
+## Review response (v3) — 2nd tech-lead review
+
+The 2nd review's central thesis — insert a **Recommendation Engine** between Coverage and the Planner so every consumer reads one shared source of *actionable recommendations* instead of re-interpreting raw coverage — is **accepted** and restructures the roadmap (`Coverage A → Context B → Recommendation Engine C → Planner D → Optimize`). Individual points were triaged by one rule: **fix the stored shape / score taxonomy now (expensive to change later); defer layers and optional-JSONB fields (cheap to add later).**
+
+| # | Point | Decision | Where |
+|---|---|---|---|
+| 2 | Recommendation Engine layer | ✅ Accept | New **Sub-project C** |
+| 4 | `reason` (WHY uncovered) | ✅ Accept — **into A** | Rides A's existing judge call; deferring wastes a future re-judge pass. Added to `CoverageVerdict` + `CoverageItem` + judge prompt. |
+| 9 | `authority` bucket | ✅ Accept — **into A** | Locks the 5-bucket taxonomy + score denominator now. Declared in `CoverageCategory`; empty in A; sources in E. |
+| 3 | `GuidelineGroup` (grouped AI Search Guidelines UI) | ✅ Accept | **C** — `GuidelineGroup` model; buckets promote to named groups. |
+| 6 | `AIProfile` (Intent/Coverage/Authority/Evidence/…) | ✅ Accept | **C** — A's `buckets` = AIProfile v1; the richer named view is the `GuidelineGroup[]`. |
+| 7 | `scoreContribution` explainability ("+N") | ✅ Accept | **C** — pure derived helper feeding `Recommendation.projectedLift`; no storage. |
+| 10 | Outline ← Planner, not Coverage/SERP | ✅ Accept | **D** — Outline moved out of B into D, consumes the Plan. |
+| 1 | Rename `CoverageItem` → `Guideline` | ❌ Push back | Conflates coverage-observation with recommendation — the split the review's own conclusion wants. `CoverageItem` = analysis unit; `Recommendation` = action unit (C). |
+| 5 | `instruction`/`applyPrompt` on the item | ❌ Push back | A `Recommendation` property, synthesized in C from `label + missing + reason + category`. Coverage must not decide "how to fix". |
+| 8 | `optimization` metadata (retryCount, …) | ⚠️ Defer to D | Optional JSONB → adding later is not a migration; A never populates it. YAGNI. (Contrast `reason`, which A populates for free.) |
+
+**Net effect on A (this sub-project):** two additive fields (`reason` on verdict + item) and one enum entry (`authority` category + its weight/label) — everything else is roadmap. A's stored `CoverageSnapshot` shape is now final through C/D/E.

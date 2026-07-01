@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Next.js (pages), Neon Postgres (JSONB), deepseek-chat (via `fetch`), Python sidecar (FastAPI), Jest.
 
-**Spec:** `docs/superpowers/specs/2026-06-30-coverage-foundation-design.md` (v2 — tech-lead review incorporated)
+**Spec:** `docs/superpowers/specs/2026-06-30-coverage-foundation-design.md` (v3 — 2nd tech-lead review: `reason` field + `authority` bucket into A; Recommendation Engine + Outline-from-Plan deferred to sub-projects C/D)
 **Audit:** `docs/superpowers/specs/2026-06-30-coverage-engine-audit.md` §10.7, §10.9
 **Memory:** `[[surfy-coverage-direction]]`, `[[deepseek-chat-not-reasoning-model]]`, `[[avoid-any-type]]`, `[[sidecar-repro-script-not-user]]`, `[[concurrent-sessions-hazard]]`
 
@@ -73,10 +73,10 @@ const result = (items: CoverageResult['items'], early = false): CoverageResult =
   ({ items, answersMainQuestionEarly: early });
 
 describe('computeCoverageScores', () => {
-  it('no items → overall 0, 4 empty buckets', () => {
+  it('no items → overall 0, 5 empty buckets (intent/knowledge/authority/quality/style)', () => {
     const { overall, buckets } = computeCoverageScores([], result([]));
     expect(overall).toBe(0);
-    expect(buckets.map((b) => b.key)).toEqual(['intent', 'knowledge', 'quality', 'style']);
+    expect(buckets.map((b) => b.key)).toEqual(['intent', 'knowledge', 'authority', 'quality', 'style']);
     expect(buckets.every((b) => b.score === 0 && b.items === 0)).toBe(true);
   });
   it('all covered q5 + early → overall 100', () => {
@@ -123,7 +123,8 @@ export type CoverageType =
   | 'readability' | 'structure'
   | 'intent';
 
-export type CoverageCategory = 'knowledge' | 'quality' | 'style' | 'intent';
+// 'authority' declared now (empty in A) to lock the bucket taxonomy + score denominator; sources land in E.
+export type CoverageCategory = 'knowledge' | 'authority' | 'quality' | 'style' | 'intent';
 export type Importance = 'critical' | 'recommended' | 'optional';
 export type CoverageSource = 'serp' | 'competitors' | 'paa' | 'llm' | 'manual';
 
@@ -145,6 +146,7 @@ export interface CoverageItem {
   confidence?: number;        // 0..1
   needsExpansion?: boolean;
   missing?: string[];
+  reason?: string;            // WHY uncovered/shallow — captured on the judge call, feeds the Recommendation Engine
   sectionId?: string;
   parentId?: string | null;   // graph-ready (flat in A)
   relatedIds?: string[];      // graph-ready (empty in A)
@@ -159,6 +161,7 @@ export interface CoverageVerdict {
   confidence: number;         // 0..1
   needsExpansion?: boolean;
   missing?: string[];
+  reason?: string;            // WHY — same LLM call; feeds the Recommendation Engine (no re-judge)
   sectionId?: string;
 }
 
@@ -188,10 +191,10 @@ export interface CoverageSnapshot {
   overall: number;            // 0..100
 }
 
-const CATEGORIES: CoverageCategory[] = ['intent', 'knowledge', 'quality', 'style'];
-const BUCKET_WEIGHT: Record<CoverageCategory, number> = { intent: 3, knowledge: 2, quality: 2, style: 1 };
+const CATEGORIES: CoverageCategory[] = ['intent', 'knowledge', 'authority', 'quality', 'style'];
+const BUCKET_WEIGHT: Record<CoverageCategory, number> = { intent: 3, knowledge: 2, authority: 2, quality: 2, style: 1 };
 const BUCKET_LABEL: Record<CoverageCategory, string> = {
-  intent: 'Intent', knowledge: 'Knowledge', quality: 'Quality', style: 'Style',
+  intent: 'Intent', knowledge: 'Knowledge', authority: 'Authority', quality: 'Quality', style: 'Style',
 };
 const IMPORTANCE_WEIGHT: Record<Importance, number> = { critical: 3, recommended: 2, optional: 1 };
 
@@ -429,9 +432,11 @@ export const deepseekJudge: CoverageJudge = {
       'For each id return: covered(bool), quality(0-5: 5=thorough explanation, 1=bare mention), ' +
       'confidence(0-1: your confidence in this verdict), needsExpansion(bool: covered but too shallow), ' +
       'missing(string[] of specific facts/sub-points still absent), ' +
+      'reason(short string: WHY uncovered or shallow — e.g. "answer hidden mid-section", "fact too vague", ' +
+      '"no statistics", "too generic"), ' +
       'sectionId(the id/heading covering it, if covered). Also answersMainQuestionEarly(bool): ' +
       'does the FIRST paragraph directly answer the main question?\n' +
-      'JSON: {"items":[{"id","covered","quality","confidence","needsExpansion","missing":[],"sectionId"}],' +
+      'JSON: {"items":[{"id","covered","quality","confidence","needsExpansion","missing":[],"reason","sectionId"}],' +
       '"answersMainQuestionEarly"}.\n\n=== ARTICLE ===\n' + plainText + '\n=== END ===';
     const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -1022,7 +1027,7 @@ describe('buildSnapshot', () => {
     expect(snap.model).toBe('deepseek-chat');
     expect(snap.promptVersion).toBe('v1|deepseek-chat|0');
     expect(snap.items).toHaveLength(1);
-    expect(snap.buckets).toHaveLength(4);
+    expect(snap.buckets).toHaveLength(5);   // intent/knowledge/authority/quality/style
     expect(snap.overall).toBe(85);
   });
 });
@@ -1085,6 +1090,7 @@ export function buildSnapshot(
       confidence: vd.confidence,
       needsExpansion: vd.needsExpansion,
       missing: vd.missing,
+      reason: vd.reason,
       sectionId: vd.sectionId,
       provenance: { judgedBy: meta.model, judgedAt: meta.createdAt, promptVersion: meta.version },
     };
@@ -1604,7 +1610,9 @@ git commit -m "feat(coverage): collectScoreSlots reads article_terms via coverag
 
 ## Self-review (spec coverage)
 
-- A1 — CoverageItem (category + provenance + graph-ready + confidence) + Snapshot + bucket scoring → Tasks 1, 2, 3. ✓
+- A1 — CoverageItem (category + provenance + graph-ready + confidence + **reason**) + Snapshot + bucket scoring → Tasks 1, 2, 3. ✓
+- A1 — **`authority` 5th bucket** declared (empty in A; sources in E) → Task 1 (CoverageCategory + BUCKET maps). ✓
+- A1 — **`reason` captured on the judge call** (feeds the future Recommendation Engine, no re-judge) → Task 1 (verdict/item field) + Task 3 (prompt) + Task 10 (buildSnapshot copies it). ✓
 - A1 — PAA builder (category:knowledge) → Task 4. ✓
 - A1 — `ai_info_to_cover` column → Task 5. ✓
 - A3 — IntroductionAnalyzer + 5 intent items (category:intent) → Tasks 2 + 6. ✓
@@ -1617,4 +1625,5 @@ git commit -m "feat(coverage): collectScoreSlots reads article_terms via coverag
 - Bucket scoring surfaced in UI → Tasks 12 + 13. ✓
 - Fallback (NULL snapshot → legacy citation score) → Task 12. ✓
 - `lib/aiSearchScore.ts`, `aiVisibilityStore.ts`, `AiSearchPanel.tsx`, `ScoreTrio.tsx:50` untouched → no task modifies them. ✓
-- Out of scope (B context, C planner, D graph + extended sources, AiReadabilityPanel carve-out, AI Tracker rebrand) → no tasks. ✓
+- Out of scope (B context, **C Recommendation Engine**, D planner + Outline-from-Plan, E graph + extended sources incl. authority sources, AiReadabilityPanel carve-out, AI Tracker rebrand) → no tasks. ✓
+- Push-backs (no CoverageItem→Guideline rename; no `instruction` on item; `optimization` metadata deferred to D) → no A-level task; recorded in spec "Review response (v3)". ✓
