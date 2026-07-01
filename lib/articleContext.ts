@@ -4,7 +4,9 @@ import { safeJsonParse } from './safeJson';
 import { parseSnapshot } from './coverageStore';
 import type { CoverageSnapshot } from './aiCoverage';
 import type { ScoreData } from './contentScore';
-import type { ArticleTermRow } from './articleTerms';
+import { readArticleTerms, type ArticleTermRow } from './articleTerms';
+import { readContentSettings } from './contentSettings';
+import { getDomainVoices } from './domainVoices';
 
 export interface CompetitorContext {
   domain: string;
@@ -51,6 +53,31 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
   const paaRaw = (scoreData as { paa_questions?: unknown } | null)?.paa_questions;
   const paa = Array.isArray(paaRaw) ? paaRaw.filter((q): q is string => typeof q === 'string') : [];
 
+  const terms = await readArticleTerms(articleId);
+
+  const [compRows] = (await db.query(
+    `SELECT domain, url, title, headings_json, terms_json FROM article_competitors WHERE article_id = ?`,
+    { replacements: [articleId] },
+  )) as [Array<Record<string, unknown>>, unknown];
+  const competitors: CompetitorContext[] = (compRows ?? []).map((c) => {
+    // Parse each JSON column ONCE, then reuse (no double safeJsonParse).
+    const headingsRaw = safeJsonParse<unknown[]>(c.headings_json as string, []);
+    const termsRaw = safeJsonParse<unknown[]>(c.terms_json as string, []);
+    return {
+      domain: String(c.domain ?? ''),
+      url: typeof c.url === 'string' ? c.url : undefined,
+      title: typeof c.title === 'string' ? c.title : undefined,
+      headings: Array.isArray(headingsRaw) ? headingsRaw.filter((h): h is string => typeof h === 'string') : [],
+      termsCount: Array.isArray(termsRaw) ? termsRaw.length : 0,
+    };
+  });
+
+  // Brand knowledge (global, file-backed) + per-domain voice tone. Best-effort: never throw the
+  // whole aggregator on a settings read failure — fall back to sparse/undefined fields instead.
+  const brand = await readContentSettings().catch(() => null);
+  const voices = row?.domain_id != null ? await getDomainVoices(Number(row.domain_id)).catch(() => null) : null;
+  const defaultVoice = voices?.find((v) => v.isDefault);
+
   return {
     articleId,
     keyword: typeof row?.target_keyword === 'string' ? row.target_keyword : '',
@@ -59,8 +86,13 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
     breakdown: null,
     coverage,
     paa,
-    terms: [],           // Task 6
-    competitors: [],     // Task 6
+    terms,
+    competitors,
+    brandKnowledge: brand?.brandKnowledge || undefined,
+    voiceTone: defaultVoice?.description || undefined,
+    // No `customRules`/`instructions` accessor exists yet in ContentSettings — left undefined
+    // until a real source of truth is added (see docs/superpowers/specs/2026-06-30-shared-context-design.md).
+    customRules: undefined,
     // `articles` has no content_type column yet — selecting it would throw ("column does not exist").
     // Field kept optional (always undefined) until a migration adds the column.
     contentType: undefined,
