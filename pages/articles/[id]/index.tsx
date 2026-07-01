@@ -27,6 +27,8 @@ import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
 import { ScoreData, countOccurrences, computeContentScore } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import type { CoverageItem, BucketScore } from '../../../lib/aiCoverage';
+import { parseSnapshot } from '../../../lib/coverageStore';
 import { getErrorMessage } from '../../../lib/errors';
 import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
@@ -463,6 +465,9 @@ const ArticleEditorPage: NextPage = () => {
   const [surfyAiActive, setSurfyAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
   const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
+  const [coverageItems, setCoverageItems] = useState<CoverageItem[]>([]);
+  const [coverageBuckets, setCoverageBuckets] = useState<BucketScore[]>([]);
+  const [aiCoverageScore, setAiCoverageScore] = useState<number | null>(null);
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
@@ -614,6 +619,10 @@ const ArticleEditorPage: NextPage = () => {
           if (art.ai_visibility_summary) {
             setAiVisibilitySummary(art.ai_visibility_summary);
           }
+          const snap = parseSnapshot(art.ai_info_to_cover);
+          setCoverageItems(snap ? [...snap.items] : []);
+          setCoverageBuckets(snap ? [...snap.buckets] : []);
+          setAiCoverageScore(snap?.overall ?? null);
           // Restore internal links panel state from DB into localStorage (if localStorage is empty)
           if (art.internal_links_cache) {
             try {
@@ -730,9 +739,10 @@ const ArticleEditorPage: NextPage = () => {
     const postScore = computeContentScore(
       postText, postWords, postHeadings, scoreData, postParas,
       (postHtml.match(/<a\s[^>]*href=/gi) || []).length, postHtml, article?.target_keyword || '',
+      undefined, coverageItems,
     );
     return { postScore, seoDelta: postScore - preScoreRef.current };
-  }, [optimizeState, editorHtml, scoreData, article?.target_keyword]);
+  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems]);
   const initialPlagiarism = useMemo(() => {
     try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
   }, [(article as any)?.plagiarism_json]);
@@ -791,6 +801,8 @@ const ArticleEditorPage: NextPage = () => {
         (html.match(/<a\s[^>]*href=/gi) || []).length,
         html,
         article?.target_keyword || '',
+        undefined,
+        coverageItems,
       ),
       ...(versionMeta ? { _ao_meta: versionMeta } : {}),
     };
@@ -1143,7 +1155,7 @@ const ArticleEditorPage: NextPage = () => {
     const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
     const preParaCount = (preHtml.match(/<p[\s>]/gi) || []).length;
     preScoreRef.current = scoreData
-      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '')
+      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '', undefined, coverageItems)
       : 0;
     changedSectionsRef.current = [];
     optimizeStore.clear();
@@ -1969,6 +1981,9 @@ const ArticleEditorPage: NextPage = () => {
                       isDone={article.status === 'accepted'}
                       onMarkDone={() => handleAcceptReject('accept')}
                       aiVisibilitySummary={aiVisibilitySummary}
+                      coverageItems={coverageItems}
+                      coverageBuckets={coverageBuckets}
+                      aiCoverageScore={aiCoverageScore}
                       isRunningAiVisibility={isRunningAiVisibility}
                       onRunAiVisibility={handleRunAiVisibility}
                       onApplyReadability={handleApplyReadability}
