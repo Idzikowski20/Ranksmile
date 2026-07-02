@@ -791,8 +791,13 @@ const ArticleEditorPage: NextPage = () => {
   const [aoFloat, setAoFloat] = useState<{ key: number; label: string } | null>(null);
   // First/current streaming section id (from meta/section SSE events) — drives the bar subtitle (Task 12).
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
-  // Run-start AI-visibility baseline (frozen overall) → gates the float via scoreDeltaGate.
+  // Run-start AI-visibility baseline (frozen overall) → gates the gauge's cumulative ↑N via scoreDeltaGate.
   const aiVisibilityBaselineRef = useRef<number>(0);
+  // Previous tick's aiNew — gates the float via THIS tick's delta (not the cumulative run total).
+  // Initialized to the same value as aiVisibilityBaselineRef.current at run start.
+  const prevAiRef = useRef<number>(0);
+  // Monotonic counter for the float's React `key` (Date.now() could collide across fast ticks).
+  const floatSeqRef = useRef<number>(0);
   // Attribution "before" buckets — run-start baseline, advanced to the current buckets on each Accept.
   const attributionBeforeRef = useRef<BucketScore[]>([]);
   // Unresolved contentOptimizer placeholder count last seen — a DROP means an Accept/Reject just
@@ -821,10 +826,15 @@ const ArticleEditorPage: NextPage = () => {
       remainingRows: remainingOpportunities(liveItems),
       attributionRows,
     });
-    // Only a positive recomputed delta vs the run-start baseline mounts the impact float.
-    const gate = scoreDeltaGate(aiVisibilityBaselineRef.current, aiNew);
-    if ((reason === 'accept' || reason === 'stream') && gate.animate) {
-      setAoFloat({ key: Date.now(), label: `Optimization Impact +${gate.delta}` });
+    // Float mounts on THIS tick's gain (vs the previous tick), not the cumulative run total —
+    // otherwise a Reject (tagged 'accept', see below) rides a still-positive cumulative delta from
+    // earlier accepts and celebrates a change that just removed coverage. Mirror scoreDeltaGate's
+    // rounding so tickDelta and the gauge's cumulative delta agree digit-for-digit.
+    const tickDelta = Math.round(aiNew) - Math.round(prevAiRef.current);
+    prevAiRef.current = aiNew;
+    if ((reason === 'accept' || reason === 'stream') && tickDelta > 0) {
+      floatSeqRef.current += 1;
+      setAoFloat({ key: floatSeqRef.current, label: `Optimization Impact +${tickDelta}` });
     }
   }, [coverageItems, coverageSnapshot]);
 
@@ -853,6 +863,9 @@ const ArticleEditorPage: NextPage = () => {
       runLiveRescore(postText, postHtml, 'typing');
     }, AO_RESCORE_DEBOUNCE_MS);
     return () => { if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; } };
+    // runLiveRescore is intentionally omitted: coverageItems/coverageSnapshot (its only real deps,
+    // via useCallback) are frozen for the duration of a run — set once in handleAutoOptimizeSections
+    // and not mutated until the next run — so the closure captured here cannot go stale mid-run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optimizeState, editorHtml, optimizeReview]);
   const initialPlagiarism = useMemo(() => {
@@ -1273,6 +1286,7 @@ const ArticleEditorPage: NextPage = () => {
     // run-start attribution "before" buckets (re-scored from the pre-optimize content so the first
     // Accept's attribution measures against a like-for-like baseline). Reset per-run float state.
     aiVisibilityBaselineRef.current = coverageSnapshot?.overall ?? 0;
+    prevAiRef.current = aiVisibilityBaselineRef.current;
     attributionBeforeRef.current = computeCoverageScores(
       liveCoverageItems(coverageItems, preText, preHtml),
       coverageSnapshot?.answersMainQuestionEarly ?? false,
