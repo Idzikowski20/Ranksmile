@@ -2113,7 +2113,6 @@ const ArticleEditorPage: NextPage = () => {
                             preScore={preScoreRef.current}
                             postScore={optimizeReview ? optimizeReview.postScore : preScoreRef.current}
                             changedCount={optimizeMetaRef.current.changedCount}
-                            wordsAdded={stats.wordsAdded}
                             adjustments={adjustmentRows}
                             remainingRows={remainingRows}
                             onCardClick={scrollToOptimizerSection}
