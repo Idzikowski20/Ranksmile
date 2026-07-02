@@ -29,7 +29,9 @@
 | `pages/sites/[domain]/topical-map.tsx` (rewrite) | Page: header row, toolbar (Tabs/Show titles/Filters/Search), two-panel list, view switch, wiring. |
 | `components/domains/TopicalFilters.tsx` (create) | Filters popover + `applyTopicalFilters()` pure filter fn + `TopicalFilterState`. |
 | `components/domains/TopicalClusterPanel.tsx` (create) | "IDEA" slide-over: stats grid, tabs Keywords/Competitors (+Overview in Task 6). |
-| `components/domains/TopicalMapCanvas.tsx` (create) | SVG radar: rings, rotated axes, hex nodes, legend card, zoom, tooltip, selected-cluster card. |
+| `lib/topicalMapGeometry.ts` (create) | Pure geometry + palette constants/functions for the radar canvas (ring radii, axis offsets, hex paths, coverage colors) — extracted so `TopicalMapCanvas.tsx` stays render logic only, and every constant is testable and cross-checked against the reference SVG in one place. |
+| `__tests__/lib/topicalMapGeometry.test.ts` (create) | Jest unit tests for `ringRadius`/`nodeCenter`. |
+| `components/domains/TopicalMapCanvas.tsx` (create) | SVG radar: rings, rotated axes, hex nodes, legend card, zoom, tooltip, selected-cluster card. Imports constants from `lib/topicalMapGeometry`. |
 | `components/ui/Tabs.tsx` (modify) | Widen `label` prop from `string` to `React.ReactNode` (needed for the hex-icon "Map" tab). |
 
 Existing components consumed (do not modify): `components/ui/index.ts` exports `Tabs`, `Toggle`, `SearchBar`, `SortableHeader`, `Checkbox`, `Skeleton`; `lib/useSortState` (`const { sortKey, sortDir, handleSort } = useSortState<K>('initialKey')`, `SortDir = 'asc' | 'desc'`); `components/domains/DomainSubLayout.tsx` (`domain, slug, section, actions?, contentMaxWidth?` — renders breadcrumb header + white scroll area); `components/common/AppShell.tsx`.
@@ -1254,16 +1256,123 @@ git commit -m "feat(topical-map): IDEA detail slide-over with keyword groups and
 ---
 ### Task 5: Map view — SVG radar canvas
 
+**Note on approach:** confirmed NOT react-flow. The reference markup (a plain `<svg>` tree with `<circle>`/`<rect>`/`<path>`/`<text>` and `<g transform="...">`, no `react-flow__*` classes or node-drag handles) is a hand-rolled radar chart. Every geometry constant below (ring radii, axis rect spans, axis-label offsets, hex path `d` strings, node-fill colors) was cross-checked field-by-field against the exact reference SVG — see `lib/topicalMapGeometry.ts` comments.
+
 **Files:**
+- Create: `lib/topicalMapGeometry.ts`
+- Test: `__tests__/lib/topicalMapGeometry.test.ts`
 - Create: `components/domains/TopicalMapCanvas.tsx`
 - Modify: `components/ui/Tabs.tsx` (widen `label` to `React.ReactNode`)
 - Modify: `pages/sites/[domain]/topical-map.tsx` (3 edits)
 
 **Interfaces:**
-- Consumes: `TopicCluster` from `lib/topicalMap` (uses `map.x/y/size`, `status`, `kd`, `vol`, `covRatio`, `name`, `keywords.length`).
+- Consumes: `TopicCluster` from `lib/topicalMap` (uses `map.x/y/size`, `status`, `kd`, `vol`, `covRatio`, `name`, `keywords.length`); from `lib/topicalMapGeometry`: `MAP_VIEWBOX, MAP_CENTER, MAP_AXIS_HALF_LENGTH, MAP_RING_COUNT, MAP_RING_COLORS, MAP_AXIS_STOPS (+ AxisStop type), MAP_HEX_MAIN, MAP_HEX_SATELLITE, MAP_HEX_LEGEND, MAP_SATELLITE_OFFSETS, MAP_HEX_SCALE, MAP_COVERAGE_FILL, ringRadius(i), nodeCenter(x,y)`.
 - Produces: default export `TopicalMapCanvas` (`{ clusters: TopicCluster[]; showTitles: boolean }`). Selection card and zoom are internal state.
 
-- [ ] **Step 1: Widen the Tabs label type**
+- [ ] **Step 1: Write the failing geometry test**
+
+Create `__tests__/lib/topicalMapGeometry.test.ts`:
+
+```ts
+import { ringRadius, nodeCenter, MAP_RING_COUNT, MAP_CENTER, MAP_NODE_RANGE } from '../../lib/topicalMapGeometry';
+
+describe('topicalMapGeometry', () => {
+  it('computes ring radii stepping 44.44 up to the reference max (355.55)', () => {
+    expect(ringRadius(0)).toBeCloseTo(44.44, 1);
+    expect(ringRadius(MAP_RING_COUNT - 1)).toBeCloseTo(355.55, 1);
+  });
+
+  it('maps the normalized center (0,0) to the SVG center', () => {
+    expect(nodeCenter(0, 0)).toEqual({ cx: MAP_CENTER.x, cy: MAP_CENTER.y });
+  });
+
+  it('scales normalized x/y by MAP_NODE_RANGE around the center', () => {
+    const { cx, cy } = nodeCenter(1, -1);
+    expect(cx).toBe(MAP_CENTER.x + MAP_NODE_RANGE);
+    expect(cy).toBe(MAP_CENTER.y - MAP_NODE_RANGE);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd /c/Users/patry/Desktop/serpbear && npx jest __tests__/lib/topicalMapGeometry.test.ts`
+Expected: FAIL — `Cannot find module '../../lib/topicalMapGeometry'`
+
+- [ ] **Step 3: Write the geometry module**
+
+Create `lib/topicalMapGeometry.ts`:
+
+```ts
+/**
+ * Pure geometry + palette constants for the Topical Map radar canvas
+ * (components/domains/TopicalMapCanvas.tsx). Every value here was
+ * cross-checked field-by-field against SurferSEO's reference SVG markup:
+ * ring radii step 44.44 (8 rings, r=44.44..355.55), axis rect spans
+ * center±400 over an 800-unit rect, axis-label x/y offsets and their
+ * `translate` adjustments, hex path `d` strings, and node fill/stroke
+ * colors (e.g. rgb(99,13,227) === #630DE3 for "covered").
+ */
+
+export const MAP_VIEWBOX = { w: 1200, h: 760 };
+export const MAP_CENTER = { x: MAP_VIEWBOX.w / 2, y: MAP_VIEWBOX.h / 2 };
+export const MAP_AXIS_HALF_LENGTH = 400; // axis rect spans center ± 400 over an 800-long rect
+export const MAP_NODE_RANGE = 340; // cluster.map.x/y ∈ [-1,1] scaled to this many SVG units
+export const MAP_RING_STEP = 44.44; // radius step between the 8 concentric rings
+export const MAP_RING_COUNT = 8;
+export const MAP_HEX_SCALE = 1.71; // base hex scale before the per-cluster size multiplier
+
+/** Ring stroke colors, outer→inner index 0..7 — verbatim from the reference SVG. */
+export const MAP_RING_COLORS = [
+   'rgb(59,113,88)', 'rgb(105,137,143)', 'rgb(151,160,199)', 'rgb(197,184,254)',
+   'rgb(189,179,237)', 'rgb(182,174,220)', 'rgb(174,169,203)', 'rgb(167,164,186)',
+];
+
+export type AxisStop = { off: number; label: string; fill: string; adj: number };
+/**
+ * Axis tick stops. `off` is the signed distance from center along the axis;
+ * `adj` is the label's `translate` shift — applied as-is on BOTH axes
+ * (x-axis: `translate(${adj})`, y-axis: `translate(0 ${adj})` — no negation;
+ * confirmed against the reference markup where off=-400/adj=35 renders
+ * `translate(35)` on the x-axis and `translate(0 35)` on the y-axis).
+ */
+export const MAP_AXIS_STOPS: AxisStop[] = [
+   { off: -400, label: 'Low', fill: '#52525C', adj: 35 },
+   { off: -240, label: 'Medium', fill: '#8F69FC', adj: 0 },
+   { off: -80, label: 'High', fill: '#169345', adj: 0 },
+   { off: 80, label: 'High', fill: '#169345', adj: -25 },
+   { off: 240, label: 'Medium', fill: '#8F69FC', adj: -45 },
+   { off: 400, label: 'Low', fill: '#52525C', adj: -55 },
+];
+
+export const MAP_HEX_MAIN = 'M9.409,0L9.409,0L4.704,8.148L-4.704,8.148L-9.409,0L-4.704,-8.148L4.704,-8.148Z';
+export const MAP_HEX_SATELLITE = 'M6.204,0L6.204,0L3.102,5.373L-3.102,5.373L-6.204,0L-3.102,-5.373L3.102,-5.373Z';
+export const MAP_HEX_LEGEND = 'M7.341,0L7.341,0L3.67,6.357L-3.67,6.357L-7.341,0L-3.67,-6.357L3.67,-6.357Z';
+/** Up to 3 satellite hexes cluster around the main node when a topic has >1 keyword. */
+export const MAP_SATELLITE_OFFSETS: Array<[number, number]> = [[9.2, 16.2], [-14, 10], [6, -17]];
+
+export const MAP_COVERAGE_FILL: Record<'covered' | 'not_covered' | 'recommended', { fill: string; stroke: string; strokeWidth: number }> = {
+   covered: { fill: '#630DE3', stroke: '#0A0418', strokeWidth: 0.6 },
+   not_covered: { fill: '#FFFFFF', stroke: '#0A0418', strokeWidth: 0.6 },
+   recommended: { fill: '#FF6F77', stroke: '#A4001C', strokeWidth: 0.6 },
+};
+
+/** Ring radius for the i-th concentric ring (0-indexed, 0 = innermost). */
+export const ringRadius = (i: number): number => (i + 1) * MAP_RING_STEP;
+
+/** Absolute SVG coordinates for a cluster's node, from its normalized map.x/y ∈ [-1,1]. */
+export const nodeCenter = (mapX: number, mapY: number): { cx: number; cy: number } => ({
+   cx: MAP_CENTER.x + mapX * MAP_NODE_RANGE,
+   cy: MAP_CENTER.y + mapY * MAP_NODE_RANGE,
+});
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd /c/Users/patry/Desktop/serpbear && npx jest __tests__/lib/topicalMapGeometry.test.ts`
+Expected: PASS (3 tests)
+
+- [ ] **Step 5: Widen the Tabs label type**
 
 In `components/ui/Tabs.tsx` change the `TabItem` interface line:
 
@@ -1273,42 +1382,42 @@ export interface TabItem { value: string; label: React.ReactNode; count?: number
 
 (`string` is assignable to `ReactNode`, so all existing call sites keep compiling.)
 
-- [ ] **Step 2: Create the canvas component**
+- [ ] **Step 6: Create the canvas component**
 
 Create `components/domains/TopicalMapCanvas.tsx`:
 
 ```tsx
 import React, { useMemo, useRef, useState } from 'react';
 import type { TopicCluster } from '../../lib/topicalMap';
+import {
+   MAP_VIEWBOX, MAP_CENTER, MAP_AXIS_HALF_LENGTH, MAP_RING_COUNT, MAP_RING_COLORS, MAP_AXIS_STOPS,
+   MAP_HEX_MAIN, MAP_HEX_SATELLITE, MAP_HEX_LEGEND, MAP_SATELLITE_OFFSETS,
+   MAP_HEX_SCALE, MAP_COVERAGE_FILL, ringRadius, nodeCenter,
+} from '../../lib/topicalMapGeometry';
 
 const FONT = 'var(--font-family-primary)';
 
-/* Geometry constants lifted from SurferSEO's SVG. */
-const HEX_MAIN = 'M9.409,0L9.409,0L4.704,8.148L-4.704,8.148L-9.409,0L-4.704,-8.148L4.704,-8.148Z';
-const HEX_SAT = 'M6.204,0L6.204,0L3.102,5.373L-3.102,5.373L-6.204,0L-3.102,-5.373L3.102,-5.373Z';
-const HEX_LEGEND = 'M7.341,0L7.341,0L3.67,6.357L-3.67,6.357L-7.341,0L-3.67,-6.357L3.67,-6.357Z';
-const RING_COLORS = ['rgb(59,113,88)', 'rgb(105,137,143)', 'rgb(151,160,199)', 'rgb(197,184,254)', 'rgb(189,179,237)', 'rgb(182,174,220)', 'rgb(174,169,203)', 'rgb(167,164,186)'];
-const AXIS_STOPS: Array<{ off: number; label: string; fill: string; adj: number }> = [
-   { off: -400, label: 'Low', fill: '#52525C', adj: 35 },
-   { off: -240, label: 'Medium', fill: '#8F69FC', adj: 0 },
-   { off: -80, label: 'High', fill: '#169345', adj: 0 },
-   { off: 80, label: 'High', fill: '#169345', adj: -25 },
-   { off: 240, label: 'Medium', fill: '#8F69FC', adj: -45 },
-   { off: 400, label: 'Low', fill: '#52525C', adj: -55 },
-];
-const VB = { w: 1200, h: 760 };
-const C = { x: VB.w / 2, y: VB.h / 2 };
-const NODE_RANGE = 340;
-
-const COVERAGE_FILL: Record<TopicCluster['status'], { fill: string; stroke: string; strokeWidth: number }> = {
-   covered: { fill: '#630DE3', stroke: '#0A0418', strokeWidth: 0.6 },
-   not_covered: { fill: '#FFFFFF', stroke: '#0A0418', strokeWidth: 0.6 },
-   recommended: { fill: '#FF6F77', stroke: '#A4001C', strokeWidth: 0.6 },
-};
-
-const SATELLITE_OFFSETS: Array<[number, number]> = [[9.2, 16.2], [-14, 10], [6, -17]];
-
 type ColorMode = 'coverage' | 'kd';
+
+/** rAF-throttled setter: at most one pending update per animation frame, so
+ * fast pointer movement over the SVG doesn't queue a setState per pixel.
+ * Pending value is boxed (`{ value: T }`) so a legitimately-queued `null`
+ * (mouseleave clearing the tooltip) is distinguishable from "nothing queued". */
+function useRafThrottledState<T>(initial: T): [T, (v: T) => void] {
+   const [state, setState] = useState(initial);
+   const pendingRef = useRef<{ value: T } | null>(null);
+   const frameRef = useRef<number | null>(null);
+   const set = (v: T) => {
+      pendingRef.current = { value: v };
+      if (frameRef.current !== null) return;
+      frameRef.current = requestAnimationFrame(() => {
+         frameRef.current = null;
+         if (pendingRef.current) setState(pendingRef.current.value);
+         pendingRef.current = null;
+      });
+   };
+   return [state, set];
+}
 
 const ChevronDown = () => (
    <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, color: '#18181B' }}>
@@ -1327,7 +1436,7 @@ const XIcon = () => (
 const LegendHex = ({ fill, stroke }: { fill: string; stroke?: string }) => (
    <svg width="15" height="15" aria-hidden="true">
       <g transform="translate(7.5, 7.5)">
-         <path d={HEX_LEGEND} transform="rotate(90)" fill={fill} stroke={stroke} strokeWidth={stroke ? 1 : 0} />
+         <path d={MAP_HEX_LEGEND} transform="rotate(90)" fill={fill} stroke={stroke} strokeWidth={stroke ? 1 : 0} />
       </g>
    </svg>
 );
@@ -1341,7 +1450,7 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
    const [zoom, setZoom] = useState(100);
    const [mode, setMode] = useState<ColorMode>('coverage');
    const [modeOpen, setModeOpen] = useState(false);
-   const [hover, setHover] = useState<{ c: TopicCluster; x: number; y: number } | null>(null);
+   const [hover, setHover] = useRafThrottledState<{ c: TopicCluster; x: number; y: number } | null>(null);
    const [selected, setSelected] = useState<TopicCluster | null>(null);
    const boxRef = useRef<HTMLDivElement>(null);
 
@@ -1353,7 +1462,7 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
       return '#630DE3';
    };
    const nodeStyle = (c: TopicCluster) => (mode === 'coverage'
-      ? COVERAGE_FILL[c.status]
+      ? MAP_COVERAGE_FILL[c.status]
       : { fill: kdFill(c.kd), stroke: '#0A0418', strokeWidth: 0.6 });
 
    const onNodeMove = (c: TopicCluster) => (e: React.MouseEvent) => {
@@ -1364,7 +1473,7 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
 
    return (
       <div ref={boxRef} style={{ position: 'relative', flex: 1, minHeight: 560, display: 'flex' }}>
-         <svg viewBox={`0 0 ${VB.w} ${VB.h}`} preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%', borderRadius: 8, minHeight: 560 }}>
+         <svg viewBox={`0 0 ${MAP_VIEWBOX.w} ${MAP_VIEWBOX.h}`} preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%', borderRadius: 8, minHeight: 560 }}>
             <defs>
                <pattern id="tm-dots" width="19" height="19" patternUnits="userSpaceOnUse">
                   <rect fill="#F4F4F5" width="100%" height="100%" />
@@ -1388,29 +1497,30 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
             <rect width="100%" height="100%" fill="url(#tm-dots)" />
             <g transform={`scale(${zoom / 100})`} style={{ transformOrigin: '50% 50%' }}>
                <g transform="rotate(-45)" style={{ transformOrigin: 'center center' }}>
-                  {RING_COLORS.map((stroke, i) => (
-                     <circle key={stroke} cx={C.x} cy={C.y} r={(i + 1) * 44.44} fill="none" stroke={stroke} strokeWidth={0.5} />
+                  {MAP_RING_COLORS.map((stroke, i) => (
+                     <circle key={stroke} cx={MAP_CENTER.x} cy={MAP_CENTER.y} r={ringRadius(i)} fill="none" stroke={stroke} strokeWidth={0.5} />
                   ))}
-                  <rect x={C.x - 400} y={C.y} width={800} height={0.5} fill="url(#tm-scale-x)" />
-                  {AXIS_STOPS.map((s) => (
-                     <text key={`x${s.off}`} x={C.x + s.off} y={C.y - 5} fill={s.fill} transform={`translate(${s.adj})`} style={{ fontSize: 11, fontFamily: FONT, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</text>
+                  <rect x={MAP_CENTER.x - MAP_AXIS_HALF_LENGTH} y={MAP_CENTER.y} width={MAP_AXIS_HALF_LENGTH * 2} height={0.5} fill="url(#tm-scale-x)" />
+                  {MAP_AXIS_STOPS.map((s) => (
+                     <text key={`x${s.off}`} x={MAP_CENTER.x + s.off} y={MAP_CENTER.y - 5} fill={s.fill} transform={`translate(${s.adj})`} style={{ fontSize: 11, fontFamily: FONT, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</text>
                   ))}
-                  <rect x={C.x} y={C.y - 400} width={0.5} height={800} fill="url(#tm-scale-y)" />
-                  {AXIS_STOPS.map((s) => (
-                     <text key={`y${s.off}`} x={C.x + 8} y={C.y + s.off} fill={s.fill} transform={`translate(0 ${-s.adj})`} style={{ fontSize: 11, fontFamily: FONT, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</text>
+                  <rect x={MAP_CENTER.x} y={MAP_CENTER.y - MAP_AXIS_HALF_LENGTH} width={0.5} height={MAP_AXIS_HALF_LENGTH * 2} fill="url(#tm-scale-y)" />
+                  {MAP_AXIS_STOPS.map((s) => (
+                     // Same `adj`, NOT negated on this axis either — verified against the reference markup (see lib/topicalMapGeometry.ts comment).
+                     <text key={`y${s.off}`} x={MAP_CENTER.x + 8} y={MAP_CENTER.y + s.off} fill={s.fill} transform={`translate(0 ${s.adj})`} style={{ fontSize: 11, fontFamily: FONT, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</text>
                   ))}
                </g>
                {clusters.map((c) => {
                   const st = nodeStyle(c);
-                  const cx = C.x + c.map.x * NODE_RANGE;
-                  const cy = C.y + c.map.y * NODE_RANGE;
-                  const sats = Math.min(SATELLITE_OFFSETS.length, Math.max(0, c.keywords.length - 1));
+                  const { cx, cy } = nodeCenter(c.map.x, c.map.y);
+                  const sats = Math.min(MAP_SATELLITE_OFFSETS.length, Math.max(0, c.keywords.length - 1));
                   const dark = selected?.id === c.id;
+                  const hexScale = MAP_HEX_SCALE * c.map.size;
                   return (
                      <g key={c.id} transform={`translate(${cx} ${cy})`}>
-                        <g transform={`scale(${1.71 * c.map.size})`}>
+                        <g transform={`scale(${hexScale})`}>
                            <path
-                              d={HEX_MAIN}
+                              d={MAP_HEX_MAIN}
                               fill={dark ? '#2E1065' : st.fill}
                               stroke={st.stroke}
                               strokeWidth={st.strokeWidth}
@@ -1421,13 +1531,13 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
                               onMouseLeave={() => setHover(null)}
                            />
                            {Array.from({ length: sats }, (_, i) => (
-                              <g key={SATELLITE_OFFSETS[i].join(',')} transform={`translate(${SATELLITE_OFFSETS[i][0]} ${SATELLITE_OFFSETS[i][1]})`}>
-                                 <path d={HEX_SAT} fill={dark ? '#2E1065' : st.fill} stroke={st.stroke} strokeWidth={0.4} style={{ cursor: 'pointer' }} onClick={() => setSelected(c)} onMouseMove={onNodeMove(c)} onMouseLeave={() => setHover(null)} />
+                              <g key={MAP_SATELLITE_OFFSETS[i].join(',')} transform={`translate(${MAP_SATELLITE_OFFSETS[i][0]} ${MAP_SATELLITE_OFFSETS[i][1]})`}>
+                                 <path d={MAP_HEX_SATELLITE} fill={dark ? '#2E1065' : st.fill} stroke={st.stroke} strokeWidth={0.4} style={{ cursor: 'pointer' }} onClick={() => setSelected(c)} onMouseMove={onNodeMove(c)} onMouseLeave={() => setHover(null)} />
                               </g>
                            ))}
                         </g>
                         {showTitles && (
-                           <text x={0} y={16 * 1.71 * c.map.size + 16} textAnchor="middle" style={{ fontSize: 12, fontWeight: 600, fill: '#18181B', fontFamily: FONT }}>{c.name}</text>
+                           <text x={0} y={16 * hexScale + 16} textAnchor="middle" style={{ fontSize: 12, fontWeight: 600, fill: '#18181B', fontFamily: FONT }}>{c.name}</text>
                         )}
                      </g>
                   );
@@ -1435,86 +1545,90 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
             </g>
          </svg>
 
-         {/* Legend card */}
-         <div style={{ position: 'absolute', top: 16, left: 16, width: 260, boxSizing: 'border-box', background: '#fff', borderRadius: 8, padding: 16, boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.08), 0px 4px 12px rgba(26,29,40,0.06)', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-               <span style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: FONT, paddingBottom: 6 }}>Color shades by:</span>
-               <div style={{ position: 'relative' }}>
-                  <button
-                     type="button"
-                     onClick={() => setModeOpen((o) => !o)}
-                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 40, border: '1px solid #D4D4D8', borderRadius: 10, background: '#fff', padding: '0 12px', fontSize: 14, fontFamily: FONT, color: '#18181B', cursor: 'pointer', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)' }}
-                  >
-                     {COLOR_MODES.find((mo) => mo.value === mode)!.label}
-                     <span style={{ transform: modeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 200ms ease', display: 'inline-flex' }}><ChevronDown /></span>
-                  </button>
-                  {modeOpen && (
-                     <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 150, background: '#fff', borderRadius: 12, padding: 6, boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09)', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top' }}>
-                        {COLOR_MODES.map((mo) => (
-                           <button
-                              key={mo.value}
-                              type="button"
-                              onClick={() => { setMode(mo.value); setModeOpen(false); }}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none', background: 'transparent', fontFamily: FONT, fontSize: 14, color: '#18181B', cursor: 'pointer', textAlign: 'left' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                           >
-                              {mo.label}
-                              {mode === mo.value && <CheckIcon />}
-                           </button>
-                        ))}
+         {/* Legend + selected-cluster card: one flex column stack (not two independently
+             absolute-positioned boxes) so the selected card always sits right below the
+             legend regardless of which legend variant (coverage swatches vs. KD gradient)
+             is showing — a fixed pixel offset here previously overlapped in KD mode. */}
+         <div style={{ position: 'absolute', top: 16, left: 16, width: 260, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ boxSizing: 'border-box', background: '#fff', borderRadius: 8, padding: 16, boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.08), 0px 4px 12px rgba(26,29,40,0.06)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+               <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: FONT, paddingBottom: 6 }}>Color shades by:</span>
+                  <div style={{ position: 'relative' }}>
+                     <button
+                        type="button"
+                        onClick={() => setModeOpen((o) => !o)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 40, border: '1px solid #D4D4D8', borderRadius: 10, background: '#fff', padding: '0 12px', fontSize: 14, fontFamily: FONT, color: '#18181B', cursor: 'pointer', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)' }}
+                     >
+                        {COLOR_MODES.find((mo) => mo.value === mode)!.label}
+                        <span style={{ transform: modeOpen ? 'rotate(180deg)' : 'none', transition: 'transform 200ms ease', display: 'inline-flex' }}><ChevronDown /></span>
+                     </button>
+                     {modeOpen && (
+                        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 150, background: '#fff', borderRadius: 12, padding: 6, boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09)', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top' }}>
+                           {COLOR_MODES.map((mo) => (
+                              <button
+                                 key={mo.value}
+                                 type="button"
+                                 onClick={() => { setMode(mo.value); setModeOpen(false); }}
+                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none', background: 'transparent', fontFamily: FONT, fontSize: 14, color: '#18181B', cursor: 'pointer', textAlign: 'left' }}
+                                 onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
+                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                 {mo.label}
+                                 {mode === mo.value && <CheckIcon />}
+                              </button>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               </div>
+               {mode === 'coverage' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                           <LegendHex fill="#fff" stroke="#0A0418" />
+                           <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>Not covered</span>
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                           <LegendHex fill="#630DE3" />
+                           <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>Covered</span>
+                        </span>
                      </div>
-                  )}
-               </div>
+                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <LegendHex fill="#FF6F77" stroke="#A4001C" />
+                        <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>Recommended</span>
+                     </span>
+                  </div>
+               ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                     <div style={{ height: 8, borderRadius: 9999, background: 'linear-gradient(90deg, #C5B8FE 0%, #8F69FC 50%, #630DE3 100%)' }} />
+                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>
+                        <span>Low KD</span>
+                        <span>High KD</span>
+                     </div>
+                  </div>
+               )}
             </div>
-            {mode === 'coverage' ? (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <LegendHex fill="#fff" stroke="#0A0418" />
-                        <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>Not covered</span>
-                     </span>
-                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <LegendHex fill="#630DE3" />
-                        <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>Covered</span>
-                     </span>
+
+            {selected && (
+               <div style={{ boxSizing: 'border-box', background: '#fff', borderRadius: 8, padding: 16, boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.08), 0px 4px 12px rgba(26,29,40,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                     <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9F9FA9', fontFamily: FONT }}>Topic cluster</span>
+                     <button type="button" aria-label="Close cluster card" onClick={() => setSelected(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181B', padding: 0, display: 'inline-flex' }}>
+                        <XIcon />
+                     </button>
                   </div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                     <LegendHex fill="#FF6F77" stroke="#A4001C" />
-                     <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>Recommended</span>
-                  </span>
-               </div>
-            ) : (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ height: 8, borderRadius: 9999, background: 'linear-gradient(90deg, #C5B8FE 0%, #8F69FC 50%, #630DE3 100%)' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>
-                     <span>Low KD</span>
-                     <span>High KD</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#18181B', fontFamily: FONT }}>{selected.name}</span>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#71717B', fontFamily: FONT }}>
+                     <span>KD: <span style={{ color: '#3F3F47' }}>{selected.kd}</span></span>
+                     <span>SV: <span style={{ color: '#3F3F47' }}>{selected.vol}</span></span>
+                     <span>Covg.: <span style={{ color: '#3F3F47' }}>{selected.covRatio}</span></span>
                   </div>
+                  <svg width="120" height="120" viewBox="-12 -12 24 24" style={{ margin: '12px auto 4px' }} aria-hidden="true">
+                     <path d={MAP_HEX_MAIN} fill={nodeStyle(selected).fill} stroke={nodeStyle(selected).stroke} strokeWidth={0.8} />
+                  </svg>
                </div>
             )}
          </div>
-
-         {/* Selected cluster card */}
-         {selected && (
-            <div style={{ position: 'absolute', top: 196, left: 16, width: 260, boxSizing: 'border-box', background: '#fff', borderRadius: 8, padding: 16, boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.08), 0px 4px 12px rgba(26,29,40,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9F9FA9', fontFamily: FONT }}>Topic cluster</span>
-                  <button type="button" aria-label="Close cluster card" onClick={() => setSelected(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181B', padding: 0, display: 'inline-flex' }}>
-                     <XIcon />
-                  </button>
-               </div>
-               <span style={{ fontSize: 15, fontWeight: 700, color: '#18181B', fontFamily: FONT }}>{selected.name}</span>
-               <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#71717B', fontFamily: FONT }}>
-                  <span>KD: <span style={{ color: '#3F3F47' }}>{selected.kd}</span></span>
-                  <span>SV: <span style={{ color: '#3F3F47' }}>{selected.vol}</span></span>
-                  <span>Covg.: <span style={{ color: '#3F3F47' }}>{selected.covRatio}</span></span>
-               </div>
-               <svg width="120" height="120" viewBox="-12 -12 24 24" style={{ margin: '12px auto 4px' }} aria-hidden="true">
-                  <path d={HEX_MAIN} fill={nodeStyle(selected).fill} stroke={nodeStyle(selected).stroke} strokeWidth={0.8} />
-               </svg>
-            </div>
-         )}
 
          {/* Zoom card */}
          <div style={{ position: 'absolute', top: 16, right: 16, background: '#fff', borderRadius: 8, padding: '10px 8px', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.08), 0px 4px 12px rgba(26,29,40,0.06)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1545,7 +1659,7 @@ const TopicalMapCanvas = ({ clusters, showTitles }: { clusters: TopicCluster[]; 
 export default TopicalMapCanvas;
 ```
 
-- [ ] **Step 3: Wire into the page (3 edits)**
+- [ ] **Step 7: Wire into the page (3 edits)**
 
 Edit 1 — add import next to TopicalClusterPanel's:
 
@@ -1568,7 +1682,7 @@ Edit 2 — replace the single-item Tabs line with the two-view control:
 
 Edit 3 — wrap the two-panel list in the view conditional. Replace the opening line `{/* ─── Two-panel list ─── */}` block wrapper: put `{view === 'map' ? (<TopicalMapCanvas clusters={shown} showTitles={showTitles} />) : (` immediately before the two-panel `<div style={{ display: 'flex', border: '1px solid #F4F4F5' ...` and close with `)}` right after that div's closing tag (before the `<style>` line). The `<style>` hover rule stays outside the conditional.
 
-- [ ] **Step 4: Verify headless**
+- [ ] **Step 8: Verify headless**
 
 Same bypass/server procedure. Probe additions: click the "Map" tab, wait 600ms, evaluate `document.querySelectorAll('svg circle').length >= 8`, hex node paths `document.querySelectorAll('svg path[d^="M9.409"]').length >= 3`, body text contains `Color shades by:` and `100%`. Do NOT click hex nodes in the probe (coordinates inside a scaled SVG are viewport-dependent — verify node selection manually from the screenshot instead). Screenshot `tm-map.png`.
 
@@ -1587,14 +1701,14 @@ Same bypass/server procedure. Probe additions: click the "Map" tab, wait 600ms, 
 
 Expected: `rings >= 8`, `hexes >= 3`, `legend: true`, `zoom: true`. View the screenshot: dotted background, 8 rings, two diagonal gradient axes with Low/Medium/High labels, purple hexes, legend + zoom cards.
 
-- [ ] **Step 5: Revert bypass, stop server, commit**
+- [ ] **Step 9: Revert bypass, stop server, commit**
 
 ```bash
 cd /c/Users/patry/Desktop/serpbear
 sed -i "s# || path.startsWith('/sites') /\\* TEMP-PROBE \\*/;#;#" pages/_app.tsx
 grep -q "TEMP-PROBE" pages/_app.tsx && echo "STOP: still present" || echo "reverted"
 pkill -f "next dev -p 3112" 2>/dev/null
-git add components/domains/TopicalMapCanvas.tsx components/ui/Tabs.tsx "pages/sites/[domain]/topical-map.tsx"
+git add lib/topicalMapGeometry.ts __tests__/lib/topicalMapGeometry.test.ts components/domains/TopicalMapCanvas.tsx components/ui/Tabs.tsx "pages/sites/[domain]/topical-map.tsx"
 git commit -m "feat(topical-map): SVG radar map view with legend, zoom and cluster card" -m "Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
 
@@ -1791,6 +1905,7 @@ git add -A && git commit -m "chore(topical-map): final verification sweep" -m "C
 - **Spec coverage:** 1:1 list (Task 2), filters (Task 3), IDEA panel with Keywords/Competitors (Task 4), Map radar with legend/zoom/tooltip/cluster-card/show-titles/color-modes (Task 5), extensions Overview/Opportunity/AI Authority/AI Gap + Opp sort (Task 6). Out of scope by explicit decision: Competitor heatmap overlay, Content Roadmap, History timeline, real-engine wiring (future plan).
 - **Type consistency:** `TopicCluster` fields referenced in Tasks 2–6 (`mainKeyword, keywords, groups, competitors, kd, vol, position, impressions, covRatio, status, articleStatus, dims, aiGap, opportunity, aiAuthority, map`) all exist in Task 1's type. Panel props `{cluster, onClose}`; canvas props `{clusters, showTitles}`; filters `{value, onChange}` — used consistently.
 - **Known judgment calls:** `slugify` uses a literal combining-diacritics character class (source file must stay UTF-8); `useSortState` API is confirmed in Task 2 Step 1 before use; probe text assertions tolerate CSS-uppercased labels.
+- **2026-07-02 external review pass (Task 5 only):** cross-checked Task 5 against the exact SurferSEO map SVG the user pasted, field-by-field (ring radii/colors, axis rect spans, axis-label `translate` offsets, hex path `d` strings, node fill colors). Found and fixed a real sign bug: the y-axis label `transform` was negating `s.adj`; the reference markup applies `s.adj` unnegated on both axes. Applied the review's low-risk, verified suggestions scoped to Task 5: extracted geometry/palette constants to `lib/topicalMapGeometry.ts` (testable, single source of truth, removes the "magic numbers" complaint) and rAF-throttled the hover tooltip's `setState` (removes the "unbounded mousemove re-render" complaint); restacked the legend + selected-cluster cards into one flex column instead of two absolutely-positioned boxes with a hardcoded `top:196`, which also fixed a real overlap bug in KD color mode. Declined the review's broader suggestions as premature for this codebase/data scale: `React.memo`/`useCallback` blanket coverage, `useMap`/`useTooltip`/`useZoom` hook extraction, splitting the canvas/panel into multiple files (no reuse pressure; `SlidePanel.tsx` is a comparable single-file precedent), virtualization/lazy-loading/Suspense/Error-Boundary (data volume is realistically tens of topics, not thousands), and splitting Task 1's adapter into 5 files or introducing per-component ViewModels (out of scope for the map-canvas ask; would need its own plan if requested).
 
 
 
