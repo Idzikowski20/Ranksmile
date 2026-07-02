@@ -40,9 +40,11 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const { data: session, isPending } = authClient.useSession();
    const userId: string | undefined = session?.user?.id;
    const [completed, setCompleted] = React.useState<boolean | null>(null);
+   const [confirmed, setConfirmed] = React.useState<boolean | null>(null);
 
    const path = router.pathname;
    const isOnboarding = path === '/onboarding';
+   const isConfirmPage = path === '/auth/confirm-account' || path === '/auth/confirm-email';
    // Auth + public read-only routes are never gated. /invite handles its own
    // session (lets an anonymous invitee stash the token before signing in).
    const isPublic = path.startsWith('/auth') || path.startsWith('/login') || path.startsWith('/drafts') || path.startsWith('/invite');
@@ -64,6 +66,26 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
          .catch(() => { if (active) setCompleted(false); });
       return () => { active = false; };
    }, [userId]);
+
+   // Fetch email-confirmation state whenever the signed-in user changes.
+   React.useEffect(() => {
+      let active = true;
+      if (!userId) { setConfirmed(null); return undefined; }
+      fetch('/api/confirm-account')
+         .then((r) => (r.ok ? r.json() : { confirmed: false }))
+         .then((d) => { if (active) setConfirmed(!!d.confirmed); })
+         .catch(() => { if (active) setConfirmed(false); });
+      return () => { active = false; };
+   }, [userId]);
+
+   // Enforce the confirm gate once state is known: an unconfirmed user can't reach
+   // any protected route (including /onboarding). A confirmed user landing on the
+   // confirm page itself is sent home.
+   React.useEffect(() => {
+      if (!userId || confirmed === null) return;
+      if (!confirmed && !isPublic) router.replace('/auth/confirm-account');
+      if (confirmed && isConfirmPage) router.replace('/');
+   }, [userId, confirmed, isPublic, isConfirmPage, router]);
 
    // Enforce the gate once state is known: not-yet-onboarded users can't reach
    // protected routes. Leaving /onboarding after finishing is handled by the page
@@ -101,6 +123,9 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    // While still resolving (completed === null) we render normally, so there's no
    // full-screen loader flash on every page load — only the sign-in transition.
    if (!isPending && !userId && !isPublic) {
+      return <AppLoading />;
+   }
+   if (userId && !isPublic && confirmed === false) {
       return <AppLoading />;
    }
    if (userId && !isPublic && completed === false && !isOnboarding) {
