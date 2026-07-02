@@ -90,7 +90,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                   </span>
                </div>
                <span className="text-gray-60 text-sm">
-                  {optimizing ? activeStatusLabel : 'Review each upgrade, then Save to apply'}
+                  {optimizing ? (activeStatusLabel ?? 'Optimizing section…') : 'Review each upgrade, then Save to apply'}
                </span>
             </div>
 
