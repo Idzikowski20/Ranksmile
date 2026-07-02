@@ -1299,6 +1299,9 @@ html.editor-route .app-content {
    .surfer-loader-sweep { animation: none; }
 }
 
+/* Auto-Optimize active-section shimmer — sweeping gradient band across the section background. */
+@keyframes aoShimmer { 0% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
+
 /* Activity Log table — row hover + title link underline-on-hover */
 .activity-log-row > td { transition: background 120ms ease; }
 .activity-log-row:hover > td { background: #FAFAFA; }
