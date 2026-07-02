@@ -11,6 +11,7 @@ import { Tabs, Toggle, SearchBar, SortableHeader, Checkbox, Skeleton } from '../
 import { useSortState } from '../../../lib/useSortState';
 import { buildTopicClusters, TopicCluster } from '../../../lib/topicalMap';
 import TopicalFilters, { DEFAULT_TOPICAL_FILTERS, TopicalFilterState, applyTopicalFilters } from '../../../components/domains/TopicalFilters';
+import TopicalClusterPanel from '../../../components/domains/TopicalClusterPanel';
 import { useSetupStatus } from '../../../services/domainPipeline';
 
 const FONT = 'var(--font-family-primary)';
@@ -280,6 +281,7 @@ const TopicalMapPage: NextPage = () => {
                   <style>{'.tm-row:hover { background: #F8F8F9; }'}</style>
                </>
             )}
+            <TopicalClusterPanel cluster={panelCluster} onClose={() => setPanelCluster(null)} />
          </DomainSubLayout>
       </AppShell>
    );
