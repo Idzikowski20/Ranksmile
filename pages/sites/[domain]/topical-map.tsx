@@ -10,6 +10,7 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 import { Tabs, Toggle, SearchBar, SortableHeader, Checkbox, Skeleton } from '../../../components/ui';
 import { useSortState } from '../../../lib/useSortState';
 import { buildTopicClusters, TopicCluster } from '../../../lib/topicalMap';
+import TopicalFilters, { DEFAULT_TOPICAL_FILTERS, TopicalFilterState, applyTopicalFilters } from '../../../components/domains/TopicalFilters';
 import { useSetupStatus } from '../../../services/domainPipeline';
 
 const FONT = 'var(--font-family-primary)';
@@ -129,17 +130,18 @@ const TopicalMapPage: NextPage = () => {
    const [query, setQuery] = useState('');
    const [panelCluster, setPanelCluster] = useState<TopicCluster | null>(null);
    const [selected, setSelected] = useState<Set<number>>(new Set());
+   const [filters, setFilters] = useState<TopicalFilterState>(DEFAULT_TOPICAL_FILTERS);
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('vol');
 
    const clusters = useMemo(() => buildTopicClusters(topicsData?.topics ?? []), [topicsData]);
 
    const shown = useMemo(() => {
-      let list = clusters;
+      let list = applyTopicalFilters(clusters, filters);
       const q = query.trim().toLowerCase();
       if (q) list = list.filter((c) => c.mainKeyword.includes(q) || c.name.toLowerCase().includes(q));
       const dir = sortDir === 'asc' ? 1 : -1;
       return [...list].sort((a, b) => (Number(a[sortKey] ?? -1) - Number(b[sortKey] ?? -1)) * dir);
-   }, [clusters, query, sortKey, sortDir]);
+   }, [clusters, query, sortKey, sortDir, filters]);
 
    const toggleSelect = (id: number) => setSelected((prev) => {
       const n = new Set(prev);
@@ -201,6 +203,7 @@ const TopicalMapPage: NextPage = () => {
                            <Toggle checked={showTitles} onChange={() => setShowTitles((s) => !s)} />
                            <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>Show titles</span>
                         </label>
+                        <TopicalFilters value={filters} onChange={setFilters} />
                         <SearchBar value={query} onChange={setQuery} placeholder="Search by main keyword" width={250} />
                      </div>
                   </div>
