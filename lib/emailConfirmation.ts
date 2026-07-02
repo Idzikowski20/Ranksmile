@@ -6,7 +6,8 @@ import { queryOne } from './db/query';
 // SerpBear-specific gate (not every auth provider needs it), and this way it can be added/removed
 // without touching the NextAuth schema. token_hash/expires_ms/confirmed_ms mirror the aiTokenUsage
 // idiom: epoch-ms integers, no timezone pitfalls across Postgres/SQLite.
-export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+// 30 min — matches the confirmation e-mail's "self-destruct in 30 minutes" copy (Surfer parity).
+export const TOKEN_TTL_MS = 30 * 60 * 1000;
 export const RESEND_COOLDOWN_MS = 60_000;
 
 let ready: Promise<void> | null = null;
