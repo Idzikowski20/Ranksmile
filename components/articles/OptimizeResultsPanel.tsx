@@ -29,7 +29,6 @@ interface Props {
   /** Number of sections the run changed. */
   changedCount: number;
   /** Net words added across changed sections (may be negative). */
-  wordsAdded: number;
   /** Per-changed-section word deltas, in section order. */
   adjustments: AdjustmentRow[];
   /** Uncovered AI-coverage items grouped by type, for the Remaining-Opportunities panel. */
@@ -80,12 +79,6 @@ const deltaColor = (n: number): string => {
   return MUTED;
 };
 
-/** Render a signed delta as text, with an em-dash for zero. */
-const signed = (n: number, suffix = ''): string => {
-  if (n > 0) return `+${n}${suffix}`;
-  if (n < 0) return `−${Math.abs(n)}${suffix}`;
-  return '—';
-};
 
 /** One clickable adjustments-list card: section label (from sectionResultLabel) + word-delta chip.
  *  Hover shifts border/bg per design.md (150ms ease); snippet/favicon rows are deferred. */
@@ -121,7 +114,7 @@ const AdjustmentCard = ({ row, onCardClick }: { row: AdjustmentRow; onCardClick?
 /** Auto-Optimize results card — headline gauge with delta + 2 stat cards +
  *  Remaining-Opportunities panel + a per-section adjustments list. Presentational only
  *  (no data fetching). */
-const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, adjustments, remainingRows, onCardClick }: Props) => {
+const OptimizeResultsPanel = ({ preScore, postScore, changedCount, adjustments, remainingRows, onCardClick }: Props) => {
   const scoreDelta = Math.round(postScore) - Math.round(preScore);
   const VISIBLE = 8;
   const shown = adjustments.slice(0, VISIBLE);
