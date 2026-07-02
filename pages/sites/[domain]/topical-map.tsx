@@ -12,6 +12,7 @@ import { useSortState } from '../../../lib/useSortState';
 import { buildTopicClusters, TopicCluster } from '../../../lib/topicalMap';
 import TopicalFilters, { DEFAULT_TOPICAL_FILTERS, TopicalFilterState, applyTopicalFilters } from '../../../components/domains/TopicalFilters';
 import TopicalClusterPanel from '../../../components/domains/TopicalClusterPanel';
+import TopicalMapCanvas from '../../../components/domains/TopicalMapCanvas';
 import { useSetupStatus } from '../../../services/domainPipeline';
 
 const FONT = 'var(--font-family-primary)';
@@ -198,7 +199,14 @@ const TopicalMapPage: NextPage = () => {
                <>
                   {/* ─── Toolbar ─── */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                     <Tabs items={[{ value: 'topics', label: 'All topics' }]} value={view} onChange={(v) => setView(v as 'topics' | 'map')} />
+                     <Tabs
+                        items={[
+                           { value: 'topics', label: 'All topics' },
+                           { value: 'map', label: (<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><HexIcon size={18} />Map</span>) },
+                        ]}
+                        value={view}
+                        onChange={(v) => setView(v as 'topics' | 'map')}
+                     />
                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                            <Toggle checked={showTitles} onChange={() => setShowTitles((s) => !s)} />
@@ -209,7 +217,9 @@ const TopicalMapPage: NextPage = () => {
                      </div>
                   </div>
 
-                  {/* ─── Two-panel list ─── */}
+                  {view === 'map' ? (
+                     <TopicalMapCanvas clusters={shown} showTitles={showTitles} />
+                  ) : (
                   <div style={{ display: 'flex', border: '1px solid #F4F4F5', borderRadius: 8, background: '#F8F8F9', gap: 16, overflow: 'hidden', minHeight: 400 }}>
                      {/* Left: Topic cluster */}
                      <div className="styled-scrollbar" style={{ width: 330, flexShrink: 0, background: '#fff', borderRight: '1px solid #F4F4F5', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -278,6 +288,7 @@ const TopicalMapPage: NextPage = () => {
                         ))}
                      </div>
                   </div>
+                  )}
                   <style>{'.tm-row:hover { background: #F8F8F9; }'}</style>
                </>
             )}

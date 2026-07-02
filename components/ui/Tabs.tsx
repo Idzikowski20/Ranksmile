@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface TabItem { value: string; label: string; count?: number; }
+export interface TabItem { value: string; label: React.ReactNode; count?: number; }
 
 const Tabs = ({ items, value, onChange }: { items: TabItem[]; value: string; onChange: (v: string) => void; }) => (
   <div style={{ display: 'inline-flex', position: 'relative', background: '#F4F4F5', borderRadius: 8, padding: 3 }}>
