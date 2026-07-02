@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { scoreColor } from '../../lib/scoreColor';
 
 interface Props {
@@ -44,21 +44,25 @@ const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 
     : placement === 'left'
       ? { right: 'calc(100% + 4px)', top: '50%', transform: 'translateY(-50%)' }
       : { left: '50%', top: '60%', transform: 'translateX(-50%)' };
+  const reduced = useReducedMotion();
   return (
-    <motion.span initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} style={{ ...base, ...pos }}>
+    <motion.span initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : 0.25 }} style={{ ...base, ...pos }}>
       <UpArrow />{delta}
     </motion.span>
   );
 };
 
 const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below' }: Props) => {
+  const reduced = useReducedMotion();
   const s = Math.max(0, Math.min(100, Math.round(score || 0)));
   const color = scoreColor(s);
   // No data yet → grey track only, no coloured fill, "—" in the centre.
   const offset = pending ? ARC : ARC * (1 - s / 100);
   const size = sizeProp ?? (compact ? 56 : 96);
   const numberFont = size <= 64 ? 16 : 24;
-  const fillStyle: React.CSSProperties = { transition: 'stroke 400ms ease-in-out, stroke-dashoffset 600ms cubic-bezier(0.34,2,0.64,1)' };
+  const fillStyle: React.CSSProperties = {
+    transition: reduced ? 'none' : 'stroke 400ms ease-in-out, stroke-dashoffset 600ms cubic-bezier(0.34,2,0.64,1)',
+  };
 
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
@@ -83,10 +87,10 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.span
                 key={s}
-                initial={{ y: '70%', opacity: 0 }}
+                initial={reduced ? false : { y: '70%', opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                exit={{ y: '-70%', opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                exit={reduced ? { opacity: 0 } : { y: '-70%', opacity: 0 }}
+                transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 30 }}
                 style={{ display: 'inline-block', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}
               >
                 {s}

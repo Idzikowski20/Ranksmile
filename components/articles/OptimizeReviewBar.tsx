@@ -24,6 +24,10 @@ export interface OptimizeReviewBarProps {
    /** Right-panel width reserved by the editor column, so the bar centres on the editor
     *  content (not the whole viewport). 0 when the panel is collapsed. */
    rightReserve?: number;
+   /** Task 12: focus-derived status for the currently-streaming section (e.g. "Improving
+    *  readability…"), from lib/optimizeMessaging.sectionStatusLabel. Shown as the subtitle
+    *  while optimizing; ignored while reviewing. */
+   activeStatusLabel?: string;
 }
 
 const ChevronUp = () => (
@@ -50,6 +54,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    onSave,
    saving,
    rightReserve = 0,
+   activeStatusLabel,
 }) => {
    const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
    const optimizing = state === 'optimizing';
@@ -84,7 +89,9 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                      {optimizing ? `Processing section ${processed} of ${total}` : 'All sections processed'}
                   </span>
                </div>
-               <span className="text-gray-60 text-sm">Accept or reject changes, edit afterwards</span>
+               <span className="text-gray-60 text-sm">
+                  {optimizing ? (activeStatusLabel ?? 'Optimizing section…') : 'Review each upgrade, then Save to apply'}
+               </span>
             </div>
 
             <div className="gap-xs flex">

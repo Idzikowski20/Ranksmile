@@ -5,6 +5,8 @@ import { optimizeStore } from './optimizeStore';
 import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
 import { wordDiffSegments, renderDiffHtml } from '../../lib/optimizeWordDiff';
 import { useEntrance } from '../../lib/motion/useEntrance';
+import { sectionStatusLabel, sectionResultLabel } from '../../lib/optimizeMessaging';
+import { prefersReducedMotion } from '../../lib/motion/gsap';
 
 // React node-view for the contentOptimizer TipTap node.
 // Shows the old (removed) and new (added) versions of a section with floating
@@ -36,8 +38,11 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
   const r = optimizeStore.get(sectionId);
   const oldHtml = sanitizeArticleHtml(r?.oldHtml || '');
   const newHtml = sanitizeArticleHtml(r?.newHtml || '');
+  const { focus, mode, reason } = r || {};
 
   const isActive = status === 'active';
+  const isImproved = status === 'improved';
+  const reducedMotion = prefersReducedMotion();
 
   // Replace this atom with parsed HTML content at its exact position.
   // Accept/Reject always splice the canonical full newHtml/oldHtml — unchanged.
@@ -93,6 +98,80 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
 
   const acceptBtnStyle: React.CSSProperties = { ...btnBase, background: 'var(--gray-base)', color: 'var(--white-base)' };
   const rejectBtnStyle: React.CSSProperties = { ...btnBase, background: 'var(--gray-10)', color: 'var(--gray-base)' };
+
+  // Active-state shimmer overlay — subtle gradient sweep band, non-interactive.
+  // Reduced motion: static muted background, no sweep.
+  const shimmerOverlayStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    borderRadius: 12,
+    pointerEvents: 'none',
+    background: reducedMotion
+      ? 'rgba(120,58,251,0.04)'
+      : 'linear-gradient(90deg, rgba(120,58,251,0) 0%, rgba(120,58,251,0.08) 50%, rgba(120,58,251,0) 100%)',
+    backgroundSize: reducedMotion ? undefined : '200% 100%',
+    animation: reducedMotion ? undefined : 'aoShimmer 1.6s linear infinite',
+  };
+
+  const statusLabelStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: -9,
+    left: 12,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '2px 8px',
+    borderRadius: 9999,
+    background: '#fff',
+    color: '#52525C',
+    fontSize: 12,
+    fontWeight: 500,
+    lineHeight: '16px',
+    fontFamily: 'var(--font-family-primary)',
+    zIndex: 2,
+  };
+
+  const statusDotStyle: React.CSSProperties = {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: 'var(--purple-base, #783AFB)',
+    flexShrink: 0,
+    animation: reducedMotion ? undefined : 'aoPulseDot 1.4s ease-in-out infinite',
+  };
+
+  const improvedPillStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    borderRadius: 9999,
+    background: 'rgba(26,178,94,0.10)',
+    color: '#1AB25E',
+    fontSize: 12,
+    fontWeight: 600,
+    lineHeight: '16px',
+    fontFamily: 'var(--font-family-primary)',
+  };
+
+  const resultChipStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    borderRadius: 9999,
+    background: 'var(--gray-10)',
+    color: '#52525C',
+    fontSize: 12,
+    fontWeight: 500,
+    lineHeight: '16px',
+    fontFamily: 'var(--font-family-primary)',
+  };
+
+  const resultRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  };
 
   // Decide rendering mode:
   // - Simple (no block-complex markup): render ONE inline word-level diff line
@@ -164,6 +243,23 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node, editor, getPo
           </svg>
         </button>
       </div>
+
+      {isActive && (
+        <>
+          <div aria-hidden="true" style={shimmerOverlayStyle} />
+          <span style={statusLabelStyle}>
+            <span aria-hidden="true" style={statusDotStyle} />
+            {sectionStatusLabel({ focus, mode, reason })}
+          </span>
+        </>
+      )}
+
+      {isImproved && (
+        <div style={resultRowStyle}>
+          <span style={improvedPillStyle}>Improved</span>
+          <span style={resultChipStyle}>{sectionResultLabel({ focus, mode, reason })}</span>
+        </div>
+      )}
 
       {diffBody}
     </NodeViewWrapper>
