@@ -25,6 +25,8 @@ const nextConfig = {
     return [
       { source: '/content-editor', destination: '/articles' },
       { source: '/content-editor/:path*', destination: '/articles/:path*' },
+      { source: '/workspace/:wsId/sites/articles/new', destination: '/articles/new' },
+      { source: '/workspace/:wsId/sites/articles/import', destination: '/articles/import' },
       { source: '/workspace/:wsId/:path*', destination: '/:path*' },
     ];
   },
