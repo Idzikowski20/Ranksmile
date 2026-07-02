@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { getPlanCheckoutHref } from '../../lib/billingPlans';
 
 // ─── Tiny reusable SVG atoms ──────────────────────────────────────────────────
 
@@ -459,7 +460,17 @@ const Separator = () => (
   <div role="separator" style={{ minHeight: 1, minWidth: 1, alignSelf: 'stretch', background: '#F4F4F5' }} />
 );
 
-const CtaButton = ({ label, style: ctaStyle, fullWidth }: { label: string; style: 'primary' | 'gray' | 'ghost'; fullWidth?: boolean }) => {
+const CtaButton = ({
+  label,
+  style: ctaStyle,
+  fullWidth,
+  href,
+}: {
+  label: string;
+  style: 'primary' | 'gray' | 'ghost';
+  fullWidth?: boolean;
+  href: string;
+}) => {
   const base: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -474,45 +485,42 @@ const CtaButton = ({ label, style: ctaStyle, fullWidth }: { label: string; style
     transition: 'background 150ms ease, opacity 150ms ease',
     border: 'none',
     whiteSpace: 'nowrap',
+    textDecoration: 'none',
   };
 
   if (ctaStyle === 'primary') {
     return (
-      <button
-        type="button"
-        onClick={() => toast.success(`${label} — coming soon!`)}
+      <a
+        href={href}
         style={{ ...base, background: '#783AFB', color: '#fff' }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.1)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.filter = ''; }}
+        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.filter = ''; }}
       >
         {label}
-      </button>
+      </a>
     );
   }
   if (ctaStyle === 'gray') {
     return (
-      <button
-        type="button"
-        onClick={() => toast.success(`${label} — coming soon!`)}
+      <a
+        href={href}
         style={{ ...base, background: '#F4F4F5', color: '#18181B' }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#E4E4E7'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
       >
         {label}
-      </button>
+      </a>
     );
   }
-  // ghost
   return (
-    <button
-      type="button"
-      onClick={() => toast.success(`${label} — coming soon!`)}
+    <a
+      href={href}
       style={{ ...base, background: 'transparent', color: '#18181B', boxShadow: 'inset 0 0 0 1px #E4E4E7' }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
       {label}
-    </button>
+    </a>
   );
 };
 
@@ -679,7 +687,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
             </p>
 
             {/* CTA */}
-            <CtaButton label={plan.cta} style={plan.ctaStyle} fullWidth />
+            <CtaButton label={plan.cta} style={plan.ctaStyle} href={getPlanCheckoutHref(plan.name, billing)} fullWidth />
 
             {/* Divider */}
             <Separator />
@@ -745,7 +753,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
               </p>
             </div>
             <div style={{ paddingTop: 4, flexShrink: 0 }}>
-              <CtaButton label="Start with Starter" style="ghost" />
+              <CtaButton label="Start with Starter" style="ghost" href={getPlanCheckoutHref('Starter', billing)} />
             </div>
           </div>
 
@@ -859,7 +867,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
                         </span>
                         <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>/mo</span>
                       </div>
-                      <CtaButton label={p.cta} style={p.ctaStyle} fullWidth />
+                      <CtaButton label={p.cta} style={p.ctaStyle} href={getPlanCheckoutHref(p.name, billing)} fullWidth />
                     </div>
                   </th>
                 ))}

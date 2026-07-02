@@ -10,8 +10,11 @@ import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
 import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
+import { useWorkspaces } from '../../services/workspaces';
 import { useQuery, useQueryClient } from 'react-query';
 import { getErrorMessage } from '../../lib/errors';
+import { deriveActiveId } from '../../lib/activeWorkspace';
+import { buildArticleWorkspaceLinks } from '../../lib/articleWorkspaceLinks';
 
 const fetchArticles = async (domainId?: number) => {
   const url = domainId ? `/api/articles?domainId=${domainId}` : '/api/articles';
@@ -34,11 +37,27 @@ const ArticlesPage: NextPage = () => {
   const [selectedDomainId, setSelectedDomainId] = useState<number | undefined>(undefined);
   const [sortBy, setSortBy] = useState('ContentUpdatedAt');
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   const { data: domainsData } = useFetchDomains(router);
   const { data: appSettingsData } = useFetchSettings();
+  const { data: wsData } = useWorkspaces();
   const appSettings: SettingsType = appSettingsData?.settings || {};
   const domains: DomainType[] = domainsData?.domains || [];
+  const activeWsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+  const activeDomain = domains.find((domain) => domain.ID === selectedDomainId) || domains[0] || null;
+  const activeSlug = activeDomain?.slug || '';
+  const articleLinks = buildArticleWorkspaceLinks(activeWsId, activeSlug);
+  const startLinks = {
+    recommendations: articleLinks.recommendations,
+    keyword: articleLinks.keyword,
+    contentAudit: articleLinks.contentAudit,
+    topicalMap: articleLinks.topicalMap,
+  };
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: articlesData, isLoading } = useQuery(
     ['articles', selectedDomainId],
@@ -152,7 +171,7 @@ const ArticlesPage: NextPage = () => {
                   {/* Import content */}
                   <button
                     type="button"
-                    onClick={() => router.push('/articles/import')}
+                    onClick={() => router.push(articleLinks.import)}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -182,7 +201,7 @@ const ArticlesPage: NextPage = () => {
                   <div style={{ display: 'flex', alignItems: 'stretch', gap: 1 }}>
                     <button
                       type="button"
-                      onClick={() => router.push('/articles/new')}
+                      onClick={() => router.push(articleLinks.keyword)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -209,7 +228,7 @@ const ArticlesPage: NextPage = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => router.push('/articles/new')}
+                      onClick={() => router.push(articleLinks.keyword)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -362,6 +381,7 @@ const ArticlesPage: NextPage = () => {
                   onDelete={handleDelete}
                   onDeleteMultiple={handleDeleteMultiple}
                   isLoading={isLoading}
+                  startLinks={startLinks}
                 />
               </div>
             </div>

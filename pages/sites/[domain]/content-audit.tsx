@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
+import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { Gauge, Button, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel } from '../../../components/ui';
@@ -426,8 +427,19 @@ const ContentAuditPage: NextPage = () => {
                   <Skeleton />
                ) : filtered.length === 0 ? (
                   pending.length === 0 ? (
-                     <div style={{ padding: '40px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-                        No articles found. <Link href="/content-editor" passHref><a style={{ color: '#783AFB' }}>Create your first article →</a></Link>
+                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '80px 24px 48px', textAlign: 'center' }}>
+                        <EmptyEyes />
+                        <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>You haven&apos;t added any pages yet</span>
+                        <p style={{ margin: 0, maxWidth: 408, color: '#3F3F47', fontSize: 14, lineHeight: '20px', fontFamily: FONT }}>Add existing pages you want to audit, get recommendations, and keep an eye out for. Modify anytime.</p>
+                        <button
+                           type="button"
+                           onClick={() => setAddOpen(true)}
+                           style={{ background: '#18181B', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', transition: 'background 150ms ease' }}
+                           onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+                           onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
+                        >
+                           Add Page
+                        </button>
                      </div>
                   ) : null
                ) : (
