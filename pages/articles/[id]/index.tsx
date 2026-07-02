@@ -18,6 +18,8 @@ import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
+import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
+import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
 import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
 import { liveCoverageItems, remainingOpportunities } from '../../../lib/liveCoverage';
 import { computeOptimizeStats } from '../../../lib/optimizeStats';
@@ -476,6 +478,8 @@ const ArticleEditorPage: NextPage = () => {
   const [optimizeRemaining, setOptimizeRemaining] = useState(0); // unresolved contentOptimizer nodes (review label)
   const [optimizeSaving, setOptimizeSaving] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [savedBannerOpen, setSavedBannerOpen] = useState(false);
   const [surfyAiActive, setSurfyAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
   const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
@@ -1427,7 +1431,8 @@ const ArticleEditorPage: NextPage = () => {
       });
       lastVersionAt.current = Date.now(); // a racing autosave must not snapshot another version
       setAutoSaveState('saved');
-      toast.success('Auto-Optimize changes saved');
+      setSaveModalOpen(false);
+      setSavedBannerOpen(true);
     } catch (err) {
       console.error('[optimize-save] failed:', err);
       toast.error('Could not save Auto-Optimize changes');
@@ -2102,7 +2107,7 @@ const ArticleEditorPage: NextPage = () => {
             onNext={() => navigateSection(1)}
             onAcceptAll={handleAcceptAll}
             onCancel={() => setCancelModalOpen(true)}
-            onSave={handleSaveOptimizeRun}
+            onSave={() => setSaveModalOpen(true)}
             saving={optimizeSaving}
             rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
           />
@@ -2113,6 +2118,26 @@ const ArticleEditorPage: NextPage = () => {
           open={cancelModalOpen}
           onGoBack={() => setCancelModalOpen(false)}
           onConfirm={handleConfirmCancel}
+        />
+
+        {/* ── AO-8a: save-confirmation modal ── */}
+        <OptimizeSaveModal
+          open={saveModalOpen}
+          onContinueEditing={() => setSaveModalOpen(false)}
+          onSave={handleSaveOptimizeRun}
+          saving={optimizeSaving}
+        />
+
+        {/* ── AO-8a: top-right saved confirmation banner ── */}
+        <OptimizeSavedBanner
+          open={savedBannerOpen}
+          onOpenHistory={() => {
+            setSavedBannerOpen(false);
+            setPanelCollapsed(false);
+            setShowInternalLinksPanel(false);
+            setShowHistory(true);
+          }}
+          onClose={() => setSavedBannerOpen(false)}
         />
 
         {/* ── AI Readability optimize: working ──────────────────────── */}
