@@ -2028,7 +2028,7 @@ const ArticleEditorPage: NextPage = () => {
                       isAutoOptimizing={isAutoOptimizing}
                       optimizeState={optimizeState}
                       onCancelOptimize={() => setCancelModalOpen(true)}
-                      onSaveOptimize={handleSaveOptimizeRun}
+                      onSaveOptimize={() => setSaveModalOpen(true)}
                       optimizeSaving={optimizeSaving}
                       saveState={autoSaveState}
                       articleId={article.id}
