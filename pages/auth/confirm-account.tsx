@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import { authClient } from '../../lib/auth/client';
+import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
 
 const F = 'var(--font-family-primary)';
 
@@ -28,6 +29,7 @@ const EnvelopeIllustration = () => (
 
 const ConfirmAccount: NextPage = () => {
    const router = useRouter();
+   const markConfirmed = useMarkEmailConfirmed();
    const [email, setEmail] = useState<string>('');
    const [cooldown, setCooldown] = useState<number>(0);
    const [sent, setSent] = useState<boolean>(false);
@@ -58,6 +60,7 @@ const ConfirmAccount: NextPage = () => {
                const statusRes = await fetch('/api/confirm-account');
                const status: ConfirmStatus = await statusRes.json();
                if (status.confirmed) {
+                  markConfirmed(true);
                   router.replace('/onboarding');
                   return;
                }
@@ -71,6 +74,7 @@ const ConfirmAccount: NextPage = () => {
                }
                const data: SendResult = await sendRes.json();
                if (data.confirmed) {
+                  markConfirmed(true);
                   router.replace('/onboarding');
                }
             } catch {
@@ -99,6 +103,7 @@ const ConfirmAccount: NextPage = () => {
          }
          const data: SendResult = await res.json();
          if (data.confirmed) {
+            markConfirmed(true);
             router.replace('/onboarding');
             return;
          }

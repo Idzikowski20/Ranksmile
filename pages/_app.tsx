@@ -12,6 +12,7 @@ import GlobalSmoothCaret from '../components/common/GlobalSmoothCaret';
 import AppLoading from '../components/common/AppLoading';
 import TopProgressBar from '../components/common/TopProgressBar';
 import { OnboardingStatusContext } from '../lib/onboardingStatus';
+import { EmailConfirmedStatusContext } from '../lib/emailConfirmedStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../lib/motion/gsap';
@@ -67,14 +68,17 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       return () => { active = false; };
    }, [userId]);
 
-   // Fetch email-confirmation state whenever the signed-in user changes.
+   // Fetch email-confirmation state whenever the signed-in user changes. Fail OPEN (not gated)
+   // on a non-ok response or network error — unlike the onboarding fetch, a transient blip here
+   // would bounce EVERY signed-in user to /auth/confirm-account and trigger a resend email; only
+   // a genuine 200 { confirmed:false } from the server should gate.
    React.useEffect(() => {
       let active = true;
       if (!userId) { setConfirmed(null); return undefined; }
       fetch('/api/confirm-account')
-         .then((r) => (r.ok ? r.json() : { confirmed: false }))
-         .then((d) => { if (active) setConfirmed(!!d.confirmed); })
-         .catch(() => { if (active) setConfirmed(false); });
+         .then((r) => (r.ok ? r.json() : null))
+         .then((d) => { if (active) setConfirmed(d === null ? true : !!d.confirmed); })
+         .catch(() => { if (active) setConfirmed(true); });
       return () => { active = false; };
    }, [userId]);
 
@@ -132,7 +136,11 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       return <AppLoading />;
    }
 
-   return <OnboardingStatusContext.Provider value={setCompleted}>{children}</OnboardingStatusContext.Provider>;
+   return (
+      <EmailConfirmedStatusContext.Provider value={setConfirmed}>
+         <OnboardingStatusContext.Provider value={setCompleted}>{children}</OnboardingStatusContext.Provider>
+      </EmailConfirmedStatusContext.Provider>
+   );
 }
 
 function MyApp({ Component, pageProps }: AppProps) {

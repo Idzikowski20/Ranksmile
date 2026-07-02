@@ -2,6 +2,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
+import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
 
 const F = 'var(--font-family-primary)';
 
@@ -20,6 +21,7 @@ const cardStyle: React.CSSProperties = {
 
 const ConfirmEmail: NextPage = () => {
    const router = useRouter();
+   const markConfirmed = useMarkEmailConfirmed();
    const [status, setStatus] = useState<Status>('verifying');
    const initialized = useRef<boolean>(false);
 
@@ -43,6 +45,10 @@ const ConfirmEmail: NextPage = () => {
             const data: ConfirmResult = await res.json();
             if (data.ok) {
                setStatus('success');
+               // Update the guard's cached confirmed flag BEFORE navigating — otherwise the
+               // guard's stale confirmed=false bounces this replace() straight back to
+               // /auth/confirm-account (same class of bug useMarkOnboardingComplete exists for).
+               markConfirmed(true);
                router.replace('/onboarding');
             } else {
                setStatus('error');
@@ -53,7 +59,7 @@ const ConfirmEmail: NextPage = () => {
       };
 
       verify();
-   }, [router.isReady, router.query, router]);
+   }, [router.isReady, router.query, router, markConfirmed]);
 
    if (status === 'success') return null;
 
