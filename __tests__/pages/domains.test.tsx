@@ -5,6 +5,11 @@ import { dummyDomain } from '../../__mocks__/data';
 import Domains from '../../pages/domains';
 
 jest.mock('next/router', () => jest.requireActual('next-router-mock'));
+// AppShell's route transition (GSAP) sets inline opacity:0 on the content wrapper; in jsdom the
+// tween never ticks, so every descendant fails toBeVisible(). Mock the hook to a plain inert ref.
+jest.mock('../../lib/motion/useRouteTransition', () => ({
+   useRouteTransition: () => ({ current: null }),
+}));
 jest.spyOn(ReactQuery, 'useQuery').mockImplementation(jest.fn().mockReturnValue(
    { data: { domains: [dummyDomain] }, isLoading: false, isSuccess: true },
 ));
