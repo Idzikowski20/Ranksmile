@@ -21,6 +21,12 @@ interface Props {
   onDelete: (id: number) => void;
   onDeleteMultiple: (ids: number[]) => Promise<void>;
   isLoading?: boolean;
+  startLinks?: {
+    recommendations: string;
+    keyword: string;
+    contentAudit: string;
+    topicalMap: string;
+  };
 }
 
 const timeAgo = (dateStr: string): { relative: string; full: string } => {
@@ -45,9 +51,83 @@ const timeAgo = (dateStr: string): { relative: string; full: string } => {
   return { relative, full };
 };
 
+const EmptyCardArrow = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
+const RecommendationsIcon = () => (
+  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+    <path d="M22.2 4.4c.5 5.1 5.8 6.5 7.6 11.2 1.8 4.5.5 10.4-4.6 13.4 1.1-3.5-.4-5.8-2.6-8.2.1 4.9-2.8 7.5-6.5 8.5-4.6-2.3-6.7-6.3-5.8-11.2.8-4.6 5.8-7.5 6.5-12.9 2.1 1.4 3.9 3.3 5.4 5.6.6-1.9.5-3.8 0-6.4Z" fill="#FF5B49" />
+    <path d="M20.5 30.2c-2.4-.8-4.1-2.8-4-5.4 0-2.2 1.6-3.8 3.2-5.4.3 2.7 2.7 3.4 3.4 5.8.6 2-.2 3.9-2.6 5Z" fill="#FFB199" />
+  </svg>
+);
 
-const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props) => {
+const KeywordIcon = () => (
+  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+    <rect x="7" y="9" width="28" height="24" rx="5" fill="#F4F4F5" stroke="#D4D4D8" strokeWidth="1.5" />
+    <path d="M14 17h14M14 22h10M14 27h14" stroke="#3F3F47" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const ContentAuditIcon = () => (
+  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+    <rect x="9" y="7" width="19" height="26" rx="4" fill="#F0FDF4" stroke="#1AB25E" strokeWidth="1.5" />
+    <path d="M14 15h9M14 20h7M14 25h5" stroke="#137832" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="29" cy="28" r="5" fill="#FFFFFF" stroke="#137832" strokeWidth="2" />
+    <path d="m32.8 31.8 3.2 3.2" stroke="#137832" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const TopicalMapIcon = () => (
+  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
+    <path d="M21 5.5 34.4 13v15L21 35.5 7.6 28V13L21 5.5Z" fill="#E1DBFE" stroke="#783AFB" strokeWidth="1.5" />
+    <path d="M21 20.5 34 13M21 20.5 8 13M21 20.5v14" stroke="#783AFB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="21" cy="20.5" r="3.5" fill="#783AFB" />
+  </svg>
+);
+
+type EmptyStartOptionKey = 'recommendations' | 'keyword' | 'contentAudit' | 'topicalMap';
+
+const EMPTY_START_OPTIONS: Array<{
+  key: EmptyStartOptionKey;
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    key: 'recommendations',
+    title: 'Recommendations',
+    description: 'Start with one of the suggested actions',
+    href: '/dashboard',
+    icon: <RecommendationsIcon />,
+  },
+  {
+    key: 'keyword',
+    title: 'Your keyword',
+    description: 'Create content based on the keyword you provide',
+    href: '/articles/new',
+    icon: <KeywordIcon />,
+  },
+  {
+    key: 'contentAudit',
+    title: 'Content Audit',
+    description: 'Optimize your existing content',
+    href: '/articles/import',
+    icon: <ContentAuditIcon />,
+  },
+  {
+    key: 'topicalMap',
+    title: 'Topical Map',
+    description: 'Create content based on your existing topics',
+    href: '/sites/configure',
+    icon: <TopicalMapIcon />,
+  },
+];
+
+const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLinks }: Props) => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -134,28 +214,73 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading }: Props)
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '64px 40px',
+          width: '100%',
           gap: 16,
+          marginTop: 56,
+          fontFamily: 'var(--font-family-primary)',
         }}
       >
-        <div
-          style={{
-            width: 48, height: 48, borderRadius: 12, background: '#F4F4F5',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width="24" height="24" style={{ color: '#9F9FA9' }}>
-            <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9z" />
-          </svg>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: '#71717B' }}>
+          How do you want to start?
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, width: '100%' }}>
+          {EMPTY_START_OPTIONS.map((option) => (
+            <Link href={startLinks?.[option.key] ?? option.href} key={option.title}>
+              <a
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 196,
+                  padding: 16,
+                  border: '1px solid #E4E4E7',
+                  borderRadius: 16,
+                  background: '#FFFFFF',
+                  color: '#18181B',
+                  textDecoration: 'none',
+                  transition: 'border-color 150ms ease, background 150ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#D4D4D8';
+                  e.currentTarget.style.background = '#F8F8F9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#E4E4E7';
+                  e.currentTarget.style.background = '#FFFFFF';
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#AA93FD';
+                  e.currentTarget.style.boxShadow = '0 0 0 2px rgba(120,58,251,0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#E4E4E7';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div
+                  style={{
+                    height: 82,
+                    borderRadius: 12,
+                    background: '#F8F8F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {option.icon}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 16, color: '#18181B' }}>
+                  <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 600 }}>
+                    {option.title}
+                  </span>
+                  <EmptyCardArrow />
+                </div>
+                <span style={{ marginTop: 4, fontSize: 14, lineHeight: '20px', color: '#71717B' }}>
+                  {option.description}
+                </span>
+              </a>
+            </Link>
+          ))}
         </div>
-        <span style={{ fontSize: 15, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
-          No articles yet
-        </span>
-        <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-          Import content from a URL or create a new article to get started.
-        </span>
       </div>
     );
   }

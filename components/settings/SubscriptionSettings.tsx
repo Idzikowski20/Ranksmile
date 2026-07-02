@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import PricingPlansSettings from './PricingPlansSettings';
 
@@ -58,6 +59,58 @@ const ChatBubbleIcon = () => (
 );
 
 // ─── Modal A — Upcoming Bills ─────────────────────────────────────────────────
+
+export const showCancellationApprovedToast = () => {
+  toast.custom((t: { id: string }) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 14,
+        width: 360,
+        padding: '16px 18px',
+        borderRadius: 8,
+        background: '#18181B',
+        color: '#FFFFFF',
+        boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.04), 0px 2px 8px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.06)',
+        fontFamily: 'var(--font-family-primary)',
+      }}
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#87E58F', marginTop: 2 }}>
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+        <path d="m8 12.2 2.4 2.4L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <span style={{ fontSize: 18, lineHeight: '24px', fontWeight: 700, color: '#87E58F' }}>
+          Your request has been approved
+        </span>
+        <span style={{ fontSize: 16, lineHeight: '24px', fontWeight: 400, color: '#FFFFFF' }}>
+          Your plan won&apos;t auto-renew and charges will not be incurred.
+        </span>
+      </div>
+      <button
+        type="button"
+        aria-label="Dismiss notification"
+        onClick={() => toast.dismiss(t.id)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 24,
+          height: 24,
+          padding: 0,
+          border: 'none',
+          background: 'transparent',
+          color: '#FFFFFF',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        <XIcon size={24} />
+      </button>
+    </div>
+  ));
+};
 
 const UpcomingBillsModal = ({ onClose }: { onClose: () => void }) => {
   const [hoverClose, setHoverClose] = useState(false);
@@ -1021,11 +1074,27 @@ const SubscriptionPage = ({
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 const SubscriptionSettings = () => {
+  const router = useRouter();
   const [view, setView] = useState<'subscription' | 'plans'>('subscription');
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
   const [canceled, setCanceled] = useState(false);
+
+  React.useEffect(() => {
+    if (!router.isReady) return;
+    setView(router.query.view === 'plans' ? 'plans' : 'subscription');
+  }, [router.isReady, router.query.view]);
+
+  const showPlans = () => {
+    setView('plans');
+    router.replace('/settings/billing_subscription?view=plans', undefined, { shallow: true });
+  };
+
+  const showSubscription = () => {
+    setView('subscription');
+    router.replace('/settings/billing_subscription', undefined, { shallow: true });
+  };
 
   if (view === 'plans') {
     return (
@@ -1033,7 +1102,7 @@ const SubscriptionSettings = () => {
         {/* Back button */}
         <button
           type="button"
-          onClick={() => setView('subscription')}
+          onClick={showSubscription}
           style={{
             background: 'transparent',
             border: 'none',
@@ -1062,7 +1131,7 @@ const SubscriptionSettings = () => {
   return (
     <>
       <SubscriptionPage
-        onChangePlan={() => setView('plans')}
+        onChangePlan={showPlans}
         onOpenUpcoming={() => setUpcomingOpen(true)}
         onOpenCancel={() => setCancelOpen(true)}
         canceled={canceled}
@@ -1080,7 +1149,7 @@ const SubscriptionSettings = () => {
           onClose={() => setFlowOpen(false)}
           onConfirm={() => {
             setCanceled(true);
-            toast.success("Your request has been approved. Your plan won't auto-renew and charges will not be incurred.");
+            showCancellationApprovedToast();
           }}
         />
       )}

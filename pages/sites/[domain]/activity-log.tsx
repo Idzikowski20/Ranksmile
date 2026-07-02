@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
+import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
@@ -571,8 +572,11 @@ const ActivityLogPage: NextPage = () => {
                            ))
                         ) : events.length === 0 ? (
                            <tr>
-                              <td colSpan={3} style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9' }}>
-                                 No activity in this range. Create or optimize content for <strong>{domain}</strong> to see events here.
+                              <td colSpan={3} style={{ padding: 0 }}>
+                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '72px 24px', textAlign: 'center' }}>
+                                    <EmptyEyes />
+                                    <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>No activities found</span>
+                                 </div>
                               </td>
                            </tr>
                         ) : (

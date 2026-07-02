@@ -864,6 +864,44 @@ Performance:          unset (pełna szerokość)
 Activity Log:         maxWidth: 680px
 ```
 
+### Scrollowalny content — zaokrąglony `main` w każdym rogu (WAŻNE)
+
+Gdy strona ma być długa/przewijana wewnątrz shella (czarna ramka statyczna,
+przewija się tylko środek), **NIE przewijaj bezpośrednio na `.app-content`.**
+Domyślny scrollbar (gruby, zajmujący miejsce — np. na Windows) rysuje kwadratowy
+track na prawej krawędzi i **przykrywa prawe zaokrąglone rogi** `.app-content`.
+
+Zamiast tego owiń treść w **wewnętrzny, zaokrąglony kontener scrolla** — dokładnie
+tak jak `SettingsLayout` (`components/settings/SettingsLayout.tsx`) i SurferSEO
+(`data-scroll-element`):
+
+```tsx
+<AppShell showSidebar={false} hideMobileNav ...>
+  <Head>...</Head>
+  <div className="relative flex-1 overflow-auto rounded-xl bg-white-base [color-scheme:light] styled-scrollbar">
+    <div style={{ padding: '48px 24px', boxSizing: 'border-box' }}>
+      <div style={{ maxWidth: 1094, margin: '0 auto' }}>{/* treść */}</div>
+    </div>
+  </div>
+</AppShell>
+```
+
+Dlaczego to działa:
+- `flex-1` → wypełnia `.app-content` (który jest `display:flex; flex-direction:column`),
+  więc `.app-content` **się nie przewija** (dziecko wypełnia go w całości).
+- `overflow-auto` + `rounded-xl` → to ten div przewija się i jest zaokrąglony
+  na **wszystkich 4 rogach** (12px); scrollbar mieści się wewnątrz zaokrąglonej karty.
+- `styled-scrollbar` (sekcja 21) → cienki pasek 6px zamiast grubego domyślnego.
+- `bg-white-base` → biały środek (przykrywa szary `#f8f9ff` z `.app-content`);
+  pomiń, jeśli chcesz zostawić domyślne jasnoszare tło content-area.
+
+**Nie** rób białego tła na samym `.app-content` (przez `contentClassName`) licząc,
+że rogi zostaną — scrollbar i tak zkwadratuje prawą stronę. Zawsze wewnętrzny
+zaokrąglony kontener scrolla.
+
+Referencyjne strony: [SettingsLayout.tsx:315](components/settings/SettingsLayout.tsx),
+[billing/checkout/[plan].tsx](pages/billing/checkout/[plan].tsx).
+
 ---
 
 ## 20. Animacje / Motion
