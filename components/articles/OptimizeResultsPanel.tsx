@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ScoreGauge from './ScoreGauge';
 import RemainingOpportunities from './RemainingOpportunities';
 import type { OptimizeAdjustment } from '../../lib/optimizeStats';
+import type { StepFocus, EditMode } from '../../lib/optimizationPlanner';
+import { sectionResultLabel } from '../../lib/optimizeMessaging';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
 const F = 'var(--font-family-primary)';
@@ -9,6 +11,15 @@ const SUCCESS = '#1AB25E';
 const ERROR = '#FF6F77';
 const TEXT = '#18181B';
 const MUTED = '#52525C';
+
+/** One adjustments-list row: word-delta stats plus enough section metadata to
+ *  render a `sectionResultLabel` and (optionally) support click-to-scroll nav. */
+export type AdjustmentRow = OptimizeAdjustment & {
+  sectionId?: string;
+  focus?: StepFocus;
+  mode?: EditMode;
+  reason?: string;
+};
 
 interface Props {
   /** Pre-optimize baseline content score (0–100). */
@@ -20,9 +31,11 @@ interface Props {
   /** Net words added across changed sections (may be negative). */
   wordsAdded: number;
   /** Per-changed-section word deltas, in section order. */
-  adjustments: OptimizeAdjustment[];
+  adjustments: AdjustmentRow[];
   /** Uncovered AI-coverage items grouped by type, for the Remaining-Opportunities panel. */
   remainingRows: Array<{ label: string; count: number }>;
+  /** Called with a row's sectionId when its card is clicked (e.g. to scroll to that section). */
+  onCardClick?: (sectionId: string) => void;
 }
 
 /* ── One signed-number stat card ──────────────────────────────────────── */
@@ -74,10 +87,41 @@ const signed = (n: number, suffix = ''): string => {
   return '—';
 };
 
+/** One clickable adjustments-list card: section label (from sectionResultLabel) + word-delta chip.
+ *  Hover shifts border/bg per design.md (150ms ease); snippet/favicon rows are deferred. */
+const AdjustmentCard = ({ row, onCardClick }: { row: AdjustmentRow; onCardClick?: (sectionId: string) => void }) => {
+  const [hover, setHover] = useState(false);
+  const clickable = !!(onCardClick && row.sectionId);
+  return (
+    <div
+      onClick={clickable ? () => onCardClick!(row.sectionId!) : undefined}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        border: '1px solid #F4F4F5', borderRadius: 12, background: hover ? '#F8F8F9' : '#FFFFFF',
+        borderColor: hover ? '#E4E4E7' : '#F4F4F5', padding: '10px 12px',
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'background 150ms ease, border-color 150ms ease',
+      }}
+    >
+      <span
+        style={{
+          fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: '18px', minWidth: 0,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}
+      >
+        {sectionResultLabel({ focus: row.focus, mode: row.mode, reason: row.reason })}
+      </span>
+      <WordChip delta={row.wordDelta} />
+    </div>
+  );
+};
+
 /** Auto-Optimize results card — headline gauge with delta + 2 stat cards +
  *  Remaining-Opportunities panel + a per-section adjustments list. Presentational only
  *  (no data fetching). */
-const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, adjustments, remainingRows }: Props) => {
+const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, adjustments, remainingRows, onCardClick }: Props) => {
   const scoreDelta = Math.round(postScore) - Math.round(preScore);
   const VISIBLE = 8;
   const shown = adjustments.slice(0, VISIBLE);
@@ -123,20 +167,7 @@ const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, a
       {adjustments.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {shown.map((a, i) => (
-            <div
-              key={`${a.heading}-${i}`}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
-            >
-              <span
-                style={{
-                  fontSize: 13, fontWeight: 500, color: TEXT, lineHeight: '18px', minWidth: 0,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}
-              >
-                {a.heading || 'Untitled section'}
-              </span>
-              <WordChip delta={a.wordDelta} />
-            </div>
+            <AdjustmentCard key={`${a.sectionId ?? a.heading}-${i}`} row={a} onCardClick={onCardClick} />
           ))}
           {extra > 0 && (
             <span style={{ fontSize: 12, fontWeight: 400, color: MUTED, lineHeight: '16px' }}>

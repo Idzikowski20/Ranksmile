@@ -39,6 +39,7 @@ import { optimizeStore } from '../../../components/articles/optimizeStore';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
 import { ABLY_EVENTS } from '../../../lib/ably/channel';
 import { throttle } from '../../../lib/throttle';
+import { prefersReducedMotion } from '../../../lib/motion/gsap';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -66,6 +67,16 @@ interface Article {
   language?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+/** Task 9 placeholder nav for the results-panel adjustments cards — smooth-scrolls the
+ *  editor to the given contentOptimizer section node. Real implementation already; Task 10/11
+ *  may extend it (e.g. highlight-on-arrival). */
+function scrollToOptimizerSection(sectionId: string): void {
+  document.querySelector(`[data-section-id="${sectionId}"]`)?.scrollIntoView({
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    block: 'center',
+  });
 }
 
 /* ── Icon button used in the top action bar ──────────────────────── */
@@ -1244,7 +1255,10 @@ const ArticleEditorPage: NextPage = () => {
           } else if (eventType === 'section') {
             const ev = payload as SectionEvent;
             orderedEvents.push(ev);
-            optimizeStore.set(ev.sectionId, { oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed });
+            optimizeStore.set(ev.sectionId, {
+              oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed,
+              focus: ev.focus, mode: ev.mode, reason: ev.reason,
+            });
             // AO-8b: collect changed sections' display data for the results-panel word-delta stats.
             if (ev.changed) {
               changedSectionsRef.current.push({ sectionId: ev.sectionId, headingText: ev.headingText, oldHtml: ev.oldHtml, newHtml: ev.newHtml });
@@ -1976,14 +1990,22 @@ const ArticleEditorPage: NextPage = () => {
                         active; stays above ContentScorePanel so both are visible while scrolling. */}
                     {optimizeState === 'reviewing' && (() => {
                       const stats = computeOptimizeStats(changedSectionsRef.current);
+                      // Task 9: thread sectionId + focus/mode/reason onto each row so the panel
+                      // can render sectionResultLabel() and support click-to-scroll nav.
+                      const adjustmentRows = stats.adjustments.map((a, i) => {
+                        const sectionId = changedSectionsRef.current[i]?.sectionId;
+                        const entry = sectionId ? optimizeStore.get(sectionId) : undefined;
+                        return { ...a, sectionId, focus: entry?.focus, mode: entry?.mode, reason: entry?.reason };
+                      });
                       return (
                         <OptimizeResultsPanel
                           preScore={preScoreRef.current}
                           postScore={optimizeReview ? optimizeReview.postScore : preScoreRef.current}
                           changedCount={optimizeMetaRef.current.changedCount}
                           wordsAdded={stats.wordsAdded}
-                          adjustments={stats.adjustments}
+                          adjustments={adjustmentRows}
                           remainingRows={remainingRows}
+                          onCardClick={scrollToOptimizerSection}
                         />
                       );
                     })()}
