@@ -22,7 +22,7 @@ const ContentOptimizer = Node.create({
         renderHTML: (attrs) => (attrs.sectionId ? { 'data-section-id': attrs.sectionId } : {}),
       },
       status: {
-        default: 'pending',   // pending | active | accepted | rejected
+        default: 'pending',   // pending | active | accepted | rejected | improved
         parseHTML: (el) => el.getAttribute('data-status') || 'pending',
         renderHTML: (attrs) => ({ 'data-status': attrs.status }),
       },

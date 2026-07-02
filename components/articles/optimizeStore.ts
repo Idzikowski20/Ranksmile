@@ -1,9 +1,14 @@
+import type { StepFocus, EditMode } from '../../lib/optimizationPlanner';
+
 export type SectionResult = {
    oldHtml: string;
    newHtml: string;
    changed: boolean;
    scores?: { seo: number; overall: number; ai: number };
    adjustments?: Array<{ type: string; snippet: string; sourceDomains: string[] }>;
+   focus?: StepFocus;
+   mode?: EditMode;
+   reason?: string;
 };
 
 const store = new Map<string, SectionResult>();
