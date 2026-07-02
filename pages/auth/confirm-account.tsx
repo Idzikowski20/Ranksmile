@@ -220,7 +220,7 @@ const ConfirmAccount: NextPage = () => {
                      textAlign: 'center',
                   }}
                >
-                  <h2 style={{ margin: 0, fontSize: 30, fontWeight: 700, color: '#fff', letterSpacing: '-2px', lineHeight: 1.2 }}>
+                  <h2 style={{ margin: 0, fontSize: 30, fontWeight: 700, color: '#fff', letterSpacing: 0, lineHeight: 1.2 }}>
                      We just sent
                      <br />
                      you an email!
