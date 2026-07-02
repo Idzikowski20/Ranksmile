@@ -163,6 +163,10 @@ body {
 .app-content {
    background-color: #f8f9ff;
    color: #18181b;
+   /* Light content surface: force light UA form controls (inputs, selects,
+      scrollbars) regardless of the global/system theme. Without this, a native
+      control with no explicit background renders dark under color-scheme: dark. */
+   color-scheme: light;
    flex: 1;
    display: flex;
    flex-direction: column;
