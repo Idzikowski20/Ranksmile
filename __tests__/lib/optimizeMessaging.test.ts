@@ -13,6 +13,12 @@ describe('sectionStatusLabel', () => {
     expect(sectionStatusLabel({ focus: 'expand', mode: 'normal' })).toBe('Expanding thin content…');
   });
 
+  it('intro-protected LESS (focus expand + mode less) does NOT claim expansion — mirrors the buildLessPrompt expand→ai-coverage remap', () => {
+    expect(sectionStatusLabel({ focus: 'expand', mode: 'less' })).toBe('Improving AI answer readiness…');
+    expect(sectionStatusLabel({ focus: 'expand', mode: 'less', reason: 'missing authority signals' }))
+      .toBe('Strengthening factual authority…');
+  });
+
   it('returns authority message for ai-coverage focus with matching reason', () => {
     expect(sectionStatusLabel({ focus: 'ai-coverage', reason: 'missing authority signals' }))
       .toBe('Strengthening factual authority…');
@@ -78,6 +84,12 @@ describe('sectionResultLabel', () => {
   it('falls back to generic improved message', () => {
     expect(sectionResultLabel({})).toBe('Improved section');
     expect(sectionResultLabel({ focus: 'skip' })).toBe('Improved section');
+  });
+
+  it('intro-protected LESS (focus expand + mode less) resolves to the AI-coverage result, not generic', () => {
+    expect(sectionResultLabel({ focus: 'expand', mode: 'less' })).toBe('Improved AI Search coverage');
+    expect(sectionResultLabel({ focus: 'expand', mode: 'less', reason: 'needs fact-check' }))
+      .toBe('Strengthened factual authority');
   });
 
   it('never contains forbidden substrings for non-expand inputs (honest labeling guard)', () => {
