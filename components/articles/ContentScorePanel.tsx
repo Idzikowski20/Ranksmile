@@ -80,8 +80,9 @@ interface Props {
   readabilityAccepted?: number;
   /** Shared/preview mode — disables every mutating action. */
   readOnly?: boolean;
-  /** AO-8b: live "↑N" content-score deltas — non-undefined ONLY during Auto-Optimize review. */
-  scoreDeltas?: { seo?: number; overall?: number };
+  /** AO-8b: live "↑N" content-score deltas — non-undefined ONLY during Auto-Optimize review.
+   *  Task 11 adds `ai` (from the live coverage re-score) alongside the existing seo/overall. */
+  scoreDeltas?: { seo?: number; overall?: number; ai?: number };
 }
 
 /* ── Small circular progress ───────────────────────────────────────── */
