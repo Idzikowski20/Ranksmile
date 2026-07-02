@@ -98,10 +98,13 @@ describe('emailConfirmation', () => {
     });
 
     it('returns ok:true and nulls token_hash/expires_ms while setting confirmed_ms for a valid token', async () => {
-      mockQuery.mockResolvedValue(rows([{
-        user_id: 'user-1', email: 'a@b.com', token_hash: hashToken('raw-token'), expires_ms: 5_000_000, last_sent_ms: 400_000, confirmed_ms: null,
-      }]));
       const now = 1_000_000;
+      mockQuery
+        .mockResolvedValueOnce(rows([{
+          user_id: 'user-1', email: 'a@b.com', token_hash: hashToken('raw-token'), expires_ms: 5_000_000, last_sent_ms: 400_000, confirmed_ms: null,
+        }])) // SELECT by token_hash
+        .mockResolvedValueOnce(rows([])) // UPDATE
+        .mockResolvedValueOnce(rows([{ confirmed_ms: now }])); // post-update confirmation read
       const result = await confirmEmailToken('raw-token', now);
       expect(result).toEqual({ ok: true });
 
@@ -111,8 +114,21 @@ describe('emailConfirmation', () => {
       expect(sql).toMatch(/token_hash\s*=\s*NULL/i);
       expect(sql).toMatch(/expires_ms\s*=\s*NULL/i);
       expect(sql).toMatch(/confirmed_ms\s*=\s*\?/i);
+      // Single-use gate: the UPDATE's WHERE must re-check the hash + expiry, not just user_id.
+      expect(sql).toMatch(/WHERE[\s\S]*token_hash\s*=\s*\?/i);
+      expect(sql).toMatch(/expires_ms\s*>=\s*\?/i);
       const params: unknown[] = updateCall[1]?.replacements ?? updateCall[1];
       expect(params).toContain(now);
+      expect(params).toContain(hashToken('raw-token'));
+    });
+
+    it('is single-use: a second sequential call with the same token returns ok:false and fires no UPDATE', async () => {
+      // After the first consumption token_hash is NULL, so the SELECT by hash finds nothing.
+      mockQuery.mockResolvedValue(rows([]));
+      const result = await confirmEmailToken('raw-token', 1_000_000);
+      expect(result).toEqual({ ok: false });
+      const updateCall = mockQuery.mock.calls.find(([sql]: [string]) => /^UPDATE/i.test(String(sql).trim()));
+      expect(updateCall).toBeUndefined();
     });
   });
 });

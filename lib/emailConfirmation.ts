@@ -91,7 +91,10 @@ export async function issueConfirmationToken(userId: string, email: string, now:
 }
 
 /** Single-use verify: find row by token_hash; expired/missing → { ok:false }.
- *  Valid → set confirmed_ms = now, NULL token_hash/expires_ms, return { ok:true }. */
+ *  Valid → set confirmed_ms = now, NULL token_hash/expires_ms, return { ok:true }.
+ *  The UPDATE itself is the single-use gate (WHERE re-checks token_hash + expiry), so a second
+ *  consumer of the same token cannot re-match once the hash is nulled; sequelize's raw-query
+ *  affected-row metadata is dialect-inconsistent, so `ok` is confirmed by re-reading the row. */
 export async function confirmEmailToken(rawToken: string, now: number = Date.now()): Promise<{ ok: boolean }> {
   await ensureEmailConfirmationsTable();
   const tokenHash = hashToken(rawToken);
@@ -102,8 +105,12 @@ export async function confirmEmailToken(rawToken: string, now: number = Date.now
   if (!row || row.expires_ms === null || Number(row.expires_ms) < now) return { ok: false };
 
   await db.query(
-    'UPDATE email_confirmations SET token_hash = NULL, expires_ms = NULL, confirmed_ms = ? WHERE user_id = ?',
-    { replacements: [now, row.user_id] },
+    'UPDATE email_confirmations SET token_hash = NULL, expires_ms = NULL, confirmed_ms = ? WHERE user_id = ? AND token_hash = ? AND expires_ms >= ?',
+    { replacements: [now, row.user_id, tokenHash, now] },
   );
-  return { ok: true };
+  const after = await queryOne<{ confirmed_ms: number | string | null }>(
+    'SELECT confirmed_ms FROM email_confirmations WHERE user_id = ? AND token_hash IS NULL',
+    [row.user_id],
+  );
+  return { ok: !!after?.confirmed_ms };
 }
