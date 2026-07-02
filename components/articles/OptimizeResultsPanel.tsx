@@ -1,5 +1,6 @@
 import React from 'react';
 import ScoreGauge from './ScoreGauge';
+import RemainingOpportunities from './RemainingOpportunities';
 import type { OptimizeAdjustment } from '../../lib/optimizeStats';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
@@ -20,6 +21,8 @@ interface Props {
   wordsAdded: number;
   /** Per-changed-section word deltas, in section order. */
   adjustments: OptimizeAdjustment[];
+  /** Uncovered AI-coverage items grouped by type, for the Remaining-Opportunities panel. */
+  remainingRows: Array<{ label: string; count: number }>;
 }
 
 /* ── One signed-number stat card ──────────────────────────────────────── */
@@ -71,9 +74,10 @@ const signed = (n: number, suffix = ''): string => {
   return '—';
 };
 
-/** Auto-Optimize results card — headline gauge with delta + 3 stat cards + a
- *  per-section adjustments list. Presentational only (no data fetching). */
-const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, adjustments }: Props) => {
+/** Auto-Optimize results card — headline gauge with delta + 2 stat cards +
+ *  Remaining-Opportunities panel + a per-section adjustments list. Presentational only
+ *  (no data fetching). */
+const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, adjustments, remainingRows }: Props) => {
   const scoreDelta = Math.round(postScore) - Math.round(preScore);
   const VISIBLE = 8;
   const shown = adjustments.slice(0, VISIBLE);
@@ -102,12 +106,18 @@ const OptimizeResultsPanel = ({ preScore, postScore, changedCount, wordsAdded, a
         </div>
       </div>
 
-      {/* Three stat cards */}
+      {/* Two stat cards */}
       <div style={{ display: 'flex', gap: 8 }}>
-        <StatCard label="Sections optimized" value={String(changedCount)} color={TEXT} />
-        <StatCard label="Words added" value={signed(wordsAdded)} color={deltaColor(wordsAdded)} />
-        <StatCard label="Score" value={signed(scoreDelta, ' pts')} color={deltaColor(scoreDelta)} />
+        <StatCard
+          label="Boosted content score"
+          value={`${Math.round(preScore)} → ${Math.round(postScore)}`}
+          color={deltaColor(scoreDelta)}
+        />
+        <StatCard label="Optimized Sections" value={String(changedCount)} color={TEXT} />
       </div>
+
+      {/* Remaining AI Opportunities */}
+      <RemainingOpportunities rows={remainingRows} />
 
       {/* Per-section adjustments */}
       {adjustments.length > 0 && (

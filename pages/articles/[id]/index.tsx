@@ -18,6 +18,9 @@ import EditorLoading from '../../../components/articles/EditorLoading';
 import CompareVersionsModal from '../../../components/articles/CompareVersionsModal';
 import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
+import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
+import { liveCoverageItems, remainingOpportunities } from '../../../lib/liveCoverage';
+import { computeOptimizeStats } from '../../../lib/optimizeStats';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
@@ -745,6 +748,25 @@ const ArticleEditorPage: NextPage = () => {
     );
     return { postScore, seoDelta: postScore - preScoreRef.current };
   }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems]);
+
+  // AO-8b (Task 8): live "Remaining AI Opportunities" rows for the results-panel header.
+  // Mirrors optimizeReview's placeholder-substitution so uncovered counts reflect the same
+  // resolved/in-review content as the score gauge above. Self-contained on purpose — Task 11
+  // replaces this with the shared debounced re-score loop.
+  const remainingRows = useMemo(() => {
+    if (optimizeState === 'idle') return [];
+    const liveHtml = editorHtml.replace(
+      /<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi,
+      (tag) => {
+        const idMatch = tag.match(/data-section-id="([^"]*)"/i);
+        const sid = idMatch ? idMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
+        return optimizeStore.get(sid)?.newHtml ?? '';
+      },
+    );
+    const liveText = liveHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+    const liveItems = liveCoverageItems(coverageItems, liveText, liveHtml);
+    return remainingOpportunities(liveItems);
+  }, [optimizeState, editorHtml, coverageItems]);
   const initialPlagiarism = useMemo(() => {
     try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
   }, [(article as any)?.plagiarism_json]);
@@ -1949,6 +1971,22 @@ const ArticleEditorPage: NextPage = () => {
                 <>
                   {/* ContentScorePanel fills remaining height */}
                   <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
+                    {/* AO-8b (Task 8): Auto-Optimize results summary — gauge + tiles + Remaining
+                        AI Opportunities. Shown once the run has finished streaming and review is
+                        active; stays above ContentScorePanel so both are visible while scrolling. */}
+                    {optimizeState === 'reviewing' && (() => {
+                      const stats = computeOptimizeStats(changedSectionsRef.current);
+                      return (
+                        <OptimizeResultsPanel
+                          preScore={preScoreRef.current}
+                          postScore={optimizeReview ? optimizeReview.postScore : preScoreRef.current}
+                          changedCount={optimizeMetaRef.current.changedCount}
+                          wordsAdded={stats.wordsAdded}
+                          adjustments={stats.adjustments}
+                          remainingRows={remainingRows}
+                        />
+                      );
+                    })()}
                     <ContentScorePanel
                       plainText={plainText}
                       wordCount={wordCount}
