@@ -1302,6 +1302,9 @@ html.editor-route .app-content {
 /* Auto-Optimize active-section shimmer — sweeping gradient band across the section background. */
 @keyframes aoShimmer { 0% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
 
+/* Auto-Optimize active-section status dot — subtle pulse next to the status label. */
+@keyframes aoPulseDot { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
 /* Activity Log table — row hover + title link underline-on-hover */
 .activity-log-row > td { transition: background 120ms ease; }
 .activity-log-row:hover > td { background: #FAFAFA; }
