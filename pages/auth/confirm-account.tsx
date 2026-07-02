@@ -29,7 +29,6 @@ const EnvelopeIllustration = () => (
 const ConfirmAccount: NextPage = () => {
    const router = useRouter();
    const [email, setEmail] = useState<string>('');
-   const [showRightPanel, setShowRightPanel] = useState<boolean>(false);
    const [cooldown, setCooldown] = useState<number>(0);
    const [sent, setSent] = useState<boolean>(false);
    const initialized = useRef<boolean>(false);
@@ -49,14 +48,6 @@ const ConfirmAccount: NextPage = () => {
          });
       }, 1000);
    };
-
-   useEffect(() => {
-      const mq = window.matchMedia('(min-width: 1280px)');
-      setShowRightPanel(mq.matches);
-      const onChange = (e: MediaQueryListEvent) => setShowRightPanel(e.matches);
-      mq.addEventListener('change', onChange);
-      return () => mq.removeEventListener('change', onChange);
-   }, []);
 
    useEffect(() => {
       if (!initialized.current) {
@@ -137,6 +128,7 @@ const ConfirmAccount: NextPage = () => {
    return (
       <>
          <Head><title>Confirm your e-mail - SerpBear</title></Head>
+         <style>{'.confirm-right-panel { display: none; } @media (min-width: 1280px) { .confirm-right-panel { display: flex; } }'}</style>
          <div style={{ minHeight: '100vh', padding: 12, background: '#f8f9ff', fontFamily: F }}>
             <div style={{ display: 'flex', gap: 12, minHeight: 'calc(100vh - 24px)' }}>
                {/* LEFT white panel */}
@@ -156,7 +148,11 @@ const ConfirmAccount: NextPage = () => {
                      Check your e-mail
                   </h1>
                   <p style={{ margin: '12px 0 24px', fontSize: 15, color: '#18181B', lineHeight: 1.6, maxWidth: 420 }}>
-                     We sent a temporary link to the email address, <strong style={{ fontWeight: 700 }}>{email}</strong>.
+                     {email ? (
+                        <>We sent a temporary link to the email address, <strong style={{ fontWeight: 700 }}>{email}</strong>.</>
+                     ) : (
+                        'We sent a temporary link to your e-mail address.'
+                     )}
                      <br />
                      Please check your Spam folder as well.
                   </p>
@@ -205,30 +201,29 @@ const ConfirmAccount: NextPage = () => {
                   </div>
                </div>
 
-               {/* RIGHT purple panel */}
-               {showRightPanel && (
-                  <div style={{
+               {/* RIGHT purple panel — hidden below 1280px via .confirm-right-panel CSS (correct on first paint, no flash) */}
+               <div
+                  className="confirm-right-panel"
+                  style={{
                      flex: '0 0 40%',
                      background: '#783AFB',
                      borderRadius: 12,
-                     display: 'flex',
                      flexDirection: 'column',
                      alignItems: 'center',
                      justifyContent: 'center',
                      padding: 24,
                      textAlign: 'center',
                   }}
-                  >
-                     <h2 style={{ margin: 0, fontSize: 30, fontWeight: 700, color: '#fff', letterSpacing: '-2px', lineHeight: 1.2 }}>
-                        We just sent
-                        <br />
-                        you an email!
-                     </h2>
-                     <div style={{ marginTop: 32 }}>
-                        <EnvelopeIllustration />
-                     </div>
+               >
+                  <h2 style={{ margin: 0, fontSize: 30, fontWeight: 700, color: '#fff', letterSpacing: '-2px', lineHeight: 1.2 }}>
+                     We just sent
+                     <br />
+                     you an email!
+                  </h2>
+                  <div style={{ marginTop: 32 }}>
+                     <EnvelopeIllustration />
                   </div>
-               )}
+               </div>
             </div>
          </div>
       </>
