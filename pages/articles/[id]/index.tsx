@@ -21,7 +21,10 @@ import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModa
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
 import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
-import { liveCoverageItems, remainingOpportunities } from '../../../lib/liveCoverage';
+import { liveCoverageItems, remainingOpportunities, scoreAttribution, scoreDeltaGate } from '../../../lib/liveCoverage';
+import { computeCoverageScores } from '../../../lib/aiCoverage';
+import AoScoreFloat from '../../../components/articles/AoScoreFloat';
+import AoScoreAttribution from '../../../components/articles/AoScoreAttribution';
 import { computeOptimizeStats } from '../../../lib/optimizeStats';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
@@ -46,6 +49,9 @@ import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
 import type { HeadingItem } from '../../../components/articles/ArticleEditor';
+
+// Task 11: debounce for manual-typing live re-scores (Accept/Reject + streaming re-score immediately).
+const AO_RESCORE_DEBOUNCE_MS = 1200;
 
 interface Article {
   id: number;
@@ -761,27 +767,94 @@ const ArticleEditorPage: NextPage = () => {
       (postHtml.match(/<a\s[^>]*href=/gi) || []).length, postHtml, article?.target_keyword || '',
       undefined, coverageItems,
     );
-    return { postScore, seoDelta: postScore - preScoreRef.current };
+    // Task 11: expose postHtml/postText so the debounced live re-score reuses the SAME
+    // placeholder-substituted content the SEO gauge scored (one substitution, not two).
+    return { postScore, seoDelta: postScore - preScoreRef.current, postHtml, postText };
   }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems]);
 
-  // AO-8b (Task 8): live "Remaining AI Opportunities" rows for the results-panel header.
-  // Mirrors optimizeReview's placeholder-substitution so uncovered counts reflect the same
-  // resolved/in-review content as the score gauge above. Self-contained on purpose — Task 11
-  // replaces this with the shared debounced re-score loop.
-  const remainingRows = useMemo(() => {
-    if (optimizeState === 'idle') return [];
-    const liveHtml = editorHtml.replace(
-      /<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi,
-      (tag) => {
-        const idMatch = tag.match(/data-section-id="([^"]*)"/i);
-        const sid = idMatch ? idMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
-        return optimizeStore.get(sid)?.newHtml ?? '';
-      },
+  // AO-8b (Task 8) / Task 11: the single live re-score loop. ONE coverage pass per tick over the
+  // same placeholder-substituted content the SEO gauge scores, feeding: the AI "↑N" gauge delta,
+  // the "Optimization Impact +N" float, the attribution rows, the remaining-opportunities header,
+  // and ContentScorePanel's live coverageItems/coverageBuckets. Task 8's self-contained
+  // remainingRows memo was REPLACED by this so the coverage pass runs exactly once per tick.
+  //
+  // liveRescore holds that one pass's result; null while idle (frozen state is used instead).
+  const [liveRescore, setLiveRescore] = useState<{
+    liveItems: readonly CoverageItem[];
+    aiNew: number;
+    buckets: BucketScore[];
+    remainingRows: Array<{ label: string; count: number }>;
+    attributionRows: Array<{ label: string; delta: number }>;
+  } | null>(null);
+  // Floating "Optimization Impact +N" chip; null = hidden. Anchored fixed near the score gauge
+  // area (robust DOM-node anchoring to a just-accepted TipTap node is disproportionate — see report).
+  const [aoFloat, setAoFloat] = useState<{ key: number; label: string } | null>(null);
+  // First/current streaming section id (from meta/section SSE events) — drives the bar subtitle (Task 12).
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  // Run-start AI-visibility baseline (frozen overall) → gates the float via scoreDeltaGate.
+  const aiVisibilityBaselineRef = useRef<number>(0);
+  // Attribution "before" buckets — run-start baseline, advanced to the current buckets on each Accept.
+  const attributionBeforeRef = useRef<BucketScore[]>([]);
+  // Unresolved contentOptimizer placeholder count last seen — a DROP means an Accept/Reject just
+  // landed (re-score immediately); no change during 'reviewing' means manual typing (debounce).
+  const placeholderCountRef = useRef<number>(-1);
+  const rescoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const remainingRows = liveRescore ? liveRescore.remainingRows : [];
+
+  // One re-score. Pure derivation from the substituted post content + the frozen snapshot items.
+  // `reason` selects the attribution baseline behaviour ('accept' advances the "before" buckets).
+  const runLiveRescore = useCallback((
+    postText: string, postHtml: string, reason: 'accept' | 'stream' | 'typing',
+  ) => {
+    const liveItems = liveCoverageItems(coverageItems, postText, postHtml);
+    const { overall: aiNew, buckets: after } = computeCoverageScores(
+      liveItems, coverageSnapshot?.answersMainQuestionEarly ?? false,
     );
-    const liveText = liveHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-    const liveItems = liveCoverageItems(coverageItems, liveText, liveHtml);
-    return remainingOpportunities(liveItems);
-  }, [optimizeState, editorHtml, coverageItems]);
+    const attributionRows = scoreAttribution(attributionBeforeRef.current, after);
+    // Per brief: keep `after` as the `before` for the NEXT Accept (incremental attribution).
+    if (reason === 'accept') attributionBeforeRef.current = after;
+    setLiveRescore({
+      liveItems,
+      aiNew,
+      buckets: after,
+      remainingRows: remainingOpportunities(liveItems),
+      attributionRows,
+    });
+    // Only a positive recomputed delta vs the run-start baseline mounts the impact float.
+    const gate = scoreDeltaGate(aiVisibilityBaselineRef.current, aiNew);
+    if ((reason === 'accept' || reason === 'stream') && gate.animate) {
+      setAoFloat({ key: Date.now(), label: `Optimization Impact +${gate.delta}` });
+    }
+  }, [coverageItems, coverageSnapshot]);
+
+  // Effect: fire the one re-score off the SAME deps optimizeReview/remainingRows used
+  // (editorHtml + optimizeState). A change in the unresolved-placeholder count == an Accept/Reject
+  // → re-score immediately; streaming ('optimizing') → immediate; otherwise manual typing → debounce.
+  useEffect(() => {
+    if (optimizeState === 'idle' || !optimizeReview) {
+      if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; }
+      placeholderCountRef.current = -1;
+      setLiveRescore(null);
+      return undefined;
+    }
+    const { postText, postHtml } = optimizeReview;
+    const placeholders = (editorHtml.match(/<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi) || []).length;
+    const prevCount = placeholderCountRef.current;
+    placeholderCountRef.current = placeholders;
+    const isAccept = prevCount !== -1 && placeholders < prevCount;
+    const immediate = optimizeState === 'optimizing' || isAccept;
+    if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; }
+    if (immediate) {
+      runLiveRescore(postText, postHtml, isAccept ? 'accept' : 'stream');
+      return undefined;
+    }
+    rescoreTimerRef.current = setTimeout(() => {
+      runLiveRescore(postText, postHtml, 'typing');
+    }, AO_RESCORE_DEBOUNCE_MS);
+    return () => { if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optimizeState, editorHtml, optimizeReview]);
   const initialPlagiarism = useMemo(() => {
     try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
   }, [(article as any)?.plagiarism_json]);
@@ -1196,6 +1269,17 @@ const ArticleEditorPage: NextPage = () => {
     preScoreRef.current = scoreData
       ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '', undefined, coverageItems)
       : 0;
+    // Task 11: capture the run-start AI baseline (gates the "Optimization Impact" float) and the
+    // run-start attribution "before" buckets (re-scored from the pre-optimize content so the first
+    // Accept's attribution measures against a like-for-like baseline). Reset per-run float state.
+    aiVisibilityBaselineRef.current = coverageSnapshot?.overall ?? 0;
+    attributionBeforeRef.current = computeCoverageScores(
+      liveCoverageItems(coverageItems, preText, preHtml),
+      coverageSnapshot?.answersMainQuestionEarly ?? false,
+    ).buckets;
+    placeholderCountRef.current = -1;
+    setAoFloat(null);
+    setActiveSectionId(null);
     changedSectionsRef.current = [];
     optimizeStore.clear();
     setOptimizeState('optimizing');
@@ -1259,6 +1343,8 @@ const ArticleEditorPage: NextPage = () => {
           } else if (eventType === 'section') {
             const ev = payload as SectionEvent;
             orderedEvents.push(ev);
+            // Task 11: track the streaming section (first section sets it, each event advances it).
+            setActiveSectionId(ev.sectionId);
             optimizeStore.set(ev.sectionId, {
               oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed,
               focus: ev.focus, mode: ev.mode, reason: ev.reason,
@@ -2003,15 +2089,28 @@ const ArticleEditorPage: NextPage = () => {
                         return { ...a, sectionId, focus: entry?.focus, mode: entry?.mode, reason: entry?.reason };
                       });
                       return (
-                        <OptimizeResultsPanel
-                          preScore={preScoreRef.current}
-                          postScore={optimizeReview ? optimizeReview.postScore : preScoreRef.current}
-                          changedCount={optimizeMetaRef.current.changedCount}
-                          wordsAdded={stats.wordsAdded}
-                          adjustments={adjustmentRows}
-                          remainingRows={remainingRows}
-                          onCardClick={scrollToOptimizerSection}
-                        />
+                        <>
+                          <OptimizeResultsPanel
+                            preScore={preScoreRef.current}
+                            postScore={optimizeReview ? optimizeReview.postScore : preScoreRef.current}
+                            changedCount={optimizeMetaRef.current.changedCount}
+                            wordsAdded={stats.wordsAdded}
+                            adjustments={adjustmentRows}
+                            remainingRows={remainingRows}
+                            onCardClick={scrollToOptimizerSection}
+                          />
+                          {/* Task 11: "why the AI score improved" — positive per-bucket attribution
+                              from the single live re-score. Rendered adjacent (own card) to keep
+                              OptimizeResultsPanel's prop contract untouched. Hidden when empty. */}
+                          {liveRescore && liveRescore.attributionRows.length > 0 && (
+                            <div style={{ margin: '0 16px 12px', padding: 12, background: '#FFFFFF', border: '1px solid #F4F4F5', borderRadius: 12 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', marginBottom: 8 }}>
+                                Why AI visibility improved
+                              </div>
+                              <AoScoreAttribution rows={liveRescore.attributionRows} />
+                            </div>
+                          )}
+                        </>
                       );
                     })()}
                     <ContentScorePanel
@@ -2021,7 +2120,12 @@ const ArticleEditorPage: NextPage = () => {
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
-                      scoreDeltas={optimizeState !== 'idle' && optimizeReview ? { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta } : undefined}
+                      scoreDeltas={optimizeState !== 'idle' && optimizeReview ? (() => {
+                        // Task 11: SEO delta from optimizeReview; AI delta from the single live re-score
+                        // (gated — only a positive recomputed delta vs the run-start baseline shows).
+                        const aiGate = liveRescore ? scoreDeltaGate(aiVisibilityBaselineRef.current, liveRescore.aiNew) : { animate: false, delta: 0 };
+                        return { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta, ai: aiGate.animate ? aiGate.delta : undefined };
+                      })() : undefined}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}
@@ -2048,8 +2152,8 @@ const ArticleEditorPage: NextPage = () => {
                       isDone={article.status === 'accepted'}
                       onMarkDone={() => handleAcceptReject('accept')}
                       aiVisibilitySummary={aiVisibilitySummary}
-                      coverageItems={coverageItems}
-                      coverageBuckets={coverageBuckets}
+                      coverageItems={optimizeState !== 'idle' && liveRescore ? [...liveRescore.liveItems] : coverageItems}
+                      coverageBuckets={optimizeState !== 'idle' && liveRescore ? liveRescore.buckets : coverageBuckets}
                       coverageSnapshot={coverageSnapshot}
                       aiCoverageScore={aiCoverageScore}
                       isRunningAiVisibility={isRunningAiVisibility}
@@ -2111,6 +2215,17 @@ const ArticleEditorPage: NextPage = () => {
             saving={optimizeSaving}
             rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
           />
+        )}
+
+        {/* ── Task 11: "Optimization Impact +N" float. Fixed near the score-gauge/topbar area
+            (top-right, left of the right panel). AoScoreFloat is position:absolute + self-removing. ── */}
+        {aoFloat && (
+          <div style={{
+            position: 'fixed', top: 70, zIndex: 9000, pointerEvents: 'none',
+            right: (panelCollapsed ? 0 : PANEL_W + PANEL_GAP) + 24,
+          }}>
+            <AoScoreFloat key={aoFloat.key} label={aoFloat.label} onDone={() => setAoFloat(null)} />
+          </div>
         )}
 
         {/* ── AO-8a: cancel-confirmation modal ── */}
