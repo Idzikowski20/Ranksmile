@@ -80,16 +80,20 @@ export function scoreAttribution(before: readonly BucketScore[], after: readonly
     .sort((a, b) => b.delta - a.delta);
 }
 
-const CATEGORY_DISPLAY_LABEL: Record<CoverageItem['category'], string> = {
-  intent: 'Intent', knowledge: 'Entities & Facts', authority: 'Authority', quality: 'Structure & Readability', style: 'Style',
+const TYPE_DISPLAY_LABEL: Record<CoverageType, string> = {
+  entity: 'Entities', fact: 'Facts', paa: 'Questions', structure: 'Structure',
+  readability: 'Readability', intent: 'Intent', definition: 'Definitions',
+  comparison: 'Comparisons', example: 'Examples', process: 'Processes',
+  statistic: 'Statistics', expectation: 'Expectations', warning: 'Warnings',
 };
 
-/** Uncovered items grouped by display bucket — the "Remaining AI Opportunities" panel. */
+/** Uncovered items grouped per TYPE ("Entities 0 · Facts 3 · Questions 2 · Structure 1") —
+ *  the "Remaining AI Opportunities" panel. Per-type, NOT per-category (spec: separate rows). */
 export function remainingOpportunities(liveItems: readonly CoverageItem[]): Array<{ label: string; count: number }> {
   const counts = new Map<string, number>();
   for (const it of liveItems) {
     if (it.covered) continue;
-    const label = CATEGORY_DISPLAY_LABEL[it.category] ?? it.category;
+    const label = TYPE_DISPLAY_LABEL[it.type] ?? it.type;
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   return [...counts.entries()]

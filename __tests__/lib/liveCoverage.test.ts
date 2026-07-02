@@ -156,18 +156,25 @@ describe('scoreAttribution', () => {
 });
 
 describe('remainingOpportunities', () => {
-  it('counts only !covered items, grouped by display label', () => {
+  it('counts only !covered items, grouped per TYPE (separate Entities/Facts/Questions/Structure rows)', () => {
     const items: CoverageItem[] = [
       item({ id: 'e1', type: 'entity', category: 'knowledge', covered: false }),
       item({ id: 'e2', type: 'entity', category: 'knowledge', covered: false }),
       item({ id: 'e3', type: 'entity', category: 'knowledge', covered: true }),
+      item({ id: 'f1', type: 'fact', category: 'knowledge', covered: false }),
+      item({ id: 'f2', type: 'fact', category: 'knowledge', covered: false }),
       item({ id: 'p1', type: 'paa', category: 'knowledge', covered: false }),
       item({ id: 's1', type: 'structure', category: 'quality', covered: false }),
     ];
     const result = remainingOpportunities(items);
-    const total = result.reduce((s, r) => s + r.count, 0);
-    expect(total).toBe(4); // 4 uncovered items total across groups
-    expect(result.every((r) => r.count > 0)).toBe(true);
+    // entity/fact/paa share category 'knowledge' but MUST stay separate rows (spec example:
+    // "Entities 0 · Facts 3 · Questions 2 · Structure 1") — never one lumped "Knowledge" row.
+    const byLabel = new Map(result.map((r) => [r.label, r.count]));
+    expect(byLabel.get('Entities')).toBe(2);
+    expect(byLabel.get('Facts')).toBe(2);
+    expect(byLabel.get('Questions')).toBe(1);
+    expect(byLabel.get('Structure')).toBe(1);
+    expect(result).toHaveLength(4);
   });
 
   it('empty when everything is covered', () => {
