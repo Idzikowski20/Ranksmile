@@ -104,7 +104,7 @@ const CellNum = ({ v, width }: { v: React.ReactNode; width: number }) => (
    </div>
 );
 
-type SortKey = 'kd' | 'vol' | 'position';
+type SortKey = 'kd' | 'vol' | 'position' | 'opportunity';
 
 const TopicalMapPage: NextPage = () => {
    const router = useRouter();
@@ -142,7 +142,8 @@ const TopicalMapPage: NextPage = () => {
       const q = query.trim().toLowerCase();
       if (q) list = list.filter((c) => c.mainKeyword.includes(q) || c.name.toLowerCase().includes(q));
       const dir = sortDir === 'asc' ? 1 : -1;
-      return [...list].sort((a, b) => (Number(a[sortKey] ?? -1) - Number(b[sortKey] ?? -1)) * dir);
+      const val = (c: TopicCluster): number => (sortKey === 'opportunity' ? c.opportunity.score : Number(c[sortKey] ?? -1));
+      return [...list].sort((a, b) => (val(a) - val(b)) * dir);
    }, [clusters, query, sortKey, sortDir, filters]);
 
    const toggleSelect = (id: number) => setSelected((prev) => {
@@ -252,16 +253,17 @@ const TopicalMapPage: NextPage = () => {
 
                      {/* Right: Main keyword */}
                      <div className="styled-scrollbar" style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-                        <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'stretch', background: '#fff', borderBottom: '1px solid #F4F4F5', minWidth: 760 }}>
+                        <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'stretch', background: '#fff', borderBottom: '1px solid #F4F4F5', minWidth: 850 }}>
                            <div style={{ width: 50, flexShrink: 0 }} />
                            <div style={{ flex: 1, minWidth: 300, padding: '12px 16px', display: 'flex', alignItems: 'center', borderLeft: '1px solid #F4F4F5', fontSize: 13, color: '#52525C', fontFamily: FONT }}>Main keyword</div>
                            <SortableHeader label="KD" sortKey="kd" activeKey={sortKey} dir={sortDir} width={100} onSort={(k) => handleSort(k as SortKey)} />
                            <SortableHeader label="Vol." sortKey="vol" activeKey={sortKey} dir={sortDir} width={100} onSort={(k) => handleSort(k as SortKey)} />
                            <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={100} onSort={(k) => handleSort(k as SortKey)} />
+                           <SortableHeader label="Opp." sortKey="opportunity" activeKey={sortKey} dir={sortDir} width={90} onSort={(k) => handleSort(k as SortKey)} />
                            <div style={{ width: 50, flexShrink: 0, borderLeft: '1px solid #F4F4F5' }} />
                         </div>
                         {shown.map((c) => (
-                           <div key={c.id} className="tm-row" style={{ display: 'flex', alignItems: 'center', minHeight: 72, borderBottom: '1px solid #F4F4F5', minWidth: 760, transition: 'background 150ms ease' }}>
+                           <div key={c.id} className="tm-row" style={{ display: 'flex', alignItems: 'center', minHeight: 72, borderBottom: '1px solid #F4F4F5', minWidth: 850, transition: 'background 150ms ease' }}>
                               <div style={{ width: 50, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                                  <Checkbox checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} />
                               </div>
@@ -281,6 +283,9 @@ const TopicalMapPage: NextPage = () => {
                               <CellNum v={c.kd} width={100} />
                               <CellNum v={c.vol} width={100} />
                               <CellNum v={c.position ?? ''} width={100} />
+                              <div style={{ width: 90, flexShrink: 0, padding: '12px 16px', borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch' }}>
+                                 <span style={{ fontSize: 12, fontWeight: 600, fontFamily: FONT, borderRadius: 9999, padding: '2px 8px', background: c.opportunity.score >= 60 ? 'rgba(120,58,251,0.08)' : '#F4F4F5', color: c.opportunity.score >= 60 ? '#783AFB' : '#52525C' }}>{c.opportunity.score}</span>
+                              </div>
                               <div style={{ width: 50, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', borderLeft: '1px solid #F4F4F5', alignSelf: 'stretch' }}>
                                  <KebabMenu items={[{ label: 'View details', onClick: () => setPanelCluster(c) }]} />
                               </div>

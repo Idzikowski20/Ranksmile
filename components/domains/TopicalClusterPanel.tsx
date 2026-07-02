@@ -36,6 +36,89 @@ const StatCell = ({ label, value }: { label: string; value: React.ReactNode }) =
    </div>
 );
 
+const barColor = (v: number): string => (v >= 80 ? '#1AB25E' : v >= 50 ? '#8B73F6' : '#FF6F77');
+
+const BarRow = ({ label, value }: { label: string; value: number }) => (
+   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <span style={{ width: 110, fontSize: 13, color: '#3F3F47', fontFamily: FONT, flexShrink: 0 }}>{label}</span>
+      <div style={{ flex: 1, height: 6, borderRadius: 9999, background: '#F4F4F5', overflow: 'hidden' }}>
+         <div style={{ width: `${value}%`, height: '100%', borderRadius: 9999, background: barColor(value), transition: 'width 0.3s ease' }} />
+      </div>
+      <span style={{ width: 40, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{value}%</span>
+   </div>
+);
+
+const OverviewSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+   <section style={{ border: '1px solid #F4F4F5', borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h3 style={{ margin: 0, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>{title}</h3>
+      {children}
+   </section>
+);
+
+const TIER_COLORS: Record<string, { bg: string; color: string }> = {
+   'Very High': { bg: '#F0FDF4', color: '#15803D' },
+   High: { bg: 'rgba(120,58,251,0.08)', color: '#783AFB' },
+   Medium: { bg: '#FEF3C7', color: '#B45309' },
+   Low: { bg: '#F4F4F5', color: '#52525C' },
+};
+
+const OverviewTab = ({ cluster }: { cluster: TopicCluster }) => {
+   const { opportunity: opp, dims, aiAuthority, aiGap } = cluster;
+   const tier = TIER_COLORS[opp.tier];
+   return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+         <OverviewSection title="Opportunity">
+            <div style={{ display: 'flex', border: '1px solid #F4F4F5', borderRadius: 8 }}>
+               <StatCell label="Opportunity" value={(
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                     {opp.score}
+                     <span style={{ background: tier.bg, color: tier.color, borderRadius: 9999, padding: '1px 8px', fontSize: 11, fontWeight: 600 }}>{opp.tier}</span>
+                  </span>
+               )} />
+               <div style={{ width: 1, background: '#F4F4F5' }} />
+               <StatCell label="Estimated gain" value={`+${opp.estGainClicks} clicks/mo`} />
+               <div style={{ width: 1, background: '#F4F4F5' }} />
+               <StatCell label="Difficulty" value={opp.difficulty} />
+               <div style={{ width: 1, background: '#F4F4F5' }} />
+               <StatCell label="Priority" value={opp.priority} />
+            </div>
+         </OverviewSection>
+         <OverviewSection title="Topic health">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+               {dims.map((d) => <BarRow key={d.label} label={d.label} value={d.value} />)}
+            </div>
+         </OverviewSection>
+         <OverviewSection title="AI Authority">
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+               <span style={{ fontSize: 24, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{aiAuthority.score}%</span>
+               <span style={{ fontSize: 13, color: '#71717B', fontFamily: FONT }}>overall</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+               {aiAuthority.subs.map((s) => <BarRow key={s.label} label={s.label} value={s.value} />)}
+            </div>
+         </OverviewSection>
+         <OverviewSection title="AI Gap">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+               {aiGap.map((g) => {
+                  const pct = Math.round((g.have / g.total) * 100);
+                  return (
+                     <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontFamily: FONT }}>
+                           <span style={{ color: '#3F3F47' }}>{g.label}</span>
+                           <span style={{ fontWeight: 600, color: '#18181B' }}>{g.have}/{g.total}</span>
+                        </div>
+                        <div style={{ height: 4, borderRadius: 9999, background: '#F4F4F5', overflow: 'hidden' }}>
+                           <div style={{ width: `${pct}%`, height: '100%', borderRadius: 9999, background: barColor(pct) }} />
+                        </div>
+                     </div>
+                  );
+               })}
+            </div>
+         </OverviewSection>
+      </div>
+   );
+};
+
 const KW_TH: React.CSSProperties = { padding: '8px 16px', textAlign: 'right', fontSize: 13, fontWeight: 400, color: '#71717B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5', textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4, whiteSpace: 'nowrap' };
 const KW_TD: React.CSSProperties = { padding: '12px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5' };
 
@@ -120,11 +203,11 @@ const GroupBlock = ({ group }: { group: KeywordGroup }) => {
 
 const TopicalClusterPanel = ({ cluster, onClose }: { cluster: TopicCluster | null; onClose: () => void }) => {
    const [visible, setVisible] = useState(false);
-   const [tab, setTab] = useState('keywords');
+   const [tab, setTab] = useState('overview');
 
    useEffect(() => {
       if (cluster) {
-         setTab('keywords');
+         setTab('overview');
          const t = setTimeout(() => setVisible(true), 10);
          return () => clearTimeout(t);
       }
@@ -172,6 +255,7 @@ const TopicalClusterPanel = ({ cluster, onClose }: { cluster: TopicCluster | nul
                <div>
                   <Tabs
                      items={[
+                        { value: 'overview', label: 'Overview' },
                         { value: 'keywords', label: 'Keywords', count: cluster.keywords.length },
                         { value: 'competitors', label: 'Competitors', count: cluster.competitors.length },
                      ]}
@@ -179,6 +263,7 @@ const TopicalClusterPanel = ({ cluster, onClose }: { cluster: TopicCluster | nul
                      onChange={setTab}
                   />
                </div>
+               {tab === 'overview' && <OverviewTab cluster={cluster} />}
                {tab === 'keywords' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                      {cluster.groups.map((g) => <GroupBlock key={g.label} group={g} />)}
