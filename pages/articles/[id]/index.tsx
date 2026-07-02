@@ -26,6 +26,7 @@ import { computeCoverageScores } from '../../../lib/aiCoverage';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
 import AoScoreAttribution from '../../../components/articles/AoScoreAttribution';
 import { computeOptimizeStats } from '../../../lib/optimizeStats';
+import { sectionStatusLabel } from '../../../lib/optimizeMessaging';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
@@ -1463,13 +1464,17 @@ const ArticleEditorPage: NextPage = () => {
     const editor = (editorRef.current as any)?.getEditor?.();
     if (!editor) return;
     // collectOptimizerPositions returns DESCENDING; reverse for document order.
-    const positions = collectOptimizerPositions(editor.state.doc as PMDocLike).map((r) => r.pos).reverse();
-    if (!positions.length) return;
+    const refs = collectOptimizerPositions(editor.state.doc as PMDocLike).slice().reverse();
+    if (!refs.length) return;
     const caret = editor.state.selection.from;
-    const target = dir === 1
-      ? (positions.find((p) => p > caret) ?? positions[0])
-      : ([...positions].reverse().find((p) => p < caret) ?? positions[positions.length - 1]);
-    editor.chain().focus().setTextSelection(target).scrollIntoView().run();
+    const targetRef = dir === 1
+      ? (refs.find((r) => r.pos > caret) ?? refs[0])
+      : ([...refs].reverse().find((r) => r.pos < caret) ?? refs[refs.length - 1]);
+    // Task 12: TipTap's tr.scrollIntoView() is an instant native scroll with no smooth/reduced-motion
+    // option, so set the caret via PM but perform the actual scroll via the DOM-level helper (same one
+    // Task 9's adjustments-card click uses) so prev/next nav is smooth (instant under reduced motion).
+    editor.chain().focus().setTextSelection(targetRef.pos).run();
+    scrollToOptimizerSection(targetRef.sectionId);
   };
 
   // Cancel: restore the pre-optimize article, discard all suggestions, exit review.
@@ -2228,6 +2233,11 @@ const ArticleEditorPage: NextPage = () => {
             onSave={() => setSaveModalOpen(true)}
             saving={optimizeSaving}
             rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
+            activeStatusLabel={
+              optimizeState === 'optimizing' && activeSectionId
+                ? sectionStatusLabel(optimizeStore.get(activeSectionId) ?? {})
+                : undefined
+            }
           />
         )}
 
