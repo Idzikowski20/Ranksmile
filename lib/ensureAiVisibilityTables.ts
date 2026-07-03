@@ -76,6 +76,7 @@ export async function ensureAiVisibilityTables(): Promise<void> {
       model TEXT NOT NULL,
       answer TEXT,
       citations ${JSON_T},
+      brands ${JSON_T},
       own_cited INTEGER DEFAULT 0,
       own_position INTEGER,
       cost_micros INTEGER DEFAULT 0,
@@ -83,6 +84,7 @@ export async function ensureAiVisibilityTables(): Promise<void> {
       created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('ai_vis_results', e));
 
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_results_scan ON ai_vis_results (scan_id)'); } catch (e) { ignoreExisting('idx results', e); }
+   try { await db.query(`ALTER TABLE ai_vis_results ADD COLUMN brands ${JSON_T}`); } catch (e) { ignoreExisting('ai_vis_results.brands', e); }
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_ai_vis_prompts_config ON ai_vis_prompts (config_id)'); } catch (e) { ignoreExisting('idx prompts', e); }
 
    checked = true;
