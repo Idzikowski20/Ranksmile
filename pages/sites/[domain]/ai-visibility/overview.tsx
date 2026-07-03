@@ -9,7 +9,7 @@ import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBa
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
 import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
-import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, type DomainOverview } from '../../../../services/aiVisibility';
+import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
 import { Modal } from '../../../../components/ui';
 
 const FONT = 'var(--font-family-primary)';
@@ -41,6 +41,19 @@ const LineIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="no
 const HashIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 3L6.5 21M17.5 3L14.5 21M20.5 8H3.5M19.5 16H2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const PromptIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path fillRule="evenodd" clipRule="evenodd" d="M3.29289 4.29289C3.68342 3.90237 4.31658 3.90237 4.70711 4.29289L10.7071 10.2929C11.0976 10.6834 11.0976 11.3166 10.7071 11.7071L4.70711 17.7071C4.31658 18.0976 3.68342 18.0976 3.29289 17.7071C2.90237 17.3166 2.90237 16.6834 3.29289 16.2929L8.58579 11L3.29289 5.70711C2.90237 5.31658 2.90237 4.68342 3.29289 4.29289Z" fill="currentColor" /><path fillRule="evenodd" clipRule="evenodd" d="M11 19C11 18.4477 11.4477 18 12 18H20C20.5523 18 21 18.4477 21 19C21 19.5523 20.5523 20 20 20H12C11.4477 20 11 19.5523 11 19Z" fill="currentColor" /></svg>);
 const InfoIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
+
+/** A "?" info icon that reveals context (compared domain, freshness) in a hover tooltip. */
+const InfoHint = ({ text }: { text: string }) => {
+   const [show, setShow] = useState(false);
+   return (
+      <span style={{ position: 'relative', display: 'inline-flex' }} onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+         <span style={{ display: 'inline-flex', cursor: 'help' }}><InfoIcon /></span>
+         {show ? (
+            <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', background: '#18181B', color: '#fff', fontSize: 12, fontWeight: 400, fontFamily: FONT, padding: '6px 10px', borderRadius: 8, zIndex: 150, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>{text}</span>
+         ) : null}
+      </span>
+   );
+};
 
 const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
 const splitUrl = (url: string, fallback: string): { host: string; path: string } => {
@@ -89,6 +102,11 @@ const AiVisibilityOverview: NextPage = () => {
 
    const startScan = useStartAiVisScan(slug);
    const [confirmDays, setConfirmDays] = useState<number | null>(null);
+   // Own scan-status subscription (shared react-query key with the shell) so the
+   // Refresh button — which lives in the toolbar, above the children render — can
+   // reflect the crunching state without threading it back up from the shell.
+   const scanStatusQ = useAiVisScanStatus(slug);
+   const crunchingTop = scanStatusQ.data?.status === 'running' || scanStatusQ.data?.status === 'queued';
 
    const runScan = async (force: boolean) => {
       const res = await startScan.mutateAsync(force ? { force: true } : undefined);
@@ -97,6 +115,17 @@ const AiVisibilityOverview: NextPage = () => {
       toast.success('Scan started');
    };
 
+   const refreshBtn = (
+      <button
+         type="button"
+         onClick={() => runScan(false)}
+         disabled={startScan.isLoading || crunchingTop}
+         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #E4E4E7', borderRadius: 8, padding: '6px 12px', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: startScan.isLoading || crunchingTop ? 'not-allowed' : 'pointer' }}
+      >
+         {crunchingTop ? 'Scanning…' : 'Refresh data'}
+      </button>
+   );
+
    return (
       <AiVisPageShell
          section="AI Visibility"
@@ -104,6 +133,7 @@ const AiVisibilityOverview: NextPage = () => {
          compareCompetitors={competitorsAll}
          compareSelected={compareDomain}
          onCompareSelect={setCompareDomain}
+         toolbarTrailing={refreshBtn}
       >
          {({ crunching }) => {
             const pending = crunching || baseQ.isLoading || ov?.pending || !ov?.snapshot;
@@ -150,32 +180,20 @@ const AiVisibilityOverview: NextPage = () => {
                );
             }
 
+            const updatedTxt = daysAgo(ov?.finishedAt) !== null ? `last updated ${daysAgo(ov?.finishedAt) === 0 ? 'today' : `${daysAgo(ov?.finishedAt)}d ago`}` : '';
+            const refreshTxt = typeof ov?.daysUntilRefresh === 'number' ? `next auto refresh in ${ov.daysUntilRefresh}d` : '';
+            const scoreHint = [compareDomain, updatedTxt, refreshTxt].filter(Boolean).join(' · ');
+
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                     <button
-                        type="button"
-                        onClick={() => runScan(false)}
-                        disabled={startScan.isLoading || crunching}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #E4E4E7', borderRadius: 8, padding: '7px 14px', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: startScan.isLoading || crunching ? 'not-allowed' : 'pointer' }}
-                     >
-                        {crunching ? 'Scanning…' : 'Refresh data'}
-                     </button>
-                  </div>
-
                   {/* Visibility score — competitor ranking + Compare */}
                   <Panel
                      title={(
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                            Visibility score: <span style={{ fontWeight: 400, color: '#18181B' }}>{pending || !own ? '—' : own.visibilityScore}</span>
                            {!pending && delta ? <DeltaBadge d={delta.visibilityScore} /> : null}
-                           {!pending && comp ? <span style={{ fontSize: 14, color: '#71717B', fontWeight: 400 }}>vs {comp.visibilityScore} · {compareDomain}</span> : null}
-                           {!pending && daysAgo(ov?.finishedAt) !== null ? (
-                              <span style={{ fontSize: 12, color: '#9F9FA9', fontWeight: 400 }}>· last updated {daysAgo(ov?.finishedAt) === 0 ? 'today' : `${daysAgo(ov?.finishedAt)}d ago`}</span>
-                           ) : null}
-                           {!pending && typeof ov?.daysUntilRefresh === 'number' ? (
-                              <span style={{ fontSize: 12, color: '#9F9FA9', fontWeight: 400 }}>· next auto refresh in {ov.daysUntilRefresh}d</span>
-                           ) : null}
+                           {!pending && comp ? <span style={{ fontSize: 14, color: '#9F9FA9', fontWeight: 400 }}>vs. {comp.visibilityScore}</span> : null}
+                           {!pending && scoreHint ? <InfoHint text={scoreHint} /> : null}
                         </span>
                      )}
                      action={(
@@ -184,7 +202,7 @@ const AiVisibilityOverview: NextPage = () => {
                               {(['bar', 'line'] as const).map((m) => {
                                  const on = chartMode === m;
                                  return (
-                                    <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#783AFB' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', transition: 'color 150ms ease' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
+                                    <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#18181B' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', transition: 'color 150ms ease' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
                                  );
                               })}
                            </div>
@@ -205,7 +223,7 @@ const AiVisibilityOverview: NextPage = () => {
                                  {(['topics', 'prompts'] as const).map((m) => {
                                     const on = promptMode === m;
                                     return (
-                                       <button key={m} type="button" onClick={() => setPromptMode(m)} title={m === 'topics' ? 'Topics' : 'Prompts'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#783AFB' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer' }}>{m === 'topics' ? <HashIcon /> : <PromptIcon />}</button>
+                                       <button key={m} type="button" onClick={() => setPromptMode(m)} title={m === 'topics' ? 'Topics' : 'Prompts'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#18181B' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer' }}>{m === 'topics' ? <HashIcon /> : <PromptIcon />}</button>
                                     );
                                  })}
                               </div>

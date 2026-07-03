@@ -37,11 +37,12 @@ const btn: React.CSSProperties = {
  * competitor picker ("Compare" ⇄ "Comparing with {domain}"); otherwise it's a
  * static button (other sub-pages don't wire comparison yet).
  */
-const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect }: {
+const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect, trailing }: {
    date?: string;
    compareCompetitors?: Array<{ domain: string }>;
    compareSelected?: string | null;
    onCompareSelect?: (d: string | null) => void;
+   trailing?: React.ReactNode;
 }) => {
    const [modelsOpen, setModelsOpen] = useState(false);
    const compareInteractive = !!(compareCompetitors && compareCompetitors.length && onCompareSelect);
@@ -80,6 +81,7 @@ const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compar
                   </div>
                )}
             </div>
+            {trailing}
          </div>
       </div>
    );
