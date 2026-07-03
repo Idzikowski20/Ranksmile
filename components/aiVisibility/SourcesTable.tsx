@@ -4,14 +4,16 @@ import HoverTooltip from '../common/HoverTooltip';
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
-export type SourceRow = { url: string; domain: string; timesShown: number; models: string[] };
-type Group = { domain: string; urls: SourceRow[]; timesShown: number; models: string[] };
+export type SourceBrand = { domain: string; brand: string };
+export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[] };
+type Group = { domain: string; urls: SourceRow[]; timesShown: number; models: string[]; mentioned: boolean; brands: SourceBrand[] };
 
 export const splitSourceUrl = (url: string, fallback: string): { host: string; path: string } => {
    try { const u = new URL(url); return { host: u.host, path: `${u.pathname}${u.search}` }; } catch { return { host: fallback, path: '' }; }
 };
 
 const PAGE_SIZE = 50;
+const GRAY_FALLBACK = 'https://www.google.com/s2/favicons?domain=example.com&sz=32';
 
 const ChevronRight = ({ open }: { open: boolean }) => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -19,6 +21,30 @@ const ChevronRight = ({ open }: { open: boolean }) => (
 const SortArrow = ({ asc }: { asc: boolean }) => (
    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ transform: asc ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M12 5v14m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
+const OpenDetailsIcon = () => (
+   <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 17H16.75C17.99 17 19 15.99 19 14.75V5.25C19 4.01 17.99 3 16.75 3H13V17Z" fill="currentColor" /><path d="M11 3.5V16.5H3.25C2.28 16.5 1.5 15.72 1.5 14.75V5.25C1.5 4.28 2.28 3.5 3.25 3.5H11Z" stroke="currentColor" /></svg>
+);
+
+/** Dotted-underline column header that reveals a definition on hover. */
+const HeadTip = ({ label, tip, align = 'left' }: { label: string; tip: string; align?: 'left' | 'right' | 'center' }) => (
+   <HoverTooltip label={tip} align={align}>
+      <span style={{ cursor: 'help', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 4, textDecorationColor: '#C4C4CC' }}>{label}</span>
+   </HoverTooltip>
+);
+
+const BrandStack = ({ brands }: { brands: SourceBrand[] }) => {
+   const shown = brands.slice(0, 3);
+   if (!shown.length) return <span style={{ color: '#9F9FA9' }}>—</span>;
+   return (
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+         {shown.map((b, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={b.brand} alt="" title={b.brand} src={b.domain ? faviconFor(b.domain) : GRAY_FALLBACK} width={16} height={16} style={{ borderRadius: 9999, border: '1px solid #fff', marginLeft: i ? -5 : 0, background: '#fff', opacity: b.domain ? 1 : 0.4 }} />
+         ))}
+         {brands.length > 3 ? <span style={{ marginLeft: 6, fontSize: 13, color: '#71717B' }}>+{brands.length - 3}</span> : null}
+      </span>
+   );
+};
 
 const headCell: React.CSSProperties = { padding: '10px 16px', fontSize: 13, fontWeight: 500, color: '#71717B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
 const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box' };
@@ -35,7 +61,16 @@ const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: 
          <span style={{ fontWeight: 600, color: '#18181B' }}>{host}</span>
          <span style={{ color: '#9F9FA9' }}>{path}</span>
       </span>
+      <span data-open style={{ position: 'absolute', right: 12, opacity: 0, transition: 'opacity 120ms ease', color: '#71717B', zIndex: 1, display: 'inline-flex' }}><OpenDetailsIcon /></span>
    </div>
+);
+
+const MetaCells = ({ mentioned, brands }: { mentioned?: boolean; brands?: SourceBrand[] }) => (
+   <>
+      <div style={{ ...bodyCell, width: 100, flexShrink: 0, justifyContent: 'center', color: mentioned ? '#18181B' : '#71717B' }}>{mentioned ? 'Yes' : 'No'}</div>
+      <div style={{ ...bodyCell, width: 120, flexShrink: 0 }}><BrandStack brands={brands || []} /></div>
+      <div style={{ ...bodyCell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: '#9F9FA9' }}>N/A</div>
+   </>
 );
 
 const ModelsCell = ({ models, modelLabel }: { models: string[]; modelLabel: Record<string, string> }) => {
@@ -55,8 +90,10 @@ const TimesCell = ({ v }: { v: number }) => (
    <div style={{ ...bodyCell, width: 150, flexShrink: 0, justifyContent: 'flex-end', fontWeight: 600, color: '#18181B' }}>{v}</div>
 );
 
-const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FAFAFA'; };
-const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#fff'; };
+const setOpenIcon = (el: HTMLElement, on: boolean) => { const ic = el.querySelector('[data-open]') as HTMLElement | null; if (ic) ic.style.opacity = on ? '1' : '0'; };
+const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FBFAFF'; setOpenIcon(e.currentTarget, true); };
+const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#fff'; setOpenIcon(e.currentTarget, false); };
+const hoverOffChild = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FCFCFD'; setOpenIcon(e.currentTarget, false); };
 
 /** SurferSEO-style sources table: fill-bar source column, optional group-by-domain with
  *  expandable URL rows, sortable Times shown, incremental "Show more" paging.
@@ -78,13 +115,19 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
       if (!grouped) return [];
       const map = new Map<string, Group>();
       for (const s of sorted) {
-         const g = map.get(s.domain) ?? { domain: s.domain, urls: [], timesShown: 0, models: [] };
+         const g = map.get(s.domain) ?? { domain: s.domain, urls: [], timesShown: 0, models: [], mentioned: false, brands: [] };
          g.urls.push(s);
          g.timesShown += s.timesShown;
          map.set(s.domain, g);
       }
       const out = Array.from(map.values());
-      for (const g of out) g.models = Array.from(new Set(g.urls.flatMap((u) => u.models)));
+      for (const g of out) {
+         g.models = Array.from(new Set(g.urls.flatMap((u) => u.models)));
+         g.mentioned = g.urls.some((u) => u.mentioned);
+         const seen = new Map<string, SourceBrand>();
+         for (const u of g.urls) for (const b of (u.brands || [])) if (!seen.has(b.brand.toLowerCase())) seen.set(b.brand.toLowerCase(), b);
+         g.brands = Array.from(seen.values());
+      }
       return out.sort((a, b) => (asc ? a.timesShown - b.timesShown : b.timesShown - a.timesShown));
    }, [sorted, grouped, asc]);
 
@@ -107,11 +150,14 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
          {/* Header */}
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>
-            {grouped ? <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}>URLs</div> : null}
+            {grouped ? <div style={{ ...headCell, width: 80, flexShrink: 0, justifyContent: 'flex-end' }}>URLs</div> : null}
+            <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></div>
+            <div style={{ ...headCell, width: 120, flexShrink: 0 }}><HeadTip label="Brands" tip="Brands mentioned in AI answers citing this source" /></div>
+            <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
             <div style={{ ...headCell, width: 110, flexShrink: 0 }}>Models</div>
             <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>
                <button type="button" onClick={() => setAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}>
-                  Times shown <SortArrow asc={asc} />
+                  <HeadTip label="Times shown" tip="Number of times the URL appears in AI answers" align="right" /> <SortArrow asc={asc} />
                </button>
             </div>
          </div>
@@ -120,16 +166,18 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
             <React.Fragment key={g.domain}>
                <div style={rowStyle} onClick={() => toggleGroup(g.domain)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') toggleGroup(g.domain); }}>
                   <SourceCell icon={g.domain} host={g.domain} path="" fillPct={(g.timesShown / maxGroup) * 100} chevronOpen={expanded.has(g.domain)} />
-                  <div style={{ ...bodyCell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: '#52525C' }}>{g.urls.length}</div>
+                  <div style={{ ...bodyCell, width: 80, flexShrink: 0, justifyContent: 'flex-end', color: '#52525C' }}>{g.urls.length}</div>
+                  <MetaCells mentioned={g.mentioned} brands={g.brands} />
                   <ModelsCell models={g.models} modelLabel={modelLabel} />
                   <TimesCell v={g.timesShown} />
                </div>
                {expanded.has(g.domain) && g.urls.map((u, i) => {
                   const { host, path } = splitSourceUrl(u.url, u.domain);
                   return (
-                     <div key={u.url} style={{ ...rowStyle, background: '#FCFCFD' }} onClick={() => onSelect(g.urls, i, true)} onMouseEnter={hoverOn} onMouseLeave={(e) => { e.currentTarget.style.background = '#FCFCFD'; }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(g.urls, i, true); }}>
+                     <div key={u.url} style={{ ...rowStyle, background: '#FCFCFD' }} onClick={() => onSelect(g.urls, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOffChild} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(g.urls, i, true); }}>
                         <SourceCell icon={u.domain} host={host} path={path} fillPct={(u.timesShown / maxUrl) * 100} indent />
-                        <div style={{ ...bodyCell, width: 90, flexShrink: 0 }} />
+                        <div style={{ ...bodyCell, width: 80, flexShrink: 0 }} />
+                        <MetaCells mentioned={u.mentioned} brands={u.brands} />
                         <ModelsCell models={u.models} modelLabel={modelLabel} />
                         <TimesCell v={u.timesShown} />
                      </div>
@@ -141,6 +189,7 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
             return (
                <div key={s.url} style={rowStyle} onClick={() => onSelect(sorted, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(sorted, i, true); }}>
                   <SourceCell icon={s.domain} host={host} path={path} fillPct={(s.timesShown / maxUrl) * 100} />
+                  <MetaCells mentioned={s.mentioned} brands={s.brands} />
                   <ModelsCell models={s.models} modelLabel={modelLabel} />
                   <TimesCell v={s.timesShown} />
                </div>
