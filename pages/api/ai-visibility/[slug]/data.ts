@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -43,6 +43,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!scan) return res.status(200).json({ pending: true });
 
       if (view === 'fanout') return res.status(200).json({ queries: [] }); // Beta stub
+
+      // Brand-aware views (sources/source-detail) load full ResultRows (incl. brands) and
+      // support prompt/model filtering via CSV query params.
+      const cfg = await queryOne<{ brand_name: string }>(
+         'SELECT c.brand_name FROM ai_vis_configs c WHERE c.domain_id = ? ORDER BY c.id DESC LIMIT 1', [domain.ID],
+      );
+      const ownBrand = cfg?.brand_name || domain.domain;
+      const parseIds = (v: unknown): number[] => (typeof v === 'string' && v ? v.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : []);
+      const parseList = (v: unknown): string[] => (typeof v === 'string' && v ? v.split(',').filter(Boolean) : []);
+      const filterRows = (rs: ResultRow[]): ResultRow[] => {
+         const pids = parseIds(req.query.prompts); const models = parseList(req.query.models);
+         return rs.filter((r) => (!pids.length || pids.includes(r.promptId)) && (!models.length || models.includes(r.model)));
+      };
+
+      if (view === 'sources') {
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const candidates = gapBrandCandidates(all, ownBrand);
+         const wanted = parseList(req.query.gapBrands);
+         const selected = wanted.length ? wanted : candidates.slice(0, 4);
+         return res.status(200).json({
+            sources: aggregateSources(all, ownBrand),
+            gapCards: selected.map((b) => mentionGap(all, b, ownBrand)),
+            gapCandidates: candidates,
+         });
+      }
+
+      if (view === 'source-detail') {
+         const url = typeof req.query.url === 'string' ? req.query.url : '';
+         if (!url) return res.status(200).json({ history: [], brands: [], brandCount: 0 });
+         const scans = await queryRows<{ id: number, finished_at: string | null }>(
+            `SELECT s.id, s.finished_at FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id
+             WHERE c.domain_id = ? AND s.status = 'completed' ORDER BY s.id DESC LIMIT 24`, [domain.ID],
+         );
+         const history: Array<{ finishedAt: string | null, timesShown: number }> = [];
+         for (const s of scans.slice().reverse()) {
+            const rs = filterRows(await loadScanResultRows(s.id));
+            history.push({ finishedAt: s.finished_at, timesShown: rs.reduce((acc, r) => acc + r.citations.filter((c) => c.url === url).length, 0) });
+         }
+         const latest = filterRows(await loadScanResultRows(scan.id));
+         const brands = brandsForSource(latest, url);
+         return res.status(200).json({ history, brands, brandCount: brands.length });
+      }
 
       const dbRows = await queryRows<DbResultRow>(
          `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
@@ -107,9 +149,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             nextRefreshAt,
             daysUntilRefresh,
          });
-      }
-      if (view === 'sources') {
-         return res.status(200).json({ sources: aggregateSources(rows) });
       }
       if (view === 'competitors') {
          return res.status(200).json({ competitors: aggregateCompetitors(rows, domain.domain) });
