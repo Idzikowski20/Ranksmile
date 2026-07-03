@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { findDueConfigIds, enqueueAiVisScan } from '../../../../lib/aiVisibilityScan';
+import { queryRows } from '../../../../lib/db/query';
 import { getErrorMessage } from '../../../../lib/errors';
 
 export const config = { maxDuration: 60 };
@@ -20,13 +21,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await db.sync();
       await ensureAiVisibilityTables();
 
-      const due: Array<{ configId: number; scanId: number }> = [];
+      let due: Array<{ configId: number; scanId: number }> = [];
       const selectAndEnqueue = async () => {
          const configIds = await findDueConfigIds();
          for (const configId of configIds) {
-            const scanId = await enqueueAiVisScan(configId);
-            due.push({ configId, scanId });
+            // Per-item guard: one failing enqueue must not abort the batch and
+            // strand the configs already enqueued this tick.
+            try { await enqueueAiVisScan(configId); }
+            catch (e) { console.warn(`[ai-vis due-scans] enqueue failed for config ${configId}:`, getErrorMessage(e)); }
          }
+         // Return ALL currently-queued scans (this tick's PLUS any orphaned by an
+         // earlier partial failure). findDueConfigIds excludes configs that already
+         // have a queued scan, and the stale-reclaim only frees `running` scans — so
+         // an un-driven `queued` scan would otherwise never run. run_scan_loop /
+         // runScanChunk are idempotent, so re-driving a queued scan is safe.
+         const queued = await queryRows<{ id: number; config_id: number }>(
+            "SELECT id, config_id FROM ai_vis_scans WHERE status = 'queued' ORDER BY id ASC",
+         );
+         due = queued.map((q) => ({ configId: q.config_id, scanId: q.id }));
       };
 
       // Cross-instance safety: if the sidecar is ever scaled to >1 instance, two

@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "SELECT id FROM ai_vis_scans WHERE config_id = ? AND status IN ('queued','running') ORDER BY id DESC LIMIT 1",
       [cfg.id],
    );
-   const force = !!(req.body && (req.body as { force?: boolean }).force);
+   const force = (req.body as { force?: unknown } | undefined)?.force === true;
    if (!active && !force) {
       const last = await queryOne<{ finished_at: string | null }>(
          "SELECT finished_at FROM ai_vis_scans WHERE config_id = ? AND status = 'completed' ORDER BY finished_at DESC LIMIT 1",
