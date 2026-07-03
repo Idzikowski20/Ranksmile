@@ -6,20 +6,24 @@ import { buildSnapshot, ResultRow, OverviewSnapshot } from './aiVisibilityMetric
 import type { LlmCitation } from './dataforseoLlm';
 
 export type DbResultRow = {
-   prompt_id: number; model: string; own_cited: number; own_position: number | null; citations: string | null;
+   prompt_id: number; model: string; own_cited: number; own_position: number | null; citations: unknown;
 };
 
-export const parseCitations = (raw: string | null): LlmCitation[] => {
-   if (!raw) return [];
-   try {
-      const v = JSON.parse(raw);
-      if (!Array.isArray(v)) return [];
-      // Coerce every field to a string: a stored citation with a url but missing
-      // title/domain must not yield `undefined` (norm(domain) would throw downstream).
-      return v
-         .filter((c): c is { url: string, domain?: unknown, title?: unknown } => !!c && typeof c.url === 'string')
-         .map((c) => ({ url: c.url, domain: typeof c.domain === 'string' ? c.domain : '', title: typeof c.title === 'string' ? c.title : '' }));
-   } catch { return []; }
+export const parseCitations = (raw: unknown): LlmCitation[] => {
+   // The citations column is jsonb on Postgres → node-pg returns it ALREADY parsed
+   // (an array); on SQLite (dev) it's TEXT → a JSON string. Running JSON.parse on an
+   // array throws → dropped every citation, so Sources/Competitors came back empty
+   // on Neon. Handle both shapes.
+   let v: unknown = raw;
+   if (typeof raw === 'string') {
+      try { v = JSON.parse(raw); } catch { return []; }
+   }
+   if (!Array.isArray(v)) return [];
+   // Coerce every field to a string: a stored citation with a url but missing
+   // title/domain must not yield `undefined` (norm(domain) would throw downstream).
+   return v
+      .filter((c): c is { url: string, domain?: unknown, title?: unknown } => !!c && typeof (c as { url?: unknown }).url === 'string')
+      .map((c) => ({ url: c.url, domain: typeof c.domain === 'string' ? c.domain : '', title: typeof c.title === 'string' ? c.title : '' }));
 };
 
 export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbRows.map((r) => ({

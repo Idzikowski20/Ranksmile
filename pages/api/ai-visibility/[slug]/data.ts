@@ -12,7 +12,7 @@ import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
 type DbResultRow = {
    prompt_id: number, model: string, own_cited: number, own_position: number | null,
-   citations: string | null, topic: string, text: string,
+   citations: unknown, topic: string, text: string,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -8,7 +8,7 @@ import type { AiVisConfig } from './aiVisibility';
  * render a skeleton until then (never a flash of empty state). */
 export function useAiVisibilityGuard(slug: string | undefined): { ready: boolean, config: AiVisConfig | null } {
    const router = useRouter();
-   const { data, isLoading } = useQuery<{ config: AiVisConfig | null }>(
+   const { data, isFetching } = useQuery<{ config: AiVisConfig | null }>(
       ['ai-vis-config', slug],
       async () => {
          const r = await fetch(`/api/ai-visibility/${slug}/config`);
@@ -18,8 +18,14 @@ export function useAiVisibilityGuard(slug: string | undefined): { ready: boolean
    );
    const config = data?.config ?? null;
    useEffect(() => {
-      if (!slug || isLoading || data === undefined) return;
+      // Decide only on a SETTLED fetch. Gating on isFetching (not isLoading) is the
+      // fix for the post-setup bounce: right after "Finish", the config query holds
+      // a stale { config: null } (cached when this guarded page was visited while
+      // unconfigured). isLoading is false while that stale value is present, so the
+      // effect used to redirect back to setup before the fresh (completed) config
+      // landed. isFetching stays true until the refetch resolves.
+      if (!slug || isFetching || data === undefined) return;
       if (!config?.completedAt) router.replace(`/sites/${slug}/ai-visibility/setup`);
-   }, [slug, isLoading, data, config, router]);
+   }, [slug, isFetching, data, config, router]);
    return { ready: !!config?.completedAt, config };
 }

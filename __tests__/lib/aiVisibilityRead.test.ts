@@ -15,6 +15,10 @@ describe('parseCitations', () => {
       expect(parseCitations(null)).toEqual([]);
       expect(parseCitations('{not json')).toEqual([]);
    });
+   it('accepts an already-parsed array (Postgres jsonb comes back parsed, not a string)', () => {
+      const out = parseCitations([{ url: 'https://a.com', domain: 'a.com', title: 'A' }, { nope: true }]);
+      expect(out).toEqual([{ url: 'https://a.com', domain: 'a.com', title: 'A' }]);
+   });
 });
 
 describe('mapDbRowsToResultRows', () => {
