@@ -221,12 +221,31 @@ export async function runScanChunk(scanId: number, ownDomain: string, limit = AI
  * (long-lived `next dev` process) and standalone scripts. On serverless the
  * durable path drives runScanChunk one chunk at a time via the sidecar instead.
  */
+/** Best-effort: analyse a finished scan's answers for brands. Never throws — Sources
+ *  just shows "no brands yet" if this fails. Loads the config's brand name itself. */
+export async function runBrandsForScan(scanId: number): Promise<void> {
+   try {
+      const cfg = await queryOne<{ brand_name: string }>(
+         'SELECT c.brand_name FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id WHERE s.id = ? LIMIT 1',
+         [scanId],
+      );
+      const ownBrand = cfg?.brand_name || '';
+      // Dynamic import keeps @ai-sdk/deepseek (ESM) out of this module's static import
+      // graph, so unit tests of aiVisibilityScan don't have to transform it.
+      const { runBrandChunk } = await import('./aiVisibilityBrands');
+      for (let i = 0; i < 100; i += 1) {
+         const { remaining } = await runBrandChunk(scanId, ownBrand);
+         if (remaining === 0) break;
+      }
+   } catch { /* brands are optional */ }
+}
+
 export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<void> {
    try {
       // Bounded by ceil(total / chunk); the guard only backstops a logic bug.
       for (let i = 0; i < 100000; i += 1) {
          const { finished } = await runScanChunk(scanId, ownDomain);
-         if (finished) return;
+         if (finished) { await runBrandsForScan(scanId); return; }
       }
    } catch (error) {
       await db.query(
