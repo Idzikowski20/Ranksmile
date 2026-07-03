@@ -66,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             sources: aggregateSources(all, ownBrand),
             gapCards: selected.map((b) => mentionGap(all, b, ownBrand)),
             gapCandidates: candidates,
+            ownLabel: ownBrand,
          });
       }
 
