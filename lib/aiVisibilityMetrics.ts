@@ -152,6 +152,38 @@ export function buildSnapshot(rows: ResultRow[], ownDomain: string): DomainSnaps
    return snapshotForDomain(rows, ownDomain);
 }
 
+// AI grounding / redirect proxies, not real competitors — excluded from the ranking.
+export const COMPETITOR_NOISE: string[] = [
+   'vertexaisearch.cloud.google.com', 'googleusercontent.com', 'google.com',
+   'gstatic.com', 'bing.com', 'duckduckgo.com',
+];
+const NOISE = new Set(COMPETITOR_NOISE);
+
+export type RankedCompetitor = { domain: string, snapshot: DomainSnapshot };
+
+/** Snapshot for the tracked domain + every distinct cited domain (minus noise),
+ *  computed ONCE. Keys are normalized (norm). Shared by ranking, compare, history. */
+export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map<string, DomainSnapshot> {
+   const domains = new Set<string>([norm(ownDomain)]);
+   for (const r of rows) for (const c of r.citations) {
+      const d = norm(c.domain);
+      if (d && !NOISE.has(d)) domains.add(d);
+   }
+   const map = new Map<string, DomainSnapshot>();
+   for (const d of domains) map.set(d, snapshotForDomain(rows, d));
+   return map;
+}
+
+/** All competitors (own excluded), each with its FULL snapshot, sorted by visibility desc.
+ *  Callers slice top-N for the chart / instant-compare and use the whole list for the picker. */
+export function rankCompetitors(byDomain: Map<string, DomainSnapshot>, ownDomain: string): RankedCompetitor[] {
+   const own = norm(ownDomain);
+   return Array.from(byDomain.entries())
+      .filter(([domain]) => domain !== own)
+      .map(([domain, snapshot]) => ({ domain, snapshot }))
+      .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
+}
+
 export type Trend = 'up' | 'down' | 'same';
 export type MetricDelta = { current: number; previous: number; delta: number; trend: Trend };
 export type OverviewDelta = {

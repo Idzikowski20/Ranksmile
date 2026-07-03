@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, computeDelta, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, ResultRow } from '../../lib/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 
@@ -88,6 +88,29 @@ describe('snapshotForDomain', () => {
       const snap = snapshotForDomain(rows, 'nobody.example');
       expect(snap.overview.visibilityScore).toBe(0);
       expect(snap.citedPromptIds).toEqual([]);
+   });
+});
+
+describe('competitor ranking', () => {
+   const rowsWithNoise: ResultRow[] = [
+      { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('vertexaisearch.cloud.google.com'), cit('oracle.com', 'https://oracle.com/a')] },
+      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('oracle.com', 'https://oracle.com/b')] },
+   ];
+   it('COMPETITOR_NOISE lists the grounding proxy', () => {
+      expect(COMPETITOR_NOISE).toContain('vertexaisearch.cloud.google.com');
+   });
+   it('buildSnapshotsForScan: entry per own + cited domain, minus noise', () => {
+      const map = buildSnapshotsForScan(rowsWithNoise, 'idztech.pl');
+      expect(map.has('idztech.pl')).toBe(true);
+      expect(map.has('oracle.com')).toBe(true);
+      expect(map.has('vertexaisearch.cloud.google.com')).toBe(false);
+   });
+   it('rankCompetitors: full snapshots, sorted desc, own excluded', () => {
+      const ranked = rankCompetitors(buildSnapshotsForScan(rowsWithNoise, 'idztech.pl'), 'idztech.pl');
+      expect(ranked.find((c) => c.domain === 'idztech.pl')).toBeUndefined();
+      expect(ranked[0].domain).toBe('oracle.com');
+      expect(ranked[0].snapshot.overview.visibilityScore).toBeGreaterThan(0);
+      expect(ranked[0].snapshot.prompts.length).toBeGreaterThan(0); // full snapshot embedded
    });
 });
 
