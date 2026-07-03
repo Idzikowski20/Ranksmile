@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import { useAiVisData } from '../../../../services/aiVisibility';
+import toast from 'react-hot-toast';
+import { useAiVisData, useStartAiVisScan } from '../../../../services/aiVisibility';
+import { Modal } from '../../../../components/ui';
 import { AI_VIS_MODEL_LABEL, AI_VIS_ALL_MODELS } from '../../../../lib/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
@@ -100,6 +102,16 @@ const AiVisibilityOverview: NextPage = () => {
    const promptsQ = useAiVisData<PromptsData>(slug, 'prompts');
    const sourcesQ = useAiVisData<SourcesData>(slug, 'sources');
 
+   const startScan = useStartAiVisScan(slug);
+   const [confirmDays, setConfirmDays] = useState<number | null>(null);
+
+   const runScan = async (force: boolean) => {
+      const res = await startScan.mutateAsync(force ? { force: true } : undefined);
+      if (res.needsConfirm) { setConfirmDays(res.lastScanDaysAgo); return; }
+      setConfirmDays(null);
+      toast.success('Scan started');
+   };
+
    return (
       <AiVisPageShell section="AI Visibility" title="Overview">
          {({ crunching }) => {
@@ -123,6 +135,17 @@ const AiVisibilityOverview: NextPage = () => {
 
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                     <button
+                        type="button"
+                        onClick={() => runScan(false)}
+                        disabled={startScan.isLoading || crunching}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #E4E4E7', borderRadius: 8, padding: '7px 14px', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: startScan.isLoading || crunching ? 'not-allowed' : 'pointer' }}
+                     >
+                        {crunching ? 'Scanning…' : 'Refresh data'}
+                     </button>
+                  </div>
+
                   {/* Visibility score */}
                   <Panel
                      title={(
@@ -202,6 +225,20 @@ const AiVisibilityOverview: NextPage = () => {
                      <StatCard label="Average position" value={o ? (o.avgPosition ?? '—') : '—'} pending={!!pending} />
                      <StatCard label="Direct citations" value={o ? o.directCitations : '—'} pending={!!pending} />
                   </div>
+
+                  {confirmDays !== null && (
+                     <Modal title="Refresh AI Visibility?" onClose={() => setConfirmDays(null)} width={460}>
+                        <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                           <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: FONT }}>
+                              Ostatni skan {confirmDays === 0 ? 'dzisiaj' : `${confirmDays} dni temu`}. Pełne odświeżenie to ~$4 kredytów DataForSEO. Odświeżyć mimo to?
+                           </p>
+                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                              <button type="button" onClick={() => setConfirmDays(null)} style={{ border: '1px solid #E4E4E7', borderRadius: 8, padding: '8px 16px', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Anuluj</button>
+                              <button type="button" onClick={() => runScan(true)} disabled={startScan.isLoading} style={{ border: 'none', borderRadius: 8, padding: '8px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Odśwież (~$4)</button>
+                           </div>
+                        </div>
+                     </Modal>
+                  )}
                </div>
             );
          }}
