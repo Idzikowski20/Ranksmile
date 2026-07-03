@@ -145,10 +145,16 @@ export function useAiVisCompetitors(slug: string | undefined, params: { prompts?
       { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
 }
 
+export type MentionSource = { url: string; domain: string; timesShown: number; ownMentioned: boolean; compMentioned: boolean };
 export type CompetitorDetailPayload = {
-   overview: { visibilityScore: number; mentionRate: number; avgPosition: number | null; mentions: number };
+   overview: { visibilityScore: number; mentionRate: number; avgPosition: number | null };
    prompts: Array<{ promptId: number; topic: string; text: string; avgPosition: number | null }>;
    sources: Array<{ url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean }>;
+   brand: string;
+   ownLabel: string;
+   mentions: number;
+   mentionSources: MentionSource[];
+   gap: { domain: string; gap: number; shared: number; you: number };
 };
 export function useAiVisCompetitorDetail(slug: string | undefined, competitor: string | null) {
    return useQuery<CompetitorDetailPayload>(['ai-vis-competitor-detail', slug, competitor],

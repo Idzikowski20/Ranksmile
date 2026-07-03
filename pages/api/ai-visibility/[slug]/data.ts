@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -194,10 +194,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const all = filterRows(await loadScanResultRows(scan.id));
          const snap = snapshotForDomain(all, comp);
          const sources = snap.sources.filter((s) => s.domain === NORM(comp));
+         // Brand name derived from the competitor domain (matches extracted brand names
+         // for most cases, e.g. www.squarespace.com → "Squarespace").
+         const base = NORM(comp).split('.')[0];
+         const brand = base ? base.charAt(0).toUpperCase() + base.slice(1) : comp;
+         const ms = sourceMentions(all, ownBrand, brand);
          return res.status(200).json({
-            overview: { visibilityScore: snap.overview.visibilityScore, mentionRate: snap.overview.mentionRate, avgPosition: snap.overview.avgPosition, mentions: snap.overview.directCitations },
+            overview: { visibilityScore: snap.overview.visibilityScore, mentionRate: snap.overview.mentionRate, avgPosition: snap.overview.avgPosition },
             prompts: competitorPrompts(all, comp),
             sources,
+            brand,
+            ownLabel: NORM(domain.domain),
+            mentions: ms.length,
+            mentionSources: ms.map((s) => ({ url: s.url, domain: s.domain, timesShown: s.timesShown, ownMentioned: s.aMentioned, compMentioned: s.bMentioned })),
+            gap: domainMentionGap(all, comp, domain.domain),
          });
       }
       if (view === 'prompts') {
