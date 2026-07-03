@@ -9,7 +9,8 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
-import { buildOverview } from '../../../../lib/aiVisibilityRead';
+import { loadScanResultRows } from '../../../../lib/aiVisibilityRead';
+import { buildSnapshotsForScan } from '../../../../lib/aiVisibilityMetrics';
 
 const HISTORY_LIMIT = 24;
 
@@ -33,13 +34,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ORDER BY s.id DESC LIMIT ${HISTORY_LIMIT}`,
          [domain.ID],
       );
-      // Deliberate N+1 (one buildOverview per scan), bounded by HISTORY_LIMIT (24).
+      // Deliberate N+1 (one snapshot build per scan), bounded by HISTORY_LIMIT (24).
       // Fine at this cap; if history ever needs hundreds of points, replace with a
       // single grouped aggregation query. Not worth the complexity now.
-      const out: Array<{ scanId: number, finishedAt: string | null, visibilityScore: number }> = [];
+      const wanted = typeof req.query.competitor === 'string' ? req.query.competitor.toLowerCase().replace(/^www\./, '') : '';
+      const ownKey = domain.domain.toLowerCase().replace(/^www\./, '');
+      const out = [] as Array<{ scanId: number, finishedAt: string | null, series: { you: unknown, competitor?: unknown } }>;
       for (const s of scans) {
-         const snap = await buildOverview(s.id);
-         out.push({ scanId: s.id, finishedAt: s.finished_at, visibilityScore: snap.overview.visibilityScore });
+         const byDomain = buildSnapshotsForScan(await loadScanResultRows(s.id), domain.domain);
+         const series: { you: unknown, competitor?: unknown } = { you: byDomain.get(ownKey)?.overview ?? null };
+         if (wanted && byDomain.has(wanted)) series.competitor = byDomain.get(wanted)?.overview;
+         out.push({ scanId: s.id, finishedAt: s.finished_at, series });
       }
       return res.status(200).json({ scans: out });
    } catch (error) {
