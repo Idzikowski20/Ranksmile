@@ -3,6 +3,7 @@ import Head from 'next/head';
 import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
+import AiVisExportMenu from './AiVisExportMenu';
 import CrunchingBar from './CrunchingBar';
 import { SkeletonBars } from './SkeletonBlocks';
 import { useAiVisibilityGuard } from '../../lib/useAiVisibilityGuard';
@@ -58,7 +59,7 @@ const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = 
                   <InfoIcon />
                </span>
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #E4E4E7', borderRadius: 8, padding: '6px 12px', fontSize: 14, fontWeight: 600, color: '#52525C', fontFamily: FONT, opacity: 0.8 }}>Export</span>
+                  <AiVisExportMenu slug={slug} />
                   <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
                </div>
             </div>

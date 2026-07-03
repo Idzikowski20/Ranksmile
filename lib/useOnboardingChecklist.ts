@@ -27,6 +27,7 @@ export function useOnboardingChecklist(): {
    total: number;
    pct: number;
    nextStep: OnboardingStep | null;
+   loading: boolean;
 } {
    const router = useRouter();
    const { data: wsData } = useWorkspaces();
@@ -36,12 +37,17 @@ export function useOnboardingChecklist(): {
    const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
    const slug = domainsData?.domains?.[0]?.slug ?? null;
 
-   const { data: sitesData } = useQuery('dashboardSites', () => getJson<{ sites?: unknown[] }>('/api/sites'), { staleTime: 5 * 60 * 1000, retry: false });
-   const { data: recsData } = useQuery(['domainRecs', slug], () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`), { enabled: !!slug, staleTime: 60 * 1000 });
-   const { data: articlesData } = useQuery('dashboardArticles', () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles'));
+   const { data: sitesData, isLoading: sitesLoading } = useQuery('dashboardSites', () => getJson<{ sites?: unknown[] }>('/api/sites'), { staleTime: 5 * 60 * 1000, retry: false });
+   const { data: recsData, isLoading: recsLoading } = useQuery(['domainRecs', slug], () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`), { enabled: !!slug, staleTime: 60 * 1000 });
+   const { data: articlesData, isLoading: articlesLoading } = useQuery('dashboardArticles', () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles'));
    // "See if AI mentions your brand" flips done once the AI Visibility scan finishes
    // (status 'completed' = the crunching bar is done and results are in the overview).
-   const { data: aiStatus } = useQuery(['aiVisStatusOnboarding', slug], () => getJson<{ status?: string }>(`/api/ai-visibility/${slug}/scan-status`), { enabled: !!slug, staleTime: 60 * 1000 });
+   const { data: aiStatus, isLoading: aiLoading } = useQuery(['aiVisStatusOnboarding', slug], () => getJson<{ status?: string }>(`/api/ai-visibility/${slug}/scan-status`), { enabled: !!slug, staleTime: 60 * 1000 });
+
+   // Until the real signals resolve, every step reads as not-done. Surfacing that
+   // (0% → animating up → hide) is the "fills up then vanishes" flash the user saw,
+   // so consumers should wait for `loading` to clear before rendering.
+   const loading = !wsData || sitesLoading || articlesLoading || (!!slug && (recsLoading || aiLoading));
 
    return useMemo(() => {
       const ws = (p: string) => workspaceHref(wsId, p);
@@ -61,6 +67,6 @@ export function useOnboardingChecklist(): {
       const total = steps.length;
       const pct = Math.round((done / total) * 100);
       const nextStep = steps.find((s) => !s.done) ?? null;
-      return { steps, done, total, pct, nextStep };
-   }, [wsId, slug, wsData, sitesData, recsData, articlesData, aiStatus]);
+      return { steps, done, total, pct, nextStep, loading };
+   }, [wsId, slug, wsData, sitesData, recsData, articlesData, aiStatus, loading]);
 }
