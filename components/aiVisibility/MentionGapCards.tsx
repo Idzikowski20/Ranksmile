@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 
 const FONT = 'var(--font-family-primary)';
-type Card = { brand: string; gap: number; shared: number; you: number };
+const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
+type Card = { domain: string; gap: number; shared: number; you: number };
 
 /** Two overlapping circles: competitor (orange, ∝ gap+shared), you (violet, ∝ shared+you),
  *  with the shared intersection painted red (your circle clipped to the competitor's). */
@@ -13,7 +14,7 @@ const Bubble = ({ card }: { card: Card }) => {
    const cx1 = compR;
    const cx2 = 2 * compR - 2; // small partner sits on the right rim
    const w = cx2 + yourR + 2;
-   const clipId = `gapclip-${card.brand.replace(/[^a-z0-9]/gi, '')}`;
+   const clipId = `gapclip-${card.domain.replace(/[^a-z0-9]/gi, '')}`;
    return (
       <svg width={w} height={74} style={{ overflow: 'visible', flexShrink: 0 }} aria-hidden>
          <defs><clipPath id={clipId}><circle cx={cx1} cy={37} r={compR} /></clipPath></defs>
@@ -53,13 +54,16 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected }: 
          <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>Mention Gap</div>
          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 4 }}>
             {cards.map((card) => (
-               <div key={card.brand} style={{ position: 'relative', width: 300, flexShrink: 0, border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+               <div key={card.domain} style={{ position: 'relative', width: 300, flexShrink: 0, border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                     <div style={{ position: 'relative' }}>
-                        <button type="button" onClick={() => setSwapFor((s) => (s === card.brand ? null : card.brand))} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, maxWidth: 220 }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.brand}</span> <ChevronDown /></button>
-                        {swapFor === card.brand ? <Picker candidates={candidates} exclude={selected} onPick={(b) => { onSelected(selected.map((x) => (x === card.brand ? b : x))); setSwapFor(null); }} onClose={() => setSwapFor(null)} /> : null}
+                     <div style={{ position: 'relative', minWidth: 0 }}>
+                        <button type="button" onClick={() => setSwapFor((s) => (s === card.domain ? null : card.domain))} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, maxWidth: 220 }}>
+                           { /* eslint-disable-next-line @next/next/no-img-element */ }
+                           <img alt="" src={faviconFor(card.domain)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.domain}</span> <ChevronDown /></button>
+                        {swapFor === card.domain ? <Picker candidates={candidates} exclude={selected} onPick={(b) => { onSelected(selected.map((x) => (x === card.domain ? b : x))); setSwapFor(null); }} onClose={() => setSwapFor(null)} /> : null}
                      </div>
-                     <button type="button" aria-label="Remove" onClick={() => onSelected(selected.filter((x) => x !== card.brand))} style={{ border: 'none', background: 'transparent', color: '#9F9FA9', cursor: 'pointer', display: 'inline-flex' }}><XIcon /></button>
+                     <button type="button" aria-label="Remove" onClick={() => onSelected(selected.filter((x) => x !== card.domain))} style={{ border: 'none', background: 'transparent', color: '#9F9FA9', cursor: 'pointer', display: 'inline-flex', flexShrink: 0 }}><XIcon /></button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px' }}>

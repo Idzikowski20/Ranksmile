@@ -73,19 +73,6 @@ const MetaCells = ({ mentioned, brands }: { mentioned?: boolean; brands?: Source
    </>
 );
 
-const ModelsCell = ({ models, modelLabel }: { models: string[]; modelLabel: Record<string, string> }) => {
-   const labels = models.map((m) => modelLabel[m] || m);
-   return (
-      <div style={{ ...bodyCell, width: 110, flexShrink: 0 }}>
-         {labels.length ? (
-            <HoverTooltip label={labels.join(' · ')} align="right">
-               <span style={{ fontSize: 13, color: '#52525C', cursor: 'default', whiteSpace: 'nowrap' }}>{labels.length} {labels.length === 1 ? 'model' : 'models'}</span>
-            </HoverTooltip>
-         ) : <span style={{ color: '#9F9FA9' }}>—</span>}
-      </div>
-   );
-};
-
 const TimesCell = ({ v }: { v: number }) => (
    <div style={{ ...bodyCell, width: 150, flexShrink: 0, justifyContent: 'flex-end', fontWeight: 600, color: '#18181B' }}>{v}</div>
 );
@@ -98,10 +85,9 @@ const hoverOffChild = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget
 /** SurferSEO-style sources table: fill-bar source column, optional group-by-domain with
  *  expandable URL rows, sortable Times shown, incremental "Show more" paging.
  *  onSelect receives the navigable list + index so the detail modal can page through it. */
-const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
+const SourcesTable = ({ sources, grouped, onSelect }: {
    sources: SourceRow[];
    grouped: boolean;
-   modelLabel: Record<string, string>;
    onSelect: (list: SourceRow[], index: number, navigable: boolean) => void;
 }) => {
    const [asc, setAsc] = useState(false);
@@ -154,7 +140,6 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
             <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></div>
             <div style={{ ...headCell, width: 120, flexShrink: 0 }}><HeadTip label="Brands" tip="Brands mentioned in AI answers citing this source" /></div>
             <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
-            <div style={{ ...headCell, width: 110, flexShrink: 0 }}>Models</div>
             <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>
                <button type="button" onClick={() => setAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}>
                   <HeadTip label="Times shown" tip="Number of times the URL appears in AI answers" align="right" /> <SortArrow asc={asc} />
@@ -168,7 +153,6 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
                   <SourceCell icon={g.domain} host={g.domain} path="" fillPct={(g.timesShown / maxGroup) * 100} chevronOpen={expanded.has(g.domain)} />
                   <div style={{ ...bodyCell, width: 80, flexShrink: 0, justifyContent: 'flex-end', color: '#52525C' }}>{g.urls.length}</div>
                   <MetaCells mentioned={g.mentioned} brands={g.brands} />
-                  <ModelsCell models={g.models} modelLabel={modelLabel} />
                   <TimesCell v={g.timesShown} />
                </div>
                {expanded.has(g.domain) && g.urls.map((u, i) => {
@@ -178,7 +162,6 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
                         <SourceCell icon={u.domain} host={host} path={path} fillPct={(u.timesShown / maxUrl) * 100} indent />
                         <div style={{ ...bodyCell, width: 80, flexShrink: 0 }} />
                         <MetaCells mentioned={u.mentioned} brands={u.brands} />
-                        <ModelsCell models={u.models} modelLabel={modelLabel} />
                         <TimesCell v={u.timesShown} />
                      </div>
                   );
@@ -190,7 +173,6 @@ const SourcesTable = ({ sources, grouped, modelLabel, onSelect }: {
                <div key={s.url} style={rowStyle} onClick={() => onSelect(sorted, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(sorted, i, true); }}>
                   <SourceCell icon={s.domain} host={host} path={path} fillPct={(s.timesShown / maxUrl) * 100} />
                   <MetaCells mentioned={s.mentioned} brands={s.brands} />
-                  <ModelsCell models={s.models} modelLabel={modelLabel} />
                   <TimesCell v={s.timesShown} />
                </div>
             );

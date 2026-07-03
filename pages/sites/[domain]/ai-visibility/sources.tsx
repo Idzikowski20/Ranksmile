@@ -13,7 +13,7 @@ import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 
-type GapCard = { brand: string; gap: number; shared: number; you: number };
+type GapCard = { domain: string; gap: number; shared: number; you: number };
 type SourcesData = { pending?: boolean; sources?: SourceRow[]; gapCards?: GapCard[]; gapCandidates?: string[]; ownLabel?: string };
 type PromptRow = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
 type PromptsData = { pending?: boolean; prompts?: PromptRow[] };
@@ -44,7 +44,7 @@ const AiVisibilitySources: NextPage = () => {
    // hydrated from localStorage, so we defer sending gapBrands until we know the choice
    // (undefined lets the server pick its default top-4).
    const [gapBrands, setGapBrands] = useState<string[] | null>(null);
-   const gapKey = slug ? `aiVisGapBrands:${slug}` : '';
+   const gapKey = slug ? `aiVisGapDomains:${slug}` : '';
    useEffect(() => {
       if (!gapKey) return;
       try {
@@ -90,9 +90,9 @@ const AiVisibilitySources: NextPage = () => {
    const gapCards = useMemo(() => sourcesQ.data?.gapCards || [], [sourcesQ.data]);
    const gapCandidates = useMemo(() => sourcesQ.data?.gapCandidates || [], [sourcesQ.data]);
    const ownLabel = sourcesQ.data?.ownLabel || 'You';
-   // Brands currently on screen — drives add/swap exclusion. Prefer the server's cards
+   // Domains currently on screen — drives add/swap exclusion. Prefer the server's cards
    // (source of truth) so the default top-4 pre-fills the picker's exclude set too.
-   const shownBrands = useMemo(() => gapCards.map((c) => c.brand), [gapCards]);
+   const shownBrands = useMemo(() => gapCards.map((c) => c.domain), [gapCards]);
 
    const navigateModal = (delta: number) => {
       setModal((m) => {
@@ -155,7 +155,6 @@ const AiVisibilitySources: NextPage = () => {
                      <SourcesTable
                         sources={filtered}
                         grouped={groupByDomain}
-                        modelLabel={AI_VIS_MODEL_LABEL}
                         onSelect={(list, index, navigable) => setModal({ list, index, navigable })}
                      />
                   )}

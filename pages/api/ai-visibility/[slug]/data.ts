@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, domainMentionGap, domainGapCandidates, brandsForSource, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -59,14 +59,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (view === 'sources') {
          const all = filterRows(await loadScanResultRows(scan.id));
-         const candidates = gapBrandCandidates(all, ownBrand);
+         // Mention Gap compares the tracked DOMAIN against competitor DOMAINS by
+         // prompt-citation overlap (not brand names extracted from answers).
+         const candidates = domainGapCandidates(all, domain.domain);
          const wanted = parseList(req.query.gapBrands);
          const selected = wanted.length ? wanted : candidates.slice(0, 4);
          return res.status(200).json({
             sources: aggregateSources(all, ownBrand),
-            gapCards: selected.map((b) => mentionGap(all, b, ownBrand)),
+            gapCards: selected.map((d) => domainMentionGap(all, d, domain.domain)),
             gapCandidates: candidates,
-            ownLabel: ownBrand,
+            ownLabel: NORM(domain.domain),
          });
       }
 
