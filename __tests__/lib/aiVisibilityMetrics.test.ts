@@ -3,10 +3,10 @@ import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetit
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 
 const rows: ResultRow[] = [
-   { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', citations: [cit('idztech.pl', 'https://idztech.pl/a'), cit('oracle.com')] },
-   { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('oracle.com')] },
-   { promptId: 2, model: 'chat_gpt', ownCited: true, ownPosition: 3, topic: 'T', text: 'Q', citations: [cit('shoper.pl'), cit('oracle.com'), cit('idztech.pl', 'https://idztech.pl/b')] },
-   { promptId: 2, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [] },
+   { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', brands: [], citations: [cit('idztech.pl', 'https://idztech.pl/a'), cit('oracle.com')] },
+   { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [cit('oracle.com')] },
+   { promptId: 2, model: 'chat_gpt', ownCited: true, ownPosition: 3, topic: 'T', text: 'Q', brands: [], citations: [cit('shoper.pl'), cit('oracle.com'), cit('idztech.pl', 'https://idztech.pl/b')] },
+   { promptId: 2, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [] },
 ];
 
 describe('ownDomainPosition', () => {
@@ -93,8 +93,8 @@ describe('snapshotForDomain', () => {
 
 describe('competitor ranking', () => {
    const rowsWithNoise: ResultRow[] = [
-      { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('vertexaisearch.cloud.google.com'), cit('oracle.com', 'https://oracle.com/a')] },
-      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('oracle.com', 'https://oracle.com/b')] },
+      { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [cit('vertexaisearch.cloud.google.com'), cit('oracle.com', 'https://oracle.com/a')] },
+      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [cit('oracle.com', 'https://oracle.com/b')] },
    ];
    it('COMPETITOR_NOISE lists the grounding proxy', () => {
       expect(COMPETITOR_NOISE).toContain('vertexaisearch.cloud.google.com');
@@ -116,12 +116,12 @@ describe('competitor ranking', () => {
 
 describe('computeDelta', () => {
    const previous = buildSnapshot([
-      { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 3, topic: 'T', text: 'Q', citations: [cit('oracle.com'), cit('shoper.pl'), cit('idztech.pl', 'https://idztech.pl/a')] },
-      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('oracle.com')] },
+      { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 3, topic: 'T', text: 'Q', brands: [], citations: [cit('oracle.com'), cit('shoper.pl'), cit('idztech.pl', 'https://idztech.pl/a')] },
+      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [cit('oracle.com')] },
    ], 'idztech.pl');
    const current = buildSnapshot([
-      { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', citations: [cit('idztech.pl', 'https://idztech.pl/a'), cit('vercel.com')] },
-      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [cit('oracle.com')] },
+      { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', brands: [], citations: [cit('idztech.pl', 'https://idztech.pl/a'), cit('vercel.com')] },
+      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [cit('oracle.com')] },
    ], 'idztech.pl');
 
    it('reports score delta with direction', () => {
@@ -136,8 +136,8 @@ describe('computeDelta', () => {
    });
    it('reports prompts that gained/lost own citation', () => {
       const gainedCase = computeDelta(
-         buildSnapshot([{ promptId: 9, model: 'gemini', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', citations: [cit('idztech.pl')] }], 'idztech.pl'),
-         buildSnapshot([{ promptId: 9, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', citations: [] }], 'idztech.pl'),
+         buildSnapshot([{ promptId: 9, model: 'gemini', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', brands: [], citations: [cit('idztech.pl')] }], 'idztech.pl'),
+         buildSnapshot([{ promptId: 9, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [] }], 'idztech.pl'),
       );
       expect(gainedCase.prompts.gained).toEqual([9]);
       expect(gainedCase.prompts.lost).toEqual([]);
