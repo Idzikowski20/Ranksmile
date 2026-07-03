@@ -28,8 +28,10 @@ describe('ensureTenancyTables', () => {
     expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_org_members_user_status ON organization_members(user_id, status)');
   });
 
-  it('runs once under concurrent first calls — the unset-owner warning fires a single time', async () => {
+  it('in production, runs once under concurrent first calls — the unset-owner warning fires a single time', async () => {
     jest.resetModules();
+    const prevEnv = process.env.NODE_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV ='production';
     delete process.env.TENANCY_OWNER_USER_ID;
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     // Fresh module instance so the lazy-init guard state is reset.
@@ -39,5 +41,21 @@ describe('ensureTenancyTables', () => {
     const ownerWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('TENANCY_OWNER_USER_ID is unset'));
     expect(ownerWarns).toHaveLength(1);
     warnSpy.mockRestore();
+    (process.env as Record<string, string | undefined>).NODE_ENV =prevEnv;
+  });
+
+  it('does not warn about the unset owner outside production (kills dev-console noise)', async () => {
+    jest.resetModules();
+    const prevEnv = process.env.NODE_ENV;
+    (process.env as Record<string, string | undefined>).NODE_ENV ='development';
+    delete process.env.TENANCY_OWNER_USER_ID;
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    const { ensureTenancyTables: fresh } = require('../../lib/ensureTenancyTables');
+    await fresh();
+    const ownerWarns = warnSpy.mock.calls.filter((c) => String(c[0]).includes('TENANCY_OWNER_USER_ID is unset'));
+    expect(ownerWarns).toHaveLength(0);
+    warnSpy.mockRestore();
+    (process.env as Record<string, string | undefined>).NODE_ENV =prevEnv;
   });
 });

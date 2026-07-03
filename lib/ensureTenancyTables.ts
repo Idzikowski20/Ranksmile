@@ -106,7 +106,11 @@ async function runEnsureTenancyTables(): Promise<void> {
    try { await db.query("ALTER TABLE domain ADD COLUMN voices TEXT DEFAULT '[]'"); } catch (e) { ignoreExisting('add domain.voices', e); }
    try { await db.query("ALTER TABLE domain ADD COLUMN blog_paths TEXT DEFAULT '[]'"); } catch (e) { ignoreExisting('add domain.blog_paths', e); }
 
-   if (!process.env.TENANCY_OWNER_USER_ID) {
+   // Production-only: locally this fired on every route module re-eval (dev hot
+   // reload / per-route bundles), spamming the console for a var with no runtime
+   // consumer — legacy domains are actually claimed by the org owner on login in
+   // migrateDomainsToWorkspaces, not from this env. Keep the prod reminder only.
+   if (process.env.NODE_ENV === 'production' && !process.env.TENANCY_OWNER_USER_ID) {
       console.warn('[tenancy] TENANCY_OWNER_USER_ID is unset — legacy (NULL workspace) domains stay hidden until claimed.');
    }
 }
