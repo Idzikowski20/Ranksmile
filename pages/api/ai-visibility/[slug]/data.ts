@@ -58,6 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          citations: parseCitationsShared(r.citations),
          topic: r.topic,
          text: r.text,
+         brands: [], // competitors/prompts branches don't read brands; B3 uses loadScanResultRows for sources
       }));
 
       if (view === 'overview') {
