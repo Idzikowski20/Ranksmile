@@ -10,7 +10,7 @@ import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTabl
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
 import { loadScanResultRows } from '../../../../lib/aiVisibilityRead';
-import { buildSnapshotsForScan } from '../../../../lib/aiVisibilityMetrics';
+import { buildSnapshotsForScan, snapshotForDomain } from '../../../../lib/aiVisibilityMetrics';
 
 const HISTORY_LIMIT = 24;
 
@@ -41,9 +41,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const ownKey = domain.domain.toLowerCase().replace(/^www\./, '');
       const out = [] as Array<{ scanId: number, finishedAt: string | null, series: { you: unknown, competitor?: unknown } }>;
       for (const s of scans) {
-         const byDomain = buildSnapshotsForScan(await loadScanResultRows(s.id), domain.domain);
+         const rows = await loadScanResultRows(s.id);
+         const byDomain = buildSnapshotsForScan(rows, domain.domain);
          const series: { you: unknown, competitor?: unknown } = { you: byDomain.get(ownKey)?.overview ?? null };
-         if (wanted && byDomain.has(wanted)) series.competitor = byDomain.get(wanted)?.overview;
+         // Always emit a competitor point per scan (0-visibility when uncited that scan)
+         // so the trend line is continuous instead of collapsing to a single point.
+         if (wanted) series.competitor = (byDomain.get(wanted) ?? snapshotForDomain(rows, wanted)).overview;
          out.push({ scanId: s.id, finishedAt: s.finished_at, series });
       }
       return res.status(200).json({ scans: out });
