@@ -152,7 +152,8 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
    }, [onNavigate, onClose]);
 
    const series = useMemo(() => {
-      const scans = histQ.data?.scans || [];
+      // history returns scans newest-first; reverse so the x-axis reads old → new.
+      const scans = [...(histQ.data?.scans || [])].reverse();
       return {
          labels: scans.map((s) => fmtDay(s.finishedAt)),
          data: scans.map((s) => {
