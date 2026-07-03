@@ -83,7 +83,6 @@ const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compar
             )}
             <div style={{ position: 'relative' }}>
                <button type="button" style={btn} onClick={() => setModelsOpen((o) => !o)}>
-                  <CheckDot on={false} />
                   <span>All models</span>
                   <ChevronDown />
                </button>

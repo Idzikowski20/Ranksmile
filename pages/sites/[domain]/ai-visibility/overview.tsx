@@ -9,6 +9,7 @@ import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBa
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
 import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
+import HoverTooltip from '../../../../components/common/HoverTooltip';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
 import { Modal } from '../../../../components/ui';
 
@@ -43,17 +44,11 @@ const PromptIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="
 const InfoIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
 /** A "?" info icon that reveals context (compared domain, freshness) in a hover tooltip. */
-const InfoHint = ({ text }: { text: string }) => {
-   const [show, setShow] = useState(false);
-   return (
-      <span style={{ position: 'relative', display: 'inline-flex' }} onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-         <span style={{ display: 'inline-flex', cursor: 'help' }}><InfoIcon /></span>
-         {show ? (
-            <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', background: '#18181B', color: '#fff', fontSize: 12, fontWeight: 400, fontFamily: FONT, padding: '6px 10px', borderRadius: 8, zIndex: 150, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>{text}</span>
-         ) : null}
-      </span>
-   );
-};
+const InfoHint = ({ text }: { text: string }) => (
+   <HoverTooltip label={text} align="center">
+      <span style={{ display: 'inline-flex', cursor: 'help' }}><InfoIcon /></span>
+   </HoverTooltip>
+);
 
 const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
 const splitUrl = (url: string, fallback: string): { host: string; path: string } => {

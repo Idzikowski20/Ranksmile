@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
+import HoverTooltip from '../../../components/common/HoverTooltip';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
@@ -592,14 +593,16 @@ const ActivityLogPage: NextPage = () => {
                            events.map((e) => (
                               <tr key={e.id} className="activity-log-row">
                                  <td style={{ padding: '14px 16px 14px 4px', verticalAlign: 'middle' }}>
-                                    {personImage ? (
-                                       // eslint-disable-next-line @next/next/no-img-element
-                                       <img alt={person} title={person} src={personImage} width={28} height={28} style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0, cursor: 'default' }} />
-                                    ) : (
-                                       <span title={person} style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
-                                          {personInitial}
-                                       </span>
-                                    )}
+                                    <HoverTooltip label={person}>
+                                       {personImage ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img alt={person} src={personImage} width={28} height={28} style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0, cursor: 'default' }} />
+                                       ) : (
+                                          <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
+                                             {personInitial}
+                                          </span>
+                                       )}
+                                    </HoverTooltip>
                                  </td>
                                  <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: '#18181B' }}>
@@ -622,9 +625,11 @@ const ActivityLogPage: NextPage = () => {
                                     </div>
                                  </td>
                                  <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                    <span title={fmtDateFull(e.time)} style={{ fontSize: 14, color: '#18181B', cursor: 'default' }}>
-                                       {fmtDateShort(e.time)}, <span style={{ color: '#71717B' }}>{fmtTime(e.time)}</span>
-                                    </span>
+                                    <HoverTooltip label={fmtDateFull(e.time)} align="right">
+                                       <span style={{ fontSize: 14, color: '#18181B', cursor: 'default' }}>
+                                          {fmtDateShort(e.time)}, <span style={{ color: '#71717B' }}>{fmtTime(e.time)}</span>
+                                       </span>
+                                    </HoverTooltip>
                                  </td>
                               </tr>
                            ))
