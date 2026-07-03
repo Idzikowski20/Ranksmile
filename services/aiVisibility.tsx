@@ -50,12 +50,28 @@ export function useAiVisScanStatus(slug: string | undefined) {
    );
 }
 
+export type StartScanResult =
+   | { needsConfirm: false; scanId: number }
+   | { needsConfirm: true; lastScanDaysAgo: number };
+
 export function useStartAiVisScan(slug: string | undefined) {
    const qc = useQueryClient();
-   return useMutation(
-      () => fetchJson<{ scanId: number }>(`/api/ai-visibility/${slug}/scan`, { method: 'POST' }),
+   return useMutation<StartScanResult, Error, { force?: boolean } | void>(
+      async (opts) => {
+         const force = !!(opts && 'force' in opts && opts.force);
+         const r = await fetch(`/api/ai-visibility/${slug}/scan`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }),
+         });
+         let body: unknown = null;
+         try { body = await r.json(); } catch { /* empty body */ }
+         if (r.status === 409 && (body as { needsConfirm?: boolean } | null)?.needsConfirm) {
+            return { needsConfirm: true, lastScanDaysAgo: (body as { lastScanDaysAgo: number }).lastScanDaysAgo };
+         }
+         if (!r.ok) throw new Error((body as { error?: string } | null)?.error || `Request failed (${r.status})`);
+         return { needsConfirm: false, scanId: (body as { scanId: number }).scanId };
+      },
       {
-         onSuccess: () => { qc.invalidateQueries(['ai-vis-scan-status', slug]); },
+         onSuccess: (res) => { if (!res.needsConfirm) qc.invalidateQueries(['ai-vis-scan-status', slug]); },
          onError: toastError,
       },
    );
