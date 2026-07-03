@@ -36,18 +36,6 @@ const StatCell = ({ label, value }: { label: string; value: React.ReactNode }) =
    </div>
 );
 
-const barColor = (v: number): string => (v >= 80 ? '#1AB25E' : v >= 50 ? '#8B73F6' : '#FF6F77');
-
-const BarRow = ({ label, value }: { label: string; value: number }) => (
-   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ width: 110, fontSize: 13, color: '#3F3F47', fontFamily: FONT, flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 6, borderRadius: 9999, background: '#F4F4F5', overflow: 'hidden' }}>
-         <div style={{ width: `${value}%`, height: '100%', borderRadius: 9999, background: barColor(value), transition: 'width 0.3s ease' }} />
-      </div>
-      <span style={{ width: 40, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{value}%</span>
-   </div>
-);
-
 const OverviewSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
    <section style={{ border: '1px solid #F4F4F5', borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h3 style={{ margin: 0, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#71717B', fontFamily: FONT }}>{title}</h3>
@@ -63,7 +51,7 @@ const TIER_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const OverviewTab = ({ cluster }: { cluster: TopicCluster }) => {
-   const { opportunity: opp, dims, aiAuthority, aiGap } = cluster;
+   const { opportunity: opp } = cluster;
    const tier = TIER_COLORS[opp.tier];
    return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -81,38 +69,6 @@ const OverviewTab = ({ cluster }: { cluster: TopicCluster }) => {
                <StatCell label="Difficulty" value={opp.difficulty} />
                <div style={{ width: 1, background: '#F4F4F5' }} />
                <StatCell label="Priority" value={opp.priority} />
-            </div>
-         </OverviewSection>
-         <OverviewSection title="Topic health">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-               {dims.map((d) => <BarRow key={d.label} label={d.label} value={d.value} />)}
-            </div>
-         </OverviewSection>
-         <OverviewSection title="AI Authority">
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-               <span style={{ fontSize: 24, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{aiAuthority.score}%</span>
-               <span style={{ fontSize: 13, color: '#71717B', fontFamily: FONT }}>overall</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-               {aiAuthority.subs.map((s) => <BarRow key={s.label} label={s.label} value={s.value} />)}
-            </div>
-         </OverviewSection>
-         <OverviewSection title="AI Gap">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-               {aiGap.map((g) => {
-                  const pct = Math.round((g.have / g.total) * 100);
-                  return (
-                     <div key={g.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontFamily: FONT }}>
-                           <span style={{ color: '#3F3F47' }}>{g.label}</span>
-                           <span style={{ fontWeight: 600, color: '#18181B' }}>{g.have}/{g.total}</span>
-                        </div>
-                        <div style={{ height: 4, borderRadius: 9999, background: '#F4F4F5', overflow: 'hidden' }}>
-                           <div style={{ width: `${pct}%`, height: '100%', borderRadius: 9999, background: barColor(pct) }} />
-                        </div>
-                     </div>
-                  );
-               })}
             </div>
          </OverviewSection>
       </div>
@@ -201,19 +157,21 @@ const GroupBlock = ({ group }: { group: KeywordGroup }) => {
    );
 };
 
-const TopicalClusterPanel = ({ cluster, onClose }: { cluster: TopicCluster | null; onClose: () => void }) => {
+export type PanelTab = 'overview' | 'keywords' | 'competitors';
+
+const TopicalClusterPanel = ({ cluster, initialTab = 'overview', onClose }: { cluster: TopicCluster | null; initialTab?: PanelTab; onClose: () => void }) => {
    const [visible, setVisible] = useState(false);
-   const [tab, setTab] = useState('overview');
+   const [tab, setTab] = useState<PanelTab>(initialTab);
 
    useEffect(() => {
       if (cluster) {
-         setTab('overview');
+         setTab(initialTab);
          const t = setTimeout(() => setVisible(true), 10);
          return () => clearTimeout(t);
       }
       setVisible(false);
       return undefined;
-   }, [cluster]);
+   }, [cluster, initialTab]);
 
    const handleClose = () => { setVisible(false); setTimeout(onClose, 220); };
    if (!cluster) return null;
@@ -260,7 +218,7 @@ const TopicalClusterPanel = ({ cluster, onClose }: { cluster: TopicCluster | nul
                         { value: 'competitors', label: 'Competitors', count: cluster.competitors.length },
                      ]}
                      value={tab}
-                     onChange={setTab}
+                     onChange={(v) => setTab(v as PanelTab)}
                   />
                </div>
                {tab === 'overview' && <OverviewTab cluster={cluster} />}
@@ -270,7 +228,7 @@ const TopicalClusterPanel = ({ cluster, onClose }: { cluster: TopicCluster | nul
                   </div>
                )}
                {tab === 'competitors' && (
-                  <div style={{ border: '1px solid #F4F4F5', borderRadius: 8, overflow: 'hidden' }}>
+                  <div className="styled-scrollbar" style={{ border: '1px solid #F4F4F5', borderRadius: 8, maxHeight: 480, overflowY: 'auto' }}>
                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                            <tr style={{ borderBottom: '1px solid #F4F4F5' }}>

@@ -359,6 +359,23 @@ class DomainSetupRequest(BaseModel):
     payload: dict
 
 
+class AiVisScanRequest(BaseModel):
+    scanId: int
+    nextjsUrl: str = ""
+
+
+@app.post("/ai-visibility/run-scan")
+async def ai_visibility_run_scan(req: AiVisScanRequest):
+    """Durable AI Visibility scan: loops Node's run-chunk endpoint until the scan
+    finishes. Returns immediately; the detached task survives this request and the
+    Node serverless time limit (chunks are idempotent, so re-driving is safe)."""
+    import asyncio
+    from pipeline.ai_vis_scan import run_scan_loop
+    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    asyncio.create_task(run_scan_loop(req.scanId, nextjs_url))
+    return {"status": "accepted"}
+
+
 @app.post("/pipeline/domain-setup")
 async def pipeline_domain_setup(req: DomainSetupRequest):
     """Async domain pipeline: runs stages, pushes progress + a terminal done/failed

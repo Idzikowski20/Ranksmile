@@ -13,7 +13,7 @@ export function buildArticleWorkspaceLinks(wsId: number | null | undefined, acti
       recommendations: activeSlug ? workspaceHref(wsId, `/sites/${activeSlug}/recommendations`) : workspaceHref(wsId, '/sites'),
       keyword: workspaceHref(wsId, '/sites/articles/new'),
       import: workspaceHref(wsId, '/sites/articles/import'),
-      contentAudit: workspaceHref(wsId, '/sites/content_audit'),
-      topicalMap: workspaceHref(wsId, '/sites/topical-map'),
+      contentAudit: activeSlug ? workspaceHref(wsId, `/sites/${activeSlug}/content-audit`) : workspaceHref(wsId, '/sites'),
+      topicalMap: activeSlug ? workspaceHref(wsId, `/sites/${activeSlug}/topical-map`) : workspaceHref(wsId, '/sites'),
    };
 }

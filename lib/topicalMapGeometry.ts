@@ -8,7 +8,7 @@
  * colors (e.g. rgb(99,13,227) === #630DE3 for "covered").
  */
 
-export const MAP_VIEWBOX = { w: 1200, h: 760 };
+export const MAP_VIEWBOX = { w: 1400, h: 720 };
 export const MAP_CENTER = { x: MAP_VIEWBOX.w / 2, y: MAP_VIEWBOX.h / 2 };
 export const MAP_AXIS_HALF_LENGTH = 400; // axis rect spans center ± 400 over an 800-long rect
 export const MAP_NODE_RANGE = 340; // cluster.map.x/y ∈ [-1,1] scaled to this many SVG units

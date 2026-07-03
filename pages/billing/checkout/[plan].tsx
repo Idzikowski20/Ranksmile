@@ -419,8 +419,14 @@ export const getServerSideProps: GetServerSideProps<CheckoutProps> = async (ctx)
 
   // Next renewal: one billing period from today (yearly → +1 year, monthly → +1 month).
   const nextCharge = new Date(now);
-  if (billing === 'yearly') nextCharge.setFullYear(nextCharge.getFullYear() + 1);
-  else nextCharge.setMonth(nextCharge.getMonth() + 1);
+  if (billing === 'yearly') {
+    nextCharge.setFullYear(nextCharge.getFullYear() + 1);
+  } else {
+    // Clamp to the target month's last day so e.g. Jan 31 → Feb 28, not Mar 3 (setMonth overflow).
+    const targetLastDay = new Date(now.getFullYear(), now.getMonth() + 2, 0).getDate();
+    nextCharge.setDate(Math.min(now.getDate(), targetLastDay));
+    nextCharge.setMonth(now.getMonth() + 1);
+  }
   const pad = (n: number) => String(n).padStart(2, '0');
   const nextChargeLabel = `${pad(nextCharge.getDate())}.${pad(nextCharge.getMonth() + 1)}.${nextCharge.getFullYear()}`;
 

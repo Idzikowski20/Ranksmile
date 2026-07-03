@@ -6,8 +6,14 @@ describe('buildArticleWorkspaceLinks', () => {
       recommendations: '/workspace/12/sites/example-com/recommendations',
       keyword: '/workspace/12/sites/articles/new',
       import: '/workspace/12/sites/articles/import',
-      contentAudit: '/workspace/12/sites/content_audit',
-      topicalMap: '/workspace/12/sites/topical-map',
+      contentAudit: '/workspace/12/sites/example-com/content-audit',
+      topicalMap: '/workspace/12/sites/example-com/topical-map',
     });
+  });
+
+  it('falls back to the sites index when no slug is active', () => {
+    const links = buildArticleWorkspaceLinks(12, '');
+    expect(links.contentAudit).toBe('/workspace/12/sites');
+    expect(links.topicalMap).toBe('/workspace/12/sites');
   });
 });

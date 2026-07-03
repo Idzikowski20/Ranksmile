@@ -8,8 +8,11 @@ import { sendConfirmationEmail } from '../../lib/confirmEmail';
 import { getErrorMessage } from '../../lib/errors';
 
 function buildOrigin(req: NextApiRequest): string {
-  return (req.headers.origin as string | undefined)
-    || process.env.NEXT_PUBLIC_APP_URL
+  // Prefer the server-configured base URL so confirmation links can't be pointed
+  // at an attacker-controlled host via a spoofed Origin header. Fall back to the
+  // request Origin/host only when no base URL is configured (e.g. local dev).
+  return process.env.NEXT_PUBLIC_APP_URL
+    || (req.headers.origin as string | undefined)
     || `https://${req.headers.host}`;
 }
 
