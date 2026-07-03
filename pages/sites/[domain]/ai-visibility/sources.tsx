@@ -125,6 +125,10 @@ const AiVisibilitySources: NextPage = () => {
       >
          {({ crunching }) => {
             const pending = crunching || sourcesQ.isLoading || !!sourcesQ.data?.pending;
+            // Table shows skeletons (not an empty state) while a fetch returns no rows
+            // yet — e.g. switching to compare keeps stale data with no compareSources,
+            // or a filter change is still in flight. Stats/Mention Gap stay put.
+            const tablePending = pending || (sourcesQ.isFetching && tableRows.length === 0);
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {/* Stats */}
@@ -172,7 +176,7 @@ const AiVisibilitySources: NextPage = () => {
                   </div>
 
                   {/* Table */}
-                  {pending ? (
+                  {tablePending ? (
                      <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}><SkeletonRows count={8} withIcon /></div>
                   ) : (
                      <SourcesTable
