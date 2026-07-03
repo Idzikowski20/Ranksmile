@@ -11,7 +11,7 @@ const CompareIcon = () => (
 
 /** "Compare" trigger (SurferSEO-style): plain when off, "Comparing with {domain}"
  *  when on. Opens a searchable list over ALL competitors, with a clear option. */
-const CompetitorPicker = ({ competitors, selected, onSelect }: { competitors: Array<{ domain: string }>; selected: string | null; onSelect: (d: string | null) => void }) => {
+const CompetitorPicker = ({ competitors, selected, onSelect, align = 'left' }: { competitors: Array<{ domain: string }>; selected: string | null; onSelect: (d: string | null) => void; align?: 'left' | 'right' }) => {
    const [open, setOpen] = useState(false);
    const [q, setQ] = useState('');
    const ref = useRef<HTMLDivElement>(null);
@@ -32,11 +32,7 @@ const CompetitorPicker = ({ competitors, selected, onSelect }: { competitors: Ar
          <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            style={{
-               display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '7px 12px',
-               border: `1px solid ${active ? '#18181B' : '#E4E4E7'}`, background: '#fff', color: '#18181B',
-               fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', maxWidth: 280,
-            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '7px 12px', border: `1px solid ${active ? '#18181B' : '#E4E4E7'}`, background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', maxWidth: 280 }}
          >
             {active ? (
                <>
@@ -58,7 +54,7 @@ const CompetitorPicker = ({ competitors, selected, onSelect }: { competitors: Ar
          </button>
 
          {open && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 280, maxHeight: 340, overflow: 'auto', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 150, padding: 8, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', [align]: 0, width: 280, maxHeight: 340, overflow: 'auto', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 150, padding: 8, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                <input
                   autoFocus
                   value={q}
