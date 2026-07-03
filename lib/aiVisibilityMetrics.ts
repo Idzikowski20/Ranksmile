@@ -252,6 +252,45 @@ export function rankCompetitors(byDomain: Map<string, DomainSnapshot>, ownDomain
       .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
 }
 
+export type DomainGapCard = { domain: string, gap: number, shared: number, you: number };
+
+function citedPromptsForDomain(rows: ResultRow[], domain: string): Set<number> {
+   const d = norm(domain);
+   const s = new Set<number>();
+   if (!d) return s;
+   for (const r of rows) {
+      if (r.citations.some((c) => norm(c.domain) === d || norm(c.domain).endsWith(`.${d}`))) s.add(r.promptId);
+   }
+   return s;
+}
+
+/** Prompt-citation overlap between the tracked domain and a competitor domain:
+ *  shared = both cited the prompt, gap = only the competitor, you = only tracked. */
+export function domainMentionGap(rows: ResultRow[], competitorDomain: string, ownDomain: string): DomainGapCard {
+   const own = citedPromptsForDomain(rows, ownDomain);
+   const comp = citedPromptsForDomain(rows, competitorDomain);
+   let gap = 0; let shared = 0; let you = 0;
+   new Set<number>([...own, ...comp]).forEach((id) => {
+      const o = own.has(id); const c = comp.has(id);
+      if (o && c) shared += 1; else if (c) gap += 1; else if (o) you += 1;
+   });
+   return { domain: norm(competitorDomain), gap, shared, you };
+}
+
+/** Competitor domains (tracked domain + grounding noise excluded) ranked by gap desc. */
+export function domainGapCandidates(rows: ResultRow[], ownDomain: string): string[] {
+   const ownN = norm(ownDomain);
+   const domains = new Set<string>();
+   for (const r of rows) for (const c of r.citations) {
+      const d = norm(c.domain);
+      if (d && d !== ownN && !d.endsWith(`.${ownN}`) && !NOISE.has(d)) domains.add(d);
+   }
+   return Array.from(domains)
+      .map((d) => ({ d, gap: domainMentionGap(rows, d, ownDomain).gap }))
+      .sort((a, b) => b.gap - a.gap)
+      .map((x) => x.d);
+}
+
 export type Trend = 'up' | 'down' | 'same';
 export type MetricDelta = { current: number; previous: number; delta: number; trend: Trend };
 export type OverviewDelta = {

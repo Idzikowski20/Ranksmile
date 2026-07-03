@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, ResultRow } from '../../lib/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 const brand = (b: string, domain = '', sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral', pos = 1) => ({ brand: b, domain, sentiment, pos, quotes: [] });
@@ -141,6 +141,18 @@ describe('mentionGap', () => {
 describe('gapBrandCandidates', () => {
    it('lists competitor brands by frequency, excluding own', () => {
       expect(gapBrandCandidates(brandRows, 'Idztech')).toEqual(['Oracle']);
+   });
+});
+describe('domainMentionGap', () => {
+   it('counts prompt-citation overlap between own and a competitor domain', () => {
+      // idztech cited prompts {1,2}; oracle {1,2}; shoper {2}
+      expect(domainMentionGap(rows, 'oracle.com', 'idztech.pl')).toEqual({ domain: 'oracle.com', gap: 0, shared: 2, you: 0 });
+      expect(domainMentionGap(rows, 'shoper.pl', 'idztech.pl')).toEqual({ domain: 'shoper.pl', gap: 0, shared: 1, you: 1 });
+   });
+});
+describe('domainGapCandidates', () => {
+   it('lists competitor domains (own excluded) ranked by gap', () => {
+      expect(domainGapCandidates(rows, 'idztech.pl')).toEqual(['oracle.com', 'shoper.pl']);
    });
 });
 describe('brandsForSource', () => {
