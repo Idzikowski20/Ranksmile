@@ -23,10 +23,14 @@ const CompetitorBarChart = ({ competitors, selected, onSelect }: { competitors: 
                   key={c.domain}
                   type="button"
                   onClick={() => onSelect(c.domain)}
-                  style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, position: 'relative', ...(c.outsider ? { borderLeft: '1px dashed #E4E4E7' } : {}) }}
+                  style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, position: 'relative' }}
                >
-                  {c.outsider && c.rank ? (
-                     <span style={{ position: 'absolute', top: 2, left: 8, fontSize: 12, fontWeight: 600, color: '#71717B', background: '#F4F4F5', borderRadius: 6, padding: '2px 6px', fontFamily: FONT }}>{`#${c.rank}`}</span>
+                  {c.outsider ? (
+                     <>
+                        {/* Full-height dashed divider marking the compared competitor from outside the top-5. */}
+                        <span aria-hidden style={{ position: 'absolute', top: 0, bottom: 0, left: 0, borderLeft: '1.5px dashed #C4C4CC' }} />
+                        {c.rank ? <span style={{ position: 'absolute', top: 2, left: 8, fontSize: 12, fontWeight: 600, color: '#52525C', background: '#E4E4E7', borderRadius: 6, padding: '2px 7px', fontFamily: FONT }}>{`#${c.rank}`}</span> : null}
+                     </>
                   ) : null}
                   <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 8, minHeight: 0 }}>
                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT, lineHeight: '18px' }}>{score}</span>

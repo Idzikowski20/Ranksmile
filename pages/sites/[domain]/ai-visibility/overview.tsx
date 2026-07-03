@@ -128,6 +128,7 @@ const AiVisibilityOverview: NextPage = () => {
          compareCompetitors={competitorsAll}
          compareSelected={compareDomain}
          onCompareSelect={setCompareDomain}
+         toolbarPrompts={(ov?.snapshot?.prompts || []).map((p) => ({ id: p.promptId, text: p.text }))}
          toolbarTrailing={refreshBtn}
       >
          {({ crunching }) => {
