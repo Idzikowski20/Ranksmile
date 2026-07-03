@@ -24,10 +24,10 @@ describe('parseCitations', () => {
 describe('mapDbRowsToResultRows', () => {
    it('maps db columns to ResultRow, coercing own_cited to boolean', () => {
       const rows = mapDbRowsToResultRows([
-         { prompt_id: 5, model: 'gemini', own_cited: 1, own_position: 2, citations: JSON.stringify([{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }]) },
-         { prompt_id: 6, model: 'chat_gpt', own_cited: 0, own_position: null, citations: null },
+         { prompt_id: 5, model: 'gemini', own_cited: 1, own_position: 2, citations: JSON.stringify([{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }]), topic: 'T', text: 'Q' },
+         { prompt_id: 6, model: 'chat_gpt', own_cited: 0, own_position: null, citations: null, topic: 'T2', text: 'Q2' },
       ]);
-      expect(rows[0]).toEqual({ promptId: 5, model: 'gemini', ownCited: true, ownPosition: 2, citations: [{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }] });
-      expect(rows[1]).toEqual({ promptId: 6, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [] });
+      expect(rows[0]).toEqual({ promptId: 5, model: 'gemini', ownCited: true, ownPosition: 2, citations: [{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }], topic: 'T', text: 'Q' });
+      expect(rows[1]).toEqual({ promptId: 6, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [], topic: 'T2', text: 'Q2' });
    });
 });
