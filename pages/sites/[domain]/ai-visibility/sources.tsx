@@ -63,9 +63,9 @@ const AiVisibilitySources: NextPage = () => {
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {/* Stats */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-                     <StatCard label="Domains" value={fmtK(domainCount)} hint="Distinct domains cited across your tracked prompts" pending={pending} />
-                     <StatCard label="URLs" value={fmtK(sources.length)} hint="Unique pages cited by the AI engines" pending={pending} />
-                     <StatCard label="References" value={fmtK(referenceCount)} hint="Total citations across all AI answers" pending={pending} />
+                     <StatCard label="Domains" value={fmtK(domainCount)} hint="Unique domains found in AI answers" pending={pending} />
+                     <StatCard label="URLs" value={fmtK(sources.length)} hint="Unique URLs found in AI answers" pending={pending} />
+                     <StatCard label="References" value={fmtK(referenceCount)} hint="Number of times URLs appear in AI answers" pending={pending} />
                   </div>
 
                   {/* Table toolbar */}
