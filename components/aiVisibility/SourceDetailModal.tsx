@@ -107,14 +107,20 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
       [detail, posAsc],
    );
 
+   // Slide-in on mount, slide-out on close — same chrome as the Recommendations SlidePanel.
+   const [visible, setVisible] = useState(false);
+   useEffect(() => { const t = setTimeout(() => setVisible(true), 10); return () => clearTimeout(t); }, []);
+   const handleClose = () => { setVisible(false); setTimeout(onClose, 220); };
+
    useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
-         if (e.key === 'Escape') onClose();
+         if (e.key === 'Escape') handleClose();
          if (navigable && e.key === 'ArrowUp') { e.preventDefault(); onNavigate(-1); }
          if (navigable && e.key === 'ArrowDown') { e.preventDefault(); onNavigate(1); }
       };
       document.addEventListener('keydown', onKey);
       return () => document.removeEventListener('keydown', onKey);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [navigable, onNavigate, onClose]);
 
    if (!s) return null;
@@ -123,11 +129,12 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
    const canDown = navigable && index < list.length - 1;
 
    return (
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(9,9,11,0.4)', display: 'flex', justifyContent: 'flex-end' }} role="presentation">
-         <style>{'@keyframes aivSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}.aiv-brandrow:hover{background:#FAFAFA}'}</style>
-         <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', width: 680, maxWidth: '100%', height: '100vh', overflow: 'auto', boxShadow: '-24px 0 64px rgba(0,0,0,0.2)', animation: 'aivSlideIn 0.25s cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
+      <>
+         <style>{'.aiv-brandrow:hover{background:#FAFAFA}'}</style>
+         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 520, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
             {/* Header: nav arrows (left) + external/close (right), then the source URL */}
-            <div style={{ position: 'sticky', top: 0, zIndex: 2, background: '#fff', padding: 24, display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
+            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                      {navigable ? (
@@ -139,7 +146,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                      <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label="Open source" style={{ ...iconBtn, textDecoration: 'none' }}><ExternalIcon /></a>
-                     <button type="button" aria-label="Close" onClick={onClose} style={iconBtn}><CloseIcon /></button>
+                     <button type="button" aria-label="Close" onClick={handleClose} style={iconBtn}><CloseIcon /></button>
                   </div>
                </div>
                <h2 style={{ margin: 0, minWidth: 0 }}>
@@ -155,7 +162,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
             </div>
 
             {/* Body: real per-source data from the latest scan */}
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                      <span style={{ fontSize: 13, color: '#71717B' }}>Times shown</span>
@@ -180,7 +187,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 8 }}>Times shown over time</div>
                   {detailQ.isLoading ? (
-                     <SkeletonBox w={600} h={200} />
+                     <SkeletonBox w="100%" h={200} />
                   ) : (detail && detail.history.length > 1) ? (
                      <MetricTrendChart
                         labels={detail.history.map((h) => fmtDay(h.finishedAt))}
@@ -195,7 +202,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
 
                {/* Brands mentioned in answers that cite this source */}
                {detailQ.isLoading ? (
-                  <SkeletonBox w={600} h={160} />
+                  <SkeletonBox w="100%" h={160} />
                ) : (detail && sortedBrands.length > 0) ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -227,7 +234,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                )}
             </div>
          </div>
-      </div>
+      </>
    );
 };
 
