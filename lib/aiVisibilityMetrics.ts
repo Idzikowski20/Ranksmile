@@ -291,6 +291,21 @@ export function domainGapCandidates(rows: ResultRow[], ownDomain: string): strin
       .map((x) => x.d);
 }
 
+/** Per-prompt average citation position for ANY domain (competitor detail modal).
+ *  null position = the domain was never cited for that prompt (renders as "—"). */
+export function competitorPrompts(rows: ResultRow[], domain: string): Array<{ promptId: number, topic: string, text: string, avgPosition: number | null }> {
+   const projected = projectRows(rows, domain);
+   const byPrompt = new Map<number, { promptId: number, topic: string, text: string, positions: number[] }>();
+   for (const r of projected) {
+      const e = byPrompt.get(r.promptId) ?? { promptId: r.promptId, topic: r.topic, text: r.text, positions: [] };
+      if (r.ownCited && r.ownPosition) e.positions.push(r.ownPosition);
+      byPrompt.set(r.promptId, e);
+   }
+   return Array.from(byPrompt.values())
+      .map((p) => ({ promptId: p.promptId, topic: p.topic, text: p.text, avgPosition: p.positions.length ? Math.round(mean(p.positions) * 10) / 10 : null }))
+      .sort((a, b) => (a.avgPosition ?? Infinity) - (b.avgPosition ?? Infinity));
+}
+
 export type Trend = 'up' | 'down' | 'same';
 export type MetricDelta = { current: number; previous: number; delta: number; trend: Trend };
 export type OverviewDelta = {

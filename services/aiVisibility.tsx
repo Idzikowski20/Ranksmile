@@ -134,6 +134,28 @@ export function useAiVisSourceDetail(slug: string | undefined, url: string | nul
       { enabled: !!slug && !!url, staleTime: 60_000 });
 }
 
+export type CompetitorRow = { domain: string; visibilityScore: number; mentionRate: number; avgPosition: number | null };
+export function useAiVisCompetitors(slug: string | undefined, params: { prompts?: number[]; models?: string[] }) {
+   const q = new URLSearchParams({ view: 'competitors' });
+   if (params.prompts?.length) q.set('prompts', params.prompts.join(','));
+   if (params.models?.length) q.set('models', params.models.join(','));
+   const key = q.toString();
+   return useQuery<{ competitors: CompetitorRow[]; pending?: boolean }>(['ai-vis-competitors', slug, key],
+      () => fetchJson<{ competitors: CompetitorRow[]; pending?: boolean }>(`/api/ai-visibility/${slug}/data?${key}`),
+      { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
+}
+
+export type CompetitorDetailPayload = {
+   overview: { visibilityScore: number; mentionRate: number; avgPosition: number | null; mentions: number };
+   prompts: Array<{ promptId: number; topic: string; text: string; avgPosition: number | null }>;
+   sources: Array<{ url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean }>;
+};
+export function useAiVisCompetitorDetail(slug: string | undefined, competitor: string | null) {
+   return useQuery<CompetitorDetailPayload>(['ai-vis-competitor-detail', slug, competitor],
+      () => fetchJson<CompetitorDetailPayload>(`/api/ai-visibility/${slug}/data?view=competitor-detail&competitor=${encodeURIComponent(competitor as string)}`),
+      { enabled: !!slug && !!competitor, staleTime: 60_000 });
+}
+
 /** Sources view with prompt/model/gapBrands filters. Distinct query key per filter set
  *  so switching filters refetches; keepPreviousData avoids flicker. */
 export function useAiVisSources<T>(slug: string | undefined, params: { prompts?: number[]; models?: string[]; gapBrands?: string[]; compare?: string | null }) {

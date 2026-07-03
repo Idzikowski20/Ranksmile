@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, domainMentionGap, domainGapCandidates, brandsForSource, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -174,7 +174,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          });
       }
       if (view === 'competitors') {
-         return res.status(200).json({ competitors: aggregateCompetitors(rows, domain.domain) });
+         // SurferSEO-style ranking: every cited competitor DOMAIN with its full
+         // overview metrics, sorted by visibility desc. Respects prompt/model filters.
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const byDomain = buildSnapshotsForScan(all, domain.domain);
+         const ranked = rankCompetitors(byDomain, domain.domain);
+         return res.status(200).json({
+            competitors: ranked.map((c) => ({
+               domain: c.domain,
+               visibilityScore: c.snapshot.overview.visibilityScore,
+               mentionRate: c.snapshot.overview.mentionRate,
+               avgPosition: c.snapshot.overview.avgPosition,
+            })),
+         });
+      }
+      if (view === 'competitor-detail') {
+         const comp = typeof req.query.competitor === 'string' ? req.query.competitor : '';
+         if (!comp) return res.status(400).json({ error: 'competitor required' });
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const snap = snapshotForDomain(all, comp);
+         const sources = snap.sources.filter((s) => s.domain === NORM(comp));
+         return res.status(200).json({
+            overview: { visibilityScore: snap.overview.visibilityScore, mentionRate: snap.overview.mentionRate, avgPosition: snap.overview.avgPosition, mentions: snap.overview.directCitations },
+            prompts: competitorPrompts(all, comp),
+            sources,
+         });
       }
       if (view === 'prompts') {
          const byPrompt = new Map<number, { id: number, topic: string, text: string, perModel: Array<{ model: string, cited: boolean, position: number | null }> }>();
