@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -208,6 +208,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             mentions: ms.length,
             mentionSources: ms.map((s) => ({ url: s.url, domain: s.domain, timesShown: s.timesShown, ownMentioned: s.aMentioned, compMentioned: s.bMentioned })),
             gap: domainMentionGap(all, comp, domain.domain),
+         });
+      }
+      if (view === 'prompt-topics') {
+         // Topic-grouped prompts for the tracked domain: per-prompt + per-topic
+         // visibility / mention rate / avg position, plus the brand favicon stack.
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const brandDomains = (rows2: ResultRow[]): string[] => {
+            const set = new Set<string>();
+            for (const r of rows2) for (const b of r.brands) if (b.domain) set.add(NORM(b.domain));
+            return Array.from(set);
+         };
+         const byPrompt = new Map<number, ResultRow[]>();
+         for (const r of all) { const l = byPrompt.get(r.promptId) ?? []; l.push(r); byPrompt.set(r.promptId, l); }
+         const promptMeta = new Map<number, { topic: string, text: string }>();
+         for (const r of all) if (!promptMeta.has(r.promptId)) promptMeta.set(r.promptId, { topic: r.topic, text: r.text });
+         const byTopic = new Map<string, ResultRow[]>();
+         for (const r of all) { const l = byTopic.get(r.topic) ?? []; l.push(r); byTopic.set(r.topic, l); }
+
+         const topics = Array.from(byTopic.entries()).map(([topic, topicRows]) => {
+            const ov = computeOverview(topicRows);
+            const promptIds = Array.from(new Set(topicRows.map((r) => r.promptId)));
+            const prompts = promptIds.map((id) => {
+               const pr = byPrompt.get(id) || [];
+               const pov = computeOverview(pr);
+               return { id, text: promptMeta.get(id)?.text || '', visibility: pov.visibilityScore, mentionRate: pov.mentionRate, avgPosition: pov.avgPosition, brands: brandDomains(pr) };
+            });
+            return { topic, promptCount: prompts.length, visibility: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition, brands: brandDomains(topicRows), prompts };
+         }).sort((a, b) => b.visibility - a.visibility);
+
+         const overall = computeOverview(all);
+         return res.status(200).json({
+            overview: { visibilityScore: overall.visibilityScore, mentionRate: overall.mentionRate, avgPosition: overall.avgPosition },
+            topics,
          });
       }
       if (view === 'prompts') {
