@@ -109,7 +109,8 @@ const SidebarLaunchpad = () => {
   // Real onboarding state (shared with the dashboard "Get started" card).
   const { steps: ITEMS, done: DONE, pct: PCT } = useOnboardingChecklist();
 
-  if (dismissed) return null;
+  // Hide once every step is complete (or the user skipped it).
+  if (dismissed || PCT >= 100) return null;
 
   return (
     <>

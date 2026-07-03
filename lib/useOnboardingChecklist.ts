@@ -39,6 +39,9 @@ export function useOnboardingChecklist(): {
    const { data: sitesData } = useQuery('dashboardSites', () => getJson<{ sites?: unknown[] }>('/api/sites'), { staleTime: 5 * 60 * 1000, retry: false });
    const { data: recsData } = useQuery(['domainRecs', slug], () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`), { enabled: !!slug, staleTime: 60 * 1000 });
    const { data: articlesData } = useQuery('dashboardArticles', () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles'));
+   // "See if AI mentions your brand" flips done once the AI Visibility scan finishes
+   // (status 'completed' = the crunching bar is done and results are in the overview).
+   const { data: aiStatus } = useQuery(['aiVisStatusOnboarding', slug], () => getJson<{ status?: string }>(`/api/ai-visibility/${slug}/scan-status`), { enabled: !!slug, staleTime: 60 * 1000 });
 
    return useMemo(() => {
       const ws = (p: string) => workspaceHref(wsId, p);
@@ -46,11 +49,12 @@ export function useOnboardingChecklist(): {
       const hasGsc = (sitesData?.sites?.length ?? 0) > 0;                  // a GSC account is connected
       const hasAudit = (recsData?.recommendations?.length ?? 0) > 0;       // the domain scan produced recs
       const hasArticle = (articlesData?.articles ?? []).some((a) => a.source !== 'site_context' && !!a.title); // real content exists
+      const hasAiResults = aiStatus?.status === 'completed';                 // AI Visibility scan finished
       const steps: OnboardingStep[] = [
          { key: 'workspace', label: 'Set up your workspace', done: hasWorkspace },
          { key: 'gsc', label: 'Connect Google Search Console', done: hasGsc },
          { key: 'audit', label: 'Audit existing content and find quick wins', done: hasAudit, href: ws(slug ? `/sites/${slug}/recommendations` : '/dashboard'), cta: 'View recommendations' },
-         { key: 'ai', label: 'See if AI mentions your brand', done: false, time: '2m', href: ws('/ai_tracker?intent=overview'), cta: 'See AI Visibility' },
+         { key: 'ai', label: 'See if AI mentions your brand', done: hasAiResults, time: '2m', href: ws('/ai_tracker?intent=overview'), cta: 'See AI Visibility' },
          { key: 'content', label: 'Create content that ranks in AI Search and SEO', done: hasArticle, time: '10m', href: ws('/articles'), cta: 'Open Content Editor' },
       ];
       const done = steps.filter((s) => s.done).length;
@@ -58,5 +62,5 @@ export function useOnboardingChecklist(): {
       const pct = Math.round((done / total) * 100);
       const nextStep = steps.find((s) => !s.done) ?? null;
       return { steps, done, total, pct, nextStep };
-   }, [wsId, slug, wsData, sitesData, recsData, articlesData]);
+   }, [wsId, slug, wsData, sitesData, recsData, articlesData, aiStatus]);
 }

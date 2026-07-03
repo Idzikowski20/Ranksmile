@@ -8,7 +8,8 @@ import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/
 import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBarChart';
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
-import { useAiVisOverview, useAiVisHistory, useStartAiVisScan } from '../../../../services/aiVisibility';
+import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
+import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, type DomainOverview } from '../../../../services/aiVisibility';
 import { Modal } from '../../../../components/ui';
 
 const FONT = 'var(--font-family-primary)';
@@ -37,24 +38,14 @@ const faviconFor = (domain: string) => `https://www.google.com/s2/favicons?domai
 
 const BarIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7" width="3" height="6" rx="1" fill="currentColor" /><rect x="5.5" y="4" width="3" height="9" rx="1" fill="currentColor" /><rect x="10" y="1" width="3" height="12" rx="1" fill="currentColor" /></svg>);
 const LineIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 5,6 8,8 13,2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>);
+const HashIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 3L6.5 21M17.5 3L14.5 21M20.5 8H3.5M19.5 16H2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
+const PromptIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path fillRule="evenodd" clipRule="evenodd" d="M3.29289 4.29289C3.68342 3.90237 4.31658 3.90237 4.70711 4.29289L10.7071 10.2929C11.0976 10.6834 11.0976 11.3166 10.7071 11.7071L4.70711 17.7071C4.31658 18.0976 3.68342 18.0976 3.29289 17.7071C2.90237 17.3166 2.90237 16.6834 3.29289 16.2929L8.58579 11L3.29289 5.70711C2.90237 5.31658 2.90237 4.68342 3.29289 4.29289Z" fill="currentColor" /><path fillRule="evenodd" clipRule="evenodd" d="M11 19C11 18.4477 11.4477 18 12 18H20C20.5523 18 21 18.4477 21 19C21 19.5523 20.5523 20 20 20H12C11.4477 20 11 19.5523 11 19Z" fill="currentColor" /></svg>);
+const InfoIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
-const StatCard = ({ label, value, vs, pending }: { label: string; value: React.ReactNode; vs?: React.ReactNode; pending: boolean }) => (
-   <section style={card}>
-      <div style={cardHeader}>
-         <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {label}: {pending ? <SkeletonBox w={24} h={16} /> : <span style={{ color: '#18181B', fontWeight: 700 }}>{value}</span>}
-         </span>
-      </div>
-      <div style={{ padding: 24 }}>
-         {pending ? <SkeletonBox w="100%" h={160} radius={10} /> : (
-            <div style={{ height: 160, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: FONT }}>
-               <span style={{ fontSize: 40, fontWeight: 700, color: '#18181B' }}>{value}</span>
-               {vs != null ? <span style={{ fontSize: 14, color: '#71717B' }}>vs {vs}</span> : null}
-            </div>
-         )}
-      </div>
-   </section>
-);
+const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
+const splitUrl = (url: string, fallback: string): { host: string; path: string } => {
+   try { const u = new URL(url); return { host: u.host, path: `${u.pathname}${u.search}` }; } catch { return { host: fallback, path: '' }; }
+};
 
 const DeltaBadge = ({ d }: { d: MetricDelta }) => {
    if (d.trend === 'same') return null;
@@ -133,6 +124,12 @@ const AiVisibilityOverview: NextPage = () => {
             const sources = (ov?.snapshot?.sources || []).slice(0, 5);
             const sourceCount = ov?.snapshot?.sources.length || 0;
 
+            // Per-metric trend series (You + optional competitor) from /history.
+            const histScans = historyQ.data?.scans || [];
+            const histLabels = histScans.map((s) => (s.finishedAt ? new Date(s.finishedAt).toLocaleDateString() : ''));
+            const youVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.you ? pick(s.series.you) : null));
+            const compVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.competitor ? pick(s.series.competitor) : null));
+
             let chartBody: React.ReactNode;
             if (pending) {
                chartBody = <SkeletonBars />;
@@ -201,58 +198,143 @@ const AiVisibilityOverview: NextPage = () => {
                   {/* Topics & Prompts + Sources */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
                      <Panel
-                        title="Topics & Prompts"
+                        title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Topics &amp; Prompts <InfoIcon /></span>}
                         action={(
-                           <div style={{ display: 'inline-flex', border: '1px solid #E4E4E7', borderRadius: 8, overflow: 'hidden' }}>
-                              {(['topics', 'prompts'] as const).map((m) => (
-                                 <button key={m} type="button" onClick={() => setPromptMode(m)} style={{ border: 'none', padding: '6px 10px', background: promptMode === m ? '#F4F4F5' : '#fff', color: '#18181B', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600 }}>{m === 'topics' ? '#' : '>_'}</button>
-                              ))}
+                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
+                                 {(['topics', 'prompts'] as const).map((m) => {
+                                    const on = promptMode === m;
+                                    return (
+                                       <button key={m} type="button" onClick={() => setPromptMode(m)} title={m === 'topics' ? 'Topics' : 'Prompts'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#783AFB' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer' }}>{m === 'topics' ? <HashIcon /> : <PromptIcon />}</button>
+                                    );
+                                 })}
+                              </div>
+                              <Link href={`/sites/${slug}/ai-visibility/prompts`} passHref><a style={viewAll}>View all</a></Link>
                            </div>
                         )}
                      >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#71717B', fontFamily: FONT }}>
-                              <span>{promptMode === 'topics' ? 'Topics' : 'Prompts'}</span><span>Visibility score{comp ? ' (you vs)' : ''}</span>
+                              <span>{promptMode === 'topics' ? 'Topics' : 'Prompts'}</span><span>Visibility score</span>
                            </div>
                            {pending ? <SkeletonRows count={5} /> : rows.length === 0 ? (
                               <span style={{ fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No data yet.</span>
                            ) : rows.map((r) => (
                               <div key={r.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                                  <span title={r.label} style={{ fontSize: 14, color: '#18181B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
-                                 <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, whiteSpace: 'nowrap' }}>
-                                    {r.score}{r.vs != null ? <span style={{ color: '#71717B', fontWeight: 400 }}> vs {r.vs}</span> : null}
+                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: '#18181B' }}>{r.score}</span>
+                                    {r.vs != null ? <span style={{ color: '#9F9FA9' }}>vs. {r.vs}</span> : null}
                                  </span>
                               </div>
                            ))}
                         </div>
                      </Panel>
 
-                     <Panel title={<span>Sources{sourceCount ? `: ${sourceCount}` : ''}</span>}>
+                     <Panel
+                        title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Sources{sourceCount ? `: ${fmtK(sourceCount)}` : ''} <InfoIcon /></span>}
+                        action={<Link href={`/sites/${slug}/ai-visibility/sources`} passHref><a style={viewAll}>View all</a></Link>}
+                     >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#71717B', fontFamily: FONT }}>
                               <span>Link</span><span>Times shown</span>
                            </div>
                            {pending ? <SkeletonRows count={5} withIcon /> : sources.length === 0 ? (
                               <span style={{ fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No sources yet.</span>
-                           ) : sources.map((s) => (
-                              <div key={s.url} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                                    { /* eslint-disable-next-line @next/next/no-img-element */ }
-                                    <img alt="" src={faviconFor(s.domain)} width={20} height={20} style={{ borderRadius: 4, flexShrink: 0 }} />
-                                    <a href={s.url} target="_blank" rel="noopener noreferrer" title={s.url} style={{ fontSize: 14, color: '#18181B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{s.domain}</a>
-                                 </span>
-                                 <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{s.timesShown}</span>
-                              </div>
-                           ))}
+                           ) : sources.map((s) => {
+                              const { host, path } = splitUrl(s.url, s.domain);
+                              return (
+                                 <div key={s.url} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                    <a href={s.url} target="_blank" rel="noopener noreferrer" title={s.url} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0, textDecoration: 'none' }}>
+                                       { /* eslint-disable-next-line @next/next/no-img-element */ }
+                                       <img alt="" src={faviconFor(s.domain)} width={20} height={20} style={{ borderRadius: 4, flexShrink: 0 }} />
+                                       <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontFamily: FONT }}>
+                                          <span style={{ fontWeight: 600, color: '#18181B' }}>{host}</span>
+                                          <span style={{ color: '#9F9FA9' }}>{path}</span>
+                                       </span>
+                                    </a>
+                                    <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, flexShrink: 0 }}>{s.timesShown}</span>
+                                 </div>
+                              );
+                           })}
                         </div>
                      </Panel>
                   </div>
 
-                  {/* Stat cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }}>
-                     <StatCard label="Mention rate" value={own ? `${own.mentionRate}%` : '—'} vs={comp ? `${comp.mentionRate}%` : undefined} pending={!!pending} />
-                     <StatCard label="Average position" value={own ? (own.avgPosition ?? '—') : '—'} vs={comp ? (comp.avgPosition ?? '—') : undefined} pending={!!pending} />
-                     <StatCard label="Direct citations" value={own ? own.directCitations : '—'} vs={comp ? comp.directCitations : undefined} pending={!!pending} />
+                  {/* Metric trends */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+                     <section style={card}>
+                        <div style={cardHeader}>
+                           <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              Mention rate: <span style={{ color: '#18181B', fontWeight: 700 }}>{own ? `${own.mentionRate}%` : '—'}</span>
+                              {comp ? <span style={{ color: '#9F9FA9', fontWeight: 400 }}>vs. {comp.mentionRate}%</span> : null}
+                              <InfoIcon />
+                           </span>
+                        </div>
+                        <div style={{ padding: 24 }}>
+                           {pending ? <SkeletonBox w="100%" h={200} radius={10} /> : (
+                              <MetricTrendChart
+                                 labels={histLabels}
+                                 lines={[
+                                    { label: 'You', data: youVals((o) => o.mentionRate), color: '#783AFB' },
+                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.mentionRate), color: '#9F9FA9' }] : []),
+                                 ]}
+                                 yMin={0}
+                                 yMax={100}
+                                 percent
+                              />
+                           )}
+                        </div>
+                     </section>
+
+                     <section style={card}>
+                        <div style={cardHeader}>
+                           <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              Average position: <span style={{ color: '#18181B', fontWeight: 700 }}>{own ? (own.avgPosition ?? '—') : '—'}</span>
+                              {comp ? <span style={{ color: '#9F9FA9', fontWeight: 400 }}>vs. {comp.avgPosition ?? '—'}</span> : null}
+                              <InfoIcon />
+                           </span>
+                        </div>
+                        <div style={{ padding: 24 }}>
+                           {pending ? <SkeletonBox w="100%" h={200} radius={10} /> : (
+                              <MetricTrendChart
+                                 labels={histLabels}
+                                 lines={[
+                                    { label: 'You', data: youVals((o) => o.avgPosition), color: '#783AFB' },
+                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.avgPosition), color: '#9F9FA9' }] : []),
+                                 ]}
+                                 yMin={1}
+                                 yMax={10}
+                                 reverse
+                              />
+                           )}
+                        </div>
+                     </section>
+
+                     <section style={card}>
+                        <div style={{ ...cardHeader, gap: 16, flexWrap: 'wrap' }}>
+                           <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#18181B', flexShrink: 0 }} />
+                              Direct citations: <span style={{ color: '#18181B', fontWeight: 700 }}>{own ? own.directCitations : '—'}</span>
+                           </span>
+                           <span style={{ ...cardTitle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#9F9FA9', flexShrink: 0 }} />
+                              Pages: <span style={{ color: '#18181B', fontWeight: 700 }}>{own ? own.pages : '—'}</span>
+                           </span>
+                        </div>
+                        <div style={{ padding: 24 }}>
+                           {pending ? <SkeletonBox w="100%" h={200} radius={10} /> : (
+                              <MetricTrendChart
+                                 labels={histLabels}
+                                 lines={[
+                                    { label: 'Direct citations', data: youVals((o) => o.directCitations), color: '#18181B' },
+                                    { label: 'Pages', data: youVals((o) => o.pages), color: '#9F9FA9' },
+                                 ]}
+                                 yMin={0}
+                              />
+                           )}
+                        </div>
+                     </section>
                   </div>
 
                   {confirmDays !== null && (
