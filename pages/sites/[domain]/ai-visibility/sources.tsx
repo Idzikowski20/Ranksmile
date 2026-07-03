@@ -1,18 +1,20 @@
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import SourcesTable, { SourceRow } from '../../../../components/aiVisibility/SourcesTable';
 import SourceDetailModal from '../../../../components/aiVisibility/SourceDetailModal';
+import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import HoverTooltip from '../../../../components/common/HoverTooltip';
 import { Toggle, SearchBar } from '../../../../components/ui';
-import { useAiVisData } from '../../../../services/aiVisibility';
+import { useAiVisSources } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 
-type SourcesData = { pending?: boolean; sources?: SourceRow[] };
+type GapCard = { brand: string; gap: number; shared: number; you: number };
+type SourcesData = { pending?: boolean; sources?: SourceRow[]; gapCards?: GapCard[]; gapCandidates?: string[]; ownLabel?: string };
 type ModalState = { list: SourceRow[]; index: number; navigable: boolean };
 
 const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
@@ -32,10 +34,28 @@ const StatCard = ({ label, value, hint, pending }: { label: string; value: strin
 const AiVisibilitySources: NextPage = () => {
    const router = useRouter();
    const { domain: slug } = router.query as { domain: string };
-   const sourcesQ = useAiVisData<SourcesData>(slug, 'sources');
    const [groupByDomain, setGroupByDomain] = useState(false);
    const [search, setSearch] = useState('');
    const [modal, setModal] = useState<ModalState | null>(null);
+
+   // Selected Mention-Gap competitor brands — persisted per domain. `null` = not yet
+   // hydrated from localStorage, so we defer sending gapBrands until we know the choice
+   // (undefined lets the server pick its default top-4).
+   const [gapBrands, setGapBrands] = useState<string[] | null>(null);
+   const gapKey = slug ? `aiVisGapBrands:${slug}` : '';
+   useEffect(() => {
+      if (!gapKey) return;
+      try {
+         const raw = window.localStorage.getItem(gapKey);
+         setGapBrands(raw ? JSON.parse(raw) : []);
+      } catch { setGapBrands([]); }
+   }, [gapKey]);
+   const setGap = (next: string[]) => {
+      setGapBrands(next);
+      try { window.localStorage.setItem(gapKey, JSON.stringify(next)); } catch { /* quota/full — non-fatal */ }
+   };
+
+   const sourcesQ = useAiVisSources<SourcesData>(slug, { gapBrands: gapBrands ?? undefined });
 
    const sources = useMemo(() => sourcesQ.data?.sources || [], [sourcesQ.data]);
    const filtered = useMemo(() => {
@@ -46,6 +66,13 @@ const AiVisibilitySources: NextPage = () => {
 
    const domainCount = useMemo(() => new Set(sources.map((s) => s.domain)).size, [sources]);
    const referenceCount = useMemo(() => sources.reduce((acc, s) => acc + s.timesShown, 0), [sources]);
+
+   const gapCards = useMemo(() => sourcesQ.data?.gapCards || [], [sourcesQ.data]);
+   const gapCandidates = useMemo(() => sourcesQ.data?.gapCandidates || [], [sourcesQ.data]);
+   const ownLabel = sourcesQ.data?.ownLabel || 'You';
+   // Brands currently on screen — drives add/swap exclusion. Prefer the server's cards
+   // (source of truth) so the default top-4 pre-fills the picker's exclude set too.
+   const shownBrands = useMemo(() => gapCards.map((c) => c.brand), [gapCards]);
 
    const navigateModal = (delta: number) => {
       setModal((m) => {
@@ -67,6 +94,17 @@ const AiVisibilitySources: NextPage = () => {
                      <StatCard label="URLs" value={fmtK(sources.length)} hint="Unique URLs found in AI answers" pending={pending} />
                      <StatCard label="References" value={fmtK(referenceCount)} hint="Number of times URLs appear in AI answers" pending={pending} />
                   </div>
+
+                  {/* Mention Gap */}
+                  {!pending && gapCandidates.length > 0 && (
+                     <MentionGapCards
+                        cards={gapCards}
+                        candidates={gapCandidates}
+                        ownLabel={ownLabel}
+                        selected={shownBrands}
+                        onSelected={setGap}
+                     />
+                  )}
 
                   {/* Table toolbar */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
