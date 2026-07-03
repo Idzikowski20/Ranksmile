@@ -500,7 +500,7 @@ const RecommendationsPage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`Recommendations — ${domain} — SerpBear`}</title></Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Recommendations" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Recommendations" heading="Recommendations" contentMaxWidth="100%">
             {/* ── Controls row ─────────────────────────────────────────────── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
 

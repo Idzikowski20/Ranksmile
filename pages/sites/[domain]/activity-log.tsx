@@ -477,8 +477,13 @@ const ActivityLogPage: NextPage = () => {
             <title>{`Activity Log — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" actions={exportBtn} contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" contentMaxWidth="100%">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT, width: '100%', maxWidth: 880, margin: '0 auto' }}>
+               {/* Title row (kept inside the centered column so it aligns with the content) */}
+               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                  <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Activity Log</h1>
+                  {exportBtn}
+               </div>
                {/* Filters row */}
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div ref={segRef} style={{ position: 'relative' }}>

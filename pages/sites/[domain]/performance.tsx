@@ -1636,7 +1636,7 @@ const PerformancePage: NextPage = () => {
         <title>{`Performance - ${domain} - SerpBear`}</title>
       </Head>
 
-      <DomainSubLayout domain={domain} slug={slug || ''} section="Performance" actions={feedbackAction} contentMaxWidth="unset">
+      <DomainSubLayout domain={domain} slug={slug || ''} section="Performance" heading="Performance" actions={feedbackAction} contentMaxWidth="unset">
         {isLoading && !scData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 16, animation: 'skeletonPulse 1.5s ease-in-out infinite' }}>
             {/* Filter bar skeletons */}
