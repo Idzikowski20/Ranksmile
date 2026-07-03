@@ -1,11 +1,13 @@
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBarChart';
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
+import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan } from '../../../../services/aiVisibility';
 import { Modal } from '../../../../components/ui';
 
@@ -132,9 +134,24 @@ const AiVisibilityOverview: NextPage = () => {
             const sourceCount = ov?.snapshot?.sources.length || 0;
 
             let chartBody: React.ReactNode;
-            if (pending) chartBody = <SkeletonBars />;
-            else if (chartMode === 'bar') chartBody = <CompetitorBarChart competitors={competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }))} selected={compareDomain} onSelect={setCompareDomain} />;
-            else chartBody = <TrendLineChart scans={historyQ.data?.scans || []} competitorDomain={compareDomain} />;
+            if (pending) {
+               chartBody = <SkeletonBars />;
+            } else if (chartMode === 'bar') {
+               chartBody = <CompetitorBarChart competitors={competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }))} selected={compareDomain} onSelect={setCompareDomain} />;
+            } else {
+               // Line mode mirrors SurferSEO: trend on the left, a "Top Competitors"
+               // picker on the right (the line only plots You + the chosen competitor).
+               chartBody = (
+                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                     <div style={{ flex: '1 1 380px', minWidth: 0 }}>
+                        <TrendLineChart scans={historyQ.data?.scans || []} competitorDomain={compareDomain} />
+                     </div>
+                     <div style={{ flex: '1 1 200px', minWidth: 200, maxWidth: 300 }}>
+                        <TopCompetitorsList competitors={competitors.map((c) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore }))} selected={compareDomain} onSelect={setCompareDomain} />
+                     </div>
+                  </div>
+               );
+            }
 
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -165,13 +182,16 @@ const AiVisibilityOverview: NextPage = () => {
                         </span>
                      )}
                      action={(
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
-                           {(['bar', 'line'] as const).map((m) => {
-                              const on = chartMode === m;
-                              return (
-                                 <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#783AFB' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', transition: 'color 150ms ease' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
-                              );
-                           })}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
+                              {(['bar', 'line'] as const).map((m) => {
+                                 const on = chartMode === m;
+                                 return (
+                                    <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#783AFB' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', transition: 'color 150ms ease' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
+                                 );
+                              })}
+                           </div>
+                           <Link href={`/sites/${slug}/ai-visibility/competitors`} passHref><a style={viewAll}>View Competitors</a></Link>
                         </div>
                      )}
                   >

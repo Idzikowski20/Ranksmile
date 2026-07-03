@@ -1,0 +1,31 @@
+import React from 'react';
+
+const FONT = 'var(--font-family-primary)';
+const favicon = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
+
+/** Right-side "Top Competitors" panel shown beside the trend line — pick one to compare. */
+const TopCompetitorsList = ({ competitors, selected, onSelect }: { competitors: Array<{ domain: string; score: number }>; selected: string | null; onSelect: (d: string) => void }) => (
+   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+         <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>Top Competitors</div>
+         <div style={{ fontSize: 13, color: '#71717B', fontFamily: FONT }}>Click on a competitor to compare</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+         {competitors.slice(0, 5).map((c, i) => {
+            const isSel = c.domain === selected;
+            return (
+               <button key={c.domain} type="button" onClick={() => onSelect(c.domain)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, fontFamily: FONT }}>
+                  <span style={{ width: 22, fontSize: 13, color: '#9F9FA9', fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0 }}>{`#${i + 1}`}</span>
+                  { /* eslint-disable-next-line @next/next/no-img-element */ }
+                  <img alt="" src={favicon(c.domain)} width={16} height={16} style={{ borderRadius: 3, flexShrink: 0 }} />
+                  <span title={c.domain} style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: isSel ? 600 : 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.domain}</span>
+                  {isSel ? <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#783AFB', flexShrink: 0 }} /> : null}
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', flexShrink: 0 }}>{c.score}</span>
+               </button>
+            );
+         })}
+      </div>
+   </div>
+);
+
+export default TopCompetitorsList;
