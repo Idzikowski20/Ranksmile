@@ -60,6 +60,9 @@ const fmtTime = (d: Date) => {
    if (h === 0) h = 12;
    return `${h}:${String(m).padStart(2, '0')}${ap}`;
 };
+// Compact table date (no year) with the full date+time surfaced on hover.
+const fmtDateShort = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+const fmtDateFull = (d: Date) => `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} · ${fmtTime(d)}`;
 const fmtRangeLabel = (from: Date | null, to: Date | null) => {
    if (!from) return 'Custom';
    const f = `${MONTHS[from.getMonth()]} ${from.getDate()}`;
@@ -320,6 +323,7 @@ const ActivityLogPage: NextPage = () => {
    const session = authClient.useSession?.();
    const person = (mounted && session?.data?.user?.email) ? session.data.user.email : 'You';
    const personInitial = (person.charAt(0) || '?').toUpperCase();
+   const personImage = (mounted && (session?.data?.user as { image?: string } | undefined)?.image) || '';
 
    const { data: peopleData } = usePeople();
    const peopleOptions: MultiOpt[] = useMemo(() => {
@@ -546,7 +550,7 @@ const ActivityLogPage: NextPage = () => {
                   <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse', fontFamily: FONT }}>
                      <thead>
                         <tr>
-                           <th style={{ width: 220, textAlign: 'left', padding: '12px 16px 12px 4px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Person</th>
+                           <th style={{ width: 96, textAlign: 'left', padding: '12px 16px 12px 4px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Person</th>
                            <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Activity</th>
                            <th style={{ width: 200, textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid #F4F4F5' }}>
                               <button
@@ -588,12 +592,14 @@ const ActivityLogPage: NextPage = () => {
                            events.map((e) => (
                               <tr key={e.id} className="activity-log-row">
                                  <td style={{ padding: '14px 16px 14px 4px', verticalAlign: 'middle' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                                       <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' }}>
+                                    {personImage ? (
+                                       // eslint-disable-next-line @next/next/no-img-element
+                                       <img alt={person} title={person} src={personImage} width={28} height={28} style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0, cursor: 'default' }} />
+                                    ) : (
+                                       <span title={person} style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
                                           {personInitial}
                                        </span>
-                                       <span style={{ minWidth: 0, fontSize: 14, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person}</span>
-                                    </div>
+                                    )}
                                  </td>
                                  <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: '#18181B' }}>
@@ -616,8 +622,9 @@ const ActivityLogPage: NextPage = () => {
                                     </div>
                                  </td>
                                  <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                    <span style={{ fontSize: 14, color: '#18181B' }}>{fmtDate(e.time)} </span>
-                                    <span style={{ fontSize: 14, color: '#71717B' }}>{fmtTime(e.time)}</span>
+                                    <span title={fmtDateFull(e.time)} style={{ fontSize: 14, color: '#18181B', cursor: 'default' }}>
+                                       {fmtDateShort(e.time)}, <span style={{ color: '#71717B' }}>{fmtTime(e.time)}</span>
+                                    </span>
                                  </td>
                               </tr>
                            ))
