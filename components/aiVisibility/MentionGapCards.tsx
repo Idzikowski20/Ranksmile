@@ -51,6 +51,7 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
          { /* click-away backdrop so typing in the search never dismisses the picker */ }
          <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 400 }} role="presentation" />
          <div style={{ position: 'fixed', top, left, width: PICKER_W, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 401, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <style>{'.aiv-gap-scroll{scrollbar-width:thin;scrollbar-color:#D4D4D8 transparent}.aiv-gap-scroll::-webkit-scrollbar{width:8px;background:transparent}.aiv-gap-scroll::-webkit-scrollbar-track{background:transparent}.aiv-gap-scroll::-webkit-scrollbar-thumb{background:#D4D4D8;border-radius:9999px}'}</style>
             <input
                autoFocus
                value={q}
@@ -61,7 +62,7 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
                onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
             />
-            <div style={{ maxHeight: 260, overflow: 'auto' }}>
+            <div className="aiv-gap-scroll" style={{ maxHeight: 260, overflow: 'auto', background: 'transparent' }}>
                {list.map((c) => (
                   <button key={c} type="button" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 10px', fontSize: 14, color: '#18181B', cursor: 'pointer', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F9F9FB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
