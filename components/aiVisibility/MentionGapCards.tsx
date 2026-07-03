@@ -36,34 +36,64 @@ const LegendRow = ({ n, label, color }: { n: number; label: string; color: strin
    </>
 );
 
-const Picker = ({ candidates, exclude, onPick, onClose }: { candidates: string[]; exclude: string[]; onPick: (b: string) => void; onClose: () => void }) => (
-   <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 220, maxHeight: 260, overflow: 'auto', background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 150, fontFamily: FONT, animation: 'growOut 0.2s ease' }} onMouseLeave={onClose}>
-      {candidates.filter((c) => !exclude.includes(c)).map((c) => (
-         <button key={c} type="button" onClick={() => onPick(c)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 10px', fontSize: 14, color: '#18181B', cursor: 'pointer', fontFamily: FONT }}>{c}</button>
-      ))}
-      {candidates.filter((c) => !exclude.includes(c)).length === 0 ? <div style={{ padding: '8px 10px', fontSize: 13, color: '#9F9FA9' }}>No more brands.</div> : null}
-   </div>
-);
+const Picker = ({ candidates, exclude, onPick, onClose }: { candidates: string[]; exclude: string[]; onPick: (b: string) => void; onClose: () => void }) => {
+   const [q, setQ] = useState('');
+   const list = candidates.filter((c) => !exclude.includes(c) && c.toLowerCase().includes(q.trim().toLowerCase()));
+   return (
+      <>
+         { /* click-away backdrop so typing in the search never dismisses the picker */ }
+         <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 140 }} role="presentation" />
+         <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 150, fontFamily: FONT, animation: 'growOut 0.2s ease' }}>
+            <input
+               autoFocus
+               value={q}
+               onChange={(e) => setQ(e.target.value)}
+               onClick={(e) => e.stopPropagation()}
+               placeholder="Search"
+               style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 10px', fontSize: 14, fontFamily: FONT, color: '#18181B', marginBottom: 6, outline: 'none' }}
+            />
+            <div style={{ maxHeight: 240, overflow: 'auto' }}>
+               {list.map((c) => (
+                  <button key={c} type="button" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 10px', fontSize: 14, color: '#18181B', cursor: 'pointer', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F9F9FB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                     { /* eslint-disable-next-line @next/next/no-img-element */ }
+                     <img alt="" src={faviconFor(c)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</span>
+                  </button>
+               ))}
+               {list.length === 0 ? <div style={{ padding: '8px 10px', fontSize: 13, color: '#9F9FA9' }}>No matches.</div> : null}
+            </div>
+         </div>
+      </>
+   );
+};
 
-const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected }: { cards: Card[]; candidates: string[]; ownLabel: string; selected: string[]; onSelected: (b: string[]) => void }) => {
+const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, activeDomain, onCompare }: { cards: Card[]; candidates: string[]; ownLabel: string; selected: string[]; onSelected: (b: string[]) => void; activeDomain?: string | null; onCompare?: (domain: string) => void }) => {
    const [addOpen, setAddOpen] = useState(false);
    const [swapFor, setSwapFor] = useState<string | null>(null);
    if (!candidates.length) return null;
+   const stop = (e: React.MouseEvent) => e.stopPropagation();
    return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
          <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>Mention Gap</div>
          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 4 }}>
             {cards.map((card) => (
-               <div key={card.domain} style={{ position: 'relative', width: 300, flexShrink: 0, border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+               <div
+                  key={card.domain}
+                  onClick={() => onCompare && onCompare(card.domain)}
+                  role={onCompare ? 'button' : undefined}
+                  tabIndex={onCompare ? 0 : undefined}
+                  onKeyDown={(e) => { if (onCompare && e.key === 'Enter') onCompare(card.domain); }}
+                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#783AFB' : '#F4F4F5'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
+               >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                      <div style={{ position: 'relative', minWidth: 0 }}>
-                        <button type="button" onClick={() => setSwapFor((s) => (s === card.domain ? null : card.domain))} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, maxWidth: 220 }}>
+                        <button type="button" onClick={(e) => { stop(e); setSwapFor((s) => (s === card.domain ? null : card.domain)); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, maxWidth: 220 }}>
                            { /* eslint-disable-next-line @next/next/no-img-element */ }
                            <img alt="" src={faviconFor(card.domain)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.domain}</span> <ChevronDown /></button>
                         {swapFor === card.domain ? <Picker candidates={candidates} exclude={selected} onPick={(b) => { onSelected(selected.map((x) => (x === card.domain ? b : x))); setSwapFor(null); }} onClose={() => setSwapFor(null)} /> : null}
                      </div>
-                     <button type="button" aria-label="Remove" onClick={() => onSelected(selected.filter((x) => x !== card.domain))} style={{ border: 'none', background: 'transparent', color: '#9F9FA9', cursor: 'pointer', display: 'inline-flex', flexShrink: 0 }}><XIcon /></button>
+                     <button type="button" aria-label="Remove" onClick={(e) => { stop(e); onSelected(selected.filter((x) => x !== card.domain)); }} style={{ border: 'none', background: 'transparent', color: '#9F9FA9', cursor: 'pointer', display: 'inline-flex', flexShrink: 0 }}><XIcon /></button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px' }}>

@@ -136,11 +136,12 @@ export function useAiVisSourceDetail(slug: string | undefined, url: string | nul
 
 /** Sources view with prompt/model/gapBrands filters. Distinct query key per filter set
  *  so switching filters refetches; keepPreviousData avoids flicker. */
-export function useAiVisSources<T>(slug: string | undefined, params: { prompts?: number[]; models?: string[]; gapBrands?: string[] }) {
+export function useAiVisSources<T>(slug: string | undefined, params: { prompts?: number[]; models?: string[]; gapBrands?: string[]; compare?: string | null }) {
    const q = new URLSearchParams({ view: 'sources' });
    if (params.prompts?.length) q.set('prompts', params.prompts.join(','));
    if (params.models?.length) q.set('models', params.models.join(','));
    if (params.gapBrands?.length) q.set('gapBrands', params.gapBrands.join(','));
+   if (params.compare) q.set('compare', params.compare);
    const key = q.toString();
    return useQuery<T & { pending?: boolean }>(['ai-vis-sources', slug, key],
       () => fetchJson<T & { pending?: boolean }>(`/api/ai-visibility/${slug}/data?${key}`),
