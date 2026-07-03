@@ -76,20 +76,28 @@ describe('/api/confirm-account', () => {
   });
 
   it('POST sends a confirmation e-mail with a URL containing the raw token and returns sent', async () => {
-    mockIssueConfirmationToken.mockResolvedValueOnce({ token: 'raw-token-abc' });
-    mockSendConfirmationEmail.mockResolvedValueOnce({ sent: true });
-    const res = mockRes();
-    await handler(mockReq({
-      method: 'POST',
-      headers: { origin: 'https://app.example.com' },
-    }), res);
-    expect(mockIssueConfirmationToken).toHaveBeenCalledWith('user-1', 'user@example.com');
-    expect(mockSendConfirmationEmail).toHaveBeenCalledWith(
-      'user@example.com',
-      'https://app.example.com/auth/confirm-email?token=raw-token-abc',
-    );
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ sent: true });
+    const prevAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+    process.env.NEXT_PUBLIC_APP_URL = 'https://configured.example.com';
+    try {
+      mockIssueConfirmationToken.mockResolvedValueOnce({ token: 'raw-token-abc' });
+      mockSendConfirmationEmail.mockResolvedValueOnce({ sent: true });
+      const res = mockRes();
+      // A spoofed Origin header must NOT win over the configured base URL.
+      await handler(mockReq({
+        method: 'POST',
+        headers: { origin: 'https://app.example.com' },
+      }), res);
+      expect(mockIssueConfirmationToken).toHaveBeenCalledWith('user-1', 'user@example.com');
+      expect(mockSendConfirmationEmail).toHaveBeenCalledWith(
+        'user@example.com',
+        'https://configured.example.com/auth/confirm-email?token=raw-token-abc',
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ sent: true });
+    } finally {
+      if (prevAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = prevAppUrl;
+    }
   });
 
   it('POST falls back to req.headers.host for origin when no origin header or NEXT_PUBLIC_APP_URL is set', async () => {

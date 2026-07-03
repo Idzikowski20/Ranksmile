@@ -278,12 +278,12 @@ const SEO_SUB_NAV = [
    { key: 'topical-map', label: 'Topical Map', icon: <IcoTopicalMap /> },
 ];
 
-const AI_VIS_NAV: { label: string; icon: React.ReactNode; badge?: string }[] = [
-   { label: 'Overview', icon: <IcoOverview /> },
-   { label: 'Sources', icon: <IcoSources /> },
-   { label: 'Competitors', icon: <IcoCompetitors /> },
-   { label: 'Prompts', icon: <IcoPrompts /> },
-   { label: 'Fanout Queries', icon: <IcoFanout />, badge: 'Beta' },
+const AI_VIS_NAV: { key: string; label: string; icon: React.ReactNode; badge?: string }[] = [
+   { key: 'overview', label: 'Overview', icon: <IcoOverview /> },
+   { key: 'sources', label: 'Sources', icon: <IcoSources /> },
+   { key: 'competitors', label: 'Competitors', icon: <IcoCompetitors /> },
+   { key: 'prompts', label: 'Prompts', icon: <IcoPrompts /> },
+   { key: 'fanout-queries', label: 'Fanout Queries', icon: <IcoFanout />, badge: 'Beta' },
 ];
 
 const LS_KEY = 'serpbear_selected_domain';
@@ -501,11 +501,14 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
                      })}
                   </CollapsibleGroup>
 
-                  {/* AI Visibility group (mockup pages) */}
+                  {/* AI Visibility group */}
                   <CollapsibleGroup label="AI Visibility" open={aiVisOpen} onToggle={() => setAiVisOpen((v) => !v)} toggleIcon="eye">
-                     {AI_VIS_NAV.map((item) => (
-                        <SubNavItem key={item.label} href="#" label={item.label} icon={item.icon} active={false} badge={item.badge} mock />
-                     ))}
+                     {AI_VIS_NAV.map((item) => {
+                        const aiPath = `/sites/${activeSlug}/ai-visibility/${item.key}`;
+                        const href = workspaceHref(activeId, aiPath);
+                        const active = mounted && isActiveSuffix(aiPath);
+                        return <SubNavItem key={item.key} href={href} label={item.label} icon={item.icon} active={active} badge={item.badge} />;
+                     })}
                   </CollapsibleGroup>
                </div>
             )}

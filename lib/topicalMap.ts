@@ -133,6 +133,7 @@ const buildKeywords = (seed: number, main: string, status: TopicStatus): TopicKe
 
 export function buildTopicClusters(
    topics: Array<{ id: number; title: string; summary?: string | null }>,
+   domain?: string,
 ): TopicCluster[] {
    return topics.map((t, idx) => {
       const seed = hashStr(t.title.trim().toLowerCase());
@@ -155,7 +156,9 @@ export function buildTopicClusters(
 
       const slug = slugify(t.title);
       const groups: KeywordGroup[] = [];
-      if (covered.length) groups.push({ url: `/${slug}`, label: `/${slug}`, keywords: covered });
+      const groupHref = domain ? `https://${domain}/${slug}` : `/${slug}`;
+      const groupLabel = domain ? `${domain}/${slug}` : `/${slug}`;
+      if (covered.length) groups.push({ url: groupHref, label: groupLabel, keywords: covered });
       if (notCovered.length) groups.push({ url: null, label: 'Not Covered', keywords: notCovered });
 
       const start = hashStr(`${seed}:cmp`) % COMPETITOR_POOL.length;

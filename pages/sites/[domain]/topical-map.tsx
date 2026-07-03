@@ -131,11 +131,18 @@ const TopicalMapPage: NextPage = () => {
    const [showTitles, setShowTitles] = useState(false);
    const [query, setQuery] = useState('');
    const [panelCluster, setPanelCluster] = useState<TopicCluster | null>(null);
+   const [panelInitialTab, setPanelInitialTab] = useState<'overview' | 'keywords' | 'competitors'>('overview');
    const [selected, setSelected] = useState<Set<number>>(new Set());
    const [filters, setFilters] = useState<TopicalFilterState>(DEFAULT_TOPICAL_FILTERS);
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('vol');
 
-   const clusters = useMemo(() => buildTopicClusters(topicsData?.topics ?? []), [topicsData]);
+   const domainName = activeDomain?.domain;
+   const clusters = useMemo(() => buildTopicClusters(topicsData?.topics ?? [], domainName), [topicsData, domainName]);
+
+   const openPanel = (c: TopicCluster, tab: 'overview' | 'keywords' | 'competitors' = 'overview') => {
+      setPanelInitialTab(tab);
+      setPanelCluster(c);
+   };
 
    const shown = useMemo(() => {
       let list = applyTopicalFilters(clusters, filters);
@@ -219,7 +226,7 @@ const TopicalMapPage: NextPage = () => {
                   </div>
 
                   {view === 'map' ? (
-                     <TopicalMapCanvas clusters={shown} showTitles={showTitles} />
+                     <TopicalMapCanvas clusters={shown} showTitles={showTitles} onKeywordClick={(c) => openPanel(c, 'keywords')} />
                   ) : (
                   <div style={{ display: 'flex', border: '1px solid #F4F4F5', borderRadius: 8, background: '#F8F8F9', gap: 16, overflow: 'hidden', minHeight: 400 }}>
                      {/* Left: Topic cluster */}
@@ -243,7 +250,7 @@ const TopicalMapPage: NextPage = () => {
                               </div>
                               <div style={{ width: 50, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', borderLeft: '1px solid #F4F4F5', alignSelf: 'stretch' }}>
                                  <KebabMenu items={[
-                                    { label: 'View details', onClick: () => setPanelCluster(c) },
+                                    { label: 'View details', onClick: () => openPanel(c) },
                                     { label: 'Copy main keyword', onClick: () => { navigator.clipboard?.writeText(c.mainKeyword); } },
                                  ]} />
                               </div>
@@ -270,8 +277,8 @@ const TopicalMapPage: NextPage = () => {
                               <div
                                  role="button"
                                  tabIndex={0}
-                                 onClick={() => setPanelCluster(c)}
-                                 onKeyDown={(e) => { if (e.key === 'Enter') setPanelCluster(c); }}
+                                 onClick={() => openPanel(c)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') openPanel(c); }}
                                  style={{ flex: 1, minWidth: 300, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer', borderLeft: '1px solid #F4F4F5', alignSelf: 'stretch' }}
                               >
                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -287,7 +294,7 @@ const TopicalMapPage: NextPage = () => {
                                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: FONT, borderRadius: 9999, padding: '2px 8px', background: c.opportunity.score >= 60 ? 'rgba(120,58,251,0.08)' : '#F4F4F5', color: c.opportunity.score >= 60 ? '#783AFB' : '#52525C' }}>{c.opportunity.score}</span>
                               </div>
                               <div style={{ width: 50, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', borderLeft: '1px solid #F4F4F5', alignSelf: 'stretch' }}>
-                                 <KebabMenu items={[{ label: 'View details', onClick: () => setPanelCluster(c) }]} />
+                                 <KebabMenu items={[{ label: 'View details', onClick: () => openPanel(c) }]} />
                               </div>
                            </div>
                         ))}
@@ -297,7 +304,7 @@ const TopicalMapPage: NextPage = () => {
                   <style>{'.tm-row:hover { background: #F8F8F9; }'}</style>
                </>
             )}
-            <TopicalClusterPanel cluster={panelCluster} onClose={() => setPanelCluster(null)} />
+            <TopicalClusterPanel cluster={panelCluster} initialTab={panelInitialTab} onClose={() => setPanelCluster(null)} />
          </DomainSubLayout>
       </AppShell>
    );

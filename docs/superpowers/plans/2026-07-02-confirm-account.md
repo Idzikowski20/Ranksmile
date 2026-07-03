@@ -4,9 +4,9 @@
 
 **Goal:** After registration, the user lands on `/auth/confirm-account` ("Check your e-mail"), receives a confirmation e-mail with a tokenized link; clicking the link verifies the token server-side, persists the confirmation in OUR database, and redirects to `/onboarding`. Unconfirmed users cannot proceed past the confirm page.
 
-**Architecture:** Auth is Neon Auth (upstream, app does NOT own the users table — session gives `{ id, email }` via `utils/getUser.ts`). We add an app-owned `email_confirmations` table (repo idiom: `lib/ensure*` + `db.query`, dual Postgres/SQLite), a token module (random 32B, SHA-256 hash stored, 24h TTL, single-use, 60s resend cooldown), one API route (status/send/verify), two pages (`/auth/confirm-account` UI per approved mock, `/auth/confirm-email` token landing), and a gate in `_app.tsx`'s `OnboardingGuard`. E-mail via existing `lib/sendMail.ts` (SMTP from app settings) with the `lib/inviteEmail.ts` template idiom.
+**Architecture:** Auth is Neon Auth (upstream, app does NOT own the users table — session gives `{ id, email }` via `utils/getUser.ts`). We add an app-owned `email_confirmations` table (repo idiom: `lib/ensure*` + `db.query`, dual Postgres/SQLite), a token module (random 32B, SHA-256 hash stored, 30 min TTL, single-use, 60s resend cooldown), one API route (status/send/verify), two pages (`/auth/confirm-account` UI per approved mock, `/auth/confirm-email` token landing), and a gate in `_app.tsx`'s `OnboardingGuard`. E-mail via the Resend HTTP API (`RESEND_APIKEY`, plain fetch) in the Surfer confirmation design.
 
-**Tech Stack:** Next.js pages, TypeScript, nodemailer (existing `sendMail`), raw SQL via `database/database` + `lib/db/query`, Jest.
+**Tech Stack:** Next.js pages, TypeScript, Resend HTTP API (plain `fetch`, no SDK), raw SQL via `database/database` + `lib/db/query`, Jest.
 
 ## Global Constraints
 
@@ -32,7 +32,7 @@ import crypto from 'crypto';
 import db from '../database/database';
 import { queryOne } from './db/query';
 
-export const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+export const TOKEN_TTL_MS = 30 * 60 * 1000; // 30 min — matches the mail's "self-destruct in 30 minutes" copy
 export const RESEND_COOLDOWN_MS = 60_000;
 
 const isPostgres = !!process.env.DATABASE_URL;
@@ -79,9 +79,9 @@ export async function confirmEmailToken(rawToken: string, now?: number): Promise
 
 **Files:** Create `lib/confirmEmail.ts`; Test `__tests__/lib/confirmEmail.test.ts`
 
-- [ ] `buildConfirmEmailHtml(confirmUrl: string): string` — pure; inline-styled HTML mirroring `lib/inviteEmail.ts` idiom (Arial, max-width 560px): heading "Confirm your e-mail", one sentence, a dark CTA button (`background:#2F2F34;color:#fff;border-radius:8px;padding:12px 24px`) linking `confirmUrl`, fallback plain link line, footer "The link expires in 24 hours. If you didn't create an account, ignore this e-mail.".
-- [ ] `sendConfirmationEmail(email: string, confirmUrl: string)` — thin wrapper over `sendMail` (import from `./sendMail`; subject `Confirm your e-mail — SerpBear`); returns sendMail's `{ sent }` result.
-- [ ] Tests (pure part only): html contains `confirmUrl` exactly once in the href, contains "24 hours", no `${` leftovers; LOCAL mock of `./sendMail` verifying subject + to.
+- [ ] `buildConfirmEmailHtml(confirmUrl: string): string` — pure; inline-styled HTML in the Surfer confirmation design (font `Inter, Helvetica, Arial, sans-serif`, max-width 600px, `#ffffff` bg): brand wordmark "Surfy", heading "You're a click away", one sentence, a dark CTA button (`background:#222A3A;color:#fff;border-radius:8px;padding:8px 24px`) reading "Confirm my email address" and linking `confirmUrl`, footer "This email will self-destruct in 30 minutes.", an ignore line, and a `support@elearning.riskcom.pl` support line.
+- [ ] `sendConfirmationEmail(email: string, confirmUrl: string)` — sends via the Resend HTTP API (`process.env.RESEND_APIKEY`, plain `fetch`, no SDK), sender `Surfy <noreply@elearning.riskcom.pl>`, subject `Confirm your e-mail — Surfy`; missing key or API error → `{ sent:false }`, never throws.
+- [ ] Tests (pure part only): html contains `confirmUrl` exactly once in the href, contains "30 minutes", no `${` leftovers; LOCAL mock of `fetch` verifying subject + to, and `{ sent:false }` when the key is unset.
 - **Verify:** tsc clean; suite green. Commit.
 
 ## Task 3 — API route `/api/confirm-account`
