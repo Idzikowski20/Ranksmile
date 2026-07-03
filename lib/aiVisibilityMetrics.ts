@@ -72,19 +72,80 @@ export function computeOverview(rows: ResultRow[]) {
    };
 }
 
-export function aggregateSources(rows: ResultRow[]) {
-   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, models: Set<string> }>();
+const brandEq = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+const answerHasBrand = (r: ResultRow, b: string): boolean => r.brands.some((x) => brandEq(x.brand, b));
+
+export function aggregateSources(rows: ResultRow[], ownBrand = '') {
+   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, models: Set<string>, mentioned: boolean, brands: Map<string, { brand: string, domain: string, n: number }> }>();
    for (const r of rows) {
       for (const c of r.citations) {
-         const entry = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, models: new Set<string>() };
+         const entry = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, models: new Set<string>(), mentioned: false, brands: new Map() };
          entry.timesShown += 1;
          entry.models.add(r.model);
+         if (ownBrand && answerHasBrand(r, ownBrand)) entry.mentioned = true;
+         for (const b of r.brands) {
+            if (ownBrand && brandEq(b.brand, ownBrand)) continue; // own brand isn't a "brand" chip
+            const key = b.brand.toLowerCase();
+            const be = entry.brands.get(key) ?? { brand: b.brand, domain: b.domain, n: 0 };
+            be.n += 1; if (!be.domain && b.domain) be.domain = b.domain;
+            entry.brands.set(key, be);
+         }
          byUrl.set(c.url, entry);
       }
    }
    return Array.from(byUrl.values())
       .sort((a, b) => b.timesShown - a.timesShown)
-      .map((e) => ({ url: e.url, domain: e.domain, timesShown: e.timesShown, models: Array.from(e.models) }));
+      .map((e) => ({
+         url: e.url, domain: e.domain, timesShown: e.timesShown, models: Array.from(e.models),
+         mentioned: e.mentioned,
+         brands: Array.from(e.brands.values()).sort((a, b) => b.n - a.n).map((b) => ({ brand: b.brand, domain: b.domain })) as SourceBrand[],
+      }));
+}
+
+export function mentionGap(rows: ResultRow[], brand: string, ownBrand: string): GapCard {
+   let gap = 0; let shared = 0; let you = 0;
+   for (const r of rows) {
+      const hasBrand = answerHasBrand(r, brand);
+      const hasOwn = !!ownBrand && answerHasBrand(r, ownBrand);
+      if (hasBrand && hasOwn) shared += 1;
+      else if (hasBrand) gap += 1;
+      else if (hasOwn) you += 1;
+   }
+   return { brand, gap, shared, you };
+}
+
+export function gapBrandCandidates(rows: ResultRow[], ownBrand: string): string[] {
+   const counts = new Map<string, { brand: string, n: number }>();
+   for (const r of rows) for (const b of r.brands) {
+      if (ownBrand && brandEq(b.brand, ownBrand)) continue;
+      const key = b.brand.toLowerCase();
+      const e = counts.get(key) ?? { brand: b.brand, n: 0 };
+      e.n += 1; counts.set(key, e);
+   }
+   return Array.from(counts.values()).sort((a, b) => b.n - a.n).map((e) => e.brand);
+}
+
+export function brandsForSource(rows: ResultRow[], url: string): SourceDetailBrand[] {
+   const byBrand = new Map<string, { brand: string, pos: number, sentiments: string[], quotes: Set<string> }>();
+   for (const r of rows) {
+      if (!r.citations.some((c) => c.url === url)) continue;
+      for (const b of r.brands) {
+         const key = b.brand.toLowerCase();
+         const e = byBrand.get(key) ?? { brand: b.brand, pos: b.pos, sentiments: [], quotes: new Set<string>() };
+         e.pos = Math.min(e.pos, b.pos);
+         e.sentiments.push(b.sentiment);
+         b.quotes.forEach((q) => e.quotes.add(q));
+         byBrand.set(key, e);
+      }
+   }
+   const dominant = (ss: string[]): SourceDetailBrand['sentiment'] => {
+      const c: Record<string, number> = {}; ss.forEach((s) => { c[s] = (c[s] || 0) + 1; });
+      const top = Object.entries(c).sort((a, b) => b[1] - a[1]);
+      return top.length > 1 && top.every((t) => t[1] === top[0][1]) ? 'mixed' : (top[0]?.[0] as SourceDetailBrand['sentiment']) || 'neutral';
+   };
+   return Array.from(byBrand.values())
+      .map((e) => ({ pos: e.pos, brand: e.brand, sentiment: dominant(e.sentiments), quotes: Array.from(e.quotes).slice(0, 3) }))
+      .sort((a, b) => a.pos - b.pos);
 }
 
 export function aggregateCompetitors(rows: ResultRow[], ownDomain: string) {

@@ -1,6 +1,14 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, ResultRow } from '../../lib/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
+const brand = (b: string, domain = '', sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral', pos = 1) => ({ brand: b, domain, sentiment, pos, quotes: [] });
+
+const brandRows: ResultRow[] = [
+   { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q',
+     citations: [cit('oracle.com', 'https://oracle.com/a')], brands: [brand('Oracle', 'oracle.com'), brand('Idztech', 'idztech.pl', 'positive', 2)] },
+   { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Q',
+     citations: [cit('oracle.com', 'https://oracle.com/a')], brands: [brand('Oracle', 'oracle.com')] },
+];
 
 const rows: ResultRow[] = [
    { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', brands: [], citations: [cit('idztech.pl', 'https://idztech.pl/a'), cit('oracle.com')] },
@@ -111,6 +119,35 @@ describe('competitor ranking', () => {
       expect(ranked[0].domain).toBe('oracle.com');
       expect(ranked[0].snapshot.overview.visibilityScore).toBeGreaterThan(0);
       expect(ranked[0].snapshot.prompts.length).toBeGreaterThan(0); // full snapshot embedded
+   });
+});
+
+describe('aggregateSources with brands', () => {
+   it('marks mentioned when own brand appears in a citing answer, and lists brands', () => {
+      const s = aggregateSources(brandRows, 'Idztech').find((x) => x.url === 'https://oracle.com/a');
+      expect(s?.mentioned).toBe(true);
+      expect(s?.brands.map((b) => b.brand)).toContain('Oracle');
+   });
+   it('own brand is not listed as a competitor chip', () => {
+      const s = aggregateSources(brandRows, 'Idztech').find((x) => x.url === 'https://oracle.com/a');
+      expect(s?.brands.map((b) => b.brand)).not.toContain('Idztech');
+   });
+});
+describe('mentionGap', () => {
+   it('counts gap (competitor without you), shared, and you-only over answers', () => {
+      expect(mentionGap(brandRows, 'Oracle', 'Idztech')).toEqual({ brand: 'Oracle', gap: 1, shared: 1, you: 0 });
+   });
+});
+describe('gapBrandCandidates', () => {
+   it('lists competitor brands by frequency, excluding own', () => {
+      expect(gapBrandCandidates(brandRows, 'Idztech')).toEqual(['Oracle']);
+   });
+});
+describe('brandsForSource', () => {
+   it('returns per-url brands ordered by pos with dominant sentiment', () => {
+      const b = brandsForSource(brandRows, 'https://oracle.com/a');
+      expect(b[0].brand).toBe('Oracle');
+      expect(b.find((x) => x.brand === 'Idztech')?.sentiment).toBe('positive');
    });
 });
 
