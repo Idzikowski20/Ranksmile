@@ -64,11 +64,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const candidates = domainGapCandidates(all, domain.domain);
          const wanted = parseList(req.query.gapBrands);
          const selected = wanted.length ? wanted : candidates.slice(0, 4);
+
+         // Compare mode: sources cited on prompts where the chosen competitor is cited
+         // (the gap sources), with own-brand-mention flag per source.
+         const compareParam = typeof req.query.compare === 'string' ? NORM(req.query.compare) : '';
+         let compareSources: unknown;
+         if (compareParam) {
+            const cited = (d: string): boolean => d === compareParam || d.endsWith(`.${compareParam}`);
+            const compPrompts = new Set(all.filter((r) => r.citations.some((c) => cited(NORM(c.domain)))).map((r) => r.promptId));
+            const urlPrompts = new Map<string, Set<number>>();
+            for (const r of all) for (const c of r.citations) {
+               const set = urlPrompts.get(c.url) ?? new Set<number>();
+               set.add(r.promptId); urlPrompts.set(c.url, set);
+            }
+            compareSources = aggregateSources(all, ownBrand)
+               .filter((s) => { const ps = urlPrompts.get(s.url); return !!ps && Array.from(ps).some((id) => compPrompts.has(id)); })
+               .map((s) => ({ ...s, compMentioned: true }));
+         }
+
          return res.status(200).json({
             sources: aggregateSources(all, ownBrand),
             gapCards: selected.map((d) => domainMentionGap(all, d, domain.domain)),
             gapCandidates: candidates,
             ownLabel: NORM(domain.domain),
+            compareSources,
+            compareLabel: compareParam || undefined,
          });
       }
 

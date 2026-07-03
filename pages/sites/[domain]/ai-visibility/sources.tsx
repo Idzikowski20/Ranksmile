@@ -14,7 +14,7 @@ import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 const FONT = 'var(--font-family-primary)';
 
 type GapCard = { domain: string; gap: number; shared: number; you: number };
-type SourcesData = { pending?: boolean; sources?: SourceRow[]; gapCards?: GapCard[]; gapCandidates?: string[]; ownLabel?: string };
+type SourcesData = { pending?: boolean; sources?: SourceRow[]; gapCards?: GapCard[]; gapCandidates?: string[]; ownLabel?: string; compareSources?: SourceRow[]; compareLabel?: string };
 type PromptRow = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
 type PromptsData = { pending?: boolean; prompts?: PromptRow[] };
 type ModalState = { list: SourceRow[]; index: number; navigable: boolean };
@@ -71,18 +71,24 @@ const AiVisibilitySources: NextPage = () => {
       [promptsQ.data],
    );
 
+   // Compare mode: a Mention-Gap card is clicked → table switches to "{comp} vs {you}".
+   const [compareDomain, setCompareDomain] = useState<string | null>(null);
+
    const sourcesQ = useAiVisSources<SourcesData>(slug, {
       prompts: promptSel,
       models: modelSel,
       gapBrands: gapBrands ?? undefined,
+      compare: compareDomain,
    });
 
    const sources = useMemo(() => sourcesQ.data?.sources || [], [sourcesQ.data]);
+   const compareSources = useMemo(() => sourcesQ.data?.compareSources || [], [sourcesQ.data]);
+   const tableRows = compareDomain ? compareSources : sources;
    const filtered = useMemo(() => {
       const q = search.trim().toLowerCase();
-      if (!q) return sources;
-      return sources.filter((s) => s.url.toLowerCase().includes(q) || s.domain.toLowerCase().includes(q));
-   }, [sources, search]);
+      if (!q) return tableRows;
+      return tableRows.filter((s) => s.url.toLowerCase().includes(q) || s.domain.toLowerCase().includes(q));
+   }, [tableRows, search]);
 
    const domainCount = useMemo(() => new Set(sources.map((s) => s.domain)).size, [sources]);
    const referenceCount = useMemo(() => sources.reduce((acc, s) => acc + s.timesShown, 0), [sources]);
@@ -133,17 +139,31 @@ const AiVisibilitySources: NextPage = () => {
                         ownLabel={ownLabel}
                         selected={shownBrands}
                         onSelected={setGap}
+                        activeDomain={compareDomain}
+                        onCompare={(d) => setCompareDomain((cur) => (cur === d ? null : d))}
                      />
                   )}
 
                   {/* Table toolbar */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                     <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{groupByDomain ? 'Domains' : 'URLs'}</span>
+                     {compareDomain ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                           <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{compareDomain} vs {ownLabel}</span>
+                           <button type="button" onClick={() => setCompareDomain(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 8, padding: '4px 10px', background: '#F4F4F5', color: '#18181B', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                              <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0" /></svg>
+                              Show all
+                           </button>
+                        </div>
+                     ) : (
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{groupByDomain ? 'Domains' : 'URLs'}</span>
+                     )}
                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: FONT }}>
-                           <Toggle checked={groupByDomain} onChange={() => setGroupByDomain((v) => !v)} />
-                           Group by domain
-                        </label>
+                        {!compareDomain && (
+                           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: FONT }}>
+                              <Toggle checked={groupByDomain} onChange={() => setGroupByDomain((v) => !v)} />
+                              Group by domain
+                           </label>
+                        )}
                         <SearchBar value={search} onChange={setSearch} placeholder="Search" width={220} />
                      </div>
                   </div>
@@ -154,7 +174,8 @@ const AiVisibilitySources: NextPage = () => {
                   ) : (
                      <SourcesTable
                         sources={filtered}
-                        grouped={groupByDomain}
+                        grouped={groupByDomain && !compareDomain}
+                        compare={compareDomain ? { ownLabel, compLabel: compareDomain } : undefined}
                         onSelect={(list, index, navigable) => setModal({ list, index, navigable })}
                      />
                   )}

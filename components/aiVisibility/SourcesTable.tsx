@@ -5,7 +5,7 @@ const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 export type SourceBrand = { domain: string; brand: string };
-export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[] };
+export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[]; compMentioned?: boolean };
 type Group = { domain: string; urls: SourceRow[]; timesShown: number; models: string[]; mentioned: boolean; brands: SourceBrand[] };
 
 export const splitSourceUrl = (url: string, fallback: string): { host: string; path: string } => {
@@ -85,10 +85,17 @@ const hoverOffChild = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget
 /** SurferSEO-style sources table: fill-bar source column, optional group-by-domain with
  *  expandable URL rows, sortable Times shown, incremental "Show more" paging.
  *  onSelect receives the navigable list + index so the detail modal can page through it. */
-const SourcesTable = ({ sources, grouped, onSelect }: {
+const CompareCell = ({ on }: { on: boolean }) => (
+   on
+      ? <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 6, padding: '2px 10px', fontSize: 13, fontWeight: 500, color: '#1AB25E', background: '#EAF8F0' }}>Yes</span>
+      : <span style={{ color: '#71717B' }}>No</span>
+);
+
+const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    sources: SourceRow[];
    grouped: boolean;
    onSelect: (list: SourceRow[], index: number, navigable: boolean) => void;
+   compare?: { ownLabel: string; compLabel: string };
 }) => {
    const [asc, setAsc] = useState(false);
    const [visible, setVisible] = useState(PAGE_SIZE);
@@ -128,7 +135,46 @@ const SourcesTable = ({ sources, grouped, onSelect }: {
    const remaining = Math.max(0, total - visible);
 
    if (!sources.length) {
-      return <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No sources yet.</div>;
+      return <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
+   }
+
+   // Compare mode: two Mentioned columns ({you} vs {competitor}) + Price, no Brands/grouping.
+   if (compare) {
+      const truncLabel: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+      return (
+         <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
+               <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>
+               <div style={{ ...headCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.ownLabel} Mentioned`}><HeadTip label={`${compare.ownLabel} Mentioned`} tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></span></div>
+               <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.compLabel} Mentioned`}><HeadTip label={`${compare.compLabel} Mentioned`} tip="Whether the competitor is cited on the same prompts as this source" align="center" /></span></div>
+               <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
+               <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}>
+                     <HeadTip label="Times shown" tip="Number of times the URL appears in AI answers" align="right" /> <SortArrow asc={asc} />
+                  </button>
+               </div>
+            </div>
+            {sorted.slice(0, visible).map((s, i) => {
+               const { host, path } = splitSourceUrl(s.url, s.domain);
+               return (
+                  <div key={s.url} style={rowStyle} onClick={() => onSelect(sorted, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(sorted, i, true); }}>
+                     <SourceCell icon={s.domain} host={host} path={path} fillPct={(s.timesShown / maxUrl) * 100} />
+                     <div style={{ ...bodyCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><CompareCell on={!!s.mentioned} /></div>
+                     <div style={{ ...bodyCell, width: 150, flexShrink: 0, justifyContent: 'center' }}><CompareCell on={!!s.compMentioned} /></div>
+                     <div style={{ ...bodyCell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: '#9F9FA9' }}>N/A</div>
+                     <TimesCell v={s.timesShown} />
+                  </div>
+               );
+            })}
+            {remaining > 0 && (
+               <div style={{ display: 'flex', justifyContent: 'center', padding: 12 }}>
+                  <button type="button" onClick={() => setVisible((v) => v + 100)} style={{ border: '1px solid #E4E4E7', borderRadius: 8, padding: '7px 14px', background: '#fff', color: '#18181B', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                     Show more ({remaining} left)
+                  </button>
+               </div>
+            )}
+         </div>
+      );
    }
 
    return (
