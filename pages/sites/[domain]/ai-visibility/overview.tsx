@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBarChart';
-import CompetitorPicker from '../../../../components/aiVisibility/CompetitorPicker';
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan } from '../../../../services/aiVisibility';
 import { Modal } from '../../../../components/ui';
@@ -106,7 +105,13 @@ const AiVisibilityOverview: NextPage = () => {
    };
 
    return (
-      <AiVisPageShell section="AI Visibility" title="Overview">
+      <AiVisPageShell
+         section="AI Visibility"
+         title="Overview"
+         compareCompetitors={competitorsAll}
+         compareSelected={compareDomain}
+         onCompareSelect={setCompareDomain}
+      >
          {({ crunching }) => {
             const pending = crunching || baseQ.isLoading || ov?.pending || !ov?.snapshot;
             const own = ov?.snapshot?.overview;
@@ -133,8 +138,7 @@ const AiVisibilityOverview: NextPage = () => {
 
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                     {competitorsAll.length ? <CompetitorPicker competitors={competitorsAll} selected={compareDomain} onSelect={setCompareDomain} /> : <span />}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                      <button
                         type="button"
                         onClick={() => runScan(false)}

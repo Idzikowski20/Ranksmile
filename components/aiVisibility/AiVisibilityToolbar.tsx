@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CompetitorPicker from './CompetitorPicker';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -32,9 +33,18 @@ const btn: React.CSSProperties = {
 /**
  * Shared header strip for every AI Visibility sub-page:
  * date pill (mock), All prompts / Compare / All models selectors.
+ * When the page supplies compare props, the "Compare" slot becomes the real
+ * competitor picker ("Compare" ⇄ "Comparing with {domain}"); otherwise it's a
+ * static button (other sub-pages don't wire comparison yet).
  */
-const AiVisibilityToolbar = ({ date = 'Jul 02, 2026' }: { date?: string }) => {
+const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect }: {
+   date?: string;
+   compareCompetitors?: Array<{ domain: string }>;
+   compareSelected?: string | null;
+   onCompareSelect?: (d: string | null) => void;
+}) => {
    const [modelsOpen, setModelsOpen] = useState(false);
+   const compareInteractive = !!(compareCompetitors && compareCompetitors.length && onCompareSelect);
    return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: '1px solid #F4F4F5', paddingTop: 16, flexWrap: 'wrap' }}>
          <span style={{ ...btn, cursor: 'default' }}>
@@ -46,9 +56,13 @@ const AiVisibilityToolbar = ({ date = 'Jul 02, 2026' }: { date?: string }) => {
                <span>All prompts</span>
                <ChevronDown />
             </button>
-            <button type="button" style={btn}>
-               <span>Compare</span>
-            </button>
+            {compareInteractive ? (
+               <CompetitorPicker competitors={compareCompetitors as Array<{ domain: string }>} selected={compareSelected} onSelect={onCompareSelect as (d: string | null) => void} align="right" />
+            ) : (
+               <button type="button" style={btn}>
+                  <span>Compare</span>
+               </button>
+            )}
             <div style={{ position: 'relative' }}>
                <button type="button" style={btn} onClick={() => setModelsOpen((o) => !o)}>
                   <CheckDot on={false} />

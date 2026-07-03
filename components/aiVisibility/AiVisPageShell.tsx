@@ -25,9 +25,14 @@ const InfoIcon = () => (
  * + persistent "Crunching data…" bar while a scan runs. `children` receives the
  * crunching flag so pages can keep showing skeletons during the first scan.
  */
-const AiVisPageShell = ({ section, title, children }: {
+const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = null, onCompareSelect, children }: {
    section: string;
    title: string;
+   // The page owns Compare state (it drives page-level queries) and hands it down
+   // so the shared toolbar's "Compare" slot reflects it. Omitted → static button.
+   compareCompetitors?: Array<{ domain: string }>;
+   compareSelected?: string | null;
+   onCompareSelect?: (d: string | null) => void;
    children: (ctx: { crunching: boolean }) => React.ReactNode;
 }) => {
    const router = useRouter();
@@ -57,7 +62,11 @@ const AiVisPageShell = ({ section, title, children }: {
                </div>
             </div>
 
-            <AiVisibilityToolbar />
+            <AiVisibilityToolbar
+               compareCompetitors={compareCompetitors}
+               compareSelected={compareSelected}
+               onCompareSelect={onCompareSelect}
+            />
 
             <div style={{ marginTop: 24 }}>
                {ready ? children({ crunching: !!crunching }) : <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}><SkeletonBars /></div>}
