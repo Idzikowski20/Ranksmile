@@ -112,6 +112,9 @@ const AiVisibilitySources: NextPage = () => {
       <AiVisPageShell
          section="AI Visibility"
          title="Sources"
+         compareCompetitors={gapCandidates.map((d) => ({ domain: d }))}
+         compareSelected={compareDomain}
+         onCompareSelect={setCompareDomain}
          toolbarPrompts={promptOptions}
          toolbarPromptSelected={promptSel}
          onToolbarPromptChange={setPromptSel}
