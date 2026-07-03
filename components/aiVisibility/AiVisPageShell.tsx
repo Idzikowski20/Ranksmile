@@ -27,9 +27,10 @@ const InfoIcon = () => (
  * + persistent "Crunching data…" bar while a scan runs. `children` receives the
  * crunching flag so pages can keep showing skeletons during the first scan.
  */
-const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = null, onCompareSelect, toolbarPrompts, toolbarPromptSelected, onToolbarPromptChange, toolbarModels, toolbarModelSelected, onToolbarModelChange, toolbarModelLabel, toolbarTrailing, children }: {
+const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = null, onCompareSelect, toolbarPrompts, toolbarPromptSelected, onToolbarPromptChange, toolbarModels, toolbarModelSelected, onToolbarModelChange, toolbarModelLabel, toolbarTrailing, titleActions, children }: {
    section: string;
    title: string;
+   titleActions?: React.ReactNode; // extra buttons in the sticky title row, before Export
    // The page owns Compare state (it drives page-level queries) and hands it down
    // so the shared toolbar's "Compare" slot reflects it. Omitted → static button.
    compareCompetitors?: Array<{ domain: string }>;
@@ -67,6 +68,7 @@ const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = 
                   <InfoIcon />
                </span>
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {titleActions}
                   <AiVisExportMenu slug={slug} />
                   <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
                </div>

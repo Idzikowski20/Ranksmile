@@ -134,6 +134,19 @@ export function useAiVisSourceDetail(slug: string | undefined, url: string | nul
       { enabled: !!slug && !!url, staleTime: 60_000 });
 }
 
+export type PromptTopicPrompt = { id: number; text: string; visibility: number; mentionRate: number; avgPosition: number | null; brands: string[] };
+export type PromptTopic = { topic: string; promptCount: number; visibility: number; mentionRate: number; avgPosition: number | null; brands: string[]; prompts: PromptTopicPrompt[] };
+export type PromptTopicsPayload = { pending?: boolean; overview: { visibilityScore: number; mentionRate: number; avgPosition: number | null }; topics: PromptTopic[] };
+export function useAiVisPromptTopics(slug: string | undefined, params: { prompts?: number[]; models?: string[] }) {
+   const q = new URLSearchParams({ view: 'prompt-topics' });
+   if (params.prompts?.length) q.set('prompts', params.prompts.join(','));
+   if (params.models?.length) q.set('models', params.models.join(','));
+   const key = q.toString();
+   return useQuery<PromptTopicsPayload>(['ai-vis-prompt-topics', slug, key],
+      () => fetchJson<PromptTopicsPayload>(`/api/ai-visibility/${slug}/data?${key}`),
+      { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
+}
+
 export type CompetitorRow = { domain: string; visibilityScore: number; mentionRate: number; avgPosition: number | null };
 export function useAiVisCompetitors(slug: string | undefined, params: { prompts?: number[]; models?: string[] }) {
    const q = new URLSearchParams({ view: 'competitors' });
