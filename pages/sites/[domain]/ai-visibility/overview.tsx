@@ -6,7 +6,8 @@ import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBarChart';
 import CompetitorPicker from '../../../../components/aiVisibility/CompetitorPicker';
-import { useAiVisOverview, useStartAiVisScan } from '../../../../services/aiVisibility';
+import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
+import { useAiVisOverview, useAiVisHistory, useStartAiVisScan } from '../../../../services/aiVisibility';
 import { Modal } from '../../../../components/ui';
 
 const FONT = 'var(--font-family-primary)';
@@ -32,6 +33,9 @@ const Panel = ({ title, action, children }: { title: React.ReactNode; action?: R
 );
 
 const faviconFor = (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+
+const BarIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7" width="3" height="6" rx="1" fill="currentColor" /><rect x="5.5" y="4" width="3" height="9" rx="1" fill="currentColor" /><rect x="10" y="1" width="3" height="12" rx="1" fill="currentColor" /></svg>);
+const LineIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 5,6 8,8 13,2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
 const StatCard = ({ label, value, vs, pending }: { label: string; value: React.ReactNode; vs?: React.ReactNode; pending: boolean }) => (
    <section style={card}>
@@ -68,6 +72,7 @@ const AiVisibilityOverview: NextPage = () => {
    const { domain: slug } = router.query as { domain: string };
    const [promptMode, setPromptMode] = useState<'topics' | 'prompts'>('topics');
    const [compareDomain, setCompareDomain] = useState<string | null>(null);
+   const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
 
    // Base query: own snapshot + top-5 competitor snapshots (no competitor param).
    const baseQ = useAiVisOverview(slug);
@@ -82,6 +87,8 @@ const AiVisibilityOverview: NextPage = () => {
    const isLongTail = !!compareDomain && !embeddedSnap;
    const longTailQ = useAiVisOverview(slug, isLongTail ? (compareDomain as string) : undefined);
    const compareSnap = embeddedSnap ?? (isLongTail ? (longTailQ.data?.compare?.snapshot ?? null) : null);
+
+   const historyQ = useAiVisHistory(slug, compareDomain || undefined);
 
    const startScan = useStartAiVisScan(slug);
    const [confirmDays, setConfirmDays] = useState<number | null>(null);
@@ -114,6 +121,11 @@ const AiVisibilityOverview: NextPage = () => {
             const sources = (ov?.snapshot?.sources || []).slice(0, 5);
             const sourceCount = ov?.snapshot?.sources.length || 0;
 
+            let chartBody: React.ReactNode;
+            if (pending) chartBody = <SkeletonBars />;
+            else if (chartMode === 'bar') chartBody = <CompetitorBarChart competitors={competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }))} selected={compareDomain} onSelect={setCompareDomain} />;
+            else chartBody = <TrendLineChart scans={historyQ.data?.scans || []} competitorDomain={compareDomain} />;
+
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -142,15 +154,18 @@ const AiVisibilityOverview: NextPage = () => {
                            ) : null}
                         </span>
                      )}
-                     action={competitorsAll.length ? <CompetitorPicker competitors={competitorsAll} selected={compareDomain} onSelect={setCompareDomain} /> : undefined}
-                  >
-                     {pending ? <SkeletonBars /> : (
-                        <CompetitorBarChart
-                           competitors={competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }))}
-                           selected={compareDomain}
-                           onSelect={setCompareDomain}
-                        />
+                     action={(
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                           <div style={{ display: 'inline-flex', border: '1px solid #E4E4E7', borderRadius: 8, overflow: 'hidden' }}>
+                              {(['bar', 'line'] as const).map((m) => (
+                                 <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', border: 'none', padding: '6px 10px', background: chartMode === m ? '#F4F4F5' : '#fff', color: chartMode === m ? '#783AFB' : '#52525C', cursor: 'pointer' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
+                              ))}
+                           </div>
+                           {competitorsAll.length ? <CompetitorPicker competitors={competitorsAll} selected={compareDomain} onSelect={setCompareDomain} /> : null}
+                        </div>
                      )}
+                  >
+                     {chartBody}
                   </Panel>
 
                   {/* Topics & Prompts + Sources */}
