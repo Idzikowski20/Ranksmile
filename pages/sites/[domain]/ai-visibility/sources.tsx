@@ -132,6 +132,7 @@ const AiVisibilitySources: NextPage = () => {
 
                   {modal && (
                      <SourceDetailModal
+                        slug={slug}
                         list={modal.list}
                         index={modal.index}
                         navigable={modal.navigable}
