@@ -6,25 +6,13 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { computeOverview, aggregateSources, aggregateCompetitors, ResultRow } from '../../../../lib/aiVisibilityMetrics';
-import type { LlmCitation } from '../../../../lib/dataforseoLlm';
+import { aggregateSources, aggregateCompetitors, buildSnapshot, computeDelta, ResultRow } from '../../../../lib/aiVisibilityMetrics';
+import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
+import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
 type DbResultRow = {
    prompt_id: number, model: string, own_cited: number, own_position: number | null,
-   citations: string | null, topic: string, text: string,
-};
-
-const parseCitations = (raw: string | null): LlmCitation[] => {
-   if (!raw) return [];
-   try {
-      const v = JSON.parse(raw);
-      if (!Array.isArray(v)) return [];
-      // Coerce every field to a string: a stored citation with a url but missing
-      // title/domain must not yield `undefined` (aggregateSources → norm(domain) would throw).
-      return v
-         .filter((c): c is { url: string, domain?: unknown, title?: unknown } => !!c && typeof c.url === 'string')
-         .map((c) => ({ url: c.url, domain: typeof c.domain === 'string' ? c.domain : '', title: typeof c.title === 'string' ? c.title : '' }));
-   } catch { return []; }
+   citations: unknown, topic: string, text: string,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -45,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          `SELECT s.id, s.finished_at FROM ai_vis_scans s
           JOIN ai_vis_configs c ON c.id = s.config_id
           WHERE c.domain_id = ? AND s.status = 'completed'
-          ORDER BY s.id DESC LIMIT 1`,
+          ORDER BY s.finished_at DESC LIMIT 1`,
          [domain.ID],
       );
       if (!scan) return res.status(200).json({ pending: true });
@@ -63,12 +51,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          model: r.model,
          ownCited: !!r.own_cited,
          ownPosition: r.own_position,
-         citations: parseCitations(r.citations),
+         citations: parseCitationsShared(r.citations),
       }));
 
       if (view === 'overview') {
-         const sources = aggregateSources(rows);
-         return res.status(200).json({ scanId: scan.id, finishedAt: scan.finished_at, overview: computeOverview(rows), sourceCount: sources.length });
+         const current = buildSnapshot(rows);
+         // "Previous" = the completed scan that finished before this one (chronology
+         // by finished_at, NOT id — a retry may have a higher id but earlier finish).
+         const prev = scan.finished_at ? await queryOne<{ id: number, finished_at: string | null }>(
+            `SELECT s.id, s.finished_at FROM ai_vis_scans s
+             JOIN ai_vis_configs c ON c.id = s.config_id
+             WHERE c.domain_id = ? AND s.status = 'completed' AND s.finished_at < ?
+             ORDER BY s.finished_at DESC LIMIT 1`,
+            [domain.ID, scan.finished_at],
+         ) : undefined;
+         const delta = prev ? computeDelta(current, buildSnapshot(await loadScanResultRows(prev.id))) : null;
+
+         // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
+         const nextRefreshAt = scan.finished_at
+            ? new Date(new Date(scan.finished_at).getTime() + AI_VIS_SETTINGS.REFRESH_INTERVAL_DAYS * 86_400_000).toISOString()
+            : null;
+         const daysUntilRefresh = nextRefreshAt
+            ? Math.max(0, Math.ceil((new Date(nextRefreshAt).getTime() - Date.now()) / 86_400_000))
+            : null;
+
+         return res.status(200).json({
+            scanId: scan.id,
+            finishedAt: scan.finished_at,
+            overview: current.overview,
+            sourceCount: current.sources.length,
+            delta,
+            previousScanAt: prev ? prev.finished_at : null,
+            nextRefreshAt,
+            daysUntilRefresh,
+         });
       }
       if (view === 'sources') {
          return res.status(200).json({ sources: aggregateSources(rows) });

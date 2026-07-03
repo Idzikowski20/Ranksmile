@@ -94,3 +94,52 @@ export function aggregateCompetitors(rows: ResultRow[], ownDomain: string) {
       .sort((a, b) => b[1] - a[1])
       .map(([domain, mentions]) => ({ domain, mentions, share: total ? Math.round((mentions / total) * 100) : 0 }));
 }
+
+export type OverviewSnapshot = {
+   overview: ReturnType<typeof computeOverview>;
+   sources: ReturnType<typeof aggregateSources>;
+   citedPromptIds: number[]; // prompts where the brand was cited in ≥1 model
+};
+
+/** Turn a scan's result rows into a comparable snapshot. Pure — the DB wrapper
+ *  that loads the rows lives in lib/aiVisibilityRead.ts. */
+export function buildSnapshot(rows: ResultRow[]): OverviewSnapshot {
+   const citedPromptIds = Array.from(new Set(rows.filter((r) => r.ownCited).map((r) => r.promptId))).sort((a, b) => a - b);
+   return { overview: computeOverview(rows), sources: aggregateSources(rows), citedPromptIds };
+}
+
+export type Trend = 'up' | 'down' | 'same';
+export type MetricDelta = { current: number; previous: number; delta: number; trend: Trend };
+export type OverviewDelta = {
+   visibilityScore: MetricDelta;
+   perModel: Array<{ model: string } & MetricDelta>;
+   sources: { added: string[]; removed: string[] };
+   prompts: { gained: number[]; lost: number[] };
+};
+
+const trendOf = (delta: number): Trend => (delta > 0 ? 'up' : delta < 0 ? 'down' : 'same');
+const metricDelta = (current: number, previous: number): MetricDelta => ({ current, previous, delta: current - previous, trend: trendOf(current - previous) });
+
+/** Diff two snapshots. Pure; callers decide what to do when there is no previous
+ *  scan (they pass no delta at all — see the data endpoint). */
+export function computeDelta(current: OverviewSnapshot, previous: OverviewSnapshot): OverviewDelta {
+   const prevModel = new Map(previous.overview.perModel.map((m) => [m.model, m.score]));
+   const perModel = current.overview.perModel.map((m) => ({ model: m.model, ...metricDelta(m.score, prevModel.get(m.model) ?? 0) }));
+
+   const curDomains = new Set(current.sources.map((s) => s.domain));
+   const prevDomains = new Set(previous.sources.map((s) => s.domain));
+   const added = Array.from(new Set(current.sources.map((s) => s.domain).filter((d) => !prevDomains.has(d))));
+   const removed = Array.from(new Set(previous.sources.map((s) => s.domain).filter((d) => !curDomains.has(d))));
+
+   const curCited = new Set(current.citedPromptIds);
+   const prevCited = new Set(previous.citedPromptIds);
+   const gained = current.citedPromptIds.filter((id) => !prevCited.has(id));
+   const lost = previous.citedPromptIds.filter((id) => !curCited.has(id));
+
+   return {
+      visibilityScore: metricDelta(current.overview.visibilityScore, previous.overview.visibilityScore),
+      perModel,
+      sources: { added, removed },
+      prompts: { gained, lost },
+   };
+}
