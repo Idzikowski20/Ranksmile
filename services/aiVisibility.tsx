@@ -66,8 +66,11 @@ export function useSaveAiVisConfig(slug: string | undefined) {
    return useMutation(
       (body: { brandName: string, topics: AiVisTopic[] }) => fetchJson<{ config: AiVisConfig }>(`/api/ai-visibility/${slug}/config`, jsonPost(body)),
       {
-         onSuccess: () => {
-            qc.invalidateQueries(['ai-vis-config', slug]);
+         onSuccess: (data) => {
+            // Prime the guard's cache with the freshly-saved (completed) config so the
+            // redirect-to-overview after "Finish" reads completedAt immediately instead
+            // of a stale { config: null } — which bounced the user back to setup.
+            qc.setQueryData(['ai-vis-config', slug], data);
             qc.invalidateQueries(['ai-vis-data', slug]);
          },
          onError: toastError,
