@@ -6,9 +6,13 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, aggregateCompetitors, buildSnapshot, computeDelta, ResultRow } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
+
+// Compare never renders a competitor's Sources → drop them to bound the payload.
+const withoutSources = (s: DomainSnapshot): DomainSnapshot => ({ ...s, sources: [] });
+const NORM = (d: string): string => d.toLowerCase().replace(/^www\./, '');
 
 type DbResultRow = {
    prompt_id: number, model: string, own_cited: number, own_position: number | null,
@@ -52,10 +56,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          ownCited: !!r.own_cited,
          ownPosition: r.own_position,
          citations: parseCitationsShared(r.citations),
+         topic: r.topic,
+         text: r.text,
       }));
 
       if (view === 'overview') {
-         const current = buildSnapshot(rows);
+         const own = domain.domain;
+         const ownKey = NORM(own);
+         const byDomain = buildSnapshotsForScan(rows, own);
+         const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(rows, own);
+         const ranked = rankCompetitors(byDomain, own);
+
+         const competitors = ranked.slice(0, 5).map((c) => ({ domain: c.domain, snapshot: withoutSources(c.snapshot) }));
+         const competitorsAll = ranked.map((c) => ({ domain: c.domain, visibilityScore: c.snapshot.overview.visibilityScore }));
+
+         // Long-tail: a picker choice outside the top-5. Reuse the already-computed map.
+         const wanted = typeof req.query.competitor === 'string' ? NORM(req.query.competitor) : '';
+         const compare = wanted && byDomain.has(wanted) && !competitors.some((c) => c.domain === wanted)
+            ? { competitorDomain: wanted, snapshot: withoutSources(byDomain.get(wanted) as DomainSnapshot) } : null;
+
          // "Previous" = the completed scan that finished before this one (chronology
          // by finished_at, NOT id — a retry may have a higher id but earlier finish).
          const prev = scan.finished_at ? await queryOne<{ id: number, finished_at: string | null }>(
@@ -65,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
              ORDER BY s.finished_at DESC LIMIT 1`,
             [domain.ID, scan.finished_at],
          ) : undefined;
-         const delta = prev ? computeDelta(current, buildSnapshot(await loadScanResultRows(prev.id))) : null;
+         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(await loadScanResultRows(prev.id), own)) : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
          const nextRefreshAt = scan.finished_at
@@ -78,8 +97,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return res.status(200).json({
             scanId: scan.id,
             finishedAt: scan.finished_at,
-            overview: current.overview,
-            sourceCount: current.sources.length,
+            snapshot: ownSnap,
+            competitors,
+            competitorsAll,
+            compare,
             delta,
             previousScanAt: prev ? prev.finished_at : null,
             nextRefreshAt,
