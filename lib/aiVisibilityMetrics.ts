@@ -97,17 +97,59 @@ export function aggregateCompetitors(rows: ResultRow[], ownDomain: string) {
       .map(([domain, mentions]) => ({ domain, mentions, share: total ? Math.round((mentions / total) * 100) : 0 }));
 }
 
-export type OverviewSnapshot = {
+/** Re-derive each row's ownCited/ownPosition for an ARBITRARY domain, so the same
+ *  scan rows can be scored from any competitor's point of view. */
+function projectRows(rows: ResultRow[], domain: string): ResultRow[] {
+   return rows.map((r) => {
+      const pos = ownDomainPosition(r.citations, domain);
+      return { ...r, ownCited: pos !== null, ownPosition: pos };
+   });
+}
+
+function promptsFor(projected: ResultRow[]): Array<{ promptId: number, topic: string, text: string, score: number }> {
+   const byPrompt = new Map<number, { promptId: number, topic: string, text: string, scores: number[] }>();
+   for (const r of projected) {
+      const e = byPrompt.get(r.promptId) ?? { promptId: r.promptId, topic: r.topic, text: r.text, scores: [] };
+      e.scores.push(pairScore(r));
+      byPrompt.set(r.promptId, e);
+   }
+   return Array.from(byPrompt.values())
+      .map((p) => ({ promptId: p.promptId, topic: p.topic, text: p.text, score: Math.round(mean(p.scores)) }))
+      .sort((a, b) => b.score - a.score);
+}
+
+function topicsFor(prompts: ReturnType<typeof promptsFor>): Array<{ topic: string, score: number }> {
+   const byTopic = new Map<string, number[]>();
+   for (const p of prompts) { const l = byTopic.get(p.topic) ?? []; l.push(p.score); byTopic.set(p.topic, l); }
+   return Array.from(byTopic.entries()).map(([topic, s]) => ({ topic, score: Math.round(mean(s)) })).sort((a, b) => b.score - a.score);
+}
+
+export type DomainSnapshot = {
    overview: ReturnType<typeof computeOverview>;
    sources: ReturnType<typeof aggregateSources>;
-   citedPromptIds: number[]; // prompts where the brand was cited in ≥1 model
+   prompts: Array<{ promptId: number, topic: string, text: string, score: number }>;
+   topics: Array<{ topic: string, score: number }>;
+   citedPromptIds: number[]; // prompts where the domain was cited in ≥1 model
 };
 
-/** Turn a scan's result rows into a comparable snapshot. Pure — the DB wrapper
- *  that loads the rows lives in lib/aiVisibilityRead.ts. */
-export function buildSnapshot(rows: ResultRow[]): OverviewSnapshot {
-   const citedPromptIds = Array.from(new Set(rows.filter((r) => r.ownCited).map((r) => r.promptId))).sort((a, b) => a - b);
-   return { overview: computeOverview(rows), sources: aggregateSources(rows), citedPromptIds };
+/** THE primitive: a full snapshot for ANY domain. Every view (overview, compare,
+ *  trend, future export) reads this one shape. Pure — the DB wrapper that loads
+ *  the rows lives in lib/aiVisibilityRead.ts. */
+export function snapshotForDomain(rows: ResultRow[], domain: string): DomainSnapshot {
+   const projected = projectRows(rows, domain);
+   const prompts = promptsFor(projected);
+   return {
+      overview: computeOverview(projected),
+      sources: aggregateSources(projected),
+      prompts,
+      topics: topicsFor(prompts),
+      citedPromptIds: Array.from(new Set(projected.filter((r) => r.ownCited).map((r) => r.promptId))).sort((a, b) => a - b),
+   };
+}
+
+/** Alias kept for existing callers that pass the tracked domain. */
+export function buildSnapshot(rows: ResultRow[], ownDomain: string): DomainSnapshot {
+   return snapshotForDomain(rows, ownDomain);
 }
 
 export type Trend = 'up' | 'down' | 'same';
@@ -124,7 +166,7 @@ const metricDelta = (current: number, previous: number): MetricDelta => ({ curre
 
 /** Diff two snapshots. Pure; callers decide what to do when there is no previous
  *  scan (they pass no delta at all — see the data endpoint). */
-export function computeDelta(current: OverviewSnapshot, previous: OverviewSnapshot): OverviewDelta {
+export function computeDelta(current: DomainSnapshot, previous: DomainSnapshot): OverviewDelta {
    const prevModel = new Map(previous.overview.perModel.map((m) => [m.model, m.score]));
    const perModel = current.overview.perModel.map((m) => ({ model: m.model, ...metricDelta(m.score, prevModel.get(m.model) ?? 0) }));
 
