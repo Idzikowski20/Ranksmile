@@ -8,13 +8,15 @@ import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import HoverTooltip from '../../../../components/common/HoverTooltip';
 import { Toggle, SearchBar } from '../../../../components/ui';
-import { useAiVisSources } from '../../../../services/aiVisibility';
+import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 
 type GapCard = { brand: string; gap: number; shared: number; you: number };
 type SourcesData = { pending?: boolean; sources?: SourceRow[]; gapCards?: GapCard[]; gapCandidates?: string[]; ownLabel?: string };
+type PromptRow = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
+type PromptsData = { pending?: boolean; prompts?: PromptRow[] };
 type ModalState = { list: SourceRow[]; index: number; navigable: boolean };
 
 const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
@@ -55,7 +57,25 @@ const AiVisibilitySources: NextPage = () => {
       try { window.localStorage.setItem(gapKey, JSON.stringify(next)); } catch { /* quota/full — non-fatal */ }
    };
 
-   const sourcesQ = useAiVisSources<SourcesData>(slug, { gapBrands: gapBrands ?? undefined });
+   // Prompt/model filters (empty == all). The prompt list + model universe come from
+   // the `prompts` view so they stay stable regardless of the current source filtering.
+   const [promptSel, setPromptSel] = useState<number[]>([]);
+   const [modelSel, setModelSel] = useState<string[]>([]);
+   const promptsQ = useAiVisData<PromptsData>(slug, 'prompts');
+   const promptOptions = useMemo(
+      () => (promptsQ.data?.prompts || []).map((p) => ({ id: p.id, text: p.text, topic: p.topic })),
+      [promptsQ.data],
+   );
+   const modelKeys = useMemo(
+      () => Array.from(new Set((promptsQ.data?.prompts || []).flatMap((p) => p.perModel.map((m) => m.model)))),
+      [promptsQ.data],
+   );
+
+   const sourcesQ = useAiVisSources<SourcesData>(slug, {
+      prompts: promptSel,
+      models: modelSel,
+      gapBrands: gapBrands ?? undefined,
+   });
 
    const sources = useMemo(() => sourcesQ.data?.sources || [], [sourcesQ.data]);
    const filtered = useMemo(() => {
@@ -83,7 +103,17 @@ const AiVisibilitySources: NextPage = () => {
    };
 
    return (
-      <AiVisPageShell section="AI Visibility" title="Sources">
+      <AiVisPageShell
+         section="AI Visibility"
+         title="Sources"
+         toolbarPrompts={promptOptions}
+         toolbarPromptSelected={promptSel}
+         onToolbarPromptChange={setPromptSel}
+         toolbarModels={modelKeys}
+         toolbarModelSelected={modelSel}
+         onToolbarModelChange={setModelSel}
+         toolbarModelLabel={AI_VIS_MODEL_LABEL}
+      >
          {({ crunching }) => {
             const pending = crunching || sourcesQ.isLoading || !!sourcesQ.data?.pending;
             return (
