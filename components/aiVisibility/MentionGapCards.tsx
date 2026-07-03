@@ -43,24 +43,26 @@ const Picker = ({ candidates, exclude, onPick, onClose }: { candidates: string[]
       <>
          { /* click-away backdrop so typing in the search never dismisses the picker */ }
          <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 140 }} role="presentation" />
-         <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 260, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 150, fontFamily: FONT, animation: 'growOut 0.2s ease' }}>
+         <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 300, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 150, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             <input
                autoFocus
                value={q}
                onChange={(e) => setQ(e.target.value)}
                onClick={(e) => e.stopPropagation()}
                placeholder="Search"
-               style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 10px', fontSize: 14, fontFamily: FONT, color: '#18181B', marginBottom: 6, outline: 'none' }}
+               style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 10px', fontSize: 14, fontFamily: FONT, color: '#18181B', marginBottom: 8, outline: 'none', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}
+               onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
+               onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
             />
-            <div style={{ maxHeight: 240, overflow: 'auto' }}>
+            <div style={{ maxHeight: 260, overflow: 'auto' }}>
                {list.map((c) => (
-                  <button key={c} type="button" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 10px', fontSize: 14, color: '#18181B', cursor: 'pointer', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F9F9FB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                  <button key={c} type="button" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 10px', fontSize: 14, color: '#18181B', cursor: 'pointer', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F9F9FB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
                      <img alt="" src={faviconFor(c)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</span>
                   </button>
                ))}
-               {list.length === 0 ? <div style={{ padding: '8px 10px', fontSize: 13, color: '#9F9FA9' }}>No matches.</div> : null}
+               {list.length === 0 ? <div style={{ padding: '10px 10px', fontSize: 13, color: '#9F9FA9' }}>No matches.</div> : null}
             </div>
          </div>
       </>
