@@ -1,6 +1,6 @@
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
@@ -79,7 +79,12 @@ const AiVisibilityOverview: NextPage = () => {
    const ov = baseQ.data;
    const competitors = ov?.competitors || []; // top-5, each with embedded snapshot (sources emptied)
    const competitorsAll = ov?.competitorsAll || []; // all domains, for the picker
-   useEffect(() => { if (!compareDomain && competitors.length) setCompareDomain(competitors[0].domain); }, [competitors, compareDomain]);
+   // Auto-select the #1 competitor ONCE when data first arrives. A ref (not a
+   // `!compareDomain` guard) so an explicit "Clear comparison" isn't re-populated.
+   const didInitCompare = useRef(false);
+   useEffect(() => {
+      if (!didInitCompare.current && competitors.length) { didInitCompare.current = true; setCompareDomain(competitors[0].domain); }
+   }, [competitors]);
 
    // Local-first: an embedded top-5 snapshot is a pure state change; only a long-tail
    // pick (outside top-5) fires a second request (distinct query key → top-5 never refetches).
@@ -128,7 +133,8 @@ const AiVisibilityOverview: NextPage = () => {
 
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                     {competitorsAll.length ? <CompetitorPicker competitors={competitorsAll} selected={compareDomain} onSelect={setCompareDomain} /> : <span />}
                      <button
                         type="button"
                         onClick={() => runScan(false)}
@@ -155,13 +161,13 @@ const AiVisibilityOverview: NextPage = () => {
                         </span>
                      )}
                      action={(
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                           <div style={{ display: 'inline-flex', border: '1px solid #E4E4E7', borderRadius: 8, overflow: 'hidden' }}>
-                              {(['bar', 'line'] as const).map((m) => (
-                                 <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', border: 'none', padding: '6px 10px', background: chartMode === m ? '#F4F4F5' : '#fff', color: chartMode === m ? '#783AFB' : '#52525C', cursor: 'pointer' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
-                              ))}
-                           </div>
-                           {competitorsAll.length ? <CompetitorPicker competitors={competitorsAll} selected={compareDomain} onSelect={setCompareDomain} /> : null}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
+                           {(['bar', 'line'] as const).map((m) => {
+                              const on = chartMode === m;
+                              return (
+                                 <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#783AFB' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', transition: 'color 150ms ease' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
+                              );
+                           })}
                         </div>
                      )}
                   >
