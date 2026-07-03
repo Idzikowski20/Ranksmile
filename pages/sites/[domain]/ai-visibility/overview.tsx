@@ -160,11 +160,25 @@ const AiVisibilityOverview: NextPage = () => {
             const youVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.you ? pick(s.series.you) : null));
             const compVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.competitor ? pick(s.series.competitor) : null));
 
+            // Compared competitor outside the embedded top-5 → show it last behind a
+            // dashed divider, with its real rank from the full (sorted) ranking.
+            const comparedInTop5 = !!compareDomain && competitors.some((c) => c.domain === compareDomain);
+            const outsiderRank = compareDomain && !comparedInTop5 ? competitorsAll.findIndex((c) => c.domain === compareDomain) + 1 : 0;
+            const outsiderScore = compareSnap?.overview.visibilityScore ?? competitorsAll.find((c) => c.domain === compareDomain)?.visibilityScore ?? 0;
+            const hasOutsider = !!compareDomain && !comparedInTop5 && outsiderRank > 0;
+
+            const barItems = hasOutsider
+               ? [...competitors.slice(0, 4).map((c) => ({ domain: c.domain, overview: c.snapshot.overview })), { domain: compareDomain as string, overview: { visibilityScore: outsiderScore }, rank: outsiderRank, outsider: true }]
+               : competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }));
+            const topRows = hasOutsider
+               ? [...competitors.slice(0, 4).map((c, i) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore, rank: i + 1 })), { domain: compareDomain as string, score: outsiderScore, rank: outsiderRank, outsider: true }]
+               : competitors.map((c, i) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore, rank: i + 1 }));
+
             let chartBody: React.ReactNode;
             if (pending) {
                chartBody = <SkeletonBars />;
             } else if (chartMode === 'bar') {
-               chartBody = <CompetitorBarChart competitors={competitors.map((c) => ({ domain: c.domain, overview: c.snapshot.overview }))} selected={compareDomain} onSelect={setCompareDomain} />;
+               chartBody = <CompetitorBarChart competitors={barItems} selected={compareDomain} onSelect={setCompareDomain} />;
             } else {
                // Line mode mirrors SurferSEO: trend on the left, a "Top Competitors"
                // picker on the right (the line only plots You + the chosen competitor).
@@ -174,7 +188,7 @@ const AiVisibilityOverview: NextPage = () => {
                         <TrendLineChart scans={historyQ.data?.scans || []} competitorDomain={compareDomain} />
                      </div>
                      <div style={{ flex: '1 1 200px', minWidth: 200, maxWidth: 300 }}>
-                        <TopCompetitorsList competitors={competitors.map((c) => ({ domain: c.domain, score: c.snapshot.overview.visibilityScore }))} selected={compareDomain} onSelect={setCompareDomain} />
+                        <TopCompetitorsList competitors={topRows} selected={compareDomain} onSelect={setCompareDomain} />
                      </div>
                   </div>
                );

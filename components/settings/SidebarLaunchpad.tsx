@@ -107,10 +107,12 @@ const SidebarLaunchpad = () => {
   const [pillHover, setPillHover] = useState(false);
 
   // Real onboarding state (shared with the dashboard "Get started" card).
-  const { steps: ITEMS, done: DONE, pct: PCT } = useOnboardingChecklist();
+  const { steps: ITEMS, done: DONE, pct: PCT, loading } = useOnboardingChecklist();
 
-  // Hide once every step is complete (or the user skipped it).
-  if (dismissed || PCT >= 100) return null;
+  // Wait for the real state before showing anything — otherwise the pill renders at
+  // 0% and visibly "fills up then disappears" while the DB signals load in. Hidden
+  // once every step is complete (or the user skipped it).
+  if (dismissed || loading || PCT >= 100) return null;
 
   return (
     <>
