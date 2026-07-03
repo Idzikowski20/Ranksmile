@@ -9,10 +9,21 @@ import { AI_VIS_MODEL_LABEL, AI_VIS_ALL_MODELS } from '../../../../lib/aiVisibil
 
 const FONT = 'var(--font-family-primary)';
 
+type MetricDelta = { current: number; previous: number; delta: number; trend: 'up' | 'down' | 'same' };
 type OverviewData = {
    pending?: boolean;
    overview?: { visibilityScore: number; mentionRate: number; avgPosition: number | null; directCitations: number; pages: number; perModel: Array<{ model: string; score: number }> };
    sourceCount?: number;
+   finishedAt?: string | null;
+   previousScanAt?: string | null;
+   nextRefreshAt?: string | null;
+   daysUntilRefresh?: number | null;
+   delta?: {
+      visibilityScore: MetricDelta;
+      perModel: Array<{ model: string } & MetricDelta>;
+      sources: { added: string[]; removed: string[] };
+      prompts: { gained: number[]; lost: number[] };
+   } | null;
 };
 type PromptsData = { pending?: boolean; prompts?: Array<{ id: number; topic: string; text: string; score: number }> };
 type SourcesData = { pending?: boolean; sources?: Array<{ url: string; domain: string; timesShown: number }> };
@@ -68,6 +79,18 @@ const StatCard = ({ label, value, pending }: { label: string; value: React.React
    </section>
 );
 
+const DeltaBadge = ({ d }: { d: MetricDelta }) => {
+   if (d.trend === 'same') return null;
+   const up = d.trend === 'up';
+   return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600, color: up ? '#1AB25E' : '#FF6F77', fontFamily: FONT }}>
+         {up ? '↑' : '↓'}{Math.abs(d.delta)}
+      </span>
+   );
+};
+
+const daysAgo = (iso?: string | null): number | null => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : null);
+
 const AiVisibilityOverview: NextPage = () => {
    const router = useRouter();
    const { domain: slug } = router.query as { domain: string };
@@ -102,7 +125,18 @@ const AiVisibilityOverview: NextPage = () => {
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {/* Visibility score */}
                   <Panel
-                     title={<span>Visibility score: <span style={{ fontWeight: 400, color: '#18181B' }}>{pending || !o ? '—' : o.visibilityScore}</span></span>}
+                     title={(
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                           Visibility score: <span style={{ fontWeight: 400, color: '#18181B' }}>{pending || !o ? '—' : o.visibilityScore}</span>
+                           {!pending && ov?.delta ? <DeltaBadge d={ov.delta.visibilityScore} /> : null}
+                           {!pending && daysAgo(ov?.finishedAt) !== null ? (
+                              <span style={{ fontSize: 12, color: '#9F9FA9', fontWeight: 400 }}>· last updated {daysAgo(ov?.finishedAt) === 0 ? 'today' : `${daysAgo(ov?.finishedAt)}d ago`}</span>
+                           ) : null}
+                           {!pending && typeof ov?.daysUntilRefresh === 'number' ? (
+                              <span style={{ fontSize: 12, color: '#9F9FA9', fontWeight: 400 }}>· next auto refresh in {ov.daysUntilRefresh}d</span>
+                           ) : null}
+                        </span>
+                     )}
                      action={<Link href={`/sites/${slug}/ai-visibility/competitors`} passHref><a style={viewAll}>View Competitors</a></Link>}
                   >
                      {pending || !o ? <SkeletonBars /> : <VisibilityBars perModel={o.perModel} />}
