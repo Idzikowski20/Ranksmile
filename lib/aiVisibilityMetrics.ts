@@ -291,6 +291,24 @@ export function domainGapCandidates(rows: ResultRow[], ownDomain: string): strin
       .map((x) => x.d);
 }
 
+/** Per-URL mention flags for two brands (competitor modal "Mentions" tab): does the
+ *  answer citing each source mention brand A (own) / brand B (the competitor). */
+export function sourceMentions(rows: ResultRow[], brandA: string, brandB: string): Array<{ url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }> {
+   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }>();
+   for (const r of rows) {
+      const a = !!brandA && answerHasBrand(r, brandA);
+      const b = !!brandB && answerHasBrand(r, brandB);
+      for (const c of r.citations) {
+         const e = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, aMentioned: false, bMentioned: false };
+         e.timesShown += 1;
+         if (a) e.aMentioned = true;
+         if (b) e.bMentioned = true;
+         byUrl.set(c.url, e);
+      }
+   }
+   return Array.from(byUrl.values()).sort((x, y) => y.timesShown - x.timesShown);
+}
+
 /** Per-prompt average citation position for ANY domain (competitor detail modal).
  *  null position = the domain was never cited for that prompt (renders as "—"). */
 export function competitorPrompts(rows: ResultRow[], domain: string): Array<{ promptId: number, topic: string, text: string, avgPosition: number | null }> {
