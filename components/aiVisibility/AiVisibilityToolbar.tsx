@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CompetitorPicker from './CompetitorPicker';
+import PromptPicker from './PromptPicker';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -54,11 +55,12 @@ const btn: React.CSSProperties = {
  * competitor picker ("Compare" ⇄ "Comparing with {domain}"); otherwise it's a
  * static button (other sub-pages don't wire comparison yet).
  */
-const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect, trailing }: {
+const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect, prompts, trailing }: {
    date?: string;
    compareCompetitors?: Array<{ domain: string }>;
    compareSelected?: string | null;
    onCompareSelect?: (d: string | null) => void;
+   prompts?: Array<{ id: number; text: string }>;
    trailing?: React.ReactNode;
 }) => {
    const [modelsOpen, setModelsOpen] = useState(false);
@@ -70,10 +72,14 @@ const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compar
             <span>{date}</span>
          </span>
          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button type="button" style={btn}>
-               <span>All prompts</span>
-               <ChevronDown />
-            </button>
+            {prompts && prompts.length ? (
+               <PromptPicker prompts={prompts} />
+            ) : (
+               <button type="button" style={btn}>
+                  <span>All prompts</span>
+                  <ChevronDown />
+               </button>
+            )}
             {compareInteractive ? (
                <CompetitorPicker competitors={compareCompetitors as Array<{ domain: string }>} selected={compareSelected} onSelect={onCompareSelect as (d: string | null) => void} align="right" />
             ) : (
