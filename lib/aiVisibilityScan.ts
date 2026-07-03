@@ -14,7 +14,7 @@ import db from '../database/database';
 import { queryOne, queryRows } from './db/query';
 import { runModelPrompt, AiModel } from './dataforseoLlm';
 import { ownDomainPosition } from './aiVisibilityMetrics';
-import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS } from './aiVisibility';
+import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from './aiVisibility';
 
 type Exec = (sql: string, replacements?: unknown[]) => Promise<[unknown[], number]>;
 
@@ -76,6 +76,41 @@ export async function enqueueAiVisScan(configId: number): Promise<number> {
    );
    if (!created) throw new Error('Failed to enqueue scan');
    return created.id;
+}
+
+export type DueSelect = (sql: string, repl: unknown[]) => Promise<Array<{ id: number }>>;
+const defaultDueSelect: DueSelect = (sql, repl) => queryRows<{ id: number }>(sql, repl);
+
+/**
+ * Configs due for an automatic refresh: their most-recent COMPLETED scan finished
+ * more than REFRESH_INTERVAL_DAYS ago AND they have no queued/running scan. Oldest
+ * first (ORDER BY last_done ASC), capped at `limit` so one tick can't flood the
+ * worker — a backlog of due configs drains a batch per tick (next tick takes the
+ * next oldest N). Configs that never completed a scan are excluded (their first
+ * scan is user-driven). `run` is injectable for unit tests. Interpolated values
+ * are constants, not user input. Dialect-aware date math mirrors enqueueAiVisScan.
+ */
+export async function findDueConfigIds(limit = AI_VIS_SETTINGS.SCHEDULER_BATCH_LIMIT, run: DueSelect = defaultDueSelect): Promise<number[]> {
+   const isPg = !!process.env.DATABASE_URL;
+   const days = AI_VIS_SETTINGS.REFRESH_INTERVAL_DAYS;
+   const cutoff = isPg ? `NOW() - INTERVAL '${days} days'` : `datetime('now', '-${days} days')`;
+   const cap = Number(limit) || AI_VIS_SETTINGS.SCHEDULER_BATCH_LIMIT;
+   const rows = await run(
+      `SELECT c.id AS id
+         FROM ai_vis_configs c
+         JOIN (
+            SELECT config_id, MAX(finished_at) AS last_done
+              FROM ai_vis_scans WHERE status = 'completed' GROUP BY config_id
+         ) lc ON lc.config_id = c.id
+        WHERE lc.last_done < ${cutoff}
+          AND NOT EXISTS (
+             SELECT 1 FROM ai_vis_scans a WHERE a.config_id = c.id AND a.status IN ('queued', 'running')
+          )
+        ORDER BY lc.last_done ASC
+        LIMIT ${cap}`,
+      [],
+   );
+   return rows.map((r) => Number(r.id));
 }
 
 type PromptRow = { id: number, text: string };

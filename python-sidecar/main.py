@@ -43,6 +43,20 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def _start_ai_vis_scheduler() -> None:
+    """Launch the AI Visibility cadence loop as a detached task on the always-on
+    sidecar. The loop's first tick runs almost immediately (after a 0–60s jitter),
+    NOT after a full 6h sleep — this intentionally shortens recovery after a
+    restart so due scans aren't stranded for hours. Skipped implicitly in one-off
+    script contexts that don't start the app."""
+    import asyncio
+    from pipeline.ai_vis_scheduler import scheduler_loop
+    nextjs_url = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    asyncio.create_task(scheduler_loop(nextjs_url))
+    print("[ai_vis_scheduler] started")
+
+
 @app.middleware("http")
 async def require_internal_token(request: Request, call_next):
     """Authorise every request with the shared secret when one is configured.

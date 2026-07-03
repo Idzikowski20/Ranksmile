@@ -29,6 +29,16 @@ export const AI_VIS_CONCURRENCY = 3;
 export const AI_VIS_HARD_CAP_PAIRS = 250; // 50 prompts × 5 models — budget backstop
 export const AI_VIS_SCAN_STALE_MS = 10 * 60 * 1000; // a `running` scan older than this is dead
 
+/** Cyclic-tracking tunables — one home so cadence, cooldown, scheduler tick, and
+ *  batch size are all findable together. SCHEDULER_TICK_HOURS is mirrored in
+ *  python-sidecar/pipeline/ai_vis_scheduler.py (Python can't import TS). */
+export const AI_VIS_SETTINGS = {
+   REFRESH_INTERVAL_DAYS: 14,       // auto re-scan cadence, measured from finished_at
+   MANUAL_REFRESH_COOLDOWN_DAYS: 7, // below this a manual scan asks for confirmation
+   SCHEDULER_TICK_HOURS: 6,         // sidecar scheduler tick
+   SCHEDULER_BATCH_LIMIT: 5,        // max scans enqueued per due-scans tick (oldest first)
+} as const;
+
 /** Keep only recognised model ids (used by both config save and the scan runner). */
 export function sanitizeModels(models: unknown): string[] {
    const all = AI_VIS_ALL_MODELS as readonly string[];
