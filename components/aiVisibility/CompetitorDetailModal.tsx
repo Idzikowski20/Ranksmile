@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import MetricTrendChart from './MetricTrendChart';
 import { SkeletonBox } from './SkeletonBlocks';
 import HoverTooltip from '../common/HoverTooltip';
-import { useAiVisCompetitorDetail, useAiVisHistory } from '../../services/aiVisibility';
+import { useAiVisCompetitorDetail } from '../../services/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
@@ -16,33 +15,12 @@ const SortArrow = ({ asc }: { asc: boolean }) => (<svg width="14" height="14" vi
 
 const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: '#52525C', cursor: 'pointer', borderRadius: 6 };
 
-const fmtDay = (iso: string | null): string => {
-   if (!iso) return '';
-   const d = new Date(iso);
-   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
 const StatCard = ({ label, value, hint }: { label: string; value: React.ReactNode; hint: string }) => (
    <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#71717B' }}>
          {label}<HoverTooltip label={hint} align="center"><span style={{ display: 'inline-flex', cursor: 'help' }}><InfoIcon /></span></HoverTooltip>
       </span>
       <span style={{ fontSize: 24, fontWeight: 700, color: '#18181B' }}>{value}</span>
-   </div>
-);
-
-type Metric = 'visibilityScore' | 'mentionRate' | 'avgPosition';
-const METRICS: Array<{ key: Metric; label: string }> = [
-   { key: 'visibilityScore', label: 'Visibility score' },
-   { key: 'mentionRate', label: 'Mention rate' },
-   { key: 'avgPosition', label: 'Avg. position' },
-];
-
-const Segmented = ({ value, onChange }: { value: Metric; onChange: (m: Metric) => void }) => (
-   <div style={{ display: 'inline-flex', gap: 4, background: '#F4F4F5', borderRadius: 10, padding: 4 }}>
-      {METRICS.map((m) => (
-         <button key={m.key} type="button" onClick={() => onChange(m.key)} style={{ border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', background: value === m.key ? '#fff' : 'transparent', color: value === m.key ? '#18181B' : '#52525C', boxShadow: value === m.key ? '0 1px 2px rgba(0,0,0,0.06)' : 'none' }}>{m.label}</button>
-      ))}
    </div>
 );
 
@@ -226,8 +204,8 @@ const PromptsTable = ({ prompts }: { prompts: Array<{ promptId: number; text: st
    );
 };
 
-/** Right slide-over for a competitor: stat cards, metric-toggle trend, its own
- *  sources, and per-prompt average position. */
+/** Right slide-over for a competitor: stat cards, Mentions (All Sources / gap),
+ *  per-prompt average position, and its own sources. */
 const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
    slug: string | undefined;
    list: string[];
@@ -237,9 +215,7 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
 }) => {
    const domain = list[index];
    const detailQ = useAiVisCompetitorDetail(slug, domain || null);
-   const histQ = useAiVisHistory(slug, domain);
    const detail = detailQ.data;
-   const [metric, setMetric] = useState<Metric>('visibilityScore');
 
    const [visible, setVisible] = useState(false);
    useEffect(() => { const t = setTimeout(() => setVisible(true), 10); return () => clearTimeout(t); }, []);
@@ -258,22 +234,8 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
       // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [onNavigate, onClose]);
 
-   const series = useMemo(() => {
-      // history returns scans newest-first; reverse so the x-axis reads old → new.
-      const scans = [...(histQ.data?.scans || [])].reverse();
-      return {
-         labels: scans.map((s) => fmtDay(s.finishedAt)),
-         data: scans.map((s) => {
-            const o = s.series.competitor as { visibilityScore: number; mentionRate: number; avgPosition: number | null } | null | undefined;
-            return o ? o[metric] : null;
-         }),
-      };
-   }, [histQ.data, metric]);
-
    if (!domain) return null;
    const ov = detail?.overview;
-   const percent = metric === 'mentionRate';
-   const reverse = metric === 'avgPosition';
 
    return (
       <>
@@ -302,25 +264,6 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
                      <StatCard label="Visibility score" hint="Average visibility across all tracked prompts and models" value={detailQ.isLoading ? <SkeletonBox w={40} h={26} /> : (ov?.visibilityScore ?? 0)} />
                      <StatCard label="Mention rate" hint="Share of prompt/model answers that cite this competitor" value={detailQ.isLoading ? <SkeletonBox w={40} h={26} /> : `${ov?.mentionRate ?? 0}%`} />
                      <StatCard label="Average position" hint="Average citation rank when this competitor is cited" value={detailQ.isLoading ? <SkeletonBox w={40} h={26} /> : (ov?.avgPosition != null ? ov.avgPosition.toFixed(1) : '—')} />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                     <Segmented value={metric} onChange={setMetric} />
-                     {histQ.isLoading ? (
-                        <SkeletonBox w="100%" h={280} />
-                     ) : series.data.filter((v) => v != null).length > 1 ? (
-                        <MetricTrendChart
-                           labels={series.labels}
-                           lines={[{ label: METRICS.find((m) => m.key === metric)?.label || '', data: series.data, color: '#783AFB' }]}
-                           yMin={metric === 'avgPosition' ? 1 : 0}
-                           yMax={percent ? 100 : undefined}
-                           reverse={reverse}
-                           percent={percent}
-                           height={280}
-                        />
-                     ) : (
-                        <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9' }}>Not enough scan history yet — the trend appears after two or more scans.</p>
-                     )}
                   </div>
                </div>
 
