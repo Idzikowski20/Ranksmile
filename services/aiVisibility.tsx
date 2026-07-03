@@ -126,3 +126,23 @@ export function useAiVisHistory(slug: string | undefined, competitor?: string) {
       () => fetchJson<HistoryPayload>(`/api/ai-visibility/${slug}/history${q}`),
       { enabled: !!slug, staleTime: 60_000, keepPreviousData: true });
 }
+
+export type SourceDetailPayload = { history: Array<{ finishedAt: string | null; timesShown: number }>; brands: Array<{ pos: number; brand: string; sentiment: 'positive' | 'neutral' | 'negative' | 'mixed'; quotes: string[] }>; brandCount: number };
+export function useAiVisSourceDetail(slug: string | undefined, url: string | null) {
+   return useQuery<SourceDetailPayload>(['ai-vis-source-detail', slug, url],
+      () => fetchJson<SourceDetailPayload>(`/api/ai-visibility/${slug}/data?view=source-detail&url=${encodeURIComponent(url as string)}`),
+      { enabled: !!slug && !!url, staleTime: 60_000 });
+}
+
+/** Sources view with prompt/model/gapBrands filters. Distinct query key per filter set
+ *  so switching filters refetches; keepPreviousData avoids flicker. */
+export function useAiVisSources<T>(slug: string | undefined, params: { prompts?: number[]; models?: string[]; gapBrands?: string[] }) {
+   const q = new URLSearchParams({ view: 'sources' });
+   if (params.prompts?.length) q.set('prompts', params.prompts.join(','));
+   if (params.models?.length) q.set('models', params.models.join(','));
+   if (params.gapBrands?.length) q.set('gapBrands', params.gapBrands.join(','));
+   const key = q.toString();
+   return useQuery<T & { pending?: boolean }>(['ai-vis-sources', slug, key],
+      () => fetchJson<T & { pending?: boolean }>(`/api/ai-visibility/${slug}/data?${key}`),
+      { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
+}
