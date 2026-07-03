@@ -16,6 +16,8 @@ export type ResultRow = {
    ownCited: boolean,
    ownPosition: number | null,
    citations: LlmCitation[],
+   topic: string,
+   text: string,
 };
 
 const norm = (d: string): string => d.toLowerCase().replace(/^www\./, '');
