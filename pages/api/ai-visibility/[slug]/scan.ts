@@ -8,6 +8,7 @@ import { enqueueAiVisScan, kickAiVisScan } from '../../../../lib/aiVisibilitySca
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
+import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
 export const config = { maxDuration: 60 };
 
@@ -27,6 +28,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const cfg = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
    if (!cfg) return res.status(400).json({ error: 'Complete the AI Visibility setup first' });
+
+   // Manual-refresh cost guard: a full scan is ~$4. If the last completed scan is
+   // recent and nothing is already running, require an explicit { force: true }.
+   const active = await queryOne<{ id: number }>(
+      "SELECT id FROM ai_vis_scans WHERE config_id = ? AND status IN ('queued','running') ORDER BY id DESC LIMIT 1",
+      [cfg.id],
+   );
+   const force = !!(req.body && (req.body as { force?: boolean }).force);
+   if (!active && !force) {
+      const last = await queryOne<{ finished_at: string | null }>(
+         "SELECT finished_at FROM ai_vis_scans WHERE config_id = ? AND status = 'completed' ORDER BY finished_at DESC LIMIT 1",
+         [cfg.id],
+      );
+      if (last?.finished_at) {
+         const days = (Date.now() - new Date(last.finished_at).getTime()) / 86_400_000;
+         if (days < AI_VIS_SETTINGS.MANUAL_REFRESH_COOLDOWN_DAYS) {
+            return res.status(409).json({ needsConfirm: true, lastScanDaysAgo: Math.floor(days) });
+         }
+      }
+   }
 
    const scanId = await enqueueAiVisScan(cfg.id);
 
