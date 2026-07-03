@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, computeDelta, ResultRow } from '../../lib/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 
@@ -53,5 +53,54 @@ describe('aggregateCompetitors', () => {
       expect(c.find((x) => x.domain === 'idztech.pl')).toBeUndefined();
       expect(c[0].domain).toBe('oracle.com');
       expect(c[0].mentions).toBe(3);
+   });
+});
+
+describe('buildSnapshot', () => {
+   it('bundles overview, sources, and the set of prompts where own was cited', () => {
+      const snap = buildSnapshot(rows);
+      expect(snap.overview.visibilityScore).toBe(43);
+      expect(snap.sources.find((s) => s.domain === 'oracle.com')?.timesShown).toBe(3);
+      // prompt 1 (chat_gpt cited) and prompt 2 (chat_gpt cited) → both cited; unique + sorted
+      expect(snap.citedPromptIds).toEqual([1, 2]);
+   });
+   it('empty rows → empty citedPromptIds', () => {
+      expect(buildSnapshot([]).citedPromptIds).toEqual([]);
+   });
+});
+
+describe('computeDelta', () => {
+   const previous = buildSnapshot([
+      { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 3, citations: [cit('oracle.com'), cit('shoper.pl'), cit('idztech.pl', 'https://idztech.pl/a')] },
+      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [cit('oracle.com')] },
+   ]);
+   const current = buildSnapshot([
+      { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, citations: [cit('idztech.pl', 'https://idztech.pl/a'), cit('vercel.com')] },
+      { promptId: 2, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [cit('oracle.com')] },
+   ]);
+
+   it('reports score delta with direction', () => {
+      const d = computeDelta(current, previous);
+      // current p1 score 100, p2 0 → 50; previous p1 70, p2 0 → 35
+      expect(d.visibilityScore).toEqual({ current: 50, previous: 35, delta: 15, trend: 'up' });
+   });
+   it('reports sources added and removed (by domain, deduped)', () => {
+      const d = computeDelta(current, previous);
+      expect(d.sources.added.sort()).toEqual(['vercel.com']);
+      expect(d.sources.removed.sort()).toEqual(['shoper.pl']);
+   });
+   it('reports prompts that gained/lost own citation', () => {
+      const gainedCase = computeDelta(
+         buildSnapshot([{ promptId: 9, model: 'gemini', ownCited: true, ownPosition: 1, citations: [cit('idztech.pl')] }]),
+         buildSnapshot([{ promptId: 9, model: 'gemini', ownCited: false, ownPosition: null, citations: [] }]),
+      );
+      expect(gainedCase.prompts.gained).toEqual([9]);
+      expect(gainedCase.prompts.lost).toEqual([]);
+   });
+   it('down and same trends', () => {
+      const same = computeDelta(previous, previous);
+      expect(same.visibilityScore.trend).toBe('same');
+      const down = computeDelta(previous, current);
+      expect(down.visibilityScore.trend).toBe('down');
    });
 });
