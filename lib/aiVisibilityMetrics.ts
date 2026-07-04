@@ -21,6 +21,7 @@ export type ResultRow = {
    topic: string,
    text: string,
    brands: BrandMention[],
+   fanOutQueries?: string[], // sub-queries the engine generated (DataForSEO fan_out_queries); runtime always sets it, optional only so test fixtures needn't
 };
 
 export type SourceBrand = { brand: string, domain: string };

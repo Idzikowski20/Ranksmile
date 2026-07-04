@@ -124,6 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          topic: r.topic,
          text: r.text,
          brands: [], // competitors/prompts branches don't read brands; B3 uses loadScanResultRows for sources
+         fanOutQueries: [], // fanout view loads via loadScanResultRows (which selects the column)
       }));
 
       if (view === 'overview') {
