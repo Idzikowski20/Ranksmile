@@ -39,9 +39,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // single grouped aggregation query. Not worth the complexity now.
       const wanted = typeof req.query.competitor === 'string' ? req.query.competitor.toLowerCase().replace(/^www\./, '') : '';
       const ownKey = domain.domain.toLowerCase().replace(/^www\./, '');
+      // Prompt filter (CSV of prompt ids) so the trend matches the overview's picker.
+      const pids = typeof req.query.prompts === 'string' && req.query.prompts
+         ? req.query.prompts.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : [];
       const out = [] as Array<{ scanId: number, finishedAt: string | null, series: { you: unknown, competitor?: unknown } }>;
       for (const s of scans) {
-         const rows = await loadScanResultRows(s.id);
+         const allRows = await loadScanResultRows(s.id);
+         const rows = pids.length ? allRows.filter((r) => pids.includes(r.promptId)) : allRows;
          const byDomain = buildSnapshotsForScan(rows, domain.domain);
          const series: { you: unknown, competitor?: unknown } = { you: byDomain.get(ownKey)?.overview ?? null };
          // Always emit a competitor point per scan (0-visibility when uncited that scan)

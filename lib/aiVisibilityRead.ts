@@ -8,7 +8,7 @@ import type { LlmCitation } from './dataforseoLlm';
 
 export type DbResultRow = {
    prompt_id: number; model: string; own_cited: number; own_position: number | null;
-   citations: unknown; topic: string; text: string; brands: unknown;
+   citations: unknown; topic: string | null; text: string | null; brands: unknown;
 };
 
 /** brands column: jsonb (parsed array) on Postgres, TEXT (JSON string) on SQLite —
@@ -58,8 +58,12 @@ export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbR
 
 export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
    const dbRows = await queryRows<DbResultRow>(
+      // LEFT JOIN: a prompt config edit can DELETE a prompt (reconciliation), leaving
+      // historical ai_vis_results rows that reference a now-missing prompt id. An inner
+      // join would silently drop those rows and corrupt past scan metrics; LEFT JOIN keeps
+      // every result row and just leaves topic/text NULL (mapDbRowsToResultRows → '').
       `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, r.brands, p.topic, p.text
-       FROM ai_vis_results r JOIN ai_vis_prompts p ON p.id = r.prompt_id
+       FROM ai_vis_results r LEFT JOIN ai_vis_prompts p ON p.id = r.prompt_id
        WHERE r.scan_id = ? AND r.error IS NULL`,
       [scanId],
    );

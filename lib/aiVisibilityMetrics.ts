@@ -232,10 +232,12 @@ export type RankedCompetitor = { domain: string, snapshot: DomainSnapshot };
 /** Snapshot for the tracked domain + every distinct cited domain (minus noise),
  *  computed ONCE. Keys are normalized (norm). Shared by ranking, compare, history. */
 export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map<string, DomainSnapshot> {
-   const domains = new Set<string>([norm(ownDomain)]);
+   const own = norm(ownDomain);
+   const domains = new Set<string>([own]);
    for (const r of rows) for (const c of r.citations) {
       const d = norm(c.domain);
-      if (d && !NOISE.has(d)) domains.add(d);
+      // Own domain and its subdomains (e.g. blog.example.com) are not competitors.
+      if (d && d !== own && !d.endsWith(`.${own}`) && !NOISE.has(d)) domains.add(d);
    }
    const map = new Map<string, DomainSnapshot>();
    for (const d of domains) map.set(d, snapshotForDomain(rows, d));
@@ -247,7 +249,7 @@ export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map
 export function rankCompetitors(byDomain: Map<string, DomainSnapshot>, ownDomain: string): RankedCompetitor[] {
    const own = norm(ownDomain);
    return Array.from(byDomain.entries())
-      .filter(([domain]) => domain !== own)
+      .filter(([domain]) => domain !== own && !domain.endsWith(`.${own}`))
       .map(([domain, snapshot]) => ({ domain, snapshot }))
       .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
 }

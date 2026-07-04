@@ -29,7 +29,7 @@ const StatCard = ({ label, value, hint, pending }: { label: string; value: strin
 const AiVisibilityPrompts: NextPage = () => {
    const router = useRouter();
    const { domain: slug } = router.query as { domain: string };
-   const manageUrl = `/sites/${slug}/ai-visibility/setup`;
+   const manageUrl = `/sites/${slug}/ai-visibility/manage`;
 
    const [promptSel, setPromptSel] = useState<number[]>([]);
    const [modelSel, setModelSel] = useState<string[]>([]);
