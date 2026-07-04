@@ -67,7 +67,7 @@ const AiVisibilityPrompts: NextPage = () => {
       >
          {({ crunching }) => {
             const pending = crunching || topicsQ.isLoading || !!topicsQ.data?.pending
-               || (topicsQ.isFetching && topics.length === 0);
+               || topicsQ.isFetching;
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>

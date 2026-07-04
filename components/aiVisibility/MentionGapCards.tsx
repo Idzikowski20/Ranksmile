@@ -94,7 +94,7 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                   onClick={() => onCompare && onCompare(card.domain)}
                   role={onCompare ? 'button' : undefined}
                   tabIndex={onCompare ? 0 : undefined}
-                  onKeyDown={(e) => { if (onCompare && e.key === 'Enter') onCompare(card.domain); }}
+                  onKeyDown={(e) => { if (!onCompare || e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCompare(card.domain); } }}
                   style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#783AFB' : '#F4F4F5'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

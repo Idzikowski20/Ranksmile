@@ -17,7 +17,7 @@ const AiVisibilityCompetitors: NextPage = () => {
 
    const [promptSel, setPromptSel] = useState<number[]>([]);
    const [modelSel, setModelSel] = useState<string[]>([]);
-   const [modalIndex, setModalIndex] = useState<number | null>(null);
+   const [modalDomain, setModalDomain] = useState<string | null>(null);
 
    const promptsQ = useAiVisData<PromptsData>(slug, 'prompts');
    const promptOptions = useMemo(
@@ -33,8 +33,14 @@ const AiVisibilityCompetitors: NextPage = () => {
    const competitors: CompetitorRow[] = useMemo(() => competitorsQ.data?.competitors || [], [competitorsQ.data]);
    const domains = useMemo(() => competitors.map((c) => c.domain), [competitors]);
 
+   // Resolve the open competitor by domain against the current list so re-sorting or
+   // re-fetching the list can never make the modal jump to a different row.
+   const modalIndex = modalDomain == null ? -1 : domains.indexOf(modalDomain);
+
    const navigateModal = (delta: number) => {
-      setModalIndex((i) => (i == null ? i : Math.max(0, Math.min(domains.length - 1, i + delta))));
+      if (modalIndex < 0) return;
+      const next = Math.max(0, Math.min(domains.length - 1, modalIndex + delta));
+      setModalDomain(domains[next]);
    };
 
    return (
@@ -59,17 +65,17 @@ const AiVisibilityCompetitors: NextPage = () => {
                   ) : (
                      <CompetitorsTable
                         competitors={competitors}
-                        onSelect={(d) => setModalIndex(domains.indexOf(d))}
+                        onSelect={setModalDomain}
                      />
                   )}
 
-                  {modalIndex != null && domains[modalIndex] && (
+                  {modalIndex >= 0 && (
                      <CompetitorDetailModal
                         slug={slug}
                         list={domains}
                         index={modalIndex}
                         onNavigate={navigateModal}
-                        onClose={() => setModalIndex(null)}
+                        onClose={() => setModalDomain(null)}
                      />
                   )}
                </div>
