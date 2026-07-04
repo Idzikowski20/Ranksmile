@@ -1,0 +1,90 @@
+import { buildAuditResult } from '../../lib/auditCompute';
+
+const HTML = `<!doctype html><html><head>
+  <title>Jak sprawdzić czy ktoś mnie śledzi — poradnik</title>
+  <meta name="description" content="Dowiedz się jak sprawdzić czy ktoś Cię śledzi: podejrzane aplikacje, obserwacja i konkretne wskazówki bezpieczeństwa krok po kroku dla każdego.">
+  <script>var x = 1;</script>
+</head><body>
+  <h1>Jak sprawdzić czy ktoś mnie śledzi</h1>
+  <p>Jeśli podejrzewasz, że ktoś Cię śledzi, w tym poradniku znajdziesz konkretne wskazówki. Śledzenie bywa dyskretne.</p>
+  <h2>Podejrzane aplikacje</h2>
+  <p>Sprawdź <strong>podejrzane aplikacje</strong> na telefonie. Nieznane aplikacje mogą śledzić Twoją lokalizację.</p>
+  <h3>Obserwacja</h3>
+  <p>Uważaj na inny samochód jadący za Tobą i zmień <b>drugą stronę ulicy</b>.</p>
+  <img src="/a.jpg" alt="śledzenie"><img src="/b.jpg" alt="telefon">
+  <a href="https://prodetektyw.pl/cyberbezpieczenstwo">Cyberbezpieczeństwo</a>
+  <a href="https://prodetektyw.pl/jak-sprawdzic-czy-ktos-mnie-sledzi">Ten sam artykuł</a>
+  <a href="https://external.example.com/x">Zewnętrzny</a>
+  <a href="#top">Kotwica</a>
+</body></html>`;
+
+const URL = 'https://prodetektyw.pl/jak-sprawdzic-czy-ktos-mnie-sledzi';
+const KEYWORD = 'ktoś mnie śledzi';
+
+describe('buildAuditResult', () => {
+   const r = buildAuditResult(HTML, URL, KEYWORD, { ttfbMs: 120, loadMs: 340 });
+
+   it('carries url + keyword + timings into factors', () => {
+      expect(r.url).toBe(URL);
+      expect(r.keyword).toBe(KEYWORD);
+      expect(r.factors.find((f) => f.key === 'ttfb')?.you).toBe(120);
+      expect(r.factors.find((f) => f.key === 'load_time')?.you).toBe(340);
+   });
+
+   it('computes real structural counts from the HTML', () => {
+      const by = (k: string) => r.factors.find((f) => f.key === k)?.you;
+      expect(by('h1_count')).toBe(1);
+      expect(by('h2_h6_count')).toBe(2); // one h2 + one h3
+      expect(by('p_count')).toBe(3);
+      expect(by('img_count')).toBe(2);
+      expect(by('strong_b_count')).toBe(2); // strong + b
+      expect(by('title_chars')).toBe('Jak sprawdzić czy ktoś mnie śledzi — poradnik'.length);
+   });
+
+   it('counts exact + partial keyword occurrences', () => {
+      const by = (k: string) => r.factors.find((f) => f.key === k)?.you ?? 0;
+      expect(by('exact_kw_title')).toBeGreaterThanOrEqual(1);
+      expect(by('exact_kw_h1')).toBeGreaterThanOrEqual(1);
+      expect(by('exact_kw_body')).toBeGreaterThanOrEqual(1);
+      expect(by('partial_kw_per100')).toBeGreaterThan(0);
+   });
+
+   it('excludes script text from body word count', () => {
+      const body = r.factors.find((f) => f.key === 'word_count_body')?.you ?? 0;
+      expect(body).toBeGreaterThan(20);
+      // "var x = 1" must not leak into body words
+      expect(JSON.stringify(r)).not.toContain('var x = 1');
+   });
+
+   it('collects same-site internal links, dedups, skips anchors/external, flags self-link', () => {
+      const urls = r.internalLinks.map((l) => l.url);
+      expect(urls).toContain('https://prodetektyw.pl/cyberbezpieczenstwo');
+      expect(urls).toContain('https://prodetektyw.pl/jak-sprawdzic-czy-ktos-mnie-sledzi');
+      expect(urls).not.toContain('https://external.example.com/x');
+      expect(urls.some((u) => u.includes('#'))).toBe(false);
+      const self = r.internalLinks.find((l) => l.url.endsWith('/jak-sprawdzic-czy-ktos-mnie-sledzi'));
+      expect(self?.linked).toBe(true);
+   });
+
+   it('produces a content score in [0,100]', () => {
+      expect(r.contentScore).toBeGreaterThanOrEqual(0);
+      expect(r.contentScore).toBeLessThanOrEqual(100);
+   });
+
+   it('marks every factor placeholder with 3 stub competitors and a suggested range', () => {
+      expect(r.factors.length).toBeGreaterThan(10);
+      r.factors.forEach((f) => {
+         expect(f.placeholder).toBe(true);
+         expect(f.competitors).toHaveLength(3);
+         expect(f.suggestedMin).not.toBeNull();
+         expect(f.suggestedMax).not.toBeNull();
+         expect((f.suggestedMax as number)).toBeGreaterThanOrEqual(f.suggestedMin as number);
+      });
+   });
+
+   it('is deterministic — same HTML yields identical factor stubs', () => {
+      const r2 = buildAuditResult(HTML, URL, KEYWORD, { ttfbMs: 120, loadMs: 340 });
+      const strip = (x: typeof r) => ({ ...x, generatedAt: '' });
+      expect(strip(r2)).toEqual(strip(r));
+   });
+});

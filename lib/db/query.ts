@@ -54,3 +54,23 @@ export interface ArticleRow {
   created_at: string | null;
   updated_at: string | null;
 }
+
+/**
+ * A row of the `audit_runs` table (see lib/ensureAuditTables). One row per (url, keyword).
+ * result_json is a serialized AuditResult (lib/auditTypes); parse at the boundary.
+ */
+export interface AuditRunRow {
+  id: number;
+  domain_id: number;
+  url: string;
+  keyword: string;
+  status: string;
+  content_score: number | null;
+  result_json: string | null;
+  progress_done: number | null;
+  progress_total: number | null;
+  error: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+}
