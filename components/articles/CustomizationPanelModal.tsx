@@ -567,7 +567,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                   Pick at least five URLs for the most relevant results. <LearnMore />
                 </SectionHeader>
 
-                <CompetitorsSection slug={slug} keyword={keyword} />
+                {slug ? <CompetitorsSection slug={slug} keyword={keyword} /> : <div style={{ padding: 16, fontSize: 14, color: C.g100, fontFamily: F }}>Select a domain to load competitors.</div>}
               </div>
 
               {/* Content Structure */}

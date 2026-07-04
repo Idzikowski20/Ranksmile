@@ -104,6 +104,19 @@ export async function scanCompetitors(domainId: number, keyword: string, languag
       );
    }
 
+   // Prune stale rows: drop any previously stored URL that isn't in the latest SERP set,
+   // so the store only holds the current top-10. Guard against wiping everything on an
+   // empty scan (0 results) — only prune when we actually scanned some URLs.
+   const scannedUrls = competitors.map((c) => c.url);
+   if (scannedUrls.length > 0) {
+      const placeholders = scannedUrls.map(() => '?').join(', ');
+      await db.query(
+         `DELETE FROM domain_serp_competitors
+          WHERE domain_id = ? AND keyword = ? AND url NOT IN (${placeholders})`,
+         { replacements: [domainId, keyword, ...scannedUrls] },
+      );
+   }
+
    return getCompetitors(domainId, keyword);
 }
 

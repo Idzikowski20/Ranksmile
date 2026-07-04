@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as unknown as { ID: number }).ID;
 
-   const { keyword } = req.body as { keyword?: string };
+   const keyword = typeof req.body?.keyword === 'string' ? req.body.keyword.trim() : '';
    if (!keyword) return res.status(400).json({ error: 'keyword is required' });
 
    const competitors = await scanCompetitors(domainId, keyword);

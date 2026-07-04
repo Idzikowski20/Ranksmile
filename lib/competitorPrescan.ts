@@ -7,6 +7,11 @@ import { ensureCompetitorsTables } from './ensureCompetitorsTables';
 // capped and best-effort — it never blocks or fails domain setup.
 const MAX_KEYWORDS = 10;
 
+// Same language heuristic as lib/auditEnrich so the shared store isn't seeded with the
+// wrong SERP for non-Polish keywords (scanCompetitors otherwise defaults to 'pl').
+const PL_DIACRITICS = /[ąćęłńóśźż]/i;
+const langOf = (kw: string): string => (PL_DIACRITICS.test(kw) ? 'pl' : 'en');
+
 /**
  * After domain setup, populate the shared Organic Competitors store for the domain's
  * top keywords so they're ready in the modal without an on-demand scan. Sequential +
@@ -20,6 +25,6 @@ export async function prescanDomainCompetitors(domainId: number): Promise<void> 
    ).catch(() => []);
    for (const r of rows) {
       if (!r.keyword) continue;
-      try { await scanCompetitors(domainId, r.keyword); } catch { /* best-effort */ }
+      try { await scanCompetitors(domainId, r.keyword, langOf(r.keyword)); } catch { /* best-effort */ }
    }
 }

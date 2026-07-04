@@ -20,10 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const { keyword, selectedIds } = req.body as { keyword?: string; selectedIds?: unknown };
    if (!keyword) return res.status(400).json({ error: 'keyword is required' });
+   if (!Array.isArray(selectedIds)) return res.status(400).json({ error: 'selectedIds must be an array' });
 
-   const ids = Array.isArray(selectedIds)
-      ? selectedIds.map((n) => Number(n)).filter((n) => Number.isFinite(n))
-      : [];
+   const ids = selectedIds.map((n) => Number(n)).filter((n) => Number.isFinite(n));
 
    await setSelection(domainId, keyword, ids);
    return res.status(200).json({ ok: true });

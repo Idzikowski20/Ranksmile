@@ -34,6 +34,7 @@ interface Props {
    slug: string | undefined;
    keyword: string;
    onSelectionChange?: () => void;
+   onSavingChange?: (saving: boolean) => void;
 }
 
 /**
@@ -41,7 +42,7 @@ interface Props {
  * scan + select mutations, and local toggle state. Used by both the Audit tool modal and
  * the Content Editor settings modal. Toggling a row persists the selection immediately.
  */
-const CompetitorsSection = ({ slug, keyword, onSelectionChange }: Props) => {
+const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }: Props) => {
    const compQ = useCompetitors(slug, keyword);
    const scanM = useScanCompetitors(slug);
    const selectM = useSelectCompetitors(slug);
@@ -55,6 +56,11 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange }: Props) => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [compQ.data?.competitors]);
 
+   // Surface the selection-save in-flight state so a parent modal can gate its confirm button.
+   useEffect(() => {
+      onSavingChange?.(selectM.isLoading);
+   }, [selectM.isLoading, onSavingChange]);
+
    const toggle = (id: number) => {
       const next = selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id];
       setSelectedIds(next);
@@ -62,7 +68,7 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange }: Props) => {
       onSelectionChange?.();
    };
 
-   const loading = compQ.isLoading;
+   const loading = compQ.isLoading || compQ.isFetching;
    const scanning = scanM.isLoading;
    const empty = competitors.length === 0 && !loading && !scanning;
 

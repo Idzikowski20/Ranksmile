@@ -18,7 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as unknown as { ID: number }).ID;
 
-   const keyword = req.query.keyword as string;
+   const raw = Array.isArray(req.query.keyword) ? req.query.keyword[0] : req.query.keyword;
+   const keyword = (raw || '').trim();
    if (!keyword) return res.status(400).json({ error: 'keyword is required' });
 
    const competitors = await getCompetitors(domainId, keyword);

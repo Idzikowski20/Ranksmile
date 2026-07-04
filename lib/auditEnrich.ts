@@ -16,6 +16,13 @@ const MAX_COMPETITORS = 6;
 
 const bareHost = (h: string): string => h.replace(/^www\./, '');
 
+// A competitor's host: its stored domain, else derived from its URL (so a row with an
+// empty domain still gets a real host for the self-comparison filter).
+const competitorHost = (domain: string, url: string): string => {
+   if (domain) return bareHost(domain);
+   try { return bareHost(new URL(url).hostname); } catch { return ''; }
+};
+
 export async function enrichAudit(domainId: number, url: string, keyword: string): Promise<RealAuditData | null> {
    const language = langOf(keyword);
    await ensureCompetitorsTables();
@@ -28,7 +35,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
 
    const selected = comps
       .filter((c) => c.selected)
-      .filter((c) => bareHost(c.domain || '') !== ownHost) // don't compare the page to itself
+      .filter((c) => competitorHost(c.domain || '', c.url) !== ownHost) // don't compare the page to itself
       .slice(0, MAX_COMPETITORS);
    if (!selected.length) return null;
 

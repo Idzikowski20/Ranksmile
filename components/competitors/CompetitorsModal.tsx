@@ -20,7 +20,10 @@ interface Props {
  * Thin modal wrapper around the shared CompetitorsSection. Selection persists live inside
  * the section, so onConfirm just triggers the parent's audit recompute.
  */
-const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => (
+const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => {
+   const [saving, setSaving] = React.useState(false);
+
+   return (
    <div
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
@@ -43,7 +46,7 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => (
          </div>
 
          <div style={{ flex: 1, overflow: 'auto', padding: '0 24px' }} className="styled-scrollbar">
-            <CompetitorsSection slug={slug} keyword={keyword} />
+            <CompetitorsSection slug={slug} keyword={keyword} onSavingChange={setSaving} />
          </div>
 
          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, padding: 16, borderTop: '1px solid #F4F4F5', flexShrink: 0 }}>
@@ -59,8 +62,9 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => (
             <button
                type="button"
                onClick={onConfirm}
-               style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', transition: 'background 150ms ease' }}
-               onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+               disabled={saving}
+               style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, transition: 'background 150ms ease' }}
+               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#783AFB'; }}
                onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
             >
                Let&apos;s go
@@ -68,6 +72,7 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => (
          </div>
       </div>
    </div>
-);
+   );
+};
 
 export default CompetitorsModal;

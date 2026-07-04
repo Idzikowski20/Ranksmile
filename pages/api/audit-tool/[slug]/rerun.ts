@@ -23,14 +23,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const id = Number((req.body as { id?: unknown } | undefined)?.id);
    if (!Number.isFinite(id)) return res.status(400).json({ error: 'A numeric audit id is required' });
 
-   const row = await queryOne<{ id: number }>('SELECT id FROM audit_runs WHERE id = ? AND domain_id = ? LIMIT 1', [id, domainId]);
+   const row = await queryOne<{ id: number; status: string }>('SELECT id, status FROM audit_runs WHERE id = ? AND domain_id = ? LIMIT 1', [id, domainId]);
    if (!row) return res.status(404).json({ error: 'Audit not found' });
 
+   // Only re-queue TERMINAL rows. Forcing a `running` row back to `queued` would let two
+   // workers compute the same audit concurrently and keep whichever finishes last (a
+   // stale result after a competitor change). A queued/running audit is already going
+   // to compute, so this is a no-op for those.
    await db.query(
       `UPDATE audit_runs SET status = 'queued', result_json = NULL, content_score = NULL, error = NULL,
               progress_done = 0, progress_total = 1, started_at = NULL, finished_at = NULL
-       WHERE id = ? AND domain_id = ?`,
+       WHERE id = ? AND domain_id = ? AND status IN ('completed', 'failed')`,
       { replacements: [id, domainId] },
    );
-   return res.status(202).json({ ok: true });
+   return res.status(202).json({ ok: true, requeued: row.status === 'completed' || row.status === 'failed' });
 }
