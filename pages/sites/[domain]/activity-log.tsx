@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
+import HoverTooltip from '../../../components/common/HoverTooltip';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
@@ -60,6 +61,9 @@ const fmtTime = (d: Date) => {
    if (h === 0) h = 12;
    return `${h}:${String(m).padStart(2, '0')}${ap}`;
 };
+// Compact table date (no year) with the full date+time surfaced on hover.
+const fmtDateShort = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+const fmtDateFull = (d: Date) => `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} · ${fmtTime(d)}`;
 const fmtRangeLabel = (from: Date | null, to: Date | null) => {
    if (!from) return 'Custom';
    const f = `${MONTHS[from.getMonth()]} ${from.getDate()}`;
@@ -320,6 +324,7 @@ const ActivityLogPage: NextPage = () => {
    const session = authClient.useSession?.();
    const person = (mounted && session?.data?.user?.email) ? session.data.user.email : 'You';
    const personInitial = (person.charAt(0) || '?').toUpperCase();
+   const personImage = (mounted && (session?.data?.user as { image?: string } | undefined)?.image) || '';
 
    const { data: peopleData } = usePeople();
    const peopleOptions: MultiOpt[] = useMemo(() => {
@@ -477,8 +482,13 @@ const ActivityLogPage: NextPage = () => {
             <title>{`Activity Log — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" actions={exportBtn} contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" contentMaxWidth="100%">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT, width: '100%', maxWidth: 880, margin: '0 auto' }}>
+               {/* Title row (kept inside the centered column so it aligns with the content) */}
+               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                  <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Activity Log</h1>
+                  {exportBtn}
+               </div>
                {/* Filters row */}
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div ref={segRef} style={{ position: 'relative' }}>
@@ -541,7 +551,7 @@ const ActivityLogPage: NextPage = () => {
                   <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse', fontFamily: FONT }}>
                      <thead>
                         <tr>
-                           <th style={{ width: 220, textAlign: 'left', padding: '12px 16px 12px 4px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Person</th>
+                           <th style={{ width: 96, textAlign: 'left', padding: '12px 16px 12px 4px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Person</th>
                            <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Activity</th>
                            <th style={{ width: 200, textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid #F4F4F5' }}>
                               <button
@@ -583,12 +593,16 @@ const ActivityLogPage: NextPage = () => {
                            events.map((e) => (
                               <tr key={e.id} className="activity-log-row">
                                  <td style={{ padding: '14px 16px 14px 4px', verticalAlign: 'middle' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                                       <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase' }}>
-                                          {personInitial}
-                                       </span>
-                                       <span style={{ minWidth: 0, fontSize: 14, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person}</span>
-                                    </div>
+                                    <HoverTooltip label={person}>
+                                       {personImage ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img alt={person} src={personImage} width={28} height={28} style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0, cursor: 'default' }} />
+                                       ) : (
+                                          <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
+                                             {personInitial}
+                                          </span>
+                                       )}
+                                    </HoverTooltip>
                                  </td>
                                  <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: '#18181B' }}>
@@ -611,8 +625,11 @@ const ActivityLogPage: NextPage = () => {
                                     </div>
                                  </td>
                                  <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                    <span style={{ fontSize: 14, color: '#18181B' }}>{fmtDate(e.time)} </span>
-                                    <span style={{ fontSize: 14, color: '#71717B' }}>{fmtTime(e.time)}</span>
+                                    <HoverTooltip label={fmtDateFull(e.time)} align="right">
+                                       <span style={{ fontSize: 14, color: '#18181B', cursor: 'default' }}>
+                                          {fmtDateShort(e.time)}, <span style={{ color: '#71717B' }}>{fmtTime(e.time)}</span>
+                                       </span>
+                                    </HoverTooltip>
                                  </td>
                               </tr>
                            ))

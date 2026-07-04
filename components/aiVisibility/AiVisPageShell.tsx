@@ -3,6 +3,7 @@ import Head from 'next/head';
 import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
+import AiVisExportMenu from './AiVisExportMenu';
 import CrunchingBar from './CrunchingBar';
 import { SkeletonBars } from './SkeletonBlocks';
 import { useAiVisibilityGuard } from '../../lib/useAiVisibilityGuard';
@@ -25,9 +26,16 @@ const InfoIcon = () => (
  * + persistent "Crunching data…" bar while a scan runs. `children` receives the
  * crunching flag so pages can keep showing skeletons during the first scan.
  */
-const AiVisPageShell = ({ section, title, children }: {
+const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = null, onCompareSelect, toolbarPrompts, toolbarTrailing, children }: {
    section: string;
    title: string;
+   // The page owns Compare state (it drives page-level queries) and hands it down
+   // so the shared toolbar's "Compare" slot reflects it. Omitted → static button.
+   compareCompetitors?: Array<{ domain: string }>;
+   compareSelected?: string | null;
+   onCompareSelect?: (d: string | null) => void;
+   toolbarPrompts?: Array<{ id: number; text: string }>; // makes "All prompts" a searchable picker
+   toolbarTrailing?: React.ReactNode; // rendered after "All models" in the toolbar (e.g. Refresh data)
    children: (ctx: { crunching: boolean }) => React.ReactNode;
 }) => {
    const router = useRouter();
@@ -52,12 +60,18 @@ const AiVisPageShell = ({ section, title, children }: {
                   <InfoIcon />
                </span>
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #E4E4E7', borderRadius: 8, padding: '6px 12px', fontSize: 14, fontWeight: 600, color: '#52525C', fontFamily: FONT, opacity: 0.8 }}>Export</span>
+                  <AiVisExportMenu slug={slug} />
                   <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
                </div>
             </div>
 
-            <AiVisibilityToolbar />
+            <AiVisibilityToolbar
+               compareCompetitors={compareCompetitors}
+               compareSelected={compareSelected}
+               onCompareSelect={onCompareSelect}
+               prompts={toolbarPrompts}
+               trailing={toolbarTrailing}
+            />
 
             <div style={{ marginTop: 24 }}>
                {ready ? children({ crunching: !!crunching }) : <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}><SkeletonBars /></div>}

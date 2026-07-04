@@ -370,7 +370,7 @@ const ContentAuditPage: NextPage = () => {
             <title>{`Content Audit — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" actions={actions} contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%">
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>

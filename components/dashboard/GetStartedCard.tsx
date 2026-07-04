@@ -40,8 +40,8 @@ const Ring = ({ pct }: { pct: number }) => {
 /** Onboarding "Next step" card — driven by the real checklist; hidden once complete. */
 const GetStartedCard = () => {
   const router = useRouter();
-  const { pct, nextStep } = useOnboardingChecklist();
-  if (!nextStep) return null; // all steps done → nothing to nudge
+  const { pct, nextStep, loading } = useOnboardingChecklist();
+  if (loading || !nextStep) return null; // wait for real state; hide when all done
 
   const href = nextStep.href || '';
 

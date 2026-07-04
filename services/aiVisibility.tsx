@@ -100,3 +100,29 @@ export function useGeneratePrompts(slug: string | undefined) {
       { onError: toastError },
    );
 }
+
+export type DomainOverview = { visibilityScore: number; mentionRate: number; avgPosition: number | null; directCitations: number; pages: number; perModel: Array<{ model: string; score: number }> };
+export type DomainSnapshotDTO = { overview: DomainOverview; sources: Array<{ url: string; domain: string; timesShown: number; models: string[] }>; prompts: Array<{ promptId: number; topic: string; text: string; score: number }>; topics: Array<{ topic: string; score: number }>; citedPromptIds: number[] };
+export type OverviewPayload = {
+   pending?: boolean; scanId?: number; finishedAt?: string | null;
+   snapshot?: DomainSnapshotDTO;
+   competitors?: Array<{ domain: string; snapshot: DomainSnapshotDTO }>;   // top-5, sources emptied
+   competitorsAll?: Array<{ domain: string; visibilityScore: number }>;     // all, for the picker
+   compare?: { competitorDomain: string; snapshot: DomainSnapshotDTO } | null; // long-tail fallback
+   delta?: unknown; nextRefreshAt?: string | null; daysUntilRefresh?: number | null;
+};
+
+export function useAiVisOverview(slug: string | undefined, competitor?: string) {
+   const q = competitor ? `&competitor=${encodeURIComponent(competitor)}` : '';
+   return useQuery<OverviewPayload>(['ai-vis-overview', slug, competitor || ''],
+      () => fetchJson<OverviewPayload>(`/api/ai-visibility/${slug}/data?view=overview${q}`),
+      { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
+}
+
+export type HistoryPayload = { scans: Array<{ scanId: number; finishedAt: string | null; series: { you: DomainOverview | null; competitor?: DomainOverview | null } }> };
+export function useAiVisHistory(slug: string | undefined, competitor?: string) {
+   const q = competitor ? `?competitor=${encodeURIComponent(competitor)}` : '';
+   return useQuery<HistoryPayload>(['ai-vis-history', slug, competitor || ''],
+      () => fetchJson<HistoryPayload>(`/api/ai-visibility/${slug}/history${q}`),
+      { enabled: !!slug, staleTime: 60_000, keepPreviousData: true });
+}
