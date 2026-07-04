@@ -84,7 +84,8 @@ const AuditDetailPage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`${run?.keyword || 'Audit'} — ${domain}`}</title></Head>
          <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="880px">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
+            <div style={{ maxWidth: 880, margin: '0 auto' }}>
             {/* Sticky title row: keyword + audited URL + Share */}
             <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '16px 0', marginBottom: 4 }}>
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0 }}>
@@ -161,6 +162,7 @@ const AuditDetailPage: NextPage = () => {
                   ))}
                </div>
             )}
+            </div>
          </DomainSubLayout>
       </AppShell>
    );
