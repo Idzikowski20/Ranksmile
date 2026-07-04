@@ -193,6 +193,49 @@ export function useAiVisCompetitorDetail(slug: string | undefined, competitor: s
       { enabled: !!slug && !!competitor, staleTime: 60_000 });
 }
 
+// ── Fanout queries ─────────────────────────────────────────────────────────
+export type FanoutByQueryRow = { query: string; promptCount: number; models: string[]; timesShown: number; prompts: Array<{ id: number; text: string; topic: string; timesShown: number }> };
+export type FanoutByPromptRow = { id: number; text: string; topic: string; fanoutCount: number; models: string[]; timesShown: number; queries: Array<{ query: string; models: string[]; timesShown: number }> };
+export type FanoutPayload = { pending?: boolean; groupByFanout: FanoutByQueryRow[]; groupByPrompt: FanoutByPromptRow[]; commonPhrases: Array<{ phrase: string; count: number }> };
+export function useAiVisFanout(slug: string | undefined, params: { prompts?: number[]; models?: string[] }) {
+   const q = new URLSearchParams({ view: 'fanout' });
+   if (params.prompts?.length) q.set('prompts', params.prompts.join(','));
+   if (params.models?.length) q.set('models', params.models.join(','));
+   const key = q.toString();
+   return useQuery<FanoutPayload>(['ai-vis-fanout', slug, key],
+      () => fetchJson<FanoutPayload>(`/api/ai-visibility/${slug}/data?${key}`),
+      { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
+}
+
+/** Shared detail slide-over payload (prompt-detail + fanout-detail return the same shape). */
+export type AiVisDetailPayload = {
+   pending?: boolean;
+   title: string;
+   overview: { visibilityScore: number; mentionRate: number; avgPosition: number | null } | null;
+   engines: string[];
+   series: Array<{ finishedAt: string | null; visibilityScore: number; mentionRate: number; avgPosition: number | null }>;
+   brands: Array<{ brand: string; domain: string; mentions: number; avgPosition: number | null }>;
+   fanout: Array<{ query: string; models: string[]; timesShown: number }>;
+};
+export function useAiVisPromptDetail(slug: string | undefined, params: { promptId: number | null; engine?: string }) {
+   const q = new URLSearchParams({ view: 'prompt-detail' });
+   if (params.promptId != null) q.set('promptId', String(params.promptId));
+   if (params.engine) q.set('engine', params.engine);
+   const key = q.toString();
+   return useQuery<AiVisDetailPayload>(['ai-vis-prompt-detail', slug, key],
+      () => fetchJson<AiVisDetailPayload>(`/api/ai-visibility/${slug}/data?${key}`),
+      { enabled: !!slug && params.promptId != null, staleTime: 60_000, keepPreviousData: true });
+}
+export function useAiVisFanoutDetail(slug: string | undefined, params: { query: string | null; engine?: string }) {
+   const q = new URLSearchParams({ view: 'fanout-detail' });
+   if (params.query) q.set('query', params.query);
+   if (params.engine) q.set('engine', params.engine);
+   const key = q.toString();
+   return useQuery<AiVisDetailPayload>(['ai-vis-fanout-detail', slug, key],
+      () => fetchJson<AiVisDetailPayload>(`/api/ai-visibility/${slug}/data?${key}`),
+      { enabled: !!slug && !!params.query, staleTime: 60_000, keepPreviousData: true });
+}
+
 /** Sources view with prompt/model/gapBrands filters. Distinct query key per filter set
  *  so switching filters refetches; keepPreviousData avoids flicker. */
 export function useAiVisSources<T>(slug: string | undefined, params: { prompts?: number[]; models?: string[]; gapBrands?: string[]; compare?: string | null }) {

@@ -133,8 +133,8 @@ export async function seedScanFromLatest(newScanId: number, configId: number): P
    );
    if (!latest) return;
    await db.query(
-      `INSERT INTO ai_vis_results (scan_id, prompt_id, model, answer, citations, brands, own_cited, own_position, cost_micros)
-       SELECT ?, prompt_id, model, answer, citations, brands, own_cited, own_position, 0
+      `INSERT INTO ai_vis_results (scan_id, prompt_id, model, answer, citations, brands, fan_out_queries, own_cited, own_position, cost_micros)
+       SELECT ?, prompt_id, model, answer, citations, brands, fan_out_queries, own_cited, own_position, 0
          FROM ai_vis_results
         WHERE scan_id = ? AND error IS NULL
           AND prompt_id IN (SELECT id FROM ai_vis_prompts WHERE config_id = ? AND selected = 1)`,
@@ -216,9 +216,9 @@ export async function runScanChunk(scanId: number, ownDomain: string, limit = AI
             const pos = ownDomainPosition(out.citations, ownDomain);
             micros = Math.round(out.costUsd * 1e6);
             await db.query(
-               `INSERT INTO ai_vis_results (scan_id, prompt_id, model, answer, citations, own_cited, own_position, cost_micros)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-               { replacements: [scanId, pair.prompt.id, pair.model, out.text, JSON.stringify(out.citations), pos ? 1 : 0, pos, micros] },
+               `INSERT INTO ai_vis_results (scan_id, prompt_id, model, answer, citations, fan_out_queries, own_cited, own_position, cost_micros)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+               { replacements: [scanId, pair.prompt.id, pair.model, out.text, JSON.stringify(out.citations), JSON.stringify(out.fanOutQueries), pos ? 1 : 0, pos, micros] },
             );
          } catch (e) {
             await db.query(
