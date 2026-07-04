@@ -188,3 +188,21 @@ export async function getRankedKeywords(opts: {
    const items = await dfsPost('/dataforseo_labs/google/ranked_keywords/live', task);
    return items.map(mapItem).filter((k) => k.keyword);
 }
+
+/**
+ * Domain authority per host, via Backlinks Bulk Ranks (one call for up to 1000 targets).
+ * DataForSEO's `rank` is 0–1000; we normalise to a 0–100 authority to match the UI shield.
+ * Returns {} when unconfigured so callers degrade to "no authority" rather than fail.
+ */
+export async function domainRanks(domains: string[]): Promise<Record<string, number>> {
+   const targets = Array.from(new Set(domains.map((d) => d.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '')).filter(Boolean)));
+   if (!targets.length || !isDataForSeoConfigured()) return {};
+   const items = await dfsPost('/backlinks/bulk_ranks/live', { targets });
+   const out: Record<string, number> = {};
+   for (const it of items) {
+      const target = String((it as { target?: unknown })?.target ?? '').replace(/^www\./, '');
+      const rank = Number((it as { rank?: unknown })?.rank ?? 0);
+      if (target) out[target] = Math.max(0, Math.min(100, Math.round(rank / 10)));
+   }
+   return out;
+}
