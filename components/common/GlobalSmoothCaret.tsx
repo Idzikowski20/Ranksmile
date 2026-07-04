@@ -293,6 +293,16 @@ const GlobalSmoothCaret = () => {
     const onSelectionChange = () => { if (activeRef.current) { resetBlink(); scheduleUpdate(); } };
     const onScrollOrResize = () => { if (activeRef.current) scheduleUpdate(); };
     const onFontsDone = () => { if (activeRef.current) scheduleUpdate(); };
+    // A modal/dropdown open animation (e.g. `growOut` scale) or transition moves the
+    // field AFTER focusin measured the caret. CSS transforms don't resize the layout
+    // box, so ResizeObserver never fires — re-measure when the field (or an ancestor
+    // that just animated/transitioned) settles. This is the fix for the caret landing
+    // below the search input inside animated dropdowns until the first click.
+    const onAncestorSettle = (e: Event) => {
+      const field = activeRef.current;
+      const target = e.target;
+      if (field && target instanceof Node && (target === field || target.contains(field))) scheduleUpdate();
+    };
 
     document.addEventListener('focusin', onFocusIn);
     document.addEventListener('focusout', onFocusOut);
@@ -301,6 +311,9 @@ const GlobalSmoothCaret = () => {
     // capture: true catches scrolling of any ancestor (modals, scroll panes) + the field itself.
     window.addEventListener('scroll', onScrollOrResize, true);
     window.addEventListener('resize', onScrollOrResize);
+    // capture: true — animationend/transitionend don't bubble reliably from all ancestors.
+    document.addEventListener('animationend', onAncestorSettle, true);
+    document.addEventListener('transitionend', onAncestorSettle, true);
     document.fonts?.addEventListener?.('loadingdone', onFontsDone);
 
     // If a field is already focused when we mount (e.g. autoFocus), pick it up.
@@ -313,6 +326,8 @@ const GlobalSmoothCaret = () => {
       document.removeEventListener('selectionchange', onSelectionChange);
       window.removeEventListener('scroll', onScrollOrResize, true);
       window.removeEventListener('resize', onScrollOrResize);
+      document.removeEventListener('animationend', onAncestorSettle, true);
+      document.removeEventListener('transitionend', onAncestorSettle, true);
       document.fonts?.removeEventListener?.('loadingdone', onFontsDone);
       resizeObserver.disconnect();
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);

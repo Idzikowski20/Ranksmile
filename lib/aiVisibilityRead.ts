@@ -1,12 +1,14 @@
-/** DB → overview snapshot. Thin wrapper so the read API and the /history + delta
- *  paths all turn a scanId into a comparable snapshot the same way. Pure mapping
- *  helpers (parseCitations, mapDbRowsToResultRows) are exported for unit tests. */
+/** DB → result rows. Thin wrapper so the read API and the /history + delta paths
+ *  all load a scan's rows the same way. Pure mapping helpers (parseCitations,
+ *  mapDbRowsToResultRows) are exported for unit tests. Rows carry the prompt's
+ *  topic/text so snapshotForDomain can compose prompts/topics without re-querying. */
 import { queryRows } from './db/query';
-import { buildSnapshot, ResultRow, OverviewSnapshot } from './aiVisibilityMetrics';
+import { ResultRow } from './aiVisibilityMetrics';
 import type { LlmCitation } from './dataforseoLlm';
 
 export type DbResultRow = {
-   prompt_id: number; model: string; own_cited: number; own_position: number | null; citations: unknown;
+   prompt_id: number; model: string; own_cited: number; own_position: number | null;
+   citations: unknown; topic: string; text: string;
 };
 
 export const parseCitations = (raw: unknown): LlmCitation[] => {
@@ -32,17 +34,16 @@ export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbR
    ownCited: !!r.own_cited,
    ownPosition: r.own_position,
    citations: parseCitations(r.citations),
+   topic: r.topic ?? '',
+   text: r.text ?? '',
 }));
 
 export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
    const dbRows = await queryRows<DbResultRow>(
-      `SELECT prompt_id, model, own_cited, own_position, citations
-       FROM ai_vis_results WHERE scan_id = ? AND error IS NULL`,
+      `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
+       FROM ai_vis_results r JOIN ai_vis_prompts p ON p.id = r.prompt_id
+       WHERE r.scan_id = ? AND r.error IS NULL`,
       [scanId],
    );
    return mapDbRowsToResultRows(dbRows);
-}
-
-export async function buildOverview(scanId: number): Promise<OverviewSnapshot> {
-   return buildSnapshot(await loadScanResultRows(scanId));
 }
