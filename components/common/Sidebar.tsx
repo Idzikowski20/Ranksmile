@@ -367,7 +367,7 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    }, [domainRecsData]);
 
    const toolItems = [
-      { href: workspaceHref(activeId, '/dashboard'), label: 'Audit', icon: <IcoAudit /> },
+      { href: workspaceHref(activeId, activeSlug ? `/sites/${activeSlug}/audit-tool` : '/dashboard'), label: 'Audit', icon: <IcoAudit /> },
       { href: workspaceHref(activeId, '/dashboard'), label: 'Topic Research', icon: <IcoTopicResearch /> },
       { href: workspaceHref(activeId, '/research'), label: 'Keyword Research', icon: <IcoKeywordResearch /> },
       { href: workspaceHref(activeId, '/content-editor'), label: 'AI Humanizer', icon: <IcoAIHumanizer /> },
