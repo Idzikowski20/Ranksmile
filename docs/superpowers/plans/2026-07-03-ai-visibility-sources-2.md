@@ -1007,10 +1007,12 @@ git commit -m "feat(ai-vis): source detail modal — Times-shown trend + brands/
 
 **Files:** Modify `components/aiVisibility/PromptPicker.tsx`.
 
-**Interfaces:**
-- Produces: controlled multiselect. New props: `prompts: Array<{ id: number; text: string; topic: string }>`, `selected: number[]`, `onChange: (ids: number[]) => void`. Empty `selected` = "All prompts".
+> **Note (superseded):** the shipped `PromptPicker.tsx` already implements this — it exports `PromptOption = { id: number; text: string; topic?: string }`, groups options by topic, and provides search + checkbox multi-select with per-topic and global "All prompts" toggles (controlled when `onChange` is passed, self-managed otherwise). Treat F1 as **reuse/extend the existing component**, not a from-scratch rewrite. The snippet below is retained for historical reference; do not replace the working component with it.
 
-- [ ] **Step 1: Rewrite as a controlled grouped multiselect.** Replace the internal single-select state with props + grouping by topic, checkboxes, "Select all":
+**Interfaces:**
+- Produces: controlled multiselect. Props already present: `prompts: PromptOption[]` (`topic?` optional), `selected?: number[]`, `onChange?: (ids: number[]) => void`. Empty `selected` = "All prompts".
+
+- [ ] **Step 1 (already satisfied): controlled grouped multiselect.** The component already uses props + grouping by topic, checkboxes, and "Select all"; no rewrite needed. Reference implementation:
 
 ```tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';

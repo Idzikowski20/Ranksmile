@@ -49,20 +49,22 @@ const AiVisibilityManage: NextPage = () => {
    const [topics, setTopics] = useState<WizardTopic[]>([]);
    const [bulkOpen, setBulkOpen] = useState(false);
    const [bulkText, setBulkText] = useState('');
-   const seeded = useRef(false);
+   const seededSlug = useRef<string | null>(null);
 
-   // Seed editable state once from the saved config, carrying each prompt's DB id.
+   // Seed editable state once per domain from the saved config, carrying each prompt's DB id.
+   // Keyed to `slug` so switching domains client-side re-seeds instead of showing the previous
+   // domain's prompts; within the same domain the guard prevents clobbering in-progress edits.
    useEffect(() => {
       const config = configQ.data?.config;
-      if (!config || seeded.current) return;
-      seeded.current = true;
+      if (!config || seededSlug.current === slug) return;
+      seededSlug.current = slug;
       setTopics(config.topics.map((t, ti) => ({
          key: `t-${ti}`,
          title: t.title,
          prompts: t.prompts.map((p) => ({ key: `db-${p.id}`, id: p.id, text: p.text, provenance: p.provenance, selected: p.selected })),
          generating: false,
       })));
-   }, [configQ.data]);
+   }, [configQ.data, slug]);
 
    const selectedCount = useMemo(
       () => topics.reduce((n, t) => n + t.prompts.filter((p) => p.selected).length, 0),
@@ -114,7 +116,7 @@ const AiVisibilityManage: NextPage = () => {
    };
 
    const pct = Math.min(100, Math.round((selectedCount / AI_VIS_PROMPT_LIMIT) * 100));
-   const loading = configQ.isLoading && !seeded.current;
+   const loading = configQ.isLoading && seededSlug.current !== slug;
 
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>

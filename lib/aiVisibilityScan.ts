@@ -262,9 +262,11 @@ export async function runBrandsForScan(scanId: number): Promise<void> {
       // Dynamic import keeps @ai-sdk/deepseek (ESM) out of this module's static import
       // graph, so unit tests of aiVisibilityScan don't have to transform it.
       const { runBrandChunk } = await import('./aiVisibilityBrands');
+      let prevRemaining = Number.POSITIVE_INFINITY;
       for (let i = 0; i < 100; i += 1) {
          const { remaining } = await runBrandChunk(scanId, ownBrand);
-         if (remaining === 0) break;
+         if (remaining === 0 || remaining >= prevRemaining) break; // done, or no progress this pass
+         prevRemaining = remaining;
       }
    } catch { /* brands are optional */ }
 }

@@ -26,6 +26,17 @@ const StatCard = ({ label, value, hint }: { label: string; value: React.ReactNod
 
 const cell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
 
+/** Only allow http/https source URLs as an href — reject `javascript:`/`data:`/malformed
+ *  so a hostile scan URL can't execute when the row is clicked. */
+const safeHref = (url: string): string | undefined => {
+   try {
+      const { protocol } = new URL(url);
+      return protocol === 'http:' || protocol === 'https:' ? url : undefined;
+   } catch {
+      return undefined;
+   }
+};
+
 type SourceRow = { url: string; domain: string; timesShown: number; mentioned?: boolean };
 const splitUrl = (url: string, fallback: string) => { try { const u = new URL(url); return { host: u.host, path: `${u.pathname}${u.search}` }; } catch { return { host: fallback, path: '' }; } };
 
@@ -66,16 +77,24 @@ const SourcesMini = ({ title, subtitle, sources }: { title: string; subtitle: st
                </div>
                {sorted.slice(0, visible).map((s) => {
                   const { host, path } = splitUrl(s.url, s.domain);
+                  const href = safeHref(s.url);
+                  const sourceInner = (
+                     <>
+                        { /* eslint-disable-next-line @next/next/no-img-element */ }
+                        <img alt="" src={faviconFor(s.domain)} width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                           <span style={{ fontWeight: 500, color: '#18181B' }}>{host}</span>
+                           <span style={{ color: '#9F9FA9' }}>{path}</span>
+                        </span>
+                     </>
+                  );
                   return (
                      <div key={s.url} style={{ display: 'flex', borderTop: '1px solid #F4F4F5' }}>
-                        <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ ...cell, flex: 1, minWidth: 0, gap: 8, textDecoration: 'none', color: 'inherit' }}>
-                           { /* eslint-disable-next-line @next/next/no-img-element */ }
-                           <img alt="" src={faviconFor(s.domain)} width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
-                           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              <span style={{ fontWeight: 500, color: '#18181B' }}>{host}</span>
-                              <span style={{ color: '#9F9FA9' }}>{path}</span>
-                           </span>
-                        </a>
+                        {href ? (
+                           <a href={href} target="_blank" rel="noopener noreferrer" style={{ ...cell, flex: 1, minWidth: 0, gap: 8, textDecoration: 'none', color: 'inherit' }}>{sourceInner}</a>
+                        ) : (
+                           <span title="Source URL is not a valid web link" style={{ ...cell, flex: 1, minWidth: 0, gap: 8, color: 'inherit' }}>{sourceInner}</span>
+                        )}
                         <div style={{ ...cell, width: 110, flexShrink: 0, justifyContent: 'center', borderLeft: '1px solid #F4F4F5', color: s.mentioned ? '#18181B' : '#71717B' }}>{s.mentioned ? 'Yes' : 'No'}</div>
                         <div style={{ ...cell, width: 150, flexShrink: 0, justifyContent: 'flex-end', gap: 10, borderLeft: '1px solid #F4F4F5', fontWeight: 600, color: '#18181B' }}>
                            <Sparkline value={s.timesShown} max={max} />
@@ -148,16 +167,24 @@ const MentionTable = ({ rows, brand, ownLabel }: { rows: MentionSource[]; brand:
             </div>
             {rows.slice(0, visible).map((s) => {
                const { host, path } = splitUrl(s.url, s.domain);
+               const href = safeHref(s.url);
+               const sourceInner = (
+                  <>
+                     { /* eslint-disable-next-line @next/next/no-img-element */ }
+                     <img alt="" src={faviconFor(s.domain)} width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+                     <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 500, color: '#18181B' }}>{host}</span>
+                        <span style={{ color: '#9F9FA9' }}>{path}</span>
+                     </span>
+                  </>
+               );
                return (
                   <div key={s.url} style={{ display: 'flex', borderTop: '1px solid #F4F4F5' }}>
-                     <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ ...cell, flex: 1, minWidth: 0, gap: 8, textDecoration: 'none', color: 'inherit' }}>
-                        { /* eslint-disable-next-line @next/next/no-img-element */ }
-                        <img alt="" src={faviconFor(s.domain)} width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
-                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                           <span style={{ fontWeight: 500, color: '#18181B' }}>{host}</span>
-                           <span style={{ color: '#9F9FA9' }}>{path}</span>
-                        </span>
-                     </a>
+                     {href ? (
+                        <a href={href} target="_blank" rel="noopener noreferrer" style={{ ...cell, flex: 1, minWidth: 0, gap: 8, textDecoration: 'none', color: 'inherit' }}>{sourceInner}</a>
+                     ) : (
+                        <span title="Source URL is not a valid web link" style={{ ...cell, flex: 1, minWidth: 0, gap: 8, color: 'inherit' }}>{sourceInner}</span>
+                     )}
                      <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'center', borderLeft: '1px solid #F4F4F5' }}>{flag(s.ownMentioned)}</div>
                      <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'center', borderLeft: '1px solid #F4F4F5' }}>{flag(s.compMentioned)}</div>
                      <div style={{ ...cell, width: 150, flexShrink: 0, justifyContent: 'flex-end', gap: 10, borderLeft: '1px solid #F4F4F5', fontWeight: 600, color: '#18181B' }}>

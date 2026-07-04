@@ -83,7 +83,13 @@ const AiVisibilitySources: NextPage = () => {
 
    const sources = useMemo(() => sourcesQ.data?.sources || [], [sourcesQ.data]);
    const compareSources = useMemo(() => sourcesQ.data?.compareSources || [], [sourcesQ.data]);
-   const tableRows = compareDomain ? compareSources : sources;
+   // `keepPreviousData` keeps the prior competitor's rows during a compare refetch, so gate
+   // them by `compareLabel` (the competitor the payload actually belongs to). The server
+   // NORMs the compare param (lowercase, strip leading `www.`), so match that here. Until the
+   // labels align we render `[]` → table falls back to skeletons, not stale mismatched rows.
+   const compareMatches = !!compareDomain
+      && sourcesQ.data?.compareLabel === compareDomain.toLowerCase().replace(/^www\./, '');
+   const tableRows = compareDomain ? (compareMatches ? compareSources : []) : sources;
    const filtered = useMemo(() => {
       const q = search.trim().toLowerCase();
       if (!q) return tableRows;
