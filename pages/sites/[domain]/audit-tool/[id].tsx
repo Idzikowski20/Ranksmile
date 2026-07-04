@@ -62,8 +62,10 @@ const AuditDetailPage: NextPage = () => {
    const run = runQ.data?.run;
    const result = runQ.data?.result;
 
-   const busy = !run || run.status === 'queued' || run.status === 'running';
-   const failed = run?.status === 'failed';
+   // Surface react-query load/error state so a failed fetch shows an error instead of
+   // an endless "Analyzing the page…" (which would only be true while compute runs).
+   const failed = runQ.isError || run?.status === 'failed';
+   const busy = !failed && (runQ.isLoading || !run || run.status === 'queued' || run.status === 'running');
 
    // Group factors by section, preserving first-seen order.
    const sections: { name: string; factors: AuditFactor[] }[] = [];
@@ -100,7 +102,7 @@ const AuditDetailPage: NextPage = () => {
 
             {failed && (
                <div style={{ border: '1px solid #FECACA', background: '#FEF2F2', borderRadius: 12, padding: 20, color: '#B91C1C', fontFamily: FONT, fontSize: 14 }}>
-                  Audit failed{run?.error ? `: ${run.error}` : '.'}
+                  {run?.status === 'failed' ? `Audit failed${run?.error ? `: ${run.error}` : '.'}` : 'Could not load this audit. Please try again.'}
                </div>
             )}
 

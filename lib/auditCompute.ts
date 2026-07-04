@@ -187,15 +187,29 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
 
 /** Fetch the page (SSRF-guarded, timed) and build the audit. */
 export async function computeAudit(url: string, keyword: string): Promise<AuditResult> {
-   await assertPublicUrl(url);
+   const headers = { 'User-Agent': 'SerpBearAuditBot/1.0 (+https://serpbear.com)' };
    const startedAt = Date.now();
-   let ttfbMs = 0;
-   const resp = await fetch(url, {
-      redirect: 'follow',
-      headers: { 'User-Agent': 'SerpBearAuditBot/1.0 (+https://serpbear.com)' },
-      signal: AbortSignal.timeout(30000),
-   });
-   ttfbMs = Date.now() - startedAt;
+
+   // Follow redirects MANUALLY and re-validate EVERY hop: validating only the initial
+   // URL then auto-following would let a page 30x-redirect to an internal/private host
+   // (localhost, 169.254.x, RFC1918) and bypass the SSRF guard.
+   let current = url;
+   let resp: Awaited<ReturnType<typeof fetch>> | null = null;
+   for (let hop = 0; hop < 5; hop += 1) {
+      await assertPublicUrl(current);
+      resp = await fetch(current, { redirect: 'manual', headers, signal: AbortSignal.timeout(30000) });
+      if (resp.status >= 300 && resp.status < 400) {
+         const loc = resp.headers.get('location');
+         if (!loc) break;
+         current = new URL(loc, current).toString();
+         continue;
+      }
+      break;
+   }
+   if (!resp) throw new Error('Audit fetch produced no response');
+   if (resp.status >= 300 && resp.status < 400) throw new Error('Too many redirects');
+
+   const ttfbMs = Date.now() - startedAt;
    const html = await resp.text();
    const loadMs = Date.now() - startedAt;
    return buildAuditResult(html, url, keyword, { ttfbMs, loadMs });

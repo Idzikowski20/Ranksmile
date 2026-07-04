@@ -36,13 +36,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
    if (keywords.length === 0) return res.status(400).json({ error: 'At least one keyword is required' });
 
-   try {
-      const ids: number[] = [];
-      for (const keyword of keywords) {
+   // Enqueue is idempotent (upsert on domain+url+keyword), so a partial batch + client
+   // retry re-queues the same rows instead of duplicating them. Collect per-keyword
+   // failures and only 500 when nothing was created.
+   const ids: number[] = [];
+   let failed = 0;
+   for (const keyword of keywords) {
+      try {
          ids.push(await enqueueAudit(domainId, url, keyword));
+      } catch (e) {
+         failed += 1;
+         console.warn('[audit] enqueue failed:', getErrorMessage(e));
       }
-      return res.status(202).json({ ids });
-   } catch (e) {
-      return res.status(500).json({ error: getErrorMessage(e) });
    }
+   if (ids.length === 0) return res.status(500).json({ error: 'Failed to create audits' });
+   return res.status(202).json({ ids, failed });
 }

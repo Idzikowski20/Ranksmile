@@ -40,6 +40,9 @@ export async function ensureAuditTables(): Promise<void> {
       created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('audit_runs', e));
 
    try { await db.query('CREATE INDEX IF NOT EXISTS idx_audit_runs_domain ON audit_runs (domain_id)'); } catch (e) { ignoreExisting('idx audit_runs domain', e); }
+   // One row per (domain, url, keyword): dedupes re-audits and is the ON CONFLICT
+   // target for the idempotent enqueue upsert (lib/auditRunner).
+   try { await db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_runs_uniq ON audit_runs (domain_id, url, keyword)'); } catch (e) { ignoreExisting('idx audit_runs uniq', e); }
 
    checked = true;
 }
