@@ -7,7 +7,6 @@ import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
 import CompetitorsModal from '../../../../components/competitors/CompetitorsModal';
 import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/auditTool';
-import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../../../services/competitors';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AuditFactor } from '../../../../lib/auditTypes';
@@ -67,20 +66,12 @@ const AuditDetailPage: NextPage = () => {
    // "Select competitors" modal — shared store keyed by (domain, keyword). Changing the
    // selection re-queues this audit so the charts recompute against the chosen competitors.
    const [compOpen, setCompOpen] = useState(false);
-   const compQ = useCompetitors(slug, run?.keyword);
-   const scanM = useScanCompetitors(slug);
-   const selectM = useSelectCompetitors(slug);
    const rerunM = useRerunAudit(slug);
    const runM = useRunAudits(slug);
 
-   const onConfirmCompetitors = (selectedIds: number[]) => {
-      if (!run?.keyword) return;
-      selectM.mutate({ keyword: run.keyword, selectedIds }, {
-         onSuccess: () => {
-            setCompOpen(false);
-            if (runId) rerunM.mutate({ id: runId }, { onSuccess: () => runM.mutate() });
-         },
-      });
+   const onConfirmCompetitors = () => {
+      setCompOpen(false);
+      if (runId) rerunM.mutate({ id: runId }, { onSuccess: () => runM.mutate() });
    };
 
    // Surface react-query load/error state so a failed fetch shows an error instead of
@@ -234,11 +225,8 @@ const AuditDetailPage: NextPage = () => {
 
          {compOpen && run?.keyword && (
             <CompetitorsModal
+               slug={slug}
                keyword={run.keyword}
-               competitors={compQ.data?.competitors || []}
-               loading={compQ.isLoading}
-               scanning={scanM.isLoading}
-               onScan={() => { if (run.keyword) scanM.mutate({ keyword: run.keyword }); }}
                onClose={() => setCompOpen(false)}
                onConfirm={onConfirmCompetitors}
             />

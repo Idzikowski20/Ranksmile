@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import CompetitorsSection from '../competitors/CompetitorsSection';
 
 /* ── Design tokens ─────────────────────────────────────────────── */
 const C = {
@@ -384,9 +385,9 @@ const SourceBadge = ({ source }: { source: 'paa' | 'comp' }) => {
 };
 
 /* ── Main component ────────────────────────────────────────────── */
-type Props = { open: boolean; keyword: string; onClose: () => void };
+type Props = { open: boolean; slug: string | undefined; keyword: string; onClose: () => void };
 
-const CustomizationPanelModal = ({ open, keyword, onClose }: Props) => {
+const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
   const [active, setActive] = useState('competitors');
   const [learn, setLearn] = useState(true);
   const [structure, setStructure] = useState({ words: 2034, headings: 31, paragraphs: 48, images: 46 });
@@ -566,108 +567,7 @@ const CustomizationPanelModal = ({ open, keyword, onClose }: Props) => {
                   Pick at least five URLs for the most relevant results. <LearnMore />
                 </SectionHeader>
 
-                <div style={{ position: 'relative', border: `1px solid ${C.g20}`, borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
-                    <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: 1000, color: C.g140 }}>
-                      <thead>
-                        <tr style={{ fontSize: 12, textTransform: 'uppercase', fontWeight: 500, color: C.g100, background: C.g5 }}>
-                          <th style={{ width: 56, padding: '12px', borderBottom: `1px solid ${C.g20}` }} />
-                          <th style={{ width: 44, padding: '12px', textAlign: 'center', borderBottom: `1px solid ${C.g20}` }}>Pos.</th>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${C.g20}` }}>Competitor</th>
-                          {show.contentScore && (
-                            <th style={{ width: 130, padding: '12px', borderBottom: `1px solid ${C.g20}` }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center', width: '100%' }}>SEO Score <InfoTip text={TIP_SEO} /></span>
-                            </th>
-                          )}
-                          {show.authority && (
-                            <th style={{ width: 116, padding: '12px', borderBottom: `1px solid ${C.g20}` }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center', width: '100%' }}>Authority <InfoTip text={TIP_AUTH} /></span>
-                            </th>
-                          )}
-                          {show.words && (
-                            <th style={{ width: 96, padding: '12px', borderBottom: `1px solid ${C.g20}` }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center', width: '100%' }}>Words <InfoTip text={TIP_WORDS} align="right" /></span>
-                            </th>
-                          )}
-                          <th style={{ width: 52, padding: '12px', textAlign: 'center', borderBottom: `1px solid ${C.g20}`, position: 'relative' }}>
-                            <div ref={colMenuRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                              <button type="button" onClick={() => setColMenu((o) => !o)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: colMenu ? C.g160 : C.g100 }}>
-                                <DotsIcon color={colMenu ? C.g160 : C.g100} />
-                              </button>
-                              {colMenu && (
-                                <div style={{
-                                  position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 1000, minWidth: 220,
-                                  background: '#fff', borderRadius: 8, padding: '8px 0', textAlign: 'left',
-                                  boxShadow: '0px 8px 16px rgba(24,26,34,0.12), 0px 1px 2px rgba(24,26,34,0.1)',
-                                  animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
-                                }}>
-                                  <div style={{ padding: '4px 16px 8px', fontSize: 12, fontWeight: 500, textTransform: 'uppercase', color: C.g100, fontFamily: F }}>Show</div>
-                                  {COL_ITEMS.map((it) => (
-                                    <button key={it.key} type="button" onClick={() => setShow((s) => ({ ...s, [it.key]: !s[it.key as keyof typeof s] }))} style={{
-                                      display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '8px 16px',
-                                      border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: F,
-                                      fontSize: 14, color: C.g160, textTransform: 'none', fontWeight: 400,
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = C.g5; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                                    >
-                                      <Toggle on={show[it.key as keyof typeof show]} />
-                                      {it.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {COMPETITORS.map((c) => (
-                          <tr key={c.pos} style={{ borderBottom: `1px solid ${C.g10}` }}>
-                            <td style={{ padding: '12px', textAlign: 'center', verticalAlign: 'middle' }}>
-                              <div style={{ display: 'flex', justifyContent: 'center' }}><Toggle on={c.on} /></div>
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: 14, verticalAlign: 'middle', color: C.g100 }}>{c.pos}</td>
-                            <td style={{ padding: '12px', textAlign: 'left', verticalAlign: 'top' }}>
-                              {show.breadcrumbs && (
-                                <a href={c.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.preventDefault()} style={{ color: C.text, textDecoration: 'underline', textUnderlineOffset: '0.05em', fontSize: 14, fontWeight: 500 }}>{c.sub || c.url}</a>
-                              )}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                                <Favicon />
-                                <span style={{ color: C.g160, fontSize: 16, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: c.on ? 1 : 0.7 }}>{c.title}</span>
-                              </div>
-                              {show.descriptions && (
-                                <div style={{ paddingTop: 4, fontSize: 16, color: C.g140, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', opacity: c.on ? 1 : 0.7 }}>{c.snippet}</div>
-                              )}
-                            </td>
-                            {show.contentScore && (
-                              <td style={{ padding: '12px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                <div style={{ display: 'inline-flex', justifyContent: 'center', width: 48, opacity: c.on ? 1 : 0.55 }}><SemicircleGauge score={c.score} /></div>
-                              </td>
-                            )}
-                            {show.authority && (
-                              <td style={{ padding: '12px', textAlign: 'center', verticalAlign: 'middle' }}>
-                                <div style={{ display: 'inline-flex', justifyContent: 'center', opacity: c.on ? 1 : 0.55 }}><AuthorityShield n={c.authority} color={c.auth} /></div>
-                              </td>
-                            )}
-                            {show.words && (
-                              <td style={{ padding: '12px', textAlign: 'center', fontSize: 14, fontWeight: 500, verticalAlign: 'middle', color: C.g120, opacity: c.on ? 1 : 0.7 }}>{c.words}</td>
-                            )}
-                            <td style={{ padding: '12px' }} />
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <button type="button" style={{
-                  marginTop: 16, width: '100%', padding: '8px 24px', borderRadius: 8, fontSize: 16, fontWeight: 600, fontFamily: F,
-                  background: C.g10, color: C.g160, border: 'none', cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = C.g20; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = C.g10; }}
-                >Load more competitors</button>
+                <CompetitorsSection slug={slug} keyword={keyword} />
               </div>
 
               {/* Content Structure */}

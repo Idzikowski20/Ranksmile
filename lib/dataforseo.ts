@@ -191,7 +191,8 @@ export async function getRankedKeywords(opts: {
 
 /**
  * Domain authority per host, via Backlinks Bulk Ranks (one call for up to 1000 targets).
- * DataForSEO's `rank` is 0–1000; we normalise to a 0–100 authority to match the UI shield.
+ * DataForSEO's `rank` is 0–1000; we normalise to a 0–10 authority to match the UI shield
+ * (the editor's tip describes authority as "a number between 1 and 10").
  * Returns {} when unconfigured so callers degrade to "no authority" rather than fail.
  */
 export async function domainRanks(domains: string[]): Promise<Record<string, number>> {
@@ -202,7 +203,7 @@ export async function domainRanks(domains: string[]): Promise<Record<string, num
    for (const it of items) {
       const target = String((it as { target?: unknown })?.target ?? '').replace(/^www\./, '');
       const rank = Number((it as { rank?: unknown })?.rank ?? 0);
-      if (target) out[target] = Math.max(0, Math.min(100, Math.round(rank / 10)));
+      if (target) out[target] = Math.max(0, Math.min(10, Math.round(rank / 100)));
    }
    return out;
 }
