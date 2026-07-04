@@ -379,7 +379,8 @@ export type FanoutByPrompt = {
 export function groupFanoutByQuery(rows: ResultRow[]): FanoutByQuery[] {
    const byQuery = new Map<string, { models: Set<string>, timesShown: number, prompts: Map<number, { text: string, topic: string, timesShown: number }> }>();
    for (const r of rows) {
-      for (const q of r.fanOutQueries ?? []) {
+      // Dedupe within a row: timesShown is per (prompt × model) row, not per array element.
+      for (const q of new Set(r.fanOutQueries ?? [])) {
          const e = byQuery.get(q) ?? { models: new Set<string>(), timesShown: 0, prompts: new Map() };
          e.models.add(r.model);
          e.timesShown += 1;
@@ -406,7 +407,7 @@ export function groupFanoutByQuery(rows: ResultRow[]): FanoutByQuery[] {
 export function groupFanoutByPrompt(rows: ResultRow[]): FanoutByPrompt[] {
    const byPrompt = new Map<number, { text: string, topic: string, models: Set<string>, timesShown: number, queries: Map<string, { models: Set<string>, timesShown: number }> }>();
    for (const r of rows) {
-      const fo = r.fanOutQueries ?? [];
+      const fo = Array.from(new Set(r.fanOutQueries ?? [])); // dedupe per row (per prompt×model)
       if (!fo.length) continue;
       const e = byPrompt.get(r.promptId) ?? { text: r.text, topic: r.topic, models: new Set<string>(), timesShown: 0, queries: new Map() };
       for (const q of fo) {

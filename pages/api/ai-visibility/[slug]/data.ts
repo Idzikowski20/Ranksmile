@@ -127,7 +127,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const query = typeof req.query.query === 'string' ? req.query.query : '';
          const entity = (rs: ResultRow[]): ResultRow[] => (view === 'prompt-detail'
             ? rs.filter((r) => r.promptId === promptId)
-            : (() => { const pids = new Set(rs.filter((r) => (r.fanOutQueries ?? []).includes(query)).map((r) => r.promptId)); return rs.filter((r) => pids.has(r.promptId)); })());
+            // Scope directly to rows that actually emitted this query, so the modal's
+            // engines/overview/trend never include models that never produced it.
+            : rs.filter((r) => (r.fanOutQueries ?? []).includes(query)));
          const scope = (rs: ResultRow[]): ResultRow[] => { const e = entity(rs); return engine ? e.filter((r) => r.model === engine) : e; };
 
          const latestAll = await loadScanResultRows(scan.id);
