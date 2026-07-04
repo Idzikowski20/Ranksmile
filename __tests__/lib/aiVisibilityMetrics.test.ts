@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow } from '../../lib/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 const brand = (b: string, domain = '', sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral', pos = 1) => ({ brand: b, domain, sentiment, pos, quotes: [] });
@@ -196,5 +196,39 @@ describe('computeDelta', () => {
       expect(same.visibilityScore.trend).toBe('same');
       const down = computeDelta(previous, current);
       expect(down.visibilityScore.trend).toBe('down');
+   });
+});
+
+describe('fan-out grouping', () => {
+   const fo: ResultRow[] = [
+      { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Prompt one', brands: [], citations: [], fanOutQueries: ['best website builders', 'simple website tools'] },
+      { promptId: 1, model: 'chat_gpt', ownCited: false, ownPosition: null, topic: 'T', text: 'Prompt one', brands: [], citations: [], fanOutQueries: ['best website builders'] },
+      { promptId: 2, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Prompt two', brands: [], citations: [], fanOutQueries: ['best website builders'] },
+   ];
+
+   it('groups by query with promptCount / models / timesShown', () => {
+      const g = groupFanoutByQuery(fo);
+      const top = g.find((x) => x.query === 'best website builders')!;
+      expect(top.timesShown).toBe(3);          // 2 prompts × (gemini,chat_gpt / gemini)
+      expect(top.promptCount).toBe(2);
+      expect(top.models.sort()).toEqual(['chat_gpt', 'gemini']);
+      expect(g[0].query).toBe('best website builders'); // sorted by timesShown desc
+   });
+
+   it('groups by prompt with fanoutCount / timesShown', () => {
+      const g = groupFanoutByPrompt(fo);
+      const p1 = g.find((x) => x.id === 1)!;
+      expect(p1.fanoutCount).toBe(2);          // two distinct queries
+      expect(p1.timesShown).toBe(3);           // builders×2 + tools×1
+      expect(p1.queries[0].query).toBe('best website builders');
+   });
+
+   it('commonPhrases counts document frequency, min 2', () => {
+      const p = commonPhrases(fo, { min: 2 });
+      expect(p.some((x) => x.phrase === 'best website builders' && x.count === 1)).toBe(false); // 1 distinct query → below min
+      const rows2: ResultRow[] = [
+         { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'x', brands: [], citations: [], fanOutQueries: ['tanie strony internetowe', 'najlepsze strony internetowe'] },
+      ];
+      expect(commonPhrases(rows2, { min: 2 }).map((x) => x.phrase)).toContain('strony internetowe');
    });
 });
