@@ -4,7 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
-import { enqueueAiVisScan, kickAiVisScan } from '../../../../lib/aiVisibilityScan';
+import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../../lib/aiVisibilityScan';
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
@@ -36,7 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       [cfg.id],
    );
    const force = (req.body as { force?: unknown } | undefined)?.force === true;
-   if (!active && !force) {
+   // Incremental refresh (after editing prompts): only new prompts cost money, so
+   // skip the manual-refresh cost cooldown and carry the prior scan's results forward.
+   const incremental = (req.body as { incremental?: unknown } | undefined)?.incremental === true;
+   if (!active && !force && !incremental) {
       const last = await queryOne<{ finished_at: string | null }>(
          "SELECT finished_at FROM ai_vis_scans WHERE config_id = ? AND status = 'completed' ORDER BY finished_at DESC LIMIT 1",
          [cfg.id],
@@ -50,6 +53,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
 
    const scanId = await enqueueAiVisScan(cfg.id);
+
+   // Carry unchanged results into this scan first, so the runner (sidecar or inline)
+   // only calls the model for new/edited prompts. Idempotent + no-op on first scan.
+   if (incremental) await seedScanFromLatest(scanId, cfg.id);
 
    // Durable path: hand the scan to the always-on python-sidecar, which loops
    // runScanChunk via /api/ai-visibility/internal/run-chunk until done — surviving

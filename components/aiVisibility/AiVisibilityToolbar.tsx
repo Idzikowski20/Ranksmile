@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import CompetitorPicker from './CompetitorPicker';
-import PromptPicker from './PromptPicker';
+import PromptPicker, { PromptOption } from './PromptPicker';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -55,16 +55,34 @@ const btn: React.CSSProperties = {
  * competitor picker ("Compare" ⇄ "Comparing with {domain}"); otherwise it's a
  * static button (other sub-pages don't wire comparison yet).
  */
-const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect, prompts, trailing }: {
+const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compareSelected = null, onCompareSelect, prompts, promptSelected, onPromptChange, models, modelSelected, onModelChange, modelLabel, trailing }: {
    date?: string;
    compareCompetitors?: Array<{ domain: string }>;
    compareSelected?: string | null;
    onCompareSelect?: (d: string | null) => void;
-   prompts?: Array<{ id: number; text: string }>;
+   prompts?: PromptOption[];
+   promptSelected?: number[];
+   onPromptChange?: (ids: number[]) => void;
+   models?: string[]; // available model keys; makes "All models" a real multiselect
+   modelSelected?: string[];
+   onModelChange?: (m: string[]) => void;
+   modelLabel?: Record<string, string>;
    trailing?: React.ReactNode;
 }) => {
    const [modelsOpen, setModelsOpen] = useState(false);
    const compareInteractive = !!(compareCompetitors && compareCompetitors.length && onCompareSelect);
+   const modelInteractive = !!(models && models.length && onModelChange);
+   const modelSel = modelSelected || [];
+   const modelLabelFor = (m: string): string => (modelLabel && modelLabel[m]) || m;
+   let modelBtnLabel = 'All models';
+   if (modelSel.length === 1) modelBtnLabel = modelLabelFor(modelSel[0]);
+   else if (modelSel.length > 1) modelBtnLabel = `${modelSel.length} models`;
+   const toggleModel = (m: string) => {
+      const s = new Set(modelSel.length ? modelSel : (models || []));
+      if (s.has(m)) s.delete(m); else s.add(m);
+      const next = Array.from(s);
+      (onModelChange as (x: string[]) => void)(next.length === 0 || next.length === (models || []).length ? [] : next);
+   };
    return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: '1px solid #F4F4F5', paddingTop: 16, flexWrap: 'wrap' }}>
          <span style={{ ...btn, cursor: 'default' }}>
@@ -73,7 +91,7 @@ const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compar
          </span>
          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {prompts && prompts.length ? (
-               <PromptPicker prompts={prompts} />
+               <PromptPicker prompts={prompts} selected={promptSelected} onChange={onPromptChange} />
             ) : (
                <button type="button" style={btn}>
                   <span>All prompts</span>
@@ -89,18 +107,34 @@ const AiVisibilityToolbar = ({ date = 'Jul 02, 2026', compareCompetitors, compar
             )}
             <div style={{ position: 'relative' }}>
                <button type="button" style={btn} onClick={() => setModelsOpen((o) => !o)}>
-                  <span>All models</span>
+                  <span>{modelInteractive ? modelBtnLabel : 'All models'}</span>
                   <ChevronDown />
                </button>
                {modelsOpen && (
                   <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 240, background: '#fff', borderRadius: 12, padding: 8, boxShadow: '0 18px 40px rgba(17,24,39,0.14), 0 8px 18px rgba(17,24,39,0.09)', zIndex: 150, fontFamily: FONT }}>
-                     {['All models', 'AI Overviews', 'AI Mode', 'ChatGPT', 'Perplexity', 'Gemini'].map((m, i) => (
-                        <button key={m} type="button" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: '#18181B', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                           {MODEL_ICON[m] ? <span style={{ display: 'inline-flex', color: '#18181B', flexShrink: 0 }}>{MODEL_ICON[m]}</span> : null}
-                           <span style={{ flex: 1 }}>{m}</span>
-                           {i === 0 && <span style={{ display: 'inline-flex', color: '#18181B' }}><Check /></span>}
-                        </button>
-                     ))}
+                     {modelInteractive ? (
+                        <>
+                           <button type="button" onClick={() => (onModelChange as (x: string[]) => void)([])} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181B', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                              <span style={{ flex: 1 }}>All models</span>
+                              {modelSel.length === 0 ? <span style={{ display: 'inline-flex', color: '#18181B' }}><Check /></span> : null}
+                           </button>
+                           {(models as string[]).map((m) => (
+                              <button key={m} type="button" onClick={() => toggleModel(m)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: '#18181B', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                                 {MODEL_ICON[modelLabelFor(m)] ? <span style={{ display: 'inline-flex', color: '#18181B', flexShrink: 0 }}>{MODEL_ICON[modelLabelFor(m)]}</span> : null}
+                                 <span style={{ flex: 1 }}>{modelLabelFor(m)}</span>
+                                 {(modelSel.length ? modelSel.includes(m) : true) ? <span style={{ display: 'inline-flex', color: '#18181B' }}><Check /></span> : null}
+                              </button>
+                           ))}
+                        </>
+                     ) : (
+                        ['All models', 'AI Overviews', 'AI Mode', 'ChatGPT', 'Perplexity', 'Gemini'].map((m, i) => (
+                           <button key={m} type="button" style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: '#18181B', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                              {MODEL_ICON[m] ? <span style={{ display: 'inline-flex', color: '#18181B', flexShrink: 0 }}>{MODEL_ICON[m]}</span> : null}
+                              <span style={{ flex: 1 }}>{m}</span>
+                              {i === 0 && <span style={{ display: 'inline-flex', color: '#18181B' }}><Check /></span>}
+                           </button>
+                        ))
+                     )}
                   </div>
                )}
             </div>

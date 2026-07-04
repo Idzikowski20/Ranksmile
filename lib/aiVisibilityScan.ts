@@ -113,6 +113,35 @@ export async function findDueConfigIds(limit = AI_VIS_SETTINGS.SCHEDULER_BATCH_L
    return rows.map((r) => Number(r.id));
 }
 
+/**
+ * Seed a freshly-queued scan with the previous completed scan's results, so an
+ * incremental refresh (triggered after editing prompts) only pays the model for
+ * genuinely new (prompt × model) pairs. runScanChunk derives "done" from the rows
+ * already present for the scan, so carrying forward the unchanged rows makes it
+ * skip them. Copied rows keep their citations/brands but cost_micros = 0 (already
+ * paid). Idempotent: no-op if this scan already has any results, or if there is no
+ * prior completed scan (first run pays for everything, as today). Only carries
+ * still-selected prompts — config.ts already deleted results for removed/edited
+ * prompts, so those fall through to a real re-scan.
+ */
+export async function seedScanFromLatest(newScanId: number, configId: number): Promise<void> {
+   const already = await queryOne<{ id: number }>('SELECT id FROM ai_vis_results WHERE scan_id = ? LIMIT 1', [newScanId]);
+   if (already) return;
+   const latest = await queryOne<{ id: number }>(
+      "SELECT id FROM ai_vis_scans WHERE config_id = ? AND status = 'completed' ORDER BY finished_at DESC LIMIT 1",
+      [configId],
+   );
+   if (!latest) return;
+   await db.query(
+      `INSERT INTO ai_vis_results (scan_id, prompt_id, model, answer, citations, brands, own_cited, own_position, cost_micros)
+       SELECT ?, prompt_id, model, answer, citations, brands, own_cited, own_position, 0
+         FROM ai_vis_results
+        WHERE scan_id = ? AND error IS NULL
+          AND prompt_id IN (SELECT id FROM ai_vis_prompts WHERE config_id = ? AND selected = 1)`,
+      { replacements: [newScanId, latest.id, configId] },
+   );
+}
+
 type PromptRow = { id: number, text: string };
 type Pair = { prompt: PromptRow, model: AiModel };
 
@@ -221,12 +250,33 @@ export async function runScanChunk(scanId: number, ownDomain: string, limit = AI
  * (long-lived `next dev` process) and standalone scripts. On serverless the
  * durable path drives runScanChunk one chunk at a time via the sidecar instead.
  */
+/** Best-effort: analyse a finished scan's answers for brands. Never throws — Sources
+ *  just shows "no brands yet" if this fails. Loads the config's brand name itself. */
+export async function runBrandsForScan(scanId: number): Promise<void> {
+   try {
+      const cfg = await queryOne<{ brand_name: string }>(
+         'SELECT c.brand_name FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id WHERE s.id = ? LIMIT 1',
+         [scanId],
+      );
+      const ownBrand = cfg?.brand_name || '';
+      // Dynamic import keeps @ai-sdk/deepseek (ESM) out of this module's static import
+      // graph, so unit tests of aiVisibilityScan don't have to transform it.
+      const { runBrandChunk } = await import('./aiVisibilityBrands');
+      let prevRemaining = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < 100; i += 1) {
+         const { remaining } = await runBrandChunk(scanId, ownBrand);
+         if (remaining === 0 || remaining >= prevRemaining) break; // done, or no progress this pass
+         prevRemaining = remaining;
+      }
+   } catch { /* brands are optional */ }
+}
+
 export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<void> {
    try {
       // Bounded by ceil(total / chunk); the guard only backstops a logic bug.
       for (let i = 0; i < 100000; i += 1) {
          const { finished } = await runScanChunk(scanId, ownDomain);
-         if (finished) return;
+         if (finished) { await runBrandsForScan(scanId); return; }
       }
    } catch (error) {
       await db.query(

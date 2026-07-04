@@ -73,9 +73,13 @@ const AiVisibilityOverview: NextPage = () => {
    const [promptMode, setPromptMode] = useState<'topics' | 'prompts'>('topics');
    const [compareDomain, setCompareDomain] = useState<string | null>(null);
    const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
+   // Prompt filter selection (empty == all). Lifted here so it can drive the overview
+   // queries; see useAiVisOverview call below.
+   const [promptSelected, setPromptSelected] = useState<number[]>([]);
 
-   // Base query: own snapshot + top-5 competitor snapshots (no competitor param).
-   const baseQ = useAiVisOverview(slug);
+   // Base query: own snapshot + top-5 competitor snapshots (no competitor param),
+   // scoped to the picked prompts (empty == all).
+   const baseQ = useAiVisOverview(slug, undefined, promptSelected);
    const ov = baseQ.data;
    const competitors = ov?.competitors || []; // top-5, each with embedded snapshot (sources emptied)
    const competitorsAll = ov?.competitorsAll || []; // all domains, for the picker
@@ -90,10 +94,16 @@ const AiVisibilityOverview: NextPage = () => {
    // pick (outside top-5) fires a second request (distinct query key → top-5 never refetches).
    const embeddedSnap = compareDomain ? (competitors.find((c) => c.domain === compareDomain)?.snapshot ?? null) : null;
    const isLongTail = !!compareDomain && !embeddedSnap;
-   const longTailQ = useAiVisOverview(slug, isLongTail ? (compareDomain as string) : undefined);
-   const compareSnap = embeddedSnap ?? (isLongTail ? (longTailQ.data?.compare?.snapshot ?? null) : null);
+   const longTailQ = useAiVisOverview(slug, isLongTail ? (compareDomain as string) : undefined, promptSelected);
+   // While the long-tail query refetches for a newly picked competitor, `keepPreviousData`
+   // still holds the PREVIOUS competitor's payload. Blank it during refetch so the compare
+   // label (compareDomain) never renders next to another competitor's metrics.
+   const compareSnap = embeddedSnap ?? (isLongTail && !longTailQ.isFetching ? (longTailQ.data?.compare?.snapshot ?? null) : null);
 
-   const historyQ = useAiVisHistory(slug, compareDomain || undefined);
+   const historyQ = useAiVisHistory(slug, compareDomain || undefined, promptSelected);
+   // Same guard for trend history: drop the retained prior-competitor scans while the
+   // competitor-scoped history refetches, so trend lines aren't mislabelled mid-swap.
+   const histData = historyQ.isFetching ? undefined : historyQ.data;
 
    const startScan = useStartAiVisScan(slug);
    const [confirmDays, setConfirmDays] = useState<number | null>(null);
@@ -128,7 +138,9 @@ const AiVisibilityOverview: NextPage = () => {
          compareCompetitors={competitorsAll}
          compareSelected={compareDomain}
          onCompareSelect={setCompareDomain}
-         toolbarPrompts={(ov?.snapshot?.prompts || []).map((p) => ({ id: p.promptId, text: p.text }))}
+         toolbarPrompts={ov?.promptOptions || []}
+         toolbarPromptSelected={promptSelected}
+         onToolbarPromptChange={setPromptSelected}
          toolbarTrailing={refreshBtn}
       >
          {({ crunching }) => {
@@ -151,7 +163,7 @@ const AiVisibilityOverview: NextPage = () => {
             const sourceCount = ov?.snapshot?.sources.length || 0;
 
             // Per-metric trend series (You + optional competitor) from /history.
-            const histScans = historyQ.data?.scans || [];
+            const histScans = histData?.scans || [];
             const histLabels = histScans.map((s) => (s.finishedAt ? new Date(s.finishedAt).toLocaleDateString() : ''));
             const youVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.you ? pick(s.series.you) : null));
             const compVals = (pick: (o: DomainOverview) => number | null): Array<number | null> => histScans.map((s) => (s.series.competitor ? pick(s.series.competitor) : null));
@@ -181,7 +193,7 @@ const AiVisibilityOverview: NextPage = () => {
                chartBody = (
                   <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                      <div style={{ flex: '1 1 380px', minWidth: 0 }}>
-                        <TrendLineChart scans={historyQ.data?.scans || []} competitorDomain={compareDomain} />
+                        <TrendLineChart scans={histData?.scans || []} competitorDomain={compareDomain} />
                      </div>
                      <div style={{ flex: '1 1 200px', minWidth: 200, maxWidth: 300 }}>
                         <TopCompetitorsList competitors={topRows} selected={compareDomain} onSelect={setCompareDomain} />

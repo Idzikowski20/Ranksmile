@@ -39,6 +39,15 @@ async def _tick(nextjs_url: str) -> None:
             await run_scan_loop(item["scanId"], nextjs_url)
         print(f"[ai_vis_scheduler] tick processed {len(due)} scan(s)")
 
+        # Backfill brand extraction for scans that still have un-analysed answers
+        # (best-effort; Sources just shows "no brands yet" until this drains).
+        try:
+            brand_url = f"{nextjs_url.rstrip('/')}/api/ai-visibility/internal/analyze-brands"
+            async with httpx.AsyncClient(timeout=60) as client:
+                await client.post(brand_url, headers=headers, json={})
+        except Exception as exc:  # noqa: BLE001 - never let backfill break the tick
+            print(f"[ai_vis_scheduler] analyze-brands failed: {exc}")
+
 
 async def scheduler_loop(nextjs_url: str) -> None:
     # Startup jitter so synchronized restarts across instances don't all hit
