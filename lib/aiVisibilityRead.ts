@@ -3,12 +3,29 @@
  *  mapDbRowsToResultRows) are exported for unit tests. Rows carry the prompt's
  *  topic/text so snapshotForDomain can compose prompts/topics without re-querying. */
 import { queryRows } from './db/query';
-import { ResultRow } from './aiVisibilityMetrics';
+import { ResultRow, BrandMention } from './aiVisibilityMetrics';
 import type { LlmCitation } from './dataforseoLlm';
 
 export type DbResultRow = {
    prompt_id: number; model: string; own_cited: number; own_position: number | null;
-   citations: unknown; topic: string; text: string;
+   citations: unknown; topic: string | null; text: string | null; brands: unknown;
+};
+
+/** brands column: jsonb (parsed array) on Postgres, TEXT (JSON string) on SQLite —
+ *  handle both, like parseCitations. pos = the stored array order (appearance order). */
+export const parseBrands = (raw: unknown): BrandMention[] => {
+   let v: unknown = raw;
+   if (typeof raw === 'string') { try { v = JSON.parse(raw); } catch { return []; } }
+   if (!Array.isArray(v)) return [];
+   return v
+      .filter((b): b is { brand: string } & Record<string, unknown> => !!b && typeof (b as { brand?: unknown }).brand === 'string')
+      .map((b, i) => ({
+         brand: String(b.brand),
+         domain: typeof b.domain === 'string' ? b.domain : '',
+         sentiment: (['positive', 'neutral', 'negative', 'mixed'].includes(String(b.sentiment)) ? b.sentiment : 'neutral') as BrandMention['sentiment'],
+         pos: i + 1,
+         quotes: Array.isArray(b.quotes) ? b.quotes.filter((q): q is string => typeof q === 'string').slice(0, 3) : [],
+      }));
 };
 
 export const parseCitations = (raw: unknown): LlmCitation[] => {
@@ -36,12 +53,17 @@ export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbR
    citations: parseCitations(r.citations),
    topic: r.topic ?? '',
    text: r.text ?? '',
+   brands: parseBrands(r.brands),
 }));
 
 export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
    const dbRows = await queryRows<DbResultRow>(
-      `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
-       FROM ai_vis_results r JOIN ai_vis_prompts p ON p.id = r.prompt_id
+      // LEFT JOIN: a prompt config edit can DELETE a prompt (reconciliation), leaving
+      // historical ai_vis_results rows that reference a now-missing prompt id. An inner
+      // join would silently drop those rows and corrupt past scan metrics; LEFT JOIN keeps
+      // every result row and just leaves topic/text NULL (mapDbRowsToResultRows → '').
+      `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, r.brands, p.topic, p.text
+       FROM ai_vis_results r LEFT JOIN ai_vis_prompts p ON p.id = r.prompt_id
        WHERE r.scan_id = ? AND r.error IS NULL`,
       [scanId],
    );

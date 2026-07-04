@@ -10,6 +10,8 @@
  */
 import type { LlmCitation } from './dataforseoLlm';
 
+export type BrandMention = { brand: string, domain: string, sentiment: 'positive' | 'neutral' | 'negative' | 'mixed', pos: number, quotes: string[] };
+
 export type ResultRow = {
    promptId: number,
    model: string,
@@ -18,7 +20,12 @@ export type ResultRow = {
    citations: LlmCitation[],
    topic: string,
    text: string,
+   brands: BrandMention[],
 };
+
+export type SourceBrand = { brand: string, domain: string };
+export type SourceDetailBrand = { pos: number, brand: string, sentiment: BrandMention['sentiment'], quotes: string[] };
+export type GapCard = { brand: string, gap: number, shared: number, you: number };
 
 const norm = (d: string): string => d.toLowerCase().replace(/^www\./, '');
 
@@ -65,19 +72,80 @@ export function computeOverview(rows: ResultRow[]) {
    };
 }
 
-export function aggregateSources(rows: ResultRow[]) {
-   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, models: Set<string> }>();
+const brandEq = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+const answerHasBrand = (r: ResultRow, b: string): boolean => r.brands.some((x) => brandEq(x.brand, b));
+
+export function aggregateSources(rows: ResultRow[], ownBrand = '') {
+   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, models: Set<string>, mentioned: boolean, brands: Map<string, { brand: string, domain: string, n: number }> }>();
    for (const r of rows) {
       for (const c of r.citations) {
-         const entry = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, models: new Set<string>() };
+         const entry = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, models: new Set<string>(), mentioned: false, brands: new Map() };
          entry.timesShown += 1;
          entry.models.add(r.model);
+         if (ownBrand && answerHasBrand(r, ownBrand)) entry.mentioned = true;
+         for (const b of r.brands) {
+            if (ownBrand && brandEq(b.brand, ownBrand)) continue; // own brand isn't a "brand" chip
+            const key = b.brand.toLowerCase();
+            const be = entry.brands.get(key) ?? { brand: b.brand, domain: b.domain, n: 0 };
+            be.n += 1; if (!be.domain && b.domain) be.domain = b.domain;
+            entry.brands.set(key, be);
+         }
          byUrl.set(c.url, entry);
       }
    }
    return Array.from(byUrl.values())
       .sort((a, b) => b.timesShown - a.timesShown)
-      .map((e) => ({ url: e.url, domain: e.domain, timesShown: e.timesShown, models: Array.from(e.models) }));
+      .map((e) => ({
+         url: e.url, domain: e.domain, timesShown: e.timesShown, models: Array.from(e.models),
+         mentioned: e.mentioned,
+         brands: Array.from(e.brands.values()).sort((a, b) => b.n - a.n).map((b) => ({ brand: b.brand, domain: b.domain })) as SourceBrand[],
+      }));
+}
+
+export function mentionGap(rows: ResultRow[], brand: string, ownBrand: string): GapCard {
+   let gap = 0; let shared = 0; let you = 0;
+   for (const r of rows) {
+      const hasBrand = answerHasBrand(r, brand);
+      const hasOwn = !!ownBrand && answerHasBrand(r, ownBrand);
+      if (hasBrand && hasOwn) shared += 1;
+      else if (hasBrand) gap += 1;
+      else if (hasOwn) you += 1;
+   }
+   return { brand, gap, shared, you };
+}
+
+export function gapBrandCandidates(rows: ResultRow[], ownBrand: string): string[] {
+   const counts = new Map<string, { brand: string, n: number }>();
+   for (const r of rows) for (const b of r.brands) {
+      if (ownBrand && brandEq(b.brand, ownBrand)) continue;
+      const key = b.brand.toLowerCase();
+      const e = counts.get(key) ?? { brand: b.brand, n: 0 };
+      e.n += 1; counts.set(key, e);
+   }
+   return Array.from(counts.values()).sort((a, b) => b.n - a.n).map((e) => e.brand);
+}
+
+export function brandsForSource(rows: ResultRow[], url: string): SourceDetailBrand[] {
+   const byBrand = new Map<string, { brand: string, pos: number, sentiments: string[], quotes: Set<string> }>();
+   for (const r of rows) {
+      if (!r.citations.some((c) => c.url === url)) continue;
+      for (const b of r.brands) {
+         const key = b.brand.toLowerCase();
+         const e = byBrand.get(key) ?? { brand: b.brand, pos: b.pos, sentiments: [], quotes: new Set<string>() };
+         e.pos = Math.min(e.pos, b.pos);
+         e.sentiments.push(b.sentiment);
+         b.quotes.forEach((q) => e.quotes.add(q));
+         byBrand.set(key, e);
+      }
+   }
+   const dominant = (ss: string[]): SourceDetailBrand['sentiment'] => {
+      const c: Record<string, number> = {}; ss.forEach((s) => { c[s] = (c[s] || 0) + 1; });
+      const top = Object.entries(c).sort((a, b) => b[1] - a[1]);
+      return top.length > 1 && top.every((t) => t[1] === top[0][1]) ? 'mixed' : (top[0]?.[0] as SourceDetailBrand['sentiment']) || 'neutral';
+   };
+   return Array.from(byBrand.values())
+      .map((e) => ({ pos: e.pos, brand: e.brand, sentiment: dominant(e.sentiments), quotes: Array.from(e.quotes).slice(0, 3) }))
+      .sort((a, b) => a.pos - b.pos);
 }
 
 export function aggregateCompetitors(rows: ResultRow[], ownDomain: string) {
@@ -164,10 +232,12 @@ export type RankedCompetitor = { domain: string, snapshot: DomainSnapshot };
 /** Snapshot for the tracked domain + every distinct cited domain (minus noise),
  *  computed ONCE. Keys are normalized (norm). Shared by ranking, compare, history. */
 export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map<string, DomainSnapshot> {
-   const domains = new Set<string>([norm(ownDomain)]);
+   const own = norm(ownDomain);
+   const domains = new Set<string>([own]);
    for (const r of rows) for (const c of r.citations) {
       const d = norm(c.domain);
-      if (d && !NOISE.has(d)) domains.add(d);
+      // Own domain and its subdomains (e.g. blog.example.com) are not competitors.
+      if (d && d !== own && !d.endsWith(`.${own}`) && !NOISE.has(d)) domains.add(d);
    }
    const map = new Map<string, DomainSnapshot>();
    for (const d of domains) map.set(d, snapshotForDomain(rows, d));
@@ -179,9 +249,81 @@ export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map
 export function rankCompetitors(byDomain: Map<string, DomainSnapshot>, ownDomain: string): RankedCompetitor[] {
    const own = norm(ownDomain);
    return Array.from(byDomain.entries())
-      .filter(([domain]) => domain !== own)
+      .filter(([domain]) => domain !== own && !domain.endsWith(`.${own}`))
       .map(([domain, snapshot]) => ({ domain, snapshot }))
       .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
+}
+
+export type DomainGapCard = { domain: string, gap: number, shared: number, you: number };
+
+function citedPromptsForDomain(rows: ResultRow[], domain: string): Set<number> {
+   const d = norm(domain);
+   const s = new Set<number>();
+   if (!d) return s;
+   for (const r of rows) {
+      if (r.citations.some((c) => norm(c.domain) === d || norm(c.domain).endsWith(`.${d}`))) s.add(r.promptId);
+   }
+   return s;
+}
+
+/** Prompt-citation overlap between the tracked domain and a competitor domain:
+ *  shared = both cited the prompt, gap = only the competitor, you = only tracked. */
+export function domainMentionGap(rows: ResultRow[], competitorDomain: string, ownDomain: string): DomainGapCard {
+   const own = citedPromptsForDomain(rows, ownDomain);
+   const comp = citedPromptsForDomain(rows, competitorDomain);
+   let gap = 0; let shared = 0; let you = 0;
+   new Set<number>([...own, ...comp]).forEach((id) => {
+      const o = own.has(id); const c = comp.has(id);
+      if (o && c) shared += 1; else if (c) gap += 1; else if (o) you += 1;
+   });
+   return { domain: norm(competitorDomain), gap, shared, you };
+}
+
+/** Competitor domains (tracked domain + grounding noise excluded) ranked by gap desc. */
+export function domainGapCandidates(rows: ResultRow[], ownDomain: string): string[] {
+   const ownN = norm(ownDomain);
+   const domains = new Set<string>();
+   for (const r of rows) for (const c of r.citations) {
+      const d = norm(c.domain);
+      if (d && d !== ownN && !d.endsWith(`.${ownN}`) && !NOISE.has(d)) domains.add(d);
+   }
+   return Array.from(domains)
+      .map((d) => ({ d, gap: domainMentionGap(rows, d, ownDomain).gap }))
+      .sort((a, b) => b.gap - a.gap)
+      .map((x) => x.d);
+}
+
+/** Per-URL mention flags for two brands (competitor modal "Mentions" tab): does the
+ *  answer citing each source mention brand A (own) / brand B (the competitor). */
+export function sourceMentions(rows: ResultRow[], brandA: string, brandB: string): Array<{ url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }> {
+   const byUrl = new Map<string, { url: string, domain: string, timesShown: number, aMentioned: boolean, bMentioned: boolean }>();
+   for (const r of rows) {
+      const a = !!brandA && answerHasBrand(r, brandA);
+      const b = !!brandB && answerHasBrand(r, brandB);
+      for (const c of r.citations) {
+         const e = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, aMentioned: false, bMentioned: false };
+         e.timesShown += 1;
+         if (a) e.aMentioned = true;
+         if (b) e.bMentioned = true;
+         byUrl.set(c.url, e);
+      }
+   }
+   return Array.from(byUrl.values()).sort((x, y) => y.timesShown - x.timesShown);
+}
+
+/** Per-prompt average citation position for ANY domain (competitor detail modal).
+ *  null position = the domain was never cited for that prompt (renders as "—"). */
+export function competitorPrompts(rows: ResultRow[], domain: string): Array<{ promptId: number, topic: string, text: string, avgPosition: number | null }> {
+   const projected = projectRows(rows, domain);
+   const byPrompt = new Map<number, { promptId: number, topic: string, text: string, positions: number[] }>();
+   for (const r of projected) {
+      const e = byPrompt.get(r.promptId) ?? { promptId: r.promptId, topic: r.topic, text: r.text, positions: [] };
+      if (r.ownCited && r.ownPosition) e.positions.push(r.ownPosition);
+      byPrompt.set(r.promptId, e);
+   }
+   return Array.from(byPrompt.values())
+      .map((p) => ({ promptId: p.promptId, topic: p.topic, text: p.text, avgPosition: p.positions.length ? Math.round(mean(p.positions) * 10) / 10 : null }))
+      .sort((a, b) => (a.avgPosition ?? Infinity) - (b.avgPosition ?? Infinity));
 }
 
 export type Trend = 'up' | 'down' | 'same';

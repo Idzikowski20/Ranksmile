@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, aggregateCompetitors, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -44,6 +44,71 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (view === 'fanout') return res.status(200).json({ queries: [] }); // Beta stub
 
+      // Brand-aware views (sources/source-detail) load full ResultRows (incl. brands) and
+      // support prompt/model filtering via CSV query params.
+      const cfg = await queryOne<{ brand_name: string }>(
+         'SELECT c.brand_name FROM ai_vis_configs c WHERE c.domain_id = ? ORDER BY c.id DESC LIMIT 1', [domain.ID],
+      );
+      const ownBrand = cfg?.brand_name || domain.domain;
+      const parseIds = (v: unknown): number[] => (typeof v === 'string' && v ? v.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : []);
+      const parseList = (v: unknown): string[] => (typeof v === 'string' && v ? v.split(',').filter(Boolean) : []);
+      const filterRows = (rs: ResultRow[]): ResultRow[] => {
+         const pids = parseIds(req.query.prompts); const models = parseList(req.query.models);
+         return rs.filter((r) => (!pids.length || pids.includes(r.promptId)) && (!models.length || models.includes(r.model)));
+      };
+
+      if (view === 'sources') {
+         const all = filterRows(await loadScanResultRows(scan.id));
+         // Mention Gap compares the tracked DOMAIN against competitor DOMAINS by
+         // prompt-citation overlap (not brand names extracted from answers).
+         const candidates = domainGapCandidates(all, domain.domain);
+         const wanted = parseList(req.query.gapBrands);
+         const selected = wanted.length ? wanted : candidates.slice(0, 4);
+
+         // Compare mode: sources cited on prompts where the chosen competitor is cited
+         // (the gap sources), with own-brand-mention flag per source.
+         const compareParam = typeof req.query.compare === 'string' ? NORM(req.query.compare) : '';
+         let compareSources: unknown;
+         if (compareParam) {
+            const cited = (d: string): boolean => d === compareParam || d.endsWith(`.${compareParam}`);
+            const compPrompts = new Set(all.filter((r) => r.citations.some((c) => cited(NORM(c.domain)))).map((r) => r.promptId));
+            const urlPrompts = new Map<string, Set<number>>();
+            for (const r of all) for (const c of r.citations) {
+               const set = urlPrompts.get(c.url) ?? new Set<number>();
+               set.add(r.promptId); urlPrompts.set(c.url, set);
+            }
+            compareSources = aggregateSources(all, ownBrand)
+               .filter((s) => { const ps = urlPrompts.get(s.url); return !!ps && Array.from(ps).some((id) => compPrompts.has(id)); })
+               .map((s) => ({ ...s, compMentioned: true }));
+         }
+
+         return res.status(200).json({
+            sources: aggregateSources(all, ownBrand),
+            gapCards: selected.map((d) => domainMentionGap(all, d, domain.domain)),
+            gapCandidates: candidates,
+            ownLabel: NORM(domain.domain),
+            compareSources,
+            compareLabel: compareParam || undefined,
+         });
+      }
+
+      if (view === 'source-detail') {
+         const url = typeof req.query.url === 'string' ? req.query.url : '';
+         if (!url) return res.status(200).json({ history: [], brands: [], brandCount: 0 });
+         const scans = await queryRows<{ id: number, finished_at: string | null }>(
+            `SELECT s.id, s.finished_at FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id
+             WHERE c.domain_id = ? AND s.status = 'completed' ORDER BY s.id DESC LIMIT 24`, [domain.ID],
+         );
+         const history: Array<{ finishedAt: string | null, timesShown: number }> = [];
+         for (const s of scans.slice().reverse()) {
+            const rs = filterRows(await loadScanResultRows(s.id));
+            history.push({ finishedAt: s.finished_at, timesShown: rs.reduce((acc, r) => acc + r.citations.filter((c) => c.url === url).length, 0) });
+         }
+         const latest = filterRows(await loadScanResultRows(scan.id));
+         const brands = brandsForSource(latest, url);
+         return res.status(200).json({ history, brands, brandCount: brands.length });
+      }
+
       const dbRows = await queryRows<DbResultRow>(
          `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
           FROM ai_vis_results r JOIN ai_vis_prompts p ON p.id = r.prompt_id
@@ -58,13 +123,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          citations: parseCitationsShared(r.citations),
          topic: r.topic,
          text: r.text,
+         brands: [], // competitors/prompts branches don't read brands; B3 uses loadScanResultRows for sources
       }));
 
       if (view === 'overview') {
          const own = domain.domain;
          const ownKey = NORM(own);
-         const byDomain = buildSnapshotsForScan(rows, own);
-         const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(rows, own);
+         const all = filterRows(rows); // scope own + competitor metrics to the picked prompts
+         const byDomain = buildSnapshotsForScan(all, own);
+         const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(all, own);
          const ranked = rankCompetitors(byDomain, own);
 
          const competitors = ranked.slice(0, 5).map((c) => ({ domain: c.domain, snapshot: withoutSources(c.snapshot) }));
@@ -84,7 +151,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
              ORDER BY s.finished_at DESC LIMIT 1`,
             [domain.ID, scan.finished_at],
          ) : undefined;
-         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(await loadScanResultRows(prev.id), own)) : null;
+         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanResultRows(prev.id)), own)) : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
          const nextRefreshAt = scan.finished_at
@@ -93,6 +160,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const daysUntilRefresh = nextRefreshAt
             ? Math.max(0, Math.ceil((new Date(nextRefreshAt).getTime() - Date.now()) / 86_400_000))
             : null;
+
+         // Picker options come from the UNFILTERED scan so a prompt filter never
+         // shrinks the list you can pick from (the snapshot above is filtered).
+         const promptOptions = Array.from(
+            new Map(rows.map((r) => [r.promptId, { id: r.promptId, text: r.text, topic: r.topic }])).values(),
+         );
 
          return res.status(200).json({
             scanId: scan.id,
@@ -105,13 +178,78 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             previousScanAt: prev ? prev.finished_at : null,
             nextRefreshAt,
             daysUntilRefresh,
+            promptOptions,
          });
       }
-      if (view === 'sources') {
-         return res.status(200).json({ sources: aggregateSources(rows) });
-      }
       if (view === 'competitors') {
-         return res.status(200).json({ competitors: aggregateCompetitors(rows, domain.domain) });
+         // SurferSEO-style ranking: every cited competitor DOMAIN with its full
+         // overview metrics, sorted by visibility desc. Respects prompt/model filters.
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const byDomain = buildSnapshotsForScan(all, domain.domain);
+         const ranked = rankCompetitors(byDomain, domain.domain);
+         return res.status(200).json({
+            competitors: ranked.map((c) => ({
+               domain: c.domain,
+               visibilityScore: c.snapshot.overview.visibilityScore,
+               mentionRate: c.snapshot.overview.mentionRate,
+               avgPosition: c.snapshot.overview.avgPosition,
+            })),
+         });
+      }
+      if (view === 'competitor-detail') {
+         const comp = typeof req.query.competitor === 'string' ? req.query.competitor : '';
+         if (!comp) return res.status(400).json({ error: 'competitor required' });
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const snap = snapshotForDomain(all, comp);
+         const sources = snap.sources.filter((s) => s.domain === NORM(comp));
+         // Brand name derived from the competitor domain (matches extracted brand names
+         // for most cases, e.g. www.squarespace.com → "Squarespace").
+         const base = NORM(comp).split('.')[0];
+         const brand = base ? base.charAt(0).toUpperCase() + base.slice(1) : comp;
+         const ms = sourceMentions(all, ownBrand, brand);
+         return res.status(200).json({
+            overview: { visibilityScore: snap.overview.visibilityScore, mentionRate: snap.overview.mentionRate, avgPosition: snap.overview.avgPosition },
+            prompts: competitorPrompts(all, comp),
+            sources,
+            brand,
+            ownLabel: NORM(domain.domain),
+            mentions: ms.length,
+            mentionSources: ms.map((s) => ({ url: s.url, domain: s.domain, timesShown: s.timesShown, ownMentioned: s.aMentioned, compMentioned: s.bMentioned })),
+            gap: domainMentionGap(all, comp, domain.domain),
+         });
+      }
+      if (view === 'prompt-topics') {
+         // Topic-grouped prompts for the tracked domain: per-prompt + per-topic
+         // visibility / mention rate / avg position, plus the brand favicon stack.
+         const all = filterRows(await loadScanResultRows(scan.id));
+         const brandDomains = (rows2: ResultRow[]): string[] => {
+            const set = new Set<string>();
+            for (const r of rows2) for (const b of r.brands) if (b.domain) set.add(NORM(b.domain));
+            return Array.from(set);
+         };
+         const byPrompt = new Map<number, ResultRow[]>();
+         for (const r of all) { const l = byPrompt.get(r.promptId) ?? []; l.push(r); byPrompt.set(r.promptId, l); }
+         const promptMeta = new Map<number, { topic: string, text: string }>();
+         for (const r of all) if (!promptMeta.has(r.promptId)) promptMeta.set(r.promptId, { topic: r.topic, text: r.text });
+         const byTopic = new Map<string, ResultRow[]>();
+         for (const r of all) { const l = byTopic.get(r.topic) ?? []; l.push(r); byTopic.set(r.topic, l); }
+
+         const topics = Array.from(byTopic.entries()).map(([topic, topicRows]) => {
+            const ov = computeOverview(topicRows);
+            const promptIds = Array.from(new Set(topicRows.map((r) => r.promptId)));
+            const prompts = promptIds.map((id) => {
+               const pr = byPrompt.get(id) || [];
+               const pov = computeOverview(pr);
+               return { id, text: promptMeta.get(id)?.text || '', visibility: pov.visibilityScore, mentionRate: pov.mentionRate, avgPosition: pov.avgPosition, brands: brandDomains(pr) };
+            });
+            return { topic, promptCount: prompts.length, visibility: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition, brands: brandDomains(topicRows), prompts };
+         }).sort((a, b) => b.visibility - a.visibility);
+
+         const overall = computeOverview(all);
+         return res.status(200).json({
+            overview: { visibilityScore: overall.visibilityScore, mentionRate: overall.mentionRate, avgPosition: overall.avgPosition },
+            topics,
+         });
       }
       if (view === 'prompts') {
          const byPrompt = new Map<number, { id: number, topic: string, text: string, perModel: Array<{ model: string, cited: boolean, position: number | null }> }>();

@@ -1,8 +1,10 @@
 import React from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import AppShell from '../common/AppShell';
 import DomainSubLayout from '../domains/DomainSubLayout';
 import AiVisibilityToolbar from './AiVisibilityToolbar';
+import { PromptOption } from './PromptPicker';
 import AiVisExportMenu from './AiVisExportMenu';
 import CrunchingBar from './CrunchingBar';
 import { SkeletonBars } from './SkeletonBlocks';
@@ -10,7 +12,6 @@ import { useAiVisibilityGuard } from '../../lib/useAiVisibilityGuard';
 import { useAiVisScanStatus } from '../../services/aiVisibility';
 import { useFetchDomains } from '../../services/domains';
 import { slugToDomain } from '../../utils/slugToDomain';
-import { useRouter } from 'next/router';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -26,15 +27,22 @@ const InfoIcon = () => (
  * + persistent "Crunching data…" bar while a scan runs. `children` receives the
  * crunching flag so pages can keep showing skeletons during the first scan.
  */
-const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = null, onCompareSelect, toolbarPrompts, toolbarTrailing, children }: {
+const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = null, onCompareSelect, toolbarPrompts, toolbarPromptSelected, onToolbarPromptChange, toolbarModels, toolbarModelSelected, onToolbarModelChange, toolbarModelLabel, toolbarTrailing, titleActions, children }: {
    section: string;
    title: string;
+   titleActions?: React.ReactNode; // extra buttons in the sticky title row, before Export
    // The page owns Compare state (it drives page-level queries) and hands it down
    // so the shared toolbar's "Compare" slot reflects it. Omitted → static button.
    compareCompetitors?: Array<{ domain: string }>;
    compareSelected?: string | null;
    onCompareSelect?: (d: string | null) => void;
-   toolbarPrompts?: Array<{ id: number; text: string }>; // makes "All prompts" a searchable picker
+   toolbarPrompts?: PromptOption[]; // makes "All prompts" a grouped multiselect
+   toolbarPromptSelected?: number[]; // controlled selection (empty == all)
+   onToolbarPromptChange?: (ids: number[]) => void;
+   toolbarModels?: string[]; // available model keys → "All models" becomes a real multiselect
+   toolbarModelSelected?: string[];
+   onToolbarModelChange?: (m: string[]) => void;
+   toolbarModelLabel?: Record<string, string>;
    toolbarTrailing?: React.ReactNode; // rendered after "All models" in the toolbar (e.g. Refresh data)
    children: (ctx: { crunching: boolean }) => React.ReactNode;
 }) => {
@@ -60,6 +68,7 @@ const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = 
                   <InfoIcon />
                </span>
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {titleActions}
                   <AiVisExportMenu slug={slug} />
                   <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
                </div>
@@ -70,6 +79,12 @@ const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = 
                compareSelected={compareSelected}
                onCompareSelect={onCompareSelect}
                prompts={toolbarPrompts}
+               promptSelected={toolbarPromptSelected}
+               onPromptChange={onToolbarPromptChange}
+               models={toolbarModels}
+               modelSelected={toolbarModelSelected}
+               onModelChange={onToolbarModelChange}
+               modelLabel={toolbarModelLabel}
                trailing={toolbarTrailing}
             />
 

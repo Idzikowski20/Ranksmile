@@ -1,9 +1,96 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SourceRow, splitSourceUrl } from './SourcesTable';
+import MetricTrendChart from './MetricTrendChart';
+import { SkeletonBox } from './SkeletonBlocks';
 import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
+import { useAiVisSourceDetail } from '../../services/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
+
+/** Only allow http/https citation URLs as an href — reject `javascript:`/`data:`/malformed
+ *  so a hostile scan URL can't execute when the external-link button is clicked. */
+const safeHref = (url: string): string | undefined => {
+   try {
+      const { protocol } = new URL(url);
+      return protocol === 'http:' || protocol === 'https:' ? url : undefined;
+   } catch {
+      return undefined;
+   }
+};
+
+type Sentiment = 'positive' | 'neutral' | 'negative' | 'mixed';
+const SENT: Record<Sentiment, { label: string; fg: string; bg: string }> = {
+   positive: { label: 'Positive', fg: '#1AB25E', bg: '#EAF8F0' },
+   neutral: { label: 'Neutral', fg: '#52525C', bg: '#F4F4F5' },
+   negative: { label: 'Negative', fg: '#FF6F77', bg: '#FDECED' },
+   mixed: { label: 'Mixed', fg: '#D97706', bg: '#FEF3E2' },
+};
+
+const SentBadge = ({ sentiment }: { sentiment: Sentiment }) => {
+   const s = SENT[sentiment] || SENT.neutral;
+   return <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 6, padding: '2px 10px', fontSize: 12, fontWeight: 600, color: s.fg, background: s.bg }}>{s.label}</span>;
+};
+
+const Chevron = ({ open }: { open: boolean }) => (<svg viewBox="0 0 24 24" width="18" height="18" style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(-180deg)' : 'none', color: '#71717B', flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" /></svg>);
+const Globe = () => (<svg viewBox="0 0 24 24" width="18" height="18" fill="none" style={{ flexShrink: 0, color: '#9F9FA9' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" /><path d="M3 12h18M12 3c2.4 2.5 2.4 15.5 0 18M12 3c-2.4 2.5-2.4 15.5 0 18" stroke="currentColor" strokeWidth="1.5" /></svg>);
+const SortArrow = ({ asc }: { asc: boolean }) => (<svg viewBox="0 0 20 20" width="16" height="16" style={{ transform: asc ? 'none' : 'rotate(180deg)', color: '#9F9FA9', flexShrink: 0 }}><path fill="currentColor" fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" /></svg>);
+
+type BrandDetail = { pos: number; brand: string; sentiment: Sentiment; quotes: string[] };
+
+/** One brand row + expandable per-quote sub-rows (grid [1fr 120px]), matching the
+ *  reference table: Pos | Brand + sentiment + chevron, quotes nested underneath. */
+const BrandDetailRow = ({ b, first }: { b: BrandDetail; first: boolean }) => {
+   const [open, setOpen] = useState(false);
+   const hasQuotes = b.quotes.length > 0;
+   return (
+      <div>
+         {!first ? <div style={{ height: 1, background: '#F4F4F5' }} /> : null}
+         <div
+            className="aiv-brandrow"
+            onClick={() => hasQuotes && setOpen((o) => !o)}
+            role={hasQuotes ? 'button' : undefined}
+            tabIndex={hasQuotes ? 0 : undefined}
+            onKeyDown={(e) => { if (hasQuotes && e.key === 'Enter') setOpen((o) => !o); }}
+            style={{ display: 'grid', gridTemplateColumns: '74px 1fr', cursor: hasQuotes ? 'pointer' : 'default' }}
+         >
+            <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', color: '#18181B', fontSize: 14 }}>{b.pos}</div>
+            <div style={{ borderLeft: '1px solid #F4F4F5', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                     <Globe />
+                     <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.brand}</span>
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                     <SentBadge sentiment={b.sentiment} />
+                     {hasQuotes ? <Chevron open={open} /> : null}
+                  </span>
+               </div>
+               {open && hasQuotes ? (
+                  <div>
+                     {b.quotes.map((q) => (
+                        <React.Fragment key={q}>
+                           <div style={{ height: 1, background: '#F4F4F5' }} />
+                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px' }}>
+                              <div style={{ padding: '12px 16px', fontSize: 14, color: '#52525C', lineHeight: 1.5 }}>{q}</div>
+                              <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start' }}><SentBadge sentiment={b.sentiment} /></div>
+                           </div>
+                        </React.Fragment>
+                     ))}
+                  </div>
+               ) : null}
+            </div>
+         </div>
+      </div>
+   );
+};
+
+const fmtDay = (iso: string | null): string => {
+   if (!iso) return '';
+   const d = new Date(iso);
+   if (Number.isNaN(d.getTime())) return '';
+   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
 const ArrowUp = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const ArrowDown = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
@@ -12,9 +99,10 @@ const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="n
 
 const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: '#52525C', cursor: 'pointer', borderRadius: 6 };
 
-/** Detail modal for a source row. When `navigable`, the up/down arrows (and ↑/↓ keys)
- *  page through the surrounding list — SurferSEO's ungrouped-modal behaviour. */
-const SourceDetailModal = ({ list, index, navigable, onNavigate, onClose }: {
+/** Right-side slide-over for a source row. When `navigable`, the up/down arrows (and
+ *  ↑/↓ keys) page through the surrounding list — SurferSEO's ungrouped behaviour. */
+const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }: {
+   slug: string | undefined;
    list: SourceRow[];
    index: number;
    navigable: boolean;
@@ -22,27 +110,43 @@ const SourceDetailModal = ({ list, index, navigable, onNavigate, onClose }: {
    onClose: () => void;
 }) => {
    const s = list[index];
+   const detailQ = useAiVisSourceDetail(slug, s ? s.url : null);
+   const detail = detailQ.data;
+   const [posAsc, setPosAsc] = useState(true);
+   const sortedBrands = useMemo(
+      () => [...(detail?.brands || [])].sort((a, b) => (posAsc ? a.pos - b.pos : b.pos - a.pos)),
+      [detail, posAsc],
+   );
+
+   // Slide-in on mount, slide-out on close — same chrome as the Recommendations SlidePanel.
+   const [visible, setVisible] = useState(false);
+   useEffect(() => { const t = setTimeout(() => setVisible(true), 10); return () => clearTimeout(t); }, []);
+   const handleClose = () => { setVisible(false); setTimeout(onClose, 220); };
 
    useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
-         if (e.key === 'Escape') onClose();
+         if (e.key === 'Escape') handleClose();
          if (navigable && e.key === 'ArrowUp') { e.preventDefault(); onNavigate(-1); }
          if (navigable && e.key === 'ArrowDown') { e.preventDefault(); onNavigate(1); }
       };
       document.addEventListener('keydown', onKey);
       return () => document.removeEventListener('keydown', onKey);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [navigable, onNavigate, onClose]);
 
    if (!s) return null;
    const { host, path } = splitSourceUrl(s.url, s.domain);
+   const openHref = safeHref(s.url);
    const canUp = navigable && index > 0;
    const canDown = navigable && index < list.length - 1;
 
    return (
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(9,9,11,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} role="presentation">
-         <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: 720, maxWidth: '100%', maxHeight: 'calc(100vh - 64px)', overflow: 'auto', boxShadow: '0px 24px 64px rgba(0,0,0,0.2)', animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
+      <>
+         <style>{'.aiv-brandrow:hover{background:#FAFAFA}'}</style>
+         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 520, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
             {/* Header: nav arrows (left) + external/close (right), then the source URL */}
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                      {navigable ? (
@@ -53,8 +157,12 @@ const SourceDetailModal = ({ list, index, navigable, onNavigate, onClose }: {
                      ) : null}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                     <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label="Open source" style={{ ...iconBtn, textDecoration: 'none' }}><ExternalIcon /></a>
-                     <button type="button" aria-label="Close" onClick={onClose} style={iconBtn}><CloseIcon /></button>
+                     {openHref ? (
+                        <a href={openHref} target="_blank" rel="noopener noreferrer" aria-label="Open source" style={{ ...iconBtn, textDecoration: 'none' }}><ExternalIcon /></a>
+                     ) : (
+                        <span aria-label="Open source" aria-disabled="true" title="Source URL is not a valid web link" style={{ ...iconBtn, cursor: 'not-allowed', opacity: 0.35 }}><ExternalIcon /></span>
+                     )}
+                     <button type="button" aria-label="Close" onClick={handleClose} style={iconBtn}><CloseIcon /></button>
                   </div>
                </div>
                <h2 style={{ margin: 0, minWidth: 0 }}>
@@ -70,7 +178,7 @@ const SourceDetailModal = ({ list, index, navigable, onNavigate, onClose }: {
             </div>
 
             {/* Body: real per-source data from the latest scan */}
-            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                      <span style={{ fontSize: 13, color: '#71717B' }}>Times shown</span>
@@ -90,9 +198,59 @@ const SourceDetailModal = ({ list, index, navigable, onNavigate, onClose }: {
                   </div>
                   <p style={{ margin: '12px 0 0', fontSize: 13, color: '#9F9FA9', lineHeight: 1.5 }}>Engines that cited this page for your tracked prompts in the latest scan.</p>
                </div>
+
+               {/* Times-shown trend across scans */}
+               <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 8 }}>Times shown over time</div>
+                  {detailQ.isLoading ? (
+                     <SkeletonBox w="100%" h={200} />
+                  ) : (detail && detail.history.length > 1) ? (
+                     <MetricTrendChart
+                        labels={detail.history.map((h) => fmtDay(h.finishedAt))}
+                        lines={[{ label: 'Times shown', data: detail.history.map((h) => h.timesShown), color: '#783AFB' }]}
+                        yMin={0}
+                        height={200}
+                     />
+                  ) : (
+                     <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9' }}>Not enough scan history yet — the trend appears after two or more scans.</p>
+                  )}
+               </div>
+
+               {/* Brands mentioned in answers that cite this source */}
+               {detailQ.isLoading ? (
+                  <SkeletonBox w="100%" h={160} />
+               ) : (detail && sortedBrands.length > 0) ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B' }}>Source mentioned {detail.brandCount} brands</span>
+                        <span style={{ fontSize: 13, color: '#71717B', lineHeight: 1.5 }}>You should be mentioned as the first choice, review the list and check if you can improve your position by contacting the source owner.</span>
+                     </div>
+                     <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden' }}>
+                        {/* Table header */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '74px 1fr', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
+                           <div style={{ padding: '12px 16px' }}>
+                              <button type="button" onClick={() => setPosAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, color: '#71717B' }}>
+                                 <span style={{ fontWeight: 600, textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 4, textDecorationColor: '#C4C4CC' }}>Pos.</span>
+                                 <SortArrow asc={posAsc} />
+                              </button>
+                           </div>
+                           <div style={{ borderLeft: '1px solid #F4F4F5', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>Brand</span>
+                              <span>Sentiment</span>
+                           </div>
+                        </div>
+                        {sortedBrands.map((b, i) => <BrandDetailRow key={`${b.pos}-${b.brand}`} b={b} first={i === 0} />)}
+                     </div>
+                  </div>
+               ) : (
+                  <div>
+                     <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 8 }}>Brands mentioned</div>
+                     <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9' }}>No brands were detected in the AI answers citing this source.</p>
+                  </div>
+               )}
             </div>
          </div>
-      </div>
+      </>
    );
 };
 

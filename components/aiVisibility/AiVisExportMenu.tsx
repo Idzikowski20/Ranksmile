@@ -10,7 +10,10 @@ const DownloadIcon = () => (
 );
 
 const csvCell = (v: unknown): string => {
-   const s = String(v ?? '');
+   const raw = String(v ?? '');
+   // Neutralize formula injection: spreadsheets treat a leading = + - @ (or tab/CR/LF)
+   // as a formula trigger, so prefix such cells with a single quote to force text.
+   const s = /^[=+\-@\t\r\n]/.test(raw) ? `'${raw}` : raw;
    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 const toCsv = (headers: string[], rows: Array<Array<unknown>>): string => [headers.join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\n');

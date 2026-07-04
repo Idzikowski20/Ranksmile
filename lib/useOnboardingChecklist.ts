@@ -31,7 +31,7 @@ export function useOnboardingChecklist(): {
 } {
    const router = useRouter();
    const { data: wsData } = useWorkspaces();
-   const { data: domainsData } = useFetchDomains({} as never);
+   const { data: domainsData, isLoading: domainsLoading } = useFetchDomains({} as never);
    const [mounted, setMounted] = useState(false);
    useEffect(() => setMounted(true), []);
    const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
@@ -47,7 +47,12 @@ export function useOnboardingChecklist(): {
    // Until the real signals resolve, every step reads as not-done. Surfacing that
    // (0% → animating up → hide) is the "fills up then vanishes" flash the user saw,
    // so consumers should wait for `loading` to clear before rendering.
-   const loading = !wsData || sitesLoading || articlesLoading || (!!slug && (recsLoading || aiLoading));
+   // The `slug`-based queries (recs/AI) are disabled until the domains query resolves,
+   // so we must also wait on `domainsLoading` — otherwise `loading` reads false during
+   // the window where domains haven't loaded yet, the card renders with empty data, and
+   // then flips once `slug` appears. `domainsLoading` clears as soon as domains resolve,
+   // including the "loaded but zero domains" case (slug stays null), so this never hangs.
+   const loading = !wsData || domainsLoading || sitesLoading || articlesLoading || (!!slug && (recsLoading || aiLoading));
 
    return useMemo(() => {
       const ws = (p: string) => workspaceHref(wsId, p);
