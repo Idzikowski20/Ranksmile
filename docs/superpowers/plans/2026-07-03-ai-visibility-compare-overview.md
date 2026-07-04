@@ -141,7 +141,7 @@ describe('snapshotForDomain', () => {
 
 - [ ] **Step 2: Run → fail** (`npx jest aiVisibilityMetrics -t snapshotForDomain`).
 
-- [ ] **Step 3: Implement.** In `lib/aiVisibilityMetrics.ts`: drop `export` from `computeOverview` and `aggregateSources` (make them `function …` internal). Replace the `OverviewSnapshot` type + `buildSnapshot`:
+- [ ] **Step 3: Implement.** In `lib/aiVisibilityMetrics.ts`: **keep `computeOverview` and `aggregateSources` exported** — Task B1's `data.ts` imports `aggregateSources` directly for the `sources` view branch (and `computeOverview` for its own branches), so unexporting either breaks B1's compilation. (`ReturnType<typeof …>` in `DomainSnapshot` below still resolves regardless of export.) Replace the `OverviewSnapshot` type + `buildSnapshot`:
 
 ```ts
 function projectRows(rows: ResultRow[], domain: string): ResultRow[] {

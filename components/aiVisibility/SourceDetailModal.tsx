@@ -8,6 +8,17 @@ import { useAiVisSourceDetail } from '../../services/aiVisibility';
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
+/** Only allow http/https citation URLs as an href — reject `javascript:`/`data:`/malformed
+ *  so a hostile scan URL can't execute when the external-link button is clicked. */
+const safeHref = (url: string): string | undefined => {
+   try {
+      const { protocol } = new URL(url);
+      return protocol === 'http:' || protocol === 'https:' ? url : undefined;
+   } catch {
+      return undefined;
+   }
+};
+
 type Sentiment = 'positive' | 'neutral' | 'negative' | 'mixed';
 const SENT: Record<Sentiment, { label: string; fg: string; bg: string }> = {
    positive: { label: 'Positive', fg: '#1AB25E', bg: '#EAF8F0' },
@@ -125,6 +136,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
 
    if (!s) return null;
    const { host, path } = splitSourceUrl(s.url, s.domain);
+   const openHref = safeHref(s.url);
    const canUp = navigable && index > 0;
    const canDown = navigable && index < list.length - 1;
 
@@ -145,7 +157,11 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                      ) : null}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                     <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label="Open source" style={{ ...iconBtn, textDecoration: 'none' }}><ExternalIcon /></a>
+                     {openHref ? (
+                        <a href={openHref} target="_blank" rel="noopener noreferrer" aria-label="Open source" style={{ ...iconBtn, textDecoration: 'none' }}><ExternalIcon /></a>
+                     ) : (
+                        <span aria-label="Open source" aria-disabled="true" title="Source URL is not a valid web link" style={{ ...iconBtn, cursor: 'not-allowed', opacity: 0.35 }}><ExternalIcon /></span>
+                     )}
                      <button type="button" aria-label="Close" onClick={handleClose} style={iconBtn}><CloseIcon /></button>
                   </div>
                </div>

@@ -129,8 +129,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (view === 'overview') {
          const own = domain.domain;
          const ownKey = NORM(own);
-         const byDomain = buildSnapshotsForScan(rows, own);
-         const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(rows, own);
+         const all = filterRows(rows); // scope own + competitor metrics to the picked prompts
+         const byDomain = buildSnapshotsForScan(all, own);
+         const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(all, own);
          const ranked = rankCompetitors(byDomain, own);
 
          const competitors = ranked.slice(0, 5).map((c) => ({ domain: c.domain, snapshot: withoutSources(c.snapshot) }));
@@ -150,7 +151,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
              ORDER BY s.finished_at DESC LIMIT 1`,
             [domain.ID, scan.finished_at],
          ) : undefined;
-         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(await loadScanResultRows(prev.id), own)) : null;
+         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanResultRows(prev.id)), own)) : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
          const nextRefreshAt = scan.finished_at
@@ -159,6 +160,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const daysUntilRefresh = nextRefreshAt
             ? Math.max(0, Math.ceil((new Date(nextRefreshAt).getTime() - Date.now()) / 86_400_000))
             : null;
+
+         // Picker options come from the UNFILTERED scan so a prompt filter never
+         // shrinks the list you can pick from (the snapshot above is filtered).
+         const promptOptions = Array.from(
+            new Map(rows.map((r) => [r.promptId, { id: r.promptId, text: r.text, topic: r.topic }])).values(),
+         );
 
          return res.status(200).json({
             scanId: scan.id,
@@ -171,6 +178,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             previousScanAt: prev ? prev.finished_at : null,
             nextRefreshAt,
             daysUntilRefresh,
+            promptOptions,
          });
       }
       if (view === 'competitors') {

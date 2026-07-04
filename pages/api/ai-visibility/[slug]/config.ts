@@ -68,7 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                'UPDATE ai_vis_configs SET brand_name = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                { replacements: [brandName, configId] },
             );
-            await db.query('DELETE FROM ai_vis_prompts WHERE config_id = ?', { replacements: [configId] });
          } else {
             await db.query(
                'INSERT INTO ai_vis_configs (domain_id, brand_name, prompt_limit, models, completed_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
@@ -79,15 +78,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             configId = created.id;
          }
 
+         // Reconcile prompts instead of wiping the table: prompts carry a stable id
+         // that ai_vis_results rows reference. A DELETE+reinsert renumbers every
+         // prompt, orphaning all scan results (the read JOIN drops them → the whole
+         // dashboard shows zeros). So: UPDATE prompts sent back with their id in
+         // place, INSERT id-less (new) ones, DELETE any the editor dropped. Scan
+         // results for kept prompts survive; only genuinely new prompts get scanned.
+         const priorRows = await queryRows<{ id: number, text: string }>('SELECT id, text FROM ai_vis_prompts WHERE config_id = ?', [configId]);
+         const priorById = new Map(priorRows.map((r) => [r.id, r.text]));
+         const keptIds = new Set<number>();
          let order = 0;
          for (const t of topics) {
             for (const p of t.prompts) {
-               await db.query(
-                  'INSERT INTO ai_vis_prompts (config_id, topic, text, provenance, selected, is_custom, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                  { replacements: [configId, t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, (p as { isCustom?: boolean }).isCustom ? 1 : 0, order] },
-               );
+               const pid = Number((p as { id?: number }).id) || 0;
+               const isCustom = (p as { isCustom?: boolean }).isCustom ? 1 : 0;
+               if (pid > 0 && priorById.has(pid)) {
+                  keptIds.add(pid);
+                  await db.query(
+                     'UPDATE ai_vis_prompts SET topic = ?, text = ?, provenance = ?, selected = ?, is_custom = ?, sort_order = ? WHERE id = ?',
+                     { replacements: [t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, isCustom, order, pid] },
+                  );
+                  // Text changed ⇒ the stored answer is stale. Drop its results so the
+                  // incremental scan re-runs this prompt instead of carrying it forward.
+                  if (priorById.get(pid) !== p.text) {
+                     await db.query('DELETE FROM ai_vis_results WHERE prompt_id = ?', { replacements: [pid] });
+                  }
+               } else {
+                  await db.query(
+                     'INSERT INTO ai_vis_prompts (config_id, topic, text, provenance, selected, is_custom, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                     { replacements: [configId, t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, isCustom, order] },
+                  );
+               }
                order += 1;
             }
+         }
+         // Prune prompts the editor removed, along with their now-unreachable results.
+         const removed = priorRows.filter((r) => !keptIds.has(r.id));
+         for (const r of removed) {
+            await db.query('DELETE FROM ai_vis_results WHERE prompt_id = ?', { replacements: [r.id] });
+            await db.query('DELETE FROM ai_vis_prompts WHERE id = ?', { replacements: [r.id] });
          }
          return res.status(200).json({ config: await loadConfig(domain.ID) });
       }

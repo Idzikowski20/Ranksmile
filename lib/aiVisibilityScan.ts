@@ -113,6 +113,35 @@ export async function findDueConfigIds(limit = AI_VIS_SETTINGS.SCHEDULER_BATCH_L
    return rows.map((r) => Number(r.id));
 }
 
+/**
+ * Seed a freshly-queued scan with the previous completed scan's results, so an
+ * incremental refresh (triggered after editing prompts) only pays the model for
+ * genuinely new (prompt × model) pairs. runScanChunk derives "done" from the rows
+ * already present for the scan, so carrying forward the unchanged rows makes it
+ * skip them. Copied rows keep their citations/brands but cost_micros = 0 (already
+ * paid). Idempotent: no-op if this scan already has any results, or if there is no
+ * prior completed scan (first run pays for everything, as today). Only carries
+ * still-selected prompts — config.ts already deleted results for removed/edited
+ * prompts, so those fall through to a real re-scan.
+ */
+export async function seedScanFromLatest(newScanId: number, configId: number): Promise<void> {
+   const already = await queryOne<{ id: number }>('SELECT id FROM ai_vis_results WHERE scan_id = ? LIMIT 1', [newScanId]);
+   if (already) return;
+   const latest = await queryOne<{ id: number }>(
+      "SELECT id FROM ai_vis_scans WHERE config_id = ? AND status = 'completed' ORDER BY finished_at DESC LIMIT 1",
+      [configId],
+   );
+   if (!latest) return;
+   await db.query(
+      `INSERT INTO ai_vis_results (scan_id, prompt_id, model, answer, citations, brands, own_cited, own_position, cost_micros)
+       SELECT ?, prompt_id, model, answer, citations, brands, own_cited, own_position, 0
+         FROM ai_vis_results
+        WHERE scan_id = ? AND error IS NULL
+          AND prompt_id IN (SELECT id FROM ai_vis_prompts WHERE config_id = ? AND selected = 1)`,
+      { replacements: [newScanId, latest.id, configId] },
+   );
+}
+
 type PromptRow = { id: number, text: string };
 type Pair = { prompt: PromptRow, model: AiModel };
 
