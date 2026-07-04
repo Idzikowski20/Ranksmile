@@ -1,4 +1,21 @@
-import { parseLlmItems, parseAiModeItems, parseAiOverview, isRetryable } from '../../lib/dataforseoLlm';
+import { parseLlmItems, parseAiModeItems, parseAiOverview, extractFanOut, isRetryable } from '../../lib/dataforseoLlm';
+
+describe('extractFanOut', () => {
+   it('reads llm_responses fan_out_queries (string[])', () => {
+      expect(extractFanOut({ fan_out_queries: ['najlepsze narzędzia', '  łatwe kreatory  ', ''] }))
+         .toEqual(['najlepsze narzędzia', 'łatwe kreatory']);
+   });
+   it('falls back to ai_mode refinement_chips (string or {title})', () => {
+      expect(extractFanOut({ refinement_chips: ['chip a', { title: 'chip b' }, { query: 'chip c' }, { foo: 1 }] }))
+         .toEqual(['chip a', 'chip b', 'chip c']);
+   });
+   it('returns [] for null / missing / non-array', () => {
+      expect(extractFanOut(null)).toEqual([]);
+      expect(extractFanOut({})).toEqual([]);
+      expect(extractFanOut({ fan_out_queries: null })).toEqual([]);
+      expect(extractFanOut({ fan_out_queries: 'nope' })).toEqual([]);
+   });
+});
 
 describe('parseLlmItems (chat_gpt/gemini/perplexity)', () => {
    const items = [

@@ -6,7 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
+import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
 import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
 
@@ -41,8 +41,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          [domain.ID],
       );
       if (!scan) return res.status(200).json({ pending: true });
-
-      if (view === 'fanout') return res.status(200).json({ queries: [] }); // Beta stub
 
       // Brand-aware views (sources/source-detail) load full ResultRows (incl. brands) and
       // support prompt/model filtering via CSV query params.
@@ -109,6 +107,75 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return res.status(200).json({ history, brands, brandCount: brands.length });
       }
 
+      if (view === 'fanout') {
+         // Fan-out sub-queries the engines generated on the latest scan, grouped two
+         // ways + the common-phrase pills. Honors the prompt/model toolbar filters.
+         const all = filterRows(await loadScanResultRows(scan.id));
+         return res.status(200).json({
+            groupByFanout: groupFanoutByQuery(all),
+            groupByPrompt: groupFanoutByPrompt(all),
+            commonPhrases: commonPhrases(all),
+         });
+      }
+
+      if (view === 'prompt-detail' || view === 'fanout-detail') {
+         // Shared detail slide-over. prompt-detail scopes to one prompt; fanout-detail
+         // scopes to every prompt that produced the given fan-out query. `engine` (the
+         // modal's model dropdown) further narrows the rows; metrics are the OWNER's.
+         const engine = typeof req.query.engine === 'string' ? req.query.engine : '';
+         const promptId = parseInt(String(req.query.promptId), 10);
+         const query = typeof req.query.query === 'string' ? req.query.query : '';
+         const entity = (rs: ResultRow[]): ResultRow[] => (view === 'prompt-detail'
+            ? rs.filter((r) => r.promptId === promptId)
+            // Scope directly to rows that actually emitted this query, so the modal's
+            // engines/overview/trend never include models that never produced it.
+            : rs.filter((r) => (r.fanOutQueries ?? []).includes(query)));
+         const scope = (rs: ResultRow[]): ResultRow[] => { const e = entity(rs); return engine ? e.filter((r) => r.model === engine) : e; };
+
+         const latestAll = await loadScanResultRows(scan.id);
+         const entityRows = entity(latestAll); // unscoped-by-engine → drives the engine dropdown + title
+         if (!entityRows.length) return res.status(200).json({ pending: false, title: query, overview: null, engines: [], series: [], brands: [], fanout: [] });
+         const scoped = engine ? entityRows.filter((r) => r.model === engine) : entityRows;
+         const overview = computeOverview(scoped);
+
+         const engines = Array.from(new Set(entityRows.map((r) => r.model)));
+
+         // Time series over recent completed scans (bounded like /history).
+         const scans = await queryRows<{ id: number, finished_at: string | null }>(
+            `SELECT s.id, s.finished_at FROM ai_vis_scans s JOIN ai_vis_configs c ON c.id = s.config_id
+             WHERE c.domain_id = ? AND s.status = 'completed' ORDER BY s.id DESC LIMIT 24`, [domain.ID]);
+         const series: Array<{ finishedAt: string | null, visibilityScore: number, mentionRate: number, avgPosition: number | null }> = [];
+         for (const s of scans.slice().reverse()) {
+            const ov = computeOverview(s.id === scan.id ? scoped : scope(await loadScanResultRows(s.id)));
+            series.push({ finishedAt: s.finished_at, visibilityScore: ov.visibilityScore, mentionRate: ov.mentionRate, avgPosition: ov.avgPosition });
+         }
+
+         // Brands recognised across the scoped rows (mention count + avg appearance pos).
+         const brandMap = new Map<string, { brand: string, domain: string, mentions: number, posSum: number }>();
+         for (const r of scoped) for (const b of r.brands) {
+            const key = b.brand.toLowerCase();
+            const e = brandMap.get(key) ?? { brand: b.brand, domain: b.domain, mentions: 0, posSum: 0 };
+            e.mentions += 1; e.posSum += b.pos; if (!e.domain && b.domain) e.domain = b.domain;
+            brandMap.set(key, e);
+         }
+         const brands = Array.from(brandMap.values())
+            .map((b) => ({ brand: b.brand, domain: b.domain, mentions: b.mentions, avgPosition: Math.round((b.posSum / b.mentions) * 10) / 10 }))
+            .sort((a, b) => b.mentions - a.mentions);
+
+         const fanout = view === 'prompt-detail'
+            ? (groupFanoutByPrompt(scoped).find((p) => p.id === promptId)?.queries ?? [])
+            : groupFanoutByQuery(scoped).filter((f) => f.query === query).map((f) => ({ query: f.query, models: f.models, timesShown: f.timesShown }));
+
+         return res.status(200).json({
+            title: view === 'prompt-detail' ? (entityRows[0]?.text || '') : query,
+            overview: { visibilityScore: overview.visibilityScore, mentionRate: overview.mentionRate, avgPosition: overview.avgPosition },
+            engines,
+            series,
+            brands,
+            fanout,
+         });
+      }
+
       const dbRows = await queryRows<DbResultRow>(
          `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
           FROM ai_vis_results r JOIN ai_vis_prompts p ON p.id = r.prompt_id
@@ -124,6 +191,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          topic: r.topic,
          text: r.text,
          brands: [], // competitors/prompts branches don't read brands; B3 uses loadScanResultRows for sources
+         fanOutQueries: [], // fanout view loads via loadScanResultRows (which selects the column)
       }));
 
       if (view === 'overview') {

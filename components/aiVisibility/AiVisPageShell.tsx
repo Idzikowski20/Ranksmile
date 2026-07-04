@@ -61,8 +61,9 @@ const AiVisPageShell = ({ section, title, compareCompetitors, compareSelected = 
          <Head><title>{`${title} — ${domain}`}</title></Head>
          <style>{'@keyframes aivPulse{0%,100%{opacity:1}50%{opacity:.5}}.aiv-pulse{animation:aivPulse 1.5s ease-in-out infinite}@keyframes aivSpin{to{transform:rotate(360deg)}}'}</style>
          <DomainSubLayout domain={domain} slug={slug || ''} section={section} contentMaxWidth="100%">
-            {/* Sticky page title row */}
-            <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', paddingBottom: 16, marginBottom: 4 }}>
+            {/* Sticky page title row — pt-lg / py-base / min-h-[32px] so the header keeps
+                consistent height + breathing room across every AI Visibility page when stuck. */}
+            <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 32, background: '#fff', paddingTop: 24, paddingBottom: 12, marginBottom: 4 }}>
                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>{title}</span>
                   <InfoIcon />

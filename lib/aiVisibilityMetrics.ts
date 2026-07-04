@@ -21,6 +21,7 @@ export type ResultRow = {
    topic: string,
    text: string,
    brands: BrandMention[],
+   fanOutQueries?: string[], // sub-queries the engine generated (DataForSEO fan_out_queries); runtime always sets it, optional only so test fixtures needn't
 };
 
 export type SourceBrand = { brand: string, domain: string };
@@ -360,4 +361,101 @@ export function computeDelta(current: DomainSnapshot, previous: DomainSnapshot):
       sources: { added, removed },
       prompts: { gained, lost },
    };
+}
+
+// ── Fan-out queries ────────────────────────────────────────────────────────
+// The follow-up search queries an engine generates while answering a prompt
+// (DataForSEO fan_out_queries). timesShown = # of (prompt×model) rows producing it.
+export type FanoutByQuery = {
+   query: string, promptCount: number, models: string[], timesShown: number,
+   prompts: Array<{ id: number, text: string, topic: string, timesShown: number }>,
+};
+export type FanoutByPrompt = {
+   id: number, text: string, topic: string, fanoutCount: number, models: string[], timesShown: number,
+   queries: Array<{ query: string, models: string[], timesShown: number }>,
+};
+
+/** Group rows by distinct fan-out query → which prompts/models produced it. */
+export function groupFanoutByQuery(rows: ResultRow[]): FanoutByQuery[] {
+   const byQuery = new Map<string, { models: Set<string>, timesShown: number, prompts: Map<number, { text: string, topic: string, timesShown: number }> }>();
+   for (const r of rows) {
+      // Dedupe within a row: timesShown is per (prompt × model) row, not per array element.
+      for (const q of new Set(r.fanOutQueries ?? [])) {
+         const e = byQuery.get(q) ?? { models: new Set<string>(), timesShown: 0, prompts: new Map() };
+         e.models.add(r.model);
+         e.timesShown += 1;
+         const p = e.prompts.get(r.promptId) ?? { text: r.text, topic: r.topic, timesShown: 0 };
+         p.timesShown += 1;
+         e.prompts.set(r.promptId, p);
+         byQuery.set(q, e);
+      }
+   }
+   return Array.from(byQuery.entries())
+      .map(([query, e]) => ({
+         query,
+         promptCount: e.prompts.size,
+         models: Array.from(e.models),
+         timesShown: e.timesShown,
+         prompts: Array.from(e.prompts.entries())
+            .map(([id, p]) => ({ id, text: p.text, topic: p.topic, timesShown: p.timesShown }))
+            .sort((a, b) => b.timesShown - a.timesShown),
+      }))
+      .sort((a, b) => b.timesShown - a.timesShown || a.query.localeCompare(b.query));
+}
+
+/** Group rows by prompt → the fan-out queries it generated. */
+export function groupFanoutByPrompt(rows: ResultRow[]): FanoutByPrompt[] {
+   const byPrompt = new Map<number, { text: string, topic: string, models: Set<string>, timesShown: number, queries: Map<string, { models: Set<string>, timesShown: number }> }>();
+   for (const r of rows) {
+      const fo = Array.from(new Set(r.fanOutQueries ?? [])); // dedupe per row (per prompt×model)
+      if (!fo.length) continue;
+      const e = byPrompt.get(r.promptId) ?? { text: r.text, topic: r.topic, models: new Set<string>(), timesShown: 0, queries: new Map() };
+      for (const q of fo) {
+         e.models.add(r.model);
+         e.timesShown += 1;
+         const qq = e.queries.get(q) ?? { models: new Set<string>(), timesShown: 0 };
+         qq.models.add(r.model);
+         qq.timesShown += 1;
+         e.queries.set(q, qq);
+      }
+      byPrompt.set(r.promptId, e);
+   }
+   return Array.from(byPrompt.entries())
+      .map(([id, e]) => ({
+         id, text: e.text, topic: e.topic,
+         fanoutCount: e.queries.size,
+         models: Array.from(e.models),
+         timesShown: e.timesShown,
+         queries: Array.from(e.queries.entries())
+            .map(([query, q]) => ({ query, models: Array.from(q.models), timesShown: q.timesShown }))
+            .sort((a, b) => b.timesShown - a.timesShown),
+      }))
+      .sort((a, b) => b.timesShown - a.timesShown);
+}
+
+/** Frequent 2–5 word phrases across all fan-out strings (document frequency:
+ *  # distinct queries containing the phrase). For the "Common phrases" pills. */
+export function commonPhrases(rows: ResultRow[], opts: { min?: number, limit?: number } = {}): Array<{ phrase: string, count: number }> {
+   const min = opts.min ?? 2;
+   const limit = opts.limit ?? 30;
+   const queries = new Set<string>();
+   for (const r of rows) for (const q of r.fanOutQueries ?? []) { const t = q.toLowerCase().trim(); if (t) queries.add(t); }
+   const freq = new Map<string, number>();
+   for (const q of queries) {
+      const words = q.split(/\s+/).filter(Boolean);
+      const seen = new Set<string>();
+      for (let n = 2; n <= 5; n += 1) {
+         for (let i = 0; i + n <= words.length; i += 1) {
+            const gram = words.slice(i, i + n).join(' ');
+            if (seen.has(gram)) continue;
+            seen.add(gram);
+            freq.set(gram, (freq.get(gram) ?? 0) + 1);
+         }
+      }
+   }
+   return Array.from(freq.entries())
+      .filter(([, c]) => c >= min)
+      .map(([phrase, count]) => ({ phrase, count }))
+      .sort((a, b) => b.count - a.count || b.phrase.length - a.phrase.length)
+      .slice(0, limit);
 }

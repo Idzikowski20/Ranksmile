@@ -1,7 +1,20 @@
 // buildOverview/loadScanResultRows touch the DB; parseCitations + mapDbRowsToResultRows are pure.
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn() } }));
 
-import { parseCitations, parseBrands, mapDbRowsToResultRows } from '../../lib/aiVisibilityRead';
+import { parseCitations, parseBrands, mapDbRowsToResultRows, parseFanOut } from '../../lib/aiVisibilityRead';
+
+describe('parseFanOut', () => {
+   it('parses a JSON string (SQLite) and an array (Postgres jsonb)', () => {
+      expect(parseFanOut('["a","  b  ",""]')).toEqual(['a', 'b']);
+      expect(parseFanOut(['a', 'b'])).toEqual(['a', 'b']);
+   });
+   it('returns [] for null / bad JSON / non-array / undefined', () => {
+      expect(parseFanOut(null)).toEqual([]);
+      expect(parseFanOut(undefined)).toEqual([]);
+      expect(parseFanOut('{bad')).toEqual([]);
+      expect(parseFanOut(42)).toEqual([]);
+   });
+});
 
 describe('parseCitations', () => {
    it('coerces missing domain/title to empty strings and drops non-url entries', () => {
@@ -39,7 +52,7 @@ describe('mapDbRowsToResultRows', () => {
          { prompt_id: 5, model: 'gemini', own_cited: 1, own_position: 2, citations: JSON.stringify([{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }]), topic: 'T', text: 'Q', brands: JSON.stringify([{ brand: 'Wix' }]) },
          { prompt_id: 6, model: 'chat_gpt', own_cited: 0, own_position: null, citations: null, topic: 'T2', text: 'Q2', brands: null },
       ]);
-      expect(rows[0]).toEqual({ promptId: 5, model: 'gemini', ownCited: true, ownPosition: 2, citations: [{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }], topic: 'T', text: 'Q', brands: [{ brand: 'Wix', domain: '', sentiment: 'neutral', pos: 1, quotes: [] }] });
-      expect(rows[1]).toEqual({ promptId: 6, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [], topic: 'T2', text: 'Q2', brands: [] });
+      expect(rows[0]).toEqual({ promptId: 5, model: 'gemini', ownCited: true, ownPosition: 2, citations: [{ url: 'https://idztech.pl', domain: 'idztech.pl', title: '' }], topic: 'T', text: 'Q', brands: [{ brand: 'Wix', domain: '', sentiment: 'neutral', pos: 1, quotes: [] }], fanOutQueries: [] });
+      expect(rows[1]).toEqual({ promptId: 6, model: 'chat_gpt', ownCited: false, ownPosition: null, citations: [], topic: 'T2', text: 'Q2', brands: [], fanOutQueries: [] });
    });
 });

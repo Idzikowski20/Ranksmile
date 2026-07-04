@@ -8,7 +8,16 @@ import type { LlmCitation } from './dataforseoLlm';
 
 export type DbResultRow = {
    prompt_id: number; model: string; own_cited: number; own_position: number | null;
-   citations: unknown; topic: string | null; text: string | null; brands: unknown;
+   citations: unknown; topic: string | null; text: string | null; brands: unknown; fan_out_queries?: unknown;
+};
+
+/** fan_out_queries column: jsonb (parsed array) on Postgres, TEXT (JSON string) on
+ *  SQLite — handle both like parseCitations; keep only non-empty strings. */
+export const parseFanOut = (raw: unknown): string[] => {
+   let v: unknown = raw;
+   if (typeof raw === 'string') { try { v = JSON.parse(raw); } catch { return []; } }
+   if (!Array.isArray(v)) return [];
+   return v.filter((q): q is string => typeof q === 'string').map((q) => q.trim()).filter(Boolean);
 };
 
 /** brands column: jsonb (parsed array) on Postgres, TEXT (JSON string) on SQLite —
@@ -54,6 +63,7 @@ export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbR
    topic: r.topic ?? '',
    text: r.text ?? '',
    brands: parseBrands(r.brands),
+   fanOutQueries: parseFanOut(r.fan_out_queries),
 }));
 
 export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
@@ -62,7 +72,7 @@ export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
       // historical ai_vis_results rows that reference a now-missing prompt id. An inner
       // join would silently drop those rows and corrupt past scan metrics; LEFT JOIN keeps
       // every result row and just leaves topic/text NULL (mapDbRowsToResultRows → '').
-      `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, r.brands, p.topic, p.text
+      `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, r.brands, r.fan_out_queries, p.topic, p.text
        FROM ai_vis_results r LEFT JOIN ai_vis_prompts p ON p.id = r.prompt_id
        WHERE r.scan_id = ? AND r.error IS NULL`,
       [scanId],

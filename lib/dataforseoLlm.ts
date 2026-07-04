@@ -14,7 +14,7 @@ const BASE = 'https://api.dataforseo.com/v3';
 
 export type AiModel = 'ai_overview' | 'ai_mode' | 'chat_gpt' | 'perplexity' | 'gemini';
 export type LlmCitation = { url: string, domain: string, title: string };
-export type LlmAnswer = { text: string, citations: LlmCitation[], costUsd: number };
+export type LlmAnswer = { text: string, citations: LlmCitation[], fanOutQueries: string[], costUsd: number };
 
 /** llm_responses/live is only for these three; the two Google engines route to SERP. */
 const LLM_ENGINES: AiModel[] = ['chat_gpt', 'perplexity', 'gemini'];
@@ -58,6 +58,29 @@ export const isRetryable = (e: unknown): boolean => {
 };
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => { setTimeout(r, ms); });
+
+/**
+ * Fan-out sub-queries the engine generated while answering. llm_responses expose
+ * `result[0].fan_out_queries` (string[], populated when web_search actually ran);
+ * the Google `ai_mode` SERP exposes `refinement_chips` (string or {title}). Others
+ * (perplexity/ai_overview) return none → []. Pure + exported for unit tests.
+ */
+export function extractFanOut(result: unknown): string[] {
+   const r = result as { fan_out_queries?: unknown, refinement_chips?: unknown } | null;
+   const raw = r?.fan_out_queries ?? r?.refinement_chips;
+   if (!Array.isArray(raw)) return [];
+   const out: string[] = [];
+   for (const q of raw) {
+      const s = typeof q === 'string'
+         ? q
+         : (q && typeof q === 'object'
+            ? String((q as { title?: unknown, query?: unknown }).title ?? (q as { query?: unknown }).query ?? '')
+            : '');
+      const t = s.trim();
+      if (t) out.push(t);
+   }
+   return out;
+}
 
 /** Pure parser for llm_responses result[0].items — exported for unit tests. */
 export function parseLlmItems(items: unknown[]): { text: string, citations: LlmCitation[] } {
@@ -175,20 +198,22 @@ export async function runModelPrompt(model: AiModel, prompt: string, countryIso 
       // Field); only chat_gpt/perplexity accept geo-scoping the web search.
       if (model !== 'gemini') task.web_search_country_iso_code = countryIso.toUpperCase();
       const { taskData, costUsd } = await postWithRetry(`/ai_optimization/${model}/llm_responses/live`, task);
-      const parsed = parseLlmItems(taskData?.result?.[0]?.items ?? []);
-      return { ...parsed, costUsd };
+      const result = taskData?.result?.[0];
+      const parsed = parseLlmItems(result?.items ?? []);
+      return { ...parsed, fanOutQueries: extractFanOut(result), costUsd };
    }
 
    if (model === 'ai_mode') {
       const task: Record<string, unknown> = { keyword: prompt.slice(0, 700), location_code: LOCATION_CODE_PL, language_code: 'pl' };
       const { taskData, costUsd } = await postWithRetry('/serp/google/ai_mode/live/advanced', task);
-      const parsed = parseAiModeItems(taskData?.result?.[0]?.items ?? []);
-      return { ...parsed, costUsd };
+      const result = taskData?.result?.[0];
+      const parsed = parseAiModeItems(result?.items ?? []);
+      return { ...parsed, fanOutQueries: extractFanOut(result), costUsd };
    }
 
    // ai_overview: pull it from a normal Google organic SERP.
    const task: Record<string, unknown> = { keyword: prompt.slice(0, 700), location_code: LOCATION_CODE_PL, language_code: 'pl' };
    const { taskData, costUsd } = await postWithRetry('/serp/google/organic/live/advanced', task);
    const parsed = parseAiOverview(taskData?.result?.[0]?.items ?? []);
-   return { ...parsed, costUsd };
+   return { ...parsed, fanOutQueries: [], costUsd }; // ai_overview exposes no fan-out
 }
