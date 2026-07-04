@@ -30,15 +30,15 @@ const CompetitorPicker = ({ competitors, selected, onSelect, align = 'left' }: {
    return (
       // minWidth:0 + flexShrink lets the picker shrink (and the domain label ellipsize)
       // when the toolbar is tight, instead of holding its full width and wrapping the row.
-      <div ref={ref} style={{ position: 'relative', minWidth: 0, flexShrink: 1 }}>
+      <div ref={ref} style={{ position: 'relative', display: 'inline-flex', minWidth: 0, flexShrink: 1, maxWidth: 300 }}>
          <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '7px 12px', border: `1px solid ${active ? '#18181B' : '#E4E4E7'}`, background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', maxWidth: 220, minWidth: 0, width: '100%' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '6px 12px', border: `1px solid ${active ? '#18181B' : '#E4E4E7'}`, background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', width: '100%', minWidth: 0, whiteSpace: 'nowrap' }}
          >
             {active ? (
                <>
-                  <span style={{ fontWeight: 400, color: '#71717B' }}>Comparing with</span>
+                  <span style={{ fontWeight: 400, color: '#71717B', whiteSpace: 'nowrap', flexShrink: 0 }}>Comparing with</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
                      <img alt="" src={favicon(selected as string)} width={16} height={16} style={{ borderRadius: 3, flexShrink: 0 }} />
