@@ -2446,6 +2446,7 @@ const ArticleEditorPage: NextPage = () => {
         {/* Content Editor customization panel */}
         <CustomizationPanelModal
           open={showCustomization}
+          slug={domains.find((d) => d.ID === article?.domain_id)?.slug}
           keyword={article?.target_keyword || ''}
           onClose={() => setShowCustomization(false)}
         />

@@ -88,3 +88,52 @@ describe('buildAuditResult', () => {
       expect(strip(r2)).toEqual(strip(r));
    });
 });
+
+describe('buildAuditResult with real competitor data (phase 2)', () => {
+   const real = {
+      competitors: [
+         { domain: 'detektywsigma.pl', rank: 1, contentScore: 80, values: { word_count_body: 2000, h1_count: 1, img_count: 6 } },
+         { domain: 'www.infor.pl', rank: 4, contentScore: 50, values: { word_count_body: 1400, h1_count: 1, img_count: 2 } },
+      ],
+      terms: [
+         { term: 'podejrzane aplikacje', target_count: 3 },
+         { term: 'inny samochód', target_count: 1 },
+      ],
+   };
+   const r = buildAuditResult(HTML, URL, KEYWORD, { ttfbMs: 100, loadMs: 300 }, real);
+
+   it('flips every factor to real (placeholder:false) with the given competitor values', () => {
+      r.factors.forEach((f) => expect(f.placeholder).toBe(false));
+      const body = r.factors.find((f) => f.key === 'word_count_body');
+      expect(body?.competitors).toEqual([
+         { label: 'detektywsigma.pl', rank: 1, value: 2000 },
+         { label: 'www.infor.pl', rank: 4, value: 1400 },
+      ]);
+      // suggested range spans the competitor spread
+      expect(body?.suggestedMin).toBe(1400);
+      expect(body?.suggestedMax).toBe(2000);
+   });
+
+   it('derives the content-score competitors + range from real data', () => {
+      expect(r.contentScoreCompetitors).toEqual([
+         { label: 'detektywsigma.pl', rank: 1, value: 80 },
+         { label: 'www.infor.pl', rank: 4, value: 50 },
+      ]);
+      expect(r.contentScoreSuggestedMin).toBe(50);
+      expect(r.contentScoreSuggestedMax).toBe(80);
+   });
+
+   it('maps NLP terms with a real "you" count + add/ok action', () => {
+      expect(r.terms.length).toBe(2);
+      const t = r.terms.find((x) => x.term === 'podejrzane aplikacje');
+      expect(t?.nlp).toBe(true);
+      expect(t?.suggested).toBe('3');
+      expect(t?.you).toBeGreaterThanOrEqual(1); // appears in the fixture body
+      expect(['add', 'ok', 'remove']).toContain(t?.action);
+   });
+
+   it('falls back to a competitor value of 0 for factors the competitor lacks', () => {
+      const strong = r.factors.find((f) => f.key === 'strong_b_words');
+      expect(strong?.competitors.every((c) => c.value === 0)).toBe(true);
+   });
+});

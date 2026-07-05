@@ -78,6 +78,21 @@ export function useCreateAudit(slug: string | undefined): UseMutationResult<{ id
    );
 }
 
+/** Re-queue one audit (e.g. after the competitor selection changed) so it recomputes. */
+export function useRerunAudit(slug: string | undefined): UseMutationResult<{ ok: boolean }, Error, { id: number }> {
+   const qc = useQueryClient();
+   return useMutation<{ ok: boolean }, Error, { id: number }>(
+      (body) => fetchJson<{ ok: boolean }>(`/api/audit-tool/${slug}/rerun`, jsonPost(body)),
+      {
+         onSuccess: (_res, vars) => {
+            qc.invalidateQueries(['audit-run', slug, vars.id]);
+            qc.invalidateQueries(['audit-status', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}
+
 export function useRunAudits(slug: string | undefined): UseMutationResult<{ processed: number }, Error, void> {
    const qc = useQueryClient();
    return useMutation<{ processed: number }, Error, void>(

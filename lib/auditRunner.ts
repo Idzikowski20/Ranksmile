@@ -9,6 +9,7 @@
 import db from '../database/database';
 import { queryOne } from './db/query';
 import { computeAudit } from './auditCompute';
+import { enrichAudit } from './auditEnrich';
 import { getErrorMessage } from './errors';
 
 const isPg = !!process.env.DATABASE_URL;
@@ -91,7 +92,10 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
 
       // One bad audit must not abort the batch — record the failure and move on.
       try {
-         const result = await computeAudit(candidate.url, candidate.keyword);
+         const result = await computeAudit(
+            candidate.url, candidate.keyword,
+            (u, k) => enrichAudit(domainId, u, k), // real competitor bars + ranges + terms (phase 2)
+         );
          await db.query(
             "UPDATE audit_runs SET status = 'completed', result_json = ?, content_score = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
             { replacements: [JSON.stringify(result), result.contentScore, candidate.id] },
