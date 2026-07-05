@@ -2,10 +2,11 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import React from 'react';
+import React, { useState } from 'react';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
-import { useAuditRun } from '../../../../services/auditTool';
+import CompetitorsModal from '../../../../components/competitors/CompetitorsModal';
+import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/auditTool';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AuditFactor } from '../../../../lib/auditTypes';
@@ -62,6 +63,17 @@ const AuditDetailPage: NextPage = () => {
    const run = runQ.data?.run;
    const result = runQ.data?.result;
 
+   // "Select competitors" modal — shared store keyed by (domain, keyword). Changing the
+   // selection re-queues this audit so the charts recompute against the chosen competitors.
+   const [compOpen, setCompOpen] = useState(false);
+   const rerunM = useRerunAudit(slug);
+   const runM = useRunAudits(slug);
+
+   const onConfirmCompetitors = () => {
+      setCompOpen(false);
+      if (runId) rerunM.mutate({ id: runId }, { onSuccess: () => runM.mutate() });
+   };
+
    // Surface react-query load/error state so a failed fetch shows an error instead of
    // an endless "Analyzing the page…" (which would only be true while compute runs).
    const failed = runQ.isError || run?.status === 'failed';
@@ -97,7 +109,20 @@ const AuditDetailPage: NextPage = () => {
                      <a href={run.url} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: '#52525C', fontFamily: FONT, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{run.url}</a>
                   )}
                </div>
-               <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', flexShrink: 0 }}>Share</button>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                  {run?.keyword && (
+                     <button
+                        type="button"
+                        onClick={() => setCompOpen(true)}
+                        aria-label="Select competitors"
+                        title="Select competitors"
+                        style={{ border: 'none', background: 'transparent', color: '#52525C', cursor: 'pointer', display: 'inline-flex', padding: 4 }}
+                     >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                     </button>
+                  )}
+                  <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
+               </div>
             </div>
 
             {failed && (
@@ -152,9 +177,40 @@ const AuditDetailPage: NextPage = () => {
                   </Panel>
 
                   <Panel title="Terms to Use">
-                     <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>
-                        NLP term suggestions arrive with real competitor data in the next phase.
-                     </div>
+                     {result.terms.length === 0 ? (
+                        <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>
+                           No term suggestions — scan competitors (top-right) to populate NLP terms for this keyword.
+                        </div>
+                     ) : (
+                        <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+                           <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
+                              <thead>
+                                 <tr>
+                                    <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px' }}>Term</th>
+                                    <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 70 }}>You</th>
+                                    <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 90 }}>Suggested</th>
+                                    <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 90 }}>Action</th>
+                                 </tr>
+                              </thead>
+                              <tbody>
+                                 {result.terms.map((t) => {
+                                    const color = t.action === 'add' ? '#DC2626' : t.action === 'remove' ? '#B45309' : '#15803D';
+                                    const label = t.action === 'add' ? `Add` : t.action === 'remove' ? 'Remove' : 'OK';
+                                    return (
+                                       <tr key={t.term}>
+                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', fontSize: 13, color: '#18181B' }}>
+                                             {t.term}{t.nlp && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#3B82F6', border: '1px solid #BFDBFE', borderRadius: 4, padding: '1px 4px' }}>NLP</span>}
+                                          </td>
+                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, color: '#52525C' }}>{t.you}</td>
+                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, color: '#52525C' }}>{t.suggested}</td>
+                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, fontWeight: 600, color }}>{label}</td>
+                                       </tr>
+                                    );
+                                 })}
+                              </tbody>
+                           </table>
+                        </div>
+                     )}
                   </Panel>
 
                   {sections.map((sec) => (
@@ -166,6 +222,15 @@ const AuditDetailPage: NextPage = () => {
             )}
             </div>
          </DomainSubLayout>
+
+         {compOpen && run?.keyword && (
+            <CompetitorsModal
+               slug={slug}
+               keyword={run.keyword}
+               onClose={() => setCompOpen(false)}
+               onConfirm={onConfirmCompetitors}
+            />
+         )}
       </AppShell>
    );
 };

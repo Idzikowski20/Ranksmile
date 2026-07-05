@@ -82,6 +82,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
         try {
           await materializeDomainSetup(Number(domainId), result || {});
+          // Fire-and-forget: pre-scan the shared Organic Competitors store for the
+          // domain's top keywords so they're ready in the audit/editor modal.
+          void import('../../../lib/competitorPrescan')
+            .then((m) => m.prescanDomainCompetitors(Number(domainId)))
+            .catch(() => { /* best-effort; never blocks setup */ });
         } catch (e) {
           // Materialization (delete+insert tx) failed — DON'T leave the job 'running'
           // (Retry only re-claims queued/failed/stale-running, so a stuck 'running' job
