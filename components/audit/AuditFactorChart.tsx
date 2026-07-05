@@ -58,7 +58,8 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, extraMax: 0.08, renderer: yRenderer }));
 
       // Dark value pill on the Y axis, revealed by the dashed cursor line (kept in bounds).
-      const yTooltip = am5.Tooltip.new(root, {});
+      // autoTextColor:false so amCharts doesn't recolor the label for contrast.
+      const yTooltip = am5.Tooltip.new(root, { autoTextColor: false });
       yTooltip.get('background')?.setAll({ fill: am5.color('#000000'), fillOpacity: 1 });
       yTooltip.label.setAll({ fill: am5.color('#FFFFFF'), fontSize: 12 });
       yAxis.set('tooltip', yTooltip);
@@ -76,9 +77,11 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       }
 
       const series = chart.series.push(am5xy.ColumnSeries.new(root, { xAxis, yAxis, categoryXField: 'cat', valueYField: 'value' }));
-      // labelText on the tooltip itself reliably populates from the hovered column's data
-      // (a bare column `tooltipText` was rendering an empty pill).
-      const colTooltip = am5.Tooltip.new(root, { getFillFromSprite: false, labelText: '{host}' });
+      // labelText populates from the hovered column's data. autoTextColor:false is the fix
+      // for the dark-on-dark label: amCharts was auto-recoloring the text to contrast with
+      // the column fill (dark "You" bar → white, light competitor bar → black), overriding
+      // our explicit white. getFillFromSprite:false keeps the pill black regardless of bar.
+      const colTooltip = am5.Tooltip.new(root, { getFillFromSprite: false, autoTextColor: false, labelText: '{host}' });
       colTooltip.get('background')?.setAll({ fill: am5.color('#000000'), fillOpacity: 1 });
       colTooltip.label.setAll({ fill: am5.color('#FFFFFF'), fontSize: 12 });
       series.set('tooltip', colTooltip);
