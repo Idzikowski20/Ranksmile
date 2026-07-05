@@ -7,6 +7,7 @@ import db from '../database/database';
 import { queryRows } from './db/query';
 import { callSidecar } from './sidecar';
 import { domainRanks } from './dataforseo';
+import { isContentCompetitor } from './competitorRelevance';
 import { CompetitorDTO, CompetitorRow, rowToCompetitorDTO } from './competitorTypes';
 
 /** Shape of one competitor returned by the sidecar /competitor-outlines endpoint. */
@@ -74,7 +75,11 @@ export async function scanCompetitors(domainId: number, keyword: string, languag
       { keyword, language: language || 'pl', num: 10 },
       60000,
    );
-   const competitors = (response.competitors || []).slice(0, 10);
+   // Drop non-article hosts (streaming/social/tools) the SERP drags in — they're never
+   // useful content-audit peers. Filter before the top-10 slice so we keep 10 real ones.
+   const competitors = (response.competitors || [])
+      .filter((c) => isContentCompetitor(c.domain || '', c.url))
+      .slice(0, 10);
 
    // Authority per host (best-effort — DataForSEO is optional; {} on failure/unconfigured).
    let ranks: Record<string, number> = {};

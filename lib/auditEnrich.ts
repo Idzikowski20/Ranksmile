@@ -6,6 +6,7 @@
 import { getCompetitors, scanCompetitors } from './competitorScan';
 import { fetchPage, extractFactorValues, RealAuditData } from './auditCompute';
 import { callSidecar } from './sidecar';
+import { isContentCompetitor } from './competitorRelevance';
 import { ensureCompetitorsTables } from './ensureCompetitorsTables';
 
 const PL_DIACRITICS = /[ąćęłńóśźż]/i;
@@ -37,6 +38,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
    const selected = comps
       .filter((c) => c.selected)
       .filter((c) => competitorHost(c.domain || '', c.url) !== ownHost) // don't compare the page to itself
+      .filter((c) => isContentCompetitor(c.domain || '', c.url)) // drop junk already stored (pre-filter scans)
       .slice(0, MAX_COMPETITORS);
    if (!selected.length) return null;
 
