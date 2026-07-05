@@ -137,3 +137,36 @@ describe('buildAuditResult with real competitor data (phase 2)', () => {
       expect(strong?.competitors.every((c) => c.value === 0)).toBe(true);
    });
 });
+
+describe('SurferSEO-style factor parity', () => {
+   const r = buildAuditResult(HTML, URL, KEYWORD, { ttfbMs: 120, loadMs: 340 });
+   const by = (k: string) => r.factors.find((f) => f.key === k);
+
+   it('breaks exact + partial keywords out per content zone (body/h2-h6/paragraphs/img-alt)', () => {
+      const keys = [
+         'exact_kw_h2h6', 'exact_kw_h2h6_per100', 'exact_kw_p', 'exact_kw_p_per100', 'exact_kw_img', 'exact_kw_img_per100',
+         'partial_kw_h2h6', 'partial_kw_h2h6_per100', 'partial_kw_p', 'partial_kw_p_per100', 'partial_kw_img', 'partial_kw_img_per100',
+      ];
+      keys.forEach((k) => expect(by(k)).toBeDefined());
+   });
+
+   it('marks the sub-zone keyword factors as informational (blue)', () => {
+      expect(by('exact_kw_h2h6')?.verdict).toBe('info');
+      expect(by('partial_kw_p')?.verdict).toBe('info');
+   });
+
+   it('applies fixed optimal ranges to title/meta/h1/img factors', () => {
+      expect([by('title_chars')?.suggestedMin, by('title_chars')?.suggestedMax]).toEqual([55, 70]);
+      expect([by('meta_desc_chars')?.suggestedMin, by('meta_desc_chars')?.suggestedMax]).toEqual([130, 150]);
+      expect([by('img_count')?.suggestedMin, by('img_count')?.suggestedMax]).toEqual([3, 6]);
+      expect([by('exact_kw_title')?.suggestedMin, by('exact_kw_title')?.suggestedMax]).toEqual([1, 1]);
+   });
+
+   it('covers all SurferSEO sections in order', () => {
+      const sections = r.factors.map((f) => f.section).filter((s, i, a) => a.indexOf(s) === i);
+      expect(sections).toEqual([
+         'Word count', 'Exact keywords', 'Partial keywords', 'Page structure',
+         'Title and meta description length', 'Time to first byte', 'Load time (ms)',
+      ]);
+   });
+});
