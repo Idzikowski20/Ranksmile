@@ -67,6 +67,7 @@ export interface AuditRunRow {
   status: string;
   content_score: number | null;
   result_json: string | null;
+  language: string | null;
   progress_done: number | null;
   progress_total: number | null;
   error: string | null;

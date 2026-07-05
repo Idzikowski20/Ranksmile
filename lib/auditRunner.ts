@@ -33,22 +33,24 @@ const affectedRows = (out: unknown): number => {
 // inserting a duplicate, so retries are idempotent (the unique index is the conflict target).
 const ON_CONFLICT = `ON CONFLICT (domain_id, url, keyword) DO UPDATE SET
    status = 'queued', result_json = NULL, content_score = NULL, error = NULL,
-   progress_done = 0, progress_total = 1, started_at = NULL, finished_at = NULL,
-   created_at = CURRENT_TIMESTAMP`;
+   language = excluded.language, progress_done = 0, progress_total = 1,
+   started_at = NULL, finished_at = NULL, created_at = CURRENT_TIMESTAMP`;
 
-export async function enqueueAudit(domainId: number, url: string, keyword: string): Promise<number> {
-   const values = "VALUES (?, ?, ?, 'queued', 0, 1)";
+export async function enqueueAudit(domainId: number, url: string, keyword: string, language: string | null = null): Promise<number> {
+   const cols = 'domain_id, url, keyword, status, progress_done, progress_total, language';
+   const values = "VALUES (?, ?, ?, 'queued', 0, 1, ?)";
+   const repl = [domainId, url, keyword, language];
    if (isPg) {
       const created = await queryOne<{ id: number }>(
-         `INSERT INTO audit_runs (domain_id, url, keyword, status, progress_done, progress_total) ${values} ${ON_CONFLICT} RETURNING id`,
-         [domainId, url, keyword],
+         `INSERT INTO audit_runs (${cols}) ${values} ${ON_CONFLICT} RETURNING id`,
+         repl,
       );
       if (!created) throw new Error('Failed to enqueue audit');
       return created.id;
    }
    await db.query(
-      `INSERT INTO audit_runs (domain_id, url, keyword, status, progress_done, progress_total) ${values} ${ON_CONFLICT}`,
-      { replacements: [domainId, url, keyword] },
+      `INSERT INTO audit_runs (${cols}) ${values} ${ON_CONFLICT}`,
+      { replacements: repl },
    );
    const created = await queryOne<{ id: number }>(
       'SELECT id FROM audit_runs WHERE domain_id = ? AND url = ? AND keyword = ? LIMIT 1',
@@ -76,8 +78,8 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
    // Bounded backstop mirrors kickAiVisScan; the deadline is the real loop guard.
    for (let i = 0; i < 100000; i += 1) {
       if (Date.now() >= deadline) break;
-      const candidate = await queryOne<{ id: number; url: string; keyword: string }>(
-         "SELECT id, url, keyword FROM audit_runs WHERE domain_id = ? AND status = 'queued' ORDER BY id ASC LIMIT 1",
+      const candidate = await queryOne<{ id: number; url: string; keyword: string; language: string | null }>(
+         "SELECT id, url, keyword, language FROM audit_runs WHERE domain_id = ? AND status = 'queued' ORDER BY id ASC LIMIT 1",
          [domainId],
       );
       if (!candidate) break;
@@ -94,7 +96,7 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
       try {
          const result = await computeAudit(
             candidate.url, candidate.keyword,
-            (u, k) => enrichAudit(domainId, u, k), // real competitor bars + ranges + terms (phase 2)
+            (u, k) => enrichAudit(domainId, u, k, candidate.language || undefined), // real competitor bars + ranges + terms (phase 2)
          );
          await db.query(
             "UPDATE audit_runs SET status = 'completed', result_json = ?, content_score = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ?",

@@ -64,9 +64,9 @@ export function useAuditStatus(slug: string | undefined): UseQueryResult<AuditSt
    );
 }
 
-export function useCreateAudit(slug: string | undefined): UseMutationResult<{ ids: number[] }, Error, { url: string; keywords: string[] }> {
+export function useCreateAudit(slug: string | undefined): UseMutationResult<{ ids: number[] }, Error, { url: string; keywords: string[]; country?: string }> {
    const qc = useQueryClient();
-   return useMutation<{ ids: number[] }, Error, { url: string; keywords: string[] }>(
+   return useMutation<{ ids: number[] }, Error, { url: string; keywords: string[]; country?: string }>(
       (body) => fetchJson<{ ids: number[] }>(`/api/audit-tool/${slug}/create`, jsonPost(body)),
       {
          onSuccess: () => {

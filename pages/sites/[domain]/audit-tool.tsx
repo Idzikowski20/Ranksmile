@@ -46,8 +46,8 @@ const AuditToolPage: NextPage = () => {
 
    const openDetail = (id: number) => { router.push(`/sites/${slug}/audit-tool/${id}`); };
 
-   const onCreate = (url: string, keywords: string[]) => {
-      createM.mutate({ url, keywords }, {
+   const onCreate = (url: string, keywords: string[], country: string) => {
+      createM.mutate({ url, keywords, country }, {
          onSuccess: () => { setModalOpen(false); lastKick.current = 0; runM.mutate(); },
       });
    };
