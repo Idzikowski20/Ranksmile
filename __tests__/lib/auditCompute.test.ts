@@ -1,4 +1,4 @@
-import { buildAuditResult } from '../../lib/auditCompute';
+import { buildAuditResult, auditContentScore, termCoverageFraction } from '../../lib/auditCompute';
 
 const HTML = `<!doctype html><html><head>
   <title>Jak sprawdzić czy ktoś mnie śledzi — poradnik</title>
@@ -182,5 +182,20 @@ describe('SurferSEO-style factor parity', () => {
          'Word count', 'Exact keywords', 'Partial keywords', 'Page structure',
          'Title and meta description length', 'Time to first byte', 'Load time (ms)',
       ]);
+   });
+});
+
+describe('audit content score (SurferSEO calibration)', () => {
+   it('is coverage-dominated: low term coverage → mid score even with good length', () => {
+      // 20% coverage, full length, 70% structure → ~48 (SurferSEO-like, not the inflated ~90)
+      expect(auditContentScore(0.2, 1, 0.7)).toBe(48);
+   });
+   it('bounds: full coverage → 100, none → 0', () => {
+      expect(auditContentScore(1, 1, 1)).toBe(100);
+      expect(auditContentScore(0, 0, 0)).toBe(0);
+   });
+   it('termCoverageFraction counts distinct terms present (inflection-tolerant)', () => {
+      const body = 'prywatny detektyw sprawdza podejrzane aplikacje na telefonie';
+      expect(termCoverageFraction(body, [{ term: 'prywatny detektyw' }, { term: 'nieznane aplikacje' }])).toBeCloseTo(0.5);
    });
 });

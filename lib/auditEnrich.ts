@@ -4,7 +4,7 @@
 // used for "You" (apples-to-apples factors), and pulls NLP terms from /analyze-serp.
 // Injected into computeAudit; any failure degrades to null → placeholder result.
 import { getCompetitors, scanCompetitors } from './competitorScan';
-import { fetchPage, extractFactorValues, RealAuditData, RichTerm } from './auditCompute';
+import { fetchPage, extractFactorValues, RealAuditData, RichTerm, auditContentScore, termCoverageFraction } from './auditCompute';
 import { getSearchVolumes } from './dataforseo';
 import { callSidecar } from './sidecar';
 import { isContentCompetitor } from './competitorRelevance';
@@ -50,7 +50,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
          const m = extractFactorValues(html, c.url, keyword, timing);
          let domain = c.domain || '';
          if (!domain) { try { domain = new URL(c.url).hostname; } catch { domain = c.url; } }
-         return { domain, rank: c.position, values: m.values, contentScore: m.contentScore, url: c.url };
+         return { domain, rank: c.position, values: m.values, contentScore: m.contentScore, url: c.url, bodyText: m.bodyText };
       } catch { return null; }
    }));
    const competitors = analyzed.filter((x): x is NonNullable<typeof x> => x !== null);
@@ -73,5 +73,28 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
       }
    }
 
-   return { competitors, terms };
+   // Calibrate content scores (coverage-dominated, SurferSEO-style) so "You" and every
+   // competitor are scored by the SAME model. Competitor-set averages are shared back so
+   // buildAuditResult can score "You" identically. Only when we actually have terms.
+   const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+   const avgWords = mean(competitors.map((c) => c.values.word_count_body || 0));
+   const avgHeadings = mean(competitors.map((c) => c.values.h2_h6_count || 0));
+   const avgPs = mean(competitors.map((c) => c.values.p_count || 0));
+   const structFrac = (v: Record<string, number>) => (
+      ((avgHeadings > 0 ? Math.min(1, (v.h2_h6_count || 0) / avgHeadings) : 0)
+         + (avgPs > 0 ? Math.min(1, (v.p_count || 0) / avgPs) : 0)) / 2
+   );
+
+   const outCompetitors = competitors.map(({ bodyText, ...c }) => {
+      if (!terms.length) return c;
+      const cov = termCoverageFraction(bodyText, terms);
+      const wordFrac = avgWords > 0 ? (c.values.word_count_body || 0) / avgWords : 0;
+      return { ...c, contentScore: auditContentScore(cov, wordFrac, structFrac(c.values)) };
+   });
+
+   return {
+      competitors: outCompetitors,
+      terms,
+      contentTargets: terms.length ? { avgWords, avgHeadings, avgPs } : undefined,
+   };
 }
