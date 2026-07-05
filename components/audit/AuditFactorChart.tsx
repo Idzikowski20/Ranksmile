@@ -40,7 +40,7 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       ];
 
       const chart = root.container.children.push(am5xy.XYChart.new(root, {
-         paddingLeft: 0, paddingRight: 8, paddingBottom: 4, layout: root.verticalLayout,
+         paddingLeft: 12, paddingRight: 8, paddingBottom: 4, layout: root.verticalLayout,
       }));
 
       const xRenderer = am5xy.AxisRendererX.new(root, { minGridDistance: 30 });
@@ -55,6 +55,12 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       // extraMax leaves headroom so the value label above the tallest bar is never clipped.
       const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, extraMax: 0.08, renderer: yRenderer }));
 
+      // Dark value pill on the Y axis, revealed by the dashed cursor line (kept in bounds).
+      const yTooltip = am5.Tooltip.new(root, {});
+      yTooltip.get('background')?.setAll({ fill: am5.color('#000'), fillOpacity: 1 });
+      yTooltip.label.setAll({ fill: am5.color('#fff'), fontSize: 12 });
+      yAxis.set('tooltip', yTooltip);
+
       // ── Hatched suggested-range band, with a solid green line on both edges ──
       if (hasRange) {
          const hatch = am5.LinePattern.new(root, { color: am5.color(RANGE_HATCH), colorOpacity: 0.7, rotation: 45, gap: 5, strokeWidth: 1, width: 1000, height: 1000 });
@@ -68,7 +74,9 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       }
 
       const series = chart.series.push(am5xy.ColumnSeries.new(root, { xAxis, yAxis, categoryXField: 'cat', valueYField: 'value' }));
-      const colTooltip = am5.Tooltip.new(root, { getFillFromSprite: false });
+      // labelText on the tooltip itself reliably populates from the hovered column's data
+      // (a bare column `tooltipText` was rendering an empty pill).
+      const colTooltip = am5.Tooltip.new(root, { getFillFromSprite: false, labelText: '{host}' });
       colTooltip.get('background')?.setAll({ fill: am5.color('#000'), fillOpacity: 1 });
       colTooltip.label.setAll({ fill: am5.color('#fff'), fontSize: 12 });
       series.set('tooltip', colTooltip);
