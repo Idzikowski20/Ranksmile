@@ -49,7 +49,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
          const m = extractFactorValues(html, c.url, keyword, timing);
          let domain = c.domain || '';
          if (!domain) { try { domain = new URL(c.url).hostname; } catch { domain = c.url; } }
-         return { domain, rank: c.position, values: m.values, contentScore: m.contentScore };
+         return { domain, rank: c.position, values: m.values, contentScore: m.contentScore, url: c.url };
       } catch { return null; }
    }));
    const competitors = analyzed.filter((x): x is NonNullable<typeof x> => x !== null);

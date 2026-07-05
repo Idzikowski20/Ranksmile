@@ -14,7 +14,7 @@ import {
 export interface FetchTiming { ttfbMs: number; loadMs: number; }
 
 /** Per-competitor page analysis fed into buildAuditResult in phase 2. */
-export interface CompetitorPage { domain: string; rank: number; values: Record<string, number>; contentScore: number; }
+export interface CompetitorPage { domain: string; rank: number; values: Record<string, number>; contentScore: number; url?: string; }
 export interface RealAuditData { competitors: CompetitorPage[]; terms: { term: string; target_count: number }[]; }
 
 /** Extracted numbers for one page keyed by factor key + the bits used elsewhere. */
@@ -47,7 +47,7 @@ function keySeed(key: string): number {
 function stub(you: number, key: string): { competitors: AuditCompetitor[]; suggestedMin: number; suggestedMax: number } {
    const s = keySeed(key);
    const mults = [1.1 + s * 0.4, 0.9 - s * 0.3, 0.7 + s * 0.2];
-   const competitors = STUB_LABELS.map((label, i) => ({ label, rank: STUB_RANKS[i], value: Math.max(0, Math.round(you * mults[i])) }));
+   const competitors = STUB_LABELS.map((label, i) => ({ label, rank: STUB_RANKS[i], value: Math.max(0, Math.round(you * mults[i])), url: `https://${label}` }));
    const base = you > 0 ? you : 10;
    return { competitors, suggestedMin: Math.round(base * 0.6), suggestedMax: Math.round(base * 1.4) };
 }
@@ -223,7 +223,7 @@ function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): Audi
    let suggestedMax: number;
    let placeholder: boolean;
    if (real && real.competitors.length) {
-      competitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.values[def.key] ?? 0 }));
+      competitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.values[def.key] ?? 0, url: c.url }));
       // Fixed-target factors (title/meta/h1/img/exact-kw-title…) keep their optimal range
       // regardless of competition; everything else derives the range from the peer spread.
       ({ suggestedMin, suggestedMax } = fixed
@@ -266,7 +266,7 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
    let csMin: number;
    let csMax: number;
    if (real && real.competitors.length) {
-      csCompetitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.contentScore }));
+      csCompetitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.contentScore, url: c.url }));
       ({ suggestedMin: csMin, suggestedMax: csMax } = rangeFrom(csCompetitors.map((c) => c.value)));
    } else {
       const s = stub(page.contentScore, 'content_score');
