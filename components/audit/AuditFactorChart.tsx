@@ -35,7 +35,9 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       const bars: Bar[] = [
          { cat: 'You', host: 'You', link: '', value: factor.you, you: true },
          ...[...factor.competitors].sort((a, b) => a.rank - b.rank).map((c) => ({
-            cat: `${c.label}\n#${c.rank} in Google`, host: c.url || c.label, link: c.url || '', value: c.value, you: false,
+            // Tooltip shows the short domain (a long URL broke the amCharts label); the full
+            // article URL rides on `link` for the click-through.
+            cat: `${c.label}\n#${c.rank} in Google`, host: c.label || 'Competitor', link: c.url || '', value: c.value, you: false,
          })),
       ];
 
