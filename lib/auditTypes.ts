@@ -35,13 +35,16 @@ export interface AuditInternalLink {
 
 export interface AuditTerm {
    term: string;
-   forms: number;
+   forms: number; // distinct inflected surface forms found on the page
+   variants: string[]; // the actual surface forms (shown when expanding "Term forms")
+   examples: string[]; // sentences from the page containing the term (rendered with <mark>)
    you: number;
    suggested: string; // e.g. '1-2'
    relevance: number; // 0-100
    searchVolume: number | null;
    action: 'add' | 'remove' | 'ok';
    nlp: boolean;
+   type: 'phrase' | 'word' | 'number'; // drives the All / Phrases / Words / Numbers tabs
 }
 
 export interface AuditResult {
