@@ -5,6 +5,7 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { enqueueAudit } from '../../../../lib/auditRunner';
+import { langForCountry } from '../../../../lib/countryLang';
 import { getErrorMessage } from '../../../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,9 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as unknown as { ID: number }).ID;
 
-   const body = (req.body || {}) as { url?: unknown, keywords?: unknown };
+   const body = (req.body || {}) as { url?: unknown, keywords?: unknown, country?: unknown };
    const url = typeof body.url === 'string' ? body.url.trim() : '';
    if (!url) return res.status(400).json({ error: 'A URL is required' });
+   // Country → SERP language for competitor enrichment. Null when no country is picked,
+   // so enrichAudit falls back to its keyword diacritic guess (backward-compatible).
+   const country = typeof body.country === 'string' ? body.country.trim() : '';
+   const language = country ? langForCountry(country) : null;
 
    const rawKeywords = Array.isArray(body.keywords) ? body.keywords : [];
    const seen = new Set<string>();
@@ -43,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    let failed = 0;
    for (const keyword of keywords) {
       try {
-         ids.push(await enqueueAudit(domainId, url, keyword));
+         ids.push(await enqueueAudit(domainId, url, keyword, language));
       } catch (e) {
          failed += 1;
          console.warn('[audit] enqueue failed:', getErrorMessage(e));
