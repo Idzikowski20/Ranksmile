@@ -23,8 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const body = (req.body || {}) as { url?: unknown, keywords?: unknown, country?: unknown };
    const url = typeof body.url === 'string' ? body.url.trim() : '';
    if (!url) return res.status(400).json({ error: 'A URL is required' });
-   // Country → SERP language for competitor enrichment (defaults to English).
-   const language = langForCountry(typeof body.country === 'string' ? body.country : '');
+   // Country → SERP language for competitor enrichment. Null when no country is picked,
+   // so enrichAudit falls back to its keyword diacritic guess (backward-compatible).
+   const country = typeof body.country === 'string' ? body.country.trim() : '';
+   const language = country ? langForCountry(country) : null;
 
    const rawKeywords = Array.isArray(body.keywords) ? body.keywords : [];
    const seen = new Set<string>();
