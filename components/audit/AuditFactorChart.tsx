@@ -50,15 +50,15 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       xAxis.data.setAll(bars);
 
       const yRenderer = am5xy.AxisRendererY.new(root, { minGridDistance: 28 });
-      yRenderer.grid.template.setAll({ stroke: am5.color('#000'), strokeOpacity: 0.08 });
+      yRenderer.grid.template.setAll({ stroke: am5.color('#000000'), strokeOpacity: 0.08 });
       yRenderer.labels.template.setAll({ fontSize: 11, fill: am5.color('#9F9FA9') });
       // extraMax leaves headroom so the value label above the tallest bar is never clipped.
       const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, extraMax: 0.08, renderer: yRenderer }));
 
       // Dark value pill on the Y axis, revealed by the dashed cursor line (kept in bounds).
       const yTooltip = am5.Tooltip.new(root, {});
-      yTooltip.get('background')?.setAll({ fill: am5.color('#000'), fillOpacity: 1 });
-      yTooltip.label.setAll({ fill: am5.color('#fff'), fontSize: 12 });
+      yTooltip.get('background')?.setAll({ fill: am5.color('#000000'), fillOpacity: 1 });
+      yTooltip.label.setAll({ fill: am5.color('#FFFFFF'), fontSize: 12 });
       yAxis.set('tooltip', yTooltip);
 
       // ── Hatched suggested-range band, with a solid green line on both edges ──
@@ -77,8 +77,8 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       // labelText on the tooltip itself reliably populates from the hovered column's data
       // (a bare column `tooltipText` was rendering an empty pill).
       const colTooltip = am5.Tooltip.new(root, { getFillFromSprite: false, labelText: '{host}' });
-      colTooltip.get('background')?.setAll({ fill: am5.color('#000'), fillOpacity: 1 });
-      colTooltip.label.setAll({ fill: am5.color('#fff'), fontSize: 12 });
+      colTooltip.get('background')?.setAll({ fill: am5.color('#000000'), fillOpacity: 1 });
+      colTooltip.label.setAll({ fill: am5.color('#FFFFFF'), fontSize: 12 });
       series.set('tooltip', colTooltip);
       series.columns.template.setAll({ width: am5.percent(58), cornerRadiusTL: 3, cornerRadiusTR: 3, strokeOpacity: 0, tooltipY: 0, tooltipText: '{host}', templateField: 'columnSettings' });
       // Click a competitor bar → open its ranking article in a new tab.
@@ -108,7 +108,7 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       // Dashed cursor line → dark y-value pill.
       const cursor = chart.set('cursor', am5xy.XYCursor.new(root, { behavior: 'none', xAxis, yAxis }));
       cursor.lineX.set('visible', false);
-      cursor.lineY.setAll({ stroke: am5.color('#000'), strokeDasharray: [3, 3], strokeOpacity: 0.4 });
+      cursor.lineY.setAll({ stroke: am5.color('#000000'), strokeDasharray: [3, 3], strokeOpacity: 0.4 });
 
       series.appear(600);
       chart.appear(600, 60);
