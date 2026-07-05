@@ -78,6 +78,9 @@ const Row: React.FC<{
 // ─── Per-factor copy derived from the numbers (no backend change needed) ───
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100));
 const nounFrom = (label: string) => label.replace(/^\s*[\d.]+\s*/, '');
+// The metric noun without the content-zone suffix, for the info headline
+// ("Compared pages have 0 - 3 exact keywords (…)" — no "in h2 to h6").
+const metricNoun = (label: string) => label.replace(/^\s*[\d.]+\s*/, '').replace(/\s+in\s+(body|h2 to h6|paragraphs|img alt|title|h1)\s*$/, '');
 
 function factorHeadline(f: AuditFactor): string {
    if (f.verdict === 'ok') return 'No action required.';
@@ -86,7 +89,7 @@ function factorHeadline(f: AuditFactor): string {
       const avg = vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100 : 0;
       const lo = f.suggestedMin ?? (vals.length ? Math.min(...vals) : 0);
       const hi = f.suggestedMax ?? (vals.length ? Math.max(...vals) : 0);
-      return `Compared pages have ${fmt(lo)} - ${fmt(hi)} (${fmt(avg)} on average)`;
+      return `Compared pages have ${fmt(lo)} - ${fmt(hi)} ${metricNoun(f.label)} (${fmt(avg)} on average)`;
    }
    // warn — express the gap to the suggested range as an actionable Add/Remove.
    const noun = nounFrom(f.label);
@@ -103,13 +106,10 @@ function factorHeadline(f: AuditFactor): string {
    return `Adjust ${noun}`;
 }
 
+// The description is now assembled in the backend (assembleFactor → buildDescription),
+// including the exact SurferSEO "…, while the suggested range is X - Y <noun>." suffix
+// on real data. Info factors carry an empty message (SurferSEO shows no description line).
 function factorDescription(f: AuditFactor): string {
-   // Real ranges (phase 2) can be stated as fact; placeholder ranges stay unstated (the
-   // expanded chart already captions them as sample data).
-   if (!f.placeholder && f.suggestedMin !== null && f.suggestedMax !== null && f.verdict !== 'info') {
-      const base = f.message.replace(/\.\s*$/, '');
-      return `${base}, while the suggested range is ${fmt(f.suggestedMin)} - ${fmt(f.suggestedMax)}.`;
-   }
    return f.message;
 }
 

@@ -82,6 +82,10 @@ interface FactorDef {
    verdict?: (v: number) => 'ok' | 'warn' | 'info'; // overrides the default within-range check
    fixedMin?: number; // fixed optimal range (overrides competitor-derived); e.g. title 55–70
    fixedMax?: number; // undefined ⇒ derive both bounds from competitors
+   // Range-suffix noun + phrasing appended to the description when real competitor data is
+   // present (mirrors SurferSEO exactly): "…, while the suggested range is 2 - 4 exact keywords."
+   unitNoun?: string;
+   rangeStyle?: 'range' | 'atLeast' | 'single' | 'optimal';
 }
 
 const INFO = (): 'info' => 'info';
@@ -93,15 +97,15 @@ const singular = (v: number, word: string) => `${word}${v === 1 ? '' : 's'}`;
 // targets (title/body/h1, body density) and structural factors carry ok/warn verdicts.
 const FACTOR_DEFS: FactorDef[] = [
    // ── Word count ──
-   { key: 'word_count_body', section: 'Word count', label: (v) => `${v} words in body`, message: (v) => `Your web page has ${v} words in body.` },
-   { key: 'h2_h6_words', section: 'Word count', label: (v) => `${v} words in h2 to h6`, message: (v) => `Your web page has ${v} words in headings.` },
-   { key: 'p_words', section: 'Word count', label: (v) => `${v} words in paragraphs`, message: (v) => `Your web page has ${v} words in p.` },
-   { key: 'strong_b_words', section: 'Word count', label: (v) => `${v} words in strong, b`, message: (v) => `Your web page has ${v} words in strong_and_b.` },
+   { key: 'word_count_body', section: 'Word count', label: (v) => `${v} words in body`, message: (v) => `Your web page has ${v} words in body.`, unitNoun: 'words' },
+   { key: 'h2_h6_words', section: 'Word count', label: (v) => `${v} words in h2 to h6`, message: (v) => `Your web page has ${v} words in headings.`, unitNoun: 'words' },
+   { key: 'p_words', section: 'Word count', label: (v) => `${v} words in paragraphs`, message: (v) => `Your web page has ${v} words in p.`, unitNoun: 'words' },
+   { key: 'strong_b_words', section: 'Word count', label: (v) => `${v} words in strong, b`, message: (v) => `Your web page has ${v} words in strong_and_b.`, unitNoun: 'words' },
 
    // ── Exact keywords ──
-   { key: 'exact_kw_title', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in title`, message: () => 'Exact keyword occurrences in the title.', fixedMin: 1, fixedMax: 1 },
-   { key: 'exact_kw_body', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in body`, message: () => 'Exact keyword occurrences in the body.' },
-   { key: 'exact_kw_h1', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h1`, message: () => 'Exact keyword occurrences in the H1.', fixedMin: 1, fixedMax: 1 },
+   { key: 'exact_kw_title', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in title`, message: (v) => `Your web page has ${v} exact ${singular(v, 'keyword')} in title.`, fixedMin: 1, fixedMax: 1, unitNoun: 'exact keyword', rangeStyle: 'single' },
+   { key: 'exact_kw_body', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in body`, message: (v) => `Your web page has ${v} exact ${singular(v, 'keyword')} in body.`, unitNoun: 'exact keywords' },
+   { key: 'exact_kw_h1', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h1`, message: (v) => `Your web page has ${v} exact ${singular(v, 'keyword')} in h1.`, fixedMin: 1, fixedMax: 1, unitNoun: 'exact keyword', rangeStyle: 'single' },
    { key: 'exact_kw_h2h6', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'exact_kw_h2h6_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'exact_kw_p', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in paragraphs`, message: () => '', verdict: INFO },
@@ -110,7 +114,7 @@ const FACTOR_DEFS: FactorDef[] = [
    { key: 'exact_kw_img_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in img alt`, message: () => '', verdict: INFO },
 
    // ── Partial keywords ──
-   { key: 'partial_kw_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in body`, message: (v) => `Your web page has ${v} partial keywords per 100 words in body.` },
+   { key: 'partial_kw_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in body`, message: (v) => `Your web page has ${v} partial keywords per 100 words in body.`, unitNoun: 'partial keywords per 100 words' },
    { key: 'partial_kw_h2h6', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'partial_kw_h2h6_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'partial_kw_p', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in paragraphs`, message: () => '', verdict: INFO },
@@ -120,14 +124,14 @@ const FACTOR_DEFS: FactorDef[] = [
 
    // ── Page structure ──
    { key: 'h1_count', section: 'Page structure', label: (v) => `${v} h1 ${singular(v, 'element')}`, message: () => "Regardless of competition, it's optimal to have exactly one h1 element which includes exact keyword.", verdict: (v) => (v === 1 ? 'ok' : 'warn'), fixedMin: 1, fixedMax: 1 },
-   { key: 'h2_h6_count', section: 'Page structure', label: (v) => `${v} h2 to h6 elements`, message: (v) => `Your web page has ${v} elements in headings.` },
-   { key: 'p_count', section: 'Page structure', label: (v) => `${v} paragraph elements`, message: (v) => `Your web page has ${v} elements in p.`, verdict: (v) => (v >= 25 ? 'ok' : 'warn') },
-   { key: 'img_count', section: 'Page structure', label: (v) => `${v} image ${singular(v, 'element')}`, message: (v) => `Your web page has ${v} images in img.`, fixedMin: 3, fixedMax: 6 },
-   { key: 'strong_b_count', section: 'Page structure', label: (v) => `${v} strong, b elements`, message: (v) => `Your web page has ${v} elements in strong_and_b.` },
+   { key: 'h2_h6_count', section: 'Page structure', label: (v) => `${v} h2 to h6 elements`, message: (v) => `Your web page has ${v} elements in headings.`, unitNoun: 'elements' },
+   { key: 'p_count', section: 'Page structure', label: (v) => `${v} paragraph elements`, message: (v) => `Your web page has ${v} elements in p.`, verdict: (v) => (v >= 25 ? 'ok' : 'warn'), unitNoun: 'elements', rangeStyle: 'atLeast' },
+   { key: 'img_count', section: 'Page structure', label: (v) => `${v} image ${singular(v, 'element')}`, message: (v) => `Your web page has ${v} images in img.`, fixedMin: 3, fixedMax: 6, unitNoun: 'images' },
+   { key: 'strong_b_count', section: 'Page structure', label: (v) => `${v} strong, b elements`, message: (v) => `Your web page has ${v} elements in strong_and_b.`, unitNoun: 'elements' },
 
    // ── Title and meta description length (fixed optimal ranges) ──
-   { key: 'title_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in title`, message: (v) => `Your web page has ${v} characters in title.`, fixedMin: 55, fixedMax: 70 },
-   { key: 'meta_desc_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in meta description`, message: (v) => `Your meta description has ${v} characters.`, fixedMin: 130, fixedMax: 150 },
+   { key: 'title_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in title`, message: (v) => `Your web page has ${v} characters in title.`, fixedMin: 55, fixedMax: 70, unitNoun: 'characters' },
+   { key: 'meta_desc_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in meta description`, message: (v) => `Your meta description has ${v} characters.`, fixedMin: 130, fixedMax: 150, unitNoun: 'characters', rangeStyle: 'optimal' },
 
    // ── Timing ──
    { key: 'ttfb', section: 'Time to first byte', unit: 'ms', label: (v) => `${v}ms to first byte`, message: () => 'Your web page TTFB is within the optimal range.', verdict: () => 'ok' },
@@ -229,6 +233,26 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
    return { values, internalLinks, contentScore, bodyText };
 }
 
+const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100));
+
+// Full SurferSEO-style description, built where the range is known. Info factors show no
+// description; timing/h1 factors keep their self-contained sentence; everything else gets
+// the exact "…, while the suggested range is X - Y <noun>." suffix (real data only — the
+// phase-1 placeholder range is intentionally not stated as fact).
+function buildDescription(def: FactorDef, you: number, min: number, max: number, placeholder: boolean, verdict: 'ok' | 'warn' | 'info'): string {
+   const base = def.message(you);
+   if (verdict === 'info') return '';
+   if (placeholder || !def.unitNoun) return base;
+   const trimmed = base.replace(/\.\s*$/, '');
+   const noun = def.unitNoun;
+   switch (def.rangeStyle) {
+      case 'single': return `${trimmed}, while the suggested is ${fmtNum(min)} ${noun}.`;
+      case 'atLeast': return `${trimmed}, while the suggested range is at least ${fmtNum(min)} ${noun}.`;
+      case 'optimal': return `${trimmed}, while the optimal range is ${fmtNum(min)} - ${fmtNum(max)} ${noun}.`;
+      default: return `${trimmed}, while the suggested range is ${fmtNum(min)} - ${fmtNum(max)} ${noun}.`;
+   }
+}
+
 function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): AuditFactor {
    const fixed = def.fixedMin !== undefined;
    let competitors: AuditCompetitor[];
@@ -252,11 +276,12 @@ function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): Audi
       placeholder = true;
    }
    const within = you >= suggestedMin && you <= suggestedMax;
+   const verdict = def.verdict ? def.verdict(you) : (within ? 'ok' : 'warn');
    return {
       key: def.key, section: def.section, unit: def.unit,
-      label: def.label(you), message: def.message(you),
+      label: def.label(you), message: buildDescription(def, you, suggestedMin, suggestedMax, placeholder, verdict),
       you, competitors, suggestedMin, suggestedMax,
-      verdict: def.verdict ? def.verdict(you) : (within ? 'ok' : 'warn'),
+      verdict,
       placeholder,
    };
 }
