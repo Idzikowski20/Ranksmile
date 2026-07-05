@@ -10,6 +10,7 @@ export interface AuditCompetitor {
    label: string; // domain, e.g. "detektywsigma.pl"
    rank: number; // Google position, e.g. 1
    value: number;
+   url?: string; // the competitor's ranking article URL (chart tooltip → clickable link)
 }
 
 /** One bar-chart factor row (Word count, Exact keywords, TTFB, …). */

@@ -138,7 +138,9 @@ const AuditDetailPage: NextPage = () => {
    const onConfirmCompetitors = () => { setCompOpen(false); rerun(); };
 
    const failed = runQ.isError || run?.status === 'failed';
-   const busy = !failed && (runQ.isLoading || !run || run.status === 'queued' || run.status === 'running');
+   // rerunM.isLoading keeps the "Analyzing…" view up the instant a re-run is fired, before
+   // the polled status flips to queued/running (otherwise the stale result flashes back).
+   const busy = !failed && (runQ.isLoading || rerunM.isLoading || !run || run.status === 'queued' || run.status === 'running');
 
    // Group factors by section, preserving first-seen order.
    const sections: { name: string; factors: AuditFactor[] }[] = [];
@@ -159,9 +161,9 @@ const AuditDetailPage: NextPage = () => {
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`${run?.keyword || 'Audit'} — ${domain}`}</title></Head>
-         <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
+         <style>{'@keyframes spin{to{transform:rotate(360deg)}}@keyframes auditPulse{0%,100%{opacity:.5}50%{opacity:1}}'}</style>
          <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
-            <div style={{ maxWidth: 880, margin: '0 auto' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             {/* Sticky title row: keyword + audited URL + actions */}
             <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '16px 0', marginBottom: 4 }}>
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0 }}>
@@ -192,11 +194,11 @@ const AuditDetailPage: NextPage = () => {
 
             {!failed && busy && (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#B45309', fontFamily: FONT, fontSize: 14, fontWeight: 600 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#18181B', fontFamily: FONT, fontSize: 14, fontWeight: 600 }}>
                      <svg viewBox="0 0 24 24" width={16} height={16} style={{ animation: 'spin 0.7s linear infinite' }}><path fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
                      Analyzing the page…
                   </div>
-                  {[0, 1, 2].map((i) => <div key={i} style={{ border: '1px solid #E4E4E7', borderRadius: 16, height: 120, background: '#F8F8F9' }} />)}
+                  {[0, 1, 2].map((i) => <div key={i} style={{ border: '1px solid #E4E4E7', borderRadius: 16, height: 120, background: '#F8F8F9', animation: `auditPulse 1.4s ease-in-out ${i * 0.15}s infinite` }} />)}
                </div>
             )}
 

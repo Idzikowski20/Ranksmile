@@ -12,7 +12,7 @@ const RANGE = '#68D391';
 const RANGE_HATCH = '#9AE6B4';
 const NUM = '#,###.##';
 
-interface Bar { cat: string; host: string; value: number; you: boolean; }
+interface Bar { cat: string; host: string; link: string; value: number; you: boolean; }
 
 /**
  * One SurferSEO-style factor chart (amCharts 5, client-only — imported via
@@ -33,9 +33,9 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
 
       // Two-line x labels: "You" / "domain \n #N in Google" (unique per bar → safe category key).
       const bars: Bar[] = [
-         { cat: 'You', host: factor.you.toString(), value: factor.you, you: true },
+         { cat: 'You', host: 'You', link: '', value: factor.you, you: true },
          ...[...factor.competitors].sort((a, b) => a.rank - b.rank).map((c) => ({
-            cat: `${c.label}\n#${c.rank} in Google`, host: c.label, value: c.value, you: false,
+            cat: `${c.label}\n#${c.rank} in Google`, host: c.url || c.label, link: c.url || '', value: c.value, you: false,
          })),
       ];
 
@@ -52,13 +52,8 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       const yRenderer = am5xy.AxisRendererY.new(root, { minGridDistance: 28 });
       yRenderer.grid.template.setAll({ stroke: am5.color('#000'), strokeOpacity: 0.08 });
       yRenderer.labels.template.setAll({ fontSize: 11, fill: am5.color('#9F9FA9') });
-      const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, renderer: yRenderer }));
-
-      // Dark value pill on the Y axis, revealed by the dashed cursor line (SurferSEO look).
-      const yTooltip = am5.Tooltip.new(root, {});
-      yTooltip.get('background')?.setAll({ fill: am5.color('#000'), fillOpacity: 1 });
-      yTooltip.label.setAll({ fill: am5.color('#fff'), fontSize: 12 });
-      yAxis.set('tooltip', yTooltip);
+      // extraMax leaves headroom so the value label above the tallest bar is never clipped.
+      const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, extraMax: 0.08, renderer: yRenderer }));
 
       // ── Hatched suggested-range band, with a solid green line on both edges ──
       if (hasRange) {
@@ -78,13 +73,19 @@ const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; heigh
       colTooltip.label.setAll({ fill: am5.color('#fff'), fontSize: 12 });
       series.set('tooltip', colTooltip);
       series.columns.template.setAll({ width: am5.percent(58), cornerRadiusTL: 3, cornerRadiusTR: 3, strokeOpacity: 0, tooltipY: 0, tooltipText: '{host}', templateField: 'columnSettings' });
+      // Click a competitor bar → open its ranking article in a new tab.
+      series.columns.template.events.on('click', (ev) => {
+         const link = (ev.target.dataItem?.dataContext as { link?: string } | undefined)?.link;
+         if (link) window.open(link, '_blank', 'noopener,noreferrer');
+      });
       series.data.setAll(bars.map((b) => ({
-         cat: b.cat, value: b.value, host: b.host,
+         cat: b.cat, value: b.value, host: b.host, link: b.link,
          columnSettings: {
             fill: am5.color(b.you ? YOU : COMP),
             fillOpacity: b.you ? 1 : (factor.placeholder ? 0.5 : 1),
             stroke: b.you ? am5.color(YOU_STROKE) : undefined,
             strokeOpacity: b.you ? 1 : 0,
+            cursorOverStyle: b.link ? 'pointer' : 'default',
          },
       })));
 
