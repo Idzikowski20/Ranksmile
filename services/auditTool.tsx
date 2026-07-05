@@ -93,6 +93,20 @@ export function useRerunAudit(slug: string | undefined): UseMutationResult<{ ok:
    );
 }
 
+export function useDeleteAudit(slug: string | undefined): UseMutationResult<{ ok: boolean }, Error, { id: number }> {
+   const qc = useQueryClient();
+   return useMutation<{ ok: boolean }, Error, { id: number }>(
+      ({ id }) => fetchJson<{ ok: boolean }>(`/api/audit-tool/${slug}/${id}`, { method: 'DELETE' }),
+      {
+         onSuccess: () => {
+            qc.invalidateQueries(['audit-list', slug]);
+            qc.invalidateQueries(['audit-status', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}
+
 export function useRunAudits(slug: string | undefined): UseMutationResult<{ processed: number }, Error, void> {
    const qc = useQueryClient();
    return useMutation<{ processed: number }, Error, void>(

@@ -10,7 +10,7 @@ import type { AuditCardDTO, AuditStatus } from '../../../../lib/auditTypes';
 type ListRow = {
    id: number, url: string, keyword: string, status: string,
    content_score: number | null, progress_done: number | null, progress_total: number | null,
-   created_at: string | null, finished_at: string | null,
+   created_at: string | null, finished_at: string | null, language: string | null,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const domainId = (ownership as unknown as { ID: number }).ID;
 
    const rows = await queryRows<ListRow>(
-      `SELECT id, url, keyword, status, content_score, progress_done, progress_total, created_at, finished_at
+      `SELECT id, url, keyword, status, content_score, progress_done, progress_total, created_at, finished_at, language
        FROM audit_runs WHERE domain_id = ? ORDER BY id DESC LIMIT 200`,
       [domainId],
    );
@@ -41,6 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       progressTotal: r.progress_total || 0,
       createdAt: r.created_at,
       finishedAt: r.finished_at,
+      language: r.language ?? null,
    }));
 
    return res.status(200).json({ items });

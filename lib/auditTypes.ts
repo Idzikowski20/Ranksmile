@@ -71,4 +71,5 @@ export interface AuditCardDTO {
    progressTotal: number;
    createdAt: string | null;
    finishedAt: string | null;
+   language: string | null; // SERP language ('pl'/'en'…) → country label on the card
 }

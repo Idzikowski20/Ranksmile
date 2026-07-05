@@ -5,10 +5,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import EmptyEyes from '../../../components/common/EmptyEyes';
-import { Skeleton } from '../../../components/ui';
 import CreateAuditModal from '../../../components/audit/CreateAuditModal';
 import AuditCard from '../../../components/audit/AuditCard';
-import { useAuditList, useAuditStatus, useCreateAudit, useRunAudits } from '../../../services/auditTool';
+import { useAuditList, useAuditStatus, useCreateAudit, useRunAudits, useDeleteAudit } from '../../../services/auditTool';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
@@ -31,6 +30,7 @@ const AuditToolPage: NextPage = () => {
    const statusQ = useAuditStatus(slug);
    const createM = useCreateAudit(slug);
    const runM = useRunAudits(slug);
+   const deleteM = useDeleteAudit(slug);
 
    // Client-driven worker: while any audit is queued/running, keep POSTing /run
    // (each is its own serverless invocation). Debounced so we don't stack calls.
@@ -77,8 +77,22 @@ const AuditToolPage: NextPage = () => {
                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Audit</h1>
                {actions}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-               {loading && <Skeleton />}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+               {loading && Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`audit-skel-${i}`} style={{ height: 133, display: 'flex', alignItems: 'center', border: '1px solid #E4E4E7', borderRadius: 12, gap: 12, animation: 'skeletonPulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.08}s` }}>
+                     <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingLeft: 24 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F0F0F4' }} />
+                     </div>
+                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ width: '45%', height: 16, borderRadius: 6, background: '#F0F0F4' }} />
+                        <div style={{ width: '28%', height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+                     </div>
+                     <div style={{ paddingRight: 24, display: 'flex', gap: 16, flexShrink: 0 }}>
+                        <div style={{ width: 60, height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+                        <div style={{ width: 40, height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+                     </div>
+                  </div>
+               ))}
 
                {!loading && items.length === 0 && (
                   <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: '56px 24px', textAlign: 'center' }}>
@@ -88,7 +102,11 @@ const AuditToolPage: NextPage = () => {
                   </div>
                )}
 
-               {!loading && items.map((it) => <AuditCard key={it.id} item={it} onOpen={openDetail} />)}
+               {!loading && items.map((it) => <AuditCard key={it.id} item={it} onOpen={openDetail} onDelete={(id) => deleteM.mutate({ id })} />)}
+
+               {!loading && items.length > 0 && (
+                  <div style={{ textAlign: 'center', color: '#71717B', fontSize: 14, fontFamily: FONT, padding: '24px 0' }}>No more results found.</div>
+               )}
             </div>
             </div>
          </DomainSubLayout>
