@@ -44,7 +44,7 @@ const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({ t
 const DetailsButton = ({ label, open, onClick }: { label: string; open: boolean; onClick: () => void }) => (
    <button
       type="button" onClick={onClick}
-      style={{ border: 'none', background: '#F4F4F5', color: '#2F2F34', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease' }}
+      style={{ boxSizing: 'border-box', height: 36, padding: '0 16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', background: '#F4F4F5', color: '#2F2F34', borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease' }}
       onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
    >{open ? label.replace(/^Show/, 'Hide') : label}</button>
