@@ -67,31 +67,58 @@ interface FactorDef {
    label: (v: number) => string;
    message: (v: number) => string;
    verdict?: (v: number) => 'ok' | 'warn' | 'info'; // overrides the default within-range check
+   fixedMin?: number; // fixed optimal range (overrides competitor-derived); e.g. title 55–70
+   fixedMax?: number; // undefined ⇒ derive both bounds from competitors
 }
 
+const INFO = (): 'info' => 'info';
+const singular = (v: number, word: string) => `${word}${v === 1 ? '' : 's'}`;
+
+// Full SurferSEO-style factor set. Keyword factors are broken out per content zone
+// (body / h2-h6 / paragraphs / img-alt) as raw count + per-100-words density; the
+// sub-zone variants are informational (blue "compared pages have …") while the primary
+// targets (title/body/h1, body density) and structural factors carry ok/warn verdicts.
 const FACTOR_DEFS: FactorDef[] = [
+   // ── Word count ──
    { key: 'word_count_body', section: 'Word count', label: (v) => `${v} words in body`, message: (v) => `Your web page has ${v} words in body.` },
    { key: 'h2_h6_words', section: 'Word count', label: (v) => `${v} words in h2 to h6`, message: (v) => `Your web page has ${v} words in headings.` },
-   { key: 'p_words', section: 'Word count', label: (v) => `${v} words in paragraphs`, message: (v) => `Your web page has ${v} words in paragraphs.` },
-   { key: 'strong_b_words', section: 'Word count', label: (v) => `${v} words in strong, b`, message: (v) => `Your web page has ${v} words in strong/b.` },
+   { key: 'p_words', section: 'Word count', label: (v) => `${v} words in paragraphs`, message: (v) => `Your web page has ${v} words in p.` },
+   { key: 'strong_b_words', section: 'Word count', label: (v) => `${v} words in strong, b`, message: (v) => `Your web page has ${v} words in strong_and_b.` },
 
-   { key: 'exact_kw_title', section: 'Exact keywords', label: (v) => `${v} exact keyword in title`, message: () => 'Exact keyword occurrences in the title.' },
-   { key: 'exact_kw_body', section: 'Exact keywords', label: (v) => `${v} exact keywords in body`, message: () => 'Exact keyword occurrences in the body.' },
-   { key: 'exact_kw_h1', section: 'Exact keywords', label: (v) => `${v} exact keyword in h1`, message: () => 'Exact keyword occurrences in the H1.' },
+   // ── Exact keywords ──
+   { key: 'exact_kw_title', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in title`, message: () => 'Exact keyword occurrences in the title.', fixedMin: 1, fixedMax: 1 },
+   { key: 'exact_kw_body', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in body`, message: () => 'Exact keyword occurrences in the body.' },
+   { key: 'exact_kw_h1', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h1`, message: () => 'Exact keyword occurrences in the H1.', fixedMin: 1, fixedMax: 1 },
+   { key: 'exact_kw_h2h6', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h2 to h6`, message: () => '', verdict: INFO },
+   { key: 'exact_kw_h2h6_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in h2 to h6`, message: () => '', verdict: INFO },
+   { key: 'exact_kw_p', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in paragraphs`, message: () => '', verdict: INFO },
+   { key: 'exact_kw_p_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in paragraphs`, message: () => '', verdict: INFO },
+   { key: 'exact_kw_img', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in img alt`, message: () => '', verdict: INFO },
+   { key: 'exact_kw_img_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in img alt`, message: () => '', verdict: INFO },
 
-   { key: 'partial_kw_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in body`, message: () => 'Partial keyword density per 100 words in the body.' },
+   // ── Partial keywords ──
+   { key: 'partial_kw_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in body`, message: (v) => `Your web page has ${v} partial keywords per 100 words in body.` },
+   { key: 'partial_kw_h2h6', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in h2 to h6`, message: () => '', verdict: INFO },
+   { key: 'partial_kw_h2h6_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in h2 to h6`, message: () => '', verdict: INFO },
+   { key: 'partial_kw_p', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in paragraphs`, message: () => '', verdict: INFO },
+   { key: 'partial_kw_p_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in paragraphs`, message: () => '', verdict: INFO },
+   { key: 'partial_kw_img', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in img alt`, message: () => '', verdict: INFO },
+   { key: 'partial_kw_img_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in img alt`, message: () => '', verdict: INFO },
 
-   { key: 'h1_count', section: 'Page structure', label: (v) => `${v} h1 element${v === 1 ? '' : 's'}`, message: () => "It's optimal to have exactly one h1 that includes the exact keyword.", verdict: (v) => (v === 1 ? 'ok' : 'warn') },
-   { key: 'h2_h6_count', section: 'Page structure', label: (v) => `${v} h2 to h6 elements`, message: () => 'Number of h2–h6 heading elements.' },
-   { key: 'p_count', section: 'Page structure', label: (v) => `${v} paragraph elements`, message: () => 'Number of paragraph elements.' },
-   { key: 'img_count', section: 'Page structure', label: (v) => `${v} image elements`, message: () => 'Number of image elements.' },
-   { key: 'strong_b_count', section: 'Page structure', label: (v) => `${v} strong, b elements`, message: () => 'Number of strong/b elements.' },
+   // ── Page structure ──
+   { key: 'h1_count', section: 'Page structure', label: (v) => `${v} h1 ${singular(v, 'element')}`, message: () => "Regardless of competition, it's optimal to have exactly one h1 element which includes exact keyword.", verdict: (v) => (v === 1 ? 'ok' : 'warn'), fixedMin: 1, fixedMax: 1 },
+   { key: 'h2_h6_count', section: 'Page structure', label: (v) => `${v} h2 to h6 elements`, message: (v) => `Your web page has ${v} elements in headings.` },
+   { key: 'p_count', section: 'Page structure', label: (v) => `${v} paragraph elements`, message: (v) => `Your web page has ${v} elements in p.`, verdict: (v) => (v >= 25 ? 'ok' : 'warn') },
+   { key: 'img_count', section: 'Page structure', label: (v) => `${v} image ${singular(v, 'element')}`, message: (v) => `Your web page has ${v} images in img.`, fixedMin: 3, fixedMax: 6 },
+   { key: 'strong_b_count', section: 'Page structure', label: (v) => `${v} strong, b elements`, message: (v) => `Your web page has ${v} elements in strong_and_b.` },
 
-   { key: 'title_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in title`, message: (v) => `Your title has ${v} characters (suggested 55–70).` },
-   { key: 'meta_desc_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in meta description`, message: (v) => `Your meta description has ${v} characters (optimal 130–150).` },
+   // ── Title and meta description length (fixed optimal ranges) ──
+   { key: 'title_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in title`, message: (v) => `Your web page has ${v} characters in title.`, fixedMin: 55, fixedMax: 70 },
+   { key: 'meta_desc_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in meta description`, message: (v) => `Your meta description has ${v} characters.`, fixedMin: 130, fixedMax: 150 },
 
-   { key: 'ttfb', section: 'Time to first byte', unit: 'ms', label: (v) => `${v}ms to first byte`, message: () => 'Time to first byte.', verdict: () => 'ok' },
-   { key: 'load_time', section: 'Load time (ms)', unit: 'ms', label: (v) => `${v}ms to load the page`, message: () => 'Total page load time.', verdict: () => 'ok' },
+   // ── Timing ──
+   { key: 'ttfb', section: 'Time to first byte', unit: 'ms', label: (v) => `${v}ms to first byte`, message: () => 'Your web page TTFB is within the optimal range.', verdict: () => 'ok' },
+   { key: 'load_time', section: 'Load time (ms)', unit: 'ms', label: (v) => `${v}ms to load the page`, message: () => 'Your web page load time is within the optimal range.', verdict: () => 'ok' },
 ];
 
 function sameSite(linkHost: string, pageHost: string): boolean {
@@ -112,25 +139,42 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
    const bodyText = plainText($('body').html() || html);
    const bodyWords = wordCount(bodyText);
 
-   const headingWords = wordCount(plainText($('h2, h3, h4, h5, h6').map((_, el) => $(el).text()).get().join(' ')));
+   const headingText = plainText($('h2, h3, h4, h5, h6').map((_, el) => $(el).text()).get().join(' '));
+   const headingWords = wordCount(headingText);
    const h1Count = $('h1').length;
    const h2h6Count = $('h2, h3, h4, h5, h6').length;
 
    const pEls = $('p');
    const pCount = pEls.length;
-   const pWords = wordCount(plainText(pEls.map((_, el) => $(el).text()).get().join(' ')));
+   const pText = plainText(pEls.map((_, el) => $(el).text()).get().join(' '));
+   const pWords = wordCount(pText);
 
-   const imgCount = $('img').length;
+   const imgEls = $('img');
+   const imgCount = imgEls.length;
+   const imgAltText = imgEls.map((_, el) => $(el).attr('alt') || '').get().join(' ').trim();
+   const imgAltWords = wordCount(imgAltText);
    const strongEls = $('strong, b');
    const strongCount = strongEls.length;
    const strongWords = wordCount(plainText(strongEls.map((_, el) => $(el).text()).get().join(' ')));
 
-   const kwExactBody = countOccurrences(bodyText, keyword);
-   const kwExactTitle = countOccurrences(title, keyword);
-   const kwExactH1 = countOccurrences($('h1').first().text() || '', keyword);
+   // Exact + partial keyword occurrences per content zone (body / h2-h6 / paragraphs /
+   // img-alt), each as a raw count and a per-100-words density — mirrors SurferSEO's
+   // factor breakdown so the audit surfaces the same requirement rows.
    const tokens = keyword.split(/\s+/).filter(Boolean);
-   const kwPartialBody = tokens.reduce((sum, t) => sum + countOccurrences(bodyText, t), 0);
-   const partialPer100 = bodyWords > 0 ? Math.round((kwPartialBody / bodyWords) * 10000) / 100 : 0;
+   const exact = (text: string) => countOccurrences(text, keyword);
+   const partial = (text: string) => tokens.reduce((sum, t) => sum + countOccurrences(text, t), 0);
+   const per100 = (count: number, words: number) => (words > 0 ? Math.round((count / words) * 10000) / 100 : 0);
+
+   const kwExactBody = exact(bodyText);
+   const kwExactTitle = exact(title);
+   const kwExactH1 = exact($('h1').first().text() || '');
+   const kwExactH2h6 = exact(headingText);
+   const kwExactP = exact(pText);
+   const kwExactImg = exact(imgAltText);
+   const kwPartialBody = partial(bodyText);
+   const kwPartialH2h6 = partial(headingText);
+   const kwPartialP = partial(pText);
+   const kwPartialImg = partial(imgAltText);
 
    // Internal links (same registrable site). `linked` marks a link already pointing at the audited URL.
    let pageHost = '';
@@ -157,7 +201,14 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
 
    const values: Record<string, number> = {
       word_count_body: bodyWords, h2_h6_words: headingWords, p_words: pWords, strong_b_words: strongWords,
-      exact_kw_title: kwExactTitle, exact_kw_body: kwExactBody, exact_kw_h1: kwExactH1, partial_kw_per100: partialPer100,
+      exact_kw_title: kwExactTitle, exact_kw_body: kwExactBody, exact_kw_h1: kwExactH1,
+      exact_kw_h2h6: kwExactH2h6, exact_kw_h2h6_per100: per100(kwExactH2h6, headingWords),
+      exact_kw_p: kwExactP, exact_kw_p_per100: per100(kwExactP, pWords),
+      exact_kw_img: kwExactImg, exact_kw_img_per100: per100(kwExactImg, imgAltWords),
+      partial_kw_per100: per100(kwPartialBody, bodyWords),
+      partial_kw_h2h6: kwPartialH2h6, partial_kw_h2h6_per100: per100(kwPartialH2h6, headingWords),
+      partial_kw_p: kwPartialP, partial_kw_p_per100: per100(kwPartialP, pWords),
+      partial_kw_img: kwPartialImg, partial_kw_img_per100: per100(kwPartialImg, imgAltWords),
       h1_count: h1Count, h2_h6_count: h2h6Count, p_count: pCount, img_count: imgCount, strong_b_count: strongCount,
       title_chars: title.length, meta_desc_chars: metaDesc.length,
       ttfb: timing.ttfbMs, load_time: timing.loadMs,
@@ -166,16 +217,25 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
 }
 
 function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): AuditFactor {
+   const fixed = def.fixedMin !== undefined;
    let competitors: AuditCompetitor[];
    let suggestedMin: number;
    let suggestedMax: number;
    let placeholder: boolean;
    if (real && real.competitors.length) {
       competitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.values[def.key] ?? 0 }));
-      ({ suggestedMin, suggestedMax } = rangeFrom(competitors.map((c) => c.value)));
+      // Fixed-target factors (title/meta/h1/img/exact-kw-title…) keep their optimal range
+      // regardless of competition; everything else derives the range from the peer spread.
+      ({ suggestedMin, suggestedMax } = fixed
+         ? { suggestedMin: def.fixedMin as number, suggestedMax: def.fixedMax as number }
+         : rangeFrom(competitors.map((c) => c.value)));
       placeholder = false;
    } else {
-      ({ competitors, suggestedMin, suggestedMax } = stub(you, def.key));
+      const s = stub(you, def.key);
+      competitors = s.competitors;
+      ({ suggestedMin, suggestedMax } = fixed
+         ? { suggestedMin: def.fixedMin as number, suggestedMax: def.fixedMax as number }
+         : { suggestedMin: s.suggestedMin, suggestedMax: s.suggestedMax });
       placeholder = true;
    }
    const within = you >= suggestedMin && you <= suggestedMax;
