@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
+import CountryFlag from './CountryFlag';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -68,7 +69,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
          onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       >
-         <div style={{ position: 'relative', width: '100%', maxWidth: 520, background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+         <div style={{ position: 'relative', width: '100%', maxWidth: 680, background: '#fff', borderRadius: 16, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             <button
                type="button" onClick={onClose} aria-label="Close"
                style={{ position: 'absolute', right: 12, top: 12, padding: 8, border: 'none', background: 'transparent', color: '#9CA3AF', cursor: 'pointer', display: 'inline-flex', transition: 'color 150ms ease, transform 150ms ease' }}
@@ -128,7 +129,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
                         type="button" onClick={() => setCtryOpen((o) => !o)}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', padding: 0 }}
                      >
-                        <span style={{ fontSize: 16 }}>{selected.flag}</span>
+                        <CountryFlag code={selected.code} />
                         <span>{selected.name}</span>
                         <span style={{ color: '#9F9FA9', display: 'inline-flex', transform: ctryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}><Chevron /></span>
                      </button>
@@ -141,7 +142,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
                                  onMouseEnter={(e) => { if (c.code !== country) e.currentTarget.style.background = '#F8F8F9'; }}
                                  onMouseLeave={(e) => { if (c.code !== country) e.currentTarget.style.background = 'transparent'; }}
                               >
-                                 <span style={{ fontSize: 16 }}>{c.flag}</span><span>{c.name}</span>
+                                 <CountryFlag code={c.code} /><span>{c.name}</span>
                               </button>
                            ))}
                         </div>
@@ -159,7 +160,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
                   <button
                      type="button" disabled={!canSubmit}
                      onClick={() => onCreate(url.trim(), keywords, country)}
-                     style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.5, transition: 'background 150ms ease' }}
+                     style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 8, padding: '6px 13px', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.5, transition: 'background 150ms ease' }}
                      onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = '#783AFB'; }}
                      onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                   >{submitting ? 'Creating…' : 'Create Audit'}</button>
