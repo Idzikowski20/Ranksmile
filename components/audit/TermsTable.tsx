@@ -111,18 +111,22 @@ const TermsTable = ({ terms }: { terms: AuditTerm[] }) => {
                   {rows.map((t) => {
                      const expanded = open.has(t.term);
                      const label = actionLabel(t);
+                     // Guard legacy audits: result_json persisted before this feature has no
+                     // examples/forms fields, so default them rather than crashing the page.
+                     const examples = t.examples ?? [];
+                     const forms = t.forms ?? 0;
                      return (
                         <React.Fragment key={t.term}>
                            <tr>
-                              <td style={{ ...td, textAlign: 'center', color: '#71717B', cursor: t.forms > 1 ? 'pointer' : 'default' }} onClick={t.forms > 1 ? () => toggle(t.term) : undefined}>
-                                 {t.forms > 1 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>{t.forms}<Chevron open={expanded} /></span> : null}
+                              <td style={{ ...td, textAlign: 'center', color: '#71717B', cursor: forms > 1 ? 'pointer' : 'default' }} onClick={forms > 1 ? () => toggle(t.term) : undefined}>
+                                 {forms > 1 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>{forms}<Chevron open={expanded} /></span> : null}
                               </td>
                               <td style={{ ...td, cursor: 'pointer' }} onClick={() => toggle(t.term)}>
                                  <span style={{ color: '#18181B' }}>{t.term}</span>
                                  {t.nlp && <span style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 5px', fontSize: 10, fontWeight: 600, color: '#3B82F6', border: '1px solid #93C5FD', borderRadius: 4, textTransform: 'uppercase' }}>NLP</span>}
                               </td>
-                              <td style={{ ...td, textAlign: 'center', cursor: t.examples.length ? 'pointer' : 'default', color: '#52525C' }} onClick={t.examples.length ? () => toggle(t.term) : undefined}>
-                                 {t.examples.length ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>{t.examples.length}<Chevron open={expanded} /></span> : '—'}
+                              <td style={{ ...td, textAlign: 'center', cursor: examples.length ? 'pointer' : 'default', color: '#52525C' }} onClick={examples.length ? () => toggle(t.term) : undefined}>
+                                 {examples.length ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>{examples.length}<Chevron open={expanded} /></span> : '—'}
                               </td>
                               <td style={{ ...td, textAlign: 'center' }}>{t.you}</td>
                               <td style={{ ...td, textAlign: 'center' }}>{t.suggested}</td>
@@ -134,12 +138,12 @@ const TermsTable = ({ terms }: { terms: AuditTerm[] }) => {
                                     : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><RedDiamond /><span>{label}</span></span>}
                               </td>
                            </tr>
-                           {expanded && t.examples.length > 0 && (
+                           {expanded && examples.length > 0 && (
                               <tr>
                                  <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #F4F4F5' }}>
                                     <div style={{ margin: 12, background: '#F8F8F9', borderRadius: 8, padding: 12 }}>
-                                       {t.examples.map((ex, i) => (
-                                          <div key={i} style={{ fontSize: 13, color: '#52525C', fontFamily: FONT, marginBottom: i === t.examples.length - 1 ? 0 : 8, lineHeight: 1.5 }}>
+                                       {examples.map((ex, i) => (
+                                          <div key={i} style={{ fontSize: 13, color: '#52525C', fontFamily: FONT, marginBottom: i === examples.length - 1 ? 0 : 8, lineHeight: 1.5 }}>
                                              &quot;<Highlighted text={ex} term={t.term} />&quot;
                                           </div>
                                        ))}

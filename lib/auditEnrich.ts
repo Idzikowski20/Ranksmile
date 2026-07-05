@@ -67,7 +67,11 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
    // (unconfigured / API error) just leaves searchVolume null.
    if (terms.length) {
       const phrases = terms.filter((t) => /\s/.test(t.term.trim())).map((t) => t.term);
-      const volumes = await getSearchVolumes(phrases, language.toUpperCase()).catch(() => ({} as Record<string, number>));
+      // DataForSEO keys volume by COUNTRY (Google Ads geo), not language — map the SERP
+      // language to its country so English sites aren't billed against the US market.
+      const LANG_COUNTRY: Record<string, string> = { pl: 'PL', en: 'US', de: 'DE', fr: 'FR', es: 'ES', it: 'IT', nl: 'NL', pt: 'PT' };
+      const country = LANG_COUNTRY[language.toLowerCase()] || 'US';
+      const volumes = await getSearchVolumes(phrases, country).catch(() => ({} as Record<string, number>));
       if (Object.keys(volumes).length) {
          terms = terms.map((t) => ({ ...t, searchVolume: volumes[t.term.toLowerCase()] ?? t.searchVolume ?? null }));
       }
