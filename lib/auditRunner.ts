@@ -10,6 +10,7 @@ import db from '../database/database';
 import { queryOne } from './db/query';
 import { computeAudit } from './auditCompute';
 import { enrichAudit } from './auditEnrich';
+import { findInternalLinkOpportunities } from './auditInternalLinks';
 import { getErrorMessage } from './errors';
 
 const isPg = !!process.env.DATABASE_URL;
@@ -97,6 +98,7 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
          const result = await computeAudit(
             candidate.url, candidate.keyword,
             (u, k) => enrichAudit(domainId, u, k, candidate.language || undefined), // real competitor bars + ranges + terms (phase 2)
+            (u, k) => findInternalLinkOpportunities(u, k), // topically-relevant internal-link opportunities
          );
          await db.query(
             "UPDATE audit_runs SET status = 'completed', result_json = ?, content_score = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ?",

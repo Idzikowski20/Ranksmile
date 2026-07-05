@@ -225,36 +225,43 @@ const AuditDetailPage: NextPage = () => {
                      })()}
                   </SectionCard>
 
-                  {/* Internal links */}
+                  {/* Internal links — topically-relevant pages that should link to the audited URL */}
                   <SectionCard title="Internal links">
                      {result.internalLinks.length === 0 ? (
-                        <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>No internal links found on the page.</div>
-                     ) : (
-                        <Row
-                           last tone="info"
-                           headline="Internal links found on this page."
-                           value={`${result.internalLinks.length} internal link${result.internalLinks.length === 1 ? '' : 's'} detected`}
-                           description="Same-site links found on the audited page. A ✓ marks a link already pointing at the audited URL."
-                           detailsLabel="Show internal links" expanded={expanded.has('internal_links')} onToggle={() => toggle('internal_links')}
-                        >
-                           <div style={{ overflow: 'auto' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
-                                 <thead><tr>
-                                    <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px' }}>URL</th>
-                                    <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 100 }}>Links here</th>
-                                 </tr></thead>
-                                 <tbody>
-                                    {result.internalLinks.map((l) => (
-                                       <tr key={l.url}>
-                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px' }}><a href={l.url} target="_blank" rel="noreferrer" style={{ color: '#783AFB', fontSize: 13, textDecoration: 'none' }}>{l.url}</a></td>
-                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right' }}>{l.linked ? '✓' : '—'}</td>
-                                       </tr>
-                                    ))}
-                                 </tbody>
-                              </table>
-                           </div>
-                        </Row>
-                     )}
+                        <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>No internal link opportunities found for this URL.</div>
+                     ) : (() => {
+                        const opps = result.internalLinks.filter((l) => !l.linked).length;
+                        return (
+                           <Row
+                              last tone={opps > 0 ? 'red' : 'ok'}
+                              headline={opps > 0 ? 'Add internal links pointing to audited URL from relevant pages listed below.' : 'No action required.'}
+                              value={opps > 0
+                                 ? `${opps} internal link ${opps === 1 ? 'opportunity' : 'opportunities'} found for this URL`
+                                 : `${result.internalLinks.length} relevant page${result.internalLinks.length === 1 ? '' : 's'} already link here`}
+                              description="We detect topically relevant pages that you can use as internal links sources to boost audited page."
+                              detailsLabel="Show internal links" expanded={expanded.has('internal_links')} onToggle={() => toggle('internal_links')}
+                           >
+                              <div style={{ overflow: 'auto' }}>
+                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
+                                    <thead><tr>
+                                       <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #E4E4E7', padding: '10px 12px' }}>url</th>
+                                       <th style={{ textAlign: 'center', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #E4E4E7', padding: '10px 12px', width: 100 }}>link</th>
+                                    </tr></thead>
+                                    <tbody>
+                                       {result.internalLinks.map((l) => (
+                                          <tr key={l.url}>
+                                             <td style={{ borderBottom: '1px solid #F4F4F5', padding: '12px 12px' }}><a href={l.url} target="_blank" rel="noreferrer" style={{ color: '#3F3F47', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 2 }}>{l.url}</a></td>
+                                             <td style={{ borderBottom: '1px solid #F4F4F5', padding: '12px 12px', textAlign: 'center' }}>
+                                                <span style={{ display: 'inline-flex' }} title={l.linked ? 'Already links to the audited URL' : 'Opportunity — add a link to the audited URL'}><ToneIcon tone={l.linked ? 'ok' : 'red'} /></span>
+                                             </td>
+                                          </tr>
+                                       ))}
+                                    </tbody>
+                                 </table>
+                              </div>
+                           </Row>
+                        );
+                     })()}
                   </SectionCard>
 
                   {/* Terms to Use */}
