@@ -28,9 +28,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    );
    if (!row) return res.status(404).json({ error: 'Audit not found' });
 
+   // Postgres JSONB comes back already parsed (an object); SQLite TEXT comes back as a
+   // string. Guard both — JSON.parse on an object throws and blanks the whole detail page.
    let result: AuditResult | null = null;
-   if (row.status === 'completed' && row.result_json) {
-      try { result = JSON.parse(row.result_json) as AuditResult; } catch { result = null; }
+   if (row.status === 'completed' && row.result_json != null) {
+      try {
+         const raw = row.result_json as unknown;
+         result = (typeof raw === 'string' ? JSON.parse(raw) : raw) as AuditResult;
+      } catch { result = null; }
    }
 
    return res.status(200).json({
