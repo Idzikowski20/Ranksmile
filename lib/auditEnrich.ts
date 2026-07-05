@@ -23,8 +23,9 @@ const competitorHost = (domain: string, url: string): string => {
    try { return bareHost(new URL(url).hostname); } catch { return ''; }
 };
 
-export async function enrichAudit(domainId: number, url: string, keyword: string): Promise<RealAuditData | null> {
-   const language = langOf(keyword);
+export async function enrichAudit(domainId: number, url: string, keyword: string, lang?: string): Promise<RealAuditData | null> {
+   // Prefer the audit's picked country language; fall back to a diacritic guess.
+   const language = lang || langOf(keyword);
    await ensureCompetitorsTables();
 
    let comps = await getCompetitors(domainId, keyword).catch(() => []);
