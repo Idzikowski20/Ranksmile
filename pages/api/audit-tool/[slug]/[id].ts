@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
-   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
+   if (req.method !== 'GET' && req.method !== 'DELETE') { res.setHeader('Allow', 'GET, DELETE'); return res.status(405).json({ error: 'Method not allowed' }); }
    const userId = await getCurrentUserId(req, res);
    const ownership = await verifyDomainOwnershipBySlug(req.query.slug as string, userId);
    if (ownership === false) return res.status(403).json({ error: 'Access denied.' });
@@ -21,6 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const id = Number(req.query.id);
    if (!Number.isFinite(id)) return res.status(404).json({ error: 'Audit not found' });
+
+   if (req.method === 'DELETE') {
+      await db.query('DELETE FROM audit_runs WHERE id = ? AND domain_id = ?', { replacements: [id, domainId] });
+      return res.status(200).json({ ok: true });
+   }
 
    const row = await queryOne<AuditRunRow>(
       'SELECT * FROM audit_runs WHERE id = ? AND domain_id = ? LIMIT 1',
