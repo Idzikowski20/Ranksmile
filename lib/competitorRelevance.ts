@@ -11,8 +11,9 @@ const NON_CONTENT_HOSTS = [
    'facebook.com', 'instagram.com', 'tiktok.com', 'twitter.com', 'x.com', 'linkedin.com',
    'pinterest.com', 'pinterest.pl', 'reddit.com', 'quora.com',
    'reverso.net', 'translate.google.com',
-   'play.google.com', 'apps.apple.com', 'itunes.apple.com', 'apple.com',
-   'maps.google.com', 'google.com', 'bing.com',
+   // App stores + Google/Apple non-article surfaces — specific subdomains only, so real
+   // content on support.google.com / developer.apple.com etc. still counts as a competitor.
+   'play.google.com', 'apps.apple.com', 'itunes.apple.com', 'maps.google.com',
 ];
 
 const bareHost = (host: string): string => host.replace(/^www\./, '').toLowerCase();
