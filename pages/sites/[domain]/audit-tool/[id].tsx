@@ -12,6 +12,7 @@ import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AuditFactor, AuditResult } from '../../../../lib/auditTypes';
 
 const AuditFactorChart = dynamic(() => import('../../../../components/audit/AuditFactorChart'), { ssr: false });
+const TermsTable = dynamic(() => import('../../../../components/audit/TermsTable'), { ssr: false });
 
 const FONT = 'var(--font-family-primary)';
 
@@ -268,30 +269,7 @@ const AuditDetailPage: NextPage = () => {
                               value={attention > 0 ? `${attention} out of ${result.terms.length} important terms require your attention!` : `${result.terms.length} important terms covered.`}
                               detailsLabel="Show details" expanded={expanded.has('terms')} onToggle={() => toggle('terms')}
                            >
-                              <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
-                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
-                                    <thead><tr>
-                                       <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px' }}>Term</th>
-                                       <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 70 }}>You</th>
-                                       <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 90 }}>Suggested</th>
-                                       <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 90 }}>Action</th>
-                                    </tr></thead>
-                                    <tbody>
-                                       {result.terms.map((t) => {
-                                          const color = t.action === 'add' ? '#DC2626' : t.action === 'remove' ? '#B45309' : '#15803D';
-                                          const label = t.action === 'add' ? 'Add' : t.action === 'remove' ? 'Remove' : 'OK';
-                                          return (
-                                             <tr key={t.term}>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', fontSize: 13, color: '#18181B' }}>{t.term}{t.nlp && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#3B82F6', border: '1px solid #BFDBFE', borderRadius: 4, padding: '1px 4px' }}>NLP</span>}</td>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, color: '#52525C' }}>{t.you}</td>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, color: '#52525C' }}>{t.suggested}</td>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, fontWeight: 600, color }}>{label}</td>
-                                             </tr>
-                                          );
-                                       })}
-                                    </tbody>
-                                 </table>
-                              </div>
+                              <TermsTable terms={result.terms} />
                            </Row>
                         );
                      })()}

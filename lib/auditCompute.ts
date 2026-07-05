@@ -5,7 +5,7 @@
 // falls back to a deterministic, clearly-labelled placeholder. Pure — no network here.
 import { load } from 'cheerio';
 import { assertPublicUrl } from './ssrfGuard';
-import { countOccurrences, ScoreData, computeContentScore } from './contentScore';
+import { countOccurrences, findTermRangesBatch, ScoreData, computeContentScore } from './contentScore';
 import { plainText, wordCount } from './optimizationPlanner';
 import {
    AuditResult, AuditFactor, AuditCompetitor, AuditInternalLink, AuditTerm,
@@ -15,7 +15,20 @@ export interface FetchTiming { ttfbMs: number; loadMs: number; }
 
 /** Per-competitor page analysis fed into buildAuditResult in phase 2. */
 export interface CompetitorPage { domain: string; rank: number; values: Record<string, number>; contentScore: number; url?: string; }
-export interface RealAuditData { competitors: CompetitorPage[]; terms: { term: string; target_count: number }[]; }
+
+/** One NLP term as returned by the sidecar (/analyze-serp). Extra fields are optional so
+ *  older/placeholder payloads (term + target_count only) still map cleanly. */
+export interface RichTerm {
+   term: string;
+   target_count: number;
+   type?: string; // sidecar semantic type (core/supporting/entity/…) — not the UI tab type
+   relevance?: number; // 0–1
+   doc_freq?: number;
+   suggested_min?: number;
+   suggested_max?: number;
+   searchVolume?: number | null; // filled by enrichAudit via DataForSEO for phrase terms
+}
+export interface RealAuditData { competitors: CompetitorPage[]; terms: RichTerm[]; }
 
 /** Extracted numbers for one page keyed by factor key + the bits used elsewhere. */
 export interface PageMetrics {
@@ -248,12 +261,44 @@ function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): Audi
    };
 }
 
-function mapTerms(terms: { term: string; target_count: number }[], bodyText: string): AuditTerm[] {
-   return terms.map((t) => {
-      const you = countOccurrences(bodyText, t.term);
-      const target = Math.max(1, t.target_count);
-      const action: AuditTerm['action'] = you < target ? 'add' : (you > target * 3 ? 'remove' : 'ok');
-      return { term: t.term, forms: 1, you, suggested: String(target), relevance: 100, searchVolume: null, action, nlp: true };
+// SurferSEO tab bucket: all-numeric → number, multi-word → phrase, single token → word.
+function termType(term: string): AuditTerm['type'] {
+   if (/^[\s\d.,%-]+$/.test(term)) return 'number';
+   return /\s/.test(term.trim()) ? 'phrase' : 'word';
+}
+
+// One highlighted example: the window of text around a match, snapped to word
+// boundaries and ellipsis-padded (SurferSEO shows "… text <mark>term</mark> text …").
+function exampleWindow(text: string, s: number, e: number): string {
+   const WIN = 90;
+   let start = Math.max(0, s - WIN);
+   let end = Math.min(text.length, e + WIN);
+   while (start > 0 && !/\s/.test(text[start - 1])) start -= 1;
+   while (end < text.length && !/\s/.test(text[end])) end += 1;
+   return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
+}
+
+// Map sidecar NLP terms to the SurferSEO "Terms to Use" rows: real per-page count (You),
+// distinct inflected forms, example sentences, a competitor-derived suggested range, and an
+// Add/Remove/OK action. `findTermRangesBatch` gives inflection-tolerant match ranges in one
+// pass, so You / forms / examples all stay consistent with the editor's term highlighting.
+function mapTerms(terms: RichTerm[], bodyText: string): AuditTerm[] {
+   const batch = findTermRangesBatch(bodyText, terms.map((t) => t.term));
+   return terms.map((t, idx) => {
+      const rs = batch[idx]?.ranges ?? [];
+      const you = rs.length;
+      const variants = Array.from(new Set(rs.map(([s, e]) => bodyText.slice(s, e).trim()).filter(Boolean)));
+      const examples = rs.slice(0, 3).map(([s, e]) => exampleWindow(bodyText, s, e));
+      const sMin = Math.max(1, t.suggested_min ?? Math.max(1, t.target_count));
+      const sMax = Math.max(sMin, t.suggested_max ?? t.target_count);
+      const suggested = sMin === sMax ? String(sMin) : `${sMin}-${sMax}`;
+      const action: AuditTerm['action'] = you < sMin ? 'add' : (you > sMax ? 'remove' : 'ok');
+      const relevance = Math.round(Math.min(1, Math.max(0, t.relevance ?? 1)) * 100);
+      return {
+         term: t.term, forms: variants.length, variants, examples,
+         you, suggested, relevance, searchVolume: t.searchVolume ?? null,
+         action, nlp: true, type: termType(t.term),
+      };
    });
 }
 

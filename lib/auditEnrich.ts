@@ -4,7 +4,8 @@
 // used for "You" (apples-to-apples factors), and pulls NLP terms from /analyze-serp.
 // Injected into computeAudit; any failure degrades to null → placeholder result.
 import { getCompetitors, scanCompetitors } from './competitorScan';
-import { fetchPage, extractFactorValues, RealAuditData } from './auditCompute';
+import { fetchPage, extractFactorValues, RealAuditData, RichTerm } from './auditCompute';
+import { getSearchVolumes } from './dataforseo';
 import { callSidecar } from './sidecar';
 import { isContentCompetitor } from './competitorRelevance';
 import { ensureCompetitorsTables } from './ensureCompetitorsTables';
@@ -55,11 +56,22 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
    const competitors = analyzed.filter((x): x is NonNullable<typeof x> => x !== null);
    if (!competitors.length) return null;
 
-   let terms: { term: string; target_count: number }[] = [];
+   let terms: RichTerm[] = [];
    try {
-      const serp = await callSidecar<{ terms?: { term: string; target_count: number }[] }>('/analyze-serp', { keyword, language }, 60000);
+      const serp = await callSidecar<{ terms?: RichTerm[] }>('/analyze-serp', { keyword, language }, 60000);
       terms = Array.isArray(serp?.terms) ? serp.terms : [];
    } catch { terms = []; }
+
+   // Search Volume (DataForSEO) for multi-word phrase terms only — mirrors SurferSEO,
+   // which shows a volume for phrases and "—" for single words. Best-effort: any failure
+   // (unconfigured / API error) just leaves searchVolume null.
+   if (terms.length) {
+      const phrases = terms.filter((t) => /\s/.test(t.term.trim())).map((t) => t.term);
+      const volumes = await getSearchVolumes(phrases, language.toUpperCase()).catch(() => ({} as Record<string, number>));
+      if (Object.keys(volumes).length) {
+         terms = terms.map((t) => ({ ...t, searchVolume: volumes[t.term.toLowerCase()] ?? t.searchVolume ?? null }));
+      }
+   }
 
    return { competitors, terms };
 }
