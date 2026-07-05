@@ -354,8 +354,10 @@ function mapTerms(terms: RichTerm[], bodyText: string): AuditTerm[] {
    });
 }
 
-/** Compose the AuditResult. Pass `real` (phase 2) for real competitor bars/ranges/terms. */
-export function buildAuditResult(html: string, url: string, keyword: string, timing: FetchTiming, real?: RealAuditData): AuditResult {
+/** Compose the AuditResult. Pass `real` (phase 2) for real competitor bars/ranges/terms and
+ *  `internalLinksOverride` for crawled internal-link opportunities (else the audited page's
+ *  own same-site links are used as a fallback). */
+export function buildAuditResult(html: string, url: string, keyword: string, timing: FetchTiming, real?: RealAuditData, internalLinksOverride?: AuditInternalLink[]): AuditResult {
    const page = extractFactorValues(html, url, keyword, timing);
    const factors = FACTOR_DEFS.map((def) => assembleFactor(def, page.values[def.key], real));
 
@@ -391,7 +393,7 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
       contentScoreSuggestedMin: csMin,
       contentScoreSuggestedMax: csMax,
       factors,
-      internalLinks: page.internalLinks,
+      internalLinks: internalLinksOverride !== undefined ? internalLinksOverride : page.internalLinks,
       terms: real ? mapTerms(real.terms, page.bodyText) : [],
       generatedAt: new Date().toISOString(),
    };
@@ -432,11 +434,16 @@ export async function computeAudit(
    url: string,
    keyword: string,
    enrich?: (url: string, keyword: string, youHtml: string) => Promise<RealAuditData | null>,
+   findLinks?: (url: string, keyword: string) => Promise<AuditInternalLink[] | null>,
 ): Promise<AuditResult> {
    const { html, timing } = await fetchPage(url);
    let real: RealAuditData | null = null;
    if (enrich) {
       try { real = await enrich(url, keyword, html); } catch { real = null; }
    }
-   return buildAuditResult(html, url, keyword, timing, real ?? undefined);
+   let links: AuditInternalLink[] | null = null;
+   if (findLinks) {
+      try { links = await findLinks(url, keyword); } catch { links = null; }
+   }
+   return buildAuditResult(html, url, keyword, timing, real ?? undefined, links ?? undefined);
 }
