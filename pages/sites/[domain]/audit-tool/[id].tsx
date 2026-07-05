@@ -208,13 +208,14 @@ const AuditDetailPage: NextPage = () => {
                   {/* Content Score */}
                   <SectionCard title="Content Score">
                      {(() => {
-                        const csMin = result.contentScoreSuggestedMin;
-                        const below = csMin !== null && result.contentScore < csMin;
+                        // Goal = the top competitor's content score (SurferSEO's "for the best results").
+                        const goal = result.contentScoreSuggestedMax;
+                        const below = goal !== null && result.contentScore < goal;
                         return (
                            <Row
                               last
                               tone={below ? 'warn' : 'ok'}
-                              headline={below ? `Improve Content Score by at least ${csMin - result.contentScore} for the best results.` : 'No action required.'}
+                              headline={below ? `Improve Content Score by at least ${goal - result.contentScore} for the best results.` : 'No action required.'}
                               value={`Your Content Score is ${result.contentScore}.`}
                               detailsLabel="Show details" expanded={expanded.has('content_score')} onToggle={() => toggle('content_score')}
                            >

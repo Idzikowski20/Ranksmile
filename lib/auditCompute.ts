@@ -28,7 +28,34 @@ export interface RichTerm {
    suggested_max?: number;
    searchVolume?: number | null; // filled by enrichAudit via DataForSEO for phrase terms
 }
-export interface RealAuditData { competitors: CompetitorPage[]; terms: RichTerm[]; }
+export interface RealAuditData {
+   competitors: CompetitorPage[];
+   terms: RichTerm[];
+   // Competitor-set averages used to score "You" the same way (word/heading/paragraph
+   // frac). Set by enrichAudit alongside the calibrated competitor content scores.
+   contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
+}
+
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+/**
+ * SurferSEO-style content score (AUDIT ONLY — the content-editor gauge keeps its own
+ * computeContentScore). Coverage-dominated so a page missing most of the suggested terms
+ * scores in the 40-55 range even with good length: 0.6 term coverage + 0.25 length +
+ * 0.15 structure, each measured against the competitor set. Approximation — SurferSEO's
+ * exact model is proprietary; both "You" and every competitor are scored identically so
+ * the chart stays apples-to-apples.
+ */
+export function auditContentScore(coverageFrac: number, wordFrac: number, structFrac: number): number {
+   return Math.round((0.6 * clamp01(coverageFrac) + 0.25 * clamp01(wordFrac) + 0.15 * clamp01(structFrac)) * 100);
+}
+
+/** Fraction of the suggested terms a page actually uses (≥1 inflection-tolerant hit). */
+export function termCoverageFraction(bodyText: string, terms: { term: string }[]): number {
+   if (!terms.length) return 0;
+   const covered = terms.filter((t) => countOccurrences(bodyText, t.term) >= 1).length;
+   return covered / terms.length;
+}
 
 /** Extracted numbers for one page keyed by factor key + the bits used elsewhere. */
 export interface PageMetrics {
@@ -332,6 +359,19 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
    const page = extractFactorValues(html, url, keyword, timing);
    const factors = FACTOR_DEFS.map((def) => assembleFactor(def, page.values[def.key], real));
 
+   // "You" content score: calibrated (coverage-dominated) when real competitor data +
+   // suggested terms are available, so it's comparable to the calibrated competitor bars;
+   // otherwise the phase-1 estimate from extractFactorValues.
+   let youScore = page.contentScore;
+   if (real && real.terms.length && real.contentTargets) {
+      const { avgWords, avgHeadings, avgPs } = real.contentTargets;
+      const cov = termCoverageFraction(page.bodyText, real.terms);
+      const wordFrac = avgWords > 0 ? page.values.word_count_body / avgWords : 0;
+      const structFrac = ((avgHeadings > 0 ? Math.min(1, page.values.h2_h6_count / avgHeadings) : 0)
+         + (avgPs > 0 ? Math.min(1, page.values.p_count / avgPs) : 0)) / 2;
+      youScore = auditContentScore(cov, wordFrac, structFrac);
+   }
+
    let csCompetitors: AuditCompetitor[];
    let csMin: number;
    let csMax: number;
@@ -346,7 +386,7 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
    return {
       url,
       keyword,
-      contentScore: page.contentScore,
+      contentScore: youScore,
       contentScoreCompetitors: csCompetitors,
       contentScoreSuggestedMin: csMin,
       contentScoreSuggestedMax: csMax,
