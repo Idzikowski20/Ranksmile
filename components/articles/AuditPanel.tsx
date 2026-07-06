@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import type { AuditItem } from '../../pages/api/audit';
-import Gauge from '../ui/Gauge';
+import { Gauge } from '../core';
 
 interface Props {
   item: AuditItem | null;

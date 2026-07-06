@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Gauge from '../ui/Gauge';
+import { Gauge } from '../core';
 
 interface Article {
   id: number;

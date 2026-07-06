@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
-import { Checkbox, SearchBar } from '../../components/ui';
+import { Checkbox, SearchBar } from '../../components/core';
 import { useFetchDomains } from '../../services/domains';
 import { getErrorMessage } from '../../lib/errors';
 
@@ -439,8 +439,7 @@ const ConfigureSite: NextPage = () => {
                   <div style={{ display: 'flex', alignItems: 'center', padding: '10px 24px', borderBottom: '1px solid #F4F4F5', background: '#FAFAFA', flexShrink: 0 }}>
                      <div style={{ width: 32, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                         <Checkbox
-                           checked={allFilteredSelected && filteredGscPages.length > 0}
-                           indeterminate={!allFilteredSelected && filteredGscPages.some((p) => selectedPages.includes(p.url))}
+                           checked={allFilteredSelected && filteredGscPages.length > 0 ? true : (!allFilteredSelected && filteredGscPages.some((p) => selectedPages.includes(p.url)) ? 'indeterminate' : false)}
                            onChange={handleModalSelectAll}
                         />
                      </div>

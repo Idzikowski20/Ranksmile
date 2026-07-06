@@ -1,13 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
+import Link from 'next/link';
+import {Stack} from '../core/layout';
+import {Text, Heading} from '../core/text';
+import {Button} from '../core';
 import Skeleton from './Skeleton';
-
-const font = 'var(--font-family-primary)';
-
-const ArrowUpRight = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, verticalAlign: 'sub' }}>
-    <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const timeGreeting = (hour: number | null): string => {
   if (hour === null) return 'Welcome back!';
@@ -24,48 +20,37 @@ interface Props {
   clicksHref: string;
 }
 
-const DashboardGreeting = ({ clicksTotal, deltaPct, hasData, loading, clicksHref }: Props) => {
+const DashboardGreeting = ({clicksTotal, deltaPct, hasData, loading, clicksHref}: Props) => {
   const [hour, setHour] = useState<number | null>(null);
   useEffect(() => { setHour(new Date().getHours()); }, []);
 
   const up = deltaPct >= 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 600, color: '#09090b', fontFamily: font }}>
-        {timeGreeting(hour)}
-      </div>
-
-      <div style={{ textAlign: 'left', fontSize: 20, lineHeight: '28px', color: '#52525C', fontFamily: font }}>
-        {loading ? (
-          <Skeleton width="min(420px, 80%)" height={20} radius={6} style={{ margin: '4px 0' }} />
-        ) : hasData ? (
-          <span>
-            Your site received{' '}
-            <strong style={{ color: '#000' }}>
-              <a
-                href={clicksHref}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: 'inherit', textDecoration: 'none' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.8'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
-              >
-                {clicksTotal} {clicksTotal === 1 ? 'click' : 'clicks'}
-                <ArrowUpRight />
-              </a>
-            </strong>
-            {' '}—a {Math.abs(deltaPct)}% {up ? 'increase' : 'decrease'} over the last 30 days.
-          </span>
-        ) : (
-          <span>
-            Connect{' '}
-            <a href="/settings/google_search_console" style={{ color: '#000', textDecoration: 'underline', textUnderlineOffset: '0.05em' }}>
-              Google Search Console
+    <Stack gap="2xl">
+      <Heading as="h2" size="2xl">{timeGreeting(hour)}</Heading>
+      {loading ? (
+        <Skeleton width="min(420px, 80%)" height={20} radius={6} />
+      ) : hasData ? (
+        <Text as="div" size="lg" variant="muted">
+          Your site received{' '}
+          <Link href={clicksHref} passHref>
+            <a className="font-semibold text-inherit hover:underline">
+              {clicksTotal} {clicksTotal === 1 ? 'click' : 'clicks'}
             </a>
-            {' '}to start tracking your clicks.
-          </span>
-        )}
-      </div>
-    </div>
+          </Link>
+          {' '}—a {Math.abs(deltaPct)}% {up ? 'increase' : 'decrease'} over the last 30 days.
+        </Text>
+      ) : (
+        <Text as="div" size="lg" variant="muted">
+          Connect{' '}
+          <Link href="/settings/google_search_console" passHref>
+            <a className="font-semibold text-inherit hover:underline">Google Search Console</a>
+          </Link>
+          {' '}to start tracking your clicks.
+        </Text>
+      )}
+    </Stack>
   );
 };
 

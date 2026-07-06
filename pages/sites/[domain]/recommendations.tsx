@@ -10,8 +10,8 @@ import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { normalizeUrlForMatch, kwScore } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader } from '../../../components/ui';
-import { DeltaDown, SortUpDown } from '../../../components/ui/icons';
+import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader } from '../../../components/core';
+import { DeltaDown, SortUpDown } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
@@ -602,7 +602,7 @@ const RecommendationsPage: NextPage = () => {
                      <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5', borderRadius: '8px 8px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
                         {/* Checkbox */}
                         <div style={{ padding: '10px 16px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', flexShrink: 0, height: '100%' }}>
-                           <Checkbox checked={allChecked} indeterminate={someChecked && !allChecked} onChange={toggleAll} />
+                           <Checkbox checked={someChecked && !allChecked ? 'indeterminate' : allChecked} onChange={toggleAll} />
                         </div>
                         {/* Page / Main keyword */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flexGrow: 1, minWidth: 256 }}>

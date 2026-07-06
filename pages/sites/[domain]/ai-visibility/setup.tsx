@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
-import { Modal } from '../../../../components/ui';
+import { Modal } from '../../../../components/core';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';

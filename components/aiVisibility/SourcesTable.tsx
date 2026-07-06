@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import HoverTooltip from '../common/HoverTooltip';
+import { HoverTooltip } from '../core';
 
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;

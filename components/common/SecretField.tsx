@@ -1,34 +1,39 @@
-import { useState } from 'react';
+import React, { useState, useId } from 'react';
 import Icon from './Icon';
+import { Input } from '../core/input/input';
 
 type SecretFieldProps = {
    label: string;
    value: string;
-   onChange: Function;
+   onChange: (value: string) => void;
    placeholder?: string;
    classNames?: string;
    hasError?: boolean;
-}
+};
 
-const SecretField = ({ label = '', value = '', placeholder = '', onChange, hasError = false }: SecretFieldProps) => {
+const SecretField = ({ label = '', value = '', placeholder = '', onChange, hasError = false, classNames = '' }: SecretFieldProps) => {
    const [showValue, setShowValue] = useState(false);
-   const labelStyle = 'mb-2 font-semibold inline-block text-sm text-gray-700 capitalize';
+   const id = useId();
    return (
-      <div className="settings__section__secret w-full relative flex justify-between items-center">
-         <label className={labelStyle}>{label}</label>
+      <div className={`settings__section__secret w-full relative flex justify-between items-center ${classNames}`}>
+         <label htmlFor={id} className="mb-2 font-semibold inline-block text-sm text-gray-700 capitalize">
+            {label}
+         </label>
          <span
-         className="absolute top-1 right-0 px-2 py-1 cursor-pointer text-gray-400 select-none"
-         onClick={() => setShowValue(!showValue)}>
+            className="absolute top-1 right-0 px-2 py-1 cursor-pointer text-gray-400 select-none z-10"
+            onClick={() => setShowValue(!showValue)}
+         >
             <Icon type={showValue ? 'eye-closed' : 'eye'} size={18} />
          </span>
-         <input
-            className={`w-[210px] p-2 border border-gray-200 rounded focus:outline-none 
-             focus:border-blue-200 ${hasError ? ' border-red-400 focus:border-red-400' : ''} `}
+         <Input
+            id={id}
+            size="sm"
             type={showValue ? 'text' : 'password'}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
-            autoComplete="off"
+            onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
+            hasError={hasError}
+            style={{ width: 210 }}
          />
       </div>
    );

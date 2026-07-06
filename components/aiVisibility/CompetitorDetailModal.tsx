@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SkeletonBox } from './SkeletonBlocks';
-import HoverTooltip from '../common/HoverTooltip';
+import { HoverTooltip } from '../core';
 import { useAiVisCompetitorDetail } from '../../services/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';

@@ -322,3 +322,12 @@ declare module '@tiptap/react/menus' {
    export { BubbleMenu, FloatingMenu } from '@tiptap/react/dist/menus';
    export type { BubbleMenuProps, FloatingMenuProps } from '@tiptap/react/dist/menus';
 }
+
+// react-date-range's package "exports" map exposes "./dist/locale" for the named
+// locale objects (e.g. enUS) used by <DateRange locale={enUS} />, but @types/react-date-range
+// doesn't declare that subpath — same node10-resolution gap as the shims above.
+declare module 'react-date-range/dist/locale' {
+   const locales: Record<string, any>;
+   export default locales;
+   export const enUS: any;
+}

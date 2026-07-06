@@ -6,8 +6,8 @@ import SourcesTable, { SourceRow } from '../../../../components/aiVisibility/Sou
 import SourceDetailModal from '../../../../components/aiVisibility/SourceDetailModal';
 import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import HoverTooltip from '../../../../components/common/HoverTooltip';
-import { Toggle, SearchBar } from '../../../../components/ui';
+import { HoverTooltip } from '../../../../components/core';
+import { Toggle, SearchBar } from '../../../../components/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 

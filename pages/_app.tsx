@@ -4,6 +4,7 @@ import React from 'react';
 import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { ThemeProvider } from '@emotion/react';
 // @ts-ignore
 import { NeonAuthUIProvider } from '@neondatabase/auth/react';
 import { authClient } from '../lib/auth/client';
@@ -16,6 +17,8 @@ import { EmailConfirmedStatusContext } from '../lib/emailConfirmedStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../lib/motion/gsap';
+import { theme } from '../components/core/theme';
+import { IconDefaultsProvider } from '../components/core/IconDefaultsProvider';
 
 /** Keeps the `active_workspace` cookie in sync with the /workspace/<id>/... URL so server-side scoping matches. */
 function WorkspaceCookieSync() {
@@ -153,19 +156,23 @@ function MyApp({ Component, pageProps }: AppProps) {
     }));
    // Register every GSAP plugin once, client-side (motion layer — see lib/motion/gsap.ts).
    useGSAP(() => { registerMotionPlugins(); });
-   return (
-      <NeonAuthUIProvider authClient={authClient} redirectTo="/" basePath="/auth">
-         <QueryClientProvider client={queryClient}>
-            <TopProgressBar />
-            <WorkspaceCookieSync />
-            <OnboardingGuard>
-               <Component {...pageProps} />
-            </OnboardingGuard>
-            <AppToaster />
-            <GlobalSmoothCaret />
-         </QueryClientProvider>
-      </NeonAuthUIProvider>
-   );
+    return (
+       <NeonAuthUIProvider authClient={authClient} redirectTo="/" basePath="/auth">
+          <QueryClientProvider client={queryClient}>
+             <ThemeProvider theme={theme}>
+                <IconDefaultsProvider size="sm">
+                   <TopProgressBar />
+                   <WorkspaceCookieSync />
+                   <OnboardingGuard>
+                      <Component {...pageProps} />
+                   </OnboardingGuard>
+                   <AppToaster />
+                   <GlobalSmoothCaret />
+                </IconDefaultsProvider>
+             </ThemeProvider>
+          </QueryClientProvider>
+       </NeonAuthUIProvider>
+    );
 }
 
 export default MyApp;
