@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { CompetitorDTO } from '../../lib/competitorTypes';
 import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../services/competitors';
-import Gauge from '../ui/Gauge';
-import Toggle from '../ui/Toggle';
+import { Gauge } from '../core';
+import { Toggle } from '../core';
 
 const FONT = 'var(--font-family-primary)';
 const favicon = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;

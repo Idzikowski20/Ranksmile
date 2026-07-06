@@ -9,9 +9,9 @@ import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBa
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
 import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
-import HoverTooltip from '../../../../components/common/HoverTooltip';
+import { HoverTooltip } from '../../../../components/core';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
-import { Modal } from '../../../../components/ui';
+import { Modal } from '../../../../components/core';
 
 const FONT = 'var(--font-family-primary)';
 

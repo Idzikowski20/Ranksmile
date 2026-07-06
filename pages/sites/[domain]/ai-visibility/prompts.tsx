@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import PromptTopicsTable, { TopicRow } from '../../../../components/aiVisibility/PromptTopicsTable';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import HoverTooltip from '../../../../components/common/HoverTooltip';
+import { HoverTooltip } from '../../../../components/core';
 import { useAiVisPromptTopics, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 

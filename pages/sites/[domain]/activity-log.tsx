@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
-import HoverTooltip from '../../../components/common/HoverTooltip';
+import { HoverTooltip } from '../../../components/core';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';

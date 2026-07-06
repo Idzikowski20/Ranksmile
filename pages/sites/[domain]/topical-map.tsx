@@ -7,7 +7,7 @@ import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import { Tabs, Toggle, SearchBar, SortableHeader, Checkbox, Skeleton } from '../../../components/ui';
+import { Tabs, Toggle, SearchBar, SortableHeader, Checkbox, Skeleton } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import { buildTopicClusters, TopicCluster } from '../../../lib/topicalMap';
 import TopicalFilters, { DEFAULT_TOPICAL_FILTERS, TopicalFilterState, applyTopicalFilters } from '../../../components/domains/TopicalFilters';

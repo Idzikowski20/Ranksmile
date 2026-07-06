@@ -14,7 +14,7 @@ import { useFetchSettings } from '../../../services/settings';
 import KeywordIdeasTable from '../../../components/ideas/KeywordIdeasTable';
 import { useFetchKeywordIdeas } from '../../../services/adwords';
 import KeywordIdeasUpdater from '../../../components/ideas/KeywordIdeasUpdater';
-import Modal from '../../../components/common/Modal';
+import { Modal } from '../../../components/core';
 import Footer from '../../../components/common/Footer';
 
 const DiscoverPage: NextPage = () => {
@@ -92,7 +92,7 @@ const DiscoverPage: NextPage = () => {
          </CSSTransition>
 
          {showUpdateModal && activDomain?.domain && (
-            <Modal closeModal={() => setShowUpdateModal(false) } title={'Load Keyword Ideas from Google Ads'} verticalCenter={true}>
+            <Modal onClose={() => setShowUpdateModal(false)} title={'Load Keyword Ideas from Google Ads'}>
                <KeywordIdeasUpdater
                domain={activDomain}
                onUpdate={() => setShowUpdateModal(false)}

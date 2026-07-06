@@ -1,11 +1,6 @@
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
 
-/**
- * Global toast renderer — dark Surfer style, bottom-right.
- * Mounted once in _app.tsx; toast()/toast.success()/toast.error() calls
- * anywhere in the app render here.
- */
 const AppToaster = () => (
   <Toaster
     position="bottom-right"

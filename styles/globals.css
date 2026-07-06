@@ -1005,6 +1005,14 @@ html.editor-route .app-content {
    text-decoration: underline !important;
 }
 
+/* Dashboard traffic alert row hover */
+.traffic-alert-row {
+   transition: background 0.15s ease;
+}
+.traffic-alert-row:hover {
+   background: #F4F4F5;
+}
+
 /* Recommendations panel — editable main keyword (pencil shows on hover) */
 .rec-keyword-edit:hover .rec-keyword-pencil { opacity: 1 !important; }
 .rec-keyword-edit:hover .rec-keyword-text { text-decoration: underline; text-underline-offset: 2px; }

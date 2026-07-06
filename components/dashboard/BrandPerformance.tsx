@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../core';
 import SectionHeader from './SectionHeader';
 import Skeleton from './Skeleton';
 
@@ -98,20 +99,11 @@ const AiVisibilityCard = () => (
           </defs>
         </svg>
       </div>
-      <button
-        type="button"
-        onClick={() => { /* mockup */ }}
-        style={{
-          position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap',
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '6px 16px', borderRadius: 6,
-          fontSize: 14, fontWeight: 600, color: '#3F3F47', background: '#fff', border: 'none', cursor: 'pointer',
-          boxShadow: 'inset 0 0 0 1px var(--gray-20)', fontFamily: font, transition: 'background 150ms ease',
-        }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
-      >
-        Add prompts
-      </button>
+      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
+        <Button variant="secondary" size="sm" onClick={() => { /* mockup */ }}>
+          Add prompts
+        </Button>
+      </div>
     </div>
   </div>
 );

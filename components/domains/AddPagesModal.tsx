@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Checkbox, SearchBar, SortableHeader } from '../ui';
-import { XIcon } from '../ui/icons';
+import { XIcon } from '../core';
 import { useSortState } from '../../lib/useSortState';
 
 const font = 'var(--font-family-primary)';
