@@ -25,3 +25,32 @@ export function workspaceHref(wsId: number | null | undefined, path: string): st
    if (!wsId) return `/${clean}`;
    return `/workspace/${wsId}/${clean}`;
 }
+
+/**
+ * Resolves the active workspace's domain out of a full (possibly cross-workspace)
+ * domains list. Matches on `workspace_id` first — the reliable, unambiguous link
+ * between a domain row and its workspace — then falls back to the workspace's own
+ * tracked domain hostname (`activeWorkspaceDomain`, from `Workspace.domain`) for
+ * legacy rows with no `workspace_id`. Returns `null` if neither resolves.
+ *
+ * Centralized because two independent ad-hoc implementations of "find the active
+ * domain" (Sidebar.tsx matching `Workspace.name` — a display name, not a hostname —
+ * against `domain.domain`; dashboard/index.tsx just taking `domains[0]` with no
+ * workspace filter at all) both silently resolved the WRONG domain after switching
+ * or creating a workspace.
+ */
+export function resolveActiveDomain<D extends { workspace_id?: number | null; domain: string }>(
+   domains: D[],
+   activeWorkspaceId: number | null | undefined,
+   activeWorkspaceDomain?: string | null,
+): D | null {
+   if (activeWorkspaceId != null) {
+      const byId = domains.find((d) => d.workspace_id === activeWorkspaceId);
+      if (byId) return byId;
+   }
+   if (activeWorkspaceDomain) {
+      const byDomain = domains.find((d) => d.domain === activeWorkspaceDomain);
+      if (byDomain) return byDomain;
+   }
+   return null;
+}

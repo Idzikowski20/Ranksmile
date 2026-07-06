@@ -52,3 +52,5 @@ graphify-out/
 # codeql static analysis
 .codeqlignore
 static_analysis_codeql_1/
+# Sentry Config File
+.env.sentry-build-plugin
