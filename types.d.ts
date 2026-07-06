@@ -5,6 +5,10 @@ type DomainType = {
    ID: number,
    domain: string,
    slug: string,
+   // Present on every row returned by GET /api/domains (Domain.workspace_id via
+   // `.get({plain:true})`) — just wasn't declared here. Null for legacy domains
+   // created before workspaces existed.
+   workspace_id?: number | null,
    tags?: string,
    notification: boolean,
    notification_interval: string,

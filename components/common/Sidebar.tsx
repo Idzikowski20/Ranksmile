@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
 import SidebarLaunchpad from '../settings/SidebarLaunchpad';
-import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
 import { useWorkspaces } from '../../services/workspaces';
 
 type SidebarProps = {
@@ -307,7 +307,6 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
    // differs server vs client under the /workspace rewrite, which would mismatch hrefs).
    const activeId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
    const activeWorkspace = workspaces.find((w) => w.id === activeId) ?? workspaces[0] ?? null;
-   const activeName = activeWorkspace?.name ?? null; // the workspace's domain name (e.g. "idztech.pl")
 
    // Detect domain slug from current URL (e.g. /sites/[slug]/...)
    const urlSlugMatch = router.asPath.match(/^(?:\/workspace\/\d+)?\/(?:domain|sites)\/([^/?#]+)/);
@@ -339,14 +338,15 @@ const Sidebar = ({ domains = [], showAddModal, showSettings = () => {} }: Sideba
       }
    }, [domains, selectedDomainSlug]);
 
-   // Resolve activeSlug: match active workspace's domain name against the domains prop
+   // Resolve activeSlug via the active workspace's domain (workspace_id match, with a
+   // hostname fallback for legacy rows — see resolveActiveDomain). Previously this
+   // matched `activeWorkspace.name` (a display name, e.g. "Idztech") against
+   // `d.domain` (a hostname, e.g. "idztech.pl"), which almost never hit and silently
+   // fell through to a possibly-stale localStorage slug from a prior workspace.
    const activeSlug = useMemo(() => {
-      if (activeName) {
-         const match = domains.find((d) => d.domain === activeName);
-         if (match) return match.slug;
-      }
-      return selectedDomainSlug;
-   }, [activeName, domains, selectedDomainSlug]);
+      const resolved = resolveActiveDomain(domains, activeId, activeWorkspace?.domain);
+      return resolved?.slug ?? selectedDomainSlug;
+   }, [activeId, activeWorkspace, domains, selectedDomainSlug]);
 
    // Recommendations counter — shares the dashboard's ['domainRecs', slug] query, so the
    // pipeline's done-invalidation (and any other refresh) updates this badge immediately

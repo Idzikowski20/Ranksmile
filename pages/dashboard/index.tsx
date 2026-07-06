@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
-import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
 import { useStaggerReveal } from '../../lib/motion/useStaggerReveal';
 import TrafficAlertsSection from '../../components/dashboard/TrafficAlertsSection';
 import Settings from '../../components/settings/Settings';
@@ -100,7 +100,14 @@ const DashboardPage: NextPage = () => {
   const hasData = recent30.length > 0;
 
   const domains: DomainType[] = domainsData?.domains || [];
-  const primaryDomain = domains[0];
+  // `domains` spans every workspace the user can access (GET /api/domains isn't
+  // workspace-scoped), so `domains[0]` picked whichever domain happened to sort first
+  // overall — NOT the currently active workspace's domain. That's why a freshly
+  // created workspace's dashboard/pipeline silently tracked a different, unrelated
+  // (already-"done") domain and the "Analyzing your domain…" card never progressed:
+  // the auto-kick effect below never fired for the new domain at all.
+  const activeWorkspace = wsData?.workspaces.find((w) => w.id === activeWsId) ?? null;
+  const primaryDomain = resolveActiveDomain(domains, activeWsId, activeWorkspace?.domain) ?? domains[0];
   const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
   const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
   const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites');
