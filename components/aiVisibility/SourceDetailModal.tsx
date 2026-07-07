@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Button } from '../core';
 import { SourceRow, splitSourceUrl } from './SourcesTable';
 import MetricTrendChart from './MetricTrendChart';
 import { SkeletonBox } from './SkeletonBlocks';
@@ -151,8 +152,8 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                      {navigable ? (
                         <>
-                           <button type="button" aria-label="Previous source" disabled={!canUp} onClick={() => onNavigate(-1)} style={{ ...iconBtn, opacity: canUp ? 1 : 0.35, cursor: canUp ? 'pointer' : 'not-allowed' }}><ArrowUp /></button>
-                           <button type="button" aria-label="Next source" disabled={!canDown} onClick={() => onNavigate(1)} style={{ ...iconBtn, opacity: canDown ? 1 : 0.35, cursor: canDown ? 'pointer' : 'not-allowed' }}><ArrowDown /></button>
+                           <Button type="button" variant="transparent" size="sm" aria-label="Previous source" disabled={!canUp} onClick={() => onNavigate(-1)} icon={<ArrowUp />} style={{ opacity: canUp ? 1 : 0.35 }} />
+                           <Button type="button" variant="transparent" size="sm" aria-label="Next source" disabled={!canDown} onClick={() => onNavigate(1)} icon={<ArrowDown />} style={{ opacity: canDown ? 1 : 0.35 }} />
                         </>
                      ) : null}
                   </div>
@@ -162,7 +163,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                      ) : (
                         <span aria-label="Open source" aria-disabled="true" title="Source URL is not a valid web link" style={{ ...iconBtn, cursor: 'not-allowed', opacity: 0.35 }}><ExternalIcon /></span>
                      )}
-                     <button type="button" aria-label="Close" onClick={handleClose} style={iconBtn}><CloseIcon /></button>
+                     <Button type="button" variant="transparent" size="sm" aria-label="Close" onClick={handleClose} icon={<CloseIcon />} />
                   </div>
                </div>
                <h2 style={{ margin: 0, minWidth: 0 }}>
@@ -229,10 +230,10 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                         {/* Table header */}
                         <div style={{ display: 'grid', gridTemplateColumns: '74px 1fr', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
                            <div style={{ padding: '12px 16px' }}>
-                              <button type="button" onClick={() => setPosAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, color: '#71717B' }}>
+                              <Button type="button" variant="transparent" size="sm" onClick={() => setPosAsc((v) => !v)} style={{ gap: 4, color: '#71717B' }}>
                                  <span style={{ fontWeight: 600, textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 4, textDecorationColor: '#C4C4CC' }}>Pos.</span>
                                  <SortArrow asc={posAsc} />
-                              </button>
+                              </Button>
                            </div>
                            <div style={{ borderLeft: '1px solid #F4F4F5', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               <span>Brand</span>

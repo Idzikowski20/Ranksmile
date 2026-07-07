@@ -7,7 +7,7 @@ import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import { Tabs, Toggle, SearchBar, SortableHeader, Checkbox, Skeleton } from '../../../components/core';
+import { Tabs, Toggle, SearchBar, SortableHeader, Checkbox, Skeleton, Button, CompactSelect } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import { buildTopicClusters, TopicCluster } from '../../../lib/topicalMap';
 import TopicalFilters, { DEFAULT_TOPICAL_FILTERS, TopicalFilterState, applyTopicalFilters } from '../../../components/domains/TopicalFilters';
@@ -63,40 +63,16 @@ export const StatusChip = ({ status }: { status: TopicCluster['status'] }) => {
    );
 };
 
-const KebabMenu = ({ items }: { items: Array<{ label: string; onClick: () => void }> }) => {
-   const [open, setOpen] = useState(false);
-   const ref = React.useRef<HTMLDivElement>(null);
-   React.useEffect(() => {
-      if (!open) return undefined;
-      const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-      document.addEventListener('mousedown', h);
-      return () => document.removeEventListener('mousedown', h);
-   }, [open]);
-   return (
-      <div ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
-         <button type="button" aria-label="More actions" onClick={() => setOpen((o) => !o)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525C', padding: 4, display: 'inline-flex' }}>
-            <KebabIcon />
-         </button>
-         {open && (
-            <div role="menu" style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 150, minWidth: 180, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: 6, boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09)', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top right' }}>
-               {items.map((it) => (
-                  <button
-                     key={it.label}
-                     type="button"
-                     role="menuitem"
-                     onClick={() => { setOpen(false); it.onClick(); }}
-                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: 8, border: 'none', background: 'transparent', fontFamily: FONT, fontSize: 14, color: '#3F3F47', cursor: 'pointer' }}
-                     onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                  >
-                     {it.label}
-                  </button>
-               ))}
-            </div>
-         )}
-      </div>
-   );
-};
+const KebabMenu = ({ items }: { items: Array<{ label: string; onClick: () => void }> }) => (
+   <CompactSelect
+      size="sm"
+      options={items.map((it) => ({ value: it.label, label: it.label }))}
+      trigger={(props, isOpen) => (
+         <Button {...props} type="button" variant="transparent" size="sm" aria-label="More actions" aria-expanded={isOpen} icon={<KebabIcon />} style={{ padding: 4 }} />
+      )}
+      onChange={(opt) => items.find((it) => it.label === opt.value)?.onClick()}
+   />
+);
 
 const CellNum = ({ v, width }: { v: React.ReactNode; width: number }) => (
    <div style={{ width, flexShrink: 0, padding: '12px 16px', borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch' }}>
@@ -165,7 +141,7 @@ const TopicalMapPage: NextPage = () => {
             <title>{`Topical Map — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Topical Map" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Topical Map" heading="Topical Map" contentMaxWidth="100%">
             {/* ─── Title row ─── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -175,17 +151,8 @@ const TopicalMapPage: NextPage = () => {
                   <InfoIcon />
                </div>
                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <button type="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: FONT, fontSize: 14, fontWeight: 600, color: '#3F3F47' }}>
-                     <FeedbackIcon /> Leave feedback
-                  </button>
-                  <button
-                     type="button"
-                     style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', borderRadius: 6, padding: '8px 16px', background: '#18181B', color: '#fff', fontFamily: FONT, fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'background 150ms ease' }}
-                     onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
-                  >
-                     Export <ChevronDownIcon />
-                  </button>
+                  <Button type="button" variant="transparent" size="sm" icon={<FeedbackIcon />}>Leave feedback</Button>
+                  <Button type="button" variant="primary" size="sm" icon={<ChevronDownIcon />}>Export</Button>
                </div>
             </div>
 

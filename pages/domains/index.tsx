@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
+import { Button } from '../../components/core';
+import { SentryPage, SentryPageHeader, SentryPanel, SentryEmptyState } from '../../components/sentry-pages';
 import { useCheckMigrationStatus, useFetchSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 import DomainItem from '../../components/domains/DomainItem';
@@ -94,46 +96,46 @@ const Domains: NextPage = () => {
          <Head>
             <title>Domains - SerpBear</title>
          </Head>
-         <div className="flex flex-col w-full max-w-5xl mx-auto p-6 lg:p-8 lg:pt-8">
-            <div className='flex justify-between mb-2 items-center'>
-               <div className=' text-sm text-gray-600'>
-                  {domainsData?.domains?.length || 0} Domains <span className=' text-gray-300 ml-1 mr-1'>|</span> {totalKeywords} keywords
-               </div>
-               <div>
-                  <button
-                  data-testid="addDomainButton"
-                  className={'ml-2 inline-block py-2 text-blue-700 font-bold text-sm'}
-                  onClick={() => setShowAddDomain(true)}>
-                     <span
-                     className='text-center leading-4 mr-2 inline-block rounded-full w-7 h-7 pt-1 bg-blue-700 text-white font-bold text-lg'>+</span>
-                     <i className=' not-italic hidden lg:inline-block'>Add Domain</i>
-                  </button>
-               </div>
-            </div>
-            <div className='flex w-full flex-col mb-8'>
-               {domainsData?.domains && domainsData.domains.map((domain:DomainType) => {
-                  return <DomainItem
-                           key={domain.ID}
-                           domain={domain}
-                           selected={false}
-                           isConsoleIntegrated={!!(appSettings && appSettings.search_console_integrated) || !!domainSCAPiObj[domain.ID] }
-                           thumb={domainThumbs[domain.domain]}
-                           updateThumb={manuallyUpdateThumb}
-                           // isConsoleIntegrated={false}
-                           />;
-               })}
+         <SentryPage maxWidth={880}>
+            <SentryPageHeader
+               title="Domains"
+               subtitle={`${domainsData?.domains?.length || 0} domains · ${totalKeywords} keywords`}
+               borderless
+               actions={(
+                  <Button type="button" variant="primary" data-testid="addDomainButton" onClick={() => setShowAddDomain(true)}>
+                     Add domain
+                  </Button>
+               )}
+            />
+            <SentryPanel noPadding>
+               {domainsData?.domains && domainsData.domains.map((domain:DomainType) => (
+                  <DomainItem
+                     key={domain.ID}
+                     domain={domain}
+                     selected={false}
+                     isConsoleIntegrated={!!(appSettings && appSettings.search_console_integrated) || !!domainSCAPiObj[domain.ID] }
+                     thumb={domainThumbs[domain.domain]}
+                     updateThumb={manuallyUpdateThumb}
+                  />
+               ))}
                {isLoading && (
-                  <div className='noDomains mt-4 p-5 py-12 rounded border text-center bg-white text-sm'>
-                     <Icon type="loading" /> Loading Domains...
+                  <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                     <Icon type="loading" /> Loading domains…
                   </div>
                )}
                {!isLoading && domainsData && domainsData.domains && domainsData.domains.length === 0 && (
-                  <div className='noDomains mt-4 p-5 py-12 rounded border text-center bg-white text-sm'>
-                     No Domains Found. Add a Domain to get started!
-                  </div>
+                  <SentryEmptyState
+                     title="No domains yet"
+                     description="Add a domain to start tracking keywords and content."
+                     actions={(
+                        <Button type="button" variant="primary" onClick={() => setShowAddDomain(true)}>
+                           Add domain
+                        </Button>
+                     )}
+                  />
                )}
-            </div>
-         </div>
+            </SentryPanel>
+         </SentryPage>
 
          <CSSTransition in={showAddDomain} timeout={300} classNames="modal_anim" unmountOnExit mountOnEnter>
             <AddDomain closeModal={() => setShowAddDomain(false)} domains={domainsData?.domains || []} />

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import { Button, CompactSelect } from '../core';
 import { useAddKeywords } from '../../services/keywords';
 import countries from '../../utils/countries';
 
@@ -127,7 +128,6 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
    const [error, setError] = useState<string | null>(null);
    const [searched, setSearched] = useState(false); // to show initial vs empty state
    const [locationCode, setLocationCode] = useState('US');
-   const [showLocDropdown, setShowLocDropdown] = useState(false);
    const [sortKey, setSortKey] = useState<'volume' | 'competition'>('volume');
    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
    const [trackingIds, setTrackingIds] = useState<Set<string>>(new Set());
@@ -135,15 +135,6 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
    const { mutate: addKeywords } = useAddKeywords(() => {
       toast.success('Keyword added to tracker');
    });
-
-   const locRef = React.useRef<HTMLDivElement>(null);
-   React.useEffect(() => {
-      const fn = (e: MouseEvent) => { if (locRef.current && !locRef.current.contains(e.target as Node)) setShowLocDropdown(false); };
-      document.addEventListener('mousedown', fn);
-      return () => document.removeEventListener('mousedown', fn);
-   }, []);
-
-   const selectedLoc = POPULAR_LOCATIONS.find((l) => l.code === locationCode) || POPULAR_LOCATIONS[0];
 
    const handleSearch = async () => {
       const q = search.trim();
@@ -279,88 +270,32 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
                />
             </div>
 
-            {/* Location dropdown */}
-            <div style={{ position: 'relative' }} ref={locRef}>
-               <button
-                  type="button"
-                  onClick={() => setShowLocDropdown((v) => !v)}
-                  style={{
-                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                     height: 42, padding: '0 12px',
-                     border: '1px solid #D4D4D8', borderRadius: 8,
-                     background: '#fff', cursor: 'pointer',
-                     fontSize: 13, fontWeight: 500, color: '#18181B',
-                     fontFamily: 'var(--font-family-primary)',
-                     whiteSpace: 'nowrap',
-                     transition: 'border-color 200ms',
-                  }}
-               >
-                  <span>{selectedLoc?.label}</span>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ color: '#9F9FA9' }}>
-                     <path d="M5 7L1 3h8z" />
-                  </svg>
-               </button>
-               {showLocDropdown && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 200, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10, boxShadow: '0px 12px 32px rgba(17,24,39,0.12)', padding: 6, minWidth: 200, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top right' }}>
-                     {POPULAR_LOCATIONS.map((loc) => (
-                        <button
-                           key={loc.code}
-                           type="button"
-                           onClick={() => { setLocationCode(loc.code); setShowLocDropdown(false); }}
-                           style={{
-                              display: 'block', width: '100%', textAlign: 'left',
-                              padding: '7px 10px', border: 'none', borderRadius: 6,
-                              background: locationCode === loc.code ? '#F4F4F5' : 'transparent',
-                              cursor: 'pointer', fontSize: 13, fontWeight: locationCode === loc.code ? 600 : 400,
-                              color: '#18181B', fontFamily: 'var(--font-family-primary)',
-                              transition: 'background 120ms',
-                           }}
-                        >
-                           {loc.label}
-                        </button>
-                     ))}
-                  </div>
-               )}
-            </div>
+            <CompactSelect
+               size="sm"
+               value={locationCode}
+               onChange={(opt) => setLocationCode(opt.value)}
+               options={POPULAR_LOCATIONS.map((loc) => ({ value: loc.code, label: loc.label }))}
+            />
 
-            {/* Search button */}
-            <button
+            <Button
                type="button"
+               variant="primary"
+               size="sm"
                onClick={handleSearch}
                disabled={loading || !search.trim()}
-               style={{
-                  height: 42, padding: '0 20px',
-                  borderRadius: 8, border: 'none',
-                  background: loading || !search.trim() ? '#F4F4F5' : '#2F2F34',
-                  color: loading || !search.trim() ? '#9F9FA9' : '#fff',
-                  fontSize: 14, fontWeight: 600,
-                  fontFamily: 'var(--font-family-primary)',
-                  cursor: loading || !search.trim() ? 'default' : 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'background 180ms ease, transform 100ms ease',
-               }}
-               onMouseEnter={(e) => {
-                  if (!loading && search.trim()) {
-                     e.currentTarget.style.background = '#783AFB';
-                     e.currentTarget.style.transform = 'translateY(-1px)';
-                  }
-               }}
-               onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#2F2F34';
-                  e.currentTarget.style.transform = 'none';
-               }}
+               busy={loading}
             >
                {loading ? 'Searching…' : 'Search'}
-            </button>
+            </Button>
          </div>
 
          {/* ── Error banner ──────────────────────────────────────────────── */}
          {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 16, background: '#FFF2F2', border: '1px solid #FFD4D4', borderRadius: 8 }}>
                <span style={{ fontSize: 13, color: '#dc2626', fontFamily: 'var(--font-family-primary)', flex: 1 }}>{error}</span>
-               <button type="button" onClick={() => setError(null)} style={{ padding: 2, border: 'none', background: 'transparent', cursor: 'pointer', color: '#dc2626', display: 'inline-flex' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" /></svg>
-               </button>
+               <Button type="button" variant="transparent" size="xs" aria-label="Dismiss error" onClick={() => setError(null)} icon={(
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" /></svg>
+               )} />
             </div>
          )}
 
@@ -431,31 +366,18 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
 
                         {/* Track button — visible on row hover */}
                         <div style={{ padding: '0 16px', borderLeft: '1px solid #F4F4F5', width: 40, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                           <button
+                           <Button
                               type="button"
                               className="kwr-track-btn"
+                              variant="link"
+                              size="xs"
                               disabled={trackingIds.has(kw.uid)}
                               onClick={() => handleTrack(kw)}
                               title={trackingIds.has(kw.uid) ? 'Tracked' : 'Track keyword'}
-                              style={{
-                                 display: 'inline-flex', alignItems: 'center', gap: 3,
-                                 padding: '3px 10px', borderRadius: 6,
-                                 border: trackingIds.has(kw.uid) ? '1px solid #1AB25E' : '1px solid #783AFB',
-                                 background: trackingIds.has(kw.uid) ? 'rgba(26,178,94,0.08)' : 'transparent',
-                                 color: trackingIds.has(kw.uid) ? '#1AB25E' : '#783AFB',
-                                 fontSize: 12, fontWeight: 600,
-                                 fontFamily: 'var(--font-family-primary)',
-                                 cursor: trackingIds.has(kw.uid) ? 'default' : 'pointer',
-                                 opacity: 0, transition: 'opacity 150ms',
-                              }}
+                              style={{ opacity: 0, transition: 'opacity 150ms' }}
                            >
-                              {trackingIds.has(kw.uid) ? (
-                                 <>
-                                    <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>
-                                    Tracked
-                                 </>
-                              ) : '+ Track'}
-                           </button>
+                              {trackingIds.has(kw.uid) ? 'Tracked' : '+ Track'}
+                           </Button>
                         </div>
                      </div>
                   );
@@ -476,22 +398,9 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
                {/* Quick suggestions */}
                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                   {['seo tools', 'keyword research', 'backlink checker', 'content marketing'].map((seed) => (
-                     <button
-                        key={seed}
-                        type="button"
-                        onClick={() => { setSearch(seed); }}
-                        style={{
-                           padding: '6px 14px', borderRadius: 9999,
-                           border: '1px solid #E4E4E7', background: '#fff',
-                           color: '#52525C', fontSize: 13, fontWeight: 500,
-                           fontFamily: 'var(--font-family-primary)', cursor: 'pointer',
-                           transition: 'border-color 150ms, background 150ms',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.background = 'rgba(120,58,251,0.04)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E4E4E7'; e.currentTarget.style.background = '#fff'; }}
-                     >
+                     <Button key={seed} type="button" variant="secondary" size="sm" onClick={() => setSearch(seed)} style={{ borderRadius: 9999 }}>
                         {seed}
-                     </button>
+                     </Button>
                   ))}
                </div>
             </div>

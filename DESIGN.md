@@ -7,10 +7,52 @@
 
 ## 1. Brand & Kontekst
 
-- **Produkt:** SerpBear (wzorowany na Surfer SEO)
+- **Produkt:** SerpBear — hybryda Surfer SEO (content/scoring) + Sentry (shell + primitives)
 - **Audience:** authenticated users — SEO marketers, content teams
-- **Motyw:** ciemny shell (sidebar + topbar) + jasne panele content (white cards on light gray)
+- **Motyw:** ciemny shell Sentry (rail + topbar) + jasne panele content (white cards on light gray)
 - **Visual tone:** clean, functional, data-dense — zero dekoracji dla samych dekoracji
+
+---
+
+## 1.1 Hybrid zones (Surfer / Sentry)
+
+| Strefa | Zakres | Źródło tokenów | Komponenty |
+|--------|--------|------------------|------------|
+| **Sentry shell** | `SentryNav`, `GlobalTopbar`, `MobileBottomNav`, settings secondary nav | [`components/core/theme.tsx`](components/core/theme.tsx) + `.sentry-*` w `globals.css` | `components/core/*` |
+| **Sentry app** | Dashboard, keywords, domains, AI vis, settings, billing | `theme.tsx` (Rubik, `#653DE9`, Sentry grays) | `core` Button, Modal, Input, Select, Form, Pagination |
+| **Surfer editor** | TipTap, Surfy, Content Score, Auto-Optimize, scoring gauges | Surfer purple `#783AFB`, `lib/scoreColor.ts`, `--zone-editor-bg` | KEEP layout; tylko primitives z `core` |
+
+**Reguły:**
+- Nowy kod **poza** edytorem/scoringiem → `components/core` + Emotion/CSS vars Sentry. Bez inline styles (wyjątek: runtime pozycje popoverów).
+- Edytor (`components/articles/*`) — **KEEP** struktura i logika Surfer; podmiana wyłącznie primitives (`Button`, `Modal`, `Input`, `Textarea`, `Alert`).
+- Unikalne widgety bez odpowiednika Sentry: `Gauge`, `ScoreGauge`, `SelectionBar`, `SortableHeader`, `SlidePanel` — w `components/surfer/`.
+
+**Mapowanie akcentów:** shell Sentry `#653DE9` / `#7553FF`; strefa editor Surfer `#783AFB` (score bands z `scoreColor.ts`).
+
+---
+
+## 1.2 Sentry page patterns (`components/sentry-pages/`)
+
+Wzorce UI dla stron **poza edytorem artykułu** — Issues, Traces, Settings, Billing.
+
+| Komponent | Użycie |
+|-----------|--------|
+| `SentryPage` | Kontener scrollowalny (`#f8f8f9` bg, padding 24px) |
+| `SentryPageHeader` | Tytuł + subtitle + akcje (Resolve, Export…) |
+| `SentryPageFilters` | Pasek filtrów: time range, dropdowny, search |
+| `SentryPanel` / `SentryPanelHeader` / `SentryPanelBody` | Biała karta z border `#dad9de`, radius 8px |
+| `SentryTable` + `SentryTableHead/Body/Row/Cell` | Tabele danych — uppercase gray headers, bez vertical borders |
+| `SentryDetailLayout` | 75% main + 300px aside (issue detail, monitor) |
+| `SentrySettingsSection` / `SentrySettingsRow` | Settings: uppercase section header, label left / control right |
+| `SentryEmptyState` | Pusty stan w tabeli lub panelu |
+
+**Layouty współdzielone:**
+- `DomainSubLayout` → opakowuje strony domeny w `SentryPage` + `SentryPageHeader`
+- `SettingsLayout` → `SentryNav` secondary nav + `SentryPage` (bez osobnego ciemnego sidebara)
+
+**CSS:** klasy `.sentry-page-*`, `.sentry-panel-*`, `.sentry-table-*`, `.sentry-settings-*` w `globals.css`.
+
+**Wykluczenia:** `pages/articles/[id]/*` (edytor), writing-mode, generating, deep-analysis.
 
 ---
 

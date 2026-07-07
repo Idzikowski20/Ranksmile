@@ -7,6 +7,8 @@ import { useQuery } from 'react-query';
 import { CSSTransition } from 'react-transition-group';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import Settings from '../../components/settings/Settings';
+import { Button, CompactSelect, MenuListItem, SearchBar } from '../../components/core';
+import { SkeletonRows } from '../../components/aiVisibility/SkeletonBlocks';
 import { useFetchDomains } from '../../services/domains';
 
 type GSCSite = {
@@ -90,7 +92,6 @@ const Sites: NextPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'az' | 'clicks' | 'impressions'>('az');
-  const [sortOpen, setSortOpen] = useState(false);
   const [toConfigureOpen, setToConfigureOpen] = useState(true);
   const [configuredOpen, setConfiguredOpen] = useState(true);
   const [openMenuSite, setOpenMenuSite] = useState<string | null>(null);
@@ -293,29 +294,19 @@ const Sites: NextPage = () => {
 
             {/* "..." menu */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <button
+              <Button
                 type="button"
+                variant="transparent"
+                size="xs"
                 aria-label="More actions"
+                aria-expanded={menuOpen}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenMenuSite(menuOpen ? null : site.siteUrl); }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  border: 'none',
-                  background: menuOpen ? '#F4F4F5' : 'transparent',
-                  cursor: 'pointer',
-                  padding: 0,
-                  color: '#9F9FA9',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" style={{ flexShrink: 0 }}>
-                  <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m5.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m7-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3" />
-                </svg>
-              </button>
+                icon={(
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
+                    <path d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m5.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0m7-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3" />
+                  </svg>
+                )}
+              />
               {menuOpen && (
                 <>
                   <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={(e) => { e.stopPropagation(); setOpenMenuSite(null); }} />
@@ -330,50 +321,21 @@ const Sites: NextPage = () => {
                       borderRadius: 8,
                       boxShadow: '0px 4px 16px rgba(0,0,0,0.12)',
                       overflow: 'hidden',
-                      minWidth: 140,
+                      minWidth: 160,
+                      padding: 4,
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {site.gscConfigured && (
-                      <button
-                        type="button"
+                      <MenuListItem
+                        label="View details"
                         onClick={() => { setOpenMenuSite(null); router.push(`/sites/${site.slug}/performance`); }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '8px 14px',
-                          border: 'none',
-                          background: 'transparent',
-                          fontSize: 13,
-                          lineHeight: '18px',
-                          color: '#18181B',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-family-primary)',
-                        }}
-                      >
-                        View details
-                      </button>
+                      />
                     )}
-                    <button
-                      type="button"
+                    <MenuListItem
+                      label={site.gscConfigured ? 'Reconfigure' : 'Configure'}
                       onClick={() => { setOpenMenuSite(null); handleConfigure(site); }}
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '8px 14px',
-                        border: 'none',
-                        background: 'transparent',
-                        fontSize: 13,
-                        lineHeight: '18px',
-                        color: '#18181B',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family-primary)',
-                      }}
-                    >
-                      {site.gscConfigured ? 'Reconfigure' : 'Configure'}
-                    </button>
+                    />
                   </div>
                 </>
               )}
@@ -446,32 +408,14 @@ const Sites: NextPage = () => {
                   )}
                 </div>
               ) : (
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={(e) => { e.stopPropagation(); handleConfigure(site); }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '4px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: '#F4F4F5',
-                    fontSize: 13,
-                    lineHeight: '16px',
-                    fontWeight: 600,
-                    color: '#18181B',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-family-primary)',
-                    transition: 'background-color 150ms, color 150ms, box-shadow 150ms, opacity 150ms',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-                  onMouseDown={(e) => { e.currentTarget.style.background = '#D4D4D8'; }}
-                  onMouseUp={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
                 >
                   Configure
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -572,143 +516,41 @@ const Sites: NextPage = () => {
 
           {/* ─── Controls: Sort, Filters, Search ─── */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8, flex: 1, flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative' }}>
-                <button
-                  type="button"
-                  onClick={() => setSortOpen(!sortOpen)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '6px 16px',
-                    borderRadius: 9999,
-                    border: '1px solid #D4D4D8',
-                    background: 'transparent',
-                    fontSize: 14,
-                    lineHeight: '20px',
-                    fontWeight: 600,
-                    color: '#2F2F34',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-family-primary)',
-                    transition: 'background 0.15s',
-                  }}
-                >
-                  <span>{sortLabel[sortBy]}</span>
-                  <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" style={{ flexShrink: 0, transition: 'transform 0.15s', transform: sortOpen ? 'rotate(180deg)' : undefined, color: '#9F9FA9' }}>
-                    <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-                  </svg>
-                </button>
-                {sortOpen && (
-                  <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={() => setSortOpen(false)} />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: 0,
-                        zIndex: 10,
-                        background: '#fff',
-                        border: '1px solid #D4D4D8',
-                        borderRadius: 8,
-                        boxShadow: '0px 4px 16px rgba(0,0,0,0.12)',
-                        overflow: 'hidden',
-                        minWidth: 220,
-                      }}
-                    >
-                      {(['az', 'clicks', 'impressions'] as const).map((key) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => { setSortBy(key); setSortOpen(false); }}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '10px 16px',
-                            border: 'none',
-                            background: sortBy === key ? '#F4F4F5' : 'transparent',
-                            fontSize: 14,
-                            lineHeight: '20px',
-                            fontWeight: sortBy === key ? 600 : 400,
-                            color: '#2F2F34',
-                            cursor: 'pointer',
-                            fontFamily: 'var(--font-family-primary)',
-                          }}
-                        >
-                          {sortLabel[key]}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <button
+            <div style={{ display: 'flex', gap: 8, flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <CompactSelect
+                size="sm"
+                value={sortBy}
+                onChange={(opt) => setSortBy(opt.value as 'az' | 'clicks' | 'impressions')}
+                options={[
+                  { value: 'az', label: sortLabel.az },
+                  { value: 'clicks', label: sortLabel.clicks },
+                  { value: 'impressions', label: sortLabel.impressions },
+                ]}
+              />
+              <Button
                 type="button"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 16px',
-                  borderRadius: 9999,
-                  border: '1px solid #D4D4D8',
-                  background: 'transparent',
-                  fontSize: 14,
-                  lineHeight: '20px',
-                  fontWeight: 600,
-                  color: '#2F2F34',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                }}
-              >
-                <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" style={{ flexShrink: 0 }}>
-                  <path d="M17 2.75a.75.75 0 0 0-1.5 0v5.5a.75.75 0 0 0 1.5 0zm0 13a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0zM3.75 15a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75M4.5 2.75a.75.75 0 0 0-1.5 0v5.5a.75.75 0 0 0 1.5 0zM10 11a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0v-5.5A.75.75 0 0 1 10 11m.75-8.25a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0zM10 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-6.25 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4m12.5 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4" />
-                </svg>
-                <span>Filters</span>
-              </button>
-            </div>
-
-            <div style={{ width: 200 }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <div style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', color: '#9F9FA9' }}>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" />
+                variant="secondary"
+                size="sm"
+                icon={(
+                  <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
+                    <path d="M17 2.75a.75.75 0 0 0-1.5 0v5.5a.75.75 0 0 0 1.5 0zm0 13a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0zM3.75 15a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75M4.5 2.75a.75.75 0 0 0-1.5 0v5.5a.75.75 0 0 0 1.5 0zM10 11a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0v-5.5A.75.75 0 0 1 10 11m.75-8.25a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0zM10 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-6.25 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4m12.5 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4" />
                   </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search"
-                  aria-label="Search by url"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: 32,
-                    paddingLeft: 32,
-                    paddingRight: 12,
-                    border: '1px solid #D4D4D8',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    lineHeight: '16px',
-                    color: '#2F2F34',
-                    background: '#fff',
-                    outline: 'none',
-                    fontFamily: 'var(--font-family-primary)',
-                    boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                    transition: 'border-color 0.2s',
-                  }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
-                />
-              </div>
+                )}
+              >
+                Filters
+              </Button>
             </div>
+            <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search" width={200} />
           </div>
 
           {/* ─── Content ─── */}
           {isLoading ? (
-            <div style={{ textAlign: 'center', padding: '48px 0', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-              Loading sites from Search Console...
+            <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}>
+                  <SkeletonRows count={4} />
+                </div>
+              ))}
             </div>
           ) : gscData?.error && sites.length === 0 ? (
             <div
@@ -737,24 +579,12 @@ const Sites: NextPage = () => {
               {configured.length > 0 && (
                 <div>
                   <h3 style={{ margin: 0 }}>
-                    <button
+                    <Button
                       type="button"
+                      variant="transparent"
+                      size="sm"
                       onClick={() => setConfiguredOpen(!configuredOpen)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        border: 'none',
-                        background: 'transparent',
-                        padding: 0,
-                        fontSize: 16,
-                        lineHeight: '24px',
-                        fontWeight: 600,
-                        color: '#52525C',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family-primary)',
-                        marginBottom: configuredOpen ? 24 : 0,
-                      }}
+                      style={{ padding: 0, minHeight: 'auto', height: 'auto', color: '#52525C', fontWeight: 600, fontSize: 16, marginBottom: configuredOpen ? 24 : 0 }}
                     >
                       Connected
                       <svg
@@ -764,11 +594,12 @@ const Sites: NextPage = () => {
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="1"
+                        aria-hidden="true"
                         style={{ flexShrink: 0, transition: 'transform 0.2s', transform: configuredOpen ? 'rotate(180deg)' : undefined }}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                       </svg>
-                    </button>
+                    </Button>
                   </h3>
                   {configuredOpen && (
                     <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
@@ -781,24 +612,12 @@ const Sites: NextPage = () => {
               {toConfigure.length > 0 && (
                 <div>
                   <h3 style={{ margin: 0 }}>
-                    <button
+                    <Button
                       type="button"
+                      variant="transparent"
+                      size="sm"
                       onClick={() => setToConfigureOpen(!toConfigureOpen)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        border: 'none',
-                        background: 'transparent',
-                        padding: 0,
-                        fontSize: 16,
-                        lineHeight: '24px',
-                        fontWeight: 600,
-                        color: '#52525C',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family-primary)',
-                        marginBottom: toConfigureOpen ? 24 : 0,
-                      }}
+                      style={{ padding: 0, minHeight: 'auto', height: 'auto', color: '#52525C', fontWeight: 600, fontSize: 16, marginBottom: toConfigureOpen ? 24 : 0 }}
                     >
                       To configure
                       <svg
@@ -808,11 +627,12 @@ const Sites: NextPage = () => {
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="1"
+                        aria-hidden="true"
                         style={{ flexShrink: 0, transition: 'transform 0.2s', transform: toConfigureOpen ? 'rotate(180deg)' : undefined }}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                       </svg>
-                    </button>
+                    </Button>
                   </h3>
                   {toConfigureOpen && (
                     <div className="md:grid-cols-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>

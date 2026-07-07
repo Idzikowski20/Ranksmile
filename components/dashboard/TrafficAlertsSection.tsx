@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Badge } from '../core';
+import { StatusIndicator } from '../core';
+import { SentryPanel, SentryPanelHeader } from '../sentry-pages';
 import { Flex, Stack, Container } from '../core/layout';
 import { Text } from '../core/text';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId } from '../../lib/activeWorkspace';
-import SectionHeader from './SectionHeader';
 
 // Mirrors the /api/gsc/traffic-alerts response (no `any` — project rule).
 type AlertEntry = { page: string; prevPos: number | null; nowPos: number | null };
@@ -13,12 +13,11 @@ type DomainAlerts = { domain: string; tiers: { droppedInTop10: AlertEntry[]; dro
 type AlertsResponse = { collecting: boolean; domains: DomainAlerts[] };
 type DropRow = AlertEntry & { domain: string; label: string };
 
-const AlertIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="flex-shrink-0">
-    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M12 9v4M12 17h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+const dropSeverityVariant = (label: string): 'danger' | 'warning' | 'success' => {
+  if (label === 'Out of index' || label === 'Dropped in top 10') return 'danger';
+  if (label === 'Dropped a tier') return 'warning';
+  return 'success';
+};
 
 const TrafficAlertsSection = () => {
   const router = useRouter();
@@ -45,10 +44,9 @@ const TrafficAlertsSection = () => {
   ]);
 
   return (
-    <Stack gap="lg">
-      <SectionHeader icon={<AlertIcon />} label="Traffic alerts" />
-      <Container border="md" radius="2xl" overflow="hidden">
-        {/* eslint-disable-next-line no-nested-ternary */}
+    <SentryPanel noPadding>
+      <SentryPanelHeader title="Traffic alerts" />
+      {/* eslint-disable-next-line no-nested-ternary */}
         {state.collecting ? (
           <Container padding="2xl">
             <Text as="p" size="md" variant="muted">
@@ -90,14 +88,16 @@ const TrafficAlertsSection = () => {
                     <span className="text-gray-40 mx-1">→</span>
                     {e.nowPos == null ? 'out' : Math.round(e.nowPos)}
                   </Text>
-                  <Badge variant="danger">{e.label}</Badge>
+                  <Flex align="center" gap="sm">
+                    <StatusIndicator variant={dropSeverityVariant(e.label)} aria-label={e.label} />
+                    <Text as="span" size="sm" wrap="nowrap">{e.label}</Text>
+                  </Flex>
                 </Flex>
               </Flex>
             ))}
           </Stack>
         )}
-      </Container>
-    </Stack>
+    </SentryPanel>
   );
 };
 

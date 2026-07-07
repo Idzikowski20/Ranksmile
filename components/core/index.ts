@@ -23,13 +23,35 @@ export type {TextProps, HeadingProps} from './text';
 
 // Backward-compat aliases
 export { Switch as Toggle } from './switch/switch';
-export { default as HoverTooltip } from '../common/HoverTooltip';
+export { HoverTooltip } from './tooltip/tooltip';
 
-// KEEP_UNIQUE — re-exported for unified imports
-export { default as Gauge } from '../ui/Gauge';
-export { default as SelectionBar } from '../ui/SelectionBar';
-export { default as SortableHeader } from '../ui/SortableHeader';
-export { default as SearchBar } from '../ui/SearchBar';
-export { default as SlidePanel } from '../ui/SlidePanel';
-export * from '../ui/icons';
-export * from '../ui/tokens';
+export { default as Alert } from './alert';
+export { Avatar, AvatarButton } from './avatar';
+export { default as Radio } from './radio';
+export { default as Textarea } from './textarea';
+
+export { default as Separator } from './separator';
+export { default as MenuListItem } from './menuListItem';
+export { default as StatusIndicator } from './statusIndicator';
+export { Pagination, getPaginationCaption } from './pagination';
+export { SegmentedControl } from './segmentedControl';
+export { FormField, Form } from './form';
+export { default as Link } from './link';
+export { Drawer } from './drawer';
+export { default as SearchBar } from './searchBar';
+
+export { DropdownButton } from './dropdownButton/dropdownButton';
+export { CompactSelect } from './compactSelect/compactSelect';
+export type { SelectOption, SelectSection, SelectOptionOrSection, CompactSelectProps } from './compactSelect/compactSelect';
+export { PageFilterBar } from './pageFilterBar/pageFilterBar';
+export { ToolRibbon } from './toolRibbon/toolRibbon';
+export { TimeRangeFilter } from './timeRangeFilter/timeRangeFilter';
+export type { TimeRangeValue } from './timeRangeFilter/timeRangeFilter';
+
+// KEEP_UNIQUE — Surfer widgets (see components/surfer/)
+export { default as Gauge } from '../surfer/Gauge';
+export { default as SelectionBar } from '../surfer/SelectionBar';
+export { default as SortableHeader } from '../surfer/SortableHeader';
+export { default as SlidePanel } from '../surfer/SlidePanel';
+export * from '../surfer/icons';
+export * from '../surfer/tokens';

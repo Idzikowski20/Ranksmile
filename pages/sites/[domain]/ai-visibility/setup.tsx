@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
-import { Modal } from '../../../../components/core';
+import { Modal, Button } from '../../../../components/core';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';
@@ -13,11 +13,6 @@ import { useSaveAiVisConfig, useStartAiVisScan, useGeneratePrompts } from '../..
 import { AI_VIS_PROMPT_LIMIT } from '../../../../lib/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
-
-const outlineBtn: React.CSSProperties = {
-   display: 'inline-flex', alignItems: 'center', border: '1px solid #E4E4E7', background: '#fff',
-   borderRadius: 8, padding: '6px 14px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, cursor: 'pointer',
-};
 
 const DEFAULT_SELECTED = 5;
 
@@ -75,7 +70,7 @@ const AiVisibilitySetup: NextPage = () => {
    // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [slug]);
 
-   const addTopic = () => setTopics((prev) => [...prev, { key: `topic-${Date.now()}-${prev.length}`, title: 'New topic', prompts: [], generating: false }]);
+   const addTopic = () => setTopics((prev) => [{ key: `topic-${Date.now()}-${prev.length}`, title: 'New topic', prompts: [], generating: false }, ...prev]);
 
    const addBulk = () => {
       const lines = bulkText.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -121,7 +116,7 @@ const AiVisibilitySetup: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`AI Visibility Setup — ${domain}`}</title></Head>
          <style>{'@keyframes aivPulse{0%,100%{opacity:1}50%{opacity:.5}}.aiv-pulse{animation:aivPulse 1.5s ease-in-out infinite}@keyframes aivSpin{to{transform:rotate(360deg)}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" heading="AI Visibility" contentMaxWidth="100%">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, width: '100%', margin: '0 auto' }}>
                {/* Heading + usage */}
                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -137,8 +132,8 @@ const AiVisibilitySetup: NextPage = () => {
                      </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                     <button type="button" style={outlineBtn} onClick={addTopic}>Add topic</button>
-                     <button type="button" style={outlineBtn} onClick={() => setBulkOpen(true)}>Add in bulk</button>
+                     <Button type="button" variant="secondary" size="sm" onClick={addTopic}>Add topic</Button>
+                     <Button type="button" variant="secondary" size="sm" onClick={() => setBulkOpen(true)}>Add in bulk</Button>
                   </div>
                </div>
 
@@ -147,14 +142,9 @@ const AiVisibilitySetup: NextPage = () => {
                {/* Footer */}
                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
                   <span style={{ fontSize: 14, color: '#18181B', fontFamily: FONT }}>Uses {selectedCount} prompts from your limit</span>
-                  <button
-                     type="button"
-                     onClick={onFinish}
-                     disabled={!canFinish}
-                     style={{ display: 'inline-flex', alignItems: 'center', border: 'none', borderRadius: 8, padding: '8px 20px', background: canFinish ? '#18181B' : '#D4D4D8', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: canFinish ? 'pointer' : 'not-allowed', transition: 'background 150ms ease' }}
-                  >
+                  <Button type="button" variant="primary" size="sm" onClick={onFinish} disabled={!canFinish}>
                      {finishing ? 'Starting…' : 'Finish'}
-                  </button>
+                  </Button>
                </div>
             </div>
 
@@ -169,8 +159,8 @@ const AiVisibilitySetup: NextPage = () => {
                         style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: 12, fontSize: 14, fontFamily: FONT, color: '#18181B', resize: 'vertical', outline: 'none' }}
                      />
                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                        <button type="button" style={outlineBtn} onClick={() => setBulkOpen(false)}>Cancel</button>
-                        <button type="button" onClick={addBulk} style={{ border: 'none', borderRadius: 8, padding: '8px 20px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Add</button>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => setBulkOpen(false)}>Cancel</Button>
+                        <Button type="button" variant="primary" size="sm" onClick={addBulk}>Add</Button>
                      </div>
                   </div>
                </Modal>

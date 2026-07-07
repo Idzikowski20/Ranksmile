@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { Button } from '../core';
+import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
 
 const font = 'var(--font-family-primary)';
-
-// ─── Integration logos (verbatim brand marks, rendered 20×20) ─────────────────
 
 const SurferMark = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -52,75 +52,9 @@ const LogoCircle = ({ children, overlap }: { children: React.ReactNode; overlap?
   </div>
 );
 
-// ─── Link / button atoms ──────────────────────────────────────────────────────
-
-const GhostLink = ({ label, href }: { label: string; href: string }) => {
-  const [hover, setHover] = useState(false);
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer noopener"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '6px 16px',
-        borderRadius: 6,
-        fontFamily: font,
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#3F3F47',
-        textDecoration: 'none',
-        whiteSpace: 'nowrap',
-        background: hover ? '#F4F4F5' : 'transparent',
-        boxShadow: 'inset 0 0 0 1px #E4E4E7',
-        transition: 'background 150ms ease',
-      }}
-    >
-      {label}
-    </a>
-  );
-};
-
-const UpgradeButton = () => {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => toast.success('Upgrade to Scale — coming soon!')}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 16px',
-        borderRadius: 6,
-        border: 'none',
-        cursor: 'pointer',
-        fontFamily: font,
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#fff',
-        background: hover ? '#783AFB' : '#18181B',
-        transition: 'background 150ms ease',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      Upgrade to Scale
-    </button>
-  );
-};
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
 const ApiSettings = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 32, fontFamily: font, width: '100%' }}>
-    {/* Intro: logos + copy */}
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 24, fontFamily: font, width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <LogoCircle><SurferMark /></LogoCircle>
         <div style={{ display: 'flex', alignItems: 'center', margin: '0 -6px', zIndex: 10 }}>
@@ -134,60 +68,43 @@ const ApiSettings = () => (
           <LogoCircle overlap><GoogleMark /></LogoCircle>
         </div>
       </div>
-
-      <p style={{ margin: 0, fontSize: 16, lineHeight: '1.5' }}>
+      <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5 }}>
         <span style={{ fontWeight: 600, color: '#18181B' }}>
           Connect with Zapier, Looker Studio, or your CMS of choice.
         </span>
-        <span style={{ display: 'block', fontWeight: 600, color: '#71717B' }}>
+        <span style={{ display: 'block', fontWeight: 600, color: '#71717B', marginTop: 4 }}>
           Automate query creation, work in bulk, and analyze data without accessing the Surfer web app.
         </span>
       </p>
     </div>
 
-    {/* Two cards */}
-    <div style={{ display: 'flex', gap: 16, width: '100%', alignItems: 'stretch' }}>
-      {/* Docs card — sized to its content */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          flexShrink: 0,
-          padding: 24,
-          border: '1px solid #E4E4E7',
-          borderRadius: 12,
-        }}
-      >
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>Docs</span>
-        <span style={{ fontSize: 14, color: '#71717B' }}>Examples, Troubleshooting, FAQ</span>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <GhostLink label="Overview" href="https://docs.surferseo.com/en/articles/5700335-surfer-api-introduction" />
-          <GhostLink label="API reference" href="https://docs.surferseo.com/" />
-          <GhostLink label="LLM-ready docs" href="https://docs.surferseo.com/" />
-        </div>
+    <div style={{ display: 'flex', gap: 16, width: '100%', alignItems: 'stretch', flexWrap: 'wrap' }}>
+      <div style={{ flexShrink: 0 }}>
+        <SentryPanel>
+          <SentryPanelHeader title="Docs" />
+          <SentryPanelBody>
+            <p style={{ margin: '0 0 12px', fontSize: 14, color: '#71717B' }}>Examples, Troubleshooting, FAQ</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button variant="secondary" size="sm" onClick={() => window.open('https://docs.surferseo.com/en/articles/5700335-surfer-api-introduction', '_blank')}>Overview</Button>
+              <Button variant="secondary" size="sm" onClick={() => window.open('https://docs.surferseo.com/', '_blank')}>API reference</Button>
+              <Button variant="secondary" size="sm" onClick={() => window.open('https://docs.surferseo.com/', '_blank')}>LLM-ready docs</Button>
+            </div>
+          </SentryPanelBody>
+        </SentryPanel>
       </div>
 
-      {/* Upsell card — grows to fill */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          flex: '1 1 0',
-          minWidth: 0,
-          padding: 24,
-          border: '1px solid #E4E4E7',
-          borderRadius: 8,
-        }}
-      >
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>API access is not available on your plan</span>
-        <span style={{ fontSize: 14, color: '#3F3F47', lineHeight: '1.45' }}>
-          Upgrade to unlock API access and integrate Surfer with your tools.
-        </span>
-        <div style={{ marginTop: 8 }}>
-          <UpgradeButton />
-        </div>
+      <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+        <SentryPanel>
+          <SentryPanelHeader title="API access" />
+          <SentryPanelBody>
+            <p style={{ margin: '0 0 12px', fontSize: 14, color: '#3F3F47', lineHeight: 1.45 }}>
+              API access is not available on your plan. Upgrade to unlock API access and integrate Surfer with your tools.
+            </p>
+            <Button type="button" variant="primary" onClick={() => toast.success('Upgrade to Scale — coming soon!')}>
+              Upgrade to Scale
+            </Button>
+          </SentryPanelBody>
+        </SentryPanel>
       </div>
     </div>
   </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
+import { SentryPage } from '../../components/sentry-pages';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
@@ -20,6 +21,8 @@ import RecentlyEdited, { RecentlyEditedItem } from '../../components/dashboard/R
 import LearnSection from '../../components/dashboard/LearnSection';
 import SetupPipeline from '../../components/dashboard/SetupPipeline';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
+import fetchJson from '../../lib/fetchJson';
+import { isActionableRecommendation } from '../../lib/recommendations';
 
 const formatShortDate = (dateStr: string): string => {
   if (!dateStr) return '';
@@ -27,13 +30,6 @@ const formatShortDate = (dateStr: string): string => {
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
-
-/** Fetch JSON, returning a typed fallback on any non-2xx response. */
-async function fetchJson<T>(url: string, fallback: T): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) return fallback;
-  return res.json();
-}
 
 interface DashboardArticle {
   id: number | string;
@@ -177,10 +173,7 @@ const DashboardPage: NextPage = () => {
     // create recs carry a priority → priority-pill row. Drop optimize recs with a
     // 0 (or missing) score — an unscored page is noise, not a useful recommendation.
     const mapped: RecommendationItem[] = domainRecs
-      .filter((r) => {
-        const isOptimize = r.type === 'optimize' || r.score != null;
-        return !isOptimize || (r.score ?? 0) > 0;
-      })
+      .filter(isActionableRecommendation)
       .map((r) => (
         r.type === 'optimize' || r.score != null
           ? { id: r.id, title: r.title, type: 'optimize', score: r.score ?? 0, wordCount: r.word_count ?? undefined, href: recommendationsHref }
@@ -236,8 +229,8 @@ const DashboardPage: NextPage = () => {
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '48px 16px' }} className="styled-scrollbar">
-          <div ref={revealRef} style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
+        <SentryPage maxWidth={880}>
+          <div ref={revealRef} style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
             <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
             <GetStartedCard />
             <BrandPerformance
@@ -273,7 +266,7 @@ const DashboardPage: NextPage = () => {
             <TrafficAlertsSection />
             <LearnSection />
           </div>
-        </div>
+        </SentryPage>
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />

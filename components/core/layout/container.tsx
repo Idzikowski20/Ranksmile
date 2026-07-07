@@ -116,6 +116,9 @@ export interface ContainerProps<T extends ContainerElement = 'div'>
   onKeyUp?: React.KeyboardEventHandler<HTMLElementTagNameMap[T]>;
   tabIndex?: number;
   role?: string;
+  href?: string;
+  target?: string;
+  rel?: string;
   'aria-label'?: string;
   'aria-labelledby'?: string;
   'aria-describedby'?: string;

@@ -1,7 +1,6 @@
 import { render, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from '@emotion/react';
-import { theme } from '../../components/core/theme';
-import Checkbox from '../../components/ui/Checkbox';
+import { theme, Checkbox } from '../../components/core';
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider theme={theme}>{children}</ThemeProvider>
@@ -19,7 +18,7 @@ describe('Checkbox', () => {
     expect((container.querySelector('input') as HTMLInputElement).checked).toBe(true);
   });
   it('ustawia natywny stan indeterminate', () => {
-    const { container } = render(<Checkbox checked={false} indeterminate onChange={() => {}} />, { wrapper: Wrapper });
+    const { container } = render(<Checkbox checked="indeterminate" onChange={() => {}} />, { wrapper: Wrapper });
     expect((container.querySelector('input') as HTMLInputElement).indeterminate).toBe(true);
   });
 });

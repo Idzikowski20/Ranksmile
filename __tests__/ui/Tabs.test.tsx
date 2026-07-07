@@ -1,7 +1,6 @@
 import { render, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from '@emotion/react';
-import { theme } from '../../components/core/theme';
-import Tabs from '../../components/ui/Tabs';
+import { theme, Tabs } from '../../components/core';
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider theme={theme}>{children}</ThemeProvider>

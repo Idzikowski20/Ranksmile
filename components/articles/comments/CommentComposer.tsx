@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Button, Textarea } from '../../core';
 
 const F = 'var(--font-family-primary)';
 const EMOJIS = ['👍', '👎', '❤️', '🔥', '😀', '😍', '🎉', '✅', '🙌', '👀', '💡', '🚀'];
@@ -53,8 +54,6 @@ const CommentComposer = ({ authorName, authorColor, authorAvatar, autoFocus, onS
     setText(''); setImages([]); setEmojiOpen(false);
   };
 
-  const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: '#a1a1aa', cursor: 'pointer' };
-
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 10, fontFamily: F }}>
       {/* avatar teardrop pin */}
@@ -65,52 +64,98 @@ const CommentComposer = ({ authorName, authorColor, authorAvatar, autoFocus, onS
       </div>
 
       <div style={{ flex: 1, minWidth: 0, background: '#2b2b30', borderRadius: 12, boxShadow: '0 8px 28px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
-        <textarea
-          ref={taRef} value={text} rows={1} placeholder="Add a comment…" className="styled-scrollbar-dark"
+        <Textarea
+          ref={taRef}
+          value={text}
+          rows={1}
+          placeholder="Add a comment…"
+          className="styled-scrollbar-dark"
+          resize="none"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); } }}
-          style={{ width: '100%', boxSizing: 'border-box', minHeight: 44, maxHeight: 160, padding: '12px 14px', background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: '#fff', fontSize: 15, fontFamily: F, lineHeight: '20px' }}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            minHeight: 44,
+            maxHeight: 160,
+            padding: '12px 14px',
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            outline: 'none',
+            color: '#fff',
+            fontSize: 15,
+            fontFamily: F,
+            lineHeight: '20px',
+          }}
         />
         {images.length > 0 && (
           <div style={{ display: 'flex', gap: 8, padding: '0 14px 10px', flexWrap: 'wrap' }}>
             {images.map((src, i) => (
               <div key={i} style={{ position: 'relative', width: 56, height: 56, borderRadius: 8, overflow: 'hidden', background: '#3a3a40' }}>
                 <img alt="" src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button type="button" onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-                  style={{ position: 'absolute', top: 2, right: 2, width: 16, height: 16, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', fontSize: 11, lineHeight: '16px', padding: 0 }}>×</button>
+                <Button
+                  type="button"
+                  variant="transparent"
+                  size="zero"
+                  onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: 2, right: 2, width: 16, height: 16, minHeight: 16, minWidth: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, lineHeight: '16px', padding: 0 }}
+                >
+                  ×
+                </Button>
               </div>
             ))}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderTop: '1px solid #3a3a40' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <button type="button" style={iconBtn} title="Emoji" onClick={() => setEmojiOpen((v) => !v)}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}><IcoEmoji /></button>
-            <button type="button" style={iconBtn} title="Mention" onClick={() => setText((t) => `${t}@`)}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}><IcoAt /></button>
-            <button type="button" style={iconBtn} title="Attach image" onClick={() => fileRef.current?.click()}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}><IcoImage /></button>
+            <Button type="button" variant="transparent" size="sm" title="Emoji" onClick={() => setEmojiOpen((v) => !v)} icon={<IcoEmoji />} />
+            <Button type="button" variant="transparent" size="sm" title="Mention" onClick={() => setText((t) => `${t}@`)} icon={<IcoAt />} />
+            <Button type="button" variant="transparent" size="sm" title="Attach image" onClick={() => fileRef.current?.click()} icon={<IcoImage />} />
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => addImages(e.target.files)} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {onCancel && (
-              <button type="button" onClick={onCancel}
-                style={{ border: 'none', background: 'transparent', color: '#a1a1aa', fontSize: 13, fontWeight: 600, fontFamily: F, cursor: 'pointer', padding: '6px 8px', borderRadius: 6 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}>Cancel</button>
+              <Button type="button" variant="transparent" size="sm" onClick={onCancel}>
+                Cancel
+              </Button>
             )}
-            <button type="button" onClick={submit} aria-label="Send" disabled={!text.trim() && images.length === 0}
-              style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: (!text.trim() && images.length === 0) ? 'not-allowed' : 'pointer', background: (!text.trim() && images.length === 0) ? '#4a4a52' : '#2f80ff', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}>
-              <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
-            </button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={submit}
+              aria-label="Send"
+              disabled={!text.trim() && images.length === 0}
+              style={{
+                width: 32,
+                minWidth: 32,
+                height: 32,
+                minHeight: 32,
+                borderRadius: '50%',
+                padding: 0,
+                ...((!text.trim() && images.length === 0) ? { opacity: 0.6 } : {}),
+              }}
+              icon={(
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+              )}
+            />
           </div>
         </div>
 
         {emojiOpen && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '8px 10px', borderTop: '1px solid #3a3a40' }}>
             {EMOJIS.map((e) => (
-              <button key={e} type="button" onClick={() => { setText((t) => t + e); setEmojiOpen(false); taRef.current?.focus(); }}
-                style={{ width: 30, height: 30, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 18 }}
-                onMouseEnter={(ev) => { ev.currentTarget.style.background = '#3a3a40'; }} onMouseLeave={(ev) => { ev.currentTarget.style.background = 'transparent'; }}>{e}</button>
+              <Button
+                key={e}
+                type="button"
+                variant="transparent"
+                size="sm"
+                onClick={() => { setText((t) => t + e); setEmojiOpen(false); taRef.current?.focus(); }}
+                style={{ width: 30, minWidth: 30, height: 30, minHeight: 30, fontSize: 18, padding: 0 }}
+              >
+                {e}
+              </Button>
             ))}
           </div>
         )}

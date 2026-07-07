@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../core';
 import PromptRow from './PromptRow';
 import AddPromptRow from './AddPromptRow';
 import { SourceBadge, topicSources } from './sourceIcons';
@@ -53,9 +54,7 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
       <div style={{ border: '1px solid #E4E4E7', borderRadius: 8, background: '#fff' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
          {/* Header */}
          <div style={{ display: 'flex', alignItems: 'center', minHeight: 56, padding: '8px 16px', gap: 8 }}>
-            <button type="button" onClick={onToggleOpen} aria-label={open ? 'Collapse' : 'Expand'} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181B', padding: 0, display: 'inline-flex' }}>
-               <Chevron open={open} />
-            </button>
+            <Button type="button" variant="transparent" size="zero" onClick={onToggleOpen} aria-label={open ? 'Collapse' : 'Expand'} icon={<Chevron open={open} />} style={{ color: '#18181B' }} />
             {empty ? (
                <input
                   value={title}
@@ -84,7 +83,7 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
             )}
             {empty ? (
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease' }}>
-                  <button type="button" tabIndex={hover ? 0 : -1} onClick={onRemoveTopic} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525C', fontSize: 14, fontWeight: 600, fontFamily: FONT }}>Remove</button>
+                  <Button type="button" variant="transparent" size="sm" tabIndex={hover ? 0 : -1} onClick={onRemoveTopic} style={{ color: '#52525C', fontWeight: 600, fontFamily: FONT }}>Remove</Button>
                   <button
                      type="button"
                      tabIndex={hover ? 0 : -1}
@@ -95,14 +94,15 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
                   </button>
                </div>
             ) : (
-               <button
+               <Button
                   type="button"
+                  variant="transparent"
+                  size="sm"
                   aria-label="Remove topic"
                   onClick={onRemoveTopic}
-                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#71717B', padding: 0, display: 'inline-flex', flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease' }}
-               >
-                  <TrashIcon />
-               </button>
+                  icon={<TrashIcon />}
+                  style={{ flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 150ms ease', color: '#71717B' }}
+               />
             )}
          </div>
 

@@ -53,7 +53,7 @@ module.exports = nextConfig;
 
 const { withSentryConfig } = require("@sentry/nextjs");
 
-module.exports = withSentryConfig(module.exports, {
+const sentryWrapped = withSentryConfig(module.exports, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -89,3 +89,13 @@ module.exports = withSentryConfig(module.exports, {
     },
   },
 });
+
+// @sentry/nextjs targets Next 13+ and injects `experimental.instrumentationHook` +
+// `experimental.serverComponentsExternalPackages`, which Next 12.3.4 doesn't recognise
+// (harmless "Invalid next.config.js options" warning on every boot). Strip them.
+if (sentryWrapped.experimental) {
+  delete sentryWrapped.experimental.instrumentationHook;
+  delete sentryWrapped.experimental.serverComponentsExternalPackages;
+}
+
+module.exports = sentryWrapped;

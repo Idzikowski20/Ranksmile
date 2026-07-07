@@ -1,8 +1,9 @@
 import React from 'react';
-import Sidebar from './Sidebar';
+import SentryNav from './nav/SentryNav';
 import GlobalTopbar from './GlobalTopbar';
 import MobileBottomNav from './MobileBottomNav';
 import { useRouteTransition } from '../../lib/motion/useRouteTransition';
+import { useNavCollapsed } from '../../lib/useNavCollapsed';
 
 type AppShellProps = {
    domains?: DomainType[];
@@ -32,16 +33,17 @@ const AppShell = ({
    hideMobileNav = false,
 }: AppShellProps) => {
    const contentRef = useRouteTransition<HTMLElement>();
+   const [navCollapsed, toggleNavCollapsed] = useNavCollapsed();
    return (
       <div className="app-shell">
-         <GlobalTopbar title={topbarTitle} breadcrumb={breadcrumb} />
+         <GlobalTopbar
+            breadcrumb={breadcrumb}
+            navCollapsed={navCollapsed}
+            onToggleNavCollapse={toggleNavCollapsed}
+         />
          <div className="app-shell-body">
             {sidebar ?? (showSidebar && (
-               <Sidebar
-                  domains={domains}
-                  showAddModal={showAddModal}
-                  showSettings={showSettings}
-               />
+               <SentryNav domains={domains} collapsed={navCollapsed} />
             ))}
             <main ref={contentRef} className={`app-content motion-page-enter ${contentClassName}`}>
                {children}
