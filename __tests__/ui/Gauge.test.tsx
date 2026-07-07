@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import Gauge from '../../components/ui/Gauge';
+import { Gauge } from '../../components/core';
 
 // Celujemy w data-testid="gauge-score" (nie querySelector('text')) — w wariancie lg pojawi się wiele <text>.
 describe('Gauge sm (pierścień)', () => {

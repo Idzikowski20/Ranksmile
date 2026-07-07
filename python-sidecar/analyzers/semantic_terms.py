@@ -97,6 +97,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             term_groups[name]["occurrences"].append(t["occurrence_count"])
 
     n_docs = max(1, len(texts))
+    lower_texts = [t.lower() for t in texts]
     aggregated = []
     stopwords = {"article", "information", "website", "site", "page", "web", "blog", "post"}
     for term, group in term_groups.items():
@@ -114,12 +115,21 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         else:
             target_count = max(1, round(doc_freq * avg_relevance * 3))
 
+        # Suggested range = spread of real per-competitor occurrence counts (SurferSEO
+        # shows e.g. "1-4"): min/max across the pages that actually use the term.
+        per_doc = [lt.count(term) for lt in lower_texts]
+        nonzero = [c for c in per_doc if c > 0]
+        s_min = max(1, min(nonzero)) if nonzero else 1
+        s_max = max(nonzero) if nonzero else target_count
+
         aggregated.append({
             "term": term,
             "target_count": target_count,
             "type": dominant_type,
             "doc_freq": doc_freq,
             "relevance": round(avg_relevance, 2),
+            "suggested_min": s_min,
+            "suggested_max": s_max,
         })
 
     # 5. Filter: >=30% of docs (min 2)
@@ -128,7 +138,14 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
 
     aggregated.sort(key=lambda t: (t["doc_freq"] * t["relevance"]), reverse=True)
 
-    return [{"term": t["term"], "target_count": t["target_count"], "type": t["type"]} for t in aggregated[:50]]
+    return [
+        {
+            "term": t["term"], "target_count": t["target_count"], "type": t["type"],
+            "relevance": t["relevance"], "doc_freq": t["doc_freq"],
+            "suggested_min": t["suggested_min"], "suggested_max": t["suggested_max"],
+        }
+        for t in aggregated[:50]
+    ]
 
 
 async def _extract_chunk(keyword: str, chunk_text: str, chunk_hash: str, api_key: str) -> list[dict]:
@@ -200,7 +217,12 @@ def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
             word_counts[w] = word_counts.get(w, 0) + 1
 
     sorted_terms = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:30]
+    n = max(1, len(texts))
     return [
-        {"term": term, "target_count": max(1, round(count / max(1, len(texts)))), "type": "supporting"}
+        {
+            "term": term, "target_count": max(1, round(count / n)), "type": "supporting",
+            "relevance": 0.5, "doc_freq": n,
+            "suggested_min": 1, "suggested_max": max(1, round(count / n)),
+        }
         for term, count in sorted_terms if term != keyword.lower()
     ][:50]

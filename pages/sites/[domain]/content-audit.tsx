@@ -7,8 +7,9 @@ import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { SentryPanel } from '../../../components/sentry-pages';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
-import { Gauge, Button, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel } from '../../../components/ui';
+import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
@@ -28,24 +29,10 @@ function toPath(url: string): string {
    } catch { return url; }
 }
 
-// 'review' is not a Badge-supported status — keep local for that case
 const StatusBadge = ({ status }: { status: string }) => {
-   const map: Record<string, { bg: string; color: string; label: string }> = {
-      published: { bg: '#F0FDF4', color: '#15803D', label: 'Published' },
-      draft: { bg: '#F9FAFB', color: '#6B7280', label: 'Draft' },
-      review: { bg: '#FFFBEB', color: '#B45309', label: 'Review' },
-      analyzing: { bg: '#FFFBEB', color: '#B45309', label: 'Analyzing' },
-      error: { bg: '#FEF2F2', color: '#DC2626', label: 'Failed' },
-   };
-   const s = map[status] || map.draft;
-   return (
-      <span style={{
-         padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-         background: s.bg, color: s.color, fontFamily: 'var(--font-family-primary)',
-      }}>
-         {s.label}
-      </span>
-   );
+   const variant = status === 'published' ? 'success' : status === 'draft' || status === 'review' || status === 'analyzing' ? 'muted' : status === 'error' ? 'danger' : 'muted';
+   const label = status === 'review' || status === 'analyzing' ? status.charAt(0).toUpperCase() + status.slice(1) : status.charAt(0).toUpperCase() + status.slice(1);
+   return <Badge variant={variant}>{label}</Badge>;
 };
 
 const FONT = 'var(--font-family-primary)';
@@ -54,7 +41,7 @@ type PendingStatus = 'processing' | 'done' | 'error';
 type PendingPage = { path: string; url: string; keyword: string; clicks: number; impressions: number; status: PendingStatus };
 
 const Spinner = ({ size = 16 }: { size?: number }) => (
-   <svg viewBox="0 0 24 24" width={size} height={size} style={{ flexShrink: 0, animation: 'spin 0.7s linear infinite', color: '#9F9FA9' }}>
+   <svg viewBox="0 0 24 24" width={size} height={size} style={{ flexShrink: 0, animation: 'spin 0.7s linear infinite', color: 'var(--color-content-secondary)' }}>
       <path fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" />
    </svg>
 );
@@ -72,6 +59,9 @@ const ProcessingPill = ({ status }: { status: PendingStatus }) => {
       </span>
    );
 };
+
+const CELL_FONT = { fontFamily: FONT, fontSize: 13, color: '#09090B' };
+const CELL_MUTED = { fontFamily: FONT, fontSize: 13, color: '#9F9FA9' };
 
 type AuditRow = {
    id: number | string; title: string; url: string; keyword: string;
@@ -347,20 +337,9 @@ const ContentAuditPage: NextPage = () => {
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
             Export CSV
          </Button>
-         <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-            style={{
-               display: 'inline-flex', alignItems: 'center', gap: 6,
-               padding: '6px 16px', borderRadius: 6, border: 'none',
-               background: '#2F2F34', fontSize: 14, fontWeight: 600, color: '#fff',
-               cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s',
-            }}
-         >
+         <Button variant="primary" onClick={() => setAddOpen(true)}>
             + Add Page
-         </button>
+         </Button>
       </>
    );
 
@@ -370,21 +349,22 @@ const ContentAuditPage: NextPage = () => {
             <title>{`Content Audit — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%">
-            {/* Toolbar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-               <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                     <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
-                     Show URLs
-                  </label>
-                  <SearchBar value={search} onChange={setSearch} placeholder="Search" width={200} />
-               </div>
-            </div>
-
-            {/* Table */}
-            <div ref={rowsRef} style={{ border: '1px solid #F4F4F5', borderRadius: 10, overflow: 'hidden' }}>
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%"
+            filters={(
+               <ToolRibbon>
+                  <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: FONT }}>
+                        <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
+                        Show URLs
+                     </label>
+                     <SearchBar value={search} onChange={setSearch} placeholder="Search" width={200} />
+                  </div>
+               </ToolRibbon>
+            )}
+         >
+            <SentryPanel noPadding>
+            <div ref={rowsRef} style={{ overflow: 'hidden' }}>
                {/* Header */}
                <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
                   {/* Checkbox */}
@@ -431,15 +411,9 @@ const ContentAuditPage: NextPage = () => {
                         <EmptyEyes />
                         <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>You haven&apos;t added any pages yet</span>
                         <p style={{ margin: 0, maxWidth: 408, color: '#3F3F47', fontSize: 14, lineHeight: '20px', fontFamily: FONT }}>Add existing pages you want to audit, get recommendations, and keep an eye out for. Modify anytime.</p>
-                        <button
-                           type="button"
-                           onClick={() => setAddOpen(true)}
-                           style={{ background: '#18181B', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', transition: 'background 150ms ease' }}
-                           onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-                           onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
-                        >
+                        <Button variant="primary" onClick={() => setAddOpen(true)}>
                            Add Page
-                        </button>
+                        </Button>
                      </div>
                   ) : null
                ) : (
@@ -470,43 +444,31 @@ const ContentAuditPage: NextPage = () => {
                                  )}
                               </div>
                               {row.keyword ? (
-                                 <button type="button" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, maxWidth: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 12, color: '#71717B', overflow: 'hidden', textAlign: 'left' }}>
-                                    <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent', textDecorationStyle: 'dotted', textUnderlineOffset: 3, transition: 'text-decoration-color 150ms' }}>{row.keyword}</span>
-                                    <span style={{ display: 'inline-flex', color: '#9F9FA9', flexShrink: 0 }}><PencilIcon /></span>
-                                 </button>
+                                 <Button type="button" variant="link" size="xs" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={<PencilIcon />} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0, color: '#71717B' }}>
+                                    <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword}</span>
+                                 </Button>
                               ) : (
-                                 <button type="button" title="Add keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 500, color: '#783AFB' }}>
+                                 <Button type="button" variant="link" size="xs" title="Add keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ alignSelf: 'flex-start', padding: 0 }}>
                                     + Add keyword
-                                 </button>
+                                 </Button>
                               )}
                               {showUrls && row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
                            </div>
-                           {/* Actions: Optimize always visible; external + panel on hover */}
-                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                              <div className="ca-row-actions" style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0, transition: 'opacity 150ms ease' }}>
-                                 {row.url && (
-                                    <a href={row.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} aria-label="Open page" style={{ display: 'inline-flex', color: '#3F3F47', textDecoration: 'none' }}>
-                                       <ExternalLinkIcon />
-                                    </a>
-                                 )}
-                                 <button type="button" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} aria-label="Open details" style={{ display: 'inline-flex', border: 'none', background: 'transparent', color: '#3F3F47', cursor: 'pointer', padding: 0 }}>
-                                    <PanelIcon />
-                                 </button>
-                              </div>
+                           <div>
                               {row.status === 'error' ? (
-                                 <button
-                                    type="button"
+                                 <Button
+                                    variant="danger"
+                                    size="sm"
                                     onClick={(e) => { e.stopPropagation(); handleRetry(row); }}
                                     disabled={retryingIds.has(row.id)}
-                                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 88, padding: '4px 12px', borderRadius: 6, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 12, fontWeight: 600, fontFamily: FONT, cursor: retryingIds.has(row.id) ? 'default' : 'pointer' }}
                                  >
                                     {retryingIds.has(row.id) ? <><Spinner size={12} /> Retrying…</> : 'Retry'}
-                                 </button>
+                                 </Button>
                               ) : (
-                                 <Link href={`/articles/${row.id}`} passHref>
-                                    <a onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 88, padding: '4px 12px', borderRadius: 6, background: '#F4F4F5', color: '#18181B', fontSize: 12, fontWeight: 600, fontFamily: FONT, textDecoration: 'none', cursor: 'pointer' }}>
+                                 <Link href={`/articles/${row.id}`} legacyBehavior passHref>
+                                    <Button variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
                                        Optimize
-                                    </a>
+                                    </Button>
                                  </Link>
                               )}
                            </div>
@@ -527,6 +489,7 @@ const ContentAuditPage: NextPage = () => {
                   ))
                )}
             </div>
+            </SentryPanel>
 
             <style dangerouslySetInnerHTML={{ __html: `
                .audit-row:hover { background: #F8F8F9 !important; }

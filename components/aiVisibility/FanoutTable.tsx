@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Button } from '../core';
 import type { FanoutByQueryRow, FanoutByPromptRow } from '../../services/aiVisibility';
 import { ModelIcon, isKnownModel } from './modelIcons';
 
@@ -34,9 +35,9 @@ const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, font
 const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid #F4F4F5', background: '#fff', transition: 'background 100ms ease' };
 
 const SortHead = ({ label, dir, onClick }: { label: string; dir: 'asc' | 'desc'; onClick: () => void }) => (
-   <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#18181B' }}>
+   <Button type="button" variant="transparent" size="sm" onClick={onClick} style={{ gap: 4, fontWeight: 600, color: '#18181B' }}>
       {label} <SortArrow dir={dir} />
-   </button>
+   </Button>
 );
 
 // left-anchored faint "times-shown" bar rendered behind the first column's text.

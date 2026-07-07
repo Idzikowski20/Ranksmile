@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
+import Modal from '../core/modal/modal';
+import Button from '../core/button/button';
+import Input from '../core/input/input';
 
 interface Props {
   domains: { ID: number; domain: string }[];
@@ -95,26 +98,13 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
   const countryData = COUNTRIES[country] || COUNTRIES.US;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(2px)',
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <Modal onClose={onClose} width={1130} closeOnOverlayClick>
       <div
         style={{
           display: 'flex',
           width: '100%',
-          maxWidth: 800,
           height: 'auto',
-          maxHeight: '90vh',
+          maxHeight: 'calc(100vh - 64px)',
           overflow: 'hidden',
           gap: 12,
           padding: 4,
@@ -364,35 +354,12 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                         <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18M5.25 6h.008v.008H5.25zM7.5 6h.008v.008H7.5zm2.25 0h.008v.008H9.75z" />
                       </svg>
                     </div>
-                    <input
+                    <Input
                       type="url"
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="https://example.com/article.html"
-                      style={{
-                        width: '100%',
-                        height: 40,
-                        paddingLeft: 40,
-                        paddingRight: 12,
-                        border: '1px solid #D4D4D8',
-                        borderRadius: 8,
-                        fontSize: 14,
-                        lineHeight: '20px',
-                        color: '#09090B',
-                        background: '#fff',
-                        outline: 'none',
-                        fontFamily: 'var(--font-family-primary)',
-                        boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                        transition: 'border-color 0.2s, box-shadow 0.2s',
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#9F9FA9';
-                        e.currentTarget.style.boxShadow = '0px 1px 2px 0px rgba(26,29,40,0.06), 0px 0px 0px 2px rgba(120,58,251,0.15)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#D4D4D8';
-                        e.currentTarget.style.boxShadow = '0px 1px 2px 0px rgba(26,29,40,0.06)';
-                      }}
+                      style={{ paddingLeft: 40 }}
                     />
                   </div>
                   <span
@@ -602,29 +569,13 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
             }}
           >
             <div style={{ width: '100%', maxWidth: 512, display: 'flex', gap: 12 }}>
-              <button
+              <Button
                 type="button"
+                variant="primary"
                 disabled={!canProceed || isImporting}
+                busy={isImporting}
                 onClick={handleImport}
-                style={{
-                  width: '100%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '10px 24px',
-                  borderRadius: 8,
-                  fontSize: 16,
-                  lineHeight: '24px',
-                  fontWeight: 600,
-                  border: 'none',
-                  cursor: canProceed && !isImporting ? 'pointer' : 'not-allowed',
-                  background: canProceed && !isImporting ? '#09090B' : '#9F9FA9',
-                  color: '#fff',
-                  opacity: canProceed ? 1 : 0.6,
-                  fontFamily: 'var(--font-family-primary)',
-                  transition: 'background 0.2s, opacity 0.2s',
-                }}
+                style={{ width: '100%' }}
               >
                 <span
                   style={{
@@ -642,7 +593,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                     'Import content'
                   )}
                 </span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -774,7 +725,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

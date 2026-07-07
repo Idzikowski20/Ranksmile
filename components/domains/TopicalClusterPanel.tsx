@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs } from '../ui';
+import { Tabs } from '../core';
 import type { KeywordGroup, TopicCluster } from '../../lib/topicalMap';
 
 const FONT = 'var(--font-family-primary)';

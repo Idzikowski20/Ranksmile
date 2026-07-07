@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '../../lib/researchUtils';
 import { getErrorMessage } from '../../lib/errors';
-import Gauge from '../ui/Gauge';
+import { Gauge } from '../core';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 export interface CompetitorOutline {

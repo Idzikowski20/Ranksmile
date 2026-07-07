@@ -4,12 +4,10 @@ import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '.
 
 const font = 'var(--font-family-primary)';
 
-// Capitalize the first letter. All-caps names (e.g. "IDZTECH") get the rest
-// lowercased → "Idztech"; mixed-case names (e.g. "SerpBear") keep their casing.
 const capFirst = (s: string) => {
-   if (!s) return s;
-   const rest = s === s.toUpperCase() ? s.slice(1).toLowerCase() : s.slice(1);
-   return s.charAt(0).toUpperCase() + rest;
+  if (!s) return s;
+  const rest = s === s.toUpperCase() ? s.slice(1).toLowerCase() : s.slice(1);
+  return s.charAt(0).toUpperCase() + rest;
 };
 
 const HeartAvatar = ({ size = 24 }: { size?: number }) => (
@@ -32,7 +30,6 @@ const HeartAvatar = ({ size = 24 }: { size?: number }) => (
   </span>
 );
 
-/** Strips protocol, path and the GSC `sc-domain:` prefix to a bare hostname. */
 function cleanDomain(domain?: string | null): string {
   return (domain || '')
     .replace(/^sc-domain:/i, '')
@@ -41,7 +38,6 @@ function cleanDomain(domain?: string | null): string {
     .trim();
 }
 
-/** Workspace icon: the domain's favicon, falling back to the heart glyph. */
 const WorkspaceAvatar = ({ domain, size = 24 }: { domain?: string | null; size?: number }) => {
   const [err, setErr] = useState(false);
   const host = cleanDomain(domain);
@@ -92,9 +88,6 @@ const WorkspaceSwitcher = () => {
   const createSetup = useCreateSetupWorkspace();
   const current = workspaces.find((w) => w.id === activeId) || workspaces[0];
 
-  // Cache the active workspace name+domain so a reload shows it instantly (before
-  // react-query refetches) instead of the generic "Workspace" + heart placeholder.
-  // Read AFTER mount so SSR and the first client render match (no hydration mismatch).
   const [cached, setCached] = useState<{ name: string; domain: string | null } | null>(null);
   useEffect(() => {
     try { const raw = localStorage.getItem('active_workspace_cache'); if (raw) setCached(JSON.parse(raw)); } catch { /* ignore */ }
@@ -120,6 +113,7 @@ const WorkspaceSwitcher = () => {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={display?.name ? `Workspace: ${display.name}` : 'Select workspace'}
         onClick={() => setOpen((o) => !o)}
         onMouseEnter={() => setBtnHover(true)}
         onMouseLeave={() => setBtnHover(false)}
@@ -153,7 +147,7 @@ const WorkspaceSwitcher = () => {
             position: 'absolute',
             top: 'calc(100% + 6px)',
             left: 0,
-            zIndex: 200,
+            zIndex: 190,
             width: 256,
             background: '#fff',
             border: '1px solid #E4E4E7',
@@ -213,7 +207,7 @@ const WorkspaceSwitcher = () => {
                 setOpen(false);
                 createSetup.mutate(undefined, {
                   onSuccess: (id) => { if (id && typeof window !== 'undefined') window.location.href = `/workspace/${id}/setup`; },
-                  onError: (err: any) => { toast.error(friendly(err?.message)); },
+                  onError: (err: unknown) => { toast.error(friendly((err as { message?: string })?.message)); },
                 });
               }}
               className="workspace-switcher-row"

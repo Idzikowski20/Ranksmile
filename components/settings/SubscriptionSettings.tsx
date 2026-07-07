@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { Button } from '../core';
+import { SentryPanel, SentryPanelBody } from '../sentry-pages';
 import PricingPlansSettings from './PricingPlansSettings';
 
 // ─── SVG atoms ────────────────────────────────────────────────────────────────
@@ -113,8 +115,6 @@ export const showCancellationApprovedToast = () => {
 };
 
 const UpcomingBillsModal = ({ onClose }: { onClose: () => void }) => {
-  const [hoverClose, setHoverClose] = useState(false);
-
   return (
     <div
       onClick={onClose}
@@ -142,26 +142,7 @@ const UpcomingBillsModal = ({ onClose }: { onClose: () => void }) => {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Upcoming bills</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#52525C',
-              padding: 4,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <XIcon size={18} />
-          </button>
+          <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<XIcon size={18} />} />
         </div>
 
         {/* Plan rows */}
@@ -194,26 +175,9 @@ const UpcomingBillsModal = ({ onClose }: { onClose: () => void }) => {
 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: hoverClose ? '#783AFB' : '#18181B',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 16px',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-family-primary)',
-              transition: 'background 150ms ease',
-            }}
-            onMouseEnter={() => setHoverClose(true)}
-            onMouseLeave={() => setHoverClose(false)}
-          >
+          <Button type="button" variant="primary" size="sm" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -230,9 +194,6 @@ const LOSS_ITEMS = [
 ];
 
 const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; onProceed: () => void }) => {
-  const [hoverCancel, setHoverCancel] = useState(false);
-  const [hoverKeep, setHoverKeep] = useState(false);
-
   return (
     <div
       onClick={onClose}
@@ -271,28 +232,7 @@ const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; 
           <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B', maxWidth: 480, lineHeight: '1.35' }}>
             Are you sure? You will lose all of your data
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#52525C',
-              padding: 4,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: 16,
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <XIcon size={18} />
-          </button>
+          <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<XIcon size={18} />} style={{ marginLeft: 16, flexShrink: 0 }} />
         </div>
 
         {/* Body — two columns */}
@@ -353,26 +293,9 @@ const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; 
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={onProceed}
-                style={{
-                  background: hoverCancel ? '#E4E4E7' : '#F4F4F5',
-                  color: '#18181B',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 24px',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                  transition: 'background 150ms ease',
-                }}
-                onMouseEnter={() => setHoverCancel(true)}
-                onMouseLeave={() => setHoverCancel(false)}
-              >
+              <Button type="button" variant="secondary" size="sm" onClick={onProceed}>
                 Cancel Subscription
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -432,26 +355,9 @@ const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; 
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  background: hoverKeep ? '#783AFB' : '#18181B',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 24px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                  transition: 'background 150ms ease',
-                }}
-                onMouseEnter={() => setHoverKeep(true)}
-                onMouseLeave={() => setHoverKeep(false)}
-              >
+              <Button type="button" variant="primary" size="sm" onClick={onClose}>
                 Keep Subscription
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -531,11 +437,6 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [step1Selection, setStep1Selection] = useState('');
   const [step2Selection, setStep2Selection] = useState('');
-  const [hoverDontCancel, setHoverDontCancel] = useState(false);
-  const [hoverNext, setHoverNext] = useState(false);
-  const [hoverChatBtn, setHoverChatBtn] = useState(false);
-  const [hoverEnrollBtn, setHoverEnrollBtn] = useState(false);
-  const [hoverCancelSub, setHoverCancelSub] = useState(false);
 
   const step1Valid = step1Selection !== '';
   const step2Valid = step2Selection !== '';
@@ -592,28 +493,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#52525C',
-              padding: 4,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: 16,
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <XIcon size={18} />
-          </button>
+          <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<XIcon size={18} />} style={{ marginLeft: 16, flexShrink: 0 }} />
         </div>
 
         {/* Body */}
@@ -696,23 +576,11 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                     href="https://community.surferseo.com/c/content-optimization-masterclass/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-block',
-                      alignSelf: 'flex-start',
-                      background: hoverEnrollBtn ? '#783AFB' : '#18181B',
-                      color: '#fff',
-                      borderRadius: 6,
-                      padding: '6px 16px',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      fontFamily: 'var(--font-family-primary)',
-                      transition: 'background 150ms ease',
-                    }}
-                    onMouseEnter={() => setHoverEnrollBtn(true)}
-                    onMouseLeave={() => setHoverEnrollBtn(false)}
+                    style={{ display: 'inline-block', alignSelf: 'flex-start', textDecoration: 'none' }}
                   >
-                    Enroll Now
+                    <Button type="button" variant="primary" size="sm">
+                      Enroll Now
+                    </Button>
                   </a>
                 </div>
               </div>
@@ -747,27 +615,15 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                   <p style={{ margin: 0, fontSize: 14, color: '#52525C', lineHeight: '1.55' }}>
                     Write to us if you&apos;re feeling stuck on your SEO journey. There&apos;s no question too small, no issue too big. Let&apos;s plan your next move, together.
                   </p>
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="sm"
                     onClick={() => toast('Live chat is not available in this demo')}
-                    style={{
-                      alignSelf: 'flex-start',
-                      background: hoverChatBtn ? '#783AFB' : '#18181B',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 6,
-                      padding: '6px 16px',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-family-primary)',
-                      transition: 'background 150ms ease',
-                    }}
-                    onMouseEnter={() => setHoverChatBtn(true)}
-                    onMouseLeave={() => setHoverChatBtn(false)}
+                    style={{ alignSelf: 'flex-start' }}
                   >
                     Chat now
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -789,90 +645,32 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
         >
           {step === 3 ? (
             <>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: hoverDontCancel ? '#18181B' : '#52525C',
-                  fontFamily: 'var(--font-family-primary)',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  padding: '8px 12px',
-                  transition: 'color 150ms ease',
-                }}
-                onMouseEnter={() => setHoverDontCancel(true)}
-                onMouseLeave={() => setHoverDontCancel(false)}
-              >
+              <Button type="button" variant="transparent" size="sm" onClick={onClose}>
                 Don&apos;t cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => { onConfirm(); onClose(); }}
-                style={{
-                  background: hoverCancelSub ? '#E4E4E7' : '#F4F4F5',
-                  color: '#18181B',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 24px',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                  transition: 'background 150ms ease',
-                }}
-                onMouseEnter={() => setHoverCancelSub(true)}
-                onMouseLeave={() => setHoverCancelSub(false)}
               >
                 Cancel Subscription
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  background: hoverDontCancel ? '#E4E4E7' : '#F4F4F5',
-                  color: '#18181B',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 24px',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-family-primary)',
-                  transition: 'background 150ms ease',
-                }}
-                onMouseEnter={() => setHoverDontCancel(true)}
-                onMouseLeave={() => setHoverDontCancel(false)}
-              >
+              <Button type="button" variant="secondary" size="sm" onClick={onClose}>
                 Don&apos;t cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
                 onClick={() => { if (step === 1 && step1Valid) setStep(2); else if (step === 2 && step2Valid) setStep(3); }}
                 disabled={step === 1 ? !step1Valid : !step2Valid}
-                style={{
-                  background: hoverNext && (step === 1 ? step1Valid : step2Valid) ? '#783AFB' : '#18181B',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 24px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: 'var(--font-family-primary)',
-                  transition: 'background 150ms ease',
-                  opacity: (step === 1 ? step1Valid : step2Valid) ? 1 : 0.6,
-                  cursor: (step === 1 ? step1Valid : step2Valid) ? 'pointer' : 'not-allowed',
-                }}
-                onMouseEnter={() => setHoverNext(true)}
-                onMouseLeave={() => setHoverNext(false)}
               >
                 Next
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -894,177 +692,69 @@ const SubscriptionPage = ({
   onOpenCancel: () => void;
   canceled: boolean;
 }) => {
-  const [hoverChangePlan, setHoverChangePlan] = useState(false);
-  const [hoverDetails, setHoverDetails] = useState(false);
-  const [hoverCancel, setHoverCancel] = useState(false);
-
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: 880,
-        margin: '0 auto',
-        paddingTop: '2.5rem',
-        fontFamily: 'var(--font-family-primary)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 24,
-      }}
-    >
-      {/* Header */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Your subscription</span>
-        <span style={{ fontSize: 14, color: '#18181B' }}>Manage your plan and add-ons</span>
-      </div>
-
-      {/* Plan label row */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: 'var(--font-family-primary)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>Plan</span>
-        <span style={{ fontSize: 14, fontWeight: 400, color: '#18181B' }}>
+        <span style={{ fontSize: 14, color: '#52525C' }}>
           {canceled ? 'Ends in 7 days' : 'Renews in 7 days'}
         </span>
       </div>
 
-      {/* Two cards row */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {/* Left card — plan transition */}
-        <div
-          style={{
-            flex: '1 1 0',
-            border: '1px solid #F4F4F5',
-            borderRadius: 8,
-            padding: '1rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: '#fff',
-          }}
-        >
-          {/* Left content */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {canceled ? (
-              <>
-                <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#1AB25E',
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ fontSize: 14, color: '#52525C' }}>Active until 30 June 2026</span>
-              </>
-            ) : (
-              <>
-                <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
-                <ChevronRight />
-                <span style={{ fontSize: 14, color: '#3F3F47' }}>on 30 June 2026</span>
-                <ChevronRight />
-                <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Growth</span>
-              </>
-            )}
-          </div>
-
-          {/* Change plan button */}
-          <button
-            type="button"
-            onClick={onChangePlan}
-            style={{
-              background: hoverChangePlan ? '#783AFB' : '#18181B',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: '6px 16px',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-family-primary)',
-              transition: 'background 150ms ease',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-            onMouseEnter={() => setHoverChangePlan(true)}
-            onMouseLeave={() => setHoverChangePlan(false)}
-          >
-            Change plan
-          </button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+          <SentryPanel>
+            <SentryPanelBody>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {canceled ? (
+                  <>
+                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#1AB25E', flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, color: '#52525C' }}>Active until 30 June 2026</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
+                    <ChevronRight />
+                    <span style={{ fontSize: 14, color: '#3F3F47' }}>on 30 June 2026</span>
+                    <ChevronRight />
+                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Growth</span>
+                  </>
+                )}
+              </div>
+              <Button type="button" variant="primary" size="sm" onClick={onChangePlan}>
+                Change plan
+              </Button>
+            </div>
+          </SentryPanelBody>
+          </SentryPanel>
         </div>
 
-        {/* Right card — upcoming payments */}
-        <div
-          style={{
-            flexBasis: 240,
-            flexShrink: 0,
-            background: '#F8F8F9',
-            border: '1px solid #F4F4F5',
-            borderRadius: 8,
-            padding: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 14, color: '#18181B' }}>Upcoming Payments</span>
-            <span style={{ fontSize: 20, fontWeight: 600, color: '#18181B' }}>
-              {canceled ? '€0.00' : '€72.57'}
-            </span>
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={onOpenUpcoming}
-              style={{
-                background: hoverDetails ? '#E4E4E7' : 'transparent',
-                color: '#3F3F47',
-                border: 'none',
-                borderRadius: 6,
-                padding: '6px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-family-primary)',
-                boxShadow: 'inset 0 0 0 1px #E4E4E7',
-                transition: 'background 150ms ease',
-              }}
-              onMouseEnter={() => setHoverDetails(true)}
-              onMouseLeave={() => setHoverDetails(false)}
-            >
-              Details
-            </button>
-          </div>
+        <div style={{ flexBasis: 240, flexShrink: 0, minWidth: 200 }}>
+          <SentryPanel>
+            <SentryPanelBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 14, color: '#18181B' }}>Upcoming payments</span>
+                  <span style={{ fontSize: 20, fontWeight: 600, color: '#18181B' }}>
+                    {canceled ? '€0.00' : '€72.57'}
+                  </span>
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={onOpenUpcoming}>
+                  Details
+                </Button>
+              </div>
+            </SentryPanelBody>
+          </SentryPanel>
         </div>
       </div>
 
-      {/* Cancel subscription link row — hidden when canceled */}
       {!canceled && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: '1.5rem' }}>
-          <button
-            type="button"
-            onClick={onOpenCancel}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              color: hoverCancel ? '#52525C' : '#3F3F47',
-              fontFamily: 'var(--font-family-primary)',
-              fontSize: 14,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              transition: 'color 150ms ease',
-            }}
-            onMouseEnter={() => setHoverCancel(true)}
-            onMouseLeave={() => setHoverCancel(false)}
-          >
-            <XIcon size={20} />
-            <span>Cancel subscription</span>
-          </button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" variant="transparent" size="sm" icon={<XIcon size={20} />} onClick={onOpenCancel}>
+            Cancel subscription
+          </Button>
         </div>
       )}
     </div>
@@ -1099,30 +789,9 @@ const SubscriptionSettings = () => {
   if (view === 'plans') {
     return (
       <div style={{ width: '100%', fontFamily: 'var(--font-family-primary)' }}>
-        {/* Back button */}
-        <button
-          type="button"
-          onClick={showSubscription}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: '0 0 16px 0',
-            cursor: 'pointer',
-            color: '#52525C',
-            fontFamily: 'var(--font-family-primary)',
-            fontSize: 14,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#18181B'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#52525C'; }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back
-        </button>
+        <Button type="button" variant="transparent" size="sm" onClick={showSubscription} style={{ marginBottom: 16 }}>
+          ← Back
+        </Button>
         <PricingPlansSettings />
       </div>
     );

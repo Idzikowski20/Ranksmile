@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Button } from '../core';
 
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
@@ -18,9 +19,9 @@ const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, font
 const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: '#fff', transition: 'background 100ms ease' };
 
 const SortHead = ({ label, active, dir, onClick, bold }: { label: string; active: boolean; dir: 'asc' | 'desc'; onClick: () => void; bold?: boolean }) => (
-   <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: bold || active ? 600 : 500, color: active ? '#18181B' : '#52525C' }}>
+   <Button type="button" variant="transparent" size="sm" onClick={onClick} style={{ gap: 4, fontWeight: bold || active ? 600 : 500, color: active ? '#18181B' : '#52525C' }}>
       {label} <SortArrow dir={active ? dir : null} />
-   </button>
+   </Button>
 );
 
 const setOpenIcon = (el: HTMLElement, on: boolean) => { const ic = el.querySelector('[data-open]') as HTMLElement | null; if (ic) ic.style.opacity = on ? '1' : '0'; };
@@ -81,9 +82,9 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
 
          {sorted.length > visible && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 12 }}>
-               <button type="button" onClick={() => setVisible((v) => v + 100)} style={{ border: '1px solid #E4E4E7', borderRadius: 8, padding: '7px 14px', background: '#fff', color: '#18181B', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+               <Button type="button" variant="secondary" size="sm" onClick={() => setVisible((v) => v + 100)}>
                   Show more ({sorted.length - visible} left)
-               </button>
+               </Button>
             </div>
          )}
       </div>

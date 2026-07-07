@@ -1,11 +1,17 @@
 import React from 'react';
+import {Flex} from '../core/layout';
+import {Text} from '../core/text';
 
-/** Section label row: muted icon + 14px semibold title (matches Surfer dashboard). */
-const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#52525C' }}>
+interface Props {
+  icon?: React.ReactNode;
+  label: string;
+}
+
+const SectionHeader = ({icon, label}: Props) => (
+  <Flex align="center" gap="sm">
     {icon}
-    <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}>{label}</span>
-  </div>
+    <Text size="md" bold variant="muted">{label}</Text>
+  </Flex>
 );
 
 export default SectionHeader;

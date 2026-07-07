@@ -49,10 +49,14 @@ const ChangeLog = ({ closeChangeLog }: ChangeLogProps) => {
       return [];
    }, [changeLogData]);
 
-   return <SidePanel title='SerpBear Changelog' closePanel={onClose}>
-            <React.Suspense fallback={<ChangeLogloader />}>
-               {!isLoading && changeLogs.length > 0 && (
-                  <div className='changelog-body bg-[#f8f9ff] px-6 pt-4 pb-10 overflow-y-auto styled-scrollbar'>
+   return (
+      <SidePanel open title="SerpBear Changelog" onClose={onClose} width="small">
+         <React.Suspense fallback={<ChangeLogloader />}>
+            {!isLoading && changeLogs.length > 0 && (
+               <div
+                  className="changelog-body bg-[#f8f9ff] px-6 pt-4 pb-10 overflow-y-auto styled-scrollbar"
+                  style={{ margin: -24, minHeight: 'calc(100% + 48px)' }}
+               >
                      {changeLogs.map(({ version, content, date, major }) => {
                         return (
                            <div
@@ -72,9 +76,10 @@ const ChangeLog = ({ closeChangeLog }: ChangeLogProps) => {
                      })}
                   </div>
                )}
-               {isLoading && <ChangeLogloader />}
-            </React.Suspense>
-         </SidePanel>;
+            {isLoading && <ChangeLogloader />}
+         </React.Suspense>
+      </SidePanel>
+   );
 };
 
 export default ChangeLog;

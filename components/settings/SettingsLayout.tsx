@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AppShell from '../common/AppShell';
+import { SentryPage, SentryPageHeader } from '../sentry-pages';
 import AccountNotificationSettings from './AccountNotificationSettings';
 import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
@@ -17,7 +17,6 @@ import BrandKnowledgeSettings from './BrandKnowledgeSettings';
 import CustomVoicesSettings from './CustomVoicesSettings';
 import WorkspaceGeneralSettings from './WorkspaceGeneralSettings';
 import WorkspaceMembersSettings from './WorkspaceMembersSettings';
-import SidebarLaunchpad from './SidebarLaunchpad';
 import { useFetchSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
@@ -83,49 +82,6 @@ const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
   profile: 'Manage your Surfer profile',
 };
 
-const SIDEBAR_SECTIONS: Array<{ label: string; items: Array<{ slug: SettingsPageSlug; label: string }> }> = [
-  {
-    label: 'Organization',
-    items: [
-      { slug: 'general', label: 'General' },
-      { slug: 'people', label: 'People' },
-    ],
-  },
-  {
-    label: 'Billing',
-    items: [
-      { slug: 'billing_subscription', label: 'Your subscription' },
-      { slug: 'billing_usage', label: 'Usage' },
-      { slug: 'billing_invoices', label: 'Invoices' },
-      { slug: 'billing_details', label: 'Billing details' },
-    ],
-  },
-  {
-    label: 'Integrations',
-    items: [
-      { slug: 'google_search_console', label: 'Search Console' },
-      { slug: 'wordpress', label: 'WordPress' },
-      { slug: 'api', label: 'API' },
-    ],
-  },
-  {
-    label: 'Workspace',
-    items: [
-      { slug: 'workspace_general', label: 'General' },
-      { slug: 'members', label: 'Members' },
-      { slug: 'brand_knowledge', label: 'Brand Knowledge' },
-      { slug: 'custom_voices', label: 'Custom Voices' },
-    ],
-  },
-  {
-    label: 'Your account',
-    items: [
-      { slug: 'profile', label: 'Profile' },
-      { slug: 'notifications', label: 'Notifications' },
-    ],
-  },
-];
-
 type SettingsLayoutProps = {
   page: string;
 };
@@ -144,6 +100,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const currentPage = normalizeSettingsPage(page);
   const pageTitle = PAGE_TITLES[currentPage] || 'Settings';
   const pageSubtitle = PAGE_SUBTITLES[currentPage];
+  const isWide = currentPage === 'billing_subscription';
 
   const [settings, setSettings] = useState<SettingsType>({
     scraper_type: 'none',
@@ -178,87 +135,22 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     setSettings({ ...settings, [key]: value });
   };
 
-  const settingsSidebar = (
-    <aside className="relative flex h-full w-[248px] shrink-0 flex-col overflow-hidden bg-[#09090B] text-white lg:border-r lg:border-white/10">
-      <div className="styled-scrollbar-dark flex h-full flex-col gap-[2px] overflow-y-auto overflow-x-hidden px-2 pb-[88px]">
-        <div className="sticky top-0 z-[100] bg-[#09090B] pt-3 pb-1">
-          <Link href="/dashboard" passHref>
-            <a className="group flex w-full items-center gap-2 rounded-lg p-2 text-[14px] font-normal text-white/70 no-underline transition-colors hover:bg-white/[0.06] hover:text-white">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 text-white/45 transition-colors group-hover:text-white">
-                <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span>Back to app</span>
-            </a>
-          </Link>
-        </div>
-
-        {SIDEBAR_SECTIONS.map((section) => (
-          <div key={section.label} className="flex w-full flex-col gap-[2px]">
-            <div className="px-2 pb-2 pt-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-white/35">
-                {section.label}
-              </span>
-            </div>
-
-            {section.items.map((item) => {
-              const isActive = currentPage === item.slug;
-              return (
-                <Link key={item.slug} href={`/settings/${item.slug}`} passHref>
-                  <a
-                    className={`flex items-center gap-2 rounded-lg p-2 text-[14px] font-normal no-underline transition-colors ${
-                      isActive ? 'bg-white/[0.08] text-white' : 'text-white/70 hover:bg-white/[0.06] hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </a>
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      <SidebarLaunchpad />
-    </aside>
-  );
-
   const renderPageContent = () => {
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center py-16 text-[14px] text-gray-100">
-          Loading settings...
+        <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 14, color: '#6a6772' }}>
+          Loading settings…
         </div>
       );
     }
 
-    if (currentPage === 'general') {
-      return <OrganizationGeneralSettings />;
-    }
-
-    if (currentPage === 'people') {
-      return <PeopleSettings />;
-    }
-
-    if (currentPage === 'workspace_general') {
-      return <WorkspaceGeneralSettings />;
-    }
-
-    if (currentPage === 'members') {
-      return <WorkspaceMembersSettings />;
-    }
-
-    if (currentPage === 'brand_knowledge') {
-      return <BrandKnowledgeSettings />;
-    }
-
-    if (currentPage === 'custom_voices') {
-      return <CustomVoicesSettings />;
-    }
-
-    if (currentPage === 'notifications') {
-      return <AccountNotificationSettings />;
-    }
-
+    if (currentPage === 'general') return <OrganizationGeneralSettings />;
+    if (currentPage === 'people') return <PeopleSettings />;
+    if (currentPage === 'workspace_general') return <WorkspaceGeneralSettings />;
+    if (currentPage === 'members') return <WorkspaceMembersSettings />;
+    if (currentPage === 'brand_knowledge') return <BrandKnowledgeSettings />;
+    if (currentPage === 'custom_voices') return <CustomVoicesSettings />;
+    if (currentPage === 'notifications') return <AccountNotificationSettings />;
     if (currentPage === 'google_search_console') {
       return (
         <SearchConsoleSettings
@@ -268,97 +160,47 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
         />
       );
     }
-
-    if (currentPage === 'billing_subscription') {
-      return <SubscriptionSettings />;
-    }
-
-    if (currentPage === 'billing_usage') {
-      return <UsageSettings />;
-    }
-
-    if (currentPage === 'billing_details') {
-      return <BillingDetailsSettings />;
-    }
-
-    if (currentPage === 'wordpress') {
-      return <WordPressSettings />;
-    }
-
-    if (currentPage === 'api') {
-      return <ApiSettings />;
-    }
-
-    if (currentPage === 'profile') {
-      return <ProfileSettings />;
-    }
+    if (currentPage === 'billing_subscription') return <SubscriptionSettings />;
+    if (currentPage === 'billing_usage') return <UsageSettings />;
+    if (currentPage === 'billing_details') return <BillingDetailsSettings />;
+    if (currentPage === 'wordpress') return <WordPressSettings />;
+    if (currentPage === 'api') return <ApiSettings />;
+    if (currentPage === 'profile') return <ProfileSettings />;
 
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-2">
-        <span className="text-[14px] text-gray-100">Coming soon</span>
+      <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 14, color: '#6a6772' }}>
+        Coming soon
       </div>
     );
   };
 
   return (
-    <AppShell
-      domains={domains}
-      showAddModal={() => {}}
-      showSettings={() => {}}
-      showSidebar={false}
-      sidebar={settingsSidebar}
-    >
+    <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head>
         <title>{`${pageTitle} — SerpBear`}</title>
       </Head>
 
-      <div className="relative flex-1 overflow-auto rounded-xl bg-white-base text-gray-140 [color-scheme:light] styled-scrollbar">
-        <div
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            padding: '48px 16px',
-          }}
-        >
-          <div
-            style={{
-              // billing_subscription (plan comparison) uses the full main width
-              // with a comfortable side gutter; other settings pages stay at the
-              // readable 880px column.
-              maxWidth: currentPage === 'billing_subscription' ? '100%' : 880,
-              margin: '0 auto',
-              paddingLeft: currentPage === 'billing_subscription' ? 32 : 0,
-              paddingRight: currentPage === 'billing_subscription' ? 32 : 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 48,
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              <div className="gap-2xs flex flex-col">
-                <span className="text-base font-semibold text-gray-140">{pageTitle}</span>
-                {pageSubtitle && (
-                  <span className="text-[14px] font-normal text-gray-140">{pageSubtitle}</span>
-                )}
-              </div>
-
-              <div role="separator" className="text-gray-20 min-h-[1px] min-w-[1px] self-stretch bg-gray-10" />
-
-              <div className="gap-base flex w-full grow flex-col">
-                {renderPageContent()}
-              </div>
-
-              {settingsError?.msg && (
-                <div className="mt-4 w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium leading-4 text-red-600">
-                  {settingsError.msg}
-                </div>
-              )}
-
+      <SentryPage maxWidth={isWide ? 1400 : 880}>
+        <SentryPageHeader title={pageTitle} subtitle={pageSubtitle} borderless />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {renderPageContent()}
+          {settingsError?.msg && (
+            <div
+              role="alert"
+              style={{
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: '1px solid #f5c6cb',
+                background: '#fdf0f0',
+                fontSize: 13,
+                color: '#c62828',
+              }}
+            >
+              {settingsError.msg}
             </div>
-          </div>
+          )}
         </div>
-      </div>
-
+      </SentryPage>
     </AppShell>
   );
 };

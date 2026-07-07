@@ -126,6 +126,29 @@ export async function getKeywordSuggestions(opts: {
    return items.map(mapItem).filter((k) => k.keyword);
 }
 
+/**
+ * Exact monthly search volume for a list of keywords (Google Ads planner data), keyed by
+ * lowercased keyword. Powers the audit "Terms to Use" Search Volume column. This endpoint
+ * returns keyword rows directly under `result` (no nested `items`), so it can't reuse
+ * dfsPost. Degrades to an empty map when unconfigured or on any error.
+ */
+export async function getSearchVolumes(keywords: string[], country?: string): Promise<Record<string, number>> {
+   const list = Array.from(new Set(keywords.map((k) => k.toLowerCase().trim()).filter(Boolean))).slice(0, 200);
+   if (!list.length || !isDataForSeoConfigured()) return {};
+   try {
+      const res = await axios.post(`${BASE}/keywords_data/google_ads/search_volume/live`, [{
+         keywords: list, location_code: locationCodeFor(country),
+      }], { headers: { Authorization: authHeader(), 'Content-Type': 'application/json' }, timeout: 60000 });
+      if (res.data?.status_code !== 20000) return {};
+      const rows: any[] = res.data?.tasks?.[0]?.result ?? [];
+      const out: Record<string, number> = {};
+      rows.forEach((r) => {
+         if (r?.keyword && typeof r?.search_volume === 'number') out[String(r.keyword).toLowerCase()] = r.search_volume;
+      });
+      return out;
+   } catch { return {}; }
+}
+
 export type PaaQuestion = { question: string, answer: string, domain: string, url: string };
 
 /**

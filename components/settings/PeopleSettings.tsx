@@ -5,6 +5,19 @@ import {
   useSetMemberWorkspaces, describeWorkspaceAccess, PeopleMember,
 } from '../../services/people';
 import { useWorkspaces, Workspace } from '../../services/workspaces';
+import { Button, Input, MenuListItem } from '../core';
+import {
+  SentrySettingsSection,
+  SentrySettingsRow,
+  SentryPanel,
+  SentryPanelBody,
+  SentryTable,
+  SentryTableHead,
+  SentryTableBody,
+  SentryTableRow,
+  SentryTableCell,
+  SentryTableHeaderCell,
+} from '../sentry-pages';
 
 const font = 'var(--font-family-primary)';
 const ROLES = ['member', 'admin', 'owner'] as const;
@@ -19,18 +32,11 @@ const parseIds = (json: string | null): number[] => {
   try { const v = JSON.parse(json); return Array.isArray(v) ? v.map(Number) : []; } catch { return []; }
 };
 
-const thStyle: React.CSSProperties = { padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: '#71717A', fontFamily: font };
-const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 14, color: '#52525C', fontFamily: font };
-// overflow visible (not hidden) so a Role dropdown in the last row isn't clipped by the card.
-const tableShell: React.CSSProperties = { width: '100%', border: '1px solid #F4F4F5', borderRadius: 12, background: '#FFFFFF', overflow: 'visible' };
-
 const Avatar = ({ initial }: { initial: string }) => (
   <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
     {initial}
   </div>
 );
-
-const Separator = () => <div role="separator" style={{ minHeight: 1, minWidth: 1, alignSelf: 'stretch', background: '#F4F4F5' }} />;
 
 const CheckMark = () => (
   <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, color: '#18181B' }}>
@@ -183,101 +189,76 @@ const PeopleSettings = () => {
   const invitations = data?.invitations || [];
 
   return (
-    <div className="flex w-full flex-col items-start gap-base" style={{ height: '100%' }}>
-      <div className="gap-2xs flex flex-col">
-        <span className="text-base font-semibold text-gray-140">People</span>
-        <span className="text-md font-normal text-gray-100">Manage who has access to this organization</span>
-      </div>
-
-      <Separator />
-
-      {/* Invite — managers only */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
       {canManage && (
-        <div className="flex w-full flex-col gap-sm">
-          <div className="gap-2xs flex flex-col">
-            <span className="text-md font-medium text-gray-140">Invite people</span>
-            <span className="text-md font-normal text-gray-100">Send an email invitation to add new members to your organization.</span>
-          </div>
-
-          <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '20px 24px', background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div className="flex flex-col gap-2xs">
-              <label htmlFor="invite-email" style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Email address</label>
-              <input
-                id="invite-email"
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
-                placeholder="name@company.com"
-                style={{ width: '100%', height: 40, border: '1px solid #D4D4D8', borderRadius: 8, padding: '0 12px', fontSize: 14, color: '#18181B', background: '#FFFFFF', fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 200 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Role</label>
-                <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Workspaces</label>
-                <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
-              </div>
-
-              <button
-                type="button"
-                onClick={sendInvite}
-                disabled={invite.isLoading}
-                className="gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100"
-                style={{ flexShrink: 0, height: 40, whiteSpace: 'nowrap', opacity: invite.isLoading ? 0.7 : 1 }}
-              >
-                <span>{invite.isLoading ? 'Sending…' : 'Send invite'}</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M6 12h7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
+        <SentrySettingsSection title="Invite people">
+          <SentrySettingsRow label="Email invitation" description="Send an email invitation to add new members to your organization.">
+            <SentryPanel>
+              <SentryPanelBody>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <Input
+                    id="invite-email"
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
+                    placeholder="name@company.com"
+                    style={{ width: '100%', maxWidth: 360 }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 200 }}>
+                      <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Role</label>
+                      <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
+                      <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Workspaces</label>
+                      <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
+                    </div>
+                    <Button type="button" variant="primary" onClick={sendInvite} disabled={invite.isLoading} style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      {invite.isLoading ? 'Sending…' : 'Send invite'}
+                    </Button>
+                  </div>
+                </div>
+              </SentryPanelBody>
+            </SentryPanel>
+          </SentrySettingsRow>
+        </SentrySettingsSection>
       )}
 
-      {canManage && <Separator />}
-
-      {/* Members */}
-      <div className="flex w-full flex-col gap-sm">
-        <span className="text-md font-medium text-gray-140">
-          Members <span style={{ color: '#71717A', fontWeight: 400 }}>({members.length})</span>
-        </span>
-
-        <div style={tableShell}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: '42%' }} /><col style={{ width: '16%' }} /><col style={{ width: '14%' }} /><col style={{ width: '20%' }} /><col style={{ width: '8%' }} />
-            </colgroup>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
-                <th style={thStyle}>Members</th><th style={thStyle}>Role</th><th style={thStyle}>Joined</th><th style={thStyle}>Workspaces</th><th style={{ padding: '10px 16px' }} />
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && <tr><td style={tdStyle} colSpan={5}>Loading…</td></tr>}
-              {!isLoading && members.length === 0 && <tr><td style={tdStyle} colSpan={5}>No members yet.</td></tr>}
+      <SentrySettingsSection title={`Members (${members.length})`}>
+        <SentrySettingsRow label="Organization members" description="People with access to this organization.">
+          <div style={{ width: '100%', overflow: 'visible' }}>
+            <SentryPanel noPadding>
+            <SentryTable>
+              <SentryTableHead>
+                <SentryTableRow>
+                  <SentryTableHeaderCell>Members</SentryTableHeaderCell>
+                  <SentryTableHeaderCell>Role</SentryTableHeaderCell>
+                  <SentryTableHeaderCell>Joined</SentryTableHeaderCell>
+                  <SentryTableHeaderCell>Workspaces</SentryTableHeaderCell>
+                  <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
+                </SentryTableRow>
+              </SentryTableHead>
+              <SentryTableBody>
+              {isLoading && (
+                <SentryTableRow><SentryTableCell colSpan={5}>Loading…</SentryTableCell></SentryTableRow>
+              )}
+              {!isLoading && members.length === 0 && (
+                <SentryTableRow><SentryTableCell colSpan={5}>No members yet.</SentryTableCell></SentryTableRow>
+              )}
               {members.map((m) => {
                 const email = m.email || m.user_id;
                 const editable = canActOn(m) && m.id !== undefined;
                 const memberWs = parseIds(m.workspace_ids);
                 return (
-                  <tr key={m.id} style={{ borderTop: '1px solid #F4F4F5' }}>
-                    <td style={{ padding: '12px 16px' }}>
+                  <SentryTableRow key={m.id}>
+                    <SentryTableCell>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar initial={(email[0] || '?').toUpperCase()} />
                         <span style={{ fontSize: 14, color: '#18181B', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
                       </div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
+                    </SentryTableCell>
+                    <SentryTableCell>
                       {editable ? (
                         <RoleSelect
                           value={m.role}
@@ -288,9 +269,9 @@ const PeopleSettings = () => {
                       ) : (
                         <span style={{ fontSize: 14, color: '#52525C', fontFamily: font }}>{cap(m.role)}</span>
                       )}
-                    </td>
-                    <td style={tdStyle}>{fmtDate(m.created_at)}</td>
-                    <td style={{ padding: '12px 16px' }}>
+                    </SentryTableCell>
+                    <SentryTableCell>{fmtDate(m.created_at)}</SentryTableCell>
+                    <SentryTableCell>
                       {editable && m.role === 'member' ? (
                         <WorkspacePicker
                           workspaces={workspaces}
@@ -302,85 +283,95 @@ const PeopleSettings = () => {
                           {m.role === 'member' ? describeWorkspaceAccess(m.workspace_ids, wsNames) : 'All'}
                         </span>
                       )}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    </SentryTableCell>
+                    <SentryTableCell align="center">
                       {editable && (
-                        <button
+                        <Button
                           type="button"
+                          variant="transparent"
+                          size="sm"
                           aria-label="Remove member"
                           onClick={() => { if (window.confirm(`Remove ${email}?`)) removeMember.mutate(m.id, { onSuccess: onOk('Member removed'), onError }); }}
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#A1A1AA', padding: 6, borderRadius: 6 }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#FF6F77'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#A1A1AA'; }}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
+                          icon={(
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                              <path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                          style={{ color: '#A1A1AA' }}
+                        />
                       )}
-                    </td>
-                  </tr>
+                    </SentryTableCell>
+                  </SentryTableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              </SentryTableBody>
+            </SentryTable>
+            </SentryPanel>
+          </div>
+        </SentrySettingsRow>
+      </SentrySettingsSection>
 
-      {/* Pending invitations */}
       {invitations.length > 0 && (
-        <>
-          <Separator />
-          <div className="flex w-full flex-col gap-sm">
-            <span className="text-md font-medium text-gray-140">
-              Pending Invitations <span style={{ color: '#71717A', fontWeight: 400 }}>({invitations.length})</span>
-            </span>
-            <div style={tableShell}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: '40%' }} /><col style={{ width: '15%' }} /><col style={{ width: '17%' }} /><col style={{ width: '20%' }} /><col style={{ width: '8%' }} />
-                </colgroup>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
-                    <th style={thStyle}>Invitee</th><th style={thStyle}>Role</th><th style={thStyle}>Expires</th><th style={thStyle}>Workspaces</th><th style={{ padding: '10px 16px' }} />
-                  </tr>
-                </thead>
-                <tbody>
+        <SentrySettingsSection title={`Pending invitations (${invitations.length})`}>
+          <SentrySettingsRow label="Outstanding invites" description="Invitations that haven't been accepted yet.">
+            <div style={{ width: '100%' }}>
+              <SentryPanel noPadding>
+              <SentryTable>
+                <SentryTableHead>
+                  <SentryTableRow>
+                    <SentryTableHeaderCell>Invitee</SentryTableHeaderCell>
+                    <SentryTableHeaderCell>Role</SentryTableHeaderCell>
+                    <SentryTableHeaderCell>Expires</SentryTableHeaderCell>
+                    <SentryTableHeaderCell>Workspaces</SentryTableHeaderCell>
+                    <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
+                  </SentryTableRow>
+                </SentryTableHead>
+                <SentryTableBody>
                   {invitations.map((inv) => (
-                    <tr key={inv.id} style={{ borderTop: '1px solid #F4F4F5' }}>
-                      <td style={{ padding: '12px 16px' }}>
+                    <SentryTableRow key={inv.id}>
+                      <SentryTableCell>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <Avatar initial={(inv.email[0] || '?').toUpperCase()} />
                           <span style={{ fontSize: 14, color: '#18181B', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.email}</span>
                         </div>
-                      </td>
-                      <td style={tdStyle}>{cap(inv.role)}</td>
-                      <td style={tdStyle}>{fmtDate(inv.expires_at)}</td>
-                      <td style={tdStyle}>{describeWorkspaceAccess(inv.workspace_ids, wsNames)}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      </SentryTableCell>
+                      <SentryTableCell>{cap(inv.role)}</SentryTableCell>
+                      <SentryTableCell>{fmtDate(inv.expires_at)}</SentryTableCell>
+                      <SentryTableCell>{describeWorkspaceAccess(inv.workspace_ids, wsNames)}</SentryTableCell>
+                      <SentryTableCell align="center">
                         {canManage && (
                           <div style={{ position: 'relative', display: 'inline-block' }}>
-                            <button type="button" onClick={() => setMenuFor(menuFor === inv.id ? null : inv.id)} aria-label="More actions"
-                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#71717A', padding: '4px 6px', borderRadius: 6, fontSize: 18, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>···</button>
+                            <Button
+                              type="button"
+                              variant="transparent"
+                              size="sm"
+                              onClick={() => setMenuFor(menuFor === inv.id ? null : inv.id)}
+                              aria-label="More actions"
+                              style={{ color: '#71717A', fontSize: 18, fontWeight: 700, letterSpacing: 1, lineHeight: 1, padding: '4px 6px' }}
+                            >
+                              ···
+                            </Button>
                             {menuFor === inv.id && (
                               <div style={{ position: 'absolute', right: 0, top: '110%', background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, minWidth: 140, overflow: 'hidden', animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}>
-                                <button type="button"
+                                <MenuListItem
+                                  label="Revoke"
+                                  priority="danger"
                                   onClick={() => { setMenuFor(null); revoke.mutate(inv.id, { onSuccess: onOk('Invitation revoked'), onError }); }}
-                                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 13, color: '#FF6F77', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: font }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF0F1'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Revoke</button>
+                                  style={{ width: '100%', fontFamily: font, fontSize: 13 }}
+                                />
                               </div>
                             )}
                           </div>
                         )}
-                      </td>
-                    </tr>
+                      </SentryTableCell>
+                    </SentryTableRow>
                   ))}
-                </tbody>
-              </table>
+                </SentryTableBody>
+              </SentryTable>
+              </SentryPanel>
             </div>
-          </div>
-        </>
+          </SentrySettingsRow>
+        </SentrySettingsSection>
       )}
 
       {!canManage && !isLoading && (

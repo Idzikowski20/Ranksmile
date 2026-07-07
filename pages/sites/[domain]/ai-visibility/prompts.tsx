@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import PromptTopicsTable, { TopicRow } from '../../../../components/aiVisibility/PromptTopicsTable';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import HoverTooltip from '../../../../components/common/HoverTooltip';
+import { HoverTooltip, Button } from '../../../../components/core';
 import { useAiVisPromptTopics, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
@@ -49,7 +49,7 @@ const AiVisibilityPrompts: NextPage = () => {
    const ov = topicsQ.data?.overview;
 
    const manageBtn = (
-      <button type="button" onClick={() => router.push(manageUrl)} style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Manage Prompts</button>
+      <Button type="button" variant="primary" size="sm" onClick={() => router.push(manageUrl)}>Manage Prompts</Button>
    );
 
    return (
@@ -82,9 +82,9 @@ const AiVisibilityPrompts: NextPage = () => {
                      <>
                         <PromptTopicsTable topics={topics} />
                         <div>
-                           <button type="button" onClick={() => router.push(manageUrl)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 8, padding: '8px 14px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
-                              <PlusIcon /> Add prompt
-                           </button>
+                           <Button type="button" variant="primary" size="sm" icon={<PlusIcon />} onClick={() => router.push(manageUrl)}>
+                              Add prompt
+                           </Button>
                         </div>
                      </>
                   )}

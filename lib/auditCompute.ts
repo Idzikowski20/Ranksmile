@@ -5,7 +5,7 @@
 // falls back to a deterministic, clearly-labelled placeholder. Pure — no network here.
 import { load } from 'cheerio';
 import { assertPublicUrl } from './ssrfGuard';
-import { countOccurrences, ScoreData, computeContentScore } from './contentScore';
+import { countOccurrences, findTermRangesBatch, ScoreData, computeContentScore } from './contentScore';
 import { plainText, wordCount } from './optimizationPlanner';
 import {
    AuditResult, AuditFactor, AuditCompetitor, AuditInternalLink, AuditTerm,
@@ -14,8 +14,48 @@ import {
 export interface FetchTiming { ttfbMs: number; loadMs: number; }
 
 /** Per-competitor page analysis fed into buildAuditResult in phase 2. */
-export interface CompetitorPage { domain: string; rank: number; values: Record<string, number>; contentScore: number; }
-export interface RealAuditData { competitors: CompetitorPage[]; terms: { term: string; target_count: number }[]; }
+export interface CompetitorPage { domain: string; rank: number; values: Record<string, number>; contentScore: number; url?: string; }
+
+/** One NLP term as returned by the sidecar (/analyze-serp). Extra fields are optional so
+ *  older/placeholder payloads (term + target_count only) still map cleanly. */
+export interface RichTerm {
+   term: string;
+   target_count: number;
+   type?: string; // sidecar semantic type (core/supporting/entity/…) — not the UI tab type
+   relevance?: number; // 0–1
+   doc_freq?: number;
+   suggested_min?: number;
+   suggested_max?: number;
+   searchVolume?: number | null; // filled by enrichAudit via DataForSEO for phrase terms
+}
+export interface RealAuditData {
+   competitors: CompetitorPage[];
+   terms: RichTerm[];
+   // Competitor-set averages used to score "You" the same way (word/heading/paragraph
+   // frac). Set by enrichAudit alongside the calibrated competitor content scores.
+   contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
+}
+
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+/**
+ * SurferSEO-style content score (AUDIT ONLY — the content-editor gauge keeps its own
+ * computeContentScore). Coverage-dominated so a page missing most of the suggested terms
+ * scores in the 40-55 range even with good length: 0.6 term coverage + 0.25 length +
+ * 0.15 structure, each measured against the competitor set. Approximation — SurferSEO's
+ * exact model is proprietary; both "You" and every competitor are scored identically so
+ * the chart stays apples-to-apples.
+ */
+export function auditContentScore(coverageFrac: number, wordFrac: number, structFrac: number): number {
+   return Math.round((0.6 * clamp01(coverageFrac) + 0.25 * clamp01(wordFrac) + 0.15 * clamp01(structFrac)) * 100);
+}
+
+/** Fraction of the suggested terms a page actually uses (≥1 inflection-tolerant hit). */
+export function termCoverageFraction(bodyText: string, terms: { term: string }[]): number {
+   if (!terms.length) return 0;
+   const covered = terms.filter((t) => countOccurrences(bodyText, t.term) >= 1).length;
+   return covered / terms.length;
+}
 
 /** Extracted numbers for one page keyed by factor key + the bits used elsewhere. */
 export interface PageMetrics {
@@ -47,7 +87,7 @@ function keySeed(key: string): number {
 function stub(you: number, key: string): { competitors: AuditCompetitor[]; suggestedMin: number; suggestedMax: number } {
    const s = keySeed(key);
    const mults = [1.1 + s * 0.4, 0.9 - s * 0.3, 0.7 + s * 0.2];
-   const competitors = STUB_LABELS.map((label, i) => ({ label, rank: STUB_RANKS[i], value: Math.max(0, Math.round(you * mults[i])) }));
+   const competitors = STUB_LABELS.map((label, i) => ({ label, rank: STUB_RANKS[i], value: Math.max(0, Math.round(you * mults[i])), url: `https://${label}` }));
    const base = you > 0 ? you : 10;
    return { competitors, suggestedMin: Math.round(base * 0.6), suggestedMax: Math.round(base * 1.4) };
 }
@@ -69,6 +109,10 @@ interface FactorDef {
    verdict?: (v: number) => 'ok' | 'warn' | 'info'; // overrides the default within-range check
    fixedMin?: number; // fixed optimal range (overrides competitor-derived); e.g. title 55–70
    fixedMax?: number; // undefined ⇒ derive both bounds from competitors
+   // Range-suffix noun + phrasing appended to the description when real competitor data is
+   // present (mirrors SurferSEO exactly): "…, while the suggested range is 2 - 4 exact keywords."
+   unitNoun?: string;
+   rangeStyle?: 'range' | 'atLeast' | 'single' | 'optimal';
 }
 
 const INFO = (): 'info' => 'info';
@@ -80,15 +124,15 @@ const singular = (v: number, word: string) => `${word}${v === 1 ? '' : 's'}`;
 // targets (title/body/h1, body density) and structural factors carry ok/warn verdicts.
 const FACTOR_DEFS: FactorDef[] = [
    // ── Word count ──
-   { key: 'word_count_body', section: 'Word count', label: (v) => `${v} words in body`, message: (v) => `Your web page has ${v} words in body.` },
-   { key: 'h2_h6_words', section: 'Word count', label: (v) => `${v} words in h2 to h6`, message: (v) => `Your web page has ${v} words in headings.` },
-   { key: 'p_words', section: 'Word count', label: (v) => `${v} words in paragraphs`, message: (v) => `Your web page has ${v} words in p.` },
-   { key: 'strong_b_words', section: 'Word count', label: (v) => `${v} words in strong, b`, message: (v) => `Your web page has ${v} words in strong_and_b.` },
+   { key: 'word_count_body', section: 'Word count', label: (v) => `${v} words in body`, message: (v) => `Your web page has ${v} words in body.`, unitNoun: 'words' },
+   { key: 'h2_h6_words', section: 'Word count', label: (v) => `${v} words in h2 to h6`, message: (v) => `Your web page has ${v} words in headings.`, unitNoun: 'words' },
+   { key: 'p_words', section: 'Word count', label: (v) => `${v} words in paragraphs`, message: (v) => `Your web page has ${v} words in p.`, unitNoun: 'words' },
+   { key: 'strong_b_words', section: 'Word count', label: (v) => `${v} words in strong, b`, message: (v) => `Your web page has ${v} words in strong_and_b.`, unitNoun: 'words' },
 
    // ── Exact keywords ──
-   { key: 'exact_kw_title', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in title`, message: () => 'Exact keyword occurrences in the title.', fixedMin: 1, fixedMax: 1 },
-   { key: 'exact_kw_body', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in body`, message: () => 'Exact keyword occurrences in the body.' },
-   { key: 'exact_kw_h1', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h1`, message: () => 'Exact keyword occurrences in the H1.', fixedMin: 1, fixedMax: 1 },
+   { key: 'exact_kw_title', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in title`, message: (v) => `Your web page has ${v} exact ${singular(v, 'keyword')} in title.`, fixedMin: 1, fixedMax: 1, unitNoun: 'exact keyword', rangeStyle: 'single' },
+   { key: 'exact_kw_body', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in body`, message: (v) => `Your web page has ${v} exact ${singular(v, 'keyword')} in body.`, unitNoun: 'exact keywords' },
+   { key: 'exact_kw_h1', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h1`, message: (v) => `Your web page has ${v} exact ${singular(v, 'keyword')} in h1.`, fixedMin: 1, fixedMax: 1, unitNoun: 'exact keyword', rangeStyle: 'single' },
    { key: 'exact_kw_h2h6', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'exact_kw_h2h6_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'exact_kw_p', section: 'Exact keywords', label: (v) => `${v} exact ${singular(v, 'keyword')} in paragraphs`, message: () => '', verdict: INFO },
@@ -97,7 +141,7 @@ const FACTOR_DEFS: FactorDef[] = [
    { key: 'exact_kw_img_per100', section: 'Exact keywords', label: (v) => `${v} exact keywords per 100 words in img alt`, message: () => '', verdict: INFO },
 
    // ── Partial keywords ──
-   { key: 'partial_kw_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in body`, message: (v) => `Your web page has ${v} partial keywords per 100 words in body.` },
+   { key: 'partial_kw_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in body`, message: (v) => `Your web page has ${v} partial keywords per 100 words in body.`, unitNoun: 'partial keywords per 100 words' },
    { key: 'partial_kw_h2h6', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'partial_kw_h2h6_per100', section: 'Partial keywords', label: (v) => `${v} partial keywords per 100 words in h2 to h6`, message: () => '', verdict: INFO },
    { key: 'partial_kw_p', section: 'Partial keywords', label: (v) => `${v} partial ${singular(v, 'keyword')} in paragraphs`, message: () => '', verdict: INFO },
@@ -107,14 +151,14 @@ const FACTOR_DEFS: FactorDef[] = [
 
    // ── Page structure ──
    { key: 'h1_count', section: 'Page structure', label: (v) => `${v} h1 ${singular(v, 'element')}`, message: () => "Regardless of competition, it's optimal to have exactly one h1 element which includes exact keyword.", verdict: (v) => (v === 1 ? 'ok' : 'warn'), fixedMin: 1, fixedMax: 1 },
-   { key: 'h2_h6_count', section: 'Page structure', label: (v) => `${v} h2 to h6 elements`, message: (v) => `Your web page has ${v} elements in headings.` },
-   { key: 'p_count', section: 'Page structure', label: (v) => `${v} paragraph elements`, message: (v) => `Your web page has ${v} elements in p.`, verdict: (v) => (v >= 25 ? 'ok' : 'warn') },
-   { key: 'img_count', section: 'Page structure', label: (v) => `${v} image ${singular(v, 'element')}`, message: (v) => `Your web page has ${v} images in img.`, fixedMin: 3, fixedMax: 6 },
-   { key: 'strong_b_count', section: 'Page structure', label: (v) => `${v} strong, b elements`, message: (v) => `Your web page has ${v} elements in strong_and_b.` },
+   { key: 'h2_h6_count', section: 'Page structure', label: (v) => `${v} h2 to h6 elements`, message: (v) => `Your web page has ${v} elements in headings.`, unitNoun: 'elements' },
+   { key: 'p_count', section: 'Page structure', label: (v) => `${v} paragraph elements`, message: (v) => `Your web page has ${v} elements in p.`, verdict: (v) => (v >= 25 ? 'ok' : 'warn'), unitNoun: 'elements', rangeStyle: 'atLeast' },
+   { key: 'img_count', section: 'Page structure', label: (v) => `${v} image ${singular(v, 'element')}`, message: (v) => `Your web page has ${v} images in img.`, fixedMin: 3, fixedMax: 6, unitNoun: 'images' },
+   { key: 'strong_b_count', section: 'Page structure', label: (v) => `${v} strong, b elements`, message: (v) => `Your web page has ${v} elements in strong_and_b.`, unitNoun: 'elements' },
 
    // ── Title and meta description length (fixed optimal ranges) ──
-   { key: 'title_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in title`, message: (v) => `Your web page has ${v} characters in title.`, fixedMin: 55, fixedMax: 70 },
-   { key: 'meta_desc_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in meta description`, message: (v) => `Your meta description has ${v} characters.`, fixedMin: 130, fixedMax: 150 },
+   { key: 'title_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in title`, message: (v) => `Your web page has ${v} characters in title.`, fixedMin: 55, fixedMax: 70, unitNoun: 'characters' },
+   { key: 'meta_desc_chars', section: 'Title and meta description length', unit: 'chars', label: (v) => `${v} characters in meta description`, message: (v) => `Your meta description has ${v} characters.`, fixedMin: 130, fixedMax: 150, unitNoun: 'characters', rangeStyle: 'optimal' },
 
    // ── Timing ──
    { key: 'ttfb', section: 'Time to first byte', unit: 'ms', label: (v) => `${v}ms to first byte`, message: () => 'Your web page TTFB is within the optimal range.', verdict: () => 'ok' },
@@ -216,6 +260,26 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
    return { values, internalLinks, contentScore, bodyText };
 }
 
+const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100));
+
+// Full SurferSEO-style description, built where the range is known. Info factors show no
+// description; timing/h1 factors keep their self-contained sentence; everything else gets
+// the exact "…, while the suggested range is X - Y <noun>." suffix (real data only — the
+// phase-1 placeholder range is intentionally not stated as fact).
+function buildDescription(def: FactorDef, you: number, min: number, max: number, placeholder: boolean, verdict: 'ok' | 'warn' | 'info'): string {
+   const base = def.message(you);
+   if (verdict === 'info') return '';
+   if (placeholder || !def.unitNoun) return base;
+   const trimmed = base.replace(/\.\s*$/, '');
+   const noun = def.unitNoun;
+   switch (def.rangeStyle) {
+      case 'single': return `${trimmed}, while the suggested is ${fmtNum(min)} ${noun}.`;
+      case 'atLeast': return `${trimmed}, while the suggested range is at least ${fmtNum(min)} ${noun}.`;
+      case 'optimal': return `${trimmed}, while the optimal range is ${fmtNum(min)} - ${fmtNum(max)} ${noun}.`;
+      default: return `${trimmed}, while the suggested range is ${fmtNum(min)} - ${fmtNum(max)} ${noun}.`;
+   }
+}
+
 function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): AuditFactor {
    const fixed = def.fixedMin !== undefined;
    let competitors: AuditCompetitor[];
@@ -223,7 +287,7 @@ function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): Audi
    let suggestedMax: number;
    let placeholder: boolean;
    if (real && real.competitors.length) {
-      competitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.values[def.key] ?? 0 }));
+      competitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.values[def.key] ?? 0, url: c.url }));
       // Fixed-target factors (title/meta/h1/img/exact-kw-title…) keep their optimal range
       // regardless of competition; everything else derives the range from the peer spread.
       ({ suggestedMin, suggestedMax } = fixed
@@ -239,34 +303,82 @@ function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): Audi
       placeholder = true;
    }
    const within = you >= suggestedMin && you <= suggestedMax;
+   const verdict = def.verdict ? def.verdict(you) : (within ? 'ok' : 'warn');
    return {
       key: def.key, section: def.section, unit: def.unit,
-      label: def.label(you), message: def.message(you),
+      label: def.label(you), message: buildDescription(def, you, suggestedMin, suggestedMax, placeholder, verdict),
       you, competitors, suggestedMin, suggestedMax,
-      verdict: def.verdict ? def.verdict(you) : (within ? 'ok' : 'warn'),
+      verdict,
       placeholder,
    };
 }
 
-function mapTerms(terms: { term: string; target_count: number }[], bodyText: string): AuditTerm[] {
-   return terms.map((t) => {
-      const you = countOccurrences(bodyText, t.term);
-      const target = Math.max(1, t.target_count);
-      const action: AuditTerm['action'] = you < target ? 'add' : (you > target * 3 ? 'remove' : 'ok');
-      return { term: t.term, forms: 1, you, suggested: String(target), relevance: 100, searchVolume: null, action, nlp: true };
+// SurferSEO tab bucket: all-numeric → number, multi-word → phrase, single token → word.
+function termType(term: string): AuditTerm['type'] {
+   if (/^[\s\d.,%-]+$/.test(term)) return 'number';
+   return /\s/.test(term.trim()) ? 'phrase' : 'word';
+}
+
+// One highlighted example: the window of text around a match, snapped to word
+// boundaries and ellipsis-padded (SurferSEO shows "… text <mark>term</mark> text …").
+function exampleWindow(text: string, s: number, e: number): string {
+   const WIN = 90;
+   let start = Math.max(0, s - WIN);
+   let end = Math.min(text.length, e + WIN);
+   while (start > 0 && !/\s/.test(text[start - 1])) start -= 1;
+   while (end < text.length && !/\s/.test(text[end])) end += 1;
+   return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
+}
+
+// Map sidecar NLP terms to the SurferSEO "Terms to Use" rows: real per-page count (You),
+// distinct inflected forms, example sentences, a competitor-derived suggested range, and an
+// Add/Remove/OK action. `findTermRangesBatch` gives inflection-tolerant match ranges in one
+// pass, so You / forms / examples all stay consistent with the editor's term highlighting.
+function mapTerms(terms: RichTerm[], bodyText: string): AuditTerm[] {
+   const batch = findTermRangesBatch(bodyText, terms.map((t) => t.term));
+   return terms.map((t, idx) => {
+      const rs = batch[idx]?.ranges ?? [];
+      const you = rs.length;
+      const variants = Array.from(new Set(rs.map(([s, e]) => bodyText.slice(s, e).trim()).filter(Boolean)));
+      const examples = rs.slice(0, 3).map(([s, e]) => exampleWindow(bodyText, s, e));
+      const sMin = Math.max(1, t.suggested_min ?? Math.max(1, t.target_count));
+      const sMax = Math.max(sMin, t.suggested_max ?? t.target_count);
+      const suggested = sMin === sMax ? String(sMin) : `${sMin}-${sMax}`;
+      const action: AuditTerm['action'] = you < sMin ? 'add' : (you > sMax ? 'remove' : 'ok');
+      const relevance = Math.round(Math.min(1, Math.max(0, t.relevance ?? 1)) * 100);
+      return {
+         term: t.term, forms: variants.length, variants, examples,
+         you, suggested, relevance, searchVolume: t.searchVolume ?? null,
+         action, nlp: true, type: termType(t.term),
+      };
    });
 }
 
-/** Compose the AuditResult. Pass `real` (phase 2) for real competitor bars/ranges/terms. */
-export function buildAuditResult(html: string, url: string, keyword: string, timing: FetchTiming, real?: RealAuditData): AuditResult {
+/** Compose the AuditResult. Pass `real` (phase 2) for real competitor bars/ranges/terms and
+ *  `internalLinksOverride` for crawled internal-link opportunities (else the audited page's
+ *  own same-site links are used as a fallback). */
+export function buildAuditResult(html: string, url: string, keyword: string, timing: FetchTiming, real?: RealAuditData, internalLinksOverride?: AuditInternalLink[]): AuditResult {
    const page = extractFactorValues(html, url, keyword, timing);
    const factors = FACTOR_DEFS.map((def) => assembleFactor(def, page.values[def.key], real));
+
+   // "You" content score: calibrated (coverage-dominated) when real competitor data +
+   // suggested terms are available, so it's comparable to the calibrated competitor bars;
+   // otherwise the phase-1 estimate from extractFactorValues.
+   let youScore = page.contentScore;
+   if (real && real.terms.length && real.contentTargets) {
+      const { avgWords, avgHeadings, avgPs } = real.contentTargets;
+      const cov = termCoverageFraction(page.bodyText, real.terms);
+      const wordFrac = avgWords > 0 ? page.values.word_count_body / avgWords : 0;
+      const structFrac = ((avgHeadings > 0 ? Math.min(1, page.values.h2_h6_count / avgHeadings) : 0)
+         + (avgPs > 0 ? Math.min(1, page.values.p_count / avgPs) : 0)) / 2;
+      youScore = auditContentScore(cov, wordFrac, structFrac);
+   }
 
    let csCompetitors: AuditCompetitor[];
    let csMin: number;
    let csMax: number;
    if (real && real.competitors.length) {
-      csCompetitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.contentScore }));
+      csCompetitors = real.competitors.map((c) => ({ label: c.domain, rank: c.rank, value: c.contentScore, url: c.url }));
       ({ suggestedMin: csMin, suggestedMax: csMax } = rangeFrom(csCompetitors.map((c) => c.value)));
    } else {
       const s = stub(page.contentScore, 'content_score');
@@ -276,12 +388,12 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
    return {
       url,
       keyword,
-      contentScore: page.contentScore,
+      contentScore: youScore,
       contentScoreCompetitors: csCompetitors,
       contentScoreSuggestedMin: csMin,
       contentScoreSuggestedMax: csMax,
       factors,
-      internalLinks: page.internalLinks,
+      internalLinks: internalLinksOverride !== undefined ? internalLinksOverride : page.internalLinks,
       terms: real ? mapTerms(real.terms, page.bodyText) : [],
       generatedAt: new Date().toISOString(),
    };
@@ -322,11 +434,16 @@ export async function computeAudit(
    url: string,
    keyword: string,
    enrich?: (url: string, keyword: string, youHtml: string) => Promise<RealAuditData | null>,
+   findLinks?: (url: string, keyword: string) => Promise<AuditInternalLink[] | null>,
 ): Promise<AuditResult> {
    const { html, timing } = await fetchPage(url);
    let real: RealAuditData | null = null;
    if (enrich) {
       try { real = await enrich(url, keyword, html); } catch { real = null; }
    }
-   return buildAuditResult(html, url, keyword, timing, real ?? undefined);
+   let links: AuditInternalLink[] | null = null;
+   if (findLinks) {
+      try { links = await findLinks(url, keyword); } catch { links = null; }
+   }
+   return buildAuditResult(html, url, keyword, timing, real ?? undefined, links ?? undefined);
 }

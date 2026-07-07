@@ -342,11 +342,17 @@ def _keyword_seed_terms(keyword: str) -> list[dict]:
     kw = (keyword or "").strip()
     if not kw:
         return []
-    terms = [{"term": kw.lower(), "target_count": 4}]
+    def _seed(term: str, target: int, type_: str) -> dict:
+        return {
+            "term": term, "target_count": target, "type": type_,
+            "relevance": 0.9 if type_ == "core" else 0.6, "doc_freq": 1,
+            "suggested_min": 1, "suggested_max": target,
+        }
+    terms = [_seed(kw.lower(), 4, "core")]
     for token in kw.lower().split():
         token = re.sub(r"[^\wąćęłńóśźż]+", "", token)
         if len(token) >= 4 and token not in _SEED_STOPWORDS and token != kw.lower():
-            terms.append({"term": token, "target_count": 2})
+            terms.append(_seed(token, 2, "supporting"))
     # dedupe, cap
     seen: set[str] = set()
     out: list[dict] = []

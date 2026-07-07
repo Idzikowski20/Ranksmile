@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../core';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
 // Auto-Optimize review bar — fixed bottom toolbar, copied 1:1 from the Surfer reference markup
@@ -42,8 +43,6 @@ const ChevronDown = () => (
    </svg>
 );
 
-const NAV_BASE = 'gap-sm relative inline-flex items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] text-md rounded-md bg-gray-10 text-gray-base p-xs';
-
 const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    state,
    processed,
@@ -58,7 +57,6 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
 }) => {
    const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
    const optimizing = state === 'optimizing';
-   const navState = optimizing ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-20 active:bg-gray-40';
 
    return (
       <div
@@ -95,27 +93,35 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
             </div>
 
             <div className="gap-xs flex">
-               <button type="button" aria-label="Previous suggestion" disabled={optimizing}
-                  onClick={optimizing ? undefined : onPrev} className={`${NAV_BASE} ${navState}`}>
-                  <ChevronUp />
-               </button>
-               <button type="button" aria-label="Next suggestion" disabled={optimizing}
-                  onClick={optimizing ? undefined : onNext} className={`${NAV_BASE} ${navState}`}>
-                  <ChevronDown />
-               </button>
+               <Button
+                  type="button"
+                  variant="transparent"
+                  size="sm"
+                  aria-label="Previous suggestion"
+                  disabled={optimizing}
+                  onClick={optimizing ? undefined : onPrev}
+                  icon={<ChevronUp />}
+               />
+               <Button
+                  type="button"
+                  variant="transparent"
+                  size="sm"
+                  aria-label="Next suggestion"
+                  disabled={optimizing}
+                  onClick={optimizing ? undefined : onNext}
+                  icon={<ChevronDown />}
+               />
             </div>
          </div>
 
          <div className="gap-sm flex items-center">
-            <button type="button" onClick={onCancel}
-               className="gap-sm relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] text-md px-base py-xs rounded-md bg-gray-base text-white-base hover:bg-purple-base active:bg-purple-100">
-               <span>Cancel</span>
-            </button>
+            <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
+               Cancel
+            </Button>
             {!optimizing && (
-               <button type="button" onClick={onSave} disabled={saving}
-                  className="gap-sm relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] text-md px-base py-xs rounded-md bg-gray-10 text-gray-base hover:bg-gray-20 active:bg-gray-40">
-                  <span>{saving ? 'Saving…' : 'Save'}</span>
-               </button>
+               <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving} busy={saving}>
+                  {saving ? 'Saving…' : 'Save'}
+               </Button>
             )}
          </div>
       </div>

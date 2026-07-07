@@ -6,6 +6,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { SentryPanel, SentryPanelHeader } from '../../../components/sentry-pages';
+import { Button, Modal, ModalBody, ModalFooter, Input, Select, DateRangePicker, Skeleton, CompactSelect, PageFilterBar, ToolRibbon } from '../../../components/core';
 import { useFetchDomains } from '../../../services/domains';
 import countries from '../../../utils/countries';
 
@@ -13,7 +15,6 @@ type MetricKey = 'clicks' | 'impressions' | 'ctr' | 'position';
 type SortMetric = 'clicks' | 'impressions' | 'ctr' | 'position';
 type SortOrder = 'highest' | 'lowest';
 type Delta = 'up' | 'down' | 'neutral';
-type FilterId = 'date' | 'location' | 'device' | 'page' | 'keyword';
 type DatePreset = '30' | '60' | '90' | '480' | 'custom';
 type DeviceFilter = 'all' | 'desktop' | 'mobile' | 'tablet';
 type PageFilter = 'all' | 'optimized' | 'tracked' | 'custom';
@@ -121,7 +122,6 @@ const MONTH_LABELS = [
   'November',
   'December',
 ];
-const DROPDOWN_SHADOW = '0px 18px 40px 0px rgba(17, 24, 39, 0.14), 0px 8px 18px 0px rgba(17, 24, 39, 0.09), 0px 2px 6px 0px rgba(17, 24, 39, 0.06)';
 
 import { slugToDomain } from '../../../utils/slugToDomain';
 
@@ -150,7 +150,7 @@ const ROW_COLUMNS = [60, 50, 40, 40] as const;
 
 function TableSkeleton({ headerLabelWidth }: { headerLabelWidth: number }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 24, border: '1px solid #E4E4E7', borderRadius: 12, background: '#FFFFFF', padding: 24 }}>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: headerLabelWidth, height: 20, borderRadius: 6, background: '#E0E0E6' }} />
         {ROW_COLUMNS.map((w, i) => (
@@ -345,14 +345,6 @@ function ChevronRight() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
-      <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 function InfoIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
@@ -490,52 +482,6 @@ function XIcon() {
   );
 }
 
-function FilterButton({
-  label,
-  icon,
-  active = false,
-  open = false,
-  onClick,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  active?: boolean;
-  open?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="perf-filter-button"
-      style={{
-        display: 'inline-flex',
-        minWidth: 55,
-        alignItems: 'center',
-        gap: 8,
-        borderRadius: 9999,
-        border: active ? '1px solid #09090B' : '1px solid #D4D4D8',
-        boxShadow: active ? 'inset 0 0 0 1px #09090B' : 'none',
-        background: '#FFFFFF',
-        padding: '8px 16px',
-        fontSize: 14,
-        fontWeight: 600,
-        color: active ? '#09090B' : '#18181B',
-        fontFamily: 'var(--font-family-primary)',
-        cursor: 'pointer',
-        transition: 'border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease',
-      }}
-      aria-expanded={open}
-    >
-      <span style={{ display: 'inline-flex', alignItems: 'center', color: 'inherit' }}>{icon}</span>
-      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-      <span style={{ display: 'inline-flex', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}>
-        <ChevronDown size={18} />
-      </span>
-    </button>
-  );
-}
-
 function TableSortButton({
   value,
   onClick,
@@ -544,27 +490,15 @@ function TableSortButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="secondary"
+      size="sm"
       onClick={onClick}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        borderRadius: 9999,
-        border: '1px solid #D4D4D8',
-        background: 'transparent',
-        padding: '8px 16px',
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#18181B',
-        fontFamily: 'var(--font-family-primary)',
-        cursor: 'pointer',
-      }}
+      style={{ borderRadius: 9999, border: '1px solid #D4D4D8', background: 'transparent', color: '#18181B' }}
     >
       <span style={{ textTransform: 'lowercase' }}>{value}</span>
       <ChevronDown size={18} />
-    </button>
+    </Button>
   );
 }
 
@@ -590,9 +524,9 @@ function MetricCard({
   return (
     <div
       style={{
-        border: '1px solid #F4F4F5',
-        borderRadius: 12,
-        padding: 16,
+      border: '1px solid #DAD9DE',
+      borderRadius: 6,
+      padding: 16,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -625,13 +559,13 @@ function MetricCard({
           </span>
         </div>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="zero"
         onClick={onToggle}
-        style={{ display: 'inline-flex', padding: 8, borderRadius: 8, background: accentBg, color: accentColor, border: 'none', cursor: 'pointer', flexShrink: 0, opacity: muted ? 0.5 : 1, transition: 'opacity 150ms ease' }}
-      >
-        <EyeIcon muted={muted} />
-      </button>
+        style={{ padding: 8, borderRadius: 8, background: accentBg, color: accentColor, border: 'none', flexShrink: 0, opacity: muted ? 0.5 : 1, transition: 'opacity 150ms ease' }}
+        icon={<EyeIcon muted={muted} />}
+      />
     </div>
   );
 }
@@ -646,7 +580,7 @@ function SummaryCard({
   direction?: Delta;
 }) {
   return (
-    <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 10, borderRadius: 12, background: '#F8F8F9', padding: 16 }}>
+    <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 8, borderRadius: 6, background: '#F8F8F9', padding: 16, border: '1px solid #DAD9DE' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
         <span style={{ color: '#52525C', display: 'inline-flex' }}><InfoIcon /></span>
@@ -995,12 +929,8 @@ const PerformancePage: NextPage = () => {
   const { domain: slug } = router.query as { domain: string };
   const domain = slug ? slugToDomain(slug) : '';
 
-  const [openFilter, setOpenFilter] = useState<FilterId | null>(null);
   const [datePreset, setDatePreset] = useState<DatePreset>('30');
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeValue>(() => getPresetRange('30'));
-  const [calendarMonth, setCalendarMonth] = useState<Date>(() => startOfMonth(parseDateKey(getPresetRange('30').start)));
-  const [pendingCalendarStart, setPendingCalendarStart] = useState<string | null>(null);
-  const [locationSearch, setLocationSearch] = useState('');
   const [locationCode, setLocationCode] = useState('ALL');
   const [deviceFilter, setDeviceFilter] = useState<DeviceFilter>('all');
   const [pageFilter, setPageFilter] = useState<PageFilter>('all');
@@ -1029,40 +959,6 @@ const PerformancePage: NextPage = () => {
     setBrandTerms(defaultBrandTerms);
     setBrandKeywordDraft(defaultBrandTerms.join(', '));
   }, [defaultBrandTerms]);
-
-  const filterRefs = {
-    date: useRef<HTMLDivElement | null>(null),
-    location: useRef<HTMLDivElement | null>(null),
-    device: useRef<HTMLDivElement | null>(null),
-    page: useRef<HTMLDivElement | null>(null),
-    keyword: useRef<HTMLDivElement | null>(null),
-  };
-
-  useEffect(() => {
-    if (!openFilter) return undefined;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const activeRef = filterRefs[openFilter].current;
-      if (activeRef && !activeRef.contains(target)) {
-        setOpenFilter(null);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpenFilter(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [openFilter]);
 
   const { data: domainsData } = useFetchDomains(router, true);
   const domains = domainsData?.domains || [];
@@ -1159,11 +1055,31 @@ const PerformancePage: NextPage = () => {
     return [{ code: 'ALL', label: 'All locations' }, ...options];
   }, [baseScData]);
 
-  const filteredLocationOptions = useMemo(() => {
-    const query = locationSearch.trim().toLowerCase();
-    if (!query) return availableLocations;
-    return availableLocations.filter((item) => item.label.toLowerCase().includes(query));
-  }, [availableLocations, locationSearch]);
+  const locationSelectOptions = useMemo(
+    () => availableLocations.map((item) => ({
+      value: item.code,
+      label: item.label,
+      textValue: item.label,
+      leadingItems: item.code !== 'ALL' ? (
+        <img src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${item.code.toLowerCase()}.svg`} alt="" style={{ display: 'block', width: 16, height: 12, boxShadow: 'rgba(0, 0, 0, 0.5) 0px 0px 1px 0px' }} />
+      ) : undefined,
+    })),
+    [availableLocations],
+  );
+
+  const deviceSelectOptions = useMemo(
+    () => DEVICE_OPTIONS.map((item) => ({
+      value: item.value,
+      label: item.label,
+      leadingItems: item.value === 'desktop' ? <DesktopIcon /> : item.value === 'mobile' ? <MobileIcon /> : item.value === 'tablet' ? <TabletIcon /> : <DeviceIcon />,
+    })),
+    [],
+  );
+
+  const pageSelectOptions = useMemo(
+    () => PAGE_OPTIONS.map((item) => ({ value: item.value, label: item.label })),
+    [],
+  );
 
   const trackedPaths = useMemo(
     () => new Set((auditData?.items || []).map((item) => normalizePath(item.url))),
@@ -1451,56 +1367,17 @@ const PerformancePage: NextPage = () => {
     return rows.slice(0, 5);
   }, [computed.keywordRows, keywordSortMetric, keywordSortOrder]);
 
-  const dateMonthOne = calendarMonth;
-  const dateMonthTwo = addMonths(calendarMonth, 1);
-  const monthOneCalendar = getCalendarCells(dateMonthOne, selectedDateRange);
-  const monthTwoCalendar = getCalendarCells(dateMonthTwo, selectedDateRange);
-  const yearOptions = Array.from(new Set([
-    getToday().getFullYear() - 1,
-    getToday().getFullYear(),
-  ])).sort((a, b) => a - b);
+  const handleTodayClick = () => {
+    const today = getToday();
+    const len = getRangeLength(selectedDateRange);
+    setSelectedDateRange({ start: formatDateKey(addDays(today, -(len - 1))), end: formatDateKey(today) });
+    setDatePreset('custom');
+  };
 
   const applyPreset = (preset: DatePreset) => {
     const range = getPresetRange(preset, selectedDateRange);
     setDatePreset(preset);
     setSelectedDateRange(range);
-    setPendingCalendarStart(null);
-    setCalendarMonth(startOfMonth(parseDateKey(range.start)));
-    setOpenFilter(null);
-  };
-
-  const handleCustomDateClick = (value: string) => {
-    const clickedDate = parseDateKey(value);
-    if (clickedDate.getTime() > getToday().getTime()) return;
-
-    setDatePreset('custom');
-
-    if (!pendingCalendarStart) {
-      setPendingCalendarStart(value);
-      setSelectedDateRange({ start: value, end: value });
-      return;
-    }
-
-    const start = pendingCalendarStart <= value ? pendingCalendarStart : value;
-    const end = pendingCalendarStart <= value ? value : pendingCalendarStart;
-    setSelectedDateRange({ start, end });
-    setPendingCalendarStart(null);
-    setOpenFilter(null);
-  };
-
-  const handleToday = () => {
-    const today = getToday();
-    if (datePreset === 'custom') {
-      const length = getRangeLength(selectedDateRange);
-      setSelectedDateRange({
-        start: formatDateKey(addDays(today, -(length - 1))),
-        end: formatDateKey(today),
-      });
-      setCalendarMonth(startOfMonth(addDays(today, -(length - 1))));
-      return;
-    }
-
-    applyPreset(datePreset);
   };
 
   const openKeywordModal = (mode: 'custom' | 'brand') => {
@@ -1511,7 +1388,6 @@ const PerformancePage: NextPage = () => {
     } else {
       setBrandKeywordDraft(brandTerms.join(', '));
     }
-    setOpenFilter(null);
   };
 
   const closeKeywordModal = () => {
@@ -1609,25 +1485,9 @@ const PerformancePage: NextPage = () => {
   }, [trafficGoal, currentClicks]);
 
   const feedbackAction = (
-    <button
-      type="button"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        padding: 0,
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#3F3F47',
-        fontFamily: 'var(--font-family-primary)',
-      }}
-    >
-      <FeedbackIcon />
+    <Button variant="link" size="sm" icon={<FeedbackIcon />} style={{ padding: 0, color: '#3F3F47' }}>
       Leave feedback
-    </button>
+    </Button>
   );
 
   return (
@@ -1638,10 +1498,9 @@ const PerformancePage: NextPage = () => {
 
       <DomainSubLayout domain={domain} slug={slug || ''} section="Performance" heading="Performance" actions={feedbackAction} contentMaxWidth="unset">
         {isLoading && !scData ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 16, animation: 'skeletonPulse 1.5s ease-in-out infinite' }}>
-            {/* Filter bar skeletons */}
-            <section style={{ display: 'flex', flexDirection: 'column', gap: 24, borderRadius: 12, background: '#F8F8F9', boxShadow: 'inset 0 0 0 1px #E4E4E7' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid #E4E4E7', borderRadius: 12, background: '#FFFFFF', padding: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, animation: 'skeletonPulse 1.5s ease-in-out infinite' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 6, background: '#F8F8F9', boxShadow: 'inset 0 0 0 1px #DAD9DE' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 12 }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                   {[120, 140, 100, 90, 130].map((w, i) => (
                     <div key={i} style={{ height: 36, width: w, borderRadius: 9999, background: '#E8E8ED' }} />
@@ -1652,7 +1511,7 @@ const PerformancePage: NextPage = () => {
               {/* KPI cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, background: '#FFFFFF', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div key={i} style={{ border: '1px solid #DAD9DE', borderRadius: 6, padding: 16, background: '#FFFFFF', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ width: 60, height: 14, borderRadius: 6, background: '#E8E8ED' }} />
                     <div style={{ width: 80, height: 24, borderRadius: 6, background: '#E0E0E6' }} />
                     <div style={{ width: 100, height: 12, borderRadius: 6, background: '#E8E8ED' }} />
@@ -1661,10 +1520,10 @@ const PerformancePage: NextPage = () => {
               </div>
 
               {/* Chart skeleton */}
-              <div style={{ border: '1px solid #E4E4E7', borderRadius: 12, background: '#FFFFFF', padding: 24 }}>
-                <div style={{ height: 220, borderRadius: 10, background: '#E8E8ED' }} />
+              <div style={{ border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 16 }}>
+                <div style={{ height: 220, borderRadius: 6, background: '#E8E8ED' }} />
               </div>
-            </section>
+            </div>
 
             {/* Table 1: Pages skeleton */}
             <TableSkeleton headerLabelWidth={80} />
@@ -1677,609 +1536,118 @@ const PerformancePage: NextPage = () => {
             {scData.error}
           </div>
         ) : (
-          <div style={{ position: 'relative', display: 'flex', flex: 1, overflow: 'auto', borderRadius: 12, background: '#FFFFFF' }}>
-            <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 32, paddingBottom: 16 }}>
-              <section
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 24,
-                  borderRadius: 12,
-                  background: '#F8F8F9',
-                  boxShadow: 'inset 0 0 0 1px #E4E4E7',
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid #E4E4E7', borderRadius: 12, background: '#FFFFFF', padding: 16 }}>
-                  <div className="performance-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                    <div ref={filterRefs.date} style={{ position: 'relative' }}>
-                      <FilterButton
-                        active
-                        open={openFilter === 'date'}
-                        label={getRangeLabel(datePreset, selectedDateRange)}
-                        icon={<CalendarIcon />}
-                        onClick={() => setOpenFilter((current) => (current === 'date' ? null : 'date'))}
-                      />
-                      {openFilter === 'date' ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 'calc(100% + 12px)',
-                            width: 'min(580px, calc(100vw - 2rem))',
-                            zIndex: 150,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 16,
-                            borderRadius: 16,
-                            background: '#FFFFFF',
-                            padding: 20,
-                            boxShadow: DROPDOWN_SHADOW,
-                            animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', display: 'flex', flex: 1, overflow: 'auto', background: '#F8F8F9' }}>
+            <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 16, padding: 16 }}>
+              <SentryPanel noPadding>
+                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <PageFilterBar condensed>
+                <div className="performance-filters" style={{ display: 'contents' }}>
+                    <CompactSelect
+                      prefix={<CalendarIcon />}
+                      size="sm"
+                      options={[]}
+                      hideOptions
+                      triggerLabel={getRangeLabel(datePreset, selectedDateRange)}
+                      menuTitle="Filter time range"
+                      menuWidth="min(580px, calc(100vw - 2rem))"
+                      menuBody={({ close }) => (
+                        <div style={{ padding: '0 0 8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', flexWrap: 'wrap', gap: 10 }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                              {DATE_PRESETS.map((preset) => {
-                                const selected = datePreset === preset.value;
-                                return (
-                                  <button
-                                    key={preset.value}
-                                    type="button"
-                                    onClick={() => applyPreset(preset.value)}
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      border: 'none',
-                                      borderRadius: 9999,
-                                      padding: '8px 16px',
-                                      background: selected ? '#09090B' : '#F4F4F5',
-                                      color: selected ? '#FFFFFF' : '#3F3F47',
-                                      fontSize: 14,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {preset.label}
-                                  </button>
-                                );
-                              })}
+                              {DATE_PRESETS.map((preset) => (
+                                <Button key={preset.value} variant={datePreset === preset.value ? 'primary' : 'secondary'} size="xs"
+                                  onClick={() => { applyPreset(preset.value); close(); }}>
+                                  {preset.label}
+                                </Button>
+                              ))}
                             </div>
-                            <button
-                              type="button"
-                              onClick={handleToday}
-                              style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 14, color: '#3F3F47', cursor: 'pointer' }}
-                            >
-                              Today
-                            </button>
+                            <Button variant="link" size="xs" onClick={() => { handleTodayClick(); close(); }}>Today</Button>
                           </div>
-
-                          <div
-                            className="performance-calendar-months"
-                            style={{
-                              position: 'relative',
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 16,
-                              flexWrap: 'nowrap',
+                          <DateRangePicker
+                            startDate={parseDateKey(selectedDateRange.start)}
+                            endDate={parseDateKey(selectedDateRange.end)}
+                            maxDate={getToday()}
+                            onChange={({ start, end }) => {
+                              setSelectedDateRange({ start: formatDateKey(start), end: formatDateKey(end) });
+                              setDatePreset('custom');
+                              close();
                             }}
-                          >
-                            <nav style={{ position: 'absolute', right: 0, top: 0, display: 'flex', gap: 8 }}>
-                              <button
-                                type="button"
-                                onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181B' }}
-                              >
-                                <ChevronLeft />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181B' }}
-                              >
-                                <ChevronRight />
-                              </button>
-                            </nav>
-
-                            {[dateMonthOne, dateMonthTwo].map((monthDate, monthIndex) => {
-                              const monthData = monthIndex === 0 ? monthOneCalendar : monthTwoCalendar;
-                              return (
-                                <div
-                                  key={monthDate.toISOString()}
-                                  className="performance-calendar-month"
-                                  style={{
-                                    display: 'flex',
-                                    minWidth: 0,
-                                    flex: '1 1 0',
-                                    flexDirection: 'column',
-                                    gap: 14,
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', height: 44, alignItems: 'center' }}>
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
-                                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 18, fontWeight: 700, color: '#18181B' }}>
-                                        <select
-                                          value={monthDate.getMonth()}
-                                          onChange={(event) => {
-                                            const nextMonth = Number(event.target.value);
-                                            const nextDate = new Date(monthDate.getFullYear(), nextMonth, 1, 12);
-                                            if (monthIndex === 0) setCalendarMonth(nextDate);
-                                            else setCalendarMonth(addMonths(nextDate, -1));
-                                          }}
-                                          style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
-                                        >
-                                          {MONTH_LABELS.map((label, index) => (
-                                            <option key={label} value={index}>
-                                              {label}
-                                            </option>
-                                          ))}
-                                        </select>
-                                        <span>{MONTH_LABELS[monthDate.getMonth()]}</span>
-                                        <ChevronDown size={18} />
-                                      </label>
-                                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 18, fontWeight: 700, color: '#18181B' }}>
-                                        <select
-                                          value={monthDate.getFullYear()}
-                                          onChange={(event) => {
-                                            const nextYear = Number(event.target.value);
-                                            const nextDate = new Date(nextYear, monthDate.getMonth(), 1, 12);
-                                            if (monthIndex === 0) setCalendarMonth(nextDate);
-                                            else setCalendarMonth(addMonths(nextDate, -1));
-                                          }}
-                                          style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
-                                        >
-                                          {yearOptions.map((year) => (
-                                            <option key={year} value={year}>
-                                              {year}
-                                            </option>
-                                          ))}
-                                        </select>
-                                        <span>{monthDate.getFullYear()}</span>
-                                        <ChevronDown size={18} />
-                                      </label>
-                                    </div>
-                                  </div>
-
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                    <thead>
-                                      <tr>
-                                        {WEEKDAY_LABELS.map((label) => (
-                                          <th key={label} style={{ width: '14.285%', paddingBottom: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: '#52525C' }}>
-                                            {label}
-                                          </th>
-                                        ))}
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {monthData.cells.map((week, weekIndex) => (
-                                        <tr key={`${monthDate.toISOString()}-${weekIndex}`}>
-                                          {week.map((cell) => {
-                                            const selected = monthData.isSelected(cell.value);
-                                            const isStart = monthData.isRangeStart(cell.value);
-                                            const isEnd = monthData.isRangeEnd(cell.value);
-                                            const activeRange = selected && !isStart && !isEnd;
-                                            return (
-                                              <td
-                                                key={cell.value}
-                                                style={{
-                                                  width: '14.285%',
-                                                  height: 38,
-                                                  textAlign: 'center',
-                                                  background: activeRange ? '#E8E8ED' : 'transparent',
-                                                  opacity: cell.outside ? 0.65 : 1,
-                                                }}
-                                              >
-                                                <button
-                                                  type="button"
-                                                  disabled={cell.disabled}
-                                                  onClick={() => handleCustomDateClick(cell.value)}
-                                                  style={{
-                                                    display: 'inline-flex',
-                                                    width: 36,
-                                                    height: 36,
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    border: 'none',
-                                                    borderRadius: isStart || isEnd ? '9999px' : 0,
-                                                    background: isStart || isEnd ? '#18181B' : activeRange ? 'transparent' : 'transparent',
-                                                    color: isStart || isEnd ? '#FFFFFF' : cell.today ? '#3F3F47' : '#18181B',
-                                                    cursor: cell.disabled ? 'not-allowed' : 'pointer',
-                                                    fontSize: 14,
-                                                    fontWeight: 700,
-                                                    opacity: cell.disabled ? 0.3 : 1,
-                                                    transition: 'all 150ms ease',
-                                                  }}
-                                                >
-                                                  {cell.label}
-                                                </button>
-                                              </td>
-                                            );
-                                          })}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              );
-                            })}
-                          </div>
+                          />
                         </div>
-                      ) : null}
-                    </div>
+                      )}
+                    />
 
-                    <div ref={filterRefs.location} style={{ position: 'relative' }}>
-                      <FilterButton
-                        label={selectedLocationLabel}
-                        icon={<LocationIcon />}
-                        open={openFilter === 'location'}
-                        onClick={() => setOpenFilter((current) => (current === 'location' ? null : 'location'))}
-                      />
-                      {openFilter === 'location' ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 'calc(100% + 12px)',
-                            zIndex: 150,
-                            display: 'flex',
-                            minWidth: 300,
-                            flexDirection: 'column',
-                            borderRadius: 12,
-                            background: '#FFFFFF',
-                            padding: '6px 0',
-                            boxShadow: DROPDOWN_SHADOW,
-                            animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                          }}
-                        >
-                          <div style={{ padding: '4px 8px 6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #D4D4D8', borderRadius: 10, padding: '0 8px', boxShadow: '0px 1px 2px 0px #1a1d280f' }}>
-                              <input
-                                type="text"
-                                value={locationSearch}
-                                onChange={(event) => setLocationSearch(event.target.value)}
-                                placeholder="Search..."
-                                style={{
-                                  width: '100%',
-                                  height: 38,
-                                  border: 'none',
-                                  background: 'transparent',
-                                  outline: 'none',
-                                  fontSize: 14,
-                                  color: '#18181B',
-                                  fontFamily: 'var(--font-family-primary)',
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div style={{ maxHeight: 250, overflowY: 'auto' }}>
-                            {filteredLocationOptions.map((item) => (
-                              <button
-                                key={item.code}
-                                type="button"
-                                onClick={() => {
-                                  setLocationCode(item.code);
-                                  setLocationSearch('');
-                                  setOpenFilter(null);
-                                }}
-                                style={{
-                                  display: 'flex',
-                                  width: 'calc(100% - 12px)',
-                                  alignItems: 'center',
-                                  gap: 10,
-                                  margin: '0 6px',
-                                  border: 'none',
-                                  borderRadius: 8,
-                                  background: locationCode === item.code ? '#F4F4F5' : 'transparent',
-                                  padding: '10px 16px',
-                                  fontSize: 14,
-                                  color: '#2F2F34',
-                                  cursor: 'pointer',
-                                  textAlign: 'left',
-                                }}
-                              >
-                                {item.code !== 'ALL' ? (
-                                  <img
-                                    src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${item.code.toLowerCase()}.svg`}
-                                    alt={`${item.code} flag`}
-                                    style={{ display: 'block', width: 16, height: 12, boxShadow: 'rgba(0, 0, 0, 0.5) 0px 0px 1px 0px' }}
-                                  />
-                                ) : null}
-                                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                                {locationCode === item.code ? (
-                                  <span style={{ marginLeft: 'auto', color: '#52525C', display: 'inline-flex' }}>
-                                    <CheckIcon />
-                                  </span>
-                                ) : null}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<LocationIcon />}
+                      size="sm"
+                      search={{ placeholder: 'Search locations…' }}
+                      options={locationSelectOptions}
+                      value={locationCode}
+                      triggerLabel={selectedLocationLabel}
+                      menuMinWidth={300}
+                      onChange={(opt) => setLocationCode(String(opt.value))}
+                    />
 
-                    <div ref={filterRefs.device} style={{ position: 'relative' }}>
-                      <FilterButton
-                        label={selectedDeviceLabel}
-                        icon={<DeviceIcon />}
-                        open={openFilter === 'device'}
-                        onClick={() => setOpenFilter((current) => (current === 'device' ? null : 'device'))}
-                      />
-                      {openFilter === 'device' ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 'calc(100% + 12px)',
-                            zIndex: 100,
-                            display: 'flex',
-                            minWidth: 240,
-                            flexDirection: 'column',
-                            borderRadius: 12,
-                            background: '#FFFFFF',
-                            padding: 6,
-                            boxShadow: DROPDOWN_SHADOW,
-                            animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                          }}
-                        >
-                          {DEVICE_OPTIONS.map((item) => {
-                            let icon = null;
-                            if (item.value === 'desktop') icon = <DesktopIcon />;
-                            if (item.value === 'mobile') icon = <MobileIcon />;
-                            if (item.value === 'tablet') icon = <TabletIcon />;
+                    <CompactSelect
+                      prefix={<DeviceIcon />}
+                      size="sm"
+                      options={deviceSelectOptions}
+                      value={deviceFilter}
+                      triggerLabel={selectedDeviceLabel}
+                      menuMinWidth={240}
+                      onChange={(opt) => setDeviceFilter(opt.value as DeviceFilter)}
+                    />
 
-                            return (
-                              <button
-                                key={item.value}
-                                type="button"
-                                onClick={() => {
-                                  setDeviceFilter(item.value);
-                                  setOpenFilter(null);
-                                }}
-                                style={{
-                                  display: 'flex',
-                                  minWidth: 220,
-                                  alignItems: 'center',
-                                  gap: 10,
-                                  border: 'none',
-                                  borderRadius: 8,
-                                  background: deviceFilter === item.value ? '#F8F8F9' : 'transparent',
-                                  padding: '10px 12px',
-                                  fontSize: 14,
-                                  fontWeight: 500,
-                                  color: '#2F2F34',
-                                  cursor: 'pointer',
-                                  textAlign: 'left',
-                                }}
-                              >
-                                {icon}
-                                <span>{item.label}</span>
-                                {deviceFilter === item.value ? (
-                                  <span style={{ marginLeft: 'auto', display: 'inline-flex' }}>
-                                    <CheckIcon />
-                                  </span>
-                                ) : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<PageIcon />}
+                      size="sm"
+                      options={pageSelectOptions}
+                      value={pageFilter}
+                      triggerLabel={selectedPageLabel}
+                      menuMinWidth={240}
+                      onChange={(opt) => setPageFilter(opt.value as PageFilter)}
+                    />
 
-                    <div ref={filterRefs.page} style={{ position: 'relative' }}>
-                      <FilterButton
-                        label={selectedPageLabel}
-                        icon={<PageIcon />}
-                        open={openFilter === 'page'}
-                        onClick={() => setOpenFilter((current) => (current === 'page' ? null : 'page'))}
-                      />
-                      {openFilter === 'page' ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 'calc(100% + 12px)',
-                            zIndex: 100,
-                            display: 'flex',
-                            minWidth: 240,
-                            flexDirection: 'column',
-                            borderRadius: 12,
-                            background: '#FFFFFF',
-                            padding: 6,
-                            boxShadow: DROPDOWN_SHADOW,
-                            animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                          }}
-                        >
-                          {PAGE_OPTIONS.map((item) => (
-                            <button
-                              key={item.value}
-                              type="button"
-                              onClick={() => {
-                                setPageFilter(item.value);
-                                setOpenFilter(null);
-                              }}
-                              style={{
-                                display: 'flex',
-                                minWidth: 220,
-                                alignItems: 'center',
-                                gap: 10,
-                                border: 'none',
-                                borderRadius: 8,
-                                background: pageFilter === item.value ? '#F8F8F9' : 'transparent',
-                                padding: '10px 12px',
-                                fontSize: 14,
-                                fontWeight: 500,
-                                color: '#2F2F34',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                              }}
-                            >
-                              <span>{item.label}</span>
-                              {pageFilter === item.value ? (
-                                <span style={{ marginLeft: 'auto', display: 'inline-flex' }}>
-                                  <CheckIcon />
-                                </span>
-                              ) : null}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div ref={filterRefs.keyword} style={{ position: 'relative' }}>
-                      <FilterButton
-                        label={selectedKeywordLabel}
-                        icon={<KeywordIcon />}
-                        open={openFilter === 'keyword'}
-                        onClick={() => setOpenFilter((current) => (current === 'keyword' ? null : 'keyword'))}
-                      />
-                      {openFilter === 'keyword' ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 'calc(100% + 12px)',
-                            zIndex: 100,
-                            display: 'flex',
-                            minWidth: 240,
-                            flexDirection: 'column',
-                            borderRadius: 12,
-                            background: '#FFFFFF',
-                            padding: 6,
-                            boxShadow: DROPDOWN_SHADOW,
-                            animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setKeywordMode('all');
-                              setOpenFilter(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: keywordMode === 'all' ? '#F8F8F9' : 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>All keywords</span>
-                            {keywordMode === 'all' ? (
-                              <span style={{ marginLeft: 'auto', display: 'inline-flex' }}>
-                                <CheckIcon />
-                              </span>
-                            ) : null}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openKeywordModal('custom')}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>Custom Keyword</span>
-                          </button>
-                          <div style={{ margin: '6px 8px', minHeight: 1, background: '#F4F4F5' }} />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setKeywordMode('nonBranded');
-                              setOpenFilter(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: keywordMode === 'nonBranded' ? '#F8F8F9' : 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>Non-Branded Keywords</span>
-                            {keywordMode === 'nonBranded' ? (
-                              <span style={{ marginLeft: 'auto', display: 'inline-flex' }}>
-                                <CheckIcon />
-                              </span>
-                            ) : null}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setKeywordMode('branded');
-                              setOpenFilter(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: keywordMode === 'branded' ? '#F8F8F9' : 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>Branded Keywords</span>
-                            <span style={{ marginLeft: 'auto', color: '#52525C' }}>{brandTerms.length}</span>
-                          </button>
-                          <div style={{ margin: '6px 8px', minHeight: 1, background: '#F4F4F5' }} />
-                          <button
-                            type="button"
-                            onClick={() => openKeywordModal('brand')}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <SettingsIcon />
-                            <span>Manage Branded Keywords</span>
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<KeywordIcon />}
+                      size="sm"
+                      value={keywordMode === 'custom' ? 'all' : keywordMode}
+                      triggerLabel={selectedKeywordLabel}
+                      menuMinWidth={260}
+                      options={[
+                        {
+                          options: [
+                            { value: 'all', label: 'All keywords' },
+                            { value: '__custom_action__', label: 'Custom Keyword' },
+                          ],
+                        },
+                        {
+                          options: [
+                            { value: 'nonBranded', label: 'Non-Branded Keywords' },
+                            { value: 'branded', label: 'Branded Keywords', trailingItems: <span>{brandTerms.length}</span> },
+                          ],
+                        },
+                        {
+                          options: [
+                            { value: '__manage_brand__', label: 'Manage Branded Keywords', leadingItems: <SettingsIcon /> },
+                          ],
+                        },
+                      ]}
+                      onChange={(opt) => {
+                        const v = String(opt.value);
+                        if (v === '__custom_action__') {
+                          openKeywordModal('custom');
+                          return;
+                        }
+                        if (v === '__manage_brand__') {
+                          openKeywordModal('brand');
+                          return;
+                        }
+                        setKeywordMode(v as KeywordMode);
+                      }}
+                    />
                   </div>
+                </PageFilterBar>
 
                   <div className="performance-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                     {computed.statsCards.map((card) => (
@@ -2299,26 +1667,31 @@ const PerformancePage: NextPage = () => {
 
                   <LineChart data={computed.chart} visibleMetrics={visibleMetrics} />
                 </div>
+              </SentryPanel>
 
-                <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, borderRadius: 12, padding: 24, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14 }}>
+                <SentryPanel>
+                <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14 }}>
                   {trafficGoal ? (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
                         <div style={{ fontWeight: 400 }}>Goal</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>Increase clicks by {trafficGoal.percentage}% each {trafficGoal.period === 'MONTH' ? 'month' : 'quarter'}</span>
-                          <button
+                          <Button
                             type="button"
+                            variant="transparent"
+                            size="sm"
                             onClick={() => { setGoalPercentage(trafficGoal.percentage); setGoalPeriod(trafficGoal.period); setGoalModalOpen(true); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14, fontWeight: 600, transition: 'color 150ms ease' }}
-                          >
-                            <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-                              <g fill="currentColor">
-                                <path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" />
-                                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" />
-                              </g>
-                            </svg>
-                          </button>
+                            aria-label="Edit goal"
+                            icon={(
+                              <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
+                                <g fill="currentColor">
+                                  <path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" />
+                                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" />
+                                </g>
+                              </svg>
+                            )}
+                          />
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
@@ -2336,16 +1709,13 @@ const PerformancePage: NextPage = () => {
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => setGoalModalOpen(true)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14, padding: 0 }}
-                      >
+                      <Button variant="link" size="sm" onClick={() => setGoalModalOpen(true)} icon={
                         <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
                           <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
                         </svg>
-                        <span>Set up traffic goal</span>
-                      </button>
+                      } style={{ padding: 0, color: '#3F3F47' }}>
+                        Set up traffic goal
+                      </Button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
                         <span style={{ fontWeight: 400 }}>Current progress</span>
                         <span>-</span>
@@ -2361,7 +1731,7 @@ const PerformancePage: NextPage = () => {
                     </>
                   )}
                 </div>
-              </section>
+                </SentryPanel>
 
               <section className="performance-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 <SummaryCard label="All Keywords" value={String(computed.keywordSummary.allKeywords)} />
@@ -2370,20 +1740,24 @@ const PerformancePage: NextPage = () => {
                 <SummaryCard label="Position 11-20" value={String(computed.keywordSummary.pos11to20)} direction={computed.keywordSummary.pos11to20Direction} />
               </section>
 
-              <section style={{ display: 'flex', flexDirection: 'column', gap: 24, border: '1px solid #E4E4E7', borderRadius: 12, background: '#FFFFFF', padding: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Pages</h3>
-                  <span style={{ fontSize: 16, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>with</span>
-                  <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                  <TableSortButton
-                    value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
-                    onClick={() => {
-                      const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                      const currentIndex = order.indexOf(pageSortMetric);
-                      setPageSortMetric(order[(currentIndex + 1) % order.length]);
-                    }}
-                  />
-                </div>
+              <SentryPanel noPadding>
+                <SentryPanelHeader
+                  title={(
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span>Pages</span>
+                      <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                      <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
+                      <TableSortButton
+                        value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
+                        onClick={() => {
+                          const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
+                          const currentIndex = order.indexOf(pageSortMetric);
+                          setPageSortMetric(order[(currentIndex + 1) % order.length]);
+                        }}
+                      />
+                    </div>
+                  )}
+                />
 
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -2421,22 +1795,26 @@ const PerformancePage: NextPage = () => {
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </SentryPanel>
 
-              <section style={{ display: 'flex', flexDirection: 'column', gap: 24, border: '1px solid #E4E4E7', borderRadius: 12, background: '#FFFFFF', padding: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Keywords</h3>
-                  <span style={{ fontSize: 16, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>with</span>
-                  <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                  <TableSortButton
-                    value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
-                    onClick={() => {
-                      const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                      const currentIndex = order.indexOf(keywordSortMetric);
-                      setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
-                    }}
-                  />
-                </div>
+              <SentryPanel noPadding>
+                <SentryPanelHeader
+                  title={(
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span>Keywords</span>
+                      <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                      <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
+                      <TableSortButton
+                        value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
+                        onClick={() => {
+                          const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
+                          const currentIndex = order.indexOf(keywordSortMetric);
+                          setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
+                        }}
+                      />
+                    </div>
+                  )}
+                />
 
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -2474,254 +1852,67 @@ const PerformancePage: NextPage = () => {
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </SentryPanel>
             </div>
           </div>
         )}
 
         {goalModalOpen ? (
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', padding: 20 }}
-            onMouseDown={(e) => { if (e.target === e.currentTarget) setGoalModalOpen(false); }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              style={{ display: 'flex', width: 'min(600px, calc(100% - 2rem))', maxHeight: '85vh', flexDirection: 'column', overflow: 'auto', borderRadius: 12, background: '#FFFFFF', boxShadow: '0px 16px 32px 0px #181a2252, 0px 2px 4px 0px #181a2229, 0px 4px 4px 0px #00000014', animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
-            >
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: 24 }}>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Create clicks goal</h2>
-                <button type="button" onClick={() => setGoalModalOpen(false)} style={{ display: 'inline-flex', border: 'none', background: 'transparent', color: '#18181B', cursor: 'pointer' }}>
-                  <XIcon />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {/* Configurator */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12, background: '#F8F8F9', padding: 16, flexWrap: 'wrap', fontSize: 14, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+          <Modal title="Create clicks goal" onClose={() => setGoalModalOpen(false)} width={600}>
+            <ModalBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: 'inherit' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12, background: '#F8F8F9', padding: 16, flexWrap: 'wrap', fontSize: 14, color: '#3F3F47' }}>
                   <span>Increase clicks by</span>
                   <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                    <input
-                      type="number"
-                      min={1}
-                      max={999}
-                      value={goalPercentage}
+                    <Input size="sm" type="number" min={1} max={999} value={goalPercentage}
                       onChange={(e) => setGoalPercentage(Math.max(1, Math.min(999, Number(e.target.value))))}
-                      style={{ width: 64, height: 40, border: '1px solid #D4D4D8', borderRadius: 8, paddingLeft: 12, paddingRight: 24, fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#18181B', background: '#FFFFFF', boxShadow: '0px 1px 2px 0px #1a1d280f', outline: 'none' }}
-                    />
+                      style={{ width: 80, paddingRight: 24 }} />
                     <span style={{ position: 'absolute', right: 8, color: '#52525C', fontSize: 14, pointerEvents: 'none' }}>%</span>
                   </div>
                   <span>each</span>
-                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                    <select
-                      value={goalPeriod}
-                      onChange={(e) => setGoalPeriod(e.target.value as GoalPeriod)}
-                      style={{ height: 40, border: '1px solid #D4D4D8', borderRadius: 8, padding: '0 32px 0 12px', fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#18181B', background: '#FFFFFF', boxShadow: '0px 1px 2px 0px #1a1d280f', cursor: 'pointer', outline: 'none', appearance: 'none' }}
-                    >
-                      <option value="MONTH">month</option>
-                      <option value="QUARTER">quarter</option>
-                    </select>
-                    <span style={{ position: 'absolute', right: 8, pointerEvents: 'none', display: 'inline-flex', color: '#52525C' }}><ChevronDown size={16} /></span>
-                  </div>
+                  <Select size="sm" value={goalPeriod} onChange={(v) => setGoalPeriod(v as GoalPeriod)} width={120}
+                    options={[{ value: 'MONTH', label: 'month' }, { value: 'QUARTER', label: 'quarter' }]} />
                 </div>
-
-                {/* Projected growth chart */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Projected growth</h3>
-                  <GoalProjectionChart
-                    baseClicks={parseInt(String(currentClicks).replace(/[^0-9]/g, ''), 10) || 0}
-                    percentage={goalPercentage}
-                    period={goalPeriod}
-                  />
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#18181B' }}>Projected growth</h3>
+                  <GoalProjectionChart baseClicks={parseInt(String(currentClicks).replace(/[^0-9]/g, ''), 10) || 0} percentage={goalPercentage} period={goalPeriod} />
                 </div>
               </div>
-
-              {/* Footer */}
-              <div style={{ borderTop: '1px solid #F4F4F5' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: 24 }}>
-                  <div>
-                    {trafficGoal ? (
-                      <button
-                        type="button"
-                        onClick={handleDeleteGoal}
-                        style={{ border: 'none', background: 'transparent', fontSize: 14, fontWeight: 600, color: '#FF6F77', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: 0 }}
-                      >
-                        Delete goal
-                      </button>
-                    ) : null}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button type="button" onClick={() => setGoalModalOpen(false)} style={{ border: 'none', background: 'transparent', fontSize: 14, fontWeight: 600, color: '#3F3F47', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}>
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveGoal}
-                      disabled={goalSaving}
-                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 10, background: '#2F2F34', padding: '10px 20px', fontSize: 14, fontWeight: 600, color: '#FFFFFF', cursor: goalSaving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-family-primary)', opacity: goalSaving ? 0.7 : 1 }}
-                    >
-                      {goalSaving ? 'Saving...' : 'Create goal'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </ModalBody>
+            <ModalFooter>
+              {trafficGoal ? (
+                <Button variant="link" size="sm" onClick={handleDeleteGoal} style={{ color: '#FF6F77', padding: 0, marginRight: 'auto' }}>Delete goal</Button>
+              ) : <div style={{ flex: 1 }} />}
+              <Button variant="secondary" size="sm" onClick={() => setGoalModalOpen(false)}>Cancel</Button>
+              <Button variant="primary" size="sm" onClick={handleSaveGoal} busy={goalSaving} disabled={goalSaving}>
+                {goalSaving ? 'Saving...' : 'Create goal'}
+              </Button>
+            </ModalFooter>
+          </Modal>
         ) : null}
 
         {keywordModalMode ? (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 150,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(0, 0, 0, 0.6)',
-              padding: 20,
-            }}
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                closeKeywordModal();
-              }
-            }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              style={{
-                display: 'flex',
-                width: 'min(600px, calc(100% - 2rem))',
-                maxHeight: '85vh',
-                flexDirection: 'column',
-                overflow: 'auto',
-                borderRadius: 12,
-                background: '#FFFFFF',
-                color: '#18181B',
-                boxShadow: '0px 16px 32px 0px #181a2252, 0px 2px 4px 0px #181a2229, 0px 4px 4px 0px #00000014, 0px 1px 1px 0px #0000000a',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: 24 }}>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#18181B' }}>
-                  {keywordModalMode === 'custom' ? 'Custom keyword' : 'Manage branded keywords'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={closeKeywordModal}
-                  style={{ display: 'inline-flex', border: 'none', background: 'transparent', color: '#18181B', cursor: 'pointer' }}
-                >
-                  <XIcon />
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', padding: '0 24px 24px' }}>
-                <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 12 }}>
-                  {keywordModalMode === 'custom' ? (
-                    <div style={{ display: 'flex', width: '50%', minWidth: 180 }}>
-                      <div style={{ display: 'flex', width: '100%', flexDirection: 'column', color: '#3F3F47' }}>
-                        <label style={{ position: 'relative', display: 'inline-flex', width: '100%', alignItems: 'center', border: '1px solid #D4D4D8', borderRadius: 10, padding: '0 12px', boxShadow: '0px 1px 2px 0px #1a1d280f', height: 40, fontSize: 14, fontWeight: 500, color: '#18181B' }}>
-                          <select
-                            value={keywordOperatorDraft}
-                            onChange={(event) => setKeywordOperatorDraft(event.target.value as KeywordOperator)}
-                            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
-                          >
-                            {KEYWORD_OPERATOR_OPTIONS.map((item) => (
-                              <option key={item.value} value={item.value}>
-                                {item.label}
-                              </option>
-                            ))}
-                          </select>
-                          <span style={{ display: 'flex', minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {KEYWORD_OPERATOR_OPTIONS.find((item) => item.value === keywordOperatorDraft)?.label}
-                          </span>
-                          <span style={{ marginLeft: 'auto', display: 'inline-flex', color: '#52525C' }}>
-                            <ChevronDown size={18} />
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div style={{ display: 'flex', width: '100%', flexDirection: 'column' }}>
-                    <label style={{ paddingBottom: 6, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>
-                      {keywordModalMode === 'custom' ? 'Keyword' : 'Keywords'}
-                    </label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        value={keywordModalMode === 'custom' ? keywordValueDraft : brandKeywordDraft}
-                        onChange={(event) => {
-                          if (keywordModalMode === 'custom') {
-                            setKeywordValueDraft(event.target.value);
-                            return;
-                          }
-                          setBrandKeywordDraft(event.target.value);
-                        }}
-                        placeholder={keywordModalMode === 'custom' ? '' : 'brand-1, brand-2'}
-                        style={{
-                          width: '100%',
-                          minHeight: 40,
-                          border: '1px solid #D4D4D8',
-                          borderRadius: 10,
-                          padding: '0 12px',
-                          boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                          color: '#18181B',
-                          fontSize: 14,
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
+          <Modal title={keywordModalMode === 'custom' ? 'Custom keyword' : 'Manage branded keywords'} onClose={closeKeywordModal} width={600}>
+            <ModalBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {keywordModalMode === 'custom' ? (
+                  <div style={{ display: 'flex', width: '50%', minWidth: 180 }}>
+                    <Select size="sm" value={keywordOperatorDraft}
+                      onChange={(v) => setKeywordOperatorDraft(v as KeywordOperator)}
+                      options={KEYWORD_OPERATOR_OPTIONS} />
                   </div>
-                </div>
+                ) : null}
+                <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>{keywordModalMode === 'custom' ? 'Keyword' : 'Keywords'}</label>
+                <Input size="sm" value={keywordModalMode === 'custom' ? keywordValueDraft : brandKeywordDraft}
+                  onChange={(e) => { if (keywordModalMode === 'custom') setKeywordValueDraft(e.target.value); else setBrandKeywordDraft(e.target.value); }}
+                  placeholder={keywordModalMode === 'custom' ? '' : 'brand-1, brand-2'} />
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, padding: 24 }}>
-                <button
-                  type="button"
-                  onClick={closeKeywordModal}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    borderRadius: 10,
-                    background: '#F4F4F5',
-                    padding: '10px 20px',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: '#3F3F47',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={keywordModalMode === 'custom' ? !keywordValueDraft.trim() : !brandKeywordDraft.trim()}
-                  onClick={handleKeywordModalSubmit}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    borderRadius: 10,
-                    background: '#3F3F47',
-                    padding: '10px 20px',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: '#FFFFFF',
-                    cursor: keywordModalMode === 'custom' ? (keywordValueDraft.trim() ? 'pointer' : 'not-allowed') : (brandKeywordDraft.trim() ? 'pointer' : 'not-allowed'),
-                    opacity: keywordModalMode === 'custom' ? (keywordValueDraft.trim() ? 1 : 0.6) : (brandKeywordDraft.trim() ? 1 : 0.6),
-                  }}
-                >
-                  Choose
-                </button>
-              </div>
-            </div>
-          </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="secondary" size="sm" onClick={closeKeywordModal}>Cancel</Button>
+              <Button variant="primary" size="sm" disabled={keywordModalMode === 'custom' ? !keywordValueDraft.trim() : !brandKeywordDraft.trim()} onClick={handleKeywordModalSubmit}>Choose</Button>
+            </ModalFooter>
+          </Modal>
         ) : null}
 
         <style jsx>{`
