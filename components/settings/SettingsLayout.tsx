@@ -100,7 +100,6 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const currentPage = normalizeSettingsPage(page);
   const pageTitle = PAGE_TITLES[currentPage] || 'Settings';
   const pageSubtitle = PAGE_SUBTITLES[currentPage];
-  const isWide = currentPage === 'billing_subscription';
 
   const [settings, setSettings] = useState<SettingsType>({
     scraper_type: 'none',
@@ -180,9 +179,9 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
         <title>{`${pageTitle} — SerpBear`}</title>
       </Head>
 
-      <SentryPage maxWidth={isWide ? 1400 : 880}>
+      <SentryPage maxWidth={880} className="sentry-page--settings">
         <SentryPageHeader title={pageTitle} subtitle={pageSubtitle} borderless />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div className="sentry-settings-content">
           {renderPageContent()}
           {settingsError?.msg && (
             <div

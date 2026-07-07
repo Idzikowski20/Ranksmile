@@ -11,9 +11,9 @@ describe('buildArticleWorkspaceLinks', () => {
     });
   });
 
-  it('falls back to the sites index when no slug is active', () => {
+  it('falls back to the dashboard when no slug is active', () => {
     const links = buildArticleWorkspaceLinks(12, '');
-    expect(links.contentAudit).toBe('/workspace/12/sites');
-    expect(links.topicalMap).toBe('/workspace/12/sites');
+    expect(links.contentAudit).toBe('/workspace/12/dashboard');
+    expect(links.topicalMap).toBe('/workspace/12/dashboard');
   });
 });

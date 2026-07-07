@@ -122,7 +122,7 @@ const EMPTY_START_OPTIONS: Array<{
     key: 'topicalMap',
     title: 'Topical Map',
     description: 'Create content based on your existing topics',
-    href: '/sites/configure',
+    href: '/dashboard',
     icon: <TopicalMapIcon />,
   },
 ];
@@ -177,6 +177,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={`article-skel-${i}`}
+            className="article-list-card"
             style={{
               height: 133,
               display: 'flex',
@@ -297,6 +298,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
           return (
             <div
               key={article.id}
+              className="article-list-card"
               style={{
                 height: 133,
                 display: 'flex',
@@ -406,7 +408,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
         return (
           <div
             key={article.id}
-            className={`article-list-item group/selectable-item select-none gap-md relative flex h-[133px] w-full items-center justify-between border border-solid hover:shadow-sm cursor-pointer pr-lg border-gray-20 rounded-xl${selectedIds.has(article.id) ? ' is-selected' : ''}`}
+            className={`article-list-card article-list-item group/selectable-item select-none gap-md relative flex h-[133px] w-full items-center justify-between border border-solid hover:shadow-sm cursor-pointer pr-lg border-gray-20 rounded-xl${selectedIds.has(article.id) ? ' is-selected' : ''}`}
             style={{
               height: 133,
               display: 'flex',

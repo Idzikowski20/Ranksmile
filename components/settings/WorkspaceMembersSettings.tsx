@@ -13,6 +13,7 @@ import {
   SentryTableRow,
   SentryTableCell,
   SentryTableHeaderCell,
+  SentryEmptyState,
 } from '../sentry-pages';
 
 const font = 'var(--font-family-primary)';
@@ -35,63 +36,90 @@ const WorkspaceMembersSettings = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   const accessMembers = (data?.members || []).filter((m) => m.hasAccess);
+  const hasMembers = !isLoading && accessMembers.length > 0;
+  const isEmpty = !isLoading && accessMembers.length === 0;
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
       <SentrySettingsSection title="Access">
         <SentrySettingsRow
           label="Workspace members"
           description={`Manage who has access to ${workspaceName} workspace.`}
         >
-          <Button type="button" variant="primary" disabled={wsId === null} onClick={() => setModalOpen(true)}>
-            Manage members
-          </Button>
+          {hasMembers && (
+            <Button type="button" variant="primary" size="sm" disabled={wsId === null} onClick={() => setModalOpen(true)}>
+              Manage members
+            </Button>
+          )}
         </SentrySettingsRow>
       </SentrySettingsSection>
 
-      <SentryPanel noPadding>
-        <SentryTable>
-          <SentryTableHead>
-            <SentryTableRow>
-              <SentryTableHeaderCell>Member</SentryTableHeaderCell>
-              <SentryTableHeaderCell>Role</SentryTableHeaderCell>
-              <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
-            </SentryTableRow>
-          </SentryTableHead>
-          <SentryTableBody>
-            {isLoading && (
+      {isLoading && (
+        <SentryPanel noPadding>
+          <SentryTable>
+            <SentryTableHead>
+              <SentryTableRow>
+                <SentryTableHeaderCell>Member</SentryTableHeaderCell>
+                <SentryTableHeaderCell>Role</SentryTableHeaderCell>
+                <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
+              </SentryTableRow>
+            </SentryTableHead>
+            <SentryTableBody>
               <SentryTableRow>
                 <SentryTableCell colSpan={3}>Loading…</SentryTableCell>
               </SentryTableRow>
-            )}
-            {!isLoading && accessMembers.length === 0 && (
+            </SentryTableBody>
+          </SentryTable>
+        </SentryPanel>
+      )}
+
+      {isEmpty && (
+        <SentryEmptyState
+          title="No members yet"
+          description="No one has access to this workspace yet."
+          actions={(
+            <Button type="button" variant="primary" disabled={wsId === null} onClick={() => setModalOpen(true)}>
+              Manage members
+            </Button>
+          )}
+        />
+      )}
+
+      {hasMembers && (
+        <SentryPanel noPadding>
+          <SentryTable>
+            <SentryTableHead>
               <SentryTableRow>
-                <SentryTableCell colSpan={3}>No members have access yet.</SentryTableCell>
+                <SentryTableHeaderCell>Member</SentryTableHeaderCell>
+                <SentryTableHeaderCell>Role</SentryTableHeaderCell>
+                <SentryTableHeaderCell>{' '}</SentryTableHeaderCell>
               </SentryTableRow>
-            )}
-            {accessMembers.map((m) => {
-              const email = m.email || '—';
-              return (
-                <SentryTableRow key={m.id}>
-                  <SentryTableCell>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar initial={(email[0] || '?').toUpperCase()} />
-                      <span style={{ fontSize: 14, color: '#18181B', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
-                    </div>
-                  </SentryTableCell>
-                  <SentryTableCell>{cap(m.role)}</SentryTableCell>
-                  <SentryTableCell>{' '}</SentryTableCell>
-                </SentryTableRow>
-              );
-            })}
-          </SentryTableBody>
-        </SentryTable>
-      </SentryPanel>
+            </SentryTableHead>
+            <SentryTableBody>
+              {accessMembers.map((m) => {
+                const email = m.email || '—';
+                return (
+                  <SentryTableRow key={m.id}>
+                    <SentryTableCell>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar initial={(email[0] || '?').toUpperCase()} />
+                        <span style={{ fontSize: 14, color: '#18181B', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
+                      </div>
+                    </SentryTableCell>
+                    <SentryTableCell>{cap(m.role)}</SentryTableCell>
+                    <SentryTableCell>{' '}</SentryTableCell>
+                  </SentryTableRow>
+                );
+              })}
+            </SentryTableBody>
+          </SentryTable>
+        </SentryPanel>
+      )}
 
       {wsId !== null && (
         <ManageMembersModal wsId={wsId} open={modalOpen} onClose={() => setModalOpen(false)} />
       )}
-    </>
+    </div>
   );
 };
 

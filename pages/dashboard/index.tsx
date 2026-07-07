@@ -105,9 +105,9 @@ const DashboardPage: NextPage = () => {
   const activeWorkspace = wsData?.workspaces.find((w) => w.id === activeWsId) ?? null;
   const primaryDomain = resolveActiveDomain(domains, activeWsId, activeWorkspace?.domain) ?? domains[0];
   const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
-  const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
-  const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/sites');
-  const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/sites');
+  const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
+  const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/dashboard');
+  const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
 
   // Domain-level recommendations produced by the setup pipeline (the scan output).
   const { data: domainRecsData, isLoading: domainRecsLoading } = useQuery(

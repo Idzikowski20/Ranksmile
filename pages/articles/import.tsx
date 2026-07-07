@@ -40,6 +40,7 @@ const ImportPage: NextPage = () => {
       url: url.trim(),
       keywords: keywords.join(','),
       country,
+      flow: 'import',
     });
     router.push(`/articles/deep-analysis?${params.toString()}`);
   };

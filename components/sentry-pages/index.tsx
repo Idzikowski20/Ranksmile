@@ -9,9 +9,13 @@ type SentryPageProps = {
 
 /** Main scrollable page container (Sentry Issues/Traces background). */
 export function SentryPage({ children, maxWidth = 1200, className = '', unified }: SentryPageProps) {
+  const maxW = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
   return (
     <div className={`sentry-page ${unified ? 'sentry-page--unified' : ''} ${className}`}>
-      <div className="sentry-page-inner styled-scrollbar" style={{ maxWidth }}>
+      <div
+        className="sentry-page-inner styled-scrollbar"
+        style={{ maxWidth: maxW, width: '100%' }}
+      >
         {children}
       </div>
     </div>
@@ -129,6 +133,7 @@ type SentrySettingsRowProps = {
 };
 
 export function SentrySettingsRow({ label, description, required, children }: SentrySettingsRowProps) {
+  const hasControl = children != null && children !== false;
   return (
     <div className="sentry-settings-row">
       <div className="sentry-settings-row-label">
@@ -138,7 +143,7 @@ export function SentrySettingsRow({ label, description, required, children }: Se
         </div>
         {description && <p className="sentry-settings-row-desc">{description}</p>}
       </div>
-      <div className="sentry-settings-row-control">{children}</div>
+      {hasControl && <div className="sentry-settings-row-control">{children}</div>}
     </div>
   );
 }

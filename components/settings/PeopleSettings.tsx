@@ -10,7 +10,6 @@ import {
   SentrySettingsSection,
   SentrySettingsRow,
   SentryPanel,
-  SentryPanelBody,
   SentryTable,
   SentryTableHead,
   SentryTableBody,
@@ -193,34 +192,32 @@ const PeopleSettings = () => {
       {canManage && (
         <SentrySettingsSection title="Invite people">
           <SentrySettingsRow label="Email invitation" description="Send an email invitation to add new members to your organization.">
-            <SentryPanel>
-              <SentryPanelBody>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
-                    placeholder="name@company.com"
-                    style={{ width: '100%', maxWidth: 360 }}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 200 }}>
-                      <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Role</label>
-                      <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
-                      <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Workspaces</label>
-                      <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
-                    </div>
-                    <Button type="button" variant="primary" onClick={sendInvite} disabled={invite.isLoading} style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
-                      {invite.isLoading ? 'Sending…' : 'Send invite'}
-                    </Button>
-                  </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+              <Input
+                id="invite-email"
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite(); } }}
+                placeholder="name@company.com"
+                style={{ width: '100%', maxWidth: 360 }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 480 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Role</label>
+                  <RoleSelect value={inviteRole} options={['member', 'admin']} onChange={(v) => setInviteRole(v as 'member' | 'admin')} />
                 </div>
-              </SentryPanelBody>
-            </SentryPanel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#18181B', fontFamily: font }}>Workspaces</label>
+                  <WorkspacePicker workspaces={workspaces} selected={inviteWs} onChange={setInviteWs} disabled={inviteRole !== 'member'} />
+                </div>
+                <div>
+                  <Button type="button" variant="primary" onClick={sendInvite} disabled={invite.isLoading} style={{ whiteSpace: 'nowrap' }}>
+                    {invite.isLoading ? 'Sending…' : 'Send invite'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </SentrySettingsRow>
         </SentrySettingsSection>
       )}

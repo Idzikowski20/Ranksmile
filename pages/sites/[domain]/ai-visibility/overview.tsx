@@ -21,7 +21,7 @@ type OverviewDelta = {
    prompts: { gained: number[]; lost: number[] };
 };
 
-const card: React.CSSProperties = { border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' };
+const card: React.CSSProperties = { border: 'none', borderRadius: 12, background: '#fff' };
 const cardHeader: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 24px 0' };
 const cardTitle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: '#3F3F47', fontFamily: FONT };
 

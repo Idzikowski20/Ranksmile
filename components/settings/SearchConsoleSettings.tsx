@@ -96,13 +96,13 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
             </div>
           ) : (
             <SentryPanel noPadding>
-              <SentryPanelBody>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {accounts.length === 0 ? (
                   <div style={{ padding: '24px 16px', fontSize: 14, color: '#71717A', fontFamily: 'var(--font-family-primary)' }}>
                     No Google accounts connected yet.
                   </div>
                 ) : (
-                  accounts.map((account, i) => (
+                  accounts.map((account) => (
                     <div
                       key={account.id}
                       style={{
@@ -111,7 +111,7 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                         justifyContent: 'space-between',
                         gap: 16,
                         padding: '16px',
-                        borderTop: i === 0 ? undefined : '1px solid #E4E4E7',
+                        flexWrap: 'wrap',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -166,7 +166,7 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                     </div>
                   ))
                 )}
-              </SentryPanelBody>
+              </div>
             </SentryPanel>
           )}
           <div>

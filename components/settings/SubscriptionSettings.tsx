@@ -693,16 +693,16 @@ const SubscriptionPage = ({
   canceled: boolean;
 }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: 'var(--font-family-primary)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', fontFamily: 'var(--font-family-primary)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>Plan</span>
         <span style={{ fontSize: 14, color: '#52525C' }}>
           {canceled ? 'Ends in 7 days' : 'Renews in 7 days'}
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', width: '100%' }}>
+        <div style={{ flex: '1 1 280px', minWidth: 0, maxWidth: '100%' }}>
           <SentryPanel>
             <SentryPanelBody>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>

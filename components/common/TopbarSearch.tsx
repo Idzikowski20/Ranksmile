@@ -4,19 +4,33 @@ import { useRouter } from 'next/router';
 import { useWorkspaces } from '../../services/workspaces';
 import { useFetchDomains } from '../../services/domains';
 import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import {
+  IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings,
+  IconFire, IconGlobe, IconBuilding, IconDocs,
+} from './nav/sentryIcons';
 
-const font = 'var(--font-family-primary)';
+const ICO = 14;
 
-const SearchIcon = ({ size = 20 }: { size?: number }) => (
+const SearchIcon = ({ size = 16 }: { size?: number }) => (
   <svg viewBox="0 0 20 20" width={size} height={size} fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
     <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11M2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9" clipRule="evenodd" />
   </svg>
 );
 
-type Command = { label: string; category: string; href: string };
+type PaletteItem = {
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  keywords: string[];
+};
 
-/** Workspace/site-scoped destinations, mirroring the sidebar's real routes. */
-function useCommands(): Command[] {
+type PaletteSection = {
+  title: string;
+  items: PaletteItem[];
+};
+
+function useCommandSections(): PaletteSection[] {
   const router = useRouter();
   const { data: wsData } = useWorkspaces();
   const { data: domainsData } = useFetchDomains({} as never);
@@ -27,119 +41,168 @@ function useCommands(): Command[] {
 
   return useMemo(() => {
     const ws = (p: string) => workspaceHref(wsId, p);
-    const cmds: Command[] = [
-      { label: 'Dashboard', category: 'Navigation', href: ws('/dashboard') },
-      { label: 'Content Editor', category: 'Tools', href: ws('/articles') },
-      { label: 'Keyword Research', category: 'Tools', href: ws('/research') },
-      { label: 'AI Humanizer', category: 'Tools', href: ws('/content-editor') },
+    const sections: PaletteSection[] = [
+      {
+        title: 'Go to…',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', href: ws('/dashboard'), icon: <IconDashboard size={ICO} />, keywords: ['overview', 'home'] },
+          { id: 'content-editor', label: 'Content Editor', href: ws('/articles'), icon: <IconIssues size={ICO} />, keywords: ['articles', 'content'] },
+          { id: 'settings', label: 'Settings', href: '/settings/general', icon: <IconSettings size={ICO} />, keywords: ['preferences', 'account'] },
+        ],
+      },
     ];
+
     if (slug) {
-      cmds.push(
-        { label: 'Recommendations', category: 'Sites', href: ws(`/sites/${slug}/recommendations`) },
-        { label: 'Performance', category: 'Sites', href: ws(`/sites/${slug}`) },
-        { label: 'Content Audit', category: 'Sites', href: ws(`/sites/${slug}/content-audit`) },
-        { label: 'Topical Map', category: 'Sites', href: ws(`/sites/${slug}/topical-map`) },
-        { label: 'Activity Log', category: 'Sites', href: ws(`/sites/${slug}/activity-log`) },
-      );
+      sections.push({
+        title: 'SEO',
+        items: [
+          { id: 'performance', label: 'Performance', href: ws(`/sites/${slug}`), icon: <IconCompass size={ICO} />, keywords: ['gsc', 'traffic'] },
+          { id: 'recommendations', label: 'Recommendations', href: ws(`/sites/${slug}/recommendations`), icon: <IconFire size={ICO} />, keywords: ['optimize'] },
+          { id: 'content-audit', label: 'Content Audit', href: ws(`/sites/${slug}/content-audit`), icon: <IconIssues size={ICO} />, keywords: ['audit'] },
+          { id: 'topical-map', label: 'Topical Map', href: ws(`/sites/${slug}/topical-map`), icon: <IconCompass size={ICO} />, keywords: ['topics', 'clusters'] },
+          { id: 'activity-log', label: 'Activity Log', href: ws(`/sites/${slug}/activity-log`), icon: <IconDocs size={ICO} />, keywords: ['history', 'log'] },
+        ],
+      });
+      sections.push({
+        title: 'AI Visibility',
+        items: [
+          { id: 'ai-overview', label: 'Overview', href: ws(`/sites/${slug}/ai-visibility/overview`), icon: <IconSiren size={ICO} />, keywords: ['ai vis'] },
+          { id: 'ai-sources', label: 'Sources', href: ws(`/sites/${slug}/ai-visibility/sources`), icon: <IconGlobe size={ICO} />, keywords: ['citations'] },
+          { id: 'ai-competitors', label: 'Competitors', href: ws(`/sites/${slug}/ai-visibility/competitors`), icon: <IconBuilding size={ICO} />, keywords: ['rivals'] },
+          { id: 'ai-prompts', label: 'Prompts', href: ws(`/sites/${slug}/ai-visibility/prompts`), icon: <IconDocs size={ICO} />, keywords: ['queries'] },
+          { id: 'ai-fanout', label: 'Fanout Queries', href: ws(`/sites/${slug}/ai-visibility/fanout-queries`), icon: <IconCompass size={ICO} />, keywords: ['fanout'] },
+        ],
+      });
     }
-    return cmds;
+
+    return sections;
   }, [wsId, slug]);
 }
 
-const CommandMenu = ({ open, onClose, commands, anchorRef }: {
-  open: boolean; onClose: () => void; commands: Command[]; anchorRef: React.RefObject<HTMLElement>;
+const matchesQuery = (item: PaletteItem, q: string) => {
+  const hay = [item.label, ...item.keywords].join(' ').toLowerCase();
+  return hay.includes(q);
+};
+
+const Kbd = ({ children }: { children: React.ReactNode }) => (
+  <kbd className="command-palette-kbd">{children}</kbd>
+);
+
+const CommandMenu = ({ open, onClose, sections }: {
+  open: boolean; onClose: () => void; sections: PaletteSection[];
 }) => {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [sel, setSel] = useState(0);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const filtered = useMemo(() => {
+  const filteredSections = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return commands;
-    return commands.filter((c) => c.label.toLowerCase().includes(q) || c.category.toLowerCase().includes(q));
-  }, [commands, query]);
+    if (!q) return sections;
+    return sections
+      .map((section) => ({ ...section, items: section.items.filter((item) => matchesQuery(item, q)) }))
+      .filter((section) => section.items.length > 0);
+  }, [sections, query]);
 
-  useEffect(() => { if (open) { setQuery(''); setSel(0); } }, [open]);
-  useEffect(() => { if (sel > filtered.length - 1) setSel(Math.max(0, filtered.length - 1)); }, [filtered, sel]);
+  const flatItems = useMemo(
+    () => filteredSections.flatMap((section) => section.items),
+    [filteredSections],
+  );
 
-  // Anchor the menu directly under the search trigger (centered on it), clamped to the viewport.
+  useEffect(() => { if (open) { setQuery(''); setSel(0); inputRef.current?.focus(); } }, [open]);
+  useEffect(() => { if (sel > flatItems.length - 1) setSel(Math.max(0, flatItems.length - 1)); }, [flatItems, sel]);
+
   useEffect(() => {
-    if (!open) return undefined;
-    const compute = () => {
-      const w = Math.min(600, window.innerWidth - 16);
-      const el = anchorRef.current;
-      if (el) {
-        const r = el.getBoundingClientRect();
-        const left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
-        setPos({ top: r.bottom + 6, left, width: w });
-      } else {
-        setPos({ top: 70, left: (window.innerWidth - w) / 2, width: w });
-      }
-    };
-    compute();
-    window.addEventListener('resize', compute);
-    return () => window.removeEventListener('resize', compute);
-  }, [open, anchorRef]);
+    if (!open || !listRef.current) return;
+    const active = listRef.current.querySelector('[data-active="true"]');
+    active?.scrollIntoView({ block: 'nearest' });
+  }, [sel, open, flatItems]);
 
-  const go = (cmd?: Command) => { if (cmd) { onClose(); router.push(cmd.href); } };
+  const go = (item?: PaletteItem, newTab = false) => {
+    if (!item) return;
+    onClose();
+    if (newTab) window.open(item.href, '_blank', 'noopener,noreferrer');
+    else router.push(item.href);
+  };
 
-  if (!open || !pos || typeof document === 'undefined') return null;
+  if (!open || typeof document === 'undefined') return null;
+
+  let itemIndex = -1;
 
   return createPortal(
-    <div role="presentation" onMouseDown={onClose} style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(0,0,0,0.6)' }}>
+    <div className="command-palette-overlay" role="presentation" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-label="Command Menu"
+        className="command-palette"
         onMouseDown={(e) => e.stopPropagation()}
-        style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, maxHeight: '70vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#18181B', border: '1px solid #221E28', borderRadius: 12, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', fontFamily: font, animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}
       >
-        {/* Search input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid #221E28', background: '#09090B' }}>
-          <span style={{ color: '#9F9FA9', display: 'inline-flex' }}><SearchIcon size={20} /></span>
+        <div className="command-palette-input-row">
+          <span className="command-palette-input-icon" aria-hidden="true"><SearchIcon size={14} /></span>
           <input
             ref={inputRef}
-            autoFocus
+            aria-label="Search commands"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSel(0); }}
             onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(filtered.length - 1, s + 1)); }
+              if (e.key === 'ArrowDown') { e.preventDefault(); setSel((s) => Math.min(flatItems.length - 1, s + 1)); }
               else if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); }
-              else if (e.key === 'Enter') { e.preventDefault(); go(filtered[sel]); }
+              else if (e.key === 'Enter') { e.preventDefault(); go(flatItems[sel], e.shiftKey); }
               else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
             }}
-            placeholder="Search…"
+            placeholder="Search for commands..."
             autoComplete="off"
             spellCheck={false}
-            style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: '#FFFFFF', fontSize: 15, fontFamily: font }}
+            className="command-palette-input"
           />
         </div>
 
-        {/* Results */}
-        <div className="styled-scrollbar" style={{ padding: 8, overflowY: 'auto', background: '#09090B' }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: '24px 12px', textAlign: 'center', color: '#71717B', fontSize: 14 }}>No results.</div>
+        <div ref={listRef} className="command-palette-results styled-scrollbar" role="listbox" aria-label="Search results">
+          {flatItems.length === 0 ? (
+            <div className="command-palette-empty">No results.</div>
           ) : (
-            <>
-              <div style={{ padding: '10px 12px 4px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#71717B' }}>Suggestions</div>
-              {filtered.map((cmd, i) => {
-                const active = i === sel;
-                return (
-                  <button
-                    key={`${cmd.category}-${cmd.label}`}
-                    type="button"
-                    onMouseEnter={() => setSel(i)}
-                    onClick={() => go(cmd)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: active ? '#2F2F34' : 'transparent', color: active ? '#FFFFFF' : '#9F9FA9', fontFamily: font, fontSize: 14, fontWeight: 500, transition: 'background 120ms ease, color 120ms ease' }}
-                  >
-                    <span>{cmd.label}</span>
-                    <span style={{ color: '#71717B', fontSize: 12, fontWeight: 500 }}>{cmd.category}</span>
-                  </button>
-                );
-              })}
-            </>
+            <ul className="command-palette-list">
+              {filteredSections.map((section) => (
+                <React.Fragment key={section.title}>
+                  <li className="command-palette-section-header" aria-hidden="true">
+                    <span>{section.title}</span>
+                  </li>
+                  {section.items.map((item) => {
+                    itemIndex += 1;
+                    const active = itemIndex === sel;
+                    return (
+                      <li key={item.id} role="presentation">
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          data-active={active ? 'true' : undefined}
+                          onMouseEnter={() => setSel(itemIndex)}
+                          onClick={() => go(item)}
+                          className={`command-palette-item${active ? ' command-palette-item--active' : ''}`}
+                        >
+                          <span className="command-palette-item-icon" aria-hidden="true">{item.icon}</span>
+                          <span className="command-palette-item-label">{item.label}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </ul>
           )}
+        </div>
+
+        <div className="command-palette-footer">
+          <div className="command-palette-footer-hints">
+            <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> Move</span>
+            <span><Kbd>↵</Kbd> Select</span>
+            <span><Kbd>⇧</Kbd> <Kbd>↵</Kbd> New tab</span>
+          </div>
+          <span className="command-palette-footer-toggle">
+            Toggle Command Palette <Kbd>Ctrl</Kbd> <Kbd>K</Kbd>
+          </span>
         </div>
       </div>
     </div>,
@@ -147,70 +210,33 @@ const CommandMenu = ({ open, onClose, commands, anchorRef }: {
   );
 };
 
-const TopbarSearch = ({ compact = false }: { compact?: boolean }) => {
+const TopbarSearch = () => {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const commands = useCommands();
+  const sections = useCommandSections();
 
-  // Ctrl/⌘+K toggles the command menu. Only the full-bar instance owns the
-  // shortcut (the compact icon is a duplicate rendered on narrow screens).
   useEffect(() => {
-    if (compact) return undefined;
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); setOpen((o) => !o); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [compact]);
-
-  if (compact) {
-    return (
-      <>
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-label="Search"
-          onClick={() => setOpen(true)}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 36, height: 36, borderRadius: 9999, border: 'none', cursor: 'pointer',
-            background: 'transparent', color: '#9F9FA9', transition: 'opacity 150ms ease',
-          }}
-        >
-          <SearchIcon size={20} />
-        </button>
-        <CommandMenu open={open} onClose={() => setOpen(false)} commands={commands} anchorRef={triggerRef} />
-      </>
-    );
-  }
+  }, []);
 
   return (
     <>
       <button
-        ref={triggerRef}
         type="button"
+        className="sentry-nav-utilbtn global-topbar-search-btn"
+        aria-label="Search"
+        aria-expanded={open}
         onClick={() => setOpen(true)}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-          width: '100%', height: 40, padding: '0 12px', borderRadius: 9999, border: 'none',
-          cursor: 'pointer', background: '#18181B', color: '#9F9FA9', fontFamily: font,
-          fontSize: 14, fontWeight: 500, transition: 'opacity 150ms ease',
-        }}
       >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <SearchIcon />
-          Search
-        </span>
-        <span className="topbar-search-kbd" style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 4, background: '#09090B', color: '#9F9FA9', fontSize: 14, lineHeight: '16px' }}>
-          Ctrl+K
-        </span>
+        <SearchIcon />
+        <span className="global-topbar-search-label">Search</span>
+        <span className="global-topbar-search-kbd">Ctrl K</span>
       </button>
 
-      <CommandMenu open={open} onClose={() => setOpen(false)} commands={commands} anchorRef={triggerRef} />
+      <CommandMenu open={open} onClose={() => setOpen(false)} sections={sections} />
     </>
   );
 };

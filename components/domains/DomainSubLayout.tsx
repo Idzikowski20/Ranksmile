@@ -39,7 +39,7 @@ const DomainSubLayout = ({
       </div>
     )}
     {filters}
-    {children}
+    <div className="sentry-page-content">{children}</div>
   </SentryPage>
 );
 

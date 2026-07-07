@@ -77,7 +77,7 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
 
    const sitePath = (sub: string) => (activeSlug
       ? workspaceHref(activeId, sub ? `/sites/${activeSlug}/${sub}` : `/sites/${activeSlug}`)
-      : workspaceHref(activeId, '/sites'));
+      : workspaceHref(activeId, '/dashboard'));
 
    const primaryItems = [
       { href: workspaceHref(activeId, '/dashboard'), label: 'Dashboard', icon: <IcoDashboard />, active: isMatch('/dashboard') },
