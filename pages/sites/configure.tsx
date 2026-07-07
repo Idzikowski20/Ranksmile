@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
-import { Checkbox, SearchBar } from '../../components/core';
+import { Button, Checkbox, SearchBar } from '../../components/core';
 import { useFetchDomains } from '../../services/domains';
 import { getErrorMessage } from '../../lib/errors';
 
@@ -276,14 +276,16 @@ const ConfigureSite: NextPage = () => {
                               </div>
                            ))}
                         </div>
-                        <button
+                        <Button
                            type="button"
-                           style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: '12px 0 0', fontSize: 14, fontWeight: 600, color: '#52525C', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+                           variant="link"
+                           size="sm"
                            onClick={() => setShowMoreLocations((v) => !v)}
+                           style={{ padding: '12px 0 0', gap: 6 }}
                         >
                            {showMoreLocations ? 'Show less' : 'Show more'}
                            <ChevronIcon open={showMoreLocations} />
-                        </button>
+                        </Button>
                      </div>
                   )}
                </div>
@@ -323,28 +325,36 @@ const ConfigureSite: NextPage = () => {
                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9" />
                                     </svg>
                                     <span style={{ flex: 1, fontSize: 13, color: '#2F2F34', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</span>
-                                    <button
+                                    <Button
                                        type="button"
+                                       variant="transparent"
+                                       size="xs"
+                                       aria-label="Remove page"
                                        onClick={() => setConfirmedPages((prev) => prev.filter((u) => u !== url))}
-                                       style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#9F9FA9', display: 'flex', alignItems: 'center' }}
-                                    >
-                                       <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" /></svg>
-                                    </button>
+                                       icon={(
+                                          <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor" aria-hidden="true">
+                                             <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
+                                          </svg>
+                                       )}
+                                    />
                                  </div>
                               ))}
                            </div>
                         )}
 
-                        <button
+                        <Button
                            type="button"
+                           variant="secondary"
+                           size="sm"
                            onClick={handleOpenModal}
-                           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid #E4E4E7', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#2F2F34', fontFamily: 'var(--font-family-primary)' }}
+                           icon={(
+                              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9" />
+                              </svg>
+                           )}
                         >
-                           <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9" />
-                           </svg>
                            {confirmedPages.length > 0 ? `${confirmedPages.length} pages selected — edit` : 'Select pages manually'}
-                        </button>
+                        </Button>
                      </div>
                   )}
                </div>
@@ -357,35 +367,19 @@ const ConfigureSite: NextPage = () => {
                {/* ─── Cancel / Finish / Skip — shown once a location is selected ─── */}
                {selectedLocation && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-                     <Link href="/sites" passHref>
-                        <a style={{
-                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                           height: 40, padding: '0 20px',
-                           border: '1px solid #E4E4E7', borderRadius: 8,
-                           fontSize: 14, fontWeight: 600, color: '#2F2F34',
-                           textDecoration: 'none', fontFamily: 'var(--font-family-primary)',
-                           background: '#fff',
-                        }}>
-                           Cancel
-                        </a>
-                     </Link>
-                     <button
+                     <Button type="button" variant="secondary" size="sm" onClick={() => router.push('/sites')}>
+                        Cancel
+                     </Button>
+                     <Button
                         type="button"
+                        variant="primary"
+                        size="sm"
                         onClick={handleSubmit}
                         disabled={submitting}
-                        style={{
-                           height: 40, padding: '0 24px',
-                           border: 'none', borderRadius: 8,
-                           background: submitting ? '#E4E4E7' : '#09090B',
-                           color: submitting ? '#9F9FA9' : '#fff',
-                           fontSize: 14, fontWeight: 600,
-                           cursor: submitting ? 'not-allowed' : 'pointer',
-                           fontFamily: 'var(--font-family-primary)',
-                           transition: 'background 0.15s',
-                        }}
+                        busy={submitting}
                      >
                         {submitting ? 'Configuring…' : confirmedPages.length > 0 ? 'Finish' : 'Skip for now'}
-                     </button>
+                     </Button>
                   </div>
                )}
             </div>
@@ -420,11 +414,18 @@ const ConfigureSite: NextPage = () => {
                            </div>
                         </div>
                      )}
-                     <button type="button" onClick={handleCloseModal} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#9F9FA9', display: 'flex', padding: 4, borderRadius: 6 }}>
-                        <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
-                           <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
-                        </svg>
-                     </button>
+                     <Button
+                        type="button"
+                        variant="transparent"
+                        size="xs"
+                        aria-label="Close"
+                        onClick={handleCloseModal}
+                        icon={(
+                           <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
+                              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" />
+                           </svg>
+                        )}
+                     />
                   </div>
 
                   {/* Sub-header */}
@@ -519,13 +520,9 @@ const ConfigureSite: NextPage = () => {
                         <span style={{ fontSize: 14, fontWeight: 500, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>
                            {selectedPages.length} {selectedPages.length === 1 ? 'page' : 'pages'} selected
                         </span>
-                        <button
-                           type="button"
-                           onClick={handleAddSelected}
-                           style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: '#783AFB', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
-                        >
+                        <Button type="button" variant="primary" size="sm" onClick={handleAddSelected}>
                            Add selected
-                        </button>
+                        </Button>
                      </div>
                   )}
                </div>

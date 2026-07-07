@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Button } from '../core';
 import TrendLineChart from './TrendLineChart';
 import { SkeletonBox } from './SkeletonBlocks';
 import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
@@ -31,8 +32,6 @@ const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="n
 const ChevronDown = () => (<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path fill="currentColor" fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>);
 const Check = () => (<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path fill="currentColor" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>);
 
-const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: '#52525C', cursor: 'pointer', borderRadius: 6 };
-const subBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, color: '#18181B', cursor: 'pointer' };
 const cell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
 const engineLabel = (e: string): string => AI_VIS_MODEL_LABEL[e] || e;
 
@@ -80,11 +79,11 @@ const EnginePicker = ({ engines, value, onChange }: { engines: string[]; value: 
    );
    return (
       <div style={{ position: 'relative' }}>
-         <button type="button" style={subBtn} onClick={() => setOpen((o) => !o)}>
+         <Button type="button" variant="secondary" size="sm" onClick={() => setOpen((o) => !o)} style={{ gap: 6, fontFamily: FONT }}>
             {value && isKnownModel(label) ? <span style={{ display: 'inline-flex', flexShrink: 0 }}><ModelIcon model={label} size={16} /></span> : null}
             <span>{label}</span>
             <ChevronDown />
-         </button>
+         </Button>
          {open ? (
             <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 220, background: '#fff', borderRadius: 12, padding: 8, boxShadow: '0 18px 40px rgba(17,24,39,0.14), 0 8px 18px rgba(17,24,39,0.09)', zIndex: 320, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                {item('', 'All models', value === '', null)}
@@ -165,16 +164,16 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                     <button type="button" aria-label="Previous" disabled={!canPrev} onClick={() => onNavigate(index - 1)} style={{ ...iconBtn, opacity: canPrev ? 1 : 0.35, cursor: canPrev ? 'pointer' : 'not-allowed' }}><ArrowUp /></button>
-                     <button type="button" aria-label="Next" disabled={!canNext} onClick={() => onNavigate(index + 1)} style={{ ...iconBtn, opacity: canNext ? 1 : 0.35, cursor: canNext ? 'pointer' : 'not-allowed' }}><ArrowDown /></button>
+                     <Button type="button" variant="transparent" size="sm" aria-label="Previous" disabled={!canPrev} onClick={() => onNavigate(index - 1)} icon={<ArrowUp />} style={{ opacity: canPrev ? 1 : 0.35 }} />
+                     <Button type="button" variant="transparent" size="sm" aria-label="Next" disabled={!canNext} onClick={() => onNavigate(index + 1)} icon={<ArrowDown />} style={{ opacity: canNext ? 1 : 0.35 }} />
                   </div>
                   <Segmented options={[{ id: 'overview', label: 'Overview' }, { id: 'responses', label: 'Responses' }]} value={tab} onChange={setTab} />
-                  <button type="button" aria-label="Close" onClick={handleClose} style={iconBtn}><CloseIcon /></button>
+                  <Button type="button" variant="transparent" size="sm" aria-label="Close" onClick={handleClose} icon={<CloseIcon />} />
                </div>
                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{title}</h2>
                {/* Sub-row: Compare (placeholder) + functional engine picker */}
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <button type="button" style={{ ...subBtn, color: '#52525C' }} aria-label="Compare (coming soon)"><span>Compare</span></button>
+                  <Button type="button" variant="secondary" size="sm" aria-label="Compare (coming soon)" style={{ color: '#52525C', fontFamily: FONT }}>Compare</Button>
                   <EnginePicker engines={engines} value={engine} onChange={setEngine} />
                </div>
             </div>

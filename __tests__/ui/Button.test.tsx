@@ -1,7 +1,6 @@
 import { render, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from '@emotion/react';
-import { theme } from '../../components/core/theme';
-import Button from '../../components/ui/Button';
+import { theme, Button } from '../../components/core';
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider theme={theme}>{children}</ThemeProvider>
@@ -25,7 +24,7 @@ describe('Button', () => {
       <>
         <Button variant="primary">P</Button>
         <Button variant="secondary">S</Button>
-        <Button variant="ghost">G</Button>
+        <Button variant="transparent">G</Button>
       </>,
       { wrapper: Wrapper }
     );

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Gauge } from '../ui';
+import { Gauge } from '../core';
 import { AuditCardDTO } from '../../lib/auditTypes';
 
 const FONT = 'var(--font-family-primary)';

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { SearchBar } from '../ui';
+import { SearchBar } from '../core';
 import { XIcon } from '../core';
 
 export type GscKeyword = { keyword: string; position: number; clicks: number; impressions: number };

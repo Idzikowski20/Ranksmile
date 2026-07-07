@@ -3,14 +3,8 @@ import { useRouter } from 'next/router';
 import { Flex, Stack } from '../core/layout';
 import { Text } from '../core/text';
 import { Button } from '../core';
-import SectionHeader from './SectionHeader';
+import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
 import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
-
-const GetStartedIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3.33789 7C5.06694 4.01099 8.29866 2 12.0001 2C17.5229 2 22.0001 6.47715 22.0001 12C22.0001 17.5228 17.5229 22 12.0001 22C8.29866 22 5.06694 19.989 3.33789 17M12 16L16 12M16 12L12 8M16 12H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const Chevron = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
@@ -46,8 +40,9 @@ const GetStartedCard = () => {
   const href = nextStep.href || '';
 
   return (
-    <Stack gap="lg">
-      <SectionHeader icon={<GetStartedIcon />} label="Get started" />
+    <SentryPanel>
+      <SentryPanelHeader title="Get started" />
+      <SentryPanelBody>
       <Flex
         align="center"
         justify="between"
@@ -87,7 +82,8 @@ const GetStartedCard = () => {
           </Button>
         )}
       </Flex>
-    </Stack>
+      </SentryPanelBody>
+    </SentryPanel>
   );
 };
 

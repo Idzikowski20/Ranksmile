@@ -7,6 +7,7 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import CreateAuditModal from '../../../components/audit/CreateAuditModal';
 import AuditCard from '../../../components/audit/AuditCard';
+import { Button } from '../../../components/core';
 import { useAuditList, useAuditStatus, useCreateAudit, useRunAudits, useDeleteAudit } from '../../../services/auditTool';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
@@ -56,22 +57,16 @@ const AuditToolPage: NextPage = () => {
    const loading = listQ.isLoading;
 
    const actions = (
-      <button
-         type="button"
-         onClick={() => setModalOpen(true)}
-         style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 6, padding: '7px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', transition: 'background 150ms ease' }}
-         onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-         onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-      >
-         <PlusIcon /> Create new Audit
-      </button>
+      <Button type="button" variant="primary" size="sm" icon={<PlusIcon />} onClick={() => setModalOpen(true)}>
+         Create new Audit
+      </Button>
    );
 
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`Audit — ${domain}`}</title></Head>
          <style>{'@keyframes spin{to{transform:rotate(360deg)}}@keyframes auditBarPulse{0%,100%{opacity:.55}50%{opacity:1}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" heading="Audit" contentMaxWidth="100%">
             <div style={{ maxWidth: 880, margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Audit</h1>

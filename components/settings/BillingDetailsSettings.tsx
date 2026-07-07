@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
+import { Button, Input } from '../core';
+import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
 
 const PencilIcon = () => (
   <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -45,119 +45,25 @@ const StripeSeal = () => (
   </svg>
 );
 
-// ─── Buttons ──────────────────────────────────────────────────────────────────
-
 const font = 'var(--font-family-primary)';
 
 const EditButton = ({ onClick }: { onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 8,
-      background: 'transparent',
-      border: 'none',
-      padding: 0,
-      cursor: 'pointer',
-      fontFamily: font,
-      fontSize: 14,
-      fontWeight: 600,
-      color: '#3F3F47',
-      transition: 'color 150ms ease',
-    }}
-    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#2F2F34'; }}
-    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#3F3F47'; }}
-  >
-    <PencilIcon />
-    <span>Edit</span>
-  </button>
+  <Button type="button" variant="transparent" size="sm" icon={<PencilIcon />} onClick={onClick}>
+    Edit
+  </Button>
 );
 
 const SaveCancel = ({ onCancel, onSave }: { onCancel: () => void; onSave: () => void }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-    <button
-      type="button"
-      onClick={onCancel}
-      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}
-    >
-      Cancel
-    </button>
-    <button
-      type="button"
-      onClick={onSave}
-      style={{
-        background: '#F4F4F5',
-        color: '#18181B',
-        border: 'none',
-        borderRadius: 8,
-        padding: '7px 18px',
-        cursor: 'pointer',
-        fontFamily: font,
-        fontSize: 14,
-        fontWeight: 600,
-        transition: 'background 150ms ease',
-      }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#E4E4E7'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
-    >
-      Save
-    </button>
+    <Button type="button" variant="transparent" size="sm" onClick={onCancel}>Cancel</Button>
+    <Button type="button" variant="secondary" size="sm" onClick={onSave}>Save</Button>
   </div>
 );
 
-// ─── Form atoms ───────────────────────────────────────────────────────────────
-
-const labelStyle: React.CSSProperties = { fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' };
-
-const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => {
-  const [focused, setFocused] = useState(false);
-  return (
-    <input
-      {...props}
-      onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
-      onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
-      style={{
-        width: '100%',
-        boxSizing: 'border-box',
-        fontFamily: font,
-        fontSize: 14,
-        color: '#18181B',
-        background: '#fff',
-        border: `1px solid ${focused ? '#AA93FD' : '#D4D4D8'}`,
-        borderRadius: 8,
-        padding: '10px 12px',
-        outline: 'none',
-        boxShadow: focused ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none',
-        transition: 'border-color 150ms ease, box-shadow 150ms ease',
-      }}
-    />
-  );
-};
-
-const LabeledInput = ({
-  label, placeholder, defaultValue, helper,
-}: { label: string; placeholder?: string; defaultValue?: string; helper?: string }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-    <label style={labelStyle}>{label}</label>
-    <TextInput placeholder={placeholder} defaultValue={defaultValue} />
-    {helper && <span style={{ fontFamily: font, fontSize: 13, color: '#52525C' }}>{helper}</span>}
-  </div>
-);
-
-/** Read-only key/value row in Customer details */
 const ReadField = ({ label, value }: { label: string; value: string }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
     <span style={{ fontFamily: font, fontSize: 14, color: '#18181B' }}>{label}</span>
     <span style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#09090B' }}>{value}</span>
-  </div>
-);
-
-const SectionHeader = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-    <span style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#18181B' }}>{title}</span>
-    {children}
   </div>
 );
 
@@ -171,8 +77,6 @@ const TaxIdRow = ({ withEdit, onEdit }: { withEdit?: boolean; onEdit?: () => voi
   </div>
 );
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 const BillingDetailsSettings = () => {
   const [editPayment, setEditPayment] = useState(false);
   const [editCustomer, setEditCustomer] = useState(false);
@@ -181,123 +85,128 @@ const BillingDetailsSettings = () => {
   const saveCustomer = () => { setEditCustomer(false); toast.success('Customer details updated'); };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, fontFamily: font }}>
-      {/* ── Payment method ──────────────────────────────────────────────── */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <SectionHeader title="Payment method">
-          {editPayment
-            ? <SaveCancel onCancel={() => setEditPayment(false)} onSave={savePayment} />
-            : <EditButton onClick={() => setEditPayment(true)} />}
-        </SectionHeader>
-
-        {editPayment ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <LabeledInput label="Cardholder Name" placeholder="e.g. John Doe" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={labelStyle}>Card Number</label>
-              <div style={{ position: 'relative' }}>
-                <TextInput placeholder="Card Number" />
-                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4, background: '#18181B', color: '#fff',
-                    borderRadius: 6, padding: '3px 7px', fontSize: 11, fontWeight: 600,
-                  }}
-                  >
-                    <span style={{ color: '#4ade80' }}>▸</span>link
+    <>
+      <SentrySettingsSection title="Payment method">
+        <SentrySettingsRow
+          label="Card on file"
+          description="Your default payment method for subscription renewals."
+        >
+          <div style={{ width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editPayment ? 16 : 0 }}>
+              {editPayment
+                ? <SaveCancel onCancel={() => setEditPayment(false)} onSave={savePayment} />
+                : <EditButton onClick={() => setEditPayment(true)} />}
+            </div>
+            {editPayment ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Cardholder Name</label>
+                  <Input placeholder="e.g. John Doe" style={{ width: '100%', maxWidth: 320 }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Card Number</label>
+                  <div style={{ position: 'relative', maxWidth: 320 }}>
+                    <Input placeholder="Card Number" style={{ width: '100%' }} />
+                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'none' }}>
+                      <VisaLogo />
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, maxWidth: 320 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Expiration Date</label>
+                    <Input placeholder="MM/YY" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>CVC</label>
+                    <Input placeholder="CVC" />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <StripeSeal />
+                  <span style={{ fontFamily: font, fontSize: 14, color: '#3F3F47' }}>
+                    Secure payment powered by{' '}
+                    <Button type="button" variant="link" size="sm" onClick={() => toast('Powered by Stripe')} style={{ padding: 0, verticalAlign: 'baseline' }}>
+                      Stripe
+                    </Button>
                   </span>
-                  <span style={{ transform: 'scale(0.62)', transformOrigin: 'right center', display: 'inline-flex' }}><VisaLogo /></span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <VisaLogo />
+                <span style={{ fontFamily: font, fontSize: 14, color: '#18181B', fontVariantNumeric: 'tabular-nums slashed-zero' }}>
+                  <span style={{ paddingRight: 4, letterSpacing: '0.05em' }}>•••• •••• ••••</span>
+                  5948
+                </span>
+                <span style={{ fontFamily: font, fontSize: 14, paddingLeft: 8, fontVariantNumeric: 'tabular-nums slashed-zero' }}>
+                  <span style={{ color: '#52525C' }}>Exp:</span> 4/2031
                 </span>
               </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-              <LabeledInput label="Expiration Date" placeholder="MM/YY" />
-              <LabeledInput label="CVC" placeholder="CVC" />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <StripeSeal />
-              <span style={{ fontFamily: font, fontSize: 14, color: '#3F3F47' }}>
-                Secure payment powered by{' '}
-                <a
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); toast('Powered by Stripe'); }}
-                  style={{ color: '#18181B', textDecoration: 'underline', fontWeight: 500 }}
-                >
-                  Stripe
-                </a>
-              </span>
-            </div>
+            )}
           </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <VisaLogo />
-            <span style={{ fontFamily: font, fontSize: 14, color: '#18181B', fontVariantNumeric: 'tabular-nums slashed-zero' }}>
-              <span style={{ paddingRight: 4, letterSpacing: '0.05em' }}>•••• •••• ••••</span>
-              5948
-            </span>
-            <span style={{ fontFamily: font, fontSize: 14, paddingLeft: 8, fontVariantNumeric: 'tabular-nums slashed-zero' }}>
-              <span style={{ color: '#52525C' }}>Exp:</span> 4/2031
-            </span>
-          </div>
-        )}
-      </section>
+        </SentrySettingsRow>
+      </SentrySettingsSection>
 
-      {/* ── Customer details ────────────────────────────────────────────── */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-        <SectionHeader title="Customer details">
-          {editCustomer
-            ? <SaveCancel onCancel={() => setEditCustomer(false)} onSave={saveCustomer} />
-            : <EditButton onClick={() => setEditCustomer(true)} />}
-        </SectionHeader>
-
-        {editCustomer ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <label style={labelStyle}>Country</label>
-              <div
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#F8F8F9',
-                  border: '1px solid #E4E4E7',
-                  borderRadius: 8,
-                  padding: '10px 12px',
-                  fontFamily: font,
-                  fontSize: 14,
-                  color: '#9F9FA9',
-                }}
-              >
-                <span>Poland</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M6 9l6 6 6-6" stroke="#9F9FA9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+      <SentrySettingsSection title="Customer details">
+        <SentrySettingsRow label="Billing information" description="Address and tax details used on invoices.">
+          <div style={{ width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editCustomer ? 16 : 0 }}>
+              {editCustomer
+                ? <SaveCancel onCancel={() => setEditCustomer(false)} onSave={saveCustomer} />
+                : <EditButton onClick={() => setEditCustomer(true)} />}
+            </div>
+            {editCustomer ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 420 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Country</label>
+                  <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8F8F9', border: '1px solid #E4E4E7', borderRadius: 8, padding: '10px 12px', fontFamily: font, fontSize: 14, color: '#9F9FA9' }}>
+                    <span>Poland</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M6 9l6 6 6-6" stroke="#9F9FA9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Billing email (optional)</label>
+                  <Input defaultValue="patryk.idzikowski@interia.pl" style={{ width: '100%' }} />
+                  <span style={{ fontFamily: font, fontSize: 13, color: '#52525C' }}>Fill in to receive invoices on an email address other than the one associated with your account</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Name/Company name</label>
+                  <Input style={{ width: '100%' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Address</label>
+                  <Input style={{ width: '100%' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>City</label>
+                  <Input style={{ width: '100%' }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>State/Province/Region</label>
+                    <Input />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>ZIP Code</label>
+                    <Input />
+                  </div>
+                </div>
+                <TaxIdRow withEdit onEdit={() => toast('Add your Tax ID')} />
               </div>
-            </div>
-            <LabeledInput
-              label="Billing email (optional)"
-              defaultValue="patryk.idzikowski@interia.pl"
-              helper="Fill in to receive invoices on an email address other than the one associated with your account"
-            />
-            <LabeledInput label="Name/Company name" />
-            <LabeledInput label="Address" />
-            <LabeledInput label="City" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 16 }}>
-              <LabeledInput label="State/Province/Region" />
-              <LabeledInput label="ZIP Code" />
-            </div>
-            <TaxIdRow withEdit onEdit={() => toast('Add your Tax ID')} />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <ReadField label="Country" value="Poland" />
+                <ReadField label="Billing email" value="patryk.idzikowski@interia.pl" />
+                <TaxIdRow />
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <ReadField label="Country" value="Poland" />
-            <ReadField label="Billing email" value="patryk.idzikowski@interia.pl" />
-            <TaxIdRow />
-          </div>
-        )}
-      </section>
-    </div>
+        </SentrySettingsRow>
+      </SentrySettingsSection>
+    </>
   );
 };
 

@@ -1,34 +1,38 @@
 # Sentry Core Component Migration
 
-> Cel: zastąpić ręczne inline-style komponenty oraz fragmenty `components/ui` przeniesionymi/core komponentami Sentry, zgodnie z DESIGN.md.
+> Hybryda Surfer/Sentry: generyczne UI → `components/core`; unikalny produkt Surfer → KEEP w `components/surfer/`.
 
-## Instalacja / fundamenty
-- `_app.tsx` już otwarty w `ThemeProvider` + `IconDefaultsProvider`.
-- Tokeny lives w `components/core/theme.tsx`.
-- Unia nowych i starych komponentów: `components/core/index.ts`.
-
-## Mapowanie importów
-- Stary: `components/ui/Button` → Nowy: `components/core/button/button` lub bezpośrednio `components/core`
-- Stary: `components/ui/Badge` → Nowy: `components/core/badge/badge`
-- Stary: `components/ui/Input` → Nowy: `components/core/input/input`
-- Stary: `components/ui/Checkbox` → Nowy: `components/core/checkbox/checkbox`
-- Stary: `components/ui/Toggle` → Nowy: `components/core/switch/switch` (alias `Toggle` istnieje)
-- Stary: `components/ui/SearchBar` → Nowy: `components/core/input/input` + ikona
-- Stary: `components/ui/Tabs` → Nowy: `components/core/tabs/tabs`
-- Stary: `components/ui/Skeleton` → Nowy: `components/core/loader/indeterminateLoader`
-- Stary: `components/ui/Modal` → Nowy: `components/core/modal/modal` z `ModalHeader / ModalBody / ModalFooter`
-- Stary: `components/ui/SlidePanel` → Nowy: `components/core/slideOverPanel/slideOverPanel`
-- Stary: `components/ui/SelectionBar` / `SortableHeader` / `SearchBar` / `SlidePanel` → left w `components/ui/` jako unikalne wrappery
-
-## Zasady redesignu
-- Preferuj flex/grid z DESIGN.md + tokeny, nie inline-style dla powtarzających się wzorców.
-- Wszystkie kolory z DESIGN.md w formie tokenów: `components/ui/tokens.ts` + mapuj na temat Sentry jeśli zachodzi zgodność.
-- Zachowuj istniejące zachowanie: `AppShell`, `Sidebar`, routing.
-- Modyfikuj pliki po jednym komponencie/stronie, commit często.
+## Fundamenty
+- `_app.tsx`: `ThemeProvider` + `IconDefaultsProvider`
+- Tokeny primary: `components/core/theme.tsx`
+- Barrel: `components/core/index.ts`
+- Design zones: `design.md` §1.1 Hybrid zones
 
 ## Status
+
 - [x] fundamenty: `_app.tsx` + theme
-- [x] unifikacja `ui/*.tsx` → delegują do `components/core/...`
-- [ ] przepisanie `pages/sites/[domain]/performance.tsx` na core-e
-- [ ] przepisanie mniejszych stron: `content-audit`, `ideas`, `recommendations`, `topical-map`, `activity-log`
-- [ ] agregacja `components/common/*` do `components/core/*` tam gdzie pasuje
+- [x] `design.md` hybrid zones + `--zone-editor-bg`
+- [x] core ports: separator, menuListItem, statusIndicator, pagination, segmentedControl, form, link, drawer, searchBar
+- [x] `SentryNav` w `AppShell` (docking, org switcher, help L2, business→billing, beyond basics, collapse)
+- [x] usunięto `Sidebar`, `WorkspaceSwitcher`, `TopBar`
+- [x] `common/Modal`, `ConfirmModal`, `InputField`, `ToggleField`, `SecretField` → core
+- [x] `SelectField` single-select → core `Select`
+- [x] `SidePanel` → `SlideOverPanel`
+- [x] `components/surfer/` — Gauge, SelectionBar, SortableHeader, SlidePanel
+- [x] usunięto `components/ui/` wrappery (barrel deprecated → core)
+- [x] editor primitives (modale, OptimizeReviewBar, CommentComposer)
+- [x] TrafficAlerts → `StatusIndicator`
+- [ ] pełna migracja keywords/domains (Icon → inline SVG) — opcjonalnie iteracyjnie
+- [ ] `SettingsLayout` → Sentry secondary nav pattern — przyszła iteracja
+
+## KEEP (`components/surfer/`)
+
+Scoring, TipTap, Surfy, AO, AuditFactorChart, TermsTable, AuthSplitLayout branding.
+
+## Importy
+
+| Stary | Nowy |
+|-------|------|
+| `components/ui/*` | `components/core` |
+| `common/HoverTooltip` | `core` → `HoverTooltip` alias |
+| `common/Modal` | `core/Modal` (wrapper zachowany dla API) |

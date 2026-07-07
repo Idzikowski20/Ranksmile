@@ -10,6 +10,7 @@ import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/a
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AuditFactor, AuditResult } from '../../../../lib/auditTypes';
+import { Button } from '../../../../components/core';
 
 const AuditFactorChart = dynamic(() => import('../../../../components/audit/AuditFactorChart'), { ssr: false });
 const TermsTable = dynamic(() => import('../../../../components/audit/TermsTable'), { ssr: false });
@@ -43,12 +44,9 @@ const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({ t
 );
 
 const DetailsButton = ({ label, open, onClick }: { label: string; open: boolean; onClick: () => void }) => (
-   <button
-      type="button" onClick={onClick}
-      style={{ boxSizing: 'border-box', height: 36, padding: '0 16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', background: '#F4F4F5', color: '#2F2F34', borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-   >{open ? label.replace(/^Show/, 'Hide') : label}</button>
+   <Button type="button" variant="secondary" size="sm" onClick={onClick}>
+      {open ? label.replace(/^Show/, 'Hide') : label}
+   </Button>
 );
 
 /** One row: tone icon + headline + value line + (indented) description, with a Show/Hide
@@ -163,27 +161,23 @@ const AuditDetailPage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`${run?.keyword || 'Audit'} — ${domain}`}</title></Head>
          <style>{'@keyframes spin{to{transform:rotate(360deg)}}@keyframes auditPulse{0%,100%{opacity:.5}50%{opacity:1}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" heading="Audit" contentMaxWidth="100%">
             <div style={{ maxWidth: 1040, margin: '0 auto' }}>
             {/* Sticky title row: keyword + audited URL + actions */}
             <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '16px 0', marginBottom: 4 }}>
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0 }}>
-                  <button type="button" onClick={() => router.push(`/sites/${slug}/audit-tool`)} aria-label="Back" style={{ border: 'none', background: 'transparent', color: '#71717B', cursor: 'pointer', fontSize: 18, padding: 0, flexShrink: 0 }}>‹</button>
+                  <Button type="button" variant="transparent" size="sm" onClick={() => router.push(`/sites/${slug}/audit-tool`)} aria-label="Back" style={{ color: '#71717B', fontSize: 18, padding: 0, flexShrink: 0 }}>‹</Button>
                   <span style={{ fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT, flexShrink: 0 }}>{run?.keyword || '…'}</span>
                   {run?.url && (
                      <a href={run.url} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: '#52525C', fontFamily: FONT, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{run.url}</a>
                   )}
                </div>
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <button type="button" onClick={rerun} disabled={rerunM.isLoading} aria-label="Refresh audit" title="Re-run audit" style={{ border: 'none', background: 'transparent', color: '#52525C', cursor: rerunM.isLoading ? 'default' : 'pointer', display: 'inline-flex', padding: 4, opacity: rerunM.isLoading ? 0.5 : 1 }}>
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 22s.85-.12 4.36-3.64C21.88 14.85 21.88 9.15 18.36 5.64 17.12 4.39 15.6 3.59 14 3.22M14 22h6M14 22v-6M10 2s-.85.12-4.36 3.64C2.12 9.15 2.12 14.85 5.64 18.36 6.88 19.61 8.4 20.41 10 20.78M10 2H4M10 2v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </button>
+                  <Button type="button" variant="transparent" size="sm" onClick={rerun} disabled={rerunM.isLoading} busy={rerunM.isLoading} aria-label="Refresh audit" title="Re-run audit" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 22s.85-.12 4.36-3.64C21.88 14.85 21.88 9.15 18.36 5.64 17.12 4.39 15.6 3.59 14 3.22M14 22h6M14 22v-6M10 2s-.85.12-4.36 3.64C2.12 9.15 2.12 14.85 5.64 18.36 6.88 19.61 8.4 20.41 10 20.78M10 2H4M10 2v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>} style={{ color: '#52525C', opacity: rerunM.isLoading ? 0.5 : 1 }} />
                   {run?.keyword && (
-                     <button type="button" onClick={() => setCompOpen(true)} aria-label="Select competitors" title="Select competitors" style={{ border: 'none', background: 'transparent', color: '#52525C', cursor: 'pointer', display: 'inline-flex', padding: 4 }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                     </button>
+                     <Button type="button" variant="transparent" size="sm" onClick={() => setCompOpen(true)} aria-label="Select competitors" title="Select competitors" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>} style={{ color: '#52525C' }} />
                   )}
-                  <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
+                  <Button type="button" variant="primary" size="sm" style={{ fontFamily: FONT }}>Share</Button>
                </div>
             </div>
 

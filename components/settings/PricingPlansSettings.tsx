@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { getPlanCheckoutHref } from '../../lib/billingPlans';
+import { Button } from '../core';
+import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
 
 // ─── Tiny reusable SVG atoms ──────────────────────────────────────────────────
 
@@ -471,55 +473,13 @@ const CtaButton = ({
   fullWidth?: boolean;
   href: string;
 }) => {
-  const base: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: fullWidth ? '100%' : undefined,
-    padding: '9px 18px',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 600,
-    fontFamily: 'var(--font-family-primary)',
-    cursor: 'pointer',
-    transition: 'background 150ms ease, opacity 150ms ease',
-    border: 'none',
-    whiteSpace: 'nowrap',
-    textDecoration: 'none',
-  };
+  const variant = ctaStyle === 'primary' ? 'primary' : ctaStyle === 'gray' ? 'secondary' : 'transparent';
 
-  if (ctaStyle === 'primary') {
-    return (
-      <a
-        href={href}
-        style={{ ...base, background: '#783AFB', color: '#fff' }}
-        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.filter = ''; }}
-      >
-        {label}
-      </a>
-    );
-  }
-  if (ctaStyle === 'gray') {
-    return (
-      <a
-        href={href}
-        style={{ ...base, background: '#F4F4F5', color: '#18181B' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-      >
-        {label}
-      </a>
-    );
-  }
   return (
-    <a
-      href={href}
-      style={{ ...base, background: 'transparent', color: '#18181B', boxShadow: 'inset 0 0 0 1px #E4E4E7' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-    >
-      {label}
+    <a href={href} style={{ display: fullWidth ? 'block' : 'inline-block', textDecoration: 'none', width: fullWidth ? '100%' : undefined }}>
+      <Button variant={variant} size="sm" style={{ width: fullWidth ? '100%' : undefined }}>
+        {label}
+      </Button>
     </a>
   );
 };
@@ -588,15 +548,9 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, paddingTop: 2 }}>
             {onSkip && (
-              <button
-                type="button"
-                onClick={onSkip}
-                style={{ fontFamily: 'var(--font-family-primary)', fontSize: 14, fontWeight: 500, color: '#52525C', background: '#fff', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease, border-color 150ms ease' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
-              >
+              <Button type="button" variant="secondary" size="sm" onClick={onSkip} style={{ whiteSpace: 'nowrap' }}>
                 Skip for now
-              </button>
+              </Button>
             )}
             <span style={{ fontSize: 14, color: '#52525C', whiteSpace: 'nowrap' }}>
               Need more?{' '}
@@ -740,7 +694,8 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
           </span>
         </div>
 
-        <div style={{ border: '1px solid #E4E4E7', borderRadius: 12, padding: '24px', background: '#fff' }}>
+        <SentryPanel>
+          <SentryPanelBody>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 17, fontWeight: 600, color: '#18181B' }}>Starter</span>
@@ -776,29 +731,28 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
               </li>
             ))}
           </ul>
-        </div>
+          </SentryPanelBody>
+        </SentryPanel>
       </div>
 
       {/* ── D) Compare Plans table ─────────────────────────────────────── */}
-      <div>
-        {/* Section header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Compare Plans</span>
-          <span style={{ fontSize: 14, color: '#52525C' }}>
-            Need more?{' '}
-            <a
-              href="#"
-              style={{ color: '#18181B', textDecoration: 'underline', fontWeight: 500 }}
-              onClick={(e) => { e.preventDefault(); toast('Contact our sales team!'); }}
-            >
-              Contact Sales
-            </a>
-          </span>
-        </div>
-
-        {/* Table — sticky header + sticky left label column. borderCollapse:separate
-            keeps sticky borders reliable across browsers. */}
-        <div style={{ overflowX: 'auto', border: '1px solid #E4E4E7', borderRadius: 12, background: '#fff' }} className="styled-scrollbar">
+      <SentryPanel noPadding>
+        <SentryPanelHeader
+          title="Compare plans"
+          actions={(
+            <span style={{ fontSize: 14, color: '#52525C' }}>
+              Need more?{' '}
+              <a
+                href="#"
+                style={{ color: '#18181B', textDecoration: 'underline', fontWeight: 500 }}
+                onClick={(e) => { e.preventDefault(); toast('Contact our sales team!'); }}
+              >
+                Contact Sales
+              </a>
+            </span>
+          )}
+        />
+        <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: 760 }}>
             <colgroup>
               <col style={{ width: '28%' }} />
@@ -961,10 +915,10 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
           </table>
         </div>
 
-        <p style={{ marginTop: 12, fontSize: 12, color: '#9F9FA9', textAlign: 'center', fontFamily: 'var(--font-family-primary)' }}>
+        <p style={{ margin: '12px 16px', fontSize: 12, color: '#9F9FA9', textAlign: 'center', fontFamily: 'var(--font-family-primary)' }}>
           * Fair usage policy applies
         </p>
-      </div>
+      </SentryPanel>
 
       {/* ── E) Rating + FAQ ───────────────────────────────────────────── */}
 
@@ -1009,7 +963,9 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
       </div>
 
       {/* FAQ */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid #E4E4E7', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+      <SentryPanel noPadding>
+        <SentryPanelHeader title="FAQ" />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
         {FAQ_ITEMS.map((item, i) => {
           const open = faqOpen === i;
           return (
@@ -1064,7 +1020,8 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
             </div>
           );
         })}
-      </div>
+        </div>
+      </SentryPanel>
 
     </div>
   );

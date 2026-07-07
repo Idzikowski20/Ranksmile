@@ -67,4 +67,19 @@ export function Tooltip({ title, children, disabled, maxWidth = 225 }: TooltipPr
   );
 }
 
+/** Backward-compat alias for legacy `label` / `align` API. */
+export function HoverTooltip({
+  label,
+  align: _align = 'left',
+  children,
+  maxWidth,
+}: {
+  label: React.ReactNode;
+  align?: 'left' | 'right' | 'center';
+  children: React.ReactNode;
+  maxWidth?: number;
+}) {
+  return <Tooltip title={label} maxWidth={maxWidth}>{children}</Tooltip>;
+}
+
 export default Tooltip;

@@ -7,8 +7,9 @@ import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { SentryPanel } from '../../../components/sentry-pages';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
-import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel } from '../../../components/core';
+import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
@@ -348,21 +349,22 @@ const ContentAuditPage: NextPage = () => {
             <title>{`Content Audit — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%">
-            {/* Toolbar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-               <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                     <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
-                     Show URLs
-                  </label>
-                  <SearchBar value={search} onChange={setSearch} placeholder="Search" width={200} />
-               </div>
-            </div>
-
-            {/* Table */}
-            <div ref={rowsRef} style={{ border: '1px solid #F4F4F5', borderRadius: 10, overflow: 'hidden' }}>
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%"
+            filters={(
+               <ToolRibbon>
+                  <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: FONT }}>
+                        <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
+                        Show URLs
+                     </label>
+                     <SearchBar value={search} onChange={setSearch} placeholder="Search" width={200} />
+                  </div>
+               </ToolRibbon>
+            )}
+         >
+            <SentryPanel noPadding>
+            <div ref={rowsRef} style={{ overflow: 'hidden' }}>
                {/* Header */}
                <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
                   {/* Checkbox */}
@@ -442,14 +444,13 @@ const ContentAuditPage: NextPage = () => {
                                  )}
                               </div>
                               {row.keyword ? (
-                                 <button type="button" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, maxWidth: '100%', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 12, color: '#71717B', overflow: 'hidden', textAlign: 'left' }}>
-                                    <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent', textDecorationStyle: 'dotted', textUnderlineOffset: 3, transition: 'text-decoration-color 150ms' }}>{row.keyword}</span>
-                                    <span style={{ display: 'inline-flex', color: '#9F9FA9', flexShrink: 0 }}><PencilIcon /></span>
-                                 </button>
+                                 <Button type="button" variant="link" size="xs" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={<PencilIcon />} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0, color: '#71717B' }}>
+                                    <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword}</span>
+                                 </Button>
                               ) : (
-                                 <button type="button" title="Add keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 500, color: '#783AFB' }}>
+                                 <Button type="button" variant="link" size="xs" title="Add keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ alignSelf: 'flex-start', padding: 0 }}>
                                     + Add keyword
-                                 </button>
+                                 </Button>
                               )}
                               {showUrls && row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
                            </div>
@@ -488,6 +489,7 @@ const ContentAuditPage: NextPage = () => {
                   ))
                )}
             </div>
+            </SentryPanel>
 
             <style dangerouslySetInnerHTML={{ __html: `
                .audit-row:hover { background: #F8F8F9 !important; }

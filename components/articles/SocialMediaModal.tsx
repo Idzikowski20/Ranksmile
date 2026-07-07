@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
+import Modal from '../core/modal/modal';
+import Button from '../core/button/button';
 
 const F = 'var(--font-family-primary)';
 
@@ -58,13 +59,13 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
     if (areaRef.current && variants[selected] !== undefined) areaRef.current.innerHTML = variants[selected];
   }, [selected, variants]);
 
-  return createPortal(
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: step === 'intro' ? 600 : 800, maxHeight: '85vh', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.3)' }}>
+  return (
+    <Modal onClose={onClose} width={step === 'intro' ? 600 : 800} closeOnOverlayClick>
+      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 64px)', overflow: 'hidden', fontFamily: F }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 24px 12px' }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>Create Post</h2>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0, marginLeft: 12 }}><IcoX /></button>
+          <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<IcoX />} />
         </div>
 
         {step === 'intro' && (
@@ -74,11 +75,9 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
               <span>We&apos;ll generate 3 post variants to promote this article, using proven templates and your AI model. Run it on a ready-to-publish article.</span>
             </div>
             <div style={{ borderTop: '1px solid #f4f4f5', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={generate}
-                style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+              <Button type="button" variant="primary" onClick={generate}>
                 Generate Social Media Posts
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -96,10 +95,17 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
                     const sel = selected === i;
                     const ready = !loading && variants[i] !== undefined;
                     return (
-                      <button key={i} type="button" disabled={!ready} onClick={() => setSelected(i)}
-                        style={{ width: 33, height: 28, borderRadius: 6, border: 'none', cursor: ready ? 'pointer' : 'not-allowed', background: sel ? '#18181b' : 'transparent', color: sel ? '#fff' : '#3f3f47', fontSize: 13, fontWeight: 600, fontFamily: F, opacity: ready ? 1 : 0.5 }}>
+                      <Button
+                        key={i}
+                        type="button"
+                        variant={sel ? 'primary' : 'transparent'}
+                        size="sm"
+                        disabled={!ready}
+                        onClick={() => setSelected(i)}
+                        style={{ width: 33, minWidth: 33, padding: '0 4px' }}
+                      >
                         {i + 1}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -122,17 +128,20 @@ const SocialMediaModal = ({ articleId, onClose }: Props) => {
             </div>
 
             <div style={{ borderTop: '1px solid #f4f4f5', padding: '14px 24px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={copy} disabled={loading || !variants.length}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: (loading || !variants.length) ? 'not-allowed' : 'pointer', opacity: (loading || !variants.length) ? 0.6 : 1, transition: 'background 0.15s' }}
-                onMouseEnter={(e) => { if (!loading && variants.length) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
-                <IcoCopy /> Copy
-              </button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={copy}
+                disabled={loading || !variants.length}
+                icon={<IcoCopy />}
+              >
+                Copy
+              </Button>
             </div>
           </>
         )}
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 };
 

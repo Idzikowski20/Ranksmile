@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
-import { Flex, Stack, Grid } from '../core/layout';
+import { Flex, Stack } from '../core/layout';
 import { Text } from '../core/text';
 import { Button, Gauge } from '../core';
+import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
 import Skeleton from './Skeleton';
 import { authClient } from '../../lib/auth/client';
 
@@ -22,12 +22,6 @@ interface Props {
   items: RecentlyEditedItem[];
   loading?: boolean;
 }
-
-const ClockIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const DocIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-[20px] text-gray-60">
@@ -226,28 +220,25 @@ const RecentlyEdited = ({items, loading}: Props) => {
   const userInitial = name ? name.charAt(0).toLowerCase() : '?';
 
   return (
-    <Stack gap="md">
-      <Flex align="center" justify="between">
-        <Flex align="center" gap="sm" className="text-gray-base">
-          <ClockIcon />
-          <Text size="md" bold>Recently edited</Text>
-        </Flex>
-      </Flex>
+    <SentryPanel>
+      <SentryPanelHeader title="Recently edited" />
+      <SentryPanelBody>
       {/* eslint-disable-next-line no-nested-ternary */}
       {loading ? (
-        <Grid gap="md" columns="repeat(1, 1fr)" className="sm:grid-cols-2 lg:grid-cols-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16 }} className="sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <CardSkeleton key={i} />)}
-        </Grid>
+        </div>
       ) : items.length === 0 ? (
         <EmptyState />
       ) : (
-        <Grid gap="md" columns="repeat(1, 1fr)" className="sm:grid-cols-2 lg:grid-cols-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16 }} className="sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item) => (
             <Card key={item.id} item={item} userInitial={userInitial} />
           ))}
-        </Grid>
+        </div>
       )}
-    </Stack>
+      </SentryPanelBody>
+    </SentryPanel>
   );
 };
 

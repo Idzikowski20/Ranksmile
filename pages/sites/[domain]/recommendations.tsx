@@ -6,12 +6,12 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { SentryPanel } from '../../../components/sentry-pages';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { normalizeUrlForMatch, kwScore } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
-import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader } from '../../../components/core';
-import { DeltaDown, SortUpDown } from '../../../components/core';
+import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
@@ -112,17 +112,10 @@ function countActiveFilters(f: FilterState): number {
    return n;
 }
 
-// ── Filters popover ───────────────────────────────────────────────────────────
-function FiltersPopover({ filters, onChange, onClose }: {
-   filters: FilterState; onChange: (f: FilterState) => void; onClose: () => void;
+// ── Filters panel (inside CompactSelect menu) ─────────────────────────────────
+function FiltersPanel({ filters, onChange }: {
+   filters: FilterState; onChange: (f: FilterState) => void;
 }) {
-   const ref = useRef<HTMLDivElement>(null);
-   useEffect(() => {
-      const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
-      document.addEventListener('mousedown', fn);
-      return () => document.removeEventListener('mousedown', fn);
-   }, [onClose]);
-
    const set = (key: keyof FilterState, val: FilterState[keyof FilterState]) => onChange({ ...filters, [key]: val });
 
    const inputStyle: React.CSSProperties = { width: 76, height: 30, padding: '0 8px', border: '1px solid #D4D4D8', borderRadius: 6, fontSize: 12, fontFamily: 'var(--font-family-primary)', color: '#18181B', outline: 'none', background: '#fff' };
@@ -139,9 +132,9 @@ function FiltersPopover({ filters, onChange, onClose }: {
    );
 
    return (
-      <div ref={ref} style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, boxShadow: '0px 18px 40px rgba(17,24,39,0.14), 0px 8px 18px rgba(17,24,39,0.09)', padding: 16, width: 280, display: 'flex', flexDirection: 'column', gap: 14, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top left' }}>
+      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-            <input type="checkbox" checked={filters.rankDropsOnly} onChange={(e) => set('rankDropsOnly', e.target.checked)} style={{ accentColor: '#783AFB', width: 14, height: 14 }} />
+            <Checkbox checked={filters.rankDropsOnly} onChange={(v) => set('rankDropsOnly', v)} />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Rank drops only</span>
          </label>
          <div style={{ height: 1, background: '#F4F4F5' }} />
@@ -150,15 +143,21 @@ function FiltersPopover({ filters, onChange, onClose }: {
          <RangeRow label="Clicks" minKey="trafficMin" maxKey="trafficMax" />
          <RangeRow label="Impressions" minKey="impressionsMin" maxKey="impressionsMax" />
          <div style={{ height: 1, background: '#F4F4F5' }} />
-         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Status</span>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-               {([{ value: '' as const, label: 'All' }, { value: 'not_started' as const, label: 'Not started' }, { value: 'in_progress' as const, label: 'In progress' }, { value: 'done' as const, label: 'Done' }]).map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => set('status', opt.value)} style={{ padding: '4px 10px', borderRadius: 9999, border: filters.status === opt.value ? '1px solid #09090B' : '1px solid #E4E4E7', background: filters.status === opt.value ? '#09090B' : '#fff', color: filters.status === opt.value ? '#fff' : '#52525C', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: 'pointer' }}>{opt.label}</button>
-               ))}
-            </div>
-         </div>
-         <button type="button" onClick={() => onChange(DEFAULT_FILTERS)} style={{ alignSelf: 'flex-start', padding: 0, border: 'none', background: 'transparent', fontSize: 12, fontWeight: 600, color: '#783AFB', fontFamily: 'var(--font-family-primary)', cursor: 'pointer' }}>Clear all filters</button>
+         <CompactSelect
+            prefix="Status"
+            size="sm"
+            options={[
+               { value: '', label: 'All' },
+               { value: 'not_started', label: 'Not started' },
+               { value: 'in_progress', label: 'In progress' },
+               { value: 'done', label: 'Done' },
+            ]}
+            value={filters.status}
+            onChange={(opt) => set('status', opt.value as FilterState['status'])}
+         />
+         <Button type="button" variant="link" size="sm" onClick={() => onChange(DEFAULT_FILTERS)} style={{ alignSelf: 'flex-start', padding: 0 }}>
+            Clear all filters
+         </Button>
       </div>
    );
 }
@@ -179,7 +178,6 @@ const RecommendationsPage: NextPage = () => {
    const [showUrls, setShowUrls] = useState(false);
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('content_score');
    const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-   const [filtersOpen, setFiltersOpen] = useState(false);
    const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
    const [panelRow, setPanelRow] = useState<RecommRow | null>(null);
    const [kwModalRow, setKwModalRow] = useState<RecommRow | null>(null);
@@ -500,57 +498,51 @@ const RecommendationsPage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`Recommendations — ${domain} — SerpBear`}</title></Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Recommendations" heading="Recommendations" contentMaxWidth="100%">
-            {/* ── Controls row ─────────────────────────────────────────────── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
-
-               {/* Tab switcher */}
-               <Tabs
-                  items={[
-                     { value: 'optimize', label: 'Optimize', count: optimizeRows.length },
-                     { value: 'ideas', label: 'Content Ideas', count: gapRows.length },
-                  ]}
-                  value={tab}
-                  onChange={(v) => setTab(v as 'optimize' | 'ideas')}
-               />
-
-               {/* Right controls */}
-               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-
-                  {/* Show URLs toggle */}
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
-                     <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
-                     <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Show URLs</span>
-                  </label>
-
-                  {/* Filters — plain text button (no border) */}
-                  <div style={{ position: 'relative' }}>
-                     <button
-                        type="button"
-                        onClick={() => setFiltersOpen((v) => !v)}
-                        style={{
-                           display: 'inline-flex', alignItems: 'center', gap: 6,
-                           border: 'none', background: 'transparent', padding: 0,
-                           fontSize: 14, fontWeight: 600, color: activeFilterCount > 0 ? '#09090B' : '#3F3F47',
-                           fontFamily: 'var(--font-family-primary)', cursor: 'pointer',
-                        }}
-                     >
-                        <SlidersIcon />
-                        <span>Filters</span>
-                        {activeFilterCount > 0 && (
-                           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: 9999, background: '#09090B', color: '#fff', fontSize: 10, fontWeight: 700 }}>{activeFilterCount}</span>
+         <DomainSubLayout
+            domain={domain}
+            slug={slug || ''}
+            section="Recommendations"
+            heading="Recommendations"
+            contentMaxWidth="100%"
+            filters={(
+               <ToolRibbon>
+                  <Tabs
+                     items={[
+                        { value: 'optimize', label: 'Optimize', count: optimizeRows.length },
+                        { value: 'ideas', label: 'Content Ideas', count: gapRows.length },
+                     ]}
+                     value={tab}
+                     onChange={(v) => setTab(v as 'optimize' | 'ideas')}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
+                        <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Show URLs</span>
+                     </label>
+                     <CompactSelect
+                        size="sm"
+                        options={[]}
+                        hideOptions
+                        menuTitle="Filters"
+                        menuWidth={300}
+                        triggerLabel={(
+                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <SlidersIcon />
+                              Filters
+                              {activeFilterCount > 0 && (
+                                 <span className="sentry-compact-select-badge">{activeFilterCount}</span>
+                              )}
+                           </span>
                         )}
-                     </button>
-                     {filtersOpen && <FiltersPopover filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} />}
+                        menuBody={<FiltersPanel filters={filters} onChange={setFilters} />}
+                     />
+                     <SearchBar value={search} onChange={setSearch} placeholder="Search" width={250} />
                   </div>
-
-                  {/* Search — 250px, shadow-xs, left icon */}
-                  <SearchBar value={search} onChange={setSearch} placeholder="Search" width={250} />
-               </div>
-            </div>
-
-            {/* ── Table ────────────────────────────────────────────────────── */}
-            <div ref={rowsRef} style={{ border: '1px solid #F4F4F5', borderRadius: 8, overflowX: 'auto' }}>
+               </ToolRibbon>
+            )}
+         >
+            <SentryPanel noPadding>
+            <div ref={rowsRef} style={{ overflowX: 'auto' }}>
 
                {/* ── Content Ideas tab — content gap from GSC ── */}
                {tab === 'ideas' && (
@@ -579,14 +571,9 @@ const RecommendationsPage: NextPage = () => {
                               {kw.position > 0 ? kw.position.toFixed(1) : '—'}
                            </div>
                            <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, display: 'flex', justifyContent: 'flex-end' }}>
-                              <button
-                                 type="button"
-                                 disabled={creatingKw === kw.keyword}
-                                 onClick={() => handleCreateArticleForKeyword(kw.keyword)}
-                                 style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #783AFB', background: creatingKw === kw.keyword ? 'rgba(120,58,251,0.08)' : 'transparent', color: '#783AFB', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: creatingKw === kw.keyword ? 'default' : 'pointer' }}
-                              >
+                              <Button type="button" variant="secondary" size="xs" disabled={creatingKw === kw.keyword} onClick={() => handleCreateArticleForKeyword(kw.keyword)}>
                                  {creatingKw === kw.keyword ? '…' : '+ Create'}
-                              </button>
+                              </Button>
                            </div>
                         </div>
                      ))}
@@ -606,15 +593,15 @@ const RecommendationsPage: NextPage = () => {
                         </div>
                         {/* Page / Main keyword */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flexGrow: 1, minWidth: 256 }}>
-                           <button type="button" onClick={() => handleSort('content_score')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}>
-                              <span style={{ fontSize: 13, color: '#52525C' }}>Page</span>
+                           <Button type="button" variant="transparent" size="sm" onClick={() => handleSort('content_score')} style={{ gap: 4, padding: 0, color: '#52525C' }}>
+                              <span style={{ fontSize: 13 }}>Page</span>
                               <SortUpDown active={false} dir={null} />
-                           </button>
+                           </Button>
                            <span style={{ color: '#D4D4D8', lineHeight: '1rem' }}>/</span>
-                           <button type="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}>
-                              <span style={{ fontSize: 13, color: '#52525C' }}>Main keyword</span>
+                           <Button type="button" variant="transparent" size="sm" style={{ gap: 4, padding: 0, color: '#52525C' }}>
+                              <span style={{ fontSize: 13 }}>Main keyword</span>
                               <SortUpDown active={false} dir={null} />
-                           </button>
+                           </Button>
                         </div>
                         <SortableHeader label="Content Score" sortKey="content_score" activeKey={sortKey} dir={sortDir} width={154} onSort={(k) => handleSort(k as SortKey)} />
                         <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
@@ -658,20 +645,13 @@ const RecommendationsPage: NextPage = () => {
                                        {row.title}
                                     </span>
                                     {/* Keyword — clickable to change */}
-                                    <button
-                                       type="button"
-                                       className="kw-btn"
-                                       title="Change main keyword"
-                                       onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }}
-                                       style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 12, color: '#52525C', maxWidth: '100%', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                    >
-                                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent', textDecorationStyle: 'dotted', textUnderlineOffset: 3, transition: 'text-decoration-color 150ms' }} className="kw-btn-text">
-                                          {row.keyword || 'Set keyword'}
-                                       </span>
-                                       <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, opacity: 1, transition: 'opacity 150ms', color: '#9F9FA9' }} className="kw-btn-icon">
+                                    <Button type="button" variant="link" size="xs" className="kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={(
+                                       <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, color: '#9F9FA9' }} className="kw-btn-icon">
                                           <g><path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" /></g>
                                        </svg>
-                                    </button>
+                                    )} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0 }}>
+                                       <span className="kw-btn-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword || 'Set keyword'}</span>
+                                    </Button>
                                     {showUrls && row.url && (
                                        <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                           {row.url}
@@ -686,12 +666,10 @@ const RecommendationsPage: NextPage = () => {
                                           <ExternalLinkIcon />
                                        </a>
                                     )}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} style={{ display: 'inline-flex', border: 'none', background: 'transparent', color: '#3F3F47', cursor: 'pointer', padding: 0 }}>
-                                       <PanelIcon />
-                                    </button>
-                                    <button type="button" disabled={optimizingId === row.id} onClick={(e) => handleOptimize(row, e)} style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 6, border: 'none', background: '#F4F4F5', color: '#18181B', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: optimizingId === row.id ? 'default' : 'pointer', opacity: optimizingId === row.id ? 0.6 : 1 }}>
+                                    <Button type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} icon={<PanelIcon />} style={{ padding: 0, color: '#3F3F47' }} aria-label="Open panel" />
+                                    <Button type="button" variant="secondary" size="xs" disabled={optimizingId === row.id} onClick={(e) => handleOptimize(row, e)}>
                                        {optimizingId === row.id ? 'Optimizing…' : 'Optimize'}
-                                    </button>
+                                    </Button>
                                  </div>
                               </div>
 
@@ -704,14 +682,9 @@ const RecommendationsPage: NextPage = () => {
                                  ) : analyzingIds.has(row.id) ? (
                                     <span style={{ fontSize: 12, fontWeight: 500, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Analyzing…</span>
                                  ) : (
-                                    <button
-                                       type="button"
-                                       onClick={(e) => handleAnalyze(row, e)}
-                                       className="analyze-btn"
-                                       style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 6, border: '1px solid #783AFB', background: 'transparent', color: '#783AFB', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-family-primary)', cursor: 'pointer', opacity: 0, transition: 'opacity 150ms' }}
-                                    >
+                                    <Button type="button" variant="secondary" size="xs" className="analyze-btn" onClick={(e) => handleAnalyze(row, e)}>
                                        Analyze
-                                    </button>
+                                    </Button>
                                  )}
                               </div>
 
@@ -752,6 +725,7 @@ const RecommendationsPage: NextPage = () => {
                )}
 
             </div>
+            </SentryPanel>
          </DomainSubLayout>
 
          <SlidePanel

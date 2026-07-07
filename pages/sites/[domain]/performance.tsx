@@ -6,7 +6,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { Button, Modal, ModalBody, ModalFooter, Input, Select, DateRangePicker, Skeleton } from '../../../components/core';
+import { SentryPanel, SentryPanelHeader } from '../../../components/sentry-pages';
+import { Button, Modal, ModalBody, ModalFooter, Input, Select, DateRangePicker, Skeleton, CompactSelect, PageFilterBar, ToolRibbon } from '../../../components/core';
 import { useFetchDomains } from '../../../services/domains';
 import countries from '../../../utils/countries';
 
@@ -14,7 +15,6 @@ type MetricKey = 'clicks' | 'impressions' | 'ctr' | 'position';
 type SortMetric = 'clicks' | 'impressions' | 'ctr' | 'position';
 type SortOrder = 'highest' | 'lowest';
 type Delta = 'up' | 'down' | 'neutral';
-type FilterId = 'date' | 'location' | 'device' | 'page' | 'keyword';
 type DatePreset = '30' | '60' | '90' | '480' | 'custom';
 type DeviceFilter = 'all' | 'desktop' | 'mobile' | 'tablet';
 type PageFilter = 'all' | 'optimized' | 'tracked' | 'custom';
@@ -122,7 +122,6 @@ const MONTH_LABELS = [
   'November',
   'December',
 ];
-const DROPDOWN_SHADOW = '0px 18px 40px 0px rgba(17, 24, 39, 0.14), 0px 8px 18px 0px rgba(17, 24, 39, 0.09), 0px 2px 6px 0px rgba(17, 24, 39, 0.06)';
 
 import { slugToDomain } from '../../../utils/slugToDomain';
 
@@ -346,14 +345,6 @@ function ChevronRight() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
-      <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 function InfoIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
@@ -488,42 +479,6 @@ function XIcon() {
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
       <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
     </svg>
-  );
-}
-
-function FilterButton({
-  label,
-  icon,
-  active = false,
-  open = false,
-  onClick,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  active?: boolean;
-  open?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={onClick}
-      style={{
-        minWidth: 55,
-        border: active ? '1px solid #09090B' : '1px solid #D4D4D8',
-        boxShadow: active ? 'inset 0 0 0 1px #09090B' : 'none',
-        background: '#FFFFFF',
-        color: active ? '#09090B' : '#18181B',
-        transition: 'border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease',
-      }}
-    >
-      <span style={{ display: 'inline-flex', alignItems: 'center', color: 'inherit' }}>{icon}</span>
-      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-      <span style={{ display: 'inline-flex', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}>
-        <ChevronDown size={18} />
-      </span>
-    </Button>
   );
 }
 
@@ -974,10 +929,8 @@ const PerformancePage: NextPage = () => {
   const { domain: slug } = router.query as { domain: string };
   const domain = slug ? slugToDomain(slug) : '';
 
-  const [openFilter, setOpenFilter] = useState<FilterId | null>(null);
   const [datePreset, setDatePreset] = useState<DatePreset>('30');
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeValue>(() => getPresetRange('30'));
-  const [locationSearch, setLocationSearch] = useState('');
   const [locationCode, setLocationCode] = useState('ALL');
   const [deviceFilter, setDeviceFilter] = useState<DeviceFilter>('all');
   const [pageFilter, setPageFilter] = useState<PageFilter>('all');
@@ -1006,40 +959,6 @@ const PerformancePage: NextPage = () => {
     setBrandTerms(defaultBrandTerms);
     setBrandKeywordDraft(defaultBrandTerms.join(', '));
   }, [defaultBrandTerms]);
-
-  const filterRefs = {
-    date: useRef<HTMLDivElement | null>(null),
-    location: useRef<HTMLDivElement | null>(null),
-    device: useRef<HTMLDivElement | null>(null),
-    page: useRef<HTMLDivElement | null>(null),
-    keyword: useRef<HTMLDivElement | null>(null),
-  };
-
-  useEffect(() => {
-    if (!openFilter) return undefined;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const activeRef = filterRefs[openFilter].current;
-      if (activeRef && !activeRef.contains(target)) {
-        setOpenFilter(null);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpenFilter(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [openFilter]);
 
   const { data: domainsData } = useFetchDomains(router, true);
   const domains = domainsData?.domains || [];
@@ -1136,11 +1055,31 @@ const PerformancePage: NextPage = () => {
     return [{ code: 'ALL', label: 'All locations' }, ...options];
   }, [baseScData]);
 
-  const filteredLocationOptions = useMemo(() => {
-    const query = locationSearch.trim().toLowerCase();
-    if (!query) return availableLocations;
-    return availableLocations.filter((item) => item.label.toLowerCase().includes(query));
-  }, [availableLocations, locationSearch]);
+  const locationSelectOptions = useMemo(
+    () => availableLocations.map((item) => ({
+      value: item.code,
+      label: item.label,
+      textValue: item.label,
+      leadingItems: item.code !== 'ALL' ? (
+        <img src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${item.code.toLowerCase()}.svg`} alt="" style={{ display: 'block', width: 16, height: 12, boxShadow: 'rgba(0, 0, 0, 0.5) 0px 0px 1px 0px' }} />
+      ) : undefined,
+    })),
+    [availableLocations],
+  );
+
+  const deviceSelectOptions = useMemo(
+    () => DEVICE_OPTIONS.map((item) => ({
+      value: item.value,
+      label: item.label,
+      leadingItems: item.value === 'desktop' ? <DesktopIcon /> : item.value === 'mobile' ? <MobileIcon /> : item.value === 'tablet' ? <TabletIcon /> : <DeviceIcon />,
+    })),
+    [],
+  );
+
+  const pageSelectOptions = useMemo(
+    () => PAGE_OPTIONS.map((item) => ({ value: item.value, label: item.label })),
+    [],
+  );
 
   const trackedPaths = useMemo(
     () => new Set((auditData?.items || []).map((item) => normalizePath(item.url))),
@@ -1433,14 +1372,12 @@ const PerformancePage: NextPage = () => {
     const len = getRangeLength(selectedDateRange);
     setSelectedDateRange({ start: formatDateKey(addDays(today, -(len - 1))), end: formatDateKey(today) });
     setDatePreset('custom');
-    setOpenFilter(null);
   };
 
   const applyPreset = (preset: DatePreset) => {
     const range = getPresetRange(preset, selectedDateRange);
     setDatePreset(preset);
     setSelectedDateRange(range);
-    setOpenFilter(null);
   };
 
   const openKeywordModal = (mode: 'custom' | 'brand') => {
@@ -1451,7 +1388,6 @@ const PerformancePage: NextPage = () => {
     } else {
       setBrandKeywordDraft(brandTerms.join(', '));
     }
-    setOpenFilter(null);
   };
 
   const closeKeywordModal = () => {
@@ -1602,28 +1538,30 @@ const PerformancePage: NextPage = () => {
         ) : (
           <div style={{ position: 'relative', display: 'flex', flex: 1, overflow: 'auto', background: '#F8F8F9' }}>
             <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 16, padding: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 12 }}>
-                <div className="performance-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <div ref={filterRefs.date} style={{ position: 'relative' }}>
-                      <FilterButton
-                        active
-                        open={openFilter === 'date'}
-                        label={getRangeLabel(datePreset, selectedDateRange)}
-                        icon={<CalendarIcon />}
-                        onClick={() => setOpenFilter((current) => (current === 'date' ? null : 'date'))}
-                      />
-                      {openFilter === 'date' ? (
-                        <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 12px)', zIndex: 150, borderRadius: 16, background: '#FFFFFF', boxShadow: DROPDOWN_SHADOW, overflow: 'hidden' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 0', flexWrap: 'wrap', gap: 10 }}>
+              <SentryPanel noPadding>
+                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <PageFilterBar condensed>
+                <div className="performance-filters" style={{ display: 'contents' }}>
+                    <CompactSelect
+                      prefix={<CalendarIcon />}
+                      size="sm"
+                      options={[]}
+                      hideOptions
+                      triggerLabel={getRangeLabel(datePreset, selectedDateRange)}
+                      menuTitle="Filter time range"
+                      menuWidth="min(580px, calc(100vw - 2rem))"
+                      menuBody={({ close }) => (
+                        <div style={{ padding: '0 0 8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', flexWrap: 'wrap', gap: 10 }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                               {DATE_PRESETS.map((preset) => (
                                 <Button key={preset.value} variant={datePreset === preset.value ? 'primary' : 'secondary'} size="xs"
-                                  onClick={() => applyPreset(preset.value)}>
+                                  onClick={() => { applyPreset(preset.value); close(); }}>
                                   {preset.label}
                                 </Button>
                               ))}
                             </div>
-                            <Button variant="link" size="xs" onClick={handleTodayClick}>Today</Button>
+                            <Button variant="link" size="xs" onClick={() => { handleTodayClick(); close(); }}>Today</Button>
                           </div>
                           <DateRangePicker
                             startDate={parseDateKey(selectedDateRange.start)}
@@ -1632,232 +1570,84 @@ const PerformancePage: NextPage = () => {
                             onChange={({ start, end }) => {
                               setSelectedDateRange({ start: formatDateKey(start), end: formatDateKey(end) });
                               setDatePreset('custom');
-                              setOpenFilter(null);
+                              close();
                             }}
                           />
                         </div>
-                      ) : null}
-                    </div>
+                      )}
+                    />
 
-                    <div ref={filterRefs.location} style={{ position: 'relative' }}>
-                      <FilterButton
-                        label={selectedLocationLabel}
-                        icon={<LocationIcon />}
-                        open={openFilter === 'location'}
-                        onClick={() => setOpenFilter((current) => (current === 'location' ? null : 'location'))}
-                      />
-                      {openFilter === 'location' ? (
-                        <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 12px)', zIndex: 150, display: 'flex', minWidth: 300, flexDirection: 'column', borderRadius: 12, background: '#FFFFFF', padding: '6px 0', boxShadow: DROPDOWN_SHADOW, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                          <div style={{ padding: '4px 8px 6px' }}>
-                            <Input size="sm" value={locationSearch} onChange={(e) => setLocationSearch(e.target.value)} placeholder="Search..." />
-                          </div>
-                          <div style={{ maxHeight: 250, overflowY: 'auto' }}>
-                            {filteredLocationOptions.map((item) => (
-                              <button key={item.code} type="button"
-                                onClick={() => { setLocationCode(item.code); setLocationSearch(''); setOpenFilter(null); }}
-                                style={{ display: 'flex', width: 'calc(100% - 12px)', alignItems: 'center', gap: 10, margin: '0 6px', border: 'none', borderRadius: 8, background: locationCode === item.code ? '#F4F4F5' : 'transparent', padding: '10px 16px', fontSize: 14, color: '#2F2F34', cursor: 'pointer', textAlign: 'left' }}>
-                                {item.code !== 'ALL' ? <img src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${item.code.toLowerCase()}.svg`} alt={`${item.code} flag`} style={{ display: 'block', width: 16, height: 12, boxShadow: 'rgba(0, 0, 0, 0.5) 0px 0px 1px 0px' }} /> : null}
-                                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-                                {locationCode === item.code ? <span style={{ marginLeft: 'auto', color: '#52525C', display: 'inline-flex' }}><CheckIcon /></span> : null}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<LocationIcon />}
+                      size="sm"
+                      search={{ placeholder: 'Search locations…' }}
+                      options={locationSelectOptions}
+                      value={locationCode}
+                      triggerLabel={selectedLocationLabel}
+                      menuMinWidth={300}
+                      onChange={(opt) => setLocationCode(String(opt.value))}
+                    />
 
-                    <div ref={filterRefs.device} style={{ position: 'relative' }}>
-                      <FilterButton label={selectedDeviceLabel} icon={<DeviceIcon />} open={openFilter === 'device'} onClick={() => setOpenFilter((current) => (current === 'device' ? null : 'device'))} />
-                      {openFilter === 'device' ? (
-                        <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 12px)', zIndex: 100, display: 'flex', minWidth: 240, flexDirection: 'column', borderRadius: 12, background: '#FFFFFF', padding: 6, boxShadow: DROPDOWN_SHADOW, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                          {DEVICE_OPTIONS.map((item) => {
-                            let icon = null;
-                            if (item.value === 'desktop') icon = <DesktopIcon />;
-                            if (item.value === 'mobile') icon = <MobileIcon />;
-                            if (item.value === 'tablet') icon = <TabletIcon />;
-                            return (
-                              <button key={item.value} type="button" onClick={() => { setDeviceFilter(item.value); setOpenFilter(null); }}
-                                style={{ display: 'flex', minWidth: 220, alignItems: 'center', gap: 10, border: 'none', borderRadius: 8, background: deviceFilter === item.value ? '#F8F8F9' : 'transparent', padding: '10px 12px', fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer', textAlign: 'left' }}>
-                                {icon}<span>{item.label}</span>
-                                {deviceFilter === item.value ? <span style={{ marginLeft: 'auto', display: 'inline-flex' }}><CheckIcon /></span> : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<DeviceIcon />}
+                      size="sm"
+                      options={deviceSelectOptions}
+                      value={deviceFilter}
+                      triggerLabel={selectedDeviceLabel}
+                      menuMinWidth={240}
+                      onChange={(opt) => setDeviceFilter(opt.value as DeviceFilter)}
+                    />
 
-                    <div ref={filterRefs.page} style={{ position: 'relative' }}>
-                      <FilterButton label={selectedPageLabel} icon={<PageIcon />} open={openFilter === 'page'} onClick={() => setOpenFilter((current) => (current === 'page' ? null : 'page'))} />
-                      {openFilter === 'page' ? (
-                        <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 12px)', zIndex: 100, display: 'flex', minWidth: 240, flexDirection: 'column', borderRadius: 12, background: '#FFFFFF', padding: 6, boxShadow: DROPDOWN_SHADOW, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                          {PAGE_OPTIONS.map((item) => (
-                            <button key={item.value} type="button" onClick={() => { setPageFilter(item.value); setOpenFilter(null); }}
-                              style={{ display: 'flex', minWidth: 220, alignItems: 'center', gap: 10, border: 'none', borderRadius: 8, background: pageFilter === item.value ? '#F8F8F9' : 'transparent', padding: '10px 12px', fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer', textAlign: 'left' }}>
-                              <span>{item.label}</span>
-                              {pageFilter === item.value ? <span style={{ marginLeft: 'auto', display: 'inline-flex' }}><CheckIcon /></span> : null}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<PageIcon />}
+                      size="sm"
+                      options={pageSelectOptions}
+                      value={pageFilter}
+                      triggerLabel={selectedPageLabel}
+                      menuMinWidth={240}
+                      onChange={(opt) => setPageFilter(opt.value as PageFilter)}
+                    />
 
-                    <div ref={filterRefs.keyword} style={{ position: 'relative' }}>
-                      <FilterButton
-                        label={selectedKeywordLabel}
-                        icon={<KeywordIcon />}
-                        open={openFilter === 'keyword'}
-                        onClick={() => setOpenFilter((current) => (current === 'keyword' ? null : 'keyword'))}
-                      />
-                      {openFilter === 'keyword' ? (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 'calc(100% + 12px)',
-                            zIndex: 100,
-                            display: 'flex',
-                            minWidth: 240,
-                            flexDirection: 'column',
-                            borderRadius: 12,
-                            background: '#FFFFFF',
-                            padding: 6,
-                            boxShadow: DROPDOWN_SHADOW,
-                            animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setKeywordMode('all');
-                              setOpenFilter(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: keywordMode === 'all' ? '#F8F8F9' : 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>All keywords</span>
-                            {keywordMode === 'all' ? (
-                              <span style={{ marginLeft: 'auto', display: 'inline-flex' }}>
-                                <CheckIcon />
-                              </span>
-                            ) : null}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openKeywordModal('custom')}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>Custom Keyword</span>
-                          </button>
-                          <div style={{ margin: '6px 8px', minHeight: 1, background: '#F4F4F5' }} />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setKeywordMode('nonBranded');
-                              setOpenFilter(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: keywordMode === 'nonBranded' ? '#F8F8F9' : 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>Non-Branded Keywords</span>
-                            {keywordMode === 'nonBranded' ? (
-                              <span style={{ marginLeft: 'auto', display: 'inline-flex' }}>
-                                <CheckIcon />
-                              </span>
-                            ) : null}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setKeywordMode('branded');
-                              setOpenFilter(null);
-                            }}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: keywordMode === 'branded' ? '#F8F8F9' : 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>Branded Keywords</span>
-                            <span style={{ marginLeft: 'auto', color: '#52525C' }}>{brandTerms.length}</span>
-                          </button>
-                          <div style={{ margin: '6px 8px', minHeight: 1, background: '#F4F4F5' }} />
-                          <button
-                            type="button"
-                            onClick={() => openKeywordModal('brand')}
-                            style={{
-                              display: 'flex',
-                              minWidth: 220,
-                              alignItems: 'center',
-                              gap: 10,
-                              border: 'none',
-                              borderRadius: 8,
-                              background: 'transparent',
-                              padding: '10px 12px',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: '#2F2F34',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <SettingsIcon />
-                            <span>Manage Branded Keywords</span>
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
+                    <CompactSelect
+                      prefix={<KeywordIcon />}
+                      size="sm"
+                      value={keywordMode === 'custom' ? 'all' : keywordMode}
+                      triggerLabel={selectedKeywordLabel}
+                      menuMinWidth={260}
+                      options={[
+                        {
+                          options: [
+                            { value: 'all', label: 'All keywords' },
+                            { value: '__custom_action__', label: 'Custom Keyword' },
+                          ],
+                        },
+                        {
+                          options: [
+                            { value: 'nonBranded', label: 'Non-Branded Keywords' },
+                            { value: 'branded', label: 'Branded Keywords', trailingItems: <span>{brandTerms.length}</span> },
+                          ],
+                        },
+                        {
+                          options: [
+                            { value: '__manage_brand__', label: 'Manage Branded Keywords', leadingItems: <SettingsIcon /> },
+                          ],
+                        },
+                      ]}
+                      onChange={(opt) => {
+                        const v = String(opt.value);
+                        if (v === '__custom_action__') {
+                          openKeywordModal('custom');
+                          return;
+                        }
+                        if (v === '__manage_brand__') {
+                          openKeywordModal('brand');
+                          return;
+                        }
+                        setKeywordMode(v as KeywordMode);
+                      }}
+                    />
                   </div>
+                </PageFilterBar>
 
                   <div className="performance-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                     {computed.statsCards.map((card) => (
@@ -1877,26 +1667,31 @@ const PerformancePage: NextPage = () => {
 
                   <LineChart data={computed.chart} visibleMetrics={visibleMetrics} />
                 </div>
+              </SentryPanel>
 
-                <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, borderRadius: 12, padding: 24, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14 }}>
+                <SentryPanel>
+                <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14 }}>
                   {trafficGoal ? (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
                         <div style={{ fontWeight: 400 }}>Goal</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>Increase clicks by {trafficGoal.percentage}% each {trafficGoal.period === 'MONTH' ? 'month' : 'quarter'}</span>
-                          <button
+                          <Button
                             type="button"
+                            variant="transparent"
+                            size="sm"
                             onClick={() => { setGoalPercentage(trafficGoal.percentage); setGoalPeriod(trafficGoal.period); setGoalModalOpen(true); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14, fontWeight: 600, transition: 'color 150ms ease' }}
-                          >
-                            <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-                              <g fill="currentColor">
-                                <path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" />
-                                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" />
-                              </g>
-                            </svg>
-                          </button>
+                            aria-label="Edit goal"
+                            icon={(
+                              <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
+                                <g fill="currentColor">
+                                  <path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" />
+                                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" />
+                                </g>
+                              </svg>
+                            )}
+                          />
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
@@ -1936,6 +1731,7 @@ const PerformancePage: NextPage = () => {
                     </>
                   )}
                 </div>
+                </SentryPanel>
 
               <section className="performance-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 <SummaryCard label="All Keywords" value={String(computed.keywordSummary.allKeywords)} />
@@ -1944,20 +1740,24 @@ const PerformancePage: NextPage = () => {
                 <SummaryCard label="Position 11-20" value={String(computed.keywordSummary.pos11to20)} direction={computed.keywordSummary.pos11to20Direction} />
               </section>
 
-              <section style={{ display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Pages</h3>
-                  <span style={{ fontSize: 16, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>with</span>
-                  <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                  <TableSortButton
-                    value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
-                    onClick={() => {
-                      const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                      const currentIndex = order.indexOf(pageSortMetric);
-                      setPageSortMetric(order[(currentIndex + 1) % order.length]);
-                    }}
-                  />
-                </div>
+              <SentryPanel noPadding>
+                <SentryPanelHeader
+                  title={(
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span>Pages</span>
+                      <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                      <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
+                      <TableSortButton
+                        value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
+                        onClick={() => {
+                          const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
+                          const currentIndex = order.indexOf(pageSortMetric);
+                          setPageSortMetric(order[(currentIndex + 1) % order.length]);
+                        }}
+                      />
+                    </div>
+                  )}
+                />
 
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1995,22 +1795,26 @@ const PerformancePage: NextPage = () => {
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </SentryPanel>
 
-              <section style={{ display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Keywords</h3>
-                  <span style={{ fontSize: 16, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>with</span>
-                  <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                  <TableSortButton
-                    value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
-                    onClick={() => {
-                      const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                      const currentIndex = order.indexOf(keywordSortMetric);
-                      setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
-                    }}
-                  />
-                </div>
+              <SentryPanel noPadding>
+                <SentryPanelHeader
+                  title={(
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span>Keywords</span>
+                      <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                      <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
+                      <TableSortButton
+                        value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
+                        onClick={() => {
+                          const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
+                          const currentIndex = order.indexOf(keywordSortMetric);
+                          setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
+                        }}
+                      />
+                    </div>
+                  )}
+                />
 
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -2048,7 +1852,7 @@ const PerformancePage: NextPage = () => {
                     </tbody>
                   </table>
                 </div>
-              </section>
+              </SentryPanel>
             </div>
           </div>
         )}

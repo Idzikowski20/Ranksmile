@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Icon from './Icon';
+import { useWorkspaces } from '../../services/workspaces';
+import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
 
 type MobileBottomNavProps = {
    domains?: DomainType[];
@@ -45,23 +47,60 @@ const IcoMore = () => (
    </svg>
 );
 
+const MobileSheetLink = ({ href, label, active, onNavigate }: { href: string; label: string; active?: boolean; onNavigate: () => void }) => (
+   <li>
+      <Link href={href} passHref>
+         <a className={`mobile-sheet-item${active ? ' mobile-sheet-item--active' : ''}`} onClick={onNavigate}>
+            <span className="mobile-sheet-item-label">{label}</span>
+         </a>
+      </Link>
+   </li>
+);
+
 const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) => {
    const router = useRouter();
    const [sheetOpen, setSheetOpen] = useState(false);
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => { setMounted(true); }, []);
 
-   const isActive = (path: string) => router.asPath === path;
-   const isActivePrefix = (prefix: string) => router.asPath.startsWith(prefix);
-   const isActiveDomain = (slug: string) => router.asPath.includes('/sites/') && router.asPath.includes(`/${slug}`);
+   const { data: wsData } = useWorkspaces();
+   const activeId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+   const activeWorkspace = (wsData?.workspaces || []).find((w) => w.id === activeId) ?? null;
+   const activeSlug = useMemo(() => {
+      const resolved = resolveActiveDomain(domains, activeId, activeWorkspace?.domain);
+      return resolved?.slug ?? domains[0]?.slug ?? null;
+   }, [activeId, activeWorkspace, domains]);
 
-   const slug = domains[0]?.slug;
-   const sitePath = (sub: string) => (slug ? `/sites/${slug}/${sub}` : '/sites');
+   const closeSheet = () => setSheetOpen(false);
+   const path = mounted ? router.asPath.split('?')[0].split('#')[0].replace(/\/$/, '') : '';
+   const isMatch = (suffix: string) => mounted && path.includes(suffix);
+
+   const sitePath = (sub: string) => (activeSlug
+      ? workspaceHref(activeId, sub ? `/sites/${activeSlug}/${sub}` : `/sites/${activeSlug}`)
+      : workspaceHref(activeId, '/sites'));
 
    const primaryItems = [
-      { href: '/dashboard', label: 'Dashboard', icon: <IcoDashboard />, active: isActive('/dashboard') },
-      { href: sitePath('recommendations'), label: 'Recommendations', icon: <IcoRecommendations />, active: router.asPath.includes('/recommendations') },
-      { href: sitePath('activity-log'), label: 'Activity Log', icon: <IcoActivity />, active: router.asPath.includes('/activity-log') },
-      { href: '/articles', label: 'Content Editor', icon: <IcoContent />, active: isActivePrefix('/articles') || isActivePrefix('/content-editor') },
+      { href: workspaceHref(activeId, '/dashboard'), label: 'Dashboard', icon: <IcoDashboard />, active: isMatch('/dashboard') },
+      { href: sitePath('recommendations'), label: 'Recommendations', icon: <IcoRecommendations />, active: isMatch('/recommendations') },
+      { href: sitePath('activity-log'), label: 'Activity Log', icon: <IcoActivity />, active: isMatch('/activity-log') },
+      { href: workspaceHref(activeId, '/articles'), label: 'Content Editor', icon: <IcoContent />, active: isMatch('/articles') },
    ];
+
+   const seoLinks = activeSlug ? [
+      { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}`), match: `/sites/${activeSlug}` },
+      { label: 'Recommendations', href: workspaceHref(activeId, `/sites/${activeSlug}/recommendations`), match: '/recommendations' },
+      { label: 'Content Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/content-audit`), match: '/content-audit' },
+      { label: 'Topical Map', href: workspaceHref(activeId, `/sites/${activeSlug}/topical-map`), match: '/topical-map' },
+      { label: 'Activity Log', href: workspaceHref(activeId, `/sites/${activeSlug}/activity-log`), match: '/activity-log' },
+   ] : [];
+
+   const aiVisLinks = activeSlug ? [
+      { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/overview`), match: '/ai-visibility/overview' },
+      { label: 'Sources', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/sources`), match: '/ai-visibility/sources' },
+      { label: 'Competitors', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/competitors`), match: '/ai-visibility/competitors' },
+      { label: 'Prompts', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/prompts`), match: '/ai-visibility/prompts' },
+      { label: 'Fanout Queries', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/fanout-queries`), match: '/ai-visibility/fanout-queries' },
+   ] : [];
 
    return (
       <>
@@ -122,13 +161,14 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
                   <p className="mobile-sheet-section-label">Sites</p>
                   <ul className="mobile-sheet-list">
                      {domains.map((d) => {
-                        const domActive = isActiveDomain(d.slug);
+                        const href = workspaceHref(activeId, `/sites/${d.slug}`);
+                        const domActive = mounted && path.includes(`/sites/${d.slug}`);
                         return (
                            <li key={d.domain}>
-                              <Link href={`/sites/${d.slug}`} passHref>
+                              <Link href={href} passHref>
                                  <a
                                     className={`mobile-sheet-item${domActive ? ' mobile-sheet-item--active' : ''}`}
-                                    onClick={() => setSheetOpen(false)}
+                                    onClick={closeSheet}
                                  >
                                     <img
                                        src={`https://www.google.com/s2/favicons?domain=${d.domain}&sz=16`}
@@ -145,11 +185,45 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
                   <button
                      type="button"
                      className="mobile-sheet-item"
-                     onClick={() => { showAddModal(); setSheetOpen(false); }}
+                     onClick={() => { showAddModal(); closeSheet(); }}
                   >
                      <span className="mobile-sheet-item-icon">+</span>
                      <span className="mobile-sheet-item-label">Add Domain</span>
                   </button>
+               </div>
+            )}
+
+            {seoLinks.length > 0 && (
+               <div className="mobile-sheet-section">
+                  <p className="mobile-sheet-section-label">SEO</p>
+                  <ul className="mobile-sheet-list">
+                     {seoLinks.map((ln) => (
+                        <MobileSheetLink
+                           key={ln.href}
+                           href={ln.href}
+                           label={ln.label}
+                           active={isMatch(ln.match)}
+                           onNavigate={closeSheet}
+                        />
+                     ))}
+                  </ul>
+               </div>
+            )}
+
+            {aiVisLinks.length > 0 && (
+               <div className="mobile-sheet-section">
+                  <p className="mobile-sheet-section-label">AI Visibility</p>
+                  <ul className="mobile-sheet-list">
+                     {aiVisLinks.map((ln) => (
+                        <MobileSheetLink
+                           key={ln.href}
+                           href={ln.href}
+                           label={ln.label}
+                           active={isMatch(ln.match)}
+                           onNavigate={closeSheet}
+                        />
+                     ))}
+                  </ul>
                </div>
             )}
 
@@ -161,7 +235,7 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
                      <button
                         type="button"
                         className="mobile-sheet-item"
-                        onClick={() => { router.push('/settings'); setSheetOpen(false); }}
+                        onClick={() => { router.push(workspaceHref(activeId, '/settings/general')); closeSheet(); }}
                      >
                         <Icon type="settings-alt" size={18} color="rgba(255,255,255,0.55)" />
                         <span className="mobile-sheet-item-label">Settings</span>

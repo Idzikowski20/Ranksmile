@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { PixabayImage, PixabayResponse } from '../../pages/api/pixabay/search';
 import { getErrorMessage } from '../../lib/errors';
+import Modal from '../core/modal/modal';
+import Button from '../core/button/button';
+import Input from '../core/input/input';
 
 interface Props {
   defaultQuery?: string;
@@ -11,7 +14,6 @@ interface Props {
 /* ── Shared style objects using design tokens ───────────────────────── */
 const ACCENT = 'var(--color-surface-raised)';  // #783afb
 const STRONG = 'var(--color-surface-strong)';    // #09090b
-const BORDER_STRONG = 'var(--color-border-strong)'; // #221e28
 const FF = 'var(--font-family-primary)';
 const RADIUS_XS = 'var(--radius-xs)';  // 7px
 const RADIUS_SM = 'var(--radius-sm)';  // 10.5px
@@ -88,25 +90,16 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
   const totalPages = Math.ceil(total / perPage);
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 200,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-    >
+    <Modal onClose={onClose} width={720} closeOnOverlayClick>
       <div
         role="dialog"
         aria-label="Search Pixabay images"
         style={{
-          background: '#fff',
-          borderRadius: RADIUS_SM,
-          boxShadow: 'rgba(0, 0, 0, 0.05) 0px 1px 1px 0px, rgba(34, 42, 53, 0.04) 0px 4px 6px 0px, rgba(47, 48, 55, 0.05) 0px 24px 68px 0px, rgba(0, 0, 0, 0.04) 0px 2px 3px 0px',
-          width: '100%', maxWidth: 720, maxHeight: '88vh',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          width: '100%',
+          maxHeight: 'calc(100vh - 64px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -120,76 +113,34 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
           }}>
             Pixabay — Free Images
           </h2>
-          <button
+          <Button
             type="button"
+            variant="transparent"
+            size="sm"
             onClick={onClose}
             aria-label="Close"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 32, height: 32, borderRadius: RADIUS_XS, border: 'none',
-              background: 'transparent', cursor: 'pointer', color: '#9f9fa9',
-              transition: 'background var(--motion-fast), color var(--motion-fast)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f4f4f5';
-              e.currentTarget.style.color = '#18181b';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#9f9fa9';
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
+            icon={(
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            )}
+          />
         </div>
 
         <form onSubmit={handleSubmit} style={{
           display: 'flex', gap: 8, padding: `var(--space-5) 20px`, borderBottom: '1px solid #f4f4f5',
         }}>
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search free images..."
             aria-label="Search Pixabay"
-            style={{
-              flex: 1, height: 38, padding: '0 var(--space-5)',
-              border: '1px solid #d4d4d8', borderRadius: RADIUS_XS,
-              fontSize: 'var(--font-size-sm)', color: '#18181b', outline: 'none',
-              fontFamily: FF,
-              boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-              transition: 'border-color var(--motion-fast)',
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = ACCENT; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = '#d4d4d8'; }}
           />
-          <button
-            type="submit"
-            disabled={isLoading || !query.trim()}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              height: 38, padding: '0 16px', borderRadius: RADIUS_XS, border: 'none',
-              background: query.trim() ? ACCENT : '#d4d4d8',
-              color: '#fff', fontSize: 'var(--font-size-sm)', fontWeight: 600, fontFamily: FF,
-              cursor: query.trim() ? 'pointer' : 'not-allowed',
-              transition: `background var(--motion-fast)`,
-            }}
-            onMouseEnter={(e) => {
-              if (query.trim() && !isLoading) e.currentTarget.style.background = '#5a1fd6';
-            }}
-            onMouseLeave={(e) => {
-              if (query.trim() && !isLoading) e.currentTarget.style.background = ACCENT;
-            }}
-          >
-            {isLoading ? (
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}>
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            ) : 'Search'}
-          </button>
+          <Button type="submit" variant="primary" disabled={isLoading || !query.trim()} busy={isLoading}>
+            Search
+          </Button>
         </form>
 
         <div
@@ -212,19 +163,9 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
               <p style={{ margin: 0, textAlign: 'center', color: '#9f9fa9', fontSize: 'var(--font-size-sm)', fontFamily: FF }}>
                 {error}
               </p>
-              <button
-                type="button"
-                onClick={() => search(query, 1)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  padding: `${SPACE_5} ${SPACE_6}`, borderRadius: RADIUS_XS,
-                  border: '1px solid #e4e4e7', background: '#fff',
-                  fontSize: 'var(--font-size-sm)', color: '#52525c', fontWeight: 500,
-                  cursor: 'pointer', fontFamily: FF,
-                }}
-              >
+              <Button type="button" variant="secondary" onClick={() => search(query, 1)}>
                 Retry
-              </button>
+              </Button>
             </div>
           )}
 
@@ -306,8 +247,10 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: 8, padding: '16px 0',
                 }}>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     disabled={page <= 1}
                     aria-label="Previous page"
                     onClick={() => {
@@ -317,28 +260,17 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                         return prev;
                       });
                     }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 32, height: 32, borderRadius: 'var(--radius-xs)',
-                      border: '1px solid #e4e4e7', background: '#fff',
-                      cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                      opacity: page <= 1 ? 0.4 : 1,
-                      transition: `background var(--motion-fast)`,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (page > 1) e.currentTarget.style.background = '#f4f4f5';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#fff';
-                    }}
-                  >
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-                  </button>
+                    icon={(
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                    )}
+                  />
                   <span style={{ fontSize: 'var(--font-size-sm)', color: '#52525c', fontFamily: FF }}>
                     {page} / {totalPages}
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     disabled={page >= totalPages}
                     aria-label="Next page"
                     onClick={() => {
@@ -348,23 +280,10 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                         return next;
                       });
                     }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 32, height: 32, borderRadius: 'var(--radius-xs)',
-                      border: '1px solid #e4e4e7', background: '#fff',
-                      cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                      opacity: page >= totalPages ? 0.4 : 1,
-                      transition: `background var(--motion-fast)`,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (page < totalPages) e.currentTarget.style.background = '#f4f4f5';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#fff';
-                    }}
-                  >
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                  </button>
+                    icon={(
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                    )}
+                  />
                 </div>
               )}
             </>
@@ -380,46 +299,15 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
           }}>
             {total > 0 ? `${total.toLocaleString()} images found` : 'Search to find images'}
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              height: 36, padding: '0 16px', borderRadius: RADIUS_XS,
-              border: '1px solid #d4d4d8', background: '#fff',
-              fontSize: 'var(--font-size-sm)', fontWeight: 500, color: '#52525c',
-              cursor: 'pointer', fontFamily: FF,
-              transition: `background var(--motion-fast)`,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-          >
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSelect}
-            disabled={!selectedId}
-            style={{
-              height: 36, padding: '0 20px', borderRadius: RADIUS_XS,
-              border: 'none',
-              background: selectedId ? ACCENT : '#d4d4d8',
-              color: '#fff', fontSize: 'var(--font-size-sm)', fontWeight: 600,
-              cursor: selectedId ? 'pointer' : 'not-allowed',
-              fontFamily: FF,
-              transition: `background var(--motion-fast)`,
-            }}
-            onMouseEnter={(e) => {
-              if (selectedId) e.currentTarget.style.background = '#5a1fd6';
-            }}
-            onMouseLeave={(e) => {
-              if (selectedId) e.currentTarget.style.background = ACCENT;
-            }}
-          >
+          </Button>
+          <Button type="button" variant="primary" onClick={handleSelect} disabled={!selectedId}>
             Insert Image
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

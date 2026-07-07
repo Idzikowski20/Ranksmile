@@ -23,6 +23,7 @@ const getJson = <T, >(url: string): Promise<T | null> => fetch(url).then((r) => 
  */
 export function useOnboardingChecklist(): {
    steps: OnboardingStep[];
+   beyondSteps: OnboardingStep[];
    done: number;
    total: number;
    pct: number;
@@ -68,10 +69,15 @@ export function useOnboardingChecklist(): {
          { key: 'ai', label: 'See if AI mentions your brand', done: hasAiResults, time: '2m', href: ws('/ai_tracker?intent=overview'), cta: 'See AI Visibility' },
          { key: 'content', label: 'Create content that ranks in AI Search and SEO', done: hasArticle, time: '10m', href: ws('/articles'), cta: 'Open Content Editor' },
       ];
+      const beyondSteps: OnboardingStep[] = [
+         { key: 'topical', label: 'Build a topical map for your niche', done: false, href: ws(slug ? `/sites/${slug}/topical-map` : '/dashboard') },
+         { key: 'wordpress', label: 'Connect WordPress for publishing', done: false, href: '/settings/wordpress' },
+         { key: 'api', label: 'Explore the API for custom workflows', done: false, href: '/settings/api' },
+      ];
       const done = steps.filter((s) => s.done).length;
       const total = steps.length;
       const pct = Math.round((done / total) * 100);
       const nextStep = steps.find((s) => !s.done) ?? null;
-      return { steps, done, total, pct, nextStep, loading };
+      return { steps, beyondSteps, done, total, pct, nextStep, loading };
    }, [wsId, slug, wsData, sitesData, recsData, articlesData, aiStatus, loading]);
 }

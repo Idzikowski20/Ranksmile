@@ -4,9 +4,9 @@ import Modal from '../../components/common/Modal';
 const closeModalMock = jest.fn();
 describe('Modal Component', () => {
    it('Renders without crashing', async () => {
-       const { container } = render(<Modal closeModal={closeModalMock }><div></div></Modal>);
-       // The modal renders a fixed overlay wrapping a single panel + close button.
-       expect(container.querySelector('button')).toBeInTheDocument();
+       render(<Modal closeModal={closeModalMock}><div>Modal Body</div></Modal>);
+       // Without a title, no close button header is rendered, but the content still shows.
+       expect(await screen.findByText('Modal Body')).toBeInTheDocument();
    });
    it('Displays the Given Content', async () => {
       render(<Modal closeModal={closeModalMock}>
@@ -21,10 +21,9 @@ describe('Modal Component', () => {
       expect(await screen.findByText('Sample Modal Title')).toBeInTheDocument();
    });
    it('Closes the modal on close button click', async () => {
-      const { container } = render(<Modal closeModal={closeModalMock} title="Sample Modal Title"><p>Some Modal Content</p></Modal>);
-      const closeBtn = container.querySelector('button');
-      expect(closeBtn).toBeInTheDocument();
-      if (closeBtn) fireEvent.click(closeBtn);
+      render(<Modal closeModal={closeModalMock} title="Sample Modal Title"><p>Some Modal Content</p></Modal>);
+      const closeBtn = await screen.findByRole('button', { name: /close modal/i });
+      fireEvent.click(closeBtn);
       expect(closeModalMock).toHaveBeenCalled();
    });
 });
