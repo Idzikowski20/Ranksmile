@@ -1,7 +1,6 @@
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
@@ -9,9 +8,8 @@ import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBa
 import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
 import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
-import HoverTooltip from '../../../../components/common/HoverTooltip';
+import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/core';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
-import { Modal } from '../../../../components/ui';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -26,7 +24,10 @@ type OverviewDelta = {
 const card: React.CSSProperties = { border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' };
 const cardHeader: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 24px 0' };
 const cardTitle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: '#3F3F47', fontFamily: FONT };
-const viewAll: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', border: '1px solid #E4E4E7', borderRadius: 8, padding: '6px 12px', fontSize: 14, fontWeight: 600, color: '#52525C', fontFamily: FONT, textDecoration: 'none', whiteSpace: 'nowrap' };
+
+const PanelNavButton = ({ href, children, onNavigate }: { href: string; children: React.ReactNode; onNavigate: (href: string) => void }) => (
+   <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate(href)}>{children}</Button>
+);
 
 const Panel = ({ title, action, children }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) => (
    <section style={card}>
@@ -121,14 +122,14 @@ const AiVisibilityOverview: NextPage = () => {
    };
 
    const refreshBtn = (
-      <button
-         type="button"
-         onClick={() => runScan(false)}
+      <Button
+         variant="secondary"
+         size="sm"
          disabled={startScan.isLoading || crunchingTop}
-         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #E4E4E7', borderRadius: 8, padding: '6px 12px', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: startScan.isLoading || crunchingTop ? 'not-allowed' : 'pointer' }}
+         onClick={() => runScan(false)}
       >
          {crunchingTop ? 'Scanning…' : 'Refresh data'}
-      </button>
+      </Button>
    );
 
    return (
@@ -220,15 +221,16 @@ const AiVisibilityOverview: NextPage = () => {
                      )}
                      action={(
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
-                              {(['bar', 'line'] as const).map((m) => {
-                                 const on = chartMode === m;
-                                 return (
-                                    <button key={m} type="button" onClick={() => setChartMode(m)} title={m === 'bar' ? 'Competitor ranking' : 'Trend over time'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#18181B' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', transition: 'color 150ms ease' }}>{m === 'bar' ? <BarIcon /> : <LineIcon />}</button>
-                                 );
-                              })}
-                           </div>
-                           <Link href={`/sites/${slug}/ai-visibility/competitors`} passHref><a style={viewAll}>View Competitors</a></Link>
+                           <SegmentedControl
+                              size="sm"
+                              value={chartMode}
+                              onChange={setChartMode}
+                              options={[
+                                 { value: 'bar', label: <BarIcon />, },
+                                 { value: 'line', label: <LineIcon /> },
+                              ]}
+                           />
+                           <PanelNavButton href={`/sites/${slug}/ai-visibility/competitors`} onNavigate={router.push}>View Competitors</PanelNavButton>
                         </div>
                      )}
                   >
@@ -241,15 +243,16 @@ const AiVisibilityOverview: NextPage = () => {
                         title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Topics &amp; Prompts <InfoIcon /></span>}
                         action={(
                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
-                                 {(['topics', 'prompts'] as const).map((m) => {
-                                    const on = promptMode === m;
-                                    return (
-                                       <button key={m} type="button" onClick={() => setPromptMode(m)} title={m === 'topics' ? 'Topics' : 'Prompts'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 28, border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#18181B' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer' }}>{m === 'topics' ? <HashIcon /> : <PromptIcon />}</button>
-                                    );
-                                 })}
-                              </div>
-                              <Link href={`/sites/${slug}/ai-visibility/prompts`} passHref><a style={viewAll}>View all</a></Link>
+                              <SegmentedControl
+                                 size="sm"
+                                 value={promptMode}
+                                 onChange={setPromptMode}
+                                 options={[
+                                    { value: 'topics', label: <HashIcon /> },
+                                    { value: 'prompts', label: <PromptIcon /> },
+                                 ]}
+                              />
+                              <PanelNavButton href={`/sites/${slug}/ai-visibility/prompts`} onNavigate={router.push}>View all</PanelNavButton>
                            </div>
                         )}
                      >
@@ -273,7 +276,7 @@ const AiVisibilityOverview: NextPage = () => {
 
                      <Panel
                         title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Sources{sourceCount ? `: ${fmtK(sourceCount)}` : ''} <InfoIcon /></span>}
-                        action={<Link href={`/sites/${slug}/ai-visibility/sources`} passHref><a style={viewAll}>View all</a></Link>}
+                        action={<PanelNavButton href={`/sites/${slug}/ai-visibility/sources`} onNavigate={router.push}>View all</PanelNavButton>}
                      >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#71717B', fontFamily: FONT }}>
@@ -384,8 +387,8 @@ const AiVisibilityOverview: NextPage = () => {
                               Ostatni skan {confirmDays === 0 ? 'dzisiaj' : `${confirmDays} dni temu`}. Pełne odświeżenie to ~$4 kredytów DataForSEO. Odświeżyć mimo to?
                            </p>
                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                              <button type="button" onClick={() => setConfirmDays(null)} style={{ border: '1px solid #E4E4E7', borderRadius: 8, padding: '8px 16px', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Anuluj</button>
-                              <button type="button" onClick={() => runScan(true)} disabled={startScan.isLoading} style={{ border: 'none', borderRadius: 8, padding: '8px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Odśwież (~$4)</button>
+                              <Button type="button" variant="secondary" size="sm" onClick={() => setConfirmDays(null)}>Anuluj</Button>
+                              <Button type="button" variant="primary" size="sm" onClick={() => runScan(true)} disabled={startScan.isLoading}>Odśwież (~$4)</Button>
                            </div>
                         </div>
                      </Modal>

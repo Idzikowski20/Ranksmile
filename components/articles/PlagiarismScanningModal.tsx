@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import Button from '../core/button/button';
 
 const F = 'var(--font-family-primary)';
 
@@ -52,16 +53,16 @@ const PlagiarismScanningModal = ({ onCancel }: { onCancel: () => void }) => crea
       <span style={{ position: 'absolute', top: 0, bottom: 0, width: '35%', borderRadius: 999, background: '#783afb', animation: 'plagBar 1.4s ease-in-out infinite' }} />
     </div>
 
-    <button
+    <Button
       type="button"
+      variant="primary"
       onClick={onCancel}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'background 0.15s' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}
+      icon={(
+        <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
+      )}
     >
-      <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
       Cancel
-    </button>
+    </Button>
   </div>,
   document.body,
 );

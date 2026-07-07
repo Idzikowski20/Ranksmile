@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Button } from '../core';
 
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
@@ -64,11 +65,11 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
             />
             <div className="aiv-gap-scroll" style={{ maxHeight: 260, overflow: 'auto', background: 'transparent' }}>
                {list.map((c) => (
-                  <button key={c} type="button" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 8, padding: '8px 10px', fontSize: 14, color: '#18181B', cursor: 'pointer', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F9F9FB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                  <Button key={c} type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start', textAlign: 'left', fontFamily: FONT, borderRadius: 8, padding: '8px 10px' }}>
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
                      <img alt="" src={faviconFor(c)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</span>
-                  </button>
+                  </Button>
                ))}
                {list.length === 0 ? <div style={{ padding: '10px 10px', fontSize: 13, color: '#9F9FA9' }}>No matches.</div> : null}
             </div>
@@ -99,13 +100,13 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                      <div style={{ position: 'relative', minWidth: 0 }}>
-                        <button type="button" onClick={(e) => { stop(e); const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setSwapFor((s) => (s === card.domain ? null : card.domain)); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, maxWidth: 220 }}>
+                        <Button type="button" variant="transparent" size="sm" onClick={(e) => { stop(e); const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setSwapFor((s) => (s === card.domain ? null : card.domain)); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, fontWeight: 600, fontFamily: FONT, maxWidth: 220 }}>
                            { /* eslint-disable-next-line @next/next/no-img-element */ }
                            <img alt="" src={faviconFor(card.domain)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
-                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.domain}</span> <ChevronDown /></button>
+                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.domain}</span> <ChevronDown /></Button>
                         {swapFor === card.domain ? <Picker rect={pickerRect} candidates={candidates} exclude={selected} onPick={(b) => { onSelected(selected.map((x) => (x === card.domain ? b : x))); setSwapFor(null); }} onClose={() => setSwapFor(null)} /> : null}
                      </div>
-                     <button type="button" aria-label="Remove" onClick={(e) => { stop(e); onSelected(selected.filter((x) => x !== card.domain)); }} style={{ border: 'none', background: 'transparent', color: '#9F9FA9', cursor: 'pointer', display: 'inline-flex', flexShrink: 0 }}><XIcon /></button>
+                     <Button type="button" variant="transparent" size="sm" aria-label="Remove" onClick={(e) => { stop(e); onSelected(selected.filter((x) => x !== card.domain)); }} icon={<XIcon />} style={{ flexShrink: 0, color: '#9F9FA9' }} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px' }}>
@@ -118,7 +119,7 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                </div>
             ))}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-               <button type="button" aria-label="Add brand" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setAddOpen((o) => !o); }} style={{ width: 56, height: 144, border: '1px solid #F4F4F5', borderRadius: 12, background: 'transparent', color: '#71717B', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><PlusIcon /></button>
+               <Button type="button" variant="secondary" size="sm" aria-label="Add brand" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setAddOpen((o) => !o); }} icon={<PlusIcon />} style={{ width: 56, height: 144, color: '#71717B' }} />
                {addOpen ? <Picker rect={pickerRect} candidates={candidates} exclude={selected} onPick={(b) => { onSelected([...selected, b]); setAddOpen(false); }} onClose={() => setAddOpen(false)} /> : null}
             </div>
          </div>

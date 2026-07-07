@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Checkbox, SearchBar, SortableHeader } from '../ui';
-import { XIcon } from '../ui/icons';
+import { Checkbox, SearchBar, SortableHeader } from '../core';
+import { XIcon } from '../core';
 import { useSortState } from '../../lib/useSortState';
 
 const font = 'var(--font-family-primary)';
@@ -142,7 +142,10 @@ const AddPagesModal = ({ pages, onClose, onAdd }: {
                      {/* Header */}
                      <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'stretch', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
                         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
-                           <Checkbox checked={allSelected} indeterminate={!allSelected && filtered.some((p) => selected.has(p.path))} onChange={toggleAll} />
+                           <Checkbox
+                              checked={allSelected ? true : filtered.some((p) => selected.has(p.path)) ? 'indeterminate' : false}
+                              onChange={toggleAll}
+                           />
                         </div>
                         <div style={{ flex: 1, minWidth: 0, padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
                            <button type="button" onClick={() => handleSort('path')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: sortKey === 'path' ? 600 : 400, color: sortKey === 'path' ? '#18181B' : '#3F3F47', fontFamily: font }}>Page URL

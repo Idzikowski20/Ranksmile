@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SkeletonBox } from './SkeletonBlocks';
-import HoverTooltip from '../common/HoverTooltip';
+import { HoverTooltip, Button } from '../core';
 import { useAiVisCompetitorDetail } from '../../services/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
@@ -12,8 +12,6 @@ const ArrowUp = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const ArrowDown = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const SortArrow = ({ asc }: { asc: boolean }) => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ transform: asc ? 'rotate(180deg)' : 'none' }}><path d="M12 5v14m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
-
-const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: '#52525C', cursor: 'pointer', borderRadius: 6 };
 
 const StatCard = ({ label, value, hint }: { label: string; value: React.ReactNode; hint: string }) => (
    <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -107,7 +105,7 @@ const SourcesMini = ({ title, subtitle, sources }: { title: string; subtitle: st
          )}
          {sorted.length > visible ? (
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-               <button type="button" onClick={() => setVisible((v) => v + 10)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>View more <SortArrow asc={false} /></button>
+               <Button type="button" variant="secondary" size="sm" onClick={() => setVisible((v) => v + 10)} style={{ gap: 6, fontFamily: FONT }}>View more <SortArrow asc={false} /></Button>
             </div>
          ) : null}
       </div>
@@ -197,7 +195,7 @@ const MentionTable = ({ rows, brand, ownLabel }: { rows: MentionSource[]; brand:
          </div>
          {rows.length > visible ? (
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-               <button type="button" onClick={() => setVisible((v) => v + 10)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', color: '#18181B', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>View more <SortArrow asc={false} /></button>
+               <Button type="button" variant="secondary" size="sm" onClick={() => setVisible((v) => v + 10)} style={{ gap: 6, fontFamily: FONT }}>View more <SortArrow asc={false} /></Button>
             </div>
          ) : null}
       </div>
@@ -230,7 +228,7 @@ const PromptsTable = ({ prompts }: { prompts: Array<{ promptId: number; text: st
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
             <div style={{ ...cell, flex: 1, minWidth: 0 }}>Prompt</div>
             <div style={{ ...cell, width: 160, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>
-               <button type="button" onClick={() => setAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}>Avg. position <SortArrow asc={asc} /></button>
+               <Button type="button" variant="transparent" size="sm" onClick={() => setAsc((v) => !v)} style={{ gap: 4, fontWeight: 600, color: '#52525C' }}>Avg. position <SortArrow asc={asc} /></Button>
             </div>
          </div>
          {sorted.map((p) => (
@@ -284,10 +282,10 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                     <button type="button" aria-label="Previous" disabled={!canUp} onClick={() => onNavigate(-1)} style={{ ...iconBtn, opacity: canUp ? 1 : 0.35, cursor: canUp ? 'pointer' : 'not-allowed' }}><ArrowUp /></button>
-                     <button type="button" aria-label="Next" disabled={!canDown} onClick={() => onNavigate(1)} style={{ ...iconBtn, opacity: canDown ? 1 : 0.35, cursor: canDown ? 'pointer' : 'not-allowed' }}><ArrowDown /></button>
+                     <Button type="button" variant="transparent" size="sm" aria-label="Previous" disabled={!canUp} onClick={() => onNavigate(-1)} icon={<ArrowUp />} style={{ opacity: canUp ? 1 : 0.35 }} />
+                     <Button type="button" variant="transparent" size="sm" aria-label="Next" disabled={!canDown} onClick={() => onNavigate(1)} icon={<ArrowDown />} style={{ opacity: canDown ? 1 : 0.35 }} />
                   </div>
-                  <button type="button" aria-label="Close" onClick={handleClose} style={iconBtn}><CloseIcon /></button>
+                  <Button type="button" variant="transparent" size="sm" aria-label="Close" onClick={handleClose} icon={<CloseIcon />} />
                </div>
                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   { /* eslint-disable-next-line @next/next/no-img-element */ }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import HoverTooltip from '../common/HoverTooltip';
+import { HoverTooltip, Button } from '../core';
 
 const FONT = 'var(--font-family-primary)';
 const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
@@ -149,9 +149,9 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
                <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.compLabel} Mentioned`}><HeadTip label={`${compare.compLabel} Mentioned`} tip="Whether the competitor is cited on the same prompts as this source" align="center" /></span></div>
                <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
                <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => setAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}>
+                  <Button type="button" variant="transparent" size="sm" onClick={() => setAsc((v) => !v)} style={{ gap: 4, color: '#52525C', fontWeight: 600 }}>
                      <HeadTip label="Times shown" tip="Number of times the URL appears in AI answers" align="right" /> <SortArrow asc={asc} />
-                  </button>
+                  </Button>
                </div>
             </div>
             {sorted.slice(0, visible).map((s, i) => {
@@ -168,9 +168,9 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
             })}
             {remaining > 0 && (
                <div style={{ display: 'flex', justifyContent: 'center', padding: 12 }}>
-                  <button type="button" onClick={() => setVisible((v) => v + 100)} style={{ border: '1px solid #E4E4E7', borderRadius: 8, padding: '7px 14px', background: '#fff', color: '#18181B', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setVisible((v) => v + 100)}>
                      Show more ({remaining} left)
-                  </button>
+                  </Button>
                </div>
             )}
          </div>
@@ -187,9 +187,9 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
             <div style={{ ...headCell, width: 120, flexShrink: 0 }}><HeadTip label="Brands" tip="Brands mentioned in AI answers citing this source" /></div>
             <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
             <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>
-               <button type="button" onClick={() => setAsc((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}>
+               <Button type="button" variant="transparent" size="sm" onClick={() => setAsc((v) => !v)} style={{ gap: 4, color: '#52525C', fontWeight: 600 }}>
                   <HeadTip label="Times shown" tip="Number of times the URL appears in AI answers" align="right" /> <SortArrow asc={asc} />
-               </button>
+               </Button>
             </div>
          </div>
 
@@ -226,9 +226,9 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
 
          {remaining > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 12 }}>
-               <button type="button" onClick={() => setVisible((v) => v + 100)} style={{ border: '1px solid #E4E4E7', borderRadius: 8, padding: '7px 14px', background: '#fff', color: '#18181B', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+               <Button type="button" variant="secondary" size="sm" onClick={() => setVisible((v) => v + 100)}>
                   Show more ({remaining} left)
-               </button>
+               </Button>
             </div>
          )}
       </div>

@@ -1,4 +1,4 @@
-import { buildAuditResult } from '../../lib/auditCompute';
+import { buildAuditResult, auditContentScore, termCoverageFraction } from '../../lib/auditCompute';
 
 const HTML = `<!doctype html><html><head>
   <title>Jak sprawdzić czy ktoś mnie śledzi — poradnik</title>
@@ -132,6 +132,20 @@ describe('buildAuditResult with real competitor data (phase 2)', () => {
       expect(['add', 'ok', 'remove']).toContain(t?.action);
    });
 
+   it('builds SurferSEO-exact description suffixes per factor style', () => {
+      const msg = (key: string) => r.factors.find((f) => f.key === key)?.message || '';
+      // range style: competitor spread 1400–2000 with the unit noun "words"
+      expect(msg('word_count_body')).toContain('while the suggested range is 1400 - 2000 words.');
+      // single style: fixed target 1, singular noun
+      expect(msg('exact_kw_title')).toContain('while the suggested is 1 exact keyword.');
+      // optimal style: meta description
+      expect(msg('meta_desc_chars')).toContain('while the optimal range is 130 - 150 characters.');
+      // atLeast style: paragraph elements
+      expect(msg('p_count')).toContain('while the suggested range is at least');
+      // info factors carry no description line
+      expect(msg('exact_kw_h2h6')).toBe('');
+   });
+
    it('falls back to a competitor value of 0 for factors the competitor lacks', () => {
       const strong = r.factors.find((f) => f.key === 'strong_b_words');
       expect(strong?.competitors.every((c) => c.value === 0)).toBe(true);
@@ -168,5 +182,20 @@ describe('SurferSEO-style factor parity', () => {
          'Word count', 'Exact keywords', 'Partial keywords', 'Page structure',
          'Title and meta description length', 'Time to first byte', 'Load time (ms)',
       ]);
+   });
+});
+
+describe('audit content score (SurferSEO calibration)', () => {
+   it('is coverage-dominated: low term coverage → mid score even with good length', () => {
+      // 20% coverage, full length, 70% structure → ~48 (SurferSEO-like, not the inflated ~90)
+      expect(auditContentScore(0.2, 1, 0.7)).toBe(48);
+   });
+   it('bounds: full coverage → 100, none → 0', () => {
+      expect(auditContentScore(1, 1, 1)).toBe(100);
+      expect(auditContentScore(0, 0, 0)).toBe(0);
+   });
+   it('termCoverageFraction counts distinct terms present (inflection-tolerant)', () => {
+      const body = 'prywatny detektyw sprawdza podejrzane aplikacje na telefonie';
+      expect(termCoverageFraction(body, [{ term: 'prywatny detektyw' }, { term: 'nieznane aplikacje' }])).toBeCloseTo(0.5);
    });
 });

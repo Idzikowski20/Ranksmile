@@ -9,14 +9,8 @@ const Skeleton = ({ width, height, radius = 6, style }: {
 }) => (
   <div
     aria-hidden="true"
-    style={{
-      width,
-      height,
-      borderRadius: radius,
-      background: '#F4F4F5',
-      animation: 'skeletonPulse 1.6s ease-in-out infinite',
-      ...style,
-    }}
+    className="sentry-skeleton-block"
+    style={{ width, height, borderRadius: radius, ...style }}
   />
 );
 

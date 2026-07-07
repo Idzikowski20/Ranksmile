@@ -47,7 +47,7 @@ const KeywordTrackerPage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`Keyword Tracker — ${domain} — SerpBear`}</title></Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Keyword Tracker" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Keyword Tracker" heading="Keyword Tracker" contentMaxWidth="100%">
             <KeywordTrackerPanel
                domain={activeDomain || null}
                isConsoleConnected={scConnected}

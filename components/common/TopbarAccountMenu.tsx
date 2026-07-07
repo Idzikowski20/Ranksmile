@@ -5,17 +5,13 @@ import { authClient } from '../../lib/auth/client';
 import { useOrganization } from '../../services/organization';
 import { useGscAccount } from '../../services/gscAccount';
 import { useProfile } from '../../services/profile';
+import { Avatar } from '../core/avatar';
+import MenuListItem from '../core/menuListItem';
 
 const font = 'var(--font-family-primary)';
 
-/** Organization avatar: the uploaded logo, or the first letter of its name. */
 const OrgBadge = ({ size, logo, initial }: { size: number; logo: string; initial: string }) => (
-   <span
-      aria-hidden="true"
-      style={{ width: size, height: size, borderRadius: 6, background: logo ? 'transparent' : '#E1DBFE', color: '#09090B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, overflow: 'hidden', textTransform: 'uppercase' }}
-   >
-      {logo ? <img alt="" src={logo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} /> : initial}
-   </span>
+   <Avatar src={logo || undefined} initials={initial} size={size} variant="secondary" />
 );
 
 const CheckIcon = () => (
@@ -24,31 +20,21 @@ const CheckIcon = () => (
    </svg>
 );
 
-const MenuItem = ({ icon, label, onClick, href }: { icon?: React.ReactNode; label: string; onClick?: () => void; href?: string }) => {
-   const [hover, setHover] = useState(false);
-   const style: React.CSSProperties = {
-      display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box',
-      padding: '8px 12px', borderRadius: 6, cursor: 'pointer', color: '#2F2F34',
-      fontFamily: font, fontSize: 14, fontWeight: 500, textDecoration: 'none', textAlign: 'left',
-      background: hover ? '#F8F8F9' : 'transparent', border: 'none', transition: 'background 120ms ease',
-   };
-   const inner = (<>{icon}<span>{label}</span></>);
-   if (href) {
-      return (
-         <a href={href} role="menuitem" style={style} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{inner}</a>
-      );
-   }
-   return (
-      <button type="button" role="menuitem" style={style} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>{inner}</button>
-   );
-};
+const MenuItem = ({ icon, label, onClick, href }: { icon?: React.ReactNode; label: string; onClick?: () => void; href?: string }) => (
+   <MenuListItem
+      label={label}
+      leadingItems={icon}
+      onClick={onClick}
+      as={href ? 'a' : 'button'}
+      href={href}
+      style={{ width: '100%', borderRadius: 6 }}
+   />
+);
 
 const TopbarAccountMenu = () => {
    const router = useRouter();
    const [mounted, setMounted] = useState(false);
    const [open, setOpen] = useState(false);
-   const [imgError, setImgError] = useState(false);
-   const [profileHover, setProfileHover] = useState(false);
    const [orgHover, setOrgHover] = useState(false);
    const ref = useRef<HTMLDivElement | null>(null);
    const session = authClient.useSession?.();
@@ -59,8 +45,6 @@ const TopbarAccountMenu = () => {
    const orgInitial = (org?.name || '').charAt(0).toUpperCase() || 'O';
    const orgLogo = org?.logoUrl || '';
    const email = mounted ? (session?.data?.user?.email ?? '') : '';
-   // Display name: user's saved profile name → auth name → none. Avatar: custom
-   // upload → Google (GSC) picture → initials.
    const displayName = mounted ? (profile?.name || session?.data?.user?.name || '') : '';
    const accountPicture = (profile?.avatarUrl || gscAccount?.picture) || '';
    const accountInitials = (displayName || email || '?').charAt(0).toUpperCase();
@@ -90,47 +74,21 @@ const TopbarAccountMenu = () => {
          >
             <span
                aria-hidden="true"
-               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 2, paddingLeft: 8, background: 'rgb(24, 24, 27)', borderRadius: 9999, transition: 'background 150ms ease' }}
+               className="topbar-avatar-trigger-photo"
             >
-               <OrgBadge size={20} logo={orgLogo} initial={orgInitial} />
-               <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo">
-                  {accountPicture && !imgError ? (
-                     <img
-                        alt=""
-                        src={accountPicture}
-                        className="topbar-avatar-image"
-                        referrerPolicy="no-referrer"
-                        onError={() => setImgError(true)}
-                     />
-                  ) : (
-                     <span>{accountInitials}</span>
-                  )}
-               </span>
+               <Avatar src={accountPicture || undefined} initials={accountInitials} size={32} variant="primary" />
             </span>
          </button>
 
          {open && (
             <div className="topbar-account-menu motion-scale-in" role="menu" style={{ width: 320, borderRadius: 12, padding: 4, transformOrigin: 'top right' }}>
-               {/* Account / email */}
                <a
                   href="/settings/profile"
                   role="menuitem"
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 6, textDecoration: 'none', background: profileHover ? '#F8F8F9' : 'transparent', transition: 'background 120ms ease' }}
-                  onMouseEnter={() => setProfileHover(true)}
-                  onMouseLeave={() => setProfileHover(false)}
+                  className="topbar-account-row"
                >
                   <span className="topbar-avatar topbar-avatar-large topbar-avatar-trigger-photo" aria-hidden="true">
-                     {accountPicture && !imgError ? (
-                        <img
-                           alt=""
-                           src={accountPicture}
-                           className="topbar-avatar-image"
-                           referrerPolicy="no-referrer"
-                           onError={() => setImgError(true)}
-                        />
-                     ) : (
-                        <span>{accountInitials}</span>
-                     )}
+                     <Avatar src={accountPicture || undefined} initials={accountInitials} size={40} variant="primary" />
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                      {displayName && (

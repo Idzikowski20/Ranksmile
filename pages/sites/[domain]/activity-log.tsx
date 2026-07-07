@@ -7,8 +7,19 @@ import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
-import HoverTooltip from '../../../components/common/HoverTooltip';
+import { HoverTooltip, Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/core';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import {
+  SentryPanel,
+  SentryPanelBody,
+  SentryTable,
+  SentryTableHead,
+  SentryTableBody,
+  SentryTableRow,
+  SentryTableCell,
+  SentryTableHeaderCell,
+  SentryEmptyState,
+} from '../../../components/sentry-pages';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { usePeople } from '../../../services/people';
@@ -90,11 +101,6 @@ const FilterIcon = () => (
       <path d="M6 12H18M3 6H21M9 18H15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
    </svg>
 );
-const ChevronDown = ({ open }: { open: boolean }) => (
-   <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: open ? 'rotate(180deg)' : 'none' }}>
-      <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
-   </svg>
-);
 const SortArrow = ({ asc }: { asc: boolean }) => (
    <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: asc ? 'rotate(180deg)' : 'none', color: '#52525C' }}>
       <path fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" />
@@ -105,121 +111,47 @@ const CalArrow = ({ dir }: { dir: 'left' | 'right' }) => (
       <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" />
    </svg>
 );
-const CheckMark = () => (
-   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-   </svg>
-);
-const Checkbox = ({ checked }: { checked: boolean }) => (
-   <span style={{ width: 18, height: 18, flexShrink: 0, borderRadius: 5, border: `1.5px solid ${checked ? '#783AFB' : '#D4D4D8'}`, background: checked ? '#783AFB' : '#fff', display: 'grid', placeItems: 'center' }}>
-      {checked && <CheckMark />}
-   </span>
-);
 const Avatar = ({ initial }: { initial: string }) => (
    <span style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>{initial}</span>
 );
 
-// ─── Multi-select dropdown (people / activities) ─────────────────────────────
+// ─── Multi-select filter (CompactSelect) ───────────────────────────────────────
 
 type MultiOpt = { value: string; label: string; initial?: string };
-const MultiSelectDropdown = ({ icon, allLabel, countNoun, withSearch, options, selected, onChange, minWidth }: {
-   icon: React.ReactNode; allLabel: string; countNoun: string; withSearch?: boolean;
-   options: MultiOpt[]; selected: string[] | null; onChange: (next: string[] | null) => void; minWidth: number;
+const MultiSelectFilter = ({ prefix, allLabel, countNoun, withSearch, options, selected, onChange }: {
+   prefix: React.ReactNode; allLabel: string; countNoun: string; withSearch?: boolean;
+   options: MultiOpt[]; selected: string[] | null; onChange: (next: string[] | null) => void;
 }) => {
-   const [open, setOpen] = useState(false);
-   const [q, setQ] = useState('');
-   const ref = useRef<HTMLDivElement>(null);
-   useEffect(() => {
-      if (!open) return undefined;
-      const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-      document.addEventListener('mousedown', onDown);
-      return () => document.removeEventListener('mousedown', onDown);
-   }, [open]);
-
    const allValues = options.map((o) => o.value);
    const eff = selected === null ? allValues : selected;
    const allChecked = options.length > 0 && eff.length === options.length;
-   const toggle = (v: string) => {
-      const s = new Set(eff);
-      if (s.has(v)) s.delete(v); else s.add(v);
-      const arr = options.filter((o) => s.has(o.value)).map((o) => o.value);
-      onChange(arr.length === options.length ? null : arr);
-   };
-   const toggleAll = () => onChange(allChecked ? [] : null);
 
    let label = allLabel;
    if (!(selected === null || allChecked)) {
       label = eff.length === 1 ? (options.find((o) => o.value === eff[0])?.label || allLabel) : `${eff.length} ${countNoun}`;
    }
-   const shown = withSearch && q ? options.filter((o) => o.label.toLowerCase().includes(q.toLowerCase())) : options;
 
    return (
-      <div ref={ref} style={{ position: 'relative' }}>
-         <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            style={{
-               display: 'inline-flex', alignItems: 'center', gap: 8, minWidth, maxWidth: 240, height: 38, padding: '0 12px',
-               borderRadius: 10, border: '1px solid #D4D4D8', background: '#fff', cursor: 'pointer',
-               fontFamily: FONT, fontSize: 14, fontWeight: 600, color: '#18181B', transition: 'opacity 150ms ease',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-         >
-            <span style={{ color: '#52525C', display: 'inline-flex' }}>{icon}</span>
-            <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-            <span style={{ color: '#52525C', display: 'inline-flex' }}><ChevronDown open={open} /></span>
-         </button>
-         {open && (
-            <div
-               role="menu"
-               style={{
-                  position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 150, width: Math.max(minWidth, 260), maxHeight: 340, overflowY: 'auto',
-                  background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: 8,
-                  boxShadow: '0 16px 40px rgba(0,0,0,0.14)', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
-                  transformOrigin: 'top right', fontFamily: FONT,
-               }}
-               className="styled-scrollbar"
-            >
-               {withSearch && (
-                  <input
-                     value={q}
-                     onChange={(e) => setQ(e.target.value)}
-                     placeholder="Search people..."
-                     autoComplete="off"
-                     style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', marginBottom: 6, borderRadius: 8, border: '1px solid #D4D4D8', outline: 'none', fontFamily: FONT, fontSize: 14, color: '#18181B' }}
-                     onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
-                     onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
-                  />
-               )}
-               <button
-                  type="button"
-                  onClick={toggleAll}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT, fontSize: 14, fontWeight: 500, color: '#18181B', background: 'transparent', transition: 'background 120ms ease' }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F9'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-               >
-                  <Checkbox checked={allChecked} />
-                  <span>Select all</span>
-               </button>
-               {shown.map((o) => (
-                  <button
-                     key={o.value}
-                     type="button"
-                     onClick={() => toggle(o.value)}
-                     style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: FONT, fontSize: 14, fontWeight: 500, color: '#18181B', background: 'transparent', transition: 'background 120ms ease' }}
-                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F9'; }}
-                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-                  >
-                     <Checkbox checked={eff.includes(o.value)} />
-                     {o.initial && <Avatar initial={o.initial} />}
-                     <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
-                  </button>
-               ))}
-               {shown.length === 0 && <div style={{ padding: '12px 10px', fontSize: 13, color: '#9F9FA9' }}>No matches.</div>}
-            </div>
-         )}
-      </div>
+      <CompactSelect
+         multiple
+         prefix={prefix}
+         size="sm"
+         search={withSearch ? { placeholder: 'Search people…' } : false}
+         options={options.map((o) => ({
+            value: o.value,
+            label: o.label,
+            textValue: o.label,
+            leadingItems: o.initial ? <Avatar initial={o.initial} /> : undefined,
+         }))}
+         value={eff}
+         triggerLabel={label}
+         clearable
+         onChange={(opts) => {
+            const vals = opts.map((o) => String(o.value));
+            if (vals.length === 0 || vals.length === options.length) onChange(null);
+            else onChange(vals);
+         }}
+      />
    );
 };
 
@@ -281,7 +213,6 @@ const RangeCalendar = ({ range, onPick, today }: { range: Range; onPick: (d: Dat
       return new Date(base.getFullYear(), base.getMonth(), 1);
    });
    const right = new Date(view.getFullYear(), view.getMonth() + 1, 1);
-   const navBtn: React.CSSProperties = { width: 32, height: 32, display: 'grid', placeItems: 'center', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181B' };
 
    return (
       <div
@@ -292,16 +223,10 @@ const RangeCalendar = ({ range, onPick, today }: { range: Range; onPick: (d: Dat
          }}
       >
          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <button
-               type="button"
-               onClick={() => setView(new Date(today.getFullYear(), today.getMonth(), 1))}
-               style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C', padding: 4 }}
-            >
-               Today
-            </button>
+            <Button type="button" variant="link" size="xs" onClick={() => setView(new Date(today.getFullYear(), today.getMonth(), 1))}>Today</Button>
             <div style={{ display: 'flex', gap: 4 }}>
-               <button type="button" aria-label="Previous month" style={navBtn} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}><CalArrow dir="left" /></button>
-               <button type="button" aria-label="Next month" style={navBtn} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}><CalArrow dir="right" /></button>
+               <Button type="button" variant="transparent" size="sm" aria-label="Previous month" icon={<CalArrow dir="left" />} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))} />
+               <Button type="button" variant="transparent" size="sm" aria-label="Next month" icon={<CalArrow dir="right" />} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))} />
             </div>
          </div>
          <div style={{ display: 'flex', gap: 36, justifyContent: 'center' }}>
@@ -457,21 +382,9 @@ const ActivityLogPage: NextPage = () => {
    };
 
    const exportBtn = (
-      <button
-         type="button"
-         onClick={exportCsv}
-         disabled={events.length === 0}
-         style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, height: 36, padding: '0 14px', borderRadius: 8,
-            border: 'none', cursor: events.length === 0 ? 'not-allowed' : 'pointer', background: '#18181B', color: '#fff',
-            fontFamily: FONT, fontSize: 14, fontWeight: 600, opacity: events.length === 0 ? 0.45 : 1, transition: 'background 150ms ease',
-         }}
-         onMouseEnter={(e) => { if (events.length) (e.currentTarget as HTMLButtonElement).style.background = '#783AFB'; }}
-         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#18181B'; }}
-      >
-         <DownloadIcon />
+      <Button type="button" variant="primary" size="sm" icon={<DownloadIcon />} onClick={exportCsv} disabled={events.length === 0}>
          Export CSV
-      </button>
+      </Button>
    );
 
    const customLabel = mode === 'custom' && customRange.from ? fmtRangeLabel(customRange.from, customRange.to) : 'Custom';
@@ -482,117 +395,98 @@ const ActivityLogPage: NextPage = () => {
             <title>{`Activity Log — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Activity Log" contentMaxWidth="100%">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT, width: '100%', maxWidth: 880, margin: '0 auto' }}>
-               {/* Title row (kept inside the centered column so it aligns with the content) */}
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                  <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Activity Log</h1>
-                  {exportBtn}
-               </div>
-               {/* Filters row */}
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+         <DomainSubLayout
+            domain={domain}
+            slug={slug || ''}
+            section="Activity Log"
+            heading="Activity Log"
+            actions={exportBtn}
+            contentMaxWidth={880}
+            filters={(
+               <ToolRibbon>
                   <div ref={segRef} style={{ position: 'relative' }}>
-                     <div style={{ display: 'inline-flex', padding: 4, borderRadius: 10, background: '#F4F4F5', gap: 2 }}>
-                        <button
-                           type="button"
-                           onClick={() => { setMode('7d'); setCalOpen(false); }}
-                           style={{
-                              display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                              fontFamily: FONT, fontSize: 13, fontWeight: 600, color: mode === '7d' ? '#18181B' : '#71717B',
-                              background: mode === '7d' ? '#fff' : 'transparent', boxShadow: mode === '7d' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none', transition: 'background 150ms ease, color 150ms ease',
-                           }}
-                        >
-                           Last 7d
-                        </button>
-                        <button
-                           type="button"
-                           onClick={() => (calOpen ? setCalOpen(false) : openCustom())}
-                           style={{
-                              display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                              fontFamily: FONT, fontSize: 13, fontWeight: 600, color: mode === 'custom' ? '#18181B' : '#71717B',
-                              background: mode === 'custom' ? '#fff' : 'transparent', boxShadow: mode === 'custom' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none', transition: 'background 150ms ease, color 150ms ease',
-                           }}
-                        >
-                           {customLabel}
-                        </button>
-                     </div>
+                     <SegmentedControl
+                        size="sm"
+                        name="activity-range"
+                        value={mode}
+                        onChange={(v) => {
+                           if (v === '7d') { setMode('7d'); setCalOpen(false); }
+                           else openCustom();
+                        }}
+                        options={[
+                           { value: '7d', label: 'Last 7d' },
+                           { value: 'custom', label: customLabel },
+                        ]}
+                     />
                      {calOpen && <RangeCalendar range={customRange} onPick={pickDay} today={today} />}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                     <MultiSelectDropdown icon={<PeopleIcon />} allLabel="All people" countNoun="people" withSearch minWidth={150} options={peopleOptions} selected={peopleSel} onChange={setPeopleSel} />
-                     <MultiSelectDropdown
-                        icon={<FilterIcon />}
-                        allLabel="All activities"
-                        countNoun="selected"
-                        minWidth={160}
-                        options={[
-                           { value: 'Content Audit', label: 'Content Audit' },
-                           { value: 'Content Editor', label: 'Content Editor' },
-                           { value: 'Topical Map', label: 'Topical Map' },
-                        ]}
-                        selected={actSel}
-                        onChange={setActSel}
-                     />
-                  </div>
-               </div>
+                  <MultiSelectFilter prefix={<PeopleIcon />} allLabel="All people" countNoun="people" withSearch options={peopleOptions} selected={peopleSel} onChange={setPeopleSel} />
+                  <MultiSelectFilter
+                     prefix={<FilterIcon />}
+                     allLabel="All activities"
+                     countNoun="selected"
+                     options={[
+                        { value: 'Content Audit', label: 'Content Audit' },
+                        { value: 'Content Editor', label: 'Content Editor' },
+                        { value: 'Topical Map', label: 'Topical Map' },
+                     ]}
+                     selected={actSel}
+                     onChange={setActSel}
+                  />
+               </ToolRibbon>
+            )}
+         >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT, width: '100%' }}>
+               <SentryPanel>
+                  <SentryPanelBody>
+                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 24, marginBottom: 16, fontSize: 13, color: '#71717B' }}>
+                        <span>Activities: <strong style={{ color: '#18181B', fontWeight: 600 }}>{events.length}</strong></span>
+                        <span>Active days: <strong style={{ color: '#18181B', fontWeight: 600 }}>{activeDays}</strong></span>
+                        <span>Most active day: <strong style={{ color: '#18181B', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
+                     </div>
+                     <Heatmap counts={counts} peakKey={peakKey} onPickDay={filterToDay} />
+                  </SentryPanelBody>
+               </SentryPanel>
 
-               {/* Heatmap card */}
-               <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 20 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 24, marginBottom: 16, fontSize: 13, color: '#71717B' }}>
-                     <span>Activities: <strong style={{ color: '#18181B', fontWeight: 600 }}>{events.length}</strong></span>
-                     <span>Active days: <strong style={{ color: '#18181B', fontWeight: 600 }}>{activeDays}</strong></span>
-                     <span>Most active day: <strong style={{ color: '#18181B', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
-                  </div>
-                  <Heatmap counts={counts} peakKey={peakKey} onPickDay={filterToDay} />
-               </div>
-
-               {/* Activity table */}
-               <div style={{ overflowX: 'auto' }} className="styled-scrollbar">
-                  <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse', fontFamily: FONT }}>
-                     <thead>
+               <SentryPanel noPadding>
+                  <SentryTable>
+                     <SentryTableHead>
                         <tr>
-                           <th style={{ width: 96, textAlign: 'left', padding: '12px 16px 12px 4px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Person</th>
-                           <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#52525C', borderBottom: '1px solid #F4F4F5' }}>Activity</th>
-                           <th style={{ width: 200, textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid #F4F4F5' }}>
-                              <button
-                                 type="button"
-                                 onClick={() => setSortAsc((s) => !s)}
-                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, fontFamily: FONT, fontSize: 13, fontWeight: 600, color: '#52525C' }}
-                              >
+                           <SentryTableHeaderCell style={{ width: 96 }}>Person</SentryTableHeaderCell>
+                           <SentryTableHeaderCell>Activity</SentryTableHeaderCell>
+                           <SentryTableHeaderCell style={{ width: 200 }}>
+                              <Button type="button" variant="transparent" size="sm" onClick={() => setSortAsc((s) => !s)} style={{ gap: 6, fontSize: 11, fontWeight: 600, color: '#6a6772', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                  Date
                                  <SortArrow asc={sortAsc} />
-                              </button>
-                           </th>
+                              </Button>
+                           </SentryTableHeaderCell>
                         </tr>
-                     </thead>
-                     <tbody>
+                     </SentryTableHead>
+                     <SentryTableBody>
                         {isLoading ? (
                            Array.from({ length: 4 }).map((_, i) => (
                               // eslint-disable-next-line react/no-array-index-key
-                              <tr key={i}>
-                                 <td style={{ padding: '14px 16px 14px 4px' }}>
+                              <SentryTableRow key={i}>
+                                 <SentryTableCell>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                        <span style={{ width: 28, height: 28, borderRadius: 9999, background: '#F1F1F3' }} />
                                        <span style={{ width: 150, height: 12, borderRadius: 6, background: '#F1F1F3' }} />
                                     </div>
-                                 </td>
-                                 <td style={{ padding: '14px 16px' }}><span style={{ display: 'block', width: '60%', height: 12, borderRadius: 6, background: '#F1F1F3' }} /></td>
-                                 <td style={{ padding: '14px 16px' }}><span style={{ display: 'block', width: 120, height: 12, borderRadius: 6, background: '#F1F1F3' }} /></td>
-                              </tr>
+                                 </SentryTableCell>
+                                 <SentryTableCell><span style={{ display: 'block', width: '60%', height: 12, borderRadius: 6, background: '#F1F1F3' }} /></SentryTableCell>
+                                 <SentryTableCell><span style={{ display: 'block', width: 120, height: 12, borderRadius: 6, background: '#F1F1F3' }} /></SentryTableCell>
+                              </SentryTableRow>
                            ))
                         ) : events.length === 0 ? (
-                           <tr>
-                              <td colSpan={3} style={{ padding: 0 }}>
-                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '72px 24px', textAlign: 'center' }}>
-                                    <EmptyEyes />
-                                    <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>No activities found</span>
-                                 </div>
-                              </td>
-                           </tr>
+                           <SentryTableRow>
+                              <SentryTableCell colSpan={3}>
+                                 <SentryEmptyState title="No activities found" description={<EmptyEyes />} />
+                              </SentryTableCell>
+                           </SentryTableRow>
                         ) : (
                            events.map((e) => (
-                              <tr key={e.id} className="activity-log-row">
-                                 <td style={{ padding: '14px 16px 14px 4px', verticalAlign: 'middle' }}>
+                              <SentryTableRow key={e.id} className="activity-log-row">
+                                 <SentryTableCell>
                                     <HoverTooltip label={person}>
                                        {personImage ? (
                                           // eslint-disable-next-line @next/next/no-img-element
@@ -603,8 +497,8 @@ const ActivityLogPage: NextPage = () => {
                                           </span>
                                        )}
                                     </HoverTooltip>
-                                 </td>
-                                 <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                 </SentryTableCell>
+                                 <SentryTableCell>
                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: '#18181B' }}>
                                        <span style={{ flexShrink: 0 }}>{e.verb}</span>
                                        <Link href={`/articles/${e.articleId}`} passHref>
@@ -623,20 +517,20 @@ const ActivityLogPage: NextPage = () => {
                                           <span style={{ flexShrink: 0, color: '#52525C' }}>in Content Editor</span>
                                        )}
                                     </div>
-                                 </td>
-                                 <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                 </SentryTableCell>
+                                 <SentryTableCell>
                                     <HoverTooltip label={fmtDateFull(e.time)} align="right">
                                        <span style={{ fontSize: 14, color: '#18181B', cursor: 'default' }}>
                                           {fmtDateShort(e.time)}, <span style={{ color: '#71717B' }}>{fmtTime(e.time)}</span>
                                        </span>
                                     </HoverTooltip>
-                                 </td>
-                              </tr>
+                                 </SentryTableCell>
+                              </SentryTableRow>
                            ))
                         )}
-                     </tbody>
-                  </table>
-               </div>
+                     </SentryTableBody>
+                  </SentryTable>
+               </SentryPanel>
             </div>
          </DomainSubLayout>
       </AppShell>

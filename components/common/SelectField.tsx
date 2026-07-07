@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Icon from './Icon';
+import Select from '../core/select/select';
+import { FormField } from '../core/form';
 
 export type SelectionOption = {
    label:string,
@@ -70,6 +72,22 @@ const SelectField = (props: SelectFieldProps) => {
       });
       setFilterdOptions(filteredItems);
    };
+
+   if (!multiple) {
+      return (
+         <FormField label={label || undefined} className={inline ? 'inline-block' : undefined}>
+            <Select
+               options={options}
+               value={selected[0] || ''}
+               onChange={(v) => updateField([v])}
+               placeholder={defaultLabel}
+               width={fullWidth ? '100%' : minWidth}
+               searchable={options.length > 10}
+               emptyMessage={emptyMsg || 'No options'}
+            />
+         </FormField>
+      );
+   }
 
    return (
        <div className={`select font-semibold text-gray-500 relative ${inline ? 'inline-block' : 'flex'} justify-between items-center`}>

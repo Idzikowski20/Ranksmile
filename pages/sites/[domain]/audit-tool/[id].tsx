@@ -10,8 +10,10 @@ import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/a
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AuditFactor, AuditResult } from '../../../../lib/auditTypes';
+import { Button } from '../../../../components/core';
 
 const AuditFactorChart = dynamic(() => import('../../../../components/audit/AuditFactorChart'), { ssr: false });
+const TermsTable = dynamic(() => import('../../../../components/audit/TermsTable'), { ssr: false });
 
 const FONT = 'var(--font-family-primary)';
 
@@ -42,12 +44,9 @@ const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({ t
 );
 
 const DetailsButton = ({ label, open, onClick }: { label: string; open: boolean; onClick: () => void }) => (
-   <button
-      type="button" onClick={onClick}
-      style={{ border: 'none', background: '#F4F4F5', color: '#2F2F34', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 150ms ease' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#E4E4E7'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-   >{open ? label.replace(/^Show/, 'Hide') : label}</button>
+   <Button type="button" variant="secondary" size="sm" onClick={onClick}>
+      {open ? label.replace(/^Show/, 'Hide') : label}
+   </Button>
 );
 
 /** One row: tone icon + headline + value line + (indented) description, with a Show/Hide
@@ -77,6 +76,9 @@ const Row: React.FC<{
 // ─── Per-factor copy derived from the numbers (no backend change needed) ───
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100));
 const nounFrom = (label: string) => label.replace(/^\s*[\d.]+\s*/, '');
+// The metric noun without the content-zone suffix, for the info headline
+// ("Compared pages have 0 - 3 exact keywords (…)" — no "in h2 to h6").
+const metricNoun = (label: string) => label.replace(/^\s*[\d.]+\s*/, '').replace(/\s+in\s+(body|h2 to h6|paragraphs|img alt|title|h1)\s*$/, '');
 
 function factorHeadline(f: AuditFactor): string {
    if (f.verdict === 'ok') return 'No action required.';
@@ -85,7 +87,7 @@ function factorHeadline(f: AuditFactor): string {
       const avg = vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100 : 0;
       const lo = f.suggestedMin ?? (vals.length ? Math.min(...vals) : 0);
       const hi = f.suggestedMax ?? (vals.length ? Math.max(...vals) : 0);
-      return `Compared pages have ${fmt(lo)} - ${fmt(hi)} (${fmt(avg)} on average)`;
+      return `Compared pages have ${fmt(lo)} - ${fmt(hi)} ${metricNoun(f.label)} (${fmt(avg)} on average)`;
    }
    // warn — express the gap to the suggested range as an actionable Add/Remove.
    const noun = nounFrom(f.label);
@@ -102,13 +104,10 @@ function factorHeadline(f: AuditFactor): string {
    return `Adjust ${noun}`;
 }
 
+// The description is now assembled in the backend (assembleFactor → buildDescription),
+// including the exact SurferSEO "…, while the suggested range is X - Y <noun>." suffix
+// on real data. Info factors carry an empty message (SurferSEO shows no description line).
 function factorDescription(f: AuditFactor): string {
-   // Real ranges (phase 2) can be stated as fact; placeholder ranges stay unstated (the
-   // expanded chart already captions them as sample data).
-   if (!f.placeholder && f.suggestedMin !== null && f.suggestedMax !== null && f.verdict !== 'info') {
-      const base = f.message.replace(/\.\s*$/, '');
-      return `${base}, while the suggested range is ${fmt(f.suggestedMin)} - ${fmt(f.suggestedMax)}.`;
-   }
    return f.message;
 }
 
@@ -138,7 +137,9 @@ const AuditDetailPage: NextPage = () => {
    const onConfirmCompetitors = () => { setCompOpen(false); rerun(); };
 
    const failed = runQ.isError || run?.status === 'failed';
-   const busy = !failed && (runQ.isLoading || !run || run.status === 'queued' || run.status === 'running');
+   // rerunM.isLoading keeps the "Analyzing…" view up the instant a re-run is fired, before
+   // the polled status flips to queued/running (otherwise the stale result flashes back).
+   const busy = !failed && (runQ.isLoading || rerunM.isLoading || !run || run.status === 'queued' || run.status === 'running');
 
    // Group factors by section, preserving first-seen order.
    const sections: { name: string; factors: AuditFactor[] }[] = [];
@@ -159,28 +160,24 @@ const AuditDetailPage: NextPage = () => {
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`${run?.keyword || 'Audit'} — ${domain}`}</title></Head>
-         <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
-            <div style={{ maxWidth: 880, margin: '0 auto' }}>
+         <style>{'@keyframes spin{to{transform:rotate(360deg)}}@keyframes auditPulse{0%,100%{opacity:.5}50%{opacity:1}}'}</style>
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" heading="Audit" contentMaxWidth="100%">
+            <div style={{ maxWidth: 1040, margin: '0 auto' }}>
             {/* Sticky title row: keyword + audited URL + actions */}
             <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '16px 0', marginBottom: 4 }}>
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0 }}>
-                  <button type="button" onClick={() => router.push(`/sites/${slug}/audit-tool`)} aria-label="Back" style={{ border: 'none', background: 'transparent', color: '#71717B', cursor: 'pointer', fontSize: 18, padding: 0, flexShrink: 0 }}>‹</button>
+                  <Button type="button" variant="transparent" size="sm" onClick={() => router.push(`/sites/${slug}/audit-tool`)} aria-label="Back" style={{ color: '#71717B', fontSize: 18, padding: 0, flexShrink: 0 }}>‹</Button>
                   <span style={{ fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT, flexShrink: 0 }}>{run?.keyword || '…'}</span>
                   {run?.url && (
                      <a href={run.url} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: '#52525C', fontFamily: FONT, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{run.url}</a>
                   )}
                </div>
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                  <button type="button" onClick={rerun} disabled={rerunM.isLoading} aria-label="Refresh audit" title="Re-run audit" style={{ border: 'none', background: 'transparent', color: '#52525C', cursor: rerunM.isLoading ? 'default' : 'pointer', display: 'inline-flex', padding: 4, opacity: rerunM.isLoading ? 0.5 : 1 }}>
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 22s.85-.12 4.36-3.64C21.88 14.85 21.88 9.15 18.36 5.64 17.12 4.39 15.6 3.59 14 3.22M14 22h6M14 22v-6M10 2s-.85.12-4.36 3.64C2.12 9.15 2.12 14.85 5.64 18.36 6.88 19.61 8.4 20.41 10 20.78M10 2H4M10 2v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </button>
+                  <Button type="button" variant="transparent" size="sm" onClick={rerun} disabled={rerunM.isLoading} busy={rerunM.isLoading} aria-label="Refresh audit" title="Re-run audit" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 22s.85-.12 4.36-3.64C21.88 14.85 21.88 9.15 18.36 5.64 17.12 4.39 15.6 3.59 14 3.22M14 22h6M14 22v-6M10 2s-.85.12-4.36 3.64C2.12 9.15 2.12 14.85 5.64 18.36 6.88 19.61 8.4 20.41 10 20.78M10 2H4M10 2v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>} style={{ color: '#52525C', opacity: rerunM.isLoading ? 0.5 : 1 }} />
                   {run?.keyword && (
-                     <button type="button" onClick={() => setCompOpen(true)} aria-label="Select competitors" title="Select competitors" style={{ border: 'none', background: 'transparent', color: '#52525C', cursor: 'pointer', display: 'inline-flex', padding: 4 }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                     </button>
+                     <Button type="button" variant="transparent" size="sm" onClick={() => setCompOpen(true)} aria-label="Select competitors" title="Select competitors" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>} style={{ color: '#52525C' }} />
                   )}
-                  <button type="button" style={{ border: 'none', borderRadius: 8, padding: '7px 16px', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>Share</button>
+                  <Button type="button" variant="primary" size="sm" style={{ fontFamily: FONT }}>Share</Button>
                </div>
             </div>
 
@@ -192,11 +189,11 @@ const AuditDetailPage: NextPage = () => {
 
             {!failed && busy && (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#B45309', fontFamily: FONT, fontSize: 14, fontWeight: 600 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#18181B', fontFamily: FONT, fontSize: 14, fontWeight: 600 }}>
                      <svg viewBox="0 0 24 24" width={16} height={16} style={{ animation: 'spin 0.7s linear infinite' }}><path fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
                      Analyzing the page…
                   </div>
-                  {[0, 1, 2].map((i) => <div key={i} style={{ border: '1px solid #E4E4E7', borderRadius: 16, height: 120, background: '#F8F8F9' }} />)}
+                  {[0, 1, 2].map((i) => <div key={i} style={{ border: '1px solid #E4E4E7', borderRadius: 16, height: 120, background: '#F8F8F9', animation: `auditPulse 1.4s ease-in-out ${i * 0.15}s infinite` }} />)}
                </div>
             )}
 
@@ -205,13 +202,14 @@ const AuditDetailPage: NextPage = () => {
                   {/* Content Score */}
                   <SectionCard title="Content Score">
                      {(() => {
-                        const csMin = result.contentScoreSuggestedMin;
-                        const below = csMin !== null && result.contentScore < csMin;
+                        // Goal = the top competitor's content score (SurferSEO's "for the best results").
+                        const goal = result.contentScoreSuggestedMax;
+                        const below = goal !== null && result.contentScore < goal;
                         return (
                            <Row
                               last
                               tone={below ? 'warn' : 'ok'}
-                              headline={below ? `Improve Content Score by at least ${csMin - result.contentScore} for the best results.` : 'No action required.'}
+                              headline={below ? `Improve Content Score by at least ${goal - result.contentScore} for the best results.` : 'No action required.'}
                               value={`Your Content Score is ${result.contentScore}.`}
                               detailsLabel="Show details" expanded={expanded.has('content_score')} onToggle={() => toggle('content_score')}
                            >
@@ -221,36 +219,43 @@ const AuditDetailPage: NextPage = () => {
                      })()}
                   </SectionCard>
 
-                  {/* Internal links */}
+                  {/* Internal links — topically-relevant pages that should link to the audited URL */}
                   <SectionCard title="Internal links">
                      {result.internalLinks.length === 0 ? (
-                        <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>No internal links found on the page.</div>
-                     ) : (
-                        <Row
-                           last tone="info"
-                           headline="Internal links found on this page."
-                           value={`${result.internalLinks.length} internal link${result.internalLinks.length === 1 ? '' : 's'} detected`}
-                           description="Same-site links found on the audited page. A ✓ marks a link already pointing at the audited URL."
-                           detailsLabel="Show internal links" expanded={expanded.has('internal_links')} onToggle={() => toggle('internal_links')}
-                        >
-                           <div style={{ overflow: 'auto' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
-                                 <thead><tr>
-                                    <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px' }}>URL</th>
-                                    <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 100 }}>Links here</th>
-                                 </tr></thead>
-                                 <tbody>
-                                    {result.internalLinks.map((l) => (
-                                       <tr key={l.url}>
-                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px' }}><a href={l.url} target="_blank" rel="noreferrer" style={{ color: '#783AFB', fontSize: 13, textDecoration: 'none' }}>{l.url}</a></td>
-                                          <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right' }}>{l.linked ? '✓' : '—'}</td>
-                                       </tr>
-                                    ))}
-                                 </tbody>
-                              </table>
-                           </div>
-                        </Row>
-                     )}
+                        <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>No internal link opportunities found for this URL.</div>
+                     ) : (() => {
+                        const opps = result.internalLinks.filter((l) => !l.linked).length;
+                        return (
+                           <Row
+                              last tone={opps > 0 ? 'red' : 'ok'}
+                              headline={opps > 0 ? 'Add internal links pointing to audited URL from relevant pages listed below.' : 'No action required.'}
+                              value={opps > 0
+                                 ? `${opps} internal link ${opps === 1 ? 'opportunity' : 'opportunities'} found for this URL`
+                                 : `${result.internalLinks.length} relevant page${result.internalLinks.length === 1 ? '' : 's'} already link here`}
+                              description="We detect topically relevant pages that you can use as internal links sources to boost audited page."
+                              detailsLabel="Show internal links" expanded={expanded.has('internal_links')} onToggle={() => toggle('internal_links')}
+                           >
+                              <div style={{ overflow: 'auto' }}>
+                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
+                                    <thead><tr>
+                                       <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #E4E4E7', padding: '10px 12px' }}>url</th>
+                                       <th style={{ textAlign: 'center', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #E4E4E7', padding: '10px 12px', width: 100 }}>link</th>
+                                    </tr></thead>
+                                    <tbody>
+                                       {result.internalLinks.map((l) => (
+                                          <tr key={l.url}>
+                                             <td style={{ borderBottom: '1px solid #F4F4F5', padding: '12px 12px' }}><a href={l.url} target="_blank" rel="noreferrer" style={{ color: '#3F3F47', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 2 }}>{l.url}</a></td>
+                                             <td style={{ borderBottom: '1px solid #F4F4F5', padding: '12px 12px', textAlign: 'center' }}>
+                                                <span style={{ display: 'inline-flex' }} title={l.linked ? 'Already links to the audited URL' : 'Opportunity — add a link to the audited URL'}><ToneIcon tone={l.linked ? 'ok' : 'red'} /></span>
+                                             </td>
+                                          </tr>
+                                       ))}
+                                    </tbody>
+                                 </table>
+                              </div>
+                           </Row>
+                        );
+                     })()}
                   </SectionCard>
 
                   {/* Terms to Use */}
@@ -266,30 +271,7 @@ const AuditDetailPage: NextPage = () => {
                               value={attention > 0 ? `${attention} out of ${result.terms.length} important terms require your attention!` : `${result.terms.length} important terms covered.`}
                               detailsLabel="Show details" expanded={expanded.has('terms')} onToggle={() => toggle('terms')}
                            >
-                              <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
-                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT }}>
-                                    <thead><tr>
-                                       <th style={{ textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px' }}>Term</th>
-                                       <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 70 }}>You</th>
-                                       <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 90 }}>Suggested</th>
-                                       <th style={{ textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #F4F4F5', padding: '8px 12px', width: 90 }}>Action</th>
-                                    </tr></thead>
-                                    <tbody>
-                                       {result.terms.map((t) => {
-                                          const color = t.action === 'add' ? '#DC2626' : t.action === 'remove' ? '#B45309' : '#15803D';
-                                          const label = t.action === 'add' ? 'Add' : t.action === 'remove' ? 'Remove' : 'OK';
-                                          return (
-                                             <tr key={t.term}>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', fontSize: 13, color: '#18181B' }}>{t.term}{t.nlp && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: '#3B82F6', border: '1px solid #BFDBFE', borderRadius: 4, padding: '1px 4px' }}>NLP</span>}</td>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, color: '#52525C' }}>{t.you}</td>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, color: '#52525C' }}>{t.suggested}</td>
-                                                <td style={{ borderBottom: '1px solid #F4F4F5', padding: '10px 12px', textAlign: 'right', fontSize: 13, fontWeight: 600, color }}>{label}</td>
-                                             </tr>
-                                          );
-                                       })}
-                                    </tbody>
-                                 </table>
-                              </div>
+                              <TermsTable terms={result.terms} />
                            </Row>
                         );
                      })()}

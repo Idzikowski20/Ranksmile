@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { Checkbox } from '../ui';
+import { Checkbox } from '../core';
+import Modal from '../core/modal/modal';
+import Button from '../core/button/button';
+import Input from '../core/input/input';
 
 // WP taxonomy/term labels can carry HTML entities (e.g. "Tips &amp; Hacks") — decode for display.
 const decodeLabel = (s: string): string => {
@@ -63,14 +65,6 @@ const popoverStyle: React.CSSProperties = {
   boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
   animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
 };
-const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input
-    {...props}
-    style={fieldStyle}
-    onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(120,58,251,0.1)'; }}
-    onBlur={(e) => { e.currentTarget.style.borderColor = '#d4d4d8'; e.currentTarget.style.boxShadow = '0px 1px 2px 0px rgba(26,29,40,0.06)'; }}
-  />
-);
 
 const Select = ({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: Opt[] }) => {
   const [open, setOpen] = useState(false);
@@ -214,24 +208,13 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
     return result?.edit_post_url || null;
   }, [result, opts]);
 
-  const PrimaryBtn = ({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) => (
-    <button type="button" onClick={disabled ? undefined : onClick} disabled={disabled}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 0.15s' }}
-      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
-      {children}
-    </button>
-  );
-  const GhostBtn = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, border: 'none', background: 'transparent', color: '#52525c', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}>{children}</button>
-  );
-
-  return createPortal(
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 600, maxHeight: '85vh', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.3)' }}>
+  return (
+    <Modal onClose={onClose} width={600} closeOnOverlayClick>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: F }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 24px 12px' }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>Export to WordPress</h2>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0, marginLeft: 12 }}><IcoX /></button>
+          <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<IcoX />} />
         </div>
 
         {/* Body */}
@@ -260,7 +243,7 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>Connect more domains</div>
                     <span style={{ fontSize: 13, lineHeight: '19px', color: '#3f3f47' }}>You can connect more than one WordPress site to your account. <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ color: '#2563eb', textDecoration: 'underline' }}>Learn more</a></span>
                   </div>
-                  <button type="button" onClick={() => setShowBanner(false)} aria-label="Dismiss" style={{ flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525c', display: 'inline-flex', padding: 0 }}><IcoX size={18} /></button>
+                  <Button type="button" variant="transparent" size="sm" onClick={() => setShowBanner(false)} aria-label="Dismiss" icon={<IcoX size={18} />} />
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -296,14 +279,14 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
                 <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{opts.siteUrl}</span>
               </div>
               <span style={{ fontSize: 14, color: '#52525c' }}>{mode === 'create' ? 'A new post will be created with the following settings:' : 'The linked post will be updated with the following settings:'}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Title</Label><TextInput value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Status</Label><Select value={status} onChange={setStatus} options={opts.statuses} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Type</Label><Select value={type} onChange={setType} options={opts.types.length ? opts.types : [{ value: 'post', label: 'Post' }]} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Category</Label><MultiSelect values={categories} onChange={setCategories} options={opts.categories} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Tags</Label><MultiSelect values={tags} onChange={setTags} options={opts.tags} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Author</Label><Select value={author} onChange={setAuthor} options={opts.authors.length ? opts.authors : [{ value: '', label: 'Default' }]} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta title</Label><TextInput value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta description</Label><TextInput value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta title</Label><Input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta description</Label><Input value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} /></div>
             </div>
           )}
 
@@ -326,34 +309,39 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
             <>
               <a href="/settings/wordpress" target="_blank" rel="noreferrer noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: '#3f3f47', textDecoration: 'none' }}>Manage WordPress Integrations <IcoChevronRight /></a>
               <div style={{ display: 'flex', gap: 10 }}>
-                <GhostBtn onClick={onClose}>Cancel</GhostBtn>
-                <PrimaryBtn onClick={() => setStep('details')} disabled={!opts || !mode}>Next <IcoArrowRight /></PrimaryBtn>
+                <Button type="button" variant="transparent" onClick={onClose}>Cancel</Button>
+                <Button type="button" variant="primary" onClick={() => setStep('details')} disabled={!opts || !mode}>
+                  Next <IcoArrowRight />
+                </Button>
               </div>
             </>
           )}
           {step === 'details' && (
             <>
-              <GhostBtn onClick={() => setStep('choose')}><IcoArrowLeft /> Back</GhostBtn>
+              <Button type="button" variant="transparent" onClick={() => setStep('choose')}>
+                <IcoArrowLeft /> Back
+              </Button>
               <div style={{ display: 'flex', gap: 10 }}>
-                <GhostBtn onClick={onClose}>Cancel</GhostBtn>
-                <PrimaryBtn onClick={submit} disabled={submitting || !title.trim()}>
+                <Button type="button" variant="transparent" onClick={onClose}>Cancel</Button>
+                <Button type="button" variant="primary" onClick={submit} disabled={submitting || !title.trim()} busy={submitting}>
                   {submitting ? 'Working…' : <><IcoDocPlus /> {mode === 'create' ? 'Create New Post' : 'Update Post'}</>}
-                </PrimaryBtn>
+                </Button>
               </div>
             </>
           )}
           {step === 'success' && (
             <>
-              <GhostBtn onClick={onClose}>Close</GhostBtn>
+              <Button type="button" variant="transparent" onClick={onClose}>Close</Button>
               {editUrl && (
-                <PrimaryBtn onClick={() => window.open(editUrl, '_blank', 'noopener')}>Edit in WordPress <IcoArrowRight /></PrimaryBtn>
+                <Button type="button" variant="primary" onClick={() => window.open(editUrl, '_blank', 'noopener')}>
+                  Edit in WordPress <IcoArrowRight />
+                </Button>
               )}
             </>
           )}
         </div>
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 };
 

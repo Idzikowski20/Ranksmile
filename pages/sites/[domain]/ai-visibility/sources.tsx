@@ -6,8 +6,7 @@ import SourcesTable, { SourceRow } from '../../../../components/aiVisibility/Sou
 import SourceDetailModal from '../../../../components/aiVisibility/SourceDetailModal';
 import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import HoverTooltip from '../../../../components/common/HoverTooltip';
-import { Toggle, SearchBar } from '../../../../components/ui';
+import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
@@ -162,10 +161,11 @@ const AiVisibilitySources: NextPage = () => {
                      {compareDomain ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                            <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{compareDomain} vs {ownLabel}</span>
-                           <button type="button" onClick={() => setCompareDomain(null)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 8, padding: '4px 10px', background: '#F4F4F5', color: '#18181B', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}>
+                           <Button type="button" variant="secondary" size="sm" onClick={() => setCompareDomain(null)} icon={(
                               <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0" /></svg>
+                           )}>
                               Show all
-                           </button>
+                           </Button>
                         </div>
                      ) : (
                         <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{groupByDomain ? 'Domains' : 'URLs'}</span>

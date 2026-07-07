@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
-import Gauge from '../ui/Gauge';
+import { Flex, Stack } from '../core/layout';
+import { Text } from '../core/text';
+import { Button, Gauge } from '../core';
+import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
 import Skeleton from './Skeleton';
 import { authClient } from '../../lib/auth/client';
-
-const font = 'var(--font-family-primary)';
 
 export interface RecentlyEditedItem {
   id: string | number;
@@ -21,12 +23,6 @@ interface Props {
   loading?: boolean;
 }
 
-const ClockIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
-    <path d="M22.7 13.5L20.7005 11.5L18.7 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.3019 3 18.1885 4.77814 19.7545 7.42909M12 7V12L15 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
 const DocIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-[20px] text-gray-60">
     <path d="M14 2.26953V6.40007C14 6.96012 14 7.24015 14.109 7.45406C14.2049 7.64222 14.3578 7.7952 14.546 7.89108C14.7599 8.00007 15.0399 8.00007 15.6 8.00007H19.7305M16 13H8M16 17H8M10 9H8M14 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H15.2C16.8802 22 17.7202 22 18.362 21.673C18.9265 21.3854 19.3854 20.9265 19.673 20.362C20 19.7202 20 18.8802 20 17.2V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -41,7 +37,6 @@ const DotsIcon = () => (
   </svg>
 );
 
-/** Compute relative time string. Call only after mount (SSR-safe). */
 function relativeTime(isoStr: string): string {
   const t = new Date(isoStr).getTime();
   if (!t || Number.isNaN(t)) return '';
@@ -56,12 +51,9 @@ function relativeTime(isoStr: string): string {
   return `${days} days ago`;
 }
 
-const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: string }) => {
-  // SSR-safe: start empty, fill after mount so server + first-client render match
+const Card = ({item, userInitial}: {item: RecentlyEditedItem; userInitial: string}) => {
   const [relTime, setRelTime] = useState('');
-  useEffect(() => {
-    setRelTime(relativeTime(item.updatedAt));
-  }, [item.updatedAt]);
+  useEffect(() => { setRelTime(relativeTime(item.updatedAt)); }, [item.updatedAt]);
 
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -81,7 +73,7 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
     if (!window.confirm(`Delete "${item.title}"? This can't be undone.`)) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/articles/${item.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/articles/${item.id}`, {method: 'DELETE'});
       if (!res.ok) throw new Error('Delete failed');
       toast.success('Article deleted');
       queryClient.invalidateQueries('dashboardArticles');
@@ -92,72 +84,64 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
   };
 
   return (
-    <div className="border-gray-20 gap-lg p-base hover:border-gray-40 group relative flex cursor-pointer flex-col rounded-2xl border border-solid transition-[transform,box-shadow,border-color] duration-200 ease-out hover:translate-y-[-2px] hover:shadow-md">
-      {/* Full-card link overlay */}
-      <a
-        href={item.href}
-        aria-label={item.title}
-        className="absolute inset-0 rounded-2xl"
-        style={{ zIndex: 1 }}
-      />
-      {/* Top row: doc icon + score gauge */}
-      <div className="flex items-center justify-between">
+    <Flex
+      direction="column"
+      gap="lg"
+      padding="md"
+      radius="2xl"
+      border="md"
+      className="group relative cursor-pointer border-gray-20 border-solid transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-gray-40 hover:shadow-md"
+    >
+      <a href={item.href} aria-label={item.title} className="absolute inset-0 rounded-2xl z-[1]" />
+      <Flex align="center" justify="between">
         <DocIcon />
-        {/* Gauge: size="sm" renders the 40×40 ring (close to 36px visual weight) */}
         <Gauge score={item.score} size="sm" />
-      </div>
-      {/* Title + keywords */}
-      <div className="gap-2xs flex flex-col">
-        <span
-          className="text-md font-semibold leading-snug text-gray-base"
-          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-        >
+      </Flex>
+      <Stack gap="2xs" className="min-w-0">
+        <Text as="span" size="md" bold className="leading-snug text-gray-base line-clamp-2">
           {item.title}
-        </span>
+        </Text>
         {item.keywords && (
-          <span
-            className="text-sm text-gray-100"
-            style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-          >
+          <Text as="span" size="sm" variant="muted" className="line-clamp-1">
             {item.keywords}
-          </span>
+          </Text>
         )}
-      </div>
-      {/* Footer: avatar + time + dots menu */}
-      <div className="gap-xs mt-auto flex items-center">
-        <div
-          className="text-gray-160 bg-gray-10 inline-flex shrink-0 items-center justify-center rounded-full size-lg text-xs font-medium uppercase"
-          aria-hidden="true"
+      </Stack>
+      <Flex align="center" gap="xs" className="mt-auto">
+        <Flex
+          align="center"
+          justify="center"
+          className="size-lg shrink-0 rounded-full bg-gray-10 text-gray-160 text-xs font-medium uppercase"
         >
           {userInitial}
-        </div>
-        <span className="text-gray-60 text-sm">{relTime}</span>
-        <div ref={menuRef} className="ml-auto" style={{ position: 'relative', zIndex: 2 }}>
+        </Flex>
+        <Text size="sm" variant="muted">{relTime}</Text>
+        <Flex className="ml-auto relative z-[2]" ref={menuRef}>
           <button
             type="button"
             aria-label="More options"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             disabled={deleting}
-            className="text-gray-60 hover:text-gray-100 transition-colors duration-150"
-            style={{ background: 'none', border: 'none', cursor: deleting ? 'default' : 'pointer', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center', opacity: deleting ? 0.5 : 1 }}
+            className="flex items-center rounded text-gray-60 transition-colors duration-150 hover:text-gray-100"
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMenuOpen((v) => !v); }}
           >
             <DotsIcon />
           </button>
           {menuOpen && (
-            <div
-              role="menu"
-              onClick={(e) => e.stopPropagation()}
-              style={{ position: 'absolute', right: 0, top: '110%', background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 150, minWidth: 160, overflow: 'hidden', padding: 4, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)' }}
+            <Flex
+              direction="column"
+              gap="xs"
+              padding="xs"
+              radius="lg"
+              border="md"
+              className="absolute right-0 top-[110%] z-[150] min-w-[160px] overflow-hidden bg-white shadow-md animate-[growOut_0.2s_cubic-bezier(0.16,1,0.3,1)]"
             >
               <a
                 href={item.href}
                 role="menuitem"
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6, fontSize: 13, color: '#2F2F34', background: 'transparent', textDecoration: 'none', fontFamily: font }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                className="flex w-full items-center gap-sm rounded-md px-2.5 py-2 text-sm text-gray-80 no-underline transition-colors hover:bg-gray-5"
               >
                 Open in editor
               </a>
@@ -165,61 +149,69 @@ const Card = ({ item, userInitial }: { item: RecentlyEditedItem; userInitial: st
                 type="button"
                 role="menuitem"
                 onClick={handleDelete}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6, fontSize: 13, color: '#FF6F77', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: font }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF0F1'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                className="flex w-full items-center gap-sm rounded-md px-2.5 py-2 text-sm text-danger border-none bg-transparent cursor-pointer transition-colors hover:bg-danger-muted"
               >
                 Delete
               </button>
-            </div>
+            </Flex>
           )}
-        </div>
-      </div>
-    </div>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 };
 
 const CardSkeleton = () => (
-  <div className="border-gray-20 gap-lg p-base flex flex-col rounded-2xl border border-solid">
-    <div className="flex items-center justify-between">
+  <Flex direction="column" gap="lg" padding="md" radius="2xl" border="md" className="border-gray-20 border-solid">
+    <Flex align="center" justify="between">
       <Skeleton width={20} height={20} radius={4} />
       <Skeleton width={36} height={36} radius={9999} />
-    </div>
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    </Flex>
+    <Flex direction="column" gap="md">
       <Skeleton width="90%" height={14} />
       <Skeleton width="55%" height={12} />
-    </div>
-    <div className="mt-auto flex items-center" style={{ gap: 8 }}>
+    </Flex>
+    <Flex align="center" gap="sm" className="mt-auto">
       <Skeleton width={24} height={24} radius={9999} />
       <Skeleton width={64} height={12} />
-    </div>
-  </div>
+    </Flex>
+  </Flex>
 );
 
-const EmptyState = () => (
-  <div
-    className="border-gray-20 rounded-2xl border border-solid"
-    style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}
+const EmptyState = () => {
+  const router = useRouter();
+  return (
+  <Flex
+    direction="column"
+    align="center"
+    gap="md"
+    paddingTop="3xl"
+    paddingRight="2xl"
+    paddingBottom="3xl"
+    paddingLeft="2xl"
+    radius="2xl"
+    border="md"
+    className="border-gray-20 border-solid text-center"
   >
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 12, background: '#F4F4F5', color: '#9F9FA9' }}>
-      <DocIcon />
-    </span>
-    <span className="text-md font-semibold" style={{ color: '#18181B' }}>No content yet</span>
-    <span className="text-sm" style={{ color: '#52525C', maxWidth: 380, lineHeight: 1.5 }}>
-      Articles you create or edit will show up here. Open the Content Editor to start writing.
-    </span>
-    <a
-      href="/articles"
-      style={{ marginTop: 4, padding: '8px 16px', borderRadius: 8, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', transition: 'background 150ms ease' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+    <Flex
+      align="center"
+      justify="center"
+      className="size-12 rounded-xl bg-gray-5 text-gray-80"
     >
+      <DocIcon />
+    </Flex>
+    <Text size="md" bold>No content yet</Text>
+    <Text as="p" size="sm" variant="muted" className="max-w-[380px] leading-relaxed">
+      Articles you create or edit will show up here. Open the Content Editor to start writing.
+    </Text>
+    <Button variant="primary" className="mt-1" onClick={() => router.push('/articles')}>
       Open Content Editor
-    </a>
-  </div>
-);
+    </Button>
+  </Flex>
+  );
+};
 
-const RecentlyEdited = ({ items, loading }: Props) => {
+const RecentlyEdited = ({items, loading}: Props) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -228,29 +220,25 @@ const RecentlyEdited = ({ items, loading }: Props) => {
   const userInitial = name ? name.charAt(0).toLowerCase() : '?';
 
   return (
-    <div className="gap-base flex flex-col">
-      {/* Section header */}
-      <div className="flex items-center justify-between">
-        <div className="gap-sm flex items-center" style={{ color: 'var(--gray-base)' }}>
-          <ClockIcon />
-          <span className="text-md font-semibold">Recently edited</span>
-        </div>
-      </div>
+    <SentryPanel>
+      <SentryPanelHeader title="Recently edited" />
+      <SentryPanelBody>
       {/* eslint-disable-next-line no-nested-ternary */}
       {loading ? (
-        <div className="gap-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16 }} className="sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <CardSkeleton key={i} />)}
         </div>
       ) : items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="gap-md grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16 }} className="sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item) => (
             <Card key={item.id} item={item} userInitial={userInitial} />
           ))}
         </div>
       )}
-    </div>
+      </SentryPanelBody>
+    </SentryPanel>
   );
 };
 

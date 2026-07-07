@@ -10,6 +10,7 @@ export interface AuditCompetitor {
    label: string; // domain, e.g. "detektywsigma.pl"
    rank: number; // Google position, e.g. 1
    value: number;
+   url?: string; // the competitor's ranking article URL (chart tooltip → clickable link)
 }
 
 /** One bar-chart factor row (Word count, Exact keywords, TTFB, …). */
@@ -34,13 +35,16 @@ export interface AuditInternalLink {
 
 export interface AuditTerm {
    term: string;
-   forms: number;
+   forms: number; // distinct inflected surface forms found on the page
+   variants: string[]; // the actual surface forms (shown when expanding "Term forms")
+   examples: string[]; // sentences from the page containing the term (rendered with <mark>)
    you: number;
    suggested: string; // e.g. '1-2'
    relevance: number; // 0-100
    searchVolume: number | null;
    action: 'add' | 'remove' | 'ok';
    nlp: boolean;
+   type: 'phrase' | 'word' | 'number'; // drives the All / Phrases / Words / Numbers tabs
 }
 
 export interface AuditResult {
@@ -67,4 +71,5 @@ export interface AuditCardDTO {
    progressTotal: number;
    createdAt: string | null;
    finishedAt: string | null;
+   language: string | null; // SERP language ('pl'/'en'…) → country label on the card
 }
