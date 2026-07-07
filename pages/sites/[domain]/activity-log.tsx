@@ -436,7 +436,6 @@ const ActivityLogPage: NextPage = () => {
                </ToolRibbon>
             )}
          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT, width: '100%' }}>
                <SentryPanel>
                   <SentryPanelBody>
                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 24, marginBottom: 16, fontSize: 13, color: '#71717B' }}>
@@ -531,7 +530,6 @@ const ActivityLogPage: NextPage = () => {
                      </SentryTableBody>
                   </SentryTable>
                </SentryPanel>
-            </div>
          </DomainSubLayout>
       </AppShell>
    );

@@ -143,6 +143,7 @@ const NewContentPage: NextPage = () => {
     q.set('keywords', keywords.join(','));
     q.set('country', LANG_TO_COUNTRY[language] || 'US');
     q.set('language', language);
+    q.set('flow', 'new');
     router.push(`/articles/deep-analysis?${q.toString()}`);
   };
 

@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "mprocs",
     "dev:next": "next dev",
+    "dev:sidecar": "cmd /C python-sidecar\\dev.cmd",
+    "setup:sidecar": "cmd /C \"cd python-sidecar && if not exist .venv\\Scripts\\python.exe (python -m venv .venv && .venv\\Scripts\\python.exe -m pip install -r requirements.txt)\"",
     "build": "next build",
     "start": "next start",
     "cron": "node cron.js",

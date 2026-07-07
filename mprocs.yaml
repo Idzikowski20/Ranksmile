@@ -7,4 +7,4 @@ procs:
     cmd: ["cmd", "/C", "npm run dev:next"]
   python-sidecar:
     cwd: "python-sidecar"
-    cmd: ["cmd", "/C", "python -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload"]
+    cmd: ["cmd", "/C", "dev.cmd"]

@@ -150,7 +150,7 @@ const ROW_COLUMNS = [60, 50, 40, 40] as const;
 
 function TableSkeleton({ headerLabelWidth }: { headerLabelWidth: number }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 16 }}>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 12, background: '#FFFFFF', padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: headerLabelWidth, height: 20, borderRadius: 6, background: '#E0E0E6' }} />
         {ROW_COLUMNS.map((w, i) => (
@@ -524,8 +524,8 @@ function MetricCard({
   return (
     <div
       style={{
-      border: '1px solid #DAD9DE',
-      borderRadius: 6,
+      border: 'none',
+      borderRadius: 12,
       padding: 16,
         display: 'flex',
         alignItems: 'center',
@@ -580,7 +580,7 @@ function SummaryCard({
   direction?: Delta;
 }) {
   return (
-    <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 8, borderRadius: 6, background: '#F8F8F9', padding: 16, border: '1px solid #DAD9DE' }}>
+    <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 8, borderRadius: 12, background: '#FFFFFF', padding: 16, border: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
         <span style={{ color: '#52525C', display: 'inline-flex' }}><InfoIcon /></span>
@@ -1498,37 +1498,27 @@ const PerformancePage: NextPage = () => {
 
       <DomainSubLayout domain={domain} slug={slug || ''} section="Performance" heading="Performance" actions={feedbackAction} contentMaxWidth="unset">
         {isLoading && !scData ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, animation: 'skeletonPulse 1.5s ease-in-out infinite' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 6, background: '#F8F8F9', boxShadow: 'inset 0 0 0 1px #DAD9DE' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 12 }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                  {[120, 140, 100, 90, 130].map((w, i) => (
-                    <div key={i} style={{ height: 36, width: w, borderRadius: 9999, background: '#E8E8ED' }} />
-                  ))}
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 12, background: '#FFFFFF', padding: 20 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                {[120, 140, 100, 90, 130].map((w, i) => (
+                  <div key={i} style={{ height: 36, width: w, borderRadius: 9999, background: '#E8E8ED' }} />
+                ))}
               </div>
-
-              {/* KPI cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{ border: '1px solid #DAD9DE', borderRadius: 6, padding: 16, background: '#FFFFFF', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div key={i} style={{ borderRadius: 12, padding: 16, background: '#F8F8F9', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ width: 60, height: 14, borderRadius: 6, background: '#E8E8ED' }} />
                     <div style={{ width: 80, height: 24, borderRadius: 6, background: '#E0E0E6' }} />
                     <div style={{ width: 100, height: 12, borderRadius: 6, background: '#E8E8ED' }} />
                   </div>
                 ))}
               </div>
-
-              {/* Chart skeleton */}
-              <div style={{ border: '1px solid #DAD9DE', borderRadius: 6, background: '#FFFFFF', padding: 16 }}>
+              <div style={{ borderRadius: 12, background: '#F8F8F9', padding: 16 }}>
                 <div style={{ height: 220, borderRadius: 6, background: '#E8E8ED' }} />
               </div>
             </div>
-
-            {/* Table 1: Pages skeleton */}
             <TableSkeleton headerLabelWidth={80} />
-
-            {/* Table 2: Keywords skeleton */}
             <TableSkeleton headerLabelWidth={90} />
           </div>
         ) : scData?.error ? (
@@ -1536,10 +1526,9 @@ const PerformancePage: NextPage = () => {
             {scData.error}
           </div>
         ) : (
-          <div style={{ position: 'relative', display: 'flex', flex: 1, overflow: 'auto', background: '#F8F8F9' }}>
-            <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: 16, padding: 16 }}>
+          <>
               <SentryPanel noPadding>
-                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
                 <PageFilterBar condensed>
                 <div className="performance-filters" style={{ display: 'contents' }}>
                     <CompactSelect
@@ -1763,7 +1752,7 @@ const PerformancePage: NextPage = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
-                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 0', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Page</th>
+                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Page</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
@@ -1773,7 +1762,7 @@ const PerformancePage: NextPage = () => {
                     <tbody>
                       {sortedPageRows.map((row, index) => (
                         <tr key={row.key} style={{ borderBottom: index < sortedPageRows.length - 1 ? '1px solid #F4F4F5' : 'none' }}>
-                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 0', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
+                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
                             <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.label}>
                               <a href={row.href} target="_blank" rel="noreferrer" style={{ color: '#18181B', textDecoration: 'none' }}>{row.label}</a>
                             </span>
@@ -1820,7 +1809,7 @@ const PerformancePage: NextPage = () => {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
-                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 0', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Keyword</th>
+                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Keyword</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
@@ -1830,7 +1819,7 @@ const PerformancePage: NextPage = () => {
                     <tbody>
                       {sortedKeywordRows.map((row, index) => (
                         <tr key={row.key} style={{ borderBottom: index < sortedKeywordRows.length - 1 ? '1px solid #F4F4F5' : 'none' }}>
-                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 0', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
+                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
                             <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.label}>
                               {row.label}
                             </span>
@@ -1853,8 +1842,7 @@ const PerformancePage: NextPage = () => {
                   </table>
                 </div>
               </SentryPanel>
-            </div>
-          </div>
+          </>
         )}
 
         {goalModalOpen ? (

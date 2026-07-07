@@ -87,7 +87,7 @@ const UsageCard = ({ blocks }: { blocks: UsageBlock[] }) => (
 );
 
 const UsageSettings = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: font }}>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', fontFamily: font }}>
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 }}>
       <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Plan</span>
       <span style={{ fontSize: 14, color: '#52525C' }}>Renews in 7 days</span>

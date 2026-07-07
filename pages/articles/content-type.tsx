@@ -57,6 +57,15 @@ const ContentTypePage: NextPage = () => {
 
   // Prefill from a resumed draft (shared/cached article fetch).
   const { data: article, isFetched } = useArticle(articleId);
+
+  // Imported articles (meta_url set) belong in the editor, not the new-content wizard.
+  useEffect(() => {
+    if (!articleId || !isFetched) return;
+    if (article?.meta_url) {
+      router.replace(`/articles/${articleId}`);
+    }
+  }, [articleId, isFetched, article?.meta_url, router]);
+
   useEffect(() => {
     if (!articleId) { setHydrated(true); return; }
     if (!isFetched) return;
