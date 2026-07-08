@@ -6,11 +6,12 @@ import * as cheerio from 'cheerio';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { getArticleIdSql } from '../../../lib/articleSql';
 import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
-import { computeContentScore } from '../../../lib/contentScore';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { renderPage } from '../../../utils/spaScraper';
 import { getErrorMessage } from '../../../lib/errors';
+import { countOccurrences } from '../../../lib/contentScore';
 
 async function fetchWithHttp(url: string): Promise<string> {
    const res = await fetch(url, {
@@ -31,66 +32,6 @@ async function fetchWithPuppeteer(url: string): Promise<string> {
    return rendered.html;
 }
 
-const STOP_WORDS = new Set([
-   'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
-   'is','was','are','were','be','been','has','have','had','do','does','did','will',
-   'would','could','should','may','might','shall','this','that','these','those','it',
-   'its','i','you','we','they','he','she','his','her','our','their','your','my','me',
-   'him','us','them','as','if','so','not','no','nor','yet','both','either','each',
-   'few','more','most','some','any','all','than','then','when','where','who','which',
-   'what','how','why','also','just','even','still','very','too','only','while','about',
-   'after','before','over','under','again','further','once','here','there','into',
-   'through','during','until','against','among','throughout','despite','towards','upon',
-   'whether','per','across','along','following','via','without','up','down','out','off',
-   'around','away','above','below','can','get','got','use','used','using','make','made',
-   'take','taken','come','came','see','seen','know','known','think','thought','want',
-   'like','look','go','going','gone','give','given','said','say','says','new','one',
-   'two','three','four','five','six','seven','eight','nine','ten','first','last','next',
-]);
-
-function extractTopWords(text: string, topN: number): Array<{ term: string; count: number }> {
-   const lower = text.toLowerCase();
-   const freq: Record<string, number> = {};
-
-   // Extract meaningful single words (3+ chars, not stop words, not numbers-only)
-   const words = lower.match(/\b[a-zÀ-ſ]{3,}\b/g) || [];
-   for (const w of words) {
-      if (!STOP_WORDS.has(w) && isNaN(Number(w))) freq[w] = (freq[w] || 0) + 1;
-   }
-
-   // Extract bigrams and trigrams — split into sentences first
-   const sentences = lower.split(/[.!?\n]+/);
-   for (const sentence of sentences) {
-      const tokens = sentence.match(/\b[a-zÀ-ſ]{2,}\b/g) || [];
-      // Bigrams
-      for (let i = 0; i < tokens.length - 1; i++) {
-         if (STOP_WORDS.has(tokens[i]) && STOP_WORDS.has(tokens[i + 1])) continue;
-         const bigram = `${tokens[i]} ${tokens[i + 1]}`;
-         freq[bigram] = (freq[bigram] || 0) + 1;
-      }
-      // Trigrams
-      for (let i = 0; i < tokens.length - 2; i++) {
-         const stopCount = [tokens[i], tokens[i + 1], tokens[i + 2]].filter((t) => STOP_WORDS.has(t)).length;
-         if (stopCount >= 2) continue;
-         const trigram = `${tokens[i]} ${tokens[i + 1]} ${tokens[i + 2]}`;
-         freq[trigram] = (freq[trigram] || 0) + 1;
-      }
-   }
-
-   return Object.entries(freq)
-      .filter(([, c]) => c >= 2)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, topN)
-      .map(([term, count]) => ({ term, count }));
-}
-
-function countOccurrences(text: string, term: string): number {
-   if (!text || !term) return 0;
-   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-   const matches = text.match(new RegExp(escaped, 'gi'));
-   return matches ? matches.length : 0;
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
@@ -101,7 +42,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { url, keywords = [], country = 'US', device = 'Desktop', domainId: bodyDomainId } = req.body;
+   const {
+      url,
+      keywords = [],
+      country = 'US',
+      device = 'Desktop',
+      domainId: bodyDomainId,
+      startAnalysis = false,
+   } = req.body;
 
    if (!url) {
       return res.status(400).json({ error: 'url is required' });
@@ -185,7 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          '#content', '#main-content', '#post-content', '#article-body',
          '.content', '.main', '#main',
       ];
-      let bestEl: any = $('body')[0];
+      let bestEl: cheerio.AnyNode = $('body')[0]!;
       let bestWordCount = 0;
 
       // Score every candidate
@@ -212,7 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       const $body = $(bestEl);
-      console.log(`[import] Best container: <${(bestEl as any).name || 'body'}> class="${$(bestEl).attr('class') || ''}" — ${bestWordCount} words`);
+      console.log(`[import] Best container: <${'tagName' in bestEl ? (bestEl.tagName || bestEl.name || 'body') : 'body'}> class="${$(bestEl).attr('class') || ''}" — ${bestWordCount} words`);
 
       // Plain text for NLP analysis
       const plainText = $body.text().replace(/\s+/g, ' ').trim();
@@ -232,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       $body.find('h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote').each((_, el) => {
          if (seen.has(el)) return;
-         const tag: string = (el as any).name || '';
+         const tag: string = 'tagName' in el ? String((el as cheerio.Element).tagName || (el as cheerio.Element).name || '') : '';
          if (!tag) return;
 
          // Mark all descendants so we don't double-emit their text
@@ -285,56 +233,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return $(el).text().trim().split(/\s+/).length >= 3;
       }).length;
 
-      // Build NLP terms from provided keywords — target 50% MORE occurrences than source
-      // so a freshly imported article doesn't immediately satisfy every term.
+      // Build NLP terms from provided keywords only — Surfer-style entity lists come from
+      // deep-analysis (competitor corpus). Import-time n-gram extraction produced Polish
+      // stopwords ("oraz", "jest") instead of phrases like "prywatny detektyw".
       const kwTerms: NlpTerm[] = (keywords as string[]).map((kw: string) => {
          const freq = countOccurrences(plainText, kw);
          return {
-            term: kw,
+            term: kw.toLowerCase().trim(),
             target_count: Math.max(2, freq > 0 ? Math.ceil(freq * 1.5) : 3),
          };
       });
 
-      // Extract additional NLP terms — target 20% more than source uses
-      const kwSet = new Set((keywords as string[]).map((k: string) => k.toLowerCase()));
-      const extracted = extractTopWords(plainText, 30)
-         .filter(({ term }) => !kwSet.has(term))
-         .slice(0, 20)
-         .map(({ term, count }) => ({
-            term,
-            target_count: Math.max(2, Math.ceil(count * 1.2)),
-         }));
-
-      // Store initial current_count from the scraped text so the list view
-      // can show a meaningful (non-zero) score without opening the editor first.
-      const allTerms: NlpTerm[] = [...kwTerms, ...extracted].map((t) => ({
+      const allTerms: NlpTerm[] = kwTerms.map((t) => ({
          ...t,
          current_count: countOccurrences(plainText, t.term),
       }));
 
-      // Build ASPIRATIONAL ScoreData targets — set higher than the source article so
-      // freshly imported content starts at ~40-60 pts and must be improved to reach 100.
-      const wordsTarget = Math.max(1000, Math.ceil(wordCount * 1.5));
-      const headingsTarget = Math.max(5, Math.ceil(headingTexts.length * 2.5));
-      const paragraphsTarget = Math.max(15, Math.ceil(paragraphCount * 2.5));
+      // Placeholder targets until deep analysis finishes — avoid inflated pre-analysis scores.
+      const wordsTarget = wordCount;
+      const headingsTarget = headingTexts.length;
+      const paragraphsTarget = paragraphCount;
       const scoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number } = {
          terms: allTerms,
          words_target: wordsTarget,
-         words_min: Math.max(600, Math.ceil(wordCount * 0.9)),
-         words_max: Math.max(2000, Math.ceil(wordCount * 2.5)),
+         words_min: Math.max(1, Math.floor(wordCount * 0.5)),
+         words_max: Math.max(wordCount + 500, 2000),
          headings_target: headingsTarget,
-         headings_min: Math.max(2, Math.ceil(headingTexts.length * 1.5)),
-         headings_max: Math.max(10, Math.ceil(headingsTarget * 1.5)),
+         headings_min: Math.max(1, headingTexts.length),
+         headings_max: Math.max(headingTexts.length + 5, 20),
          paragraphs_target: paragraphsTarget,
-         paragraphs_min: Math.max(5, Math.ceil(paragraphCount * 1.5)),
-         paragraphs_max: Math.max(20, Math.ceil(paragraphsTarget * 1.5)),
+         paragraphs_min: Math.max(1, paragraphCount),
+         paragraphs_max: Math.max(paragraphCount + 10, 30),
+         competitor_count: 0,
+         scoring_model: 'legacy',
          _heading_count: headingTexts.length,
          _paragraph_count: paragraphCount,
       };
-      scoreData._computed_score = computeContentScore(
-         plainText, wordCount, headingTexts.length, scoreData, paragraphCount, undefined,
-         contentHtml, (keywords as string[])[0] || '',
-      );
+      // No _computed_score here — gauge updates after deep analysis applies competitor benchmarks.
 
       // Target domain: explicit from the request (audit/recommendation imports), else the first.
       let domainId = Number(bodyDomainId) || 0;
@@ -356,28 +291,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          ? await uploadImageFromUrl(featuredImage, slug || 'article')
          : null;
 
-      // Save draft article
-      const [articleId] = await db.query(
-         `INSERT INTO articles
-            (domain_id, title, slug, content, target_keyword, meta_title, meta_description,
-             score_data, word_count, featured_image, status, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-         {
-            replacements: [
-               domainId,
-               title,
-               slug,
-               contentHtml,
-               (keywords as string[])[0] || title,
-               metaTitle,
-               metaDescription,
-               JSON.stringify(scoreData),
-               wordCount,
-               featuredImageUrl,
-            ],
-            type: QueryTypes.INSERT,
-         },
-      );
+      const langMap: Record<string, string> = {
+         PL: 'pl', DE: 'de', FR: 'fr', ES: 'es', IT: 'it', NL: 'nl', PT: 'pt',
+         US: 'en', GB: 'en',
+      };
+      const language = langMap[(country as string || 'US').toUpperCase()] || 'en';
+      const articleStatus = startAnalysis ? 'analyzing' : 'draft';
+
+      // Save draft article (or analyzing placeholder when editor will run deep analysis in background)
+      const insertReplacements = [
+         domainId,
+         title,
+         slug,
+         contentHtml,
+         (keywords as string[])[0] || title,
+         metaTitle,
+         metaDescription,
+         url,
+         language,
+         JSON.stringify(scoreData),
+         wordCount,
+         featuredImageUrl,
+         articleStatus,
+      ];
+      let articleId: number | undefined;
+      if (process.env.DATABASE_URL) {
+         const articleIdSql = await getArticleIdSql();
+         const rows = await db.query<{ id: number }>(
+            `INSERT INTO articles
+               (domain_id, title, slug, content, target_keyword, meta_title, meta_description,
+                meta_url, language, score_data, word_count, featured_image, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+             RETURNING ${articleIdSql} AS id`,
+            { replacements: insertReplacements, type: QueryTypes.SELECT },
+         );
+         articleId = rows[0]?.id;
+      } else {
+         const [newId] = await db.query(
+            `INSERT INTO articles
+               (domain_id, title, slug, content, target_keyword, meta_title, meta_description,
+                meta_url, language, score_data, word_count, featured_image, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            { replacements: insertReplacements, type: QueryTypes.INSERT },
+         );
+         articleId = newId as unknown as number;
+      }
+      if (!articleId) {
+         return res.status(500).json({ error: 'Article created but id was not returned' });
+      }
 
       // Auto-enrich keywords in background (fire-and-forget)
       if (keywords.length > 0) {

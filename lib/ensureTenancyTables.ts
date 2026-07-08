@@ -11,7 +11,7 @@ const NOW = 'CURRENT_TIMESTAMP';
  * syntax) loudly — a blanket `catch {}` would mask a real failure as success.
  */
 function ignoreExisting(label: string, e: unknown): void {
-   const m = String((e as any)?.message ?? e ?? '');
+   const m = String((e as { message?: string } | undefined)?.message ?? e ?? '');
    if (!/exist|duplicate|already/i.test(m)) console.warn(`[tenancy] ${label} failed:`, m);
 }
 

@@ -1,4 +1,9 @@
 import type { CoverageItem } from './aiCoverage';
+import { computeCompetitorContentScore } from './competitorContentScore';
+import { termSalienceWeight } from './termSalienceCore';
+import { countOccurrences, normalizePl, tokenize, wordMatch } from './termMatch';
+
+export { countOccurrences } from './termMatch';
 
 // Content Score formula — targets derived from average of top-10 competitor pages.
 //
@@ -15,6 +20,13 @@ export interface NlpTerm {
    term: string;
    target_count: number;
    current_count?: number;
+   /** Competitor-derived usage range (Surfer "suggested" column). */
+   suggested_min?: number;
+   suggested_max?: number;
+   relevance?: number;
+   doc_freq?: number;
+   /** 0–100 prominence from competitor H2/bold/font-weight zones (Surfer NLP salience v2). */
+   salience?: number;
 }
 
 export interface ScoreData {
@@ -32,46 +44,20 @@ export interface ScoreData {
    competitor_count?: number;
    /** People Also Ask questions fetched from Serper — used for FAQ coverage signal */
    paa_questions?: string[];
-}
-
-const PL_DIACRITICS: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' };
-function normalizePl(s: string): string {
-   return (s || '').toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => PL_DIACRITICS[c] || c);
-}
-function tokenize(s: string): string[] {
-   return normalizePl(s).match(/[a-z0-9]+/g) || [];
-}
-/**
- * Two words "match" when they share a long common prefix — tolerates Polish
- * inflection (pozycjonowanie ≈ pozycjonować, strony ≈ stronę ≈ stron, wyszukiwania
- * ≈ wyszukiwarce) without a full stemmer.
- */
-function wordMatch(a: string, b: string): boolean {
-   if (a === b) return true;
-   const n = Math.min(a.length, b.length);
-   let i = 0;
-   while (i < n && a[i] === b[i]) i += 1;
-   return i >= 4 && i >= n - 3;
-}
-
-/**
- * Count occurrences of a (possibly multi-word) term, matching each word by shared
- * prefix so inflected forms count too. "pozycjonowanie strony" matches
- * "Pozycjonowanie Strony", "pozycjonować stronę", "pozycjonowania stron", etc.
- */
-export function countOccurrences(text: string, term: string): number {
-   const T = tokenize(text);
-   const Q = tokenize(term);
-   if (!T.length || !Q.length) return 0;
-   let count = 0;
-   for (let i = 0; i + Q.length <= T.length; i += 1) {
-      let ok = true;
-      for (let j = 0; j < Q.length; j += 1) {
-         if (!wordMatch(T[i + j], Q[j])) { ok = false; break; }
-      }
-      if (ok) count += 1;
-   }
-   return count;
+   /** When set, content score uses Surfer-style competitor benchmarking. */
+   scoring_model?: 'competitor' | 'legacy';
+   content_targets?: { avgWords: number; avgHeadings: number; avgPs: number };
+   /** Full Surfer-style audit payload (factors, terms, internal links). */
+   audit_result?: import('./auditTypes').AuditResult;
+   /** On-page SEO score from audit factor verdicts. */
+   seo_score?: number;
+   /** AI Search score (Facts + Intent) — persisted after deep-analysis. */
+   ai_score?: number;
+   /** Persisted gauge values (not part of scoring formula). */
+   _heading_count?: number;
+   _paragraph_count?: number;
+   _computed_score?: number;
+   _content_score?: number;
 }
 
 /**
@@ -337,10 +323,14 @@ export function collectScoreSlots(
       const earned = Math.round((covered / entityItems.length) * 25);
       push('terms', 'NLP terms', earned, 25, `${covered}/${entityItems.length} terms covered`);
    } else if (scoreData.terms?.length) {
-      const totalWeight = scoreData.terms.reduce((s, t) => s + Math.max(t.target_count, 1), 0);
+      const totalWeight = scoreData.terms.reduce(
+        (s, t) => s + Math.max(t.target_count, 1) * termSalienceWeight(t),
+        0,
+      );
       const termsRatio = scoreData.terms.reduce((s, t) => {
          const actual = countOccurrences(plainText, t.term);
-         return s + Math.min(actual / Math.max(t.target_count, 1), 1) * Math.max(t.target_count, 1);
+         const w = Math.max(t.target_count, 1) * termSalienceWeight(t);
+         return s + Math.min(actual / Math.max(t.target_count, 1), 1) * w;
       }, 0) / Math.max(totalWeight, 1);
       push('terms', 'NLP terms', termsRatio * 25, 25, 'Use the suggested terms at their target counts (see Keywords & Terms)');
    }
@@ -395,6 +385,30 @@ export function computeContentScore(
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
    coverageItems?: CoverageItem[],
 ): number {
+   // Surfer-style: competitor benchmarks from deep analysis / SERP pipeline.
+   if (
+      scoreData.scoring_model === 'competitor'
+      && scoreData.content_targets
+      && scoreData.terms?.length
+   ) {
+      const base = computeCompetitorContentScore(
+         plainText,
+         wordCount,
+         headingCount,
+         paragraphCount ?? 0,
+         scoreData.terms,
+         scoreData.content_targets,
+      );
+      let bonus = 0;
+      if (html && keyword) {
+         bonus += Math.round((_kwPlacement(html, keyword) / 15) * 8);
+      }
+      if (internalLinksCount !== undefined && internalLinksCount > 0) {
+         bonus += Math.min(2, internalLinksCount);
+      }
+      return Math.min(100, base + bonus);
+   }
+
    const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage, coverageItems);
    if (!slots.length) return 0;
 

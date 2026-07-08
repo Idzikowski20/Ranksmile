@@ -1,4 +1,5 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
@@ -6,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import AppShell from '../../../components/common/AppShell';
+import { Button } from '../../../components/core';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
 import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
 import KeywordSuggestInput from '../../../components/articles/KeywordSuggestInput';
@@ -20,12 +22,9 @@ import OptimizeReviewBar from '../../../components/articles/OptimizeReviewBar';
 import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModal';
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
-import OptimizeResultsPanel from '../../../components/articles/OptimizeResultsPanel';
 import { liveCoverageItems, remainingOpportunities, scoreAttribution, scoreDeltaGate } from '../../../lib/liveCoverage';
 import { computeCoverageScores } from '../../../lib/aiCoverage';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
-import AoScoreAttribution from '../../../components/articles/AoScoreAttribution';
-import { computeOptimizeStats } from '../../../lib/optimizeStats';
 import { sectionStatusLabel } from '../../../lib/optimizeMessaging';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
@@ -34,18 +33,29 @@ import { useFetchDomains } from '../../../services/domains';
 import { useFetchSettings } from '../../../services/settings';
 import { useContentSettings } from '../../../services/contentSettings';
 import { useArticleKeywords } from '../../../services/articleKeywords';
-import { ScoreData, countOccurrences, computeContentScore } from '../../../lib/contentScore';
+import { ScoreData, NlpTerm, countOccurrences, computeContentScore } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
+import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
 import { getErrorMessage } from '../../../lib/errors';
-import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
+import { buildStreamingDoc } from '../../../lib/optimizeReviewDoc';
+import { substituteOptimizerPlaceholders } from '../../../lib/optimizePostHtml';
+import { splitSections } from '../../../lib/articleSections';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
 import { optimizeStore } from '../../../components/articles/optimizeStore';
+import { useBackgroundDeepAnalysis } from '../../../hooks/useBackgroundDeepAnalysis';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
 import { ABLY_EVENTS } from '../../../lib/ably/channel';
+import { ablyIgnore } from '../../../lib/ably/safe';
 import { throttle } from '../../../lib/throttle';
 import { prefersReducedMotion } from '../../../lib/motion/gsap';
+import type { ArticleEditorHandle } from '../../../lib/types/editor';
+import type { Editor } from '@tiptap/core';
+import type { Node as PMNode } from '@tiptap/pm/model';
+import type { PlagiarismResult } from '../../../components/articles/PlagiarismPanel';
+import type { AiReadabilityResult } from '../../../components/articles/PrePublishPanel';
+import { parseJsonish } from '../../../lib/types/json';
 import dynamic from 'next/dynamic';
 
 const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
@@ -76,6 +86,8 @@ interface Article {
   language?: string;
   created_at?: string;
   updated_at?: string;
+  plagiarism_json?: string | null;
+  ai_readability_json?: string | null;
 }
 
 /** Task 9 placeholder nav for the results-panel adjustments cards — smooth-scrolls the
@@ -131,16 +143,17 @@ const IcoDots = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path fil
 const IcoChevronR = () => (<svg width={18} height={18} viewBox="0 0 24 24"><path {...sIco} d="m9 18l6-6l-6-6" /></svg>);
 
 /* Menu row used by the ⋯ actions menu */
-const MenuRow = ({ icon, label, sub, chevron, onClick }: { icon: React.ReactNode; label: string; sub?: string; chevron?: boolean; onClick?: () => void }) => (
+const MenuRow = ({ icon, label, sub, chevron, onClick, disabled }: { icon: React.ReactNode; label: string; sub?: string; chevron?: boolean; onClick?: () => void; disabled?: boolean }) => (
   <button
     type="button"
-    onClick={onClick}
+    onClick={disabled ? undefined : onClick}
+    disabled={disabled}
     style={{
       display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '8px 14px',
-      border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
-      fontFamily: 'var(--font-family-primary)', color: '#18181B',
+      border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
+      fontFamily: 'var(--font-family-primary)', color: '#18181B', opacity: disabled ? 0.45 : 1,
     }}
-    onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#f8f8f9'; }}
     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
   >
     <span style={{ color: '#18181B', display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
@@ -306,6 +319,51 @@ const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClos
   );
 };
 
+/** Portal Share popover — escapes `.sentry-panel { overflow: hidden }` on the toolbar. */
+const SharePopoverPortal = ({
+  anchorRef,
+  popoverRef,
+  articleId,
+  onClose,
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  popoverRef: React.RefObject<HTMLDivElement | null>;
+  articleId: string;
+  onClose: () => void;
+}) => {
+  const [style, setStyle] = useState<React.CSSProperties | null>(null);
+
+  useEffect(() => {
+    const place = () => {
+      const el = anchorRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      setStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        right: Math.max(12, window.innerWidth - rect.right),
+        zIndex: 350,
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [anchorRef]);
+
+  if (!style || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div ref={popoverRef}>
+      <SharePopover articleId={articleId} onClose={onClose} style={style} />
+    </div>,
+    document.body,
+  );
+};
+
 /* ── Content Editor breadcrumb (replaces workspace switcher in the topbar) ── */
 const BC_COUNTRY: Record<string, { name: string; cc: string }> = {
   pl: { name: 'Poland', cc: 'pl' }, en: { name: 'United States', cc: 'us' }, de: { name: 'Germany', cc: 'de' },
@@ -408,7 +466,8 @@ const ArticleEditorPage: NextPage = () => {
   const appSettings: SettingsType = appSettingsData?.settings || {};
   const domains: DomainType[] = domainsData?.domains || [];
 
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<ArticleEditorHandle | null>(null);
+  const getEditor = (): Editor | null => editorRef.current?.getEditor() ?? null;
   const pixabayCallbackRef = useRef<((img: { url: string; alt: string }) => void) | null>(null);
   const autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -452,6 +511,7 @@ const ArticleEditorPage: NextPage = () => {
   const actionsRef = useRef<HTMLDivElement>(null);
   const voiceRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
+  const sharePopoverRef = useRef<HTMLDivElement>(null);
   const [domainBaseUrl, setDomainBaseUrl] = useState('');
   const [linkBar, setLinkBar] = useState<{ count: number; preLinkHtml: string; positions: number[] } | null>(null);
   const [linkNavIdx, setLinkNavIdx] = useState(0);
@@ -479,10 +539,12 @@ const ArticleEditorPage: NextPage = () => {
   // AO-8b: results-panel inputs captured during the SSE run — pre-optimize content score
   // baseline (gauge/ScoreTrio delta) + the changed sections' display data (word-delta stats).
   const preScoreRef = useRef<number>(0);
+  const preContentScoreRef = useRef<number>(0);
   const changedSectionsRef = useRef<Array<{ sectionId: string; headingText: string; oldHtml: string; newHtml: string }>>([]);
   // AO-8a: review lifecycle chrome — processed counter, save-in-flight, cancel-confirm modal.
   const [optimizeProgress, setOptimizeProgress] = useState<{ processed: number; total: number }>({ processed: 0, total: 0 });
   const [optimizeRemaining, setOptimizeRemaining] = useState(0); // unresolved contentOptimizer nodes (review label)
+  const [optimizeDocTick, setOptimizeDocTick] = useState(0);
   const [optimizeSaving, setOptimizeSaving] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -497,6 +559,64 @@ const ArticleEditorPage: NextPage = () => {
   const [isRunningAiVisibility, setIsRunningAiVisibility] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
+  const [analysisReloadKey, setAnalysisReloadKey] = useState(0);
+
+  const onAnalysisComplete = useCallback(async () => {
+    const articleId = typeof id === 'string' ? id : null;
+    if (articleId) {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          const r = await fetch(`/api/articles/${articleId}`);
+          if (r.ok) {
+            const data = await r.json();
+            const art = data.article;
+            if (art) {
+              setArticle(art);
+              if (art.score_data) {
+                try { setScoreData(JSON.parse(art.score_data)); } catch { /* ignore */ }
+              }
+              if (art.ai_visibility_summary) {
+                setAiVisibilitySummary(art.ai_visibility_summary);
+              }
+              const snap = parseSnapshot(art.ai_info_to_cover);
+              if (snap?.items?.length) {
+                setCoverageItems([...snap.items]);
+                setCoverageBuckets([...snap.buckets]);
+                setAiCoverageScore(snap.overall ?? null);
+                setCoverageSnapshot(snap);
+              }
+              if (art.score_data || snap?.items?.length) break;
+            }
+          }
+        } catch { /* retry */ }
+        await new Promise((resolve) => { setTimeout(resolve, 1000); });
+      }
+    }
+    setAnalysisReloadKey((k) => k + 1);
+    toast.success('Analiza zakończona');
+  }, [id]);
+  const onAnalysisError = useCallback((message: string) => {
+    toast.error(message);
+  }, []);
+
+  const { ui: deepAnalysisUi, isAnalyzing: isDeepAnalyzing } = useBackgroundDeepAnalysis({
+    articleId: article?.id ?? null,
+    articleStatus: article?.status,
+    metaUrl: article?.meta_url,
+    targetKeyword: article?.target_keyword,
+    enabled: !isLoading && !!article,
+    onComplete: onAnalysisComplete,
+    onError: onAnalysisError,
+  });
+
+  const editorLocked = isDeepAnalyzing;
+
+  useEffect(() => {
+    if (!isDeepAnalyzing) return;
+    setPanelCollapsed(false);
+    setShowHistory(false);
+    setShowInternalLinksPanel(false);
+  }, [isDeepAnalyzing]);
 
   const [editorHtml, setEditorHtml] = useState('');
   const [plainText, setPlainText] = useState('');
@@ -539,22 +659,29 @@ const ArticleEditorPage: NextPage = () => {
   useEffect(() => {
     if (!ownerChannel) return undefined;
     const onComment = () => setCommentsVersion((v) => v + 1);
-    ownerChannel.subscribe(ABLY_EVENTS.comment, onComment).catch(() => {});
-    ownerChannel.presence.enter({ role: 'owner' }).catch(() => {});
-    return () => { ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
+    ablyIgnore(ownerChannel.subscribe(ABLY_EVENTS.comment, onComment));
+    ablyIgnore(ownerChannel.presence.enter({ role: 'owner' }));
+    return () => {
+      ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment);
+      ablyIgnore(ownerChannel.presence.leave());
+    };
   }, [ownerChannel]);
 
   const [reviewers, setReviewers] = useState<string[]>([]);
   useEffect(() => {
     if (!ownerChannel) return undefined;
-    const refresh = () => ownerChannel.presence.get()
-      .then((members) => setReviewers(members
-        .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
-        .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest')))
-      .catch(() => {});
-    ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh).catch(() => {});
+    const refresh = () => ablyIgnore(
+      ownerChannel.presence.get()
+        .then((members) => setReviewers(members
+          .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
+          .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest'))),
+    );
+    ablyIgnore(ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh));
     refresh();
-    return () => { ownerChannel.presence.unsubscribe(); };
+    return () => {
+      ownerChannel.presence.unsubscribe();
+      ablyIgnore(ownerChannel.presence.leave());
+    };
   }, [ownerChannel]);
 
   // Live broadcast to viewers. Ably caps a single message at ~64KB; above this we
@@ -668,11 +795,11 @@ const ArticleEditorPage: NextPage = () => {
               fetch(`/api/articles?domainId=${art.domain_id}`).then((r) => r.json()),
             ])
               .then(([dd, d]) => {
-                const dom = (dd.domains || []).find((d: any) => d.ID === art.domain_id);
+                const dom = (dd.domains || []).find((d: DomainType) => d.ID === art.domain_id);
                 if (dom?.domain) setDomainBaseUrl(`https://${dom.domain}`);
                 const others = (d.articles || [])
-                  .filter((a: any) => a.id !== art.id && a.status === 'published')
-                  .map((a: any) => ({ id: a.id, title: a.title, url: a.meta_url || '' }));
+                  .filter((a: { id: number; status?: string }) => a.id !== art.id && a.status === 'published')
+                  .map((a: { id: number; title: string; meta_url?: string | null }) => ({ id: a.id, title: a.title, url: a.meta_url || '' }));
                 setInternalArticles(others);
               })
               .catch(() => {});
@@ -682,14 +809,14 @@ const ArticleEditorPage: NextPage = () => {
       )
       .catch(() => toast.error('Failed to load article'))
       .finally(() => setIsLoading(false));
-  }, [id]);
+  }, [id, analysisReloadKey, router]);
 
   useEffect(() => {
     if (!actionsMenu && !voiceOpen && !shareOpen) return undefined;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
       if (voiceOpen && voiceRef.current && !voiceRef.current.contains(t)) setVoiceOpen(false);
-      if (shareOpen && shareRef.current && !shareRef.current.contains(t)) setShareOpen(false);
+      if (shareOpen && !shareRef.current?.contains(t) && !sharePopoverRef.current?.contains(t)) setShareOpen(false);
       if (actionsMenu && actionsRef.current && !actionsRef.current.contains(t)) { setActionsMenu(false); setVoiceOpen(false); }
     };
     document.addEventListener('mousedown', onDoc);
@@ -743,22 +870,36 @@ const ArticleEditorPage: NextPage = () => {
   // recomputes when its actual input changes (was running on every keystroke).
   const internalLinksCount = useMemo(() => (editorHtml.match(/<a\s[^>]*href=/gi) || []).length, [editorHtml]);
 
+  /** Main centre gauge — same formula as ContentScorePanel (not seo_score). */
+  const liveContentScore = useMemo(() => {
+    if (!scoreData) return 0;
+    const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
+    const updatedTerms = scoreData.terms?.map((t) => ({
+      ...t,
+      current_count: countOccurrences(plainText, t.term),
+    }));
+    return computeContentScore(
+      plainText,
+      wordCount,
+      headingCount,
+      { ...scoreData, terms: updatedTerms ?? scoreData.terms },
+      paraCount,
+      internalLinksCount,
+      editorHtml,
+      article?.target_keyword || '',
+      undefined,
+      coverageItems,
+    );
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, editorHtml, article?.target_keyword, coverageItems]);
+
   // AO-8b: live post-optimize content score during review. The review doc keeps changed
   // sections as empty contentOptimizer placeholder divs (their HTML lives in optimizeStore,
   // not in editorHtml), so substitute each unresolved placeholder's newHtml back in before
   // scoring. Resolved (accepted/rejected) sections already carry real content, so the score
   // climbs as the user works. seoDelta drives the gauge + ScoreTrio "↑N" badges.
   const optimizeReview = useMemo(() => {
-    // Compute live during optimizing too, so the ↑N delta climbs as each section streams in.
     if (optimizeState === 'idle' || !scoreData) return null;
-    const postHtml = editorHtml.replace(
-      /<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi,
-      (tag) => {
-        const idMatch = tag.match(/data-section-id="([^"]*)"/i);
-        const sid = idMatch ? idMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '';
-        return optimizeStore.get(sid)?.newHtml ?? '';
-      },
-    );
+    const postHtml = substituteOptimizerPlaceholders(editorHtml);
     const postText = postHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
     const postWords = postText ? postText.split(/\s+/).length : 0;
     const postHeadings = (postHtml.match(/<h[1-6][\s>]/gi) || []).length;
@@ -768,10 +909,9 @@ const ArticleEditorPage: NextPage = () => {
       (postHtml.match(/<a\s[^>]*href=/gi) || []).length, postHtml, article?.target_keyword || '',
       undefined, coverageItems,
     );
-    // Task 11: expose postHtml/postText so the debounced live re-score reuses the SAME
-    // placeholder-substituted content the SEO gauge scored (one substitution, not two).
-    return { postScore, seoDelta: postScore - preScoreRef.current, postHtml, postText };
-  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems]);
+    const seoDelta = Math.max(0, postScore - preScoreRef.current);
+    return { postScore, seoDelta, postHtml, postText };
+  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, optimizeDocTick]);
 
   // AO-8b (Task 8) / Task 11: the single live re-score loop. ONE coverage pass per tick over the
   // same placeholder-substituted content the SEO gauge scores, feeding: the AI "↑N" gauge delta,
@@ -792,6 +932,8 @@ const ArticleEditorPage: NextPage = () => {
   const [aoFloat, setAoFloat] = useState<{ key: number; label: string } | null>(null);
   // First/current streaming section id (from meta/section SSE events) — drives the bar subtitle (Task 12).
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  /** Section currently being scanned (shimmer) — 1-based index drives the bottom bar. */
+  const [scanningSectionId, setScanningSectionId] = useState<string | null>(null);
   // Run-start AI-visibility baseline (frozen overall) → gates the gauge's cumulative ↑N via scoreDeltaGate.
   const aiVisibilityBaselineRef = useRef<number>(0);
   // Previous tick's aiNew — gates the float via THIS tick's delta (not the cumulative run total).
@@ -850,14 +992,10 @@ const ArticleEditorPage: NextPage = () => {
       return undefined;
     }
     const { postText, postHtml } = optimizeReview;
-    const placeholders = (editorHtml.match(/<div[^>]*\bdata-content-optimizer\b[^>]*><\/div>/gi) || []).length;
-    const prevCount = placeholderCountRef.current;
-    placeholderCountRef.current = placeholders;
-    const isAccept = prevCount !== -1 && placeholders < prevCount;
-    const immediate = optimizeState === 'optimizing' || isAccept;
+    const immediate = optimizeState === 'optimizing' || optimizeState === 'reviewing';
     if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; }
     if (immediate) {
-      runLiveRescore(postText, postHtml, isAccept ? 'accept' : 'stream');
+      runLiveRescore(postText, postHtml, 'stream');
       return undefined;
     }
     rescoreTimerRef.current = setTimeout(() => {
@@ -868,13 +1006,9 @@ const ArticleEditorPage: NextPage = () => {
     // via useCallback) are frozen for the duration of a run — set once in handleAutoOptimizeSections
     // and not mutated until the next run — so the closure captured here cannot go stale mid-run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [optimizeState, editorHtml, optimizeReview]);
-  const initialPlagiarism = useMemo(() => {
-    try { const v = (article as any)?.plagiarism_json; return v ? JSON.parse(v) : null; } catch { return null; }
-  }, [(article as any)?.plagiarism_json]);
-  const initialAiReadability = useMemo(() => {
-    try { const v = (article as any)?.ai_readability_json; return v ? JSON.parse(v) : null; } catch { return null; }
-  }, [(article as any)?.ai_readability_json]);
+  }, [optimizeState, editorHtml, optimizeReview, optimizeDocTick]);
+  const initialPlagiarism = useMemo(() => parseJsonish<PlagiarismResult>(article?.plagiarism_json), [article?.plagiarism_json]);
+  const initialAiReadability = useMemo(() => parseJsonish<AiReadabilityResult>(article?.ai_readability_json), [article?.ai_readability_json]);
 
   const handleRestoreVersion = (version: { id: number; content: string; score_data: string | null }) => {
     const editor = editorRef.current?.getEditor();
@@ -915,23 +1049,25 @@ const ArticleEditorPage: NextPage = () => {
       ...t,
       current_count: countOccurrences(text, t.term),
     }));
-    const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number; _ao_meta?: { changes: number; promptVersion: string; creditDeducted: boolean } } = {
+    const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number; _content_score?: number; _ao_meta?: { changes: number; promptVersion: string; creditDeducted: boolean } } = {
       ...scoreData,
       terms: updatedTerms,
       _heading_count: headings,
       _paragraph_count: paragraphs,
-      _computed_score: computeContentScore(
-        text, words, headings,
-        { ...scoreData, terms: updatedTerms },
-        paragraphs,
-        (html.match(/<a\s[^>]*href=/gi) || []).length,
-        html,
-        article?.target_keyword || '',
-        undefined,
-        coverageItems,
-      ),
-      ...(versionMeta ? { _ao_meta: versionMeta } : {}),
     };
+    const contentScore = computeContentScore(
+      text, words, headings,
+      { ...updatedScoreData },
+      paragraphs,
+      (html.match(/<a\s[^>]*href=/gi) || []).length,
+      html,
+      article?.target_keyword || '',
+      undefined,
+      coverageItems,
+    );
+    updatedScoreData._computed_score = contentScore;
+    updatedScoreData._content_score = contentScore;
+    if (versionMeta) updatedScoreData._ao_meta = versionMeta;
 
     // Persist internal links panel state from localStorage
     let internalLinksCache: object | undefined;
@@ -1091,8 +1227,7 @@ const ArticleEditorPage: NextPage = () => {
   // "Apply All" from the AI Readability panel — send the suggestions to the sidecar, which
   // rewrites the article HTML applying them (structure only), then show the review bar.
   const handleApplyReadability = async (result: { criteria?: Array<{ suggestions?: string[] }> }) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (!editor || !id || isApplyingReadability) return;
     const suggestions = (result?.criteria || []).flatMap((c) => c.suggestions || []).filter(Boolean);
     if (!suggestions.length) return;
@@ -1118,8 +1253,7 @@ const ArticleEditorPage: NextPage = () => {
 
   // Open the side-by-side diff of a pre-optimize snapshot vs. the current editor content.
   const openCompareVersions = (preHtml: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     setCompareVersions({ original: preHtml, updated: editor ? editor.getHTML() : '' });
   };
   // Shared "Compare versions" button for the Auto-Optimize and Optimize-AI-Readability bars.
@@ -1137,8 +1271,7 @@ const ArticleEditorPage: NextPage = () => {
   );
 
   const handleInsertLinks = (links: Array<{ anchorText: string; url: string }>) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (!editor) return [];
 
     const preLinkHtml = editor.getHTML();
@@ -1149,7 +1282,7 @@ const ArticleEditorPage: NextPage = () => {
     const buildTextMap = () => {
       let fullText = '';
       const segments: Array<{ textStart: number; docPos: number; len: number }> = [];
-      editor.state.doc.descendants((node: any, pos: number) => {
+      editor.state.doc.descendants((node: PMNode, pos: number) => {
         if (node.isText && node.text) {
           segments.push({ textStart: fullText.length, docPos: pos, len: node.text.length });
           fullText += node.text;
@@ -1272,8 +1405,7 @@ const ArticleEditorPage: NextPage = () => {
   // contentOptimizer node (Accept/Reject). isAutoOptimizing spans the whole flow so autosave +
   // the format toolbar stay suspended until every section is resolved (Step D) or we bail out.
   const handleAutoOptimizeSections = async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (!editor) return;
     const preHtml: string = editor.getHTML();
     preReviewHtmlRef.current = preHtml;
@@ -1283,6 +1415,11 @@ const ArticleEditorPage: NextPage = () => {
     preScoreRef.current = scoreData
       ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '', undefined, coverageItems)
       : 0;
+    const preAiBase = aiCoverageScore ?? scoreData?.ai_score ?? 0;
+    const hasAiBaseline = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || (scoreData?.ai_score != null);
+    preContentScoreRef.current = hasAiBaseline
+      ? computeOverallContentScore(preScoreRef.current, preAiBase)
+      : preScoreRef.current;
     // Task 11: capture the run-start AI baseline (gates the "Optimization Impact" float) and the
     // run-start attribution "before" buckets (re-scored from the pre-optimize content so the first
     // Accept's attribution measures against a like-for-like baseline). Reset per-run float state.
@@ -1295,16 +1432,26 @@ const ArticleEditorPage: NextPage = () => {
     placeholderCountRef.current = -1;
     setAoFloat(null);
     setActiveSectionId(null);
+    setScanningSectionId(null);
     changedSectionsRef.current = [];
     optimizeStore.clear();
     setOptimizeState('optimizing');
     setIsAutoOptimizing(true);
-    setOptimizeProgress({ processed: 0, total: 0 }); // AO-8a: reset before this run's meta arrives
+    setOptimizeProgress({ processed: 0, total: 0 });
     setAutoOptimizeStatus('Optimizing sections…');
+    optimizeStore.setOnDocSync(() => {
+      const ed = getEditor();
+      if (ed) {
+        setEditorHtml(ed.getHTML());
+        setOptimizeDocTick((t) => t + 1);
+      }
+    });
 
     const resetIdle = () => {
       optimizeStore.clear();
-      changedSectionsRef.current = []; // AO-8b: clear results-panel data on no-op/error
+      changedSectionsRef.current = [];
+      setScanningSectionId(null);
+      setOptimizeDocTick(0);
       setOptimizeState('idle');
       setIsAutoOptimizing(false);
       setOptimizeProgress({ processed: 0, total: 0 }); // AO-8a
@@ -1314,7 +1461,7 @@ const ArticleEditorPage: NextPage = () => {
       const res = await fetch('/api/articles/optimize-sections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: preHtml, articleId: article?.id, scoreData }),
+        body: JSON.stringify({ content: preHtml, articleId: article?.id, scoreData, targetScore: 90, maxRounds: 4 }),
       });
       // Org-wide AI budget exhausted — surface the same message the legacy flow uses, then bail.
       if (res.status === 429) {
@@ -1351,31 +1498,71 @@ const ArticleEditorPage: NextPage = () => {
           let payload: unknown;
           try { payload = JSON.parse(dataLine[1]); } catch (e) { console.error('[optimize-sections] JSON parse error', eventType, e); continue; }
 
-          if (eventType === 'meta') {
-            // AO-8a: seed the "Processing X of N" counter for the toolbar.
-            const m = payload as { total: number };
+          if (eventType === 'terms') {
+            const { terms: enrichedTerms } = payload as { terms: NlpTerm[] };
+            if (enrichedTerms?.length) {
+              const plain = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+              setScoreData((prev) => ({
+                ...prev,
+                terms: enrichedTerms.map((t) => ({
+                  ...t,
+                  current_count: countOccurrences(plain, t.term),
+                })),
+              }));
+            }
+          } else if (eventType === 'meta') {
+            const m = payload as { total: number; sections?: Array<{ sectionId: string }> };
             setOptimizeProgress({ processed: 0, total: m.total });
+            // Mark all sections + start scanning the first one.
+            const articleSections = splitSections(preHtml);
+            articleSections.forEach((s) => {
+              optimizeStore.set(s.id, { oldHtml: s.html, newHtml: s.html, changed: false });
+            });
+            const firstId = articleSections[0]?.id ?? null;
+            setScanningSectionId(firstId);
+            setActiveSectionId(firstId);
+            const streamHtml = buildStreamingDoc(preHtml, [], firstId);
+            try { editor.commands.setContent(streamHtml, { emitUpdate: false }); } catch (e) { console.error('[optimize-sections] setContent error', e); }
+            setEditorHtml(streamHtml);
+            setOptimizeDocTick((t) => t + 1);
+            if (firstId) {
+              requestAnimationFrame(() => scrollToOptimizerSection(firstId));
+            }
           } else if (eventType === 'section') {
             const ev = payload as SectionEvent;
             orderedEvents.push(ev);
-            // Task 11: track the streaming section (first section sets it, each event advances it).
             setActiveSectionId(ev.sectionId);
             optimizeStore.set(ev.sectionId, {
               oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed,
               focus: ev.focus, mode: ev.mode, reason: ev.reason,
             });
-            // AO-8b: collect changed sections' display data for the results-panel word-delta stats.
             if (ev.changed) {
               changedSectionsRef.current.push({ sectionId: ev.sectionId, headingText: ev.headingText, oldHtml: ev.oldHtml, newHtml: ev.newHtml });
             }
-            setOptimizeProgress((p) => ({ ...p, processed: p.processed + 1 })); // AO-8a
+            const articleSections = splitSections(preHtml);
+            const nextSection = articleSections[ev.index + 1];
+            const nextId = nextSection?.id ?? null;
+            setScanningSectionId(nextId);
+            const streamHtml = buildStreamingDoc(preHtml, orderedEvents, nextId);
+            try { editor.commands.setContent(streamHtml, { emitUpdate: false }); } catch (e) { console.error('[optimize-sections] setContent error', e); }
+            setEditorHtml(streamHtml);
+            setOptimizeDocTick((t) => t + 1);
+            if (nextId) {
+              requestAnimationFrame(() => scrollToOptimizerSection(nextId));
+            }
+            setOptimizeProgress((p) => ({ ...p, processed: p.processed + 1 }));
+          } else if (eventType === 'progress') {
+            const p = payload as { round: number; score: number; target: number };
+            setAutoOptimizeStatus(`Runda ${p.round} — wynik ${p.score}/${p.target}…`);
           } else if (eventType === 'done') {
-            const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean };
+            const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean; finalScore?: number; rounds?: number };
             optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted, promptVersion: meta.promptVersion };
+            setScanningSectionId(null);
             if (meta.changedCount > 0) {
-              const reviewHtml = buildReviewDoc(orderedEvents);
-              // emitUpdate:false → entering review must NOT trigger autosave.
+              const reviewHtml = buildStreamingDoc(preHtml, orderedEvents, null);
               try { editor.commands.setContent(reviewHtml, { emitUpdate: false }); } catch (e) { console.error('[optimize-sections] setContent error', e); }
+              setEditorHtml(reviewHtml);
+              setOptimizeDocTick((t) => t + 1);
               setOptimizeState('reviewing');
               setAutoOptimizeStatus(`Review ${meta.changedCount} section${meta.changedCount === 1 ? '' : 's'}…`);
             } else {
@@ -1406,24 +1593,20 @@ const ArticleEditorPage: NextPage = () => {
   // review could never complete and isAutoOptimizing would stay stuck true (autosave dead).
   useEffect(() => {
     if (optimizeState !== 'reviewing') return undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let ed: any = null;
+    let ed: Editor | null = null;
     const check = () => {
       if (!ed) return;
-      let count = 0;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ed.state.doc.descendants((n: any) => { if (n.type.name === 'contentOptimizer') count += 1; });
-      setOptimizeRemaining(count); // AO-8a: drive the toolbar "N of M to review" label
-      if (count === 0) {
-        setEditorHtml(ed.getHTML()); // sync resolved content into page state BEFORE re-enabling autosave
-        optimizeStore.clear();
-        setOptimizeState('idle');
-        setIsAutoOptimizing(false); // autosave resumes and persists the resolved content
-      }
+      let pending = 0;
+      ed.state.doc.descendants((n: PMNode) => {
+        if (n.type.name === 'contentOptimizer') {
+          const st = String(n.attrs.status ?? '');
+          if (st === 'improved' || st === 'pending' || st === 'active') pending += 1;
+        }
+      });
+      setOptimizeRemaining(pending);
     };
     const tryBind = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const e = (editorRef.current as any)?.getEditor?.();
+      const e = getEditor();
       if (e && !ed) { ed = e; e.on('update', check); check(); return true; }
       return false;
     };
@@ -1441,16 +1624,14 @@ const ArticleEditorPage: NextPage = () => {
   // positions. When the last node is resolved the review-completion effect above sees
   // zero nodes and transitions back to idle — we never duplicate that logic here.
   const resolveAllOptimizerNodes = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (!editor) return;
     const refs = collectOptimizerPositions(editor.state.doc as PMDocLike);
     refs.forEach((ref) => {
       const entry = optimizeStore.get(ref.sectionId);
-      // Prefer the optimized version; fall back to the original (reject semantics) if newHtml
-      // is empty. On a full store miss there's no safe replacement — SKIP the splice so we never
-      // blow away the section's content with an empty string.
-      const html = entry?.newHtml || entry?.oldHtml || '';
+      const html = ref.status === 'rejected'
+        ? (entry?.oldHtml || '')
+        : (entry?.newHtml || entry?.oldHtml || '');
       if (!html) return;
       editor.chain().insertContentAt({ from: ref.pos, to: ref.pos + ref.nodeSize }, html).run();
     });
@@ -1460,11 +1641,12 @@ const ArticleEditorPage: NextPage = () => {
 
   // Jump the caret to the next/prev unresolved section and scroll it into view.
   const navigateSection = (dir: 1 | -1) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (!editor) return;
     // collectOptimizerPositions returns DESCENDING; reverse for document order.
-    const refs = collectOptimizerPositions(editor.state.doc as PMDocLike).slice().reverse();
+    const refs = collectOptimizerPositions(editor.state.doc as PMDocLike)
+      .filter((r) => r.status === 'improved' || r.status === 'pending' || r.status === 'active')
+      .slice().reverse();
     if (!refs.length) return;
     const caret = editor.state.selection.from;
     const targetRef = dir === 1
@@ -1479,8 +1661,7 @@ const ArticleEditorPage: NextPage = () => {
 
   // Cancel: restore the pre-optimize article, discard all suggestions, exit review.
   const handleConfirmCancel = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (editor) {
       // emitUpdate:false → restoring must NOT trigger autosave of the (discarded) review doc.
       try { editor.commands.setContent(preReviewHtmlRef.current, { emitUpdate: false }); } catch (e) { console.error('[optimize-cancel] setContent error', e); }
@@ -1498,8 +1679,7 @@ const ArticleEditorPage: NextPage = () => {
   // divs), then persist the resolved doc as an `auto_optimize` version snapshot with run
   // metadata embedded in score_data. The review-completion effect handles the idle exit.
   const handleSaveOptimizeRun = async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editor = (editorRef.current as any)?.getEditor?.();
+    const editor = getEditor();
     if (!editor) return;
     setOptimizeSaving(true);
     try {
@@ -1510,8 +1690,7 @@ const ArticleEditorPage: NextPage = () => {
       const words = text ? text.split(/\s+/).length : 0;
       let headings = 0;
       let paragraphs = 0;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      editor.state.doc.descendants((n: any) => {
+      editor.state.doc.descendants((n: PMNode) => {
         if (n.type.name === 'heading') headings += 1;
         if (n.type.name === 'paragraph' && n.textContent.trim()) paragraphs += 1;
       });
@@ -1538,6 +1717,11 @@ const ArticleEditorPage: NextPage = () => {
       setAutoSaveState('saved');
       setSaveModalOpen(false);
       setSavedBannerOpen(true);
+      optimizeStore.clear();
+      setOptimizeState('idle');
+      setIsAutoOptimizing(false);
+      setOptimizeRemaining(0);
+      setLiveRescore(null);
     } catch (err) {
       console.error('[optimize-save] failed:', err);
       toast.error('Could not save Auto-Optimize changes');
@@ -1858,9 +2042,9 @@ const ArticleEditorPage: NextPage = () => {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              // Reserve space for the right panel so editor content is never hidden behind it
               marginRight: panelCollapsed ? 0 : PANEL_W + PANEL_GAP,
               transition: 'margin-right 0.2s ease',
+              position: 'relative',
             }}
           >
             <ArticleEditor
@@ -1875,6 +2059,7 @@ const ArticleEditorPage: NextPage = () => {
               internalArticles={internalArticles}
               reviewMode={!!linkBar}
               formattingSuspended={optimizeState === 'reviewing'}
+              readOnly={editorLocked}
               highlightTerms={highlightTerms}
               onAiActivity={setSurfyAiActive}
               articleKeyword={article?.target_keyword || ''}
@@ -1905,6 +2090,15 @@ const ArticleEditorPage: NextPage = () => {
                 } catch { setCommentThreads((prev) => prev.filter((t) => t.id !== tmp)); return undefined; }
               }}
             />
+            {editorLocked && (
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute', inset: 0, zIndex: 30, cursor: 'wait',
+                  background: 'rgba(255,255,255,0.4)', borderRadius: 12,
+                }}
+              />
+            )}
           </div>
 
           {/* ── Compact actions bar (shown when the side panel is hidden) ── */}
@@ -1917,10 +2111,10 @@ const ArticleEditorPage: NextPage = () => {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18, delay: 0.12 }}
               style={{
-                position: 'absolute', top: 14, right: 12, zIndex: 95, display: 'flex', alignItems: 'center', gap: 6,
+                position: 'absolute', top: 14, right: 12, zIndex: shareOpen ? 150 : 95, display: 'flex', alignItems: 'center', gap: 6,
               }}>
               <div ref={actionsRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                <IconBtn onClick={() => { setActionsMenu((o) => !o); setVoiceOpen(false); }} title="More"><IcoDots /></IconBtn>
+                <IconBtn disabled={editorLocked} onClick={() => { setActionsMenu((o) => !o); setVoiceOpen(false); }} title="More"><IcoDots /></IconBtn>
                 {actionsMenu && (
                   <div style={{
                     position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, minWidth: 244,
@@ -1929,32 +2123,32 @@ const ArticleEditorPage: NextPage = () => {
                     animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
                   }}>
                     <MenuRow
+                      disabled={editorLocked}
                       icon={article.status === 'accepted' ? <IcoDoneFilled /> : <IcoDoneOutline />}
                       label={article.status === 'accepted' ? 'Unmark as done' : 'Mark as done'}
                       onClick={() => { handleAcceptReject(article.status === 'accepted' ? 'reject' : 'accept'); setActionsMenu(false); }}
                     />
-                    <MenuRow icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowInternalLinksPanel(false); setShowHistory(true); setActionsMenu(false); }} />
-                    <MenuRow icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
+                    <MenuRow disabled={editorLocked} icon={<IcoClock />} label="Version history" onClick={() => { setPanelCollapsed(false); setShowInternalLinksPanel(false); setShowHistory(true); setActionsMenu(false); }} />
+                    <MenuRow disabled={editorLocked} icon={<IcoGear />} label="Settings" onClick={() => { setShowCustomization(true); setActionsMenu(false); }} />
                     <div style={{ position: 'relative' }}>
-                      <MenuRow icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
+                      <MenuRow disabled={editorLocked} icon={<IcoVoice />} label="Voice" sub="SERP based" chevron onClick={() => setVoiceOpen((v) => !v)} />
                       {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
                     </div>
                   </div>
                 )}
               </div>
-              <IconBtn onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
+              <IconBtn disabled={editorLocked} onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
               <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                <button
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={editorLocked}
                   onClick={() => { setShareOpen((v) => !v); setVoiceOpen(false); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 14px', borderRadius: 6,
-                    border: 'none', background: shareOpen ? '#783afb' : '#18181b', color: '#fff', fontSize: 13, fontWeight: 600,
-                    fontFamily: 'var(--font-family-primary)', cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = shareOpen ? '#783afb' : '#18181b'; }}
-                >Share</button>
-                {shareOpen && <SharePopover articleId={String(id)} onClose={() => setShareOpen(false)} style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200 }} />}
+                >
+                  Share
+                </Button>
+                {shareOpen && <SharePopoverPortal anchorRef={shareRef} popoverRef={sharePopoverRef} articleId={String(id)} onClose={() => setShareOpen(false)} />}
               </div>
             </motion.div>
           )}
@@ -1981,23 +2175,13 @@ const ArticleEditorPage: NextPage = () => {
             }}
           >
             {/* Top card: action icons + share */}
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid #e4e4e7',
-                borderRadius: 12,
-                padding: '10px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-              }}
-            >
+            <div className="sentry-panel editor-side-toolbar" style={{ position: 'relative', zIndex: shareOpen || voiceOpen ? 150 : undefined }}>
               {/* Left: action icon buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* Mark / unmark as done */}
                 <span data-tour="done" style={{ display: 'inline-flex' }}>
                   <IconBtn
+                    disabled={editorLocked}
                     onClick={() => handleAcceptReject(article.status === 'accepted' ? 'reject' : 'accept')}
                     title={article.status === 'accepted' ? 'Unmark as done' : 'Mark as done'}
                   >
@@ -2009,14 +2193,14 @@ const ArticleEditorPage: NextPage = () => {
 
                 {/* Version History */}
                 <span data-tour="version" style={{ display: 'inline-flex' }}>
-                  <IconBtn onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
+                  <IconBtn disabled={editorLocked} onClick={() => { setShowInternalLinksPanel(false); setShowHistory((v) => !v); }} title="Version History">
                     <IcoClock />
                   </IconBtn>
                 </span>
 
                 {/* Voice */}
                 <div ref={voiceRef} data-tour="voice" style={{ position: 'relative', display: 'inline-flex' }}>
-                  <IconBtn onClick={() => setVoiceOpen((v) => !v)} title="Voice">
+                  <IconBtn disabled={editorLocked} onClick={() => setVoiceOpen((v) => !v)} title="Voice">
                     <IcoVoice />
                   </IconBtn>
                   {voiceOpen && <VoicePopover style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200 }} />}
@@ -2024,50 +2208,55 @@ const ArticleEditorPage: NextPage = () => {
 
                 {/* Settings (customization panel) */}
                 <span data-tour="settings" style={{ display: 'inline-flex' }}>
-                  <IconBtn onClick={() => setShowCustomization(true)} title="Settings"><IcoGear /></IconBtn>
+                  <IconBtn disabled={editorLocked} onClick={() => setShowCustomization(true)} title="Settings"><IcoGear /></IconBtn>
                 </span>
               </div>
 
               {/* Right: panel toggle + Share */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span data-tour="hide-panel" style={{ display: 'inline-flex' }}>
-                  <IconBtn onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
+                  <IconBtn disabled={editorLocked} onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
                 </span>
                 <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                  <button
+                  <Button
                     data-tour="share"
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={editorLocked}
                     onClick={() => { setShareOpen((v) => !v); setVoiceOpen(false); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                      padding: '6px 14px', borderRadius: 6, border: 'none',
-                      background: shareOpen ? '#783afb' : '#18181b', color: '#fff',
-                      fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)',
-                      cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = shareOpen ? '#783afb' : '#18181b'; }}
                   >
                     Share
-                  </button>
-                  {shareOpen && <SharePopover articleId={String(id)} onClose={() => setShareOpen(false)} style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200 }} />}
+                  </Button>
+                  {shareOpen && <SharePopoverPortal anchorRef={shareRef} popoverRef={sharePopoverRef} articleId={String(id)} onClose={() => setShareOpen(false)} />}
                 </div>
               </div>
             </div>
 
             {/* Bottom card: keyword + content score OR panel */}
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid #e4e4e7',
-                borderRadius: 12,
-                flex: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-              }}
-            >
-              {surfyDockOpen ? (
+            <div className="sentry-panel editor-side-panel-card">
+              {editorLocked ? (
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
+                  <ContentScorePanel
+                    plainText={plainText}
+                    wordCount={wordCount}
+                    headingCount={headingCount}
+                    scoreData={scoreData}
+                    internalLinksCount={internalLinksCount}
+                    html={editorHtml}
+                    keyword={article?.target_keyword || ''}
+                    articleId={article.id}
+                    domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
+                    cachedOutlines={article.competitor_outlines_cache}
+                    fallbackScore={article.content_score}
+                    title={article.title || ''}
+                    metaTitle={article.meta_title || ''}
+                    metaDescription={article.meta_description || ''}
+                    isDeepAnalyzing={isDeepAnalyzing}
+                    deepAnalysisUi={deepAnalysisUi}
+                  />
+                </div>
+              ) : surfyDockOpen ? (
                 // Docked Surfy pane — the editor portals SurfyChatPanel into this element.
                 <div ref={setSurfyDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
               ) : showInternalLinksPanel ? (
@@ -2087,7 +2276,7 @@ const ArticleEditorPage: NextPage = () => {
                 <VersionHistoryPanel
                   articleId={article.id}
                   currentWordCount={wordCount}
-                  currentScore={(scoreData as any)._computed_score ?? 0}
+                  currentScore={liveContentScore}
                   onClose={() => setShowHistory(false)}
                   onRestore={handleRestoreVersion}
                 />
@@ -2095,42 +2284,6 @@ const ArticleEditorPage: NextPage = () => {
                 <>
                   {/* ContentScorePanel fills remaining height */}
                   <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
-                    {/* AO-8b (Task 8): Auto-Optimize results summary — gauge + tiles + Remaining
-                        AI Opportunities. Shown once the run has finished streaming and review is
-                        active; stays above ContentScorePanel so both are visible while scrolling. */}
-                    {optimizeState === 'reviewing' && (() => {
-                      const stats = computeOptimizeStats(changedSectionsRef.current);
-                      // Task 9: thread sectionId + focus/mode/reason onto each row so the panel
-                      // can render sectionResultLabel() and support click-to-scroll nav.
-                      const adjustmentRows = stats.adjustments.map((a, i) => {
-                        const sectionId = changedSectionsRef.current[i]?.sectionId;
-                        const entry = sectionId ? optimizeStore.get(sectionId) : undefined;
-                        return { ...a, sectionId, focus: entry?.focus, mode: entry?.mode, reason: entry?.reason };
-                      });
-                      return (
-                        <>
-                          <OptimizeResultsPanel
-                            preScore={preScoreRef.current}
-                            postScore={optimizeReview ? optimizeReview.postScore : preScoreRef.current}
-                            changedCount={optimizeMetaRef.current.changedCount}
-                            adjustments={adjustmentRows}
-                            remainingRows={remainingRows}
-                            onCardClick={scrollToOptimizerSection}
-                          />
-                          {/* Task 11: "why the AI score improved" — positive per-bucket attribution
-                              from the single live re-score. Rendered adjacent (own card) to keep
-                              OptimizeResultsPanel's prop contract untouched. Hidden when empty. */}
-                          {liveRescore && liveRescore.attributionRows.length > 0 && (
-                            <div style={{ margin: '0 16px 12px', padding: 12, background: '#FFFFFF', border: '1px solid #F4F4F5', borderRadius: 12 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', marginBottom: 8 }}>
-                                Why AI visibility improved
-                              </div>
-                              <AoScoreAttribution rows={liveRescore.attributionRows} />
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
                     <ContentScorePanel
                       plainText={plainText}
                       wordCount={wordCount}
@@ -2139,11 +2292,23 @@ const ArticleEditorPage: NextPage = () => {
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
                       scoreDeltas={optimizeState !== 'idle' && optimizeReview ? (() => {
-                        // Task 11: SEO delta from optimizeReview; AI delta from the single live re-score
-                        // (gated — only a positive recomputed delta vs the run-start baseline shows).
-                        const aiGate = liveRescore ? scoreDeltaGate(aiVisibilityBaselineRef.current, liveRescore.aiNew) : { animate: false, delta: 0 };
-                        return { seo: optimizeReview.seoDelta, overall: optimizeReview.seoDelta, ai: aiGate.animate ? aiGate.delta : undefined };
+                        const aiNow = liveRescore?.aiNew ?? aiCoverageScore ?? scoreData?.ai_score ?? 0;
+                        const aiBase = aiVisibilityBaselineRef.current || scoreData?.ai_score ?? 0;
+                        const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
+                        const preOverall = preContentScoreRef.current;
+                        const postOverall = hasAi
+                          ? computeOverallContentScore(optimizeReview.postScore, aiNow)
+                          : optimizeReview.postScore;
+                        return {
+                          seo: optimizeReview.seoDelta > 0 ? optimizeReview.seoDelta : undefined,
+                          overall: postOverall - preOverall > 0 ? postOverall - preOverall : undefined,
+                          ai: Math.round(aiNow) - Math.round(aiBase) > 0 ? Math.round(aiNow) - Math.round(aiBase) : undefined,
+                        };
                       })() : undefined}
+                      optimizeLiveScores={optimizeState !== 'idle' && optimizeReview ? {
+                        seo: optimizeReview.postScore,
+                        ai: liveRescore?.aiNew ?? aiCoverageScore ?? scoreData?.ai_score ?? undefined,
+                      } : undefined}
                       keyword={article?.target_keyword || ''}
                       onInternalLinks={() => { setShowHistory(false); setShowInternalLinksPanel(true); }}
                       onAutoOptimize={() => handleAutoOptimizeSections()}
@@ -2154,6 +2319,7 @@ const ArticleEditorPage: NextPage = () => {
                       optimizeSaving={optimizeSaving}
                       saveState={autoSaveState}
                       articleId={article.id}
+                      domainSlug={domains.find((d) => d.ID === article?.domain_id)?.slug}
                       cachedOutlines={article.competitor_outlines_cache}
                       fallbackScore={article.content_score}
                       title={article.title || ''}
@@ -2179,6 +2345,8 @@ const ArticleEditorPage: NextPage = () => {
                       onApplyReadability={handleApplyReadability}
                       onPlagiarismHighlight={handlePlagiarismHighlight}
                       readabilityAccepted={readabilityAcceptKey}
+                      isDeepAnalyzing={isDeepAnalyzing}
+                      deepAnalysisUi={deepAnalysisUi}
                     />
                   </div>
                 </>
@@ -2232,6 +2400,14 @@ const ArticleEditorPage: NextPage = () => {
             onSave={() => setSaveModalOpen(true)}
             saving={optimizeSaving}
             rightReserve={panelCollapsed ? 0 : PANEL_W + PANEL_GAP}
+            currentSection={(() => {
+              if (optimizeState !== 'optimizing' || !optimizeProgress.total) return undefined;
+              if (scanningSectionId) {
+                const idx = splitSections(preReviewHtmlRef.current).findIndex((s) => s.id === scanningSectionId);
+                if (idx >= 0) return idx + 1;
+              }
+              return Math.min(optimizeProgress.processed + 1, optimizeProgress.total);
+            })()}
             activeStatusLabel={
               optimizeState === 'optimizing' && activeSectionId
                 ? sectionStatusLabel(optimizeStore.get(activeSectionId) ?? {})
@@ -2312,8 +2488,7 @@ const ArticleEditorPage: NextPage = () => {
               type="button"
               onClick={() => {
                 const preHtml = readabilityBar.preHtml;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const editor = (editorRef.current as any)?.getEditor?.();
+                const editor = getEditor();
                 if (editor) editor.commands.setContent(preHtml);
                 setReadabilityBar(null);
               }}
@@ -2448,6 +2623,11 @@ const ArticleEditorPage: NextPage = () => {
           open={showCustomization}
           slug={domains.find((d) => d.ID === article?.domain_id)?.slug}
           keyword={article?.target_keyword || ''}
+          articleId={article?.id}
+          scoreData={scoreData}
+          onScoreDataChange={setScoreData}
+          competitorOutlinesCache={article?.competitor_outlines_cache}
+          language={article?.language}
           onClose={() => setShowCustomization(false)}
         />
 

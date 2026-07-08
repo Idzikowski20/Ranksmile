@@ -56,13 +56,15 @@ export function wordDiffSegments(oldText: string, newText: string): DiffSeg[] {
    return result;
 }
 
-/** Render diff segments as inline HTML: removed = gray strikethrough, added = green. */
+/** Render diff segments as inline HTML: removed = gray strikethrough, added = green bg + underline. */
 export function renderDiffHtml(segs: DiffSeg[]): string {
    return segs.map((s) => {
       const t = escapeHtml(s.text);
       if (s.type === 'equal') return t;
-      if (s.type === 'removed') return `<span data-diff-type="removed" style="color:#9f9fa9;text-decoration:line-through">${t}</span>`;
-      return `<span data-diff-type="added" style="background:rgba(26,178,94,0.18);border-radius:2px">${t}</span>`;
+      if (s.type === 'removed') {
+         return `<span data-diff-type="removed" style="color:#9f9fa9;text-decoration:line-through;opacity:0.85">${t}</span>`;
+      }
+      return `<span data-diff-type="added" style="color:#18181b;background:rgba(26,178,94,0.14);border-radius:2px;text-decoration:underline;text-decoration-color:#1AB25E;text-underline-offset:2px;text-decoration-thickness:2px">${t}</span>`;
    }).join('');
 }
 

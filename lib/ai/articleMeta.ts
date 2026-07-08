@@ -1,27 +1,20 @@
 import { getArticleIdSql } from '../articleSql';
 import { queryOne, queryRows, type ArticleRow } from '../db/query';
+import type { AiVisibilitySummary } from '../aiSearchScore';
+import { parseJsonish } from '../types/json';
 
 export interface ArticleSeoMeta {
   domain: string;
   language: string;
   targetKeyword: string;
   competitorDomains: string[];
-  // Persisted scores shown in the editor's Content Score panel — so Surfy reports the SAME numbers
-  // as the UI (rather than re-computing different ones) until the article is actually edited.
   rankingScore: number | null;
-  rankingSignals: any | null;
-  aiVisibility: any | null;
+  rankingSignals: Record<string, unknown> | null;
+  aiVisibility: AiVisibilitySummary | null;
 }
 
 const DEFAULTS: ArticleSeoMeta = { domain: '', language: 'pl', targetKeyword: '', competitorDomains: [], rankingScore: null, rankingSignals: null, aiVisibility: null };
 
-const parseJsonish = (v: any): any | null => {
-  if (v == null) return null;
-  if (typeof v === 'object') return v;
-  try { return JSON.parse(v); } catch { return null; }
-};
-
-// Mirrors pages/api/articles/ai-visibility.ts (domainFromUrl / competitorDomainsFromCache).
 function domainFromUrl(url: string): string {
    try {
       return new URL(url).hostname.replace(/^www\./, '');
@@ -33,9 +26,9 @@ function domainFromUrl(url: string): string {
 function competitorDomainsFromCache(cache: string | null): string[] {
    if (!cache) return [];
    try {
-      const parsed = JSON.parse(cache);
+      const parsed = JSON.parse(cache) as { competitors?: Array<{ url?: string }> };
       return (parsed.competitors || [])
-         .map((item: any) => (item.url ? domainFromUrl(item.url) : ''))
+         .map((item) => (item.url ? domainFromUrl(item.url) : ''))
          .filter(Boolean);
    } catch {
       return [];
@@ -76,8 +69,8 @@ export async function resolveArticleSeoMeta(articleId: number): Promise<ArticleS
          targetKeyword: article.target_keyword || article.title || '',
          competitorDomains,
          rankingScore: article.ranking_score != null ? Number(article.ranking_score) : null,
-         rankingSignals: parseJsonish(article.ranking_signals),
-         aiVisibility: parseJsonish(article.ai_visibility_summary),
+         rankingSignals: parseJsonish<Record<string, unknown>>(article.ranking_signals),
+         aiVisibility: parseJsonish<AiVisibilitySummary>(article.ai_visibility_summary),
       };
    } catch {
       return { ...DEFAULTS };

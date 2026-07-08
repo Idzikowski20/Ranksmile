@@ -48,15 +48,16 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1, minWidth: 0 }}>
-          {/* Favicon */}
-          <img
-            src={faviconSrc}
-            alt=""
-            width={16}
-            height={16}
-            style={{ borderRadius: 3, marginTop: 2, flexShrink: 0, objectFit: 'contain' }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <span style={{ display: 'inline-flex', flexShrink: 0, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+            <img
+              src={faviconSrc}
+              alt=""
+              width={16}
+              height={16}
+              style={{ display: 'block', width: 16, height: 16, objectFit: 'contain', borderRadius: 3 }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Title */}
             <div style={{

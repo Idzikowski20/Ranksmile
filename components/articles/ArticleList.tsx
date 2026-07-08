@@ -296,8 +296,8 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
         // Analyzing state — simplified row with spinner
         if (article.status === 'analyzing') {
           return (
+            <Link href={`/articles/${article.id}`} key={article.id} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div
-              key={article.id}
               className="article-list-card"
               style={{
                 height: 133,
@@ -310,6 +310,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
                 gap: 12,
                 userSelect: 'none',
                 opacity: 0.7,
+                cursor: 'pointer',
               }}
             >
               {/* Left: Spinner */}
@@ -370,7 +371,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
               <button
                 type="button"
                 title="Delete"
-                onClick={() => onDelete(article.id)}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(article.id); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -402,6 +403,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
                 </svg>
               </button>
             </div>
+            </Link>
           );
         }
 

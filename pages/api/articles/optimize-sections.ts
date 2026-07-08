@@ -3,26 +3,78 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/aiTokenUsage';
-import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
+import { splitSections, normalizeHtmlForDiff, joinSections } from '../../../lib/articleSections';
 import type { Section } from '../../../lib/articleSections';
 import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
 import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
-import type { SectionResult } from '../../../components/articles/optimizeStore';
 import type { ScoreData } from '../../../lib/contentScore';
+import { computeContentScore } from '../../../lib/contentScore';
+import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import { buildArticleContext } from '../../../lib/articleContext';
+import type { ArticleContext } from '../../../lib/articleContext';
+import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articleKeywordDiscovery';
+import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
+import { filterOnTopicTerms } from '../../../lib/topicRelevance';
+import { getArticleIdSql } from '../../../lib/articleSql';
+import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
 import { buildOptimizationPlan } from '../../../lib/optimizationPlanner';
 import type { Plan, PlanStep } from '../../../lib/optimizationPlanner';
+import {
+  DEFAULT_MAX_ROUNDS,
+  selectOptimizeMode,
+  TARGET_AI,
+  TARGET_SEO,
+  type OptimizeMode,
+} from '../../../lib/optimizeMode';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
+import { flushSse, flushHeaders } from '../../../lib/types/api';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
-const PROMPT_VERSION = 'ao-sections-v1';
+const PROMPT_VERSION = 'ao-sections-v3';
+
+function scoreSeo(html: string, scoreData: ScoreData | undefined, keyword: string): number {
+   const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+   const wc = plain ? plain.split(/\s+/).length : 0;
+   const hc = (html.match(/<h[1-6]/gi) || []).length;
+   const pc = (html.match(/<p[\s>]/gi) || []).length;
+   if (!scoreData) return 0;
+   return computeContentScore(plain, wc, hc, scoreData, pc, undefined, html, keyword);
+}
+
+function scoreAiFromContext(ctx: ArticleContext | null, latestAiScore: number): number {
+   if (ctx?.scoreData?.ai_score != null) return ctx.scoreData.ai_score;
+   return latestAiScore;
+}
+
+function globalOptimizeBrief(ctx: ArticleContext, html: string, mode: OptimizeMode): string {
+   const lines: string[] = [];
+   if (mode !== 'ai-only') {
+      const missing = computeMissingTerms(ctx.scoreData ?? undefined, html).slice(0, 30);
+      if (missing.length) {
+         lines.push(`Missing SEO entities (use verbatim where natural): ${missing.map((t) => `"${t}"`).join(', ')}`);
+      }
+   }
+   const uncoveredFacts = (ctx.coverage?.items || [])
+      .filter((i) => !i.covered && i.type === 'fact')
+      .slice(0, 15);
+   if (uncoveredFacts.length) {
+      lines.push(`AI Search — cover these facts:\n${uncoveredFacts.map((i) => `- ${i.label}`).join('\n')}`);
+   }
+   const uncovered = (ctx.coverage?.items || [])
+      .filter((i) => !i.covered && (i.category === 'knowledge' || i.category === 'intent') && i.type !== 'fact')
+      .slice(0, 20);
+   if (uncovered.length) {
+      lines.push(`AI Search — cover these points:\n${uncovered.map((i) => `- ${i.label}`).join('\n')}`);
+   }
+   return lines.length ? `\n\nGLOBAL OBJECTIVES (this section must contribute):\n${lines.join('\n\n')}` : '';
+}
 
 function sse(res: NextApiResponse, event: string, data: object) {
    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-   if (typeof (res as any).flush === 'function') (res as any).flush();
+   flushSse(res);
 }
 
 /** Per-section restrained editing checklist. `missingTerms` are woven in verbatim where natural. */
@@ -89,10 +141,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { content, articleId, scoreData } = req.body as {
+   const { content, articleId, scoreData, targetScore, maxRounds, writeNewSections } = req.body as {
       content: string;
       articleId?: number;
       scoreData?: ScoreData;
+      targetScore?: number;
+      maxRounds?: number;
+      writeNewSections?: boolean;
    };
    if (!content) return res.status(400).json({ error: 'content is required' });
 
@@ -123,7 +178,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    res.setHeader('X-Accel-Buffering', 'no');
    res.setHeader('Content-Encoding', 'identity');
    res.status(200);
-   if (typeof (res as any).flushHeaders === 'function') (res as any).flushHeaders();
+   flushHeaders(res);
    res.write(':ok\n\n');
 
    const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -139,85 +194,196 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    req.on('close', onClose);
 
    try {
-      const sections = splitSections(content);
-      sse(res, 'meta', { total: sections.length, sections: sections.map((s) => ({ sectionId: s.id, index: s.index, headingText: s.headingText })) });
+      const TARGET_SEO_SCORE = Math.min(100, Math.max(50, Number(targetScore) || TARGET_SEO));
+      const TARGET_AI_SCORE = TARGET_AI;
+      const MAX_ROUNDS = Math.min(6, Math.max(1, Number(maxRounds) || DEFAULT_MAX_ROUNDS));
+      const allowNewSections = writeNewSections === true;
+      let workingHtml = content;
+      let ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
 
-      // Server-side context + plan assembly. articleId present -> Planner v2; absent (unsaved draft) -> legacyPlan.
-      const ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
-      const snapshot = ctx?.coverage ?? null;
-      const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
+      // Strip off-topic DFS noise from score_data before optimizing.
+      if (ctx?.scoreData?.terms?.length && ctx.keyword) {
+         const cleaned = filterOnTopicTerms(filterUsefulNlpTerms(ctx.scoreData.terms), ctx.keyword);
+         if (cleaned.length !== ctx.scoreData.terms.length) {
+            const nextScoreData = { ...ctx.scoreData, terms: cleaned };
+            ctx = { ...ctx, scoreData: nextScoreData };
+            if (scoreData) Object.assign(scoreData, { terms: cleaned });
+            try {
+               const articleIdSql = await getArticleIdSql();
+               await db.query(
+                  `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
+                  { replacements: [JSON.stringify(nextScoreData), articleId] },
+               );
+            } catch { /* non-fatal */ }
+            sse(res, 'terms', { terms: cleaned });
+         }
+      }
 
-      const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
-
-      // seoScore: already-computed score persisted alongside score_data (pages/api/articles/[id]/index.ts:78).
-      // Not typed on ScoreData (added dynamically) — absent -> 0 (no takeover; PURE constraint: never recompute here).
-      const seoScore = (scoreData as (ScoreData & { _computed_score?: number }) | undefined)?._computed_score
-         ?? (ctx?.scoreData as (ScoreData & { _computed_score?: number }) | null)?._computed_score
-         ?? 0;
-      const aiScore = ctx ? await readLatestAiScore(Number(articleId)) : 0;
-
-      const plan: Plan = ctx
-         ? buildOptimizationPlan({
-            sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used, seoScore, aiScore,
-         })
-         : legacyPlan(sections, scoreData, content);
-
-      if (plan.trimmed) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
+      // Enrich only when still thin after cleanup.
+      if (ctx && ctx.scoreData && ctx.keyword) {
+         const competitorDomains = (ctx.competitors || []).map((c) => c.domain).filter(Boolean);
+         const baseTerms = filterOnTopicTerms(filterUsefulNlpTerms(ctx.scoreData.terms), ctx.keyword);
+         if (needsTermEnrichment(baseTerms, ctx.keyword)) {
+            const merged = await enrichNlpTermsIfNeeded({
+               terms: baseTerms,
+               primaryKeyword: ctx.keyword,
+               languageCode: ctx.language,
+               competitorDomains,
+               plainText: workingHtml.replace(/<[^>]+>/g, ' '),
+            });
+            const useful = filterOnTopicTerms(filterUsefulNlpTerms(merged), ctx.keyword);
+            if (useful.length > baseTerms.length) {
+               const nextScoreData = { ...ctx.scoreData, terms: useful };
+               ctx = { ...ctx, scoreData: nextScoreData };
+               if (scoreData) Object.assign(scoreData, { terms: useful });
+               try {
+                  const articleIdSql = await getArticleIdSql();
+                  await db.query(
+                     `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
+                     { replacements: [JSON.stringify(nextScoreData), articleId] },
+                  );
+               } catch { /* non-fatal */ }
+               sse(res, 'terms', { terms: useful });
+            }
+         }
+      }
 
       let changedCount = 0;
       let aiTokens = 0;
+      let roundsRun = 0;
+      let finalSeo = 0;
+      let finalAi = 0;
+      let finalContent = 0;
+
+      sse(res, 'meta', {
+         total: splitSections(workingHtml).length,
+         targetSeo: TARGET_SEO_SCORE,
+         targetAi: TARGET_AI_SCORE,
+         maxRounds: MAX_ROUNDS,
+      });
 
       try {
-         for (const step of plan.steps) {
-            if (aborted) break;
+         for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
+            roundsRun = round;
+            const sections = splitSections(workingHtml);
+            const snapshot = ctx?.coverage ?? null;
+            const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
+            const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
+            const seoScore = scoreData?.seo_score
+               ?? (ctx?.scoreData as (ScoreData & { seo_score?: number }) | null)?.seo_score
+               ?? scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+            const aiScore = ctx && articleId != null
+               ? scoreAiFromContext(ctx, await readLatestAiScore(Number(articleId)))
+               : 0;
+            const mode = selectOptimizeMode(seoScore, aiScore);
 
-            const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
+            let plan: Plan = ctx
+               ? buildOptimizationPlan({
+                  sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used, seoScore, aiScore,
+               })
+               : legacyPlan(sections, scoreData, workingHtml);
 
-            if (step.focus === 'skip') {
-               sse(res, 'section', buildSectionEvent(section, { oldHtml: step.html, newHtml: step.html, changed: false }, step));
-               continue;
+            if (!allowNewSections) {
+               plan = {
+                  ...plan,
+                  steps: plan.steps.map((step) => (
+                     step.focus === 'expand'
+                        ? { ...step, focus: 'ai-coverage' as const, mode: 'less' as const }
+                        : { ...step, mode: step.mode === 'expand' ? 'less' as const : step.mode }
+                  )),
+               };
             }
 
-            let newHtml = section.html;
-            const MAX_ATTEMPTS = 3; // 1 initial + 2 retries
-            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-               try {
-                  const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                     body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        max_tokens: 4000,
-                        temperature: 0.3,
-                        messages: [
-                           { role: 'system', content: step.systemPrompt },
-                           { role: 'user', content: step.userInstruction ?? `Improve this section:\n\n${section.html}` },
-                        ],
-                     }),
-                     signal: controller.signal,
-                  });
-                  if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-                  const data = await aiRes.json();
-                  aiTokens += data.usage?.total_tokens || 0;
-                  const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
-                  if (isUsableEdit(cleaned)) newHtml = cleaned; // else keep original (empty/garbage)
-                  break; // success — stop retrying
-               } catch (error) {
-                  // An aborted run is not a retriable failure — break out and stop.
-                  if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
-                  if (attempt === MAX_ATTEMPTS) newHtml = section.html; // all attempts failed → skip
+            if (plan.trimmed && round === 1) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
+
+            let roundChanged = 0;
+            const brief = ctx ? globalOptimizeBrief(ctx, workingHtml, mode) : '';
+
+            for (const step of plan.steps) {
+               if (aborted) break;
+
+               const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
+
+               if (step.focus === 'skip') {
+                  continue;
+               }
+
+               let newHtml = section.html;
+               const systemPrompt = `${step.systemPrompt}${brief}`;
+               const MAX_ATTEMPTS = 3;
+               for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+                  try {
+                     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                           model: 'deepseek-chat',
+                           max_tokens: 4000,
+                           temperature: 0.3,
+                           messages: [
+                              { role: 'system', content: systemPrompt },
+                              { role: 'user', content: step.userInstruction ?? `Improve this section:\n\n${section.html}` },
+                           ],
+                        }),
+                        signal: controller.signal,
+                     });
+                     if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
+                     const data = await aiRes.json();
+                     aiTokens += data.usage?.total_tokens || 0;
+                     const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
+                     if (isUsableEdit(cleaned)) newHtml = cleaned;
+                     break;
+                  } catch (error) {
+                     if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
+                     if (attempt === MAX_ATTEMPTS) newHtml = section.html;
+                  }
+               }
+
+               if (aborted) break;
+
+               const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
+               if (changed) {
+                  roundChanged += 1;
+                  const idx = sections.findIndex((s) => s.id === section.id);
+                  if (idx >= 0) sections[idx] = { ...sections[idx], html: newHtml };
                }
             }
 
-            if (aborted) break;
+            workingHtml = joinSections(sections);
+            finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+            finalAi = ctx && articleId != null
+               ? scoreAiFromContext(ctx, await readLatestAiScore(Number(articleId)))
+               : 0;
+            finalContent = computeOverallContentScore(finalSeo, finalAi);
+            sse(res, 'progress', {
+               round,
+               seo: finalSeo,
+               ai: finalAi,
+               content: finalContent,
+               mode,
+               targetSeo: TARGET_SEO_SCORE,
+               targetAi: TARGET_AI_SCORE,
+               changed: roundChanged,
+            });
 
-            const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
-            const result: SectionResult = { oldHtml: section.html, newHtml, changed };
+            if ((finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE) || roundChanged === 0) break;
+         }
+
+         // One review diff: original → final (after all rounds).
+         const originalSections = splitSections(content);
+         const finalSections = splitSections(workingHtml);
+         for (let i = 0; i < originalSections.length; i += 1) {
+            const old = originalSections[i];
+            const neu = finalSections[i] ?? old;
+            const changed = normalizeHtmlForDiff(old.html) !== normalizeHtmlForDiff(neu.html);
             if (changed) changedCount += 1;
-            sse(res, 'section', buildSectionEvent(section, result, step));
+            sse(res, 'section', buildSectionEvent(
+               old,
+               { oldHtml: old.html, newHtml: neu.html, changed },
+               { sectionId: old.id, index: old.index, headingText: old.headingText, focus: 'seo-terms', systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: 'Multi-round optimize', mode: 'normal' },
+            ));
          }
       } finally {
-         // B cubic-P1: record spend even on a mid-run throw (mirrors deep-analysis.ts finally).
          if (!aborted && orgId != null && shouldChargeCredit(changedCount, aiTokens)) {
             await recordAiTokens(orgId, aiTokens);
          }
@@ -225,12 +391,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (aborted) return;
 
-      // Charge the shared pool only when the run produced changes ("no changes ⇒ no credit deducted").
-      // shouldChargeCredit is deterministic on changedCount/aiTokens, so this flag can't diverge
-      // from the spend already recorded in the finally above.
       const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
 
-      sse(res, 'done', { changedCount, total: plan.steps.length, promptVersion: PROMPT_VERSION, creditDeducted, trimmed: plan.trimmed, ignoredLift: plan.ignoredLift });
+      sse(res, 'done', {
+         changedCount, total: splitSections(content).length, promptVersion: PROMPT_VERSION,
+         creditDeducted, rounds: roundsRun,
+         seo: finalSeo, ai: finalAi, content: finalContent,
+         targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE,
+      });
    } catch (error) {
       if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
    } finally {

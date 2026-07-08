@@ -4,8 +4,10 @@ import db from '../database/database';
 import { ensureTenancyTables } from './ensureTenancyTables';
 import { getArticleIdSql } from './articleSql';
 
-type Row = Record<string, any>;
-async function select(sql: string, replacements: any[]): Promise<Row[]> {
+import type { DbRow, SqlReplacements } from './types/db';
+
+type Row = DbRow;
+async function select(sql: string, replacements: SqlReplacements): Promise<Row[]> {
    const [rows] = await db.query(sql, { replacements }) as [Row[], unknown];
    return rows;
 }
@@ -45,9 +47,9 @@ async function migrateDomainsToWorkspaces(orgId: number, userId: string, isOwner
    for (const s of shared) {
       const wsId = Number(s.ws);
       const domains = await select('SELECT "ID" AS id, domain FROM domain WHERE workspace_id = ? ORDER BY "ID" ASC', [wsId]);
-      await db.query('UPDATE workspaces SET name = ? WHERE id = ?', { replacements: [domains[0].domain, wsId] });
+      await db.query('UPDATE workspaces SET name = ? WHERE id = ?', { replacements: [String(domains[0].domain ?? ''), wsId] });
       for (let i = 1; i < domains.length; i += 1) {
-         const newWs = await createWorkspace(orgId, domains[i].domain);
+         const newWs = await createWorkspace(orgId, String(domains[i].domain ?? ''));
          await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', { replacements: [newWs, domains[i].id] });
       }
    }
@@ -60,7 +62,7 @@ async function migrateDomainsToWorkspaces(orgId: number, userId: string, isOwner
       [userId, orgId],
    );
    for (const d of orphans) {
-      const newWs = await createWorkspace(orgId, d.domain);
+      const newWs = await createWorkspace(orgId, String(d.domain ?? ''));
       await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', { replacements: [newWs, d.id] });
    }
 }
@@ -78,7 +80,7 @@ export async function ensureUserTenancy(userId: string): Promise<{ orgId: number
    if (!member.length) {
       try {
          await db.transaction(async (t: Transaction) => {
-            const opt = (r: any[]) => ({ replacements: r, transaction: t } as any);
+            const opt = (r: SqlReplacements) => ({ replacements: r, transaction: t });
             await db.query('INSERT INTO organizations (owner_user_id, name) VALUES (?, ?)', opt([userId, 'My organization']));
             const [orgs] = await db.query('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', opt([userId])) as unknown as [Row[], unknown];
             const newOrgId = Number(orgs[0].id);
@@ -106,7 +108,7 @@ export async function getAccessibleWorkspaceIds(userId: string | null | undefine
    const wsIdsRaw = member[0].workspace_ids;
    if (role === 'owner' || role === 'admin' || wsIdsRaw == null) return all;
    let allowed: number[] = [];
-   try { allowed = (JSON.parse(wsIdsRaw) as any[]).map((n) => Number(n)); } catch { allowed = []; }
+   try { allowed = (JSON.parse(String(wsIdsRaw)) as unknown[]).map((n) => Number(n)); } catch { allowed = []; }
    return all.filter((id) => allowed.includes(id));
 }
 

@@ -51,9 +51,9 @@ interface DomainRec {
 }
 
 const DashboardPage: NextPage = () => {
-  const { data: domainsData } = useFetchDomains({} as any);
-  const queryClient = useQueryClient();
   const router = useRouter();
+  const { data: domainsData } = useFetchDomains(router);
+  const queryClient = useQueryClient();
   const { data: wsData } = useWorkspaces();
   // SSR-safe active workspace id so links carry the /workspace/<id> prefix the rest of
   // the app uses (parsed from the URL after mount; falls back to the workspaces activeId).

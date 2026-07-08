@@ -40,14 +40,14 @@ async function getVersions(id: string, res: NextApiResponse) {
           ORDER BY created_at DESC`,
          [id],
       );
-      // Expose each version's content score (stored in score_data._computed_score) without
-      // shipping the full score_data blob to the client.
+      // Expose the main Content Score gauge value (NOT seo_score / audit score).
       const versions = rows.map((r) => {
          let score: number | null = null;
          if (r.score_data) {
             try {
                const sd = typeof r.score_data === 'string' ? JSON.parse(r.score_data) : r.score_data;
-               if (typeof sd?._computed_score === 'number') score = sd._computed_score;
+               if (typeof sd?._content_score === 'number') score = sd._content_score;
+               else if (typeof sd?._computed_score === 'number') score = sd._computed_score;
             } catch { /* ignore malformed score_data */ }
          }
          const { score_data, ...rest } = r;

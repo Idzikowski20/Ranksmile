@@ -4,7 +4,8 @@
 // used for "You" (apples-to-apples factors), and pulls NLP terms from /analyze-serp.
 // Injected into computeAudit; any failure degrades to null → placeholder result.
 import { getCompetitors, scanCompetitors } from './competitorScan';
-import { fetchPage, extractFactorValues, RealAuditData, RichTerm, auditContentScore, termCoverageFraction } from './auditCompute';
+import { fetchPage, extractFactorValues, RealAuditData, auditContentScore, termScoreFraction } from './auditCompute';
+import type { RichTerm } from './competitorContentScore';
 import { getSearchVolumes } from './dataforseo';
 import { callSidecar } from './sidecar';
 import { isContentCompetitor } from './competitorRelevance';
@@ -91,7 +92,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
 
    const outCompetitors = competitors.map(({ bodyText, ...c }) => {
       if (!terms.length) return c;
-      const cov = termCoverageFraction(bodyText, terms);
+      const cov = termScoreFraction(bodyText, terms);
       const wordFrac = avgWords > 0 ? (c.values.word_count_body || 0) / avgWords : 0;
       return { ...c, contentScore: auditContentScore(cov, wordFrac, structFrac(c.values)) };
    });

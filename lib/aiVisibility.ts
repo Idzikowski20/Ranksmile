@@ -3,11 +3,13 @@
 
 export type AiVisPrompt = { id: number, text: string, provenance: string[], selected: boolean };
 export type AiVisTopic = { title: string, prompts: AiVisPrompt[] };
+export type AiVisPriority = 'core' | 'supporting' | 'long_tail';
 export type AiVisConfig = {
    id: number,
    brandName: string,
    promptLimit: number,
    models: string[],
+   priority: AiVisPriority,
    completedAt: string | null,
    topics: AiVisTopic[],
 };
@@ -31,13 +33,47 @@ export const AI_VIS_SCAN_STALE_MS = 10 * 60 * 1000; // a `running` scan older th
 
 /** Cyclic-tracking tunables — one home so cadence, cooldown, scheduler tick, and
  *  batch size are all findable together. SCHEDULER_TICK_HOURS is mirrored in
- *  python-sidecar/pipeline/ai_vis_scheduler.py (Python can't import TS). */
+ *  python-sidecar/pipeline/ai_vis_scheduler.py (Python can't import TS).
+ *
+ *  Tiered refresh (DataForSEO budget guidance): core keywords scan most often,
+ *  long-tail least — measured from finished_at of the latest completed scan. */
 export const AI_VIS_SETTINGS = {
-   REFRESH_INTERVAL_DAYS: 14,       // auto re-scan cadence, measured from finished_at
-   MANUAL_REFRESH_COOLDOWN_DAYS: 7, // below this a manual scan asks for confirmation
-   SCHEDULER_TICK_HOURS: 6,         // sidecar scheduler tick
-   SCHEDULER_BATCH_LIMIT: 5,        // max scans enqueued per due-scans tick (oldest first)
+   REFRESH_INTERVAL_DAYS: 7,        // legacy default (= supporting tier)
+   MANUAL_REFRESH_COOLDOWN_DAYS: 3, // legacy default (= supporting tier)
+   SCHEDULER_TICK_HOURS: 6,
+   SCHEDULER_BATCH_LIMIT: 5,
+   REFRESH_INTERVALS: {
+      core: 1,
+      supporting: 7,
+      long_tail: 14,
+   } as Record<AiVisPriority, number>,
+   MANUAL_COOLDOWNS: {
+      core: 1,
+      supporting: 3,
+      long_tail: 7,
+   } as Record<AiVisPriority, number>,
 } as const;
+
+export const AI_VIS_PRIORITY_LABEL: Record<AiVisPriority, string> = {
+   core: 'Kluczowe (codziennie)',
+   supporting: 'Wspierające (co tydzień)',
+   long_tail: 'Long-tail (co 2 tygodnie)',
+};
+
+export function normalizeAiVisPriority(raw: unknown): AiVisPriority {
+   if (raw === 'core' || raw === 'long_tail') return raw;
+   return 'supporting';
+}
+
+export function refreshIntervalDays(priority?: AiVisPriority | string | null): number {
+   const p = normalizeAiVisPriority(priority);
+   return AI_VIS_SETTINGS.REFRESH_INTERVALS[p];
+}
+
+export function manualRefreshCooldownDays(priority?: AiVisPriority | string | null): number {
+   const p = normalizeAiVisPriority(priority);
+   return AI_VIS_SETTINGS.MANUAL_COOLDOWNS[p];
+}
 
 /** Keep only recognised model ids (used by both config save and the scan runner). */
 export function sanitizeModels(models: unknown): string[] {

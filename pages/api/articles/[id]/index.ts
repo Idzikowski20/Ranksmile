@@ -75,7 +75,7 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
    try {
      if (score_data) {
        const sd = typeof score_data === 'string' ? JSON.parse(score_data) : score_data;
-       contentScore = sd._computed_score ?? 0;
+       contentScore = sd._content_score ?? sd._computed_score ?? 0;
      }
    } catch { contentScore = 0; }
 

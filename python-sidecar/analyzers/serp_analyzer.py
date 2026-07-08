@@ -5,13 +5,10 @@ SEO terms from competitor content.
 import asyncio
 import os
 import re
-import unicodedata
 from urllib.parse import urlparse
 
 import httpx
-import numpy as np
 from bs4 import BeautifulSoup
-from sklearn.feature_extraction.text import TfidfVectorizer
 from analyzers.semantic_terms import extract_semantic_terms
 
 
@@ -40,40 +37,6 @@ async def _fetch_via_spa_fallback(url: str, plain_text: str) -> str | None:
         print(f"[serp_analyzer] SPA fallback failed for {url}: {exc}")
 
     return None
-
-
-POLISH_STOPWORDS = {
-    "aby", "ale", "albo", "ani", "bez", "bo", "by", "byc", "byl", "byla", "bylo",
-    "byly", "czy", "dla", "do", "gdy", "gdzie", "go", "ich", "im", "jest",
-    "jesli", "juz", "kiedy", "kto", "ktora", "ktore", "ktory", "lub", "ma",
-    "mial", "miec", "mnie", "moze", "mozna", "na", "nad", "nam", "nas", "nie",
-    "nim", "niz", "oraz", "po", "pod", "przed", "przez", "przy", "sa", "sie",
-    "sobie", "tak", "takze", "tego", "tej", "ten", "teraz", "tez", "to",
-    "tych", "tym", "u", "w", "we", "z", "za", "ze", "zeby", "warto",
-    "nalezy", "czasem", "sytuacja", "informacje",
-}
-
-GENERIC_TERMS = {
-    "strona", "artykul", "tekst", "temat", "firma", "firmy", "osoba", "osoby",
-    "przypadek", "przyklad", "mozliwosc", "rozwiazanie",
-}
-
-
-def normalize_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFD", text.lower())
-    normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
-    return re.sub(r"\s+", " ", normalized).strip()
-
-
-def is_useful_phrase(phrase: str) -> bool:
-    tokens = [t for t in phrase.split() if t]
-    if not tokens:
-        return False
-    if all(t in POLISH_STOPWORDS or t in GENERIC_TERMS for t in tokens):
-        return False
-    if len(tokens) == 1 and (tokens[0] in POLISH_STOPWORDS or len(tokens[0]) < 5):
-        return False
-    return not any(t in POLISH_STOPWORDS for t in tokens)
 
 
 def domain_from_url(url: str) -> str:
@@ -219,73 +182,9 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
 
 
 def _extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
-    """
-    DEPRECATED: Replaced by analyzers.semantic_terms.extract_semantic_terms()
-    in analyze_serp(). Kept for backward compatibility.
-
-    Extracts NLP terms from competitor pages using a two-pass approach:
-    1. TF-IDF discovers candidate phrases (good at surfacing relevant multi-word terms)
-    2. Actual term frequency sets target_count (reflects real competitor usage)
-
-    Only terms appearing in ≥30% of competitor pages are included — this ensures
-    we measure terms that are CONSISTENTLY used across top results, not outliers.
-    """
-    if not texts:
-        return []
-
-    n_docs = len(texts)
-    normalized_texts = [normalize_text(text) for text in texts]
-
-    # Step 1: TF-IDF discovers candidate phrases that must appear in ≥30% of pages
-    min_df = max(2, int(n_docs * 0.3))
-    try:
-        vectorizer = TfidfVectorizer(
-            ngram_range=(1, 3),
-            max_features=300,
-            stop_words=list(POLISH_STOPWORDS),
-            min_df=min_df,
-            token_pattern=r"(?u)\b[a-z0-9][a-z0-9-]{2,}\b",
-        )
-        vectorizer.fit_transform(normalized_texts)
-        candidate_terms: set[str] = set(vectorizer.get_feature_names_out())
-    except Exception as exc:
-        print(f"[serp_analyzer] TF-IDF error: {exc}")
-        candidate_terms = set()
-
-    # Step 2: For each candidate, count real occurrences across all pages.
-    # target_count = average count across ALL competitor pages (not just those containing the term),
-    # so a term in 10/10 pages with avg 5 occurrences → target=5;
-    # a term in 3/10 pages with avg 2 occurrences → target=1 (rounds down — correct, it's rare).
-    result_by_term: dict[str, dict] = {}
-
-    # Always seed with keyword itself (TF-IDF may miss it due to low IDF if it's ubiquitous)
-    kw = normalize_text(keyword)
-    if kw and is_useful_phrase(kw):
-        kw_total = sum(t.count(kw) for t in normalized_texts)
-        result_by_term[kw] = {
-            "term": kw,
-            "target_count": max(1, round(kw_total / n_docs)),
-            "doc_freq": n_docs,
-        }
-
-    for term in candidate_terms:
-        if not is_useful_phrase(term):
-            continue
-        doc_counts = [t.count(term) for t in normalized_texts]
-        docs_with_term = sum(1 for c in doc_counts if c > 0)
-        if docs_with_term < min_df:
-            continue
-        avg_across_all = sum(doc_counts) / n_docs
-        result_by_term[term] = {
-            "term": term,
-            "target_count": max(1, round(avg_across_all)),
-            "doc_freq": docs_with_term,
-        }
-
-    # Sort: terms appearing in more competitor pages first, then by count
-    result = list(result_by_term.values())
-    result.sort(key=lambda x: (x["doc_freq"], x["target_count"]), reverse=True)
-    return [{"term": r["term"], "target_count": r["target_count"]} for r in result[:50]]
+    """Backward-compatible alias — implementation lives in competitor_terms."""
+    from analyzers.competitor_terms import extract_nlp_terms
+    return extract_nlp_terms(texts, keyword)
 
 
 def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None) -> dict:
@@ -314,8 +213,8 @@ def _compute_targets(texts: list[str], soups: list[BeautifulSoup] | None = None)
         paragraph_counts = [max(5, wc // 120) for wc in word_counts]
 
     return {
-        "words_min": int(min(word_counts) * 0.85),
-        "words_max": int(max(word_counts) * 1.15),
+        "words_min": int(min(word_counts)),
+        "words_max": int(max(word_counts)),
         "words_target": int(sum(word_counts) / len(word_counts)),
         "headings_min": max(3, min(heading_counts)),
         "headings_max": max(8, max(heading_counts)),

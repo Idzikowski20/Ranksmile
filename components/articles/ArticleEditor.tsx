@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
+import type { Editor, JSONContent } from '@tiptap/core';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PendingAction } from '../../lib/ai/types';
+import type { ArticleEditorHandle } from '../../lib/types/editor';
 import { ArrowUp01Icon, ArrowDown01Icon } from 'hugeicons-react';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -10,7 +13,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
-import type { ScoreData } from '../../lib/contentScore';
+import type { ScoreData, NlpTerm } from '../../lib/contentScore';
 import { getErrorMessage } from '../../lib/errors';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
 import SurferImageNode from './SurferImageNode';
@@ -58,11 +61,13 @@ interface Props {
   initialFeaturedImage?: { url: string; alt: string } | null;
   onFeaturedImageChange?: (img: { url: string; alt: string } | null) => void;
   /** Prop-based ref — bypasses Next.js dynamic() which doesn't forward React refs */
-  editorRef?: React.MutableRefObject<any>;
+  editorRef?: React.MutableRefObject<ArticleEditorHandle | null>;
   /** When true, inserted links are highlighted purple for review */
   reviewMode?: boolean;
   /** When true, the format toolbar is visually disabled (Auto-Optimize section review). */
   formattingSuspended?: boolean;
+  /** Deep analysis / import — lock the document and toolbar. */
+  readOnly?: boolean;
   /** Highlight NLP entity terms inline (Write & Optimize). */
   highlightTerms?: boolean;
   /** Fired with true when Surfy is processing, false when done */
@@ -93,7 +98,7 @@ interface Props {
 }
 
 interface MenuBarProps {
-  editor: any;
+  editor: Editor;
   keyword?: string;
   onAskSurfy: () => void;
   formattingSuspended?: boolean;
@@ -961,15 +966,27 @@ const SURFY_TOOL_LABELS: Record<string, string> = {
 };
 const surfyToolLabel = (tool: string) => SURFY_TOOL_LABELS[tool] || tool;
 
+type SurfyAgentDonePayload = {
+  message?: string;
+  finalHtml?: string | null;
+  content?: string | null;
+  action?: string;
+  thinking?: string;
+  changelog?: unknown[];
+  pendingAction?: PendingAction | null;
+  meta?: { metaTitle?: string; metaDescription?: string } | null;
+  usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+};
+
 /** Read the agent's SSE stream, forwarding live events, and resolve with the terminal `done` payload. */
 async function readSurfyAgentStream(
   res: Response,
   on: { text: (delta: string) => void; step: (d: { phase: string; tool: string }) => void; usage: (n: number) => void },
-): Promise<any> {
+): Promise<SurfyAgentDonePayload> {
   const reader = res.body!.getReader();
   const dec = new TextDecoder();
   let buf = '';
-  let done: any = null;
+  let done: SurfyAgentDonePayload | null = null;
   for (;;) {
     const { value, done: streamDone } = await reader.read();
     if (streamDone) break;
@@ -980,13 +997,13 @@ async function readSurfyAgentStream(
       const ev = /event: (.*)/.exec(f)?.[1];
       const dataLine = /data: (.*)/.exec(f)?.[1];
       if (!ev || !dataLine) continue;
-      let parsed: any;
-      try { parsed = JSON.parse(dataLine); } catch { continue; }
-      if (ev === 'text') on.text(parsed.delta || '');
-      else if (ev === 'step') on.step(parsed);
-      else if (ev === 'usage') on.usage(parsed.totalTokens || 0);
-      else if (ev === 'done') done = parsed;
-      else if (ev === 'error') throw new Error(parsed.error || 'stream error');
+      let parsed: Record<string, unknown>;
+      try { parsed = JSON.parse(dataLine) as Record<string, unknown>; } catch { continue; }
+      if (ev === 'text') on.text(String(parsed.delta || ''));
+      else if (ev === 'step') on.step(parsed as { phase: string; tool: string });
+      else if (ev === 'usage') on.usage(Number(parsed.totalTokens) || 0);
+      else if (ev === 'done') done = parsed as SurfyAgentDonePayload;
+      else if (ev === 'error') throw new Error(String(parsed.error || 'stream error'));
     }
   }
   if (!done) throw new Error('stream ended without result');
@@ -1000,7 +1017,7 @@ const SlashIcon = ({ d }: { d: string }) => (
 );
 
 const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() => void>): SlashItem[] => {
-  const del = (editor: any, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
+  const del = (editor: Editor, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
   const all: SlashItem[] = [
     { title: 'Ask Surfy', hint: '/ask', icon: <IconSurfy size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
     { title: 'Add an image', hint: '/img', icon: <SlashIcon d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6" />, command: ({ editor, range }) => {
@@ -1029,7 +1046,7 @@ const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() 
   return all.filter((i) => i.title.toLowerCase().includes(q) || i.hint.slice(1).startsWith(q));
 };
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1039,8 +1056,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const commentsRef = useRef<CommentAnchor[]>(commentAnchors);
     commentsRef.current = commentAnchors;
     // Live refs for the term-highlight decorations (read inside the PM plugin).
-    const termsRef = useRef<any[]>([]);
-    termsRef.current = (scoreData?.terms as Array<{ term: string; current_count?: number; target_count: number }>) || [];
+    const termsRef = useRef<NlpTerm[]>([]);
+    termsRef.current = scoreData?.terms || [];
     const highlightTermsRef = useRef<boolean>(highlightTerms ?? true);
     highlightTermsRef.current = highlightTerms ?? true;
     const plagSentencesRef = useRef<string[]>([]);
@@ -1215,7 +1232,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           }
         }
 
-        let data: any;
+        let data: SurfyAgentDonePayload & Record<string, unknown>;
         if (useAgent) {
           // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
           if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
@@ -1235,19 +1252,33 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           setSurfyUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
           setSurfyTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
         } else {
-          data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Request failed');
+          const json = await res.json() as Record<string, unknown>;
+          if (!res.ok) throw new Error(String(json.error || 'Request failed'));
+          data = json as SurfyAgentDonePayload & Record<string, unknown>;
         }
 
         if (useAgent) {
           surfyMetaRef.current = data.meta || null;
-          setSurfyResponse({ action: 'replace_article', message: data.message, content: data.finalHtml || null, changelog: data.changelog || [], steps: undefined, pendingAction: data.pendingAction || null });
+          setSurfyResponse({
+            action: 'replace_article',
+            message: data.message || '',
+            content: data.finalHtml || null,
+            changelog: (data.changelog || []) as Array<{ tool: string; summary: string }>,
+            steps: undefined,
+            pendingAction: data.pendingAction || null,
+          });
         } else {
           surfyMetaRef.current = null;
-          setSurfyResponse({ action: data.action, message: data.message, content: data.content });
+          setSurfyResponse({ action: data.action, message: data.message || '', content: data.content ?? null });
         }
         setSurfyHistory((prev) => {
-          const next = [...prev, { role: 'assistant' as const, message: data.message, content: data.finalHtml ?? data.content, action: data.action, thinking: data.thinking || '' }];
+          const next = [...prev, {
+            role: 'assistant' as const,
+            message: data.message || '',
+            content: data.finalHtml ?? data.content ?? null,
+            action: data.action,
+            thinking: data.thinking || '',
+          }];
           return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
         });
         setSurfyPrompt('');
@@ -1312,7 +1343,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     // Always-current editor ref — useEditor returns null on first render in
     // Next.js (TipTap v3 detects window.next and forces immediatelyRender:false).
     // A plain ref lets getEditor() read the live value without stale-closure issues.
-    const editorLiveRef = useRef<any>(null);
+    const editorLiveRef = useRef<Editor | null>(null);
     const surfyOpenRef = useRef(surfyOpen);
     surfyOpenRef.current = surfyOpen;
     const surfyMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
@@ -1394,7 +1425,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       close: () => setSurfyOpen(false),
     };
 
-    const calcAndEmit = useCallback((ed: any) => {
+    const calcAndEmit = useCallback((ed: Editor) => {
       let html = ed.getHTML();
       // Strip highlight marks when Surfy is open to prevent leaking into saved content
       if (surfyOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
@@ -1403,13 +1434,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       // more robustly than a naive split) with a split fallback if unavailable.
       const words = ed.storage.characterCount?.words?.() ?? text.split(/\s+/).filter(Boolean).length;
       const json = ed.getJSON();
-      const headings = (json.content || []).filter((n: any) => n.type === 'heading').length;
-      const paragraphs = (json.content || []).filter((n: any) => n.type === 'paragraph' && n.content?.length).length;
+      const content = json.content || [];
+      const headings = content.filter((n: JSONContent) => n.type === 'heading').length;
+      const paragraphs = content.filter((n: JSONContent) => n.type === 'paragraph' && n.content?.length).length;
       onChangeRef.current(html, text, words, headings, paragraphs);
       if (onHeadingsChangeRef.current) {
         const items: HeadingItem[] = [];
-        ed.state.doc.descendants((node: any, pos: number) => {
-          if (node.type.name === 'heading') items.push({ level: node.attrs.level, text: node.textContent, pos });
+        ed.state.doc.descendants((node: PMNode, pos: number) => {
+          if (node.type.name === 'heading') items.push({ level: node.attrs.level as number, text: node.textContent, pos });
         });
         onHeadingsChangeRef.current(items);
       }
@@ -1465,6 +1497,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       ],
       content,
       immediatelyRender: false,
+      editable: !readOnly,
       onCreate({ editor: ed }) { calcAndEmit(ed); },
       // Only recompute on real content changes — skips selection/decoration-refresh
       // transactions (e.g. the no-op tx we dispatch to repaint comment highlights).
@@ -1473,6 +1506,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     // Keep the live ref in sync on every render
     editorLiveRef.current = editor;
+
+    useEffect(() => {
+      if (!editor) return;
+      editor.setEditable(!readOnly);
+    }, [editor, readOnly]);
+
+    const toolbarLocked = !!formattingSuspended || !!readOnly;
 
     const surfyHlRangeRef = useRef<{ from: number; to: number } | null>(null);
     useEffect(() => {
@@ -1653,17 +1693,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           /* YouTube embed */
           .art-editor-scroll .ProseMirror div[data-youtube-video] { margin: 16px 0; }
           .art-editor-scroll .ProseMirror div[data-youtube-video] iframe { max-width: 100%; width: 100%; aspect-ratio: 16 / 9; height: auto; border: none; border-radius: 8px; }
+          .art-editor-scroll[data-readonly="true"] { cursor: wait; }
+          .art-editor-scroll[data-readonly="true"] .ProseMirror { cursor: wait; user-select: none; }
+          .art-editor-scroll[data-readonly="true"] .ProseMirror * { pointer-events: none; }
         `}</style>
 
         {/* Toolbar */}
-        <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} formattingSuspended={formattingSuspended} />
+        {editor && <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} formattingSuspended={toolbarLocked} />}
 
         {/* Scrollable editor — Title/Description + Featured image now live in the
             "Publish or Export" panel, so the editor shows the article body only.
             Wrapped in a relative container so the progressive-blur fades pin to the
             scroll-area edges (below the toolbar) and don't scroll with the content. */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'}>
+        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'}>
           <div
             ref={editorWrapRef}
             className={surfySelection ? 'surfy-selection-highlight' : ''}

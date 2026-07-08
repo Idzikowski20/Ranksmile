@@ -1,10 +1,11 @@
 import db from '../database/database';
 import { ensureUserTenancy } from './tenancy';
+import type { DbRow, SqlReplacements } from './types/db';
 
 export type Workspace = { id: number; name: string; domain?: string | null };
-type Row = Record<string, any>;
+type Row = DbRow;
 
-async function select(sql: string, replacements: any[]): Promise<Row[]> {
+async function select(sql: string, replacements: SqlReplacements): Promise<Row[]> {
    const [rows] = await db.query(sql, { replacements }) as [Row[], unknown];
    return rows;
 }

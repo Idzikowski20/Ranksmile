@@ -62,8 +62,16 @@ const TopbarInbox = () => {
         const [dRes, aRes] = await Promise.all([fetch('/api/domains'), fetch('/api/articles')]);
         const dJson = await dRes.json();
         const aJson = await aRes.json();
-        const domains: any[] = dJson?.domains || [];
-        const articles: any[] = aJson?.articles || [];
+        const domains: DomainType[] = dJson?.domains || [];
+        type InboxArticle = {
+          domain_id: number;
+          content_score?: number;
+          source?: string;
+          title?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        const articles: InboxArticle[] = aJson?.articles || [];
         const byDomain = new Map<number, { count: number; at: string }>();
         articles.forEach((a) => {
           const cs = a.content_score ?? 0;

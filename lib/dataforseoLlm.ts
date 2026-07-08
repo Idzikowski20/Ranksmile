@@ -9,6 +9,7 @@
  */
 import axios from 'axios';
 import { isDataForSeoConfigured } from './dataforseo';
+import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 
 const BASE = 'https://api.dataforseo.com/v3';
 
@@ -151,7 +152,14 @@ export function parseAiOverview(items: unknown[]): { text: string, citations: Ll
    return { text, citations };
 }
 
-async function postWithRetry(path: string, task: Record<string, unknown>): Promise<{ taskData: any, costUsd: number }> {
+type DfsTaskPayload = {
+   status_code?: number,
+   status_message?: string,
+   cost?: number,
+   result?: Array<{ items?: unknown[], fan_out_queries?: unknown, refinement_chips?: unknown }>,
+};
+
+async function postWithRetry(path: string, task: Record<string, unknown>): Promise<{ taskData: DfsTaskPayload, costUsd: number }> {
    const MAX_ATTEMPTS = 3;
    let lastErr: unknown;
    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -204,15 +212,25 @@ export async function runModelPrompt(model: AiModel, prompt: string, countryIso 
    }
 
    if (model === 'ai_mode') {
-      const task: Record<string, unknown> = { keyword: prompt.slice(0, 700), location_code: LOCATION_CODE_PL, language_code: 'pl' };
+      const task: Record<string, unknown> = {
+         keyword: prompt.slice(0, 700),
+         location_code: LOCATION_CODE_PL,
+         language_code: 'pl',
+         ...DFS_SERP_AI_ELEMENT,
+      };
       const { taskData, costUsd } = await postWithRetry('/serp/google/ai_mode/live/advanced', task);
       const result = taskData?.result?.[0];
       const parsed = parseAiModeItems(result?.items ?? []);
       return { ...parsed, fanOutQueries: extractFanOut(result), costUsd };
    }
 
-   // ai_overview: pull it from a normal Google organic SERP.
-   const task: Record<string, unknown> = { keyword: prompt.slice(0, 700), location_code: LOCATION_CODE_PL, language_code: 'pl' };
+   // ai_overview: pull it from a normal Google organic SERP (page 1 only).
+   const task: Record<string, unknown> = {
+      keyword: prompt.slice(0, 700),
+      location_code: LOCATION_CODE_PL,
+      language_code: 'pl',
+      ...DFS_SERP_AI_ELEMENT,
+   };
    const { taskData, costUsd } = await postWithRetry('/serp/google/organic/live/advanced', task);
    const parsed = parseAiOverview(taskData?.result?.[0]?.items ?? []);
    return { ...parsed, fanOutQueries: [], costUsd }; // ai_overview exposes no fan-out
