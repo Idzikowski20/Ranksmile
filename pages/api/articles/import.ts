@@ -5,6 +5,8 @@ import { QueryTypes } from 'sequelize';
 import * as cheerio from 'cheerio';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import type { ScoreData, NlpTerm } from '../../../lib/contentScore';
@@ -53,6 +55,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (!url) {
       return res.status(400).json({ error: 'url is required' });
+   }
+
+   const userId = await getCurrentUserId(req, res);
+   let domainId = Number(bodyDomainId) || 0;
+   if (domainId) {
+      const owned = await verifyDomainOwnershipById(domainId, userId ? String(userId) : null);
+      if (owned === null) return res.status(404).json({ error: 'Domain not found' });
+      if (owned === false) return res.status(403).json({ error: 'Access denied.' });
+      domainId = owned.ID;
+   } else {
+      const fallback = await firstAccessibleDomainId(userId ? String(userId) : null);
+      if (!fallback) return res.status(403).json({ error: 'No accessible domain to create the article under.' });
+      domainId = fallback;
    }
 
    try {
@@ -270,13 +285,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          _paragraph_count: paragraphCount,
       };
       // No _computed_score here — gauge updates after deep analysis applies competitor benchmarks.
-
-      // Target domain: explicit from the request (audit/recommendation imports), else the first.
-      let domainId = Number(bodyDomainId) || 0;
-      if (!domainId) {
-         const [domains] = await db.query('SELECT "ID" FROM domain LIMIT 1', { replacements: [] });
-         domainId = (domains as Array<{ ID: number }>)[0]?.ID || 1;
-      }
 
       // Slug from title
       const slug = title
