@@ -139,14 +139,14 @@ async def run_ai_visibility(
     for results in per_prompt_results:
         citations.extend(results)
 
-    prompts_cited = len({c["prompt"] for c in citations if c.get("is_own_domain")})
-    competitor_citations = len([c for c in citations if c.get("is_competitor")])
     readiness_scores = [
         c.get("answer_readiness_score", 0)
         for c in citations
         if c.get("answer_readiness_score") is not None
     ]
     extractability_score = round(sum(readiness_scores) / max(len(readiness_scores), 1))
+    prompts_cited = len({c["prompt"] for c in citations if (c.get("answer_readiness_score") or 0) >= 60})
+    competitor_citations = len([c for c in citations if c.get("is_competitor")])
 
     return {
         "prompts_total": len(prompts),

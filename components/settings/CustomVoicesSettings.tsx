@@ -4,8 +4,6 @@ import { useContentSettings, useUpdateContentSettings } from '../../services/con
 import { Button, Input, Textarea, Checkbox } from '../core';
 import Modal, { ModalBody, ModalFooter } from '../core/modal/modal';
 import {
-  SentrySettingsSection,
-  SentrySettingsRow,
   SentryPanel,
   SentryEmptyState,
 } from '../sentry-pages';
@@ -93,16 +91,13 @@ const CustomVoicesSettings = () => {
 
   return (
     <>
-      <SentrySettingsSection title="Custom voices">
-        <SentrySettingsRow
-          label="Voice library"
-          description="Manage custom voices used in Content Editor, Humanizer, and Surfer AI."
-        >
+      {voices.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
           <Button type="button" variant="primary" size="sm" onClick={() => setOpen(true)}>
             Add custom voice
           </Button>
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </div>
+      )}
 
       {voices.length === 0 ? (
         <SentryEmptyState
@@ -116,7 +111,8 @@ const CustomVoicesSettings = () => {
         />
       ) : (
         <SentryPanel noPadding>
-            {voices.map((v, i) => (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {voices.map((v) => (
               <div
                 key={v.id}
                 style={{
@@ -125,7 +121,6 @@ const CustomVoicesSettings = () => {
                   justifyContent: 'space-between',
                   gap: 12,
                   padding: '14px 16px',
-                  borderTop: i === 0 ? undefined : '1px solid #E4E4E7',
                 }}
               >
                 <div style={{ minWidth: 0 }}>
@@ -146,6 +141,7 @@ const CustomVoicesSettings = () => {
                 </Button>
               </div>
             ))}
+            </div>
         </SentryPanel>
       )}
 

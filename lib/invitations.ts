@@ -3,8 +3,10 @@ import db from '../database/database';
 import { ensureUserTenancy } from './tenancy';
 
 export type Invitation = { id: number; org_id: number; email: string; role: string; workspace_ids: string | null; token: string; status: string; expires_at: string | null };
-type Row = Record<string, any>;
-const select = async (sql: string, r: any[]): Promise<Row[]> => { const [rows] = await db.query(sql, { replacements: r }) as [Row[], unknown]; return rows; };
+import type { DbRow, SqlReplacements } from './types/db';
+
+type Row = DbRow;
+const select = async (sql: string, r: SqlReplacements): Promise<Row[]> => { const [rows] = await db.query(sql, { replacements: r }) as [Row[], unknown]; return rows; };
 
 export async function createInvitation(userId: string, p: { email: string; role: string; workspaceIds: number[] | null }): Promise<Invitation> {
    const { orgId } = await ensureUserTenancy(userId);

@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const domainRaw = (drows as Array<{ domain: string }>)[0]?.domain || '';
    const host = cleanHost(domainRaw);
    const sc = domainRaw ? await readLocalSCData(domainRaw) : false;
-   const items: any[] = sc && sc.thirtyDays ? sc.thirtyDays : [];
+   const items: SearchAnalyticsItem[] = sc && sc.thirtyDays ? sc.thirtyDays : [];
 
    const map = new Map<string, { clicks: number; impressions: number; posW: number }>();
    items.forEach((it) => {

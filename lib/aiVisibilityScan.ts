@@ -92,8 +92,23 @@ const defaultDueSelect: DueSelect = (sql, repl) => queryRows<{ id: number }>(sql
  */
 export async function findDueConfigIds(limit = AI_VIS_SETTINGS.SCHEDULER_BATCH_LIMIT, run: DueSelect = defaultDueSelect): Promise<number[]> {
    const isPg = !!process.env.DATABASE_URL;
-   const days = AI_VIS_SETTINGS.REFRESH_INTERVAL_DAYS;
-   const cutoff = isPg ? `NOW() - INTERVAL '${days} days'` : `datetime('now', '-${days} days')`;
+   const tierCutoff = (days: number) => (
+      isPg ? `NOW() - INTERVAL '${days} days'` : `datetime('now', '-${days} days')`
+   );
+   const coreCut = tierCutoff(AI_VIS_SETTINGS.REFRESH_INTERVALS.core);
+   const supportingCut = tierCutoff(AI_VIS_SETTINGS.REFRESH_INTERVALS.supporting);
+   const longTailCut = tierCutoff(AI_VIS_SETTINGS.REFRESH_INTERVALS.long_tail);
+   const dueExpr = isPg
+      ? `CASE COALESCE(c.priority, 'supporting')
+            WHEN 'core' THEN ${coreCut}
+            WHEN 'long_tail' THEN ${longTailCut}
+            ELSE ${supportingCut}
+         END`
+      : `CASE COALESCE(c.priority, 'supporting')
+            WHEN 'core' THEN ${coreCut}
+            WHEN 'long_tail' THEN ${longTailCut}
+            ELSE ${supportingCut}
+         END`;
    const cap = Number(limit) || AI_VIS_SETTINGS.SCHEDULER_BATCH_LIMIT;
    const rows = await run(
       `SELECT c.id AS id
@@ -102,7 +117,7 @@ export async function findDueConfigIds(limit = AI_VIS_SETTINGS.SCHEDULER_BATCH_L
             SELECT config_id, MAX(finished_at) AS last_done
               FROM ai_vis_scans WHERE status = 'completed' GROUP BY config_id
          ) lc ON lc.config_id = c.id
-        WHERE lc.last_done < ${cutoff}
+        WHERE lc.last_done < ${dueExpr}
           AND NOT EXISTS (
              SELECT 1 FROM ai_vis_scans a WHERE a.config_id = c.id AND a.status IN ('queued', 'running')
           )

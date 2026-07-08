@@ -5,29 +5,33 @@
 // falls back to a deterministic, clearly-labelled placeholder. Pure — no network here.
 import { load } from 'cheerio';
 import { assertPublicUrl } from './ssrfGuard';
-import { countOccurrences, findTermRangesBatch, ScoreData, computeContentScore } from './contentScore';
+import { findTermRangesBatch, ScoreData, computeContentScore } from './contentScore';
+import { countOccurrences } from './termMatch';
+import {
+   auditContentScore,
+   termCoverageFraction,
+   termRangeCoverageFraction,
+   termScoreFraction,
+   type RichTerm,
+} from './competitorContentScore';
 import { plainText, wordCount } from './optimizationPlanner';
 import {
    AuditResult, AuditFactor, AuditCompetitor, AuditInternalLink, AuditTerm,
 } from './auditTypes';
+
+export type { RichTerm } from './competitorContentScore';
+export {
+   auditContentScore,
+   termCoverageFraction,
+   termRangeCoverageFraction,
+   termScoreFraction,
+} from './competitorContentScore';
 
 export interface FetchTiming { ttfbMs: number; loadMs: number; }
 
 /** Per-competitor page analysis fed into buildAuditResult in phase 2. */
 export interface CompetitorPage { domain: string; rank: number; values: Record<string, number>; contentScore: number; url?: string; }
 
-/** One NLP term as returned by the sidecar (/analyze-serp). Extra fields are optional so
- *  older/placeholder payloads (term + target_count only) still map cleanly. */
-export interface RichTerm {
-   term: string;
-   target_count: number;
-   type?: string; // sidecar semantic type (core/supporting/entity/…) — not the UI tab type
-   relevance?: number; // 0–1
-   doc_freq?: number;
-   suggested_min?: number;
-   suggested_max?: number;
-   searchVolume?: number | null; // filled by enrichAudit via DataForSEO for phrase terms
-}
 export interface RealAuditData {
    competitors: CompetitorPage[];
    terms: RichTerm[];
@@ -36,25 +40,29 @@ export interface RealAuditData {
    contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
 }
 
-const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-
 /**
- * SurferSEO-style content score (AUDIT ONLY — the content-editor gauge keeps its own
- * computeContentScore). Coverage-dominated so a page missing most of the suggested terms
- * scores in the 40-55 range even with good length: 0.6 term coverage + 0.25 length +
- * 0.15 structure, each measured against the competitor set. Approximation — SurferSEO's
- * exact model is proprietary; both "You" and every competitor are scored identically so
- * the chart stays apples-to-apples.
+ * SEO score from audit factor verdicts (Surfer-style on-page checklist).
+ * Non-info factors contribute; internal-link gaps apply a logarithmic penalty.
  */
-export function auditContentScore(coverageFrac: number, wordFrac: number, structFrac: number): number {
-   return Math.round((0.6 * clamp01(coverageFrac) + 0.25 * clamp01(wordFrac) + 0.15 * clamp01(structFrac)) * 100);
-}
-
-/** Fraction of the suggested terms a page actually uses (≥1 inflection-tolerant hit). */
-export function termCoverageFraction(bodyText: string, terms: { term: string }[]): number {
-   if (!terms.length) return 0;
-   const covered = terms.filter((t) => countOccurrences(bodyText, t.term) >= 1).length;
-   return covered / terms.length;
+export function computeSeoScoreFromAudit(audit: AuditResult): number {
+   const scored = audit.factors.filter((f) => f.verdict !== 'info');
+   if (!scored.length) return audit.contentScore;
+   let sum = 0;
+   for (const f of scored) {
+      if (f.verdict === 'ok') { sum += 1; continue; }
+      const min = f.suggestedMin ?? 0;
+      const max = f.suggestedMax ?? min;
+      const span = Math.max(max - min, max * 0.2, 1);
+      if (f.you < min) sum += Math.max(0, 1 - (min - f.you) / span);
+      else if (f.you > max) sum += Math.max(0, 1 - (f.you - max) / span);
+   }
+   let base = Math.round((sum / scored.length) * 100);
+   const missing = audit.internalLinks?.filter((l) => !l.linked).length ?? 0;
+   if (missing > 0) {
+      const penalty = Math.min(20, Math.round(Math.log10(missing + 1) * 8));
+      base = Math.max(0, base - penalty);
+   }
+   return base;
 }
 
 /** Extracted numbers for one page keyed by factor key + the bits used elsewhere. */
@@ -367,7 +375,7 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
    let youScore = page.contentScore;
    if (real && real.terms.length && real.contentTargets) {
       const { avgWords, avgHeadings, avgPs } = real.contentTargets;
-      const cov = termCoverageFraction(page.bodyText, real.terms);
+      const cov = termScoreFraction(page.bodyText, real.terms);
       const wordFrac = avgWords > 0 ? page.values.word_count_body / avgWords : 0;
       const structFrac = ((avgHeadings > 0 ? Math.min(1, page.values.h2_h6_count / avgHeadings) : 0)
          + (avgPs > 0 ? Math.min(1, page.values.p_count / avgPs) : 0)) / 2;

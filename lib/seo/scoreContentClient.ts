@@ -1,10 +1,16 @@
+import type { ScoreData } from '../contentScore';
+
+export type RankingSignal = { name: string; score: number; recommendation?: string };
+export type RankingSignalsPayload = { signals?: RankingSignal[] };
+export type ScoreContentResult = { ranking_score: number; ranking_signals: RankingSignalsPayload };
+
 export async function scoreContent(
   html: string,
   keyword: string,
-  scoreData: any,
+  scoreData: ScoreData | Record<string, unknown> | null,
   articleTitle: string,
   articleMetaDescription: string
-): Promise<{ ranking_score: number; ranking_signals: any } | null> {
+): Promise<ScoreContentResult | null> {
   const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);

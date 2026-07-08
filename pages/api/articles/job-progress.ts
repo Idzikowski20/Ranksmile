@@ -20,32 +20,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ── GET: poll job state (frontend) ──────────────────────────────
   if (req.method === 'GET') {
-    const jobId = req.query.jobId as string;
-    if (!jobId) return res.status(400).json({ error: 'jobId query param is required' });
+    const jobId = req.query.jobId as string | undefined;
+    const articleId = req.query.articleId as string | undefined;
+    if (!jobId && !articleId) {
+      return res.status(400).json({ error: 'jobId or articleId query param is required' });
+    }
 
     try {
       const rows = await db.query<{
+        id: string;
         status: string;
         current_stage: string | null;
         stage_progress: number | null;
         total_progress: number | null;
         progress_message: string | null;
+        updated_at: string | Date | null;
       }>(
-        `SELECT status, current_stage, stage_progress, total_progress, progress_message
-         FROM analysis_jobs WHERE id = ?`,
-        { replacements: [jobId], type: QueryTypes.SELECT },
+        jobId
+          ? `SELECT id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+             FROM analysis_jobs WHERE id = ?`
+          : `SELECT id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+             FROM analysis_jobs
+             WHERE article_id = ? AND job_type = 'deep_analysis'
+             ORDER BY created_at DESC, id DESC
+             LIMIT 1`,
+        { replacements: [jobId || Number(articleId)], type: QueryTypes.SELECT },
       );
 
       if (!rows.length) return res.status(404).json({ error: 'job not found' });
 
       const j = rows[0];
       return res.status(200).json({
-        jobId,
+        jobId: j.id,
         status: j.status,
         currentStage: j.current_stage,
         stageProgress: j.stage_progress,
         totalProgress: j.total_progress,
         progressMessage: j.progress_message,
+        updatedAt: j.updated_at ? new Date(j.updated_at).toISOString() : null,
       });
     } catch (err) {
       const msg = (err instanceof Error ? err.message : String(err));

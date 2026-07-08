@@ -8,7 +8,7 @@ import { enqueueAiVisScan, kickAiVisScan, seedScanFromLatest } from '../../../..
 import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
-import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
+import { manualRefreshCooldownDays, refreshIntervalDays } from '../../../../lib/aiVisibility';
 
 export const config = { maxDuration: 60 };
 
@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domain = ownership as unknown as { ID: number, domain: string };
 
-   const cfg = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
+   const cfg = await queryOne<{ id: number, priority: string | null }>('SELECT id, priority FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
    if (!cfg) return res.status(400).json({ error: 'Complete the AI Visibility setup first' });
 
    // Manual-refresh cost guard: a full scan is ~$4. If the last completed scan is
@@ -46,7 +46,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
       if (last?.finished_at) {
          const days = (Date.now() - new Date(last.finished_at).getTime()) / 86_400_000;
-         if (days < AI_VIS_SETTINGS.MANUAL_REFRESH_COOLDOWN_DAYS) {
+         const cooldown = manualRefreshCooldownDays(cfg.priority);
+         if (days < cooldown) {
             return res.status(409).json({ needsConfirm: true, lastScanDaysAgo: Math.floor(days) });
          }
       }

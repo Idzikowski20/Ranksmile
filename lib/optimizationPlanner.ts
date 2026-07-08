@@ -5,6 +5,7 @@ import type { RoutedGuideline } from './optimizeGuidelineRouting';
 import type { CoverageSnapshot } from './aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
+import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from './optimizeMode';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';
 
@@ -12,11 +13,13 @@ export type StepFocus = 'seo-terms' | 'ai-coverage' | 'readability' | 'expand' |
 
 export type EditMode = 'less' | 'normal' | 'expand';
 
-// --- F: benefit-threshold + takeover constants (tunable; 0..100 AI-score scale) ---
-const LESS_MIN = 6;            // expectedLift < LESS_MIN -> skip
-const NORMAL_MIN = 12;         // LESS_MIN..NORMAL_MIN -> LESS; > NORMAL_MIN -> NORMAL
-const SEO_HIGH = 85;           // SEO score at/above which AI-takeover can fire
-const AI_GAP = 25;             // takeover when (seoScore - aiScore) > AI_GAP
+export type { OptimizeMode } from './optimizeMode';
+
+// --- benefit-threshold + takeover constants (tunable; 0..100 AI-score scale) ---
+const LESS_MIN = 6;
+const NORMAL_MIN = 12;
+const SEO_HIGH = SEO_READY;
+const AI_GAP_LEGACY = AI_GAP;
 const INTENT_INTRO_MIN = 50;   // intent bucket score below which intro may expand
 const TERM_WORTH_FLOOR = 1;    // OD-2 [RATIFIED]: a section with >=1 under-target term (when NOT in aiTakeover) is worth a LESS edit
 
@@ -141,46 +144,58 @@ function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
 
 export function buildOptimizationPlan(input: PlanInput): Plan {
   const routed = assignGuidelinesToSections(input.guidelines, input.sections);
-  const aiTakeover = input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP;   // pillar 5 / OD-3
-  const snapshot = input.context.coverage;   // non-null in the planner path (endpoint gates on ctx)
+  const mode = selectOptimizeMode(input.seoScore, input.aiScore);
+  const aiTakeover = mode === 'ai-only' || mode === 'minimal'
+    || (input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP_LEGACY);
+  const seoOnly = mode === 'seo-first';
+  const snapshot = input.context.coverage;
 
   const steps: PlanStep[] = input.sections.map((section) => {
     const rgs = routed.get(section.id) ?? [];
     const secText = plainText(section.html);
-    const secTerms = aiTakeover ? [] : sectionMissingTerms(secText, input.context);   // takeover drops term work
-    const expectedLift = diminishingLift(rgs.map((r) => r.guideline.projectedLift));
+    const secTerms = aiTakeover && mode !== 'seo-first' ? [] : sectionMissingTerms(secText, input.context);
+    let filteredRgs = rgs;
+    if (seoOnly) {
+      filteredRgs = rgs.filter((r) => r.guideline.group !== 'knowledge' && r.guideline.group !== 'authority');
+    }
+    if (aiTakeover && mode === 'ai-only') {
+      filteredRgs = rgs.filter((r) => r.guideline.group === 'knowledge' || r.guideline.group === 'intent' || r.guideline.group === 'authority');
+    }
+    const expectedLift = diminishingLift(filteredRgs.map((r) => r.guideline.projectedLift));
 
-    const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: rgs, missingTerms: secTerms };
+    const base = { sectionId: section.id, index: section.index, headingText: section.headingText, html: section.html, guidelines: filteredRgs, missingTerms: secTerms };
 
-    // Skip gate (replaces rgs.length===0 && secTerms.length===0): benefit-threshold + critical-miss + takeover aware.
-    if (!worthEditing({ expectedLift, rgs, secTerms, aiTakeover })) {
+    if (!worthEditing({ expectedLift, rgs: filteredRgs, secTerms, aiTakeover })) {
       return {
         ...base, focus: 'skip', systemPrompt: '', estimatedTokens: 0, expectedLift,
         reason: 'Skipped - below benefit threshold', mode: 'normal',
       };
     }
 
-    const focus = focusFor(rgs, secTerms);
-    const mode = snapshot
-      ? selectMode({ section, expectedLift, rgs, snapshot, aiTakeover })
-      : 'normal';   // defensive: if no snapshot, behave as NORMAL
+    const focus = focusFor(filteredRgs, secTerms);
+    let editMode: EditMode = snapshot
+      ? selectMode({ section, expectedLift, rgs: filteredRgs, snapshot, aiTakeover })
+      : 'normal';
+    if (mode === 'ai-only' || mode === 'minimal') editMode = 'less';
+    if (mode === 'full' && focus === 'expand') editMode = 'expand';
+
     const draft: PlanStep = {
       ...base, focus, expectedLift,
       estimatedTokens: estimateStepTokens(section),
       systemPrompt: '',
-      reason: rgs.length ? `Optimize: ${rgs.length} guidelines` : 'Optimize: under-target terms',
-      mode,
+      reason: filteredRgs.length ? `Optimize (${mode}): ${filteredRgs.length} guidelines` : `Optimize (${mode}): under-target terms`,
+      mode: editMode,
     };
     return {
       ...draft,
-      systemPrompt: buildStepPromptForMode(draft, input.context, mode),
-      userInstruction: userInstructionForMode(draft, mode),
+      systemPrompt: buildStepPromptForMode(draft, input.context, editMode),
+      userInstruction: userInstructionForMode(draft, editMode),
     };
   });
 
   const { trimmed, ignoredLift } = trimToBudget(steps, input.budgetRemaining);
   const survivingNonSkip = steps.filter((s) => s.focus !== 'skip');
-  const rationale = `${survivingNonSkip.length}/${steps.length} sections to optimize${trimmed ? ` (trimmed, ignored ${ignoredLift} lift)` : ''}`;
+  const rationale = `${mode}: ${survivingNonSkip.length}/${steps.length} sections${trimmed ? ` (trimmed, ignored ${ignoredLift} lift)` : ''}`;
   return {
     steps,
     estimatedTokens: survivingNonSkip.reduce((sum, s) => sum + s.estimatedTokens, 0),

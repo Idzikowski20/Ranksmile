@@ -3,15 +3,16 @@
 // so the editor's "AI Search — Info to cover" list is populated either way.
 import { QueryTypes } from 'sequelize';
 import db from '../database/database';
-import { computeAiSearchScore, AiVisibilitySummary } from './aiSearchScore';
+import { computeAiSearchScore, type AiVisibilitySummary } from './aiSearchScore';
 
 /** Insert one ai_visibility_runs row (+ citations) and return the run id. */
 export async function persistAiVisibilityRun(
    articleId: number | string,
    keyword: string,
    summary: AiVisibilitySummary,
+   scoreOverride?: number,
 ): Promise<number> {
-   const score = computeAiSearchScore(summary);
+   const score = scoreOverride ?? computeAiSearchScore(summary);
    const runValues = [
       articleId,
       keyword || '',
@@ -43,7 +44,6 @@ export async function persistAiVisibilityRun(
    }
    if (!runId) throw new Error('Failed to resolve AI visibility run id');
 
-   // Batch all citations into a single multi-row insert (was one round-trip each).
    const citations = summary.citations || [];
    if (citations.length) {
       const placeholders = citations.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');

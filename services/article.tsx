@@ -4,12 +4,14 @@
 // the cached record across those client-side navigations.
 import { useQuery } from 'react-query';
 
+import type { RankingSourceEntry } from '../lib/types/sidecar';
+
 export type ArticleRecord = {
    id?: number;
    wizard_state?: string | null;
-   ranking_sources?: any;
+   ranking_sources?: RankingSourceEntry[] | string | null;
    content?: string | null;
-   [k: string]: any;
+   [k: string]: unknown;
 };
 
 export async function fetchArticle(id: string | number): Promise<ArticleRecord | null> {

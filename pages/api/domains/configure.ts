@@ -1,5 +1,6 @@
 // POST /api/domains/configure
 // Creates a domain + site_context with selected language and pages
+import type { CreationAttributes } from 'sequelize';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import Domain from '../../../database/models/domain';
@@ -40,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             added: new Date().toJSON(),
             userId: userId || null,
             workspace_id: workspaceId,
-         } as any,
+         } as CreationAttributes<Domain>,
       });
 
       if (!created) {

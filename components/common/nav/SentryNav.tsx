@@ -5,7 +5,7 @@ import { useQuery } from 'react-query';
 import { authClient } from '../../../lib/auth/client';
 import { useProfile } from '../../../services/profile';
 import { useGscAccount } from '../../../services/gscAccount';
-import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '../../../services/workspaces';
+import { useWorkspaces } from '../../../services/workspaces';
 import { useOnboardingChecklist, type OnboardingStep } from '../../../lib/useOnboardingChecklist';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../../lib/activeWorkspace';
 import fetchJson from '../../../lib/fetchJson';
@@ -20,7 +20,6 @@ import {
 
 type Props = {
   domains?: DomainType[];
-  collapsed?: boolean;
 };
 
 type SecondaryLink = { label: string; href: string; match: string };
@@ -64,16 +63,24 @@ const useDismiss = (onClose: () => void) => {
   return ref;
 };
 
-const useLocalStorage = <T, >(key: string, defaultValue: T): [T, (v: T | ((prev: T) => T)) => void] => {
-  const [value, setValue] = useState<T>(() => {
-    if (typeof window === 'undefined') return defaultValue;
+const useLocalStorage = <T, >(key: string, defaultValue: T): [T, (v: T | ((prev: T) => T)) => void, boolean] => {
+  const [value, setValue] = useState<T>(defaultValue);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
     try {
       const stored = window.localStorage.getItem(key);
-      return stored ? (JSON.parse(stored) as T) : defaultValue;
-    } catch { /* ignore JSON/storage errors */ return defaultValue; }
-  });
-  useEffect(() => { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore storage errors */ } }, [key, value]);
-  return [value, setValue];
+      if (stored) setValue(JSON.parse(stored) as T);
+    } catch { /* ignore JSON/storage errors */ }
+    setHydrated(true);
+  }, [key]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore storage errors */ }
+  }, [key, value, hydrated]);
+
+  return [value, setValue, hydrated];
 };
 
 /* ─── Footer dropdown popovers ───────────────────────────────────────────── */
@@ -99,15 +106,6 @@ const MenuLink = ({ icon, label, href, chevron, trailing, onClick, expanded }: M
   return <button type="button" className="sentry-menu-item" onClick={onClick} aria-expanded={expanded}>{body}</button>;
 };
 
-const CheckIcon = () => (
-  <svg viewBox="0 0 16 16" width="14" height="14" fill="#7553FF" aria-hidden="true" style={{ flexShrink: 0 }}>
-    <path fillRule="evenodd" d="M13.36 4.5a.75.75 0 0 1 .14 1.05l-7 9a.75.75 0 0 1-1.11.07l-3.5-3.5a.75.75 0 0 1 0-1.06l.08-.08a.75.75 0 0 1 .98 0L5.5 12.5l6.3-8.1a.75.75 0 0 1 1.05-.14l.01.01z" clipRule="evenodd" />
-  </svg>
-);
-const PlusIcon = () => (
-  <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5z" /></svg>
-);
-
 type SubItem = { icon: React.ReactNode; label: string; href?: string };
 const HELP_SUBMENUS: Record<string, SubItem[]> = {
   Resources: [
@@ -126,68 +124,6 @@ const HELP_SUBMENUS: Record<string, SubItem[]> = {
     { icon: <IconBuilding />, label: 'Privacy Policy', href: 'https://surferseo.com/privacy-policy/' },
   ],
 };
-const cleanDomain = (domain?: string | null) => (domain || '')
-  .replace(/^sc-domain:/i, '')
-  .replace(/^https?:\/\//i, '')
-  .replace(/\/.*$/, '')
-  .trim();
-
-const OrgWorkspaceAvatar = ({ domain }: { domain?: string | null }) => {
-  const [err, setErr] = useState(false);
-  const host = cleanDomain(domain);
-  if (!host || err) {
-    return <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{host?.charAt(0).toUpperCase() || 'S'}</span>;
-  }
-  return <img alt="" src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`} onError={() => setErr(true)} />;
-};
-
-const OrgMenu = ({
-  anchor,
-  onClose,
-  workspaces,
-  activeId,
-  onSelect,
-  onCreate,
-}: {
-  anchor: DOMRect;
-  onClose: () => void;
-  workspaces: Array<{ id: number; name: string; domain?: string | null }>;
-  activeId: number | null;
-  onSelect: (id: number) => void;
-  onCreate: () => void;
-}) => {
-  const ref = useDismiss(onClose);
-  const left = Math.max(8, anchor.left + anchor.width / 2 - 128);
-  return (
-    <div ref={ref} className="sentry-nav-popover" style={{ left, top: anchor.bottom + 8, bottom: 'auto' }}>
-      <div className="sentry-menu-title">Workspaces</div>
-      <ul className="sentry-menu-list">
-        {workspaces.map((w) => {
-          const active = w.id === activeId;
-          return (
-            <li key={w.id}>
-              <MenuLink
-                icon={(
-                  <span className="sentry-nav-org" style={{ width: 24, height: 24, borderRadius: 6, flexShrink: 0 }}>
-                    <OrgWorkspaceAvatar domain={w.domain} />
-                  </span>
-                )}
-                label={w.name}
-                trailing={active ? <CheckIcon /> : undefined}
-                onClick={() => { if (!active) onSelect(w.id); onClose(); }}
-              />
-            </li>
-          );
-        })}
-      </ul>
-      <hr className="sentry-menu-sep" />
-      <ul className="sentry-menu-list">
-        <li><MenuLink icon={<PlusIcon />} label="Add new workspace" onClick={() => { onCreate(); onClose(); }} /></li>
-      </ul>
-    </div>
-  );
-};
-
 const HelpMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }) => {
   const ref = useDismiss(onClose);
   const [sub, setSub] = useState<string | null>(null);
@@ -375,16 +311,16 @@ const UserMenu = ({ anchor, onClose, name, email, pic, initial }: { anchor: DOMR
 
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
-const SentryNav = ({ domains = [], collapsed = false }: Props) => {
+const SentryNav = ({ domains = [] }: Props) => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const [docked, setDocked] = useLocalStorage('serpbear-nav-docked', true);
-  const [pinnedKey, setPinnedKey] = useLocalStorage<string | null>('serpbear-nav-pinned-key', null);
+  const [docked, setDocked, dockedReady] = useLocalStorage('serpbear-nav-docked', true);
+  const [pinnedKey, setPinnedKey, pinnedReady] = useLocalStorage<string | null>('serpbear-nav-pinned-key', null);
+  const navReady = dockedReady && pinnedReady;
+  const isDocked = navReady && docked;
 
   const { data: wsData } = useWorkspaces();
-  const setActiveWorkspace = useSetActiveWorkspace();
-  const createSetupWorkspace = useCreateSetupWorkspace();
   const { data: profile } = useProfile();
   const { data: gscAccount } = useGscAccount();
   const session = authClient.useSession?.();
@@ -422,8 +358,20 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
 
   const primaryItems: PrimaryItem[] = useMemo(() => {
     const items: PrimaryItem[] = [
-      { key: 'dashboard', label: 'Dashboard', icon: <IconDashboard />, href: workspaceHref(activeId, '/dashboard'), match: '/dashboard' },
-      { key: 'content', label: 'Content', icon: <IconIssues />, href: workspaceHref(activeId, '/articles'), match: '/articles' },
+      {
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: <IconDashboard />,
+        href: workspaceHref(activeId, '/dashboard'),
+        match: '/dashboard',
+      },
+      {
+        key: 'content',
+        label: 'Content',
+        icon: <IconIssues />,
+        href: workspaceHref(activeId, '/articles'),
+        match: '/articles',
+      },
     ];
     if (activeSlug) {
       items.push({
@@ -507,32 +455,68 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
 
   // Hovered/active secondary flyout
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
-  const activePrimary = useMemo(() => primaryItems.find((it) => it.secondary && isMatch(it.match)) ?? null, [primaryItems, path, mounted]);
+  const [collapsing, setCollapsing] = useState(false);
+  const collapseTimerRef = useRef<number | null>(null);
+  const hoverSuppressRef = useRef(false);
+  const hoverSuppressTimerRef = useRef<number | null>(null);
+  const FLYOUT_CLOSE_MS = 240;
 
-  // When docked: hover previews other groups; active route or pinnedKey is the default.
+  const clearHoverPreview = () => {
+    if (isDocked) return;
+    hoverSuppressRef.current = true;
+    if (hoverSuppressTimerRef.current != null) window.clearTimeout(hoverSuppressTimerRef.current);
+    hoverSuppressTimerRef.current = window.setTimeout(() => {
+      hoverSuppressRef.current = false;
+      hoverSuppressTimerRef.current = null;
+    }, FLYOUT_CLOSE_MS);
+    setHoveredKey(null);
+  };
+
+  const setHoverPreview = (key: string | null) => {
+    if (hoverSuppressRef.current && key !== null) return;
+    setHoveredKey(key);
+  };
+
+  useEffect(() => () => {
+    if (hoverSuppressTimerRef.current != null) window.clearTimeout(hoverSuppressTimerRef.current);
+    if (collapseTimerRef.current != null) window.clearTimeout(collapseTimerRef.current);
+  }, []);
+
+  const handleRailMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget;
+    if (next instanceof Node && e.currentTarget.contains(next)) return;
+    clearHoverPreview();
+  };
+  const activePrimary = useMemo(() => primaryItems.find((it) => {
+    if (!it.secondary) return false;
+    return isMatch(it.match);
+  }) ?? null, [primaryItems, path, mounted]);
+
+  // When docked (or mid-collapse): hover previews other groups; active route or pinnedKey is the default.
   const secondaryKey = useMemo(() => {
-    if (docked) return hoveredKey ?? activePrimary?.key ?? pinnedKey;
+    if (isDocked || collapsing) return hoveredKey ?? activePrimary?.key ?? pinnedKey;
     return hoveredKey;
-  }, [docked, hoveredKey, activePrimary?.key, pinnedKey]);
+  }, [isDocked, collapsing, hoveredKey, activePrimary?.key, pinnedKey]);
 
   const flyoutItem = useMemo(() => {
     let key = secondaryKey;
-    if (docked && !key) key = activeSlug ? 'seo' : 'settings';
+    if (isDocked && !key) key = activeSlug ? 'seo' : 'settings';
     if (!key) return null;
     return primaryItems.find((it) => it.key === key && it.secondary) ?? null;
-  }, [secondaryKey, docked, activeSlug, primaryItems]);
+  }, [secondaryKey, isDocked, activeSlug, primaryItems]);
 
-  // Ensure docked mode always has a visible group (e.g. Dashboard has no activePrimary).
+  // Ensure docked mode always has a visible group when none is pinned yet.
   useEffect(() => {
-    if (docked && !pinnedKey && !activePrimary?.key) {
+    if (!navReady) return;
+    if (isDocked && !pinnedKey && !activePrimary?.key) {
       setPinnedKey(activeSlug ? 'seo' : 'settings');
     }
-  }, [docked, pinnedKey, activePrimary?.key, activeSlug, setPinnedKey]);
+  }, [navReady, isDocked, pinnedKey, activePrimary?.key, activeSlug, setPinnedKey]);
 
   // Sync pinned group when navigating while the secondary panel is docked.
   useEffect(() => {
-    if (docked && activePrimary?.key && !hoveredKey) setPinnedKey(activePrimary.key);
-  }, [docked, activePrimary?.key, hoveredKey, setPinnedKey]);
+    if (isDocked && activePrimary?.key && !hoveredKey) setPinnedKey(activePrimary.key);
+  }, [isDocked, activePrimary?.key, hoveredKey, setPinnedKey]);
 
   // Keep the flyout mounted through its close animation (Sentry animates hide with
   // the same spring, so we can't unmount instantly). `rendered` holds the last shown
@@ -542,35 +526,46 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
   const [open, setOpen] = useState(false);
 
   const toggleDock = () => {
-    setDocked((prev) => {
-      const next = !prev;
-      if (next) {
-        setPinnedKey((cur) => hoveredKey ?? activePrimary?.key ?? rendered?.key ?? cur);
-      }
-      return next;
-    });
+    if (isDocked) {
+      // Animate the panel sliding under the rail before removing layout space —
+      // otherwise app-content jumps wider for one frame (white flash).
+      setCollapsing(true);
+      setOpen(false);
+      if (collapseTimerRef.current != null) window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = window.setTimeout(() => {
+        setDocked(false);
+        setCollapsing(false);
+        collapseTimerRef.current = null;
+      }, FLYOUT_CLOSE_MS);
+      return;
+    }
+    setDocked(true);
+    setOpen(true);
+    setPinnedKey((cur) => hoveredKey ?? activePrimary?.key ?? rendered?.key ?? cur);
   };
+
+  const secondaryOpen = !collapsing && (isDocked || open);
 
   useEffect(() => {
     if (flyoutItem) {
       setRendered(flyoutItem);
-      if (docked) {
+      if (isDocked) {
         setOpen(true);
         return undefined;
       }
       const raf = requestAnimationFrame(() => setOpen(true));
       return () => cancelAnimationFrame(raf);
     }
-    if (docked) return undefined;
+    if (isDocked) return undefined;
     setOpen(false);
     const t = setTimeout(() => {
       setRendered(null);
     }, 220);
     return () => clearTimeout(t);
-  }, [flyoutItem, docked]);
+  }, [flyoutItem, isDocked]);
 
   // Footer popovers
-  type PopKind = 'org' | 'help' | 'whatsnew' | 'status' | 'onboarding' | 'user';
+  type PopKind = 'help' | 'whatsnew' | 'status' | 'onboarding' | 'user';
   const [popover, setPopover] = useState<{ kind: PopKind; rect: DOMRect } | null>(null);
   const openPopover = (kind: PopKind) => (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -581,6 +576,7 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
   // Active state for a secondary flyout link. Performance (base /sites/<slug>) must
   // match exactly; AI-vis + deeper SEO routes use suffix matching.
   const isSecondaryActive = (matchSuffix: string) => {
+    if (matchSuffix === '/dashboard') return isMatch('/dashboard', true);
     if (matchSuffix.includes('/ai-visibility/')) return isMatch(matchSuffix);
     if (activeSlug && matchSuffix.endsWith(activeSlug)) return path.endsWith(matchSuffix);
     return isMatch(matchSuffix);
@@ -593,33 +589,22 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
   };
 
   return (
-    <div className="sentry-nav-rail-wrap" onMouseLeave={() => setHoveredKey(null)}>
-      <nav aria-label="Primary Navigation" className={`sentry-nav${collapsed ? ' sentry-nav--collapsed' : ''}`}>
-        <div className="sentry-nav-header">
-          <button
-            type="button"
-            className="sentry-nav-org"
-            aria-label={activeWorkspace?.name ? `Workspace: ${activeWorkspace.name}` : 'Switch workspace'}
-            aria-expanded={popover?.kind === 'org'}
-            onClick={openPopover('org')}
-          >
-            <OrgWorkspaceAvatar domain={activeWorkspace?.domain} />
-          </button>
-        </div>
+    <div className="sentry-nav-rail-wrap" onMouseLeave={handleRailMouseLeave}>
+      <nav aria-label="Primary Navigation" className="sentry-nav">
         {/* Primary list */}
         <ul className="sentry-nav-list">
           {primaryItems.map((it) => {
             const active = isActivePrimary(it);
             return (
-              <li key={it.key} className="sentry-nav-item" onMouseEnter={() => setHoveredKey(it.secondary ? it.key : null)}>
+              <li key={it.key} className="sentry-nav-item" onMouseEnter={() => setHoverPreview(it.secondary ? it.key : null)}>
                 <Link href={it.href} passHref>
                   <a
                     className="sentry-nav-link"
+                    aria-label={it.label}
                     aria-current={active ? 'location' : undefined}
                     data-active-group={active ? 'true' : undefined}
                   >
                     {it.icon}
-                    <span className="sentry-nav-label">{it.label}</span>
                   </a>
                 </Link>
               </li>
@@ -653,23 +638,28 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
         </div>
       </nav>
 
-      {/* Secondary flyout (hover over SEO / AI Vis, or when on one of their routes) */}
+      {/* Reserve layout width only while animating docked → collapsed */}
+      {collapsing && rendered?.secondary && (
+        <div className="sentry-secondary-spacer" aria-hidden="true" />
+      )}
+
+      {/* Secondary flyout (hover over primary groups, or when on one of their routes) */}
       {rendered?.secondary && (
         <div
-          className={`sentry-secondary${docked ? ' sentry-secondary--docked' : ''}`}
-          data-open={docked || open ? 'true' : 'false'}
-          onMouseEnter={() => setHoveredKey(rendered.key)}
+          className={`sentry-secondary${isDocked && !collapsing ? ' sentry-secondary--docked' : ''}${collapsing ? ' sentry-secondary--collapsing' : ''}`}
+          data-open={secondaryOpen ? 'true' : 'false'}
+          onMouseEnter={() => setHoverPreview(rendered.key)}
         >
           <div className="sentry-secondary-header">
             <span className="sentry-secondary-title">{rendered.secondary.title}</span>
             <button
               type="button"
-              className={`sentry-dock-toggle${docked ? '' : ' sentry-dock-toggle--expand'}`}
-              aria-label={docked ? 'Collapse' : 'Expand'}
-              aria-pressed={docked}
+              className={`sentry-dock-toggle${isDocked ? '' : ' sentry-dock-toggle--expand'}`}
+              aria-label={isDocked ? 'Collapse' : 'Expand'}
+              aria-pressed={isDocked}
               onClick={toggleDock}
             >
-              <svg role="img" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true" style={{ transform: docked ? 'rotate(-90deg)' : 'rotate(90deg)' }}>
+              <svg role="img" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true" style={{ transform: isDocked ? 'rotate(-90deg)' : 'rotate(90deg)' }}>
                 <path d="M8 8C8.21 8 8.4 8.09 8.54 8.24L12.79 12.74C13.08 13.04 13.07 13.51 12.76 13.79C12.46 14.08 11.99 14.07 11.7 13.76L8 9.84L4.29 13.76C4.01 14.07 3.54 14.08 3.23 13.79C2.93 13.51 2.92 13.04 3.2 12.74L7.45 8.24C7.6 8.09 7.79 8 8 8ZM8 2C8.21 2 8.4 2.09 8.54 2.24L12.79 6.74C13.08 7.04 13.07 7.51 12.76 7.79C12.46 8.08 11.99 8.07 11.7 7.76L8 3.84L4.29 7.76C4.01 8.07 3.54 8.08 3.23 7.79C2.93 7.51 2.92 7.04 3.2 6.74L7.45 2.24C7.6 2.09 7.79 2 8 2Z" />
               </svg>
             </button>
@@ -705,20 +695,6 @@ const SentryNav = ({ domains = [], collapsed = false }: Props) => {
       )}
 
       {/* Footer dropdown popovers */}
-      {popover?.kind === 'org' && (
-        <OrgMenu
-          anchor={popover.rect}
-          onClose={closePopover}
-          workspaces={wsData?.workspaces || []}
-          activeId={activeId}
-          onSelect={(id) => setActiveWorkspace.mutate(id)}
-          onCreate={() => {
-            createSetupWorkspace.mutate(undefined, {
-              onSuccess: (id) => { if (id && typeof window !== 'undefined') window.location.href = `/workspace/${id}/setup`; },
-            });
-          }}
-        />
-      )}
       {popover?.kind === 'help' && <HelpMenu anchor={popover.rect} onClose={closePopover} />}
       {popover?.kind === 'whatsnew' && <WhatsNewMenu anchor={popover.rect} onClose={closePopover} />}
       {popover?.kind === 'status' && <ServiceStatusMenu anchor={popover.rect} onClose={closePopover} />}

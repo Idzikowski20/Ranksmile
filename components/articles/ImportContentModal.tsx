@@ -50,7 +50,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
       const warnings: string[] = [];
       for (const { kw, cannibalized } of results) {
         for (const c of cannibalized) {
-          warnings.push(`"${c.keyword}" already targeted by: ${c.articles.map((a: any) => a.title).join(', ')}`);
+          warnings.push(`"${c.keyword}" already targeted by: ${c.articles.map((a: { title?: string | null }) => a.title).join(', ')}`);
         }
       }
       setCannibalWarnings(warnings);

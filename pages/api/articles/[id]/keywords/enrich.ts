@@ -70,7 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (e) { /* Ads not configured — ok */ }
 
   // Upsert into article_keywords
-  const enriched: any[] = [];
+  type EnrichedKeyword = { keyword: string; relevance_score: number; is_covered: boolean; ads_monthly_volume: number | null };
+  const enriched: EnrichedKeyword[] = [];
   for (const kw of keywords) {
     const uid = `${id}:${kw}`;
     const relevance = computeRelevanceScore(kw, tk);

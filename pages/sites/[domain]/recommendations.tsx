@@ -63,6 +63,21 @@ const PanelIcon = () => (
 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+type DomainArticle = {
+   id: number | string;
+   title: string;
+   publish_url?: string | null;
+   meta_url?: string | null;
+   target_keyword?: string | null;
+   content_score?: number;
+   status?: string;
+   source?: string;
+   meta_title?: string | null;
+   word_count?: number;
+   updated_at?: string | null;
+   created_at?: string;
+};
+
 type SortKey = 'content_score' | 'position' | 'clicks' | 'impressions';
 
 
@@ -171,7 +186,7 @@ const RecommendationsPage: NextPage = () => {
 
    const { data: domainsData, isLoading: domainsLoading } = useFetchDomains(router, true);
    const domains = domainsData?.domains || [];
-   const activeDomain = domains.find((d: any) => d.slug === slug);
+   const activeDomain = domains.find((d: DomainType) => d.slug === slug);
 
    const [tab, setTab] = useState<'optimize' | 'ideas'>('optimize');
    const [search, setSearch] = useState('');
@@ -211,9 +226,9 @@ const RecommendationsPage: NextPage = () => {
 
    // All GSC keywords for the domain — used in the "Change main keyword" modal
    const allGscKeywords = useMemo<GscKeyword[]>(() => {
-      const raw: any[] = scData?.data?.thirtyDays || [];
+      const raw: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
       const seen = new Map<string, GscKeyword>();
-      raw.forEach((kw: any) => {
+      raw.forEach((kw) => {
          if (!kw.keyword) return;
          const k = kw.keyword.toLowerCase();
          const ex = seen.get(k);
@@ -227,9 +242,9 @@ const RecommendationsPage: NextPage = () => {
 
    // URL → best keyword map for site_context entries (no target_keyword — match by page URL)
    const urlKeywordMap = useMemo(() => {
-      const raw: any[] = scData?.data?.thirtyDays || [];
+      const raw: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
       const map = new Map<string, GscKeyword>();
-      raw.forEach((kw: any) => {
+      raw.forEach((kw) => {
          if (!kw.page) return;
          const urlKey = normalizeUrlForMatch(kw.page);
          const ex = map.get(urlKey);
@@ -246,9 +261,9 @@ const RecommendationsPage: NextPage = () => {
    useEffect(() => {
       if (backfillRan.current !== slug) backfillRan.current = null;
       if (backfillRan.current) return;
-      const articles: any[] = articlesData?.articles || [];
-      const hasStaleScores = articles.some((a: any) => a.content_score === 0 && a.source !== 'site_context');
-      const hasMissingKeywords = articles.some((a: any) => !a.target_keyword && (a.publish_url || a.meta_url));
+      const articles: DomainArticle[] = articlesData?.articles || [];
+      const hasStaleScores = articles.some((a) => a.content_score === 0 && a.source !== 'site_context');
+      const hasMissingKeywords = articles.some((a) => !a.target_keyword && (a.publish_url || a.meta_url));
       if ((hasStaleScores || hasMissingKeywords) && activeDomain?.ID && scData?.data?.thirtyDays?.length > 0) {
          backfillRan.current = slug;
          fetch('/api/articles/backfill', {
@@ -262,14 +277,14 @@ const RecommendationsPage: NextPage = () => {
    }, [articlesData, scData, activeDomain?.ID]);
 
    const rows = useMemo<RecommRow[]>(() => {
-      const articles: any[] = articlesData?.articles || [];
+      const articles: DomainArticle[] = articlesData?.articles || [];
       const scMap = new Map<string, GscKeyword>();
       allGscKeywords.forEach((kw) => { scMap.set(kw.keyword.toLowerCase(), kw); });
-      return articles.map((a: any) => {
+      return articles.map((a) => {
          let sc: GscKeyword | undefined;
          // Try URL match first (more reliable) — then fall back to keyword match
          if (a.publish_url || a.meta_url) {
-            const urlKey = normalizeUrlForMatch(a.publish_url || a.meta_url);
+            const urlKey = normalizeUrlForMatch(String(a.publish_url || a.meta_url || ''));
             sc = urlKeywordMap.get(urlKey);
          }
          if (!sc && a.target_keyword) {
@@ -410,7 +425,7 @@ const RecommendationsPage: NextPage = () => {
       const id = row.id;
       setAnalyzingIds((prev) => new Set(prev).add(id));
       try {
-         const body: any = {
+         const body: Record<string, unknown> = {
             url: row.url,
             domainId: activeDomain!.ID,
             // Sidecar requires a keyword in the payload — send the page's main keyword.

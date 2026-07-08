@@ -65,9 +65,14 @@ const AddPagesModal = ({ pages, onClose, onAdd }: {
       const q = search.trim().toLowerCase();
       if (q) out = out.filter((p) => p.path.toLowerCase().includes(q));
       return [...out].sort((a, b) => {
-         const va = (a as any)[sortKey];
-         const vb = (b as any)[sortKey];
-         if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+         if (sortKey === 'path') {
+            return sortDir === 'desc' ? b.path.localeCompare(a.path) : a.path.localeCompare(b.path);
+         }
+         const va = a.clicks;
+         const vb = b.clicks;
+         if (sortKey === 'impressions') {
+            return sortDir === 'desc' ? b.impressions - a.impressions : a.impressions - b.impressions;
+         }
          return sortDir === 'desc' ? vb - va : va - vb;
       });
    }, [pages, search, sortKey, sortDir]);

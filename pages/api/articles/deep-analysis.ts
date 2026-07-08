@@ -9,7 +9,29 @@ import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
-import { getAiSearchInfo, paaCoverageItems } from '../../../lib/seo/keywordData';
+import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../../../lib/dataforseo';
+import { paaCoverageItems, paaFactsCoverageItems } from '../../../lib/seo/keywordData';
+import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult, RankingSourceEntry } from '../../../lib/types/sidecar';
+import { flushHeaders, flushSse } from '../../../lib/types/api';
+import type { NlpTerm, ScoreData } from '../../../lib/contentScore';
+import {
+  calibrateTermRangesFromCorpus,
+  filterUsefulNlpTerms,
+  hasMinCompetitorDomains,
+  scaleTermRangesToWordCount,
+} from '../../../lib/competitorTermCalibration';
+import { factsToCoverageItems } from '../../../lib/articleFacts';
+import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
+import { computeAiSearchScoreV2, computeOverallContentScore } from '../../../lib/aiSearchScore';
+import type { ArticleFact } from '../../../lib/articleFacts';
+
+type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
+import {
+  discoverRankingKeywords,
+  enrichNlpTermsIfNeeded,
+  mergeNlpTerms,
+  saveArticleKeywords,
+} from '../../../lib/articleKeywordDiscovery';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { callSidecar, sidecarBase } from '../../../lib/sidecar';
@@ -24,6 +46,11 @@ import { analyzeIntroduction, introCoverageItems, deepseekIntroJudge } from '../
 import { readArticleTerms, articleTermsToCoverageItems } from '../../../lib/articleTerms';
 import { mergeCoverageItems, buildSnapshot } from '../../../lib/coverageStore';
 import { splitSections } from '../../../lib/articleSections';
+import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
+import { enrichTermsWithSalience } from '../../../lib/termSalience';
+import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
+import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCompute';
+import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 
 /** Map an ISO country code to the SERP analysis language the sidecar supports. */
 function langForCountry(country: string): string {
@@ -34,18 +61,42 @@ function langForCountry(country: string): string {
   return map[(country || '').toUpperCase()] || 'en';
 }
 
-function sse(res: NextApiResponse, event: string, data: any) {
+function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  if (typeof (res as any).flush === 'function') (res as any).flush();
+  flushSse(res);
+}
+
+function summaryFromSidecar(aiSearch: AiVisibilitySummary | null | undefined): AiVisibilitySummary | null {
+  if (!aiSearch || !Array.isArray(aiSearch.citations) || !aiSearch.citations.length) return null;
+  return {
+    prompts_total: aiSearch.prompts_total || aiSearch.citations.length,
+    prompts_cited: aiSearch.prompts_cited || 0,
+    competitor_citations: aiSearch.competitor_citations || 0,
+    extractability_score: aiSearch.extractability_score || 0,
+    citations: aiSearch.citations,
+  };
 }
 
 /** Build the article score_data target ranges from a sidecar SERP result. */
-function buildScoreData(serp: any, terms: any[], competitorCount: number) {
+function buildScoreData(
+  serp: SerpAnalysis,
+  terms: NlpTerm[],
+  competitorCount: number,
+  opts?: {
+    scoringModel?: 'competitor' | 'legacy';
+    contentTargets?: { avgWords: number; avgHeadings: number; avgPs: number };
+    auditResult?: import('../../../lib/auditTypes').AuditResult;
+    seoScore?: number;
+    competitorWordSpread?: { min: number; max: number };
+  },
+): ScoreData {
+  const wordMin = opts?.competitorWordSpread?.min ?? serp.words_min ?? 1500;
+  const wordMax = opts?.competitorWordSpread?.max ?? serp.words_max ?? 3000;
   return {
     terms,
     words_target: serp.words_target || 2200,
-    words_min: serp.words_min || 1500,
-    words_max: serp.words_max || 3000,
+    words_min: wordMin,
+    words_max: wordMax,
     headings_target: serp.headings_target || 15,
     headings_min: serp.headings_min || 10,
     headings_max: serp.headings_max || 25,
@@ -54,11 +105,27 @@ function buildScoreData(serp: any, terms: any[], competitorCount: number) {
     paragraphs_max: serp.paragraphs_max || 40,
     competitor_count: competitorCount,
     paa_questions: serp.paa_questions || [],
+    scoring_model: opts?.scoringModel || 'legacy',
+    content_targets: opts?.contentTargets,
+    audit_result: opts?.auditResult,
+    seo_score: opts?.seoScore,
   };
 }
 
+function mapSerpTerms(rawTerms: RawSerpTerm[]): NlpTerm[] {
+  return rawTerms.map((t) => ({
+    term: String(t.term || t.text || '').toLowerCase().trim(),
+    target_count: t.target_count ?? t.importance ?? t.count ?? 1,
+    suggested_min: t.suggested_min,
+    suggested_max: t.suggested_max,
+    relevance: t.relevance,
+    doc_freq: t.doc_freq,
+    salience: t.salience,
+  })).filter((t) => t.term);
+}
+
 /** Replace an article's stored SERP competitors with a single batched insert. */
-async function replaceCompetitors(articleId: number, competitors: any[]): Promise<void> {
+async function replaceCompetitors(articleId: number, competitors: SerpCompetitor[]): Promise<void> {
   await db.query('DELETE FROM article_competitors WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
   const rows = (competitors || []).slice(0, 50);
   if (!rows.length) return;
@@ -115,15 +182,15 @@ async function runKeywordMode(
   sse(res, 'progress', { step: 'serp', status: 'running' });
 
   // 2. Gather SERP for the keyword (no page fetch needed).
-  let serp: any = {};
+  let serp: SerpAnalysis = {};
   try {
-    serp = await callSidecar('/analyze-serp', { keyword, language });
+    serp = await callSidecar<SerpAnalysis>('/analyze-serp', { keyword, language });
   } catch (err) {
     console.log('[deep-analysis:keyword] analyze-serp failed (non-fatal):', getErrorMessage(err));
   }
   sse(res, 'progress', { step: 'serp', status: 'done' });
 
-  const competitors: any[] = serp.competitors || [];
+  const competitors: SerpCompetitor[] = serp.competitors || [];
 
   // 3. Store competitors → article_competitors (same store the editor reads).
   await replaceCompetitors(articleId, competitors);
@@ -134,23 +201,21 @@ async function runKeywordMode(
   //    ideas here: for brand keywords (e.g. containing "google") they flood the list
   //    with irrelevant suggestions (google maps, translate, minecraft…) that tank the
   //    NLP-terms score because the article never naturally contains them.
-  const terms: any[] = serp.terms || [];
+  const terms: NlpTerm[] = serp.terms || [];
 
-  // 5. AI-cited sources (People-Also-Ask) for the "Cited by AI models" tab.
+  // 5. AI-cited sources (People Also Ask) — lightweight PAA fetch, no article scoring.
   const aiSources: Array<{ domain: string; url: string; title: string }> = [];
   try {
-    const ai = await getAiSearchInfo({ keyword, articleText: '', country, languageCode: language });
-    if (ai && ai.citations) {
-      // Keep each cited page (Surfer lists 16–20, same domain can appear more than
-      // once) — dedupe by URL, not domain, capped at 20.
+    if (isDataForSeoConfigured()) {
+      const paa = await getPeopleAlsoAsk({ keyword, country, languageCode: language });
       const seen = new Set<string>();
-      for (const c of ai.citations) {
-        const d = (c.cited_domain || '').replace(/^www\./, '');
+      for (const q of paa.questions) {
+        const d = (q.domain || '').replace(/^www\./, '');
         if (!d) continue;
-        const key = c.cited_url || `${d}|${c.prompt || ''}`;
+        const key = q.url || `${d}|${q.question}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        aiSources.push({ domain: d, url: c.cited_url || '', title: c.prompt || '' });
+        aiSources.push({ domain: d, url: q.url || '', title: q.question });
         if (aiSources.length >= 20) break;
       }
     }
@@ -160,7 +225,7 @@ async function runKeywordMode(
   // 6. Persist score_data + ranking_sources on the article.
   const scoreData = buildScoreData(serp, terms, competitors.length);
   const rankingSources = {
-    google: competitors.map((c, i) => ({ rank: i + 1, domain: (c.domain || '').replace(/^www\./, ''), url: c.url || '', title: c.title || '' })),
+    google: competitors.map((c, i): RankingSourceEntry => ({ rank: i + 1, domain: (c.domain || '').replace(/^www\./, ''), url: c.url || '', title: c.title || '' })),
     ai: aiSources,
   };
   try {
@@ -228,7 +293,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('X-Accel-Buffering', 'no');
   res.setHeader('Content-Encoding', 'identity');
   res.status(200);
-  if (typeof (res as any).flushHeaders === 'function') (res as any).flushHeaders();
+  flushHeaders(res);
   res.write(':ok\n\n');
 
   // New-content keyword mode: gather SERP (no URL fetch), create draft, store
@@ -281,8 +346,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // ── Create analysis job ───────────────────────────────────────────
+  // Supersede any in-flight jobs for this article (orphaned after refresh / sidecar reload).
+  try {
+    await db.query(
+      `UPDATE analysis_jobs
+       SET status = 'failed', error = 'superseded', updated_at = CURRENT_TIMESTAMP
+       WHERE article_id = ? AND job_type = 'deep_analysis' AND status IN ('running', 'queued')`,
+      { replacements: [articleId] },
+    );
+  } catch (err) {
+    console.warn('[deep-analysis] supersede stale jobs failed (non-fatal):', getErrorMessage(err));
+  }
+
   const jobId = `job_${articleId}_${Date.now()}`;
-  const payload = { url, keyword, keywords, language: langForCountry(country), tone: 'professional' };
+  const pipelineKeyword = keyword || (keywords as string[]).find((k) => k?.trim()) || '';
+  const payload = { url, keyword: pipelineKeyword, keywords, language: langForCountry(country), tone: 'professional' };
 
   try {
     await db.query(
@@ -318,6 +396,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sse(res, 'error', { step: 'save', message: 'Job already claimed or max attempts reached' });
       return res.end();
     }
+    await db.query(
+      `UPDATE analysis_jobs
+       SET current_stage = 'fetch_page', progress_message = 'Starting analysis...', updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      { replacements: [jobId] },
+    );
   } catch (err) {
     console.error('[deep-analysis] job claim failed:', getErrorMessage(err));
     sse(res, 'error', { step: 'save', message: 'Failed to claim analysis job' });
@@ -331,6 +415,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min timeout
     let sidecarResp: Response;
+
+    console.log('[deep-analysis] calling sidecar', `${sidecarUrl}/pipeline/deep-analysis`, jobId);
 
     try {
       sidecarResp = await fetch(`${sidecarUrl}/pipeline/deep-analysis`, {
@@ -360,9 +446,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sidecarData = await sidecarResp.json();
     const result = sidecarData.result || {};
 
-    // Write done status + result to job row
+    // Store pipeline result but keep job running — post-processing (coverage, AI visibility)
+    // still runs in Node. Marking done here caused the frontend to reload before
+    // ai_info_to_cover was persisted.
     await db.query(
-      `UPDATE analysis_jobs SET status = 'done', result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      `UPDATE analysis_jobs
+       SET result = ?, current_stage = 'finalizing', progress_message = 'Saving analysis results...', updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
       { replacements: [JSON.stringify(result), jobId] },
     );
 
@@ -377,12 +467,148 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // like Surfer's "important terms". We deliberately do NOT layer DataForSEO keyword
     // ideas: for brand keywords they flood the list with irrelevant suggestions
     // (maps, translate, minecraft…) the article never contains, which tanks the score.
-    const allTerms = [
+    const rawTerms = [
       ...(serp.terms || []),
       ...(terms.terms || []),
     ];
+    const allTerms = mapSerpTerms(rawTerms);
 
-    const scoreData = buildScoreData(serp, allTerms, (serp.competitors || []).length);
+    const plainTextEarly = (fetchPage.html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const competitorDomains = (serp.competitors || [])
+      .map((c: { domain?: string; url?: string }) => (c.domain || '').replace(/^www\./, '') || (() => {
+        try { return new URL(c.url || '').hostname.replace(/^www\./, ''); } catch { return ''; }
+      })())
+      .filter(Boolean);
+
+    // Discover real ranking keywords (GSC page + DataForSEO) — fixes thin 3-token lists.
+    let resolvedKeyword = pipelineKeyword || keyword || '';
+    try {
+      const artRow = await db.query<{ domain_id: number | null }>(
+        `SELECT domain_id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+        { replacements: [articleId], type: QueryTypes.SELECT },
+      );
+      let workspaceDomain = '';
+      if (artRow[0]?.domain_id) {
+        const dom = await db.query<{ domain: string | null }>(
+          `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+          { replacements: [artRow[0].domain_id], type: QueryTypes.SELECT },
+        );
+        workspaceDomain = dom[0]?.domain || '';
+      }
+      const discovered = await discoverRankingKeywords({
+        pageUrl: url,
+        workspaceDomain,
+        userKeywords: (keywords as string[]) || [],
+        country,
+        languageCode: langForCountry(country),
+      });
+      if (discovered.keywords.length) {
+        await saveArticleKeywords(articleId, discovered.keywords, discovered.primaryKeyword, plainTextEarly);
+      }
+      if (discovered.primaryKeyword) {
+        resolvedKeyword = discovered.primaryKeyword;
+        await db.query(
+          `UPDATE articles SET target_keyword = ? WHERE ${articleIdSql} = ?`,
+          { replacements: [resolvedKeyword, articleId] },
+        );
+      }
+    } catch (err) {
+      console.log('[deep-analysis] keyword discovery failed (non-fatal):', getErrorMessage(err));
+    }
+
+    const enrichedTerms = await enrichNlpTermsIfNeeded({
+      terms: filterUsefulNlpTerms(allTerms),
+      primaryKeyword: resolvedKeyword,
+      country,
+      languageCode: langForCountry(country),
+      competitorDomains,
+      plainText: plainTextEarly,
+    });
+    let mergedTerms = mergeNlpTerms(
+      filterUsefulNlpTerms(allTerms),
+      filterUsefulNlpTerms(enrichedTerms),
+    ).map((t) => ({
+      ...t,
+      suggested_min: t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
+      suggested_max: t.suggested_max ?? Math.max(t.suggested_min ?? 1, Math.round((t.target_count || 1) * 1.5)),
+      current_count: countOccurrences(plainTextEarly, t.term),
+    }));
+
+    let competitorBenchmarks: Awaited<ReturnType<typeof buildCompetitorBenchmarks>> = null;
+    try {
+      competitorBenchmarks = await buildCompetitorBenchmarks(
+        resolvedKeyword || keyword || '',
+        url,
+        serp.competitors || [],
+        mergedTerms,
+      );
+      if (competitorBenchmarks?.real.terms?.length) {
+        mergedTerms = competitorBenchmarks.real.terms;
+      }
+    } catch (err) {
+      console.log('[deep-analysis] competitor benchmarks failed (non-fatal):', getErrorMessage(err));
+    }
+
+    mergedTerms = filterNlpTermsForAnalysis(
+      filterUsefulNlpTerms(mergedTerms),
+      resolvedKeyword || keyword || '',
+    );
+    console.log(`[deep-analysis] terms after filter: ${mergedTerms.length} (keyword: ${resolvedKeyword || keyword || ''})`);
+
+    if (!hasMinCompetitorDomains(competitorDomains)) {
+      console.warn('[deep-analysis] fewer than 3 distinct competitor domains — term ranges may be less reliable');
+    }
+
+    const corpusTexts = competitorBenchmarks?.corpusTexts ?? [];
+    const corpusHtmls = competitorBenchmarks?.corpusHtmls ?? [];
+    if (corpusTexts.length) {
+      mergedTerms = calibrateTermRangesFromCorpus(mergedTerms, corpusTexts);
+    }
+
+    const contentTargets = competitorBenchmarks?.targets ?? {
+      avgWords: serp.words_target || 2200,
+      avgHeadings: serp.headings_target || 15,
+      avgPs: serp.paragraphs_target || 20,
+    };
+
+    const pageContentEarly = fetchPage.html || '';
+    const resolvedKw = resolvedKeyword || keyword || '';
+    let auditResult: ReturnType<typeof buildAuditResult> | undefined;
+    let seoScoreFromAudit: number | undefined;
+    let competitorWordSpread: { min: number; max: number } | undefined;
+
+    if (pageContentEarly && competitorBenchmarks?.real) {
+      try {
+        const internalLinks = await findInternalLinkOpportunities(url, resolvedKw);
+        const timing = {
+          ttfbMs: fetchPage.ttfb_ms ?? fetchPage.ttfbMs ?? 200,
+          loadMs: fetchPage.load_ms ?? fetchPage.loadMs ?? 1200,
+        };
+        auditResult = buildAuditResult(
+          pageContentEarly,
+          url,
+          resolvedKw,
+          timing,
+          { ...competitorBenchmarks.real, terms: mergedTerms },
+          internalLinks ?? undefined,
+        );
+        seoScoreFromAudit = computeSeoScoreFromAudit(auditResult);
+        const bodyWords = competitorBenchmarks.real.competitors.map((c) => c.values.word_count_body || 0).filter((n) => n > 0);
+        if (bodyWords.length) {
+          competitorWordSpread = { min: Math.min(...bodyWords), max: Math.max(...bodyWords) };
+        }
+      } catch (err) {
+        console.log('[deep-analysis] audit result failed (non-fatal):', getErrorMessage(err));
+      }
+    }
+
+    const scoreData = buildScoreData(serp, mergedTerms, (serp.competitors || []).length, {
+      scoringModel: competitorBenchmarks ? 'competitor' : 'legacy',
+      contentTargets,
+      auditResult,
+      seoScore: seoScoreFromAudit,
+      competitorWordSpread,
+    });
 
     const rankingScore = score.ranking_score ?? null;
     const rankingSignals = score.ranking_signals ? JSON.stringify(score.ranking_signals) : null;
@@ -407,13 +633,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Also store it in the content_score column so list and panel always match.
     const plainText = pageContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = plainText ? plainText.split(/\s+/).length : 0;
-    (scoreData as any)._heading_count = headingCount;
-    (scoreData as any)._paragraph_count = paragraphCount;
-    const computedScore = computeContentScore(
+
+    mergedTerms = scaleTermRangesToWordCount(mergedTerms, wordCount, contentTargets.avgWords);
+    if (corpusHtmls.length) {
+      mergedTerms = enrichTermsWithSalience(mergedTerms, corpusHtmls);
+    }
+    scoreData.terms = mergedTerms;
+
+    scoreData._heading_count = headingCount;
+    scoreData._paragraph_count = paragraphCount;
+    const seoScore = seoScoreFromAudit ?? computeContentScore(
       plainText, wordCount, headingCount, scoreData, paragraphCount, undefined,
-      pageContent, keyword || '',
+      pageContent, resolvedKeyword || '',
     );
-    (scoreData as any)._computed_score = computedScore;
+    scoreData.seo_score = seoScore;
+    scoreData._computed_score = seoScore;
+    scoreData._content_score = seoScore;
 
     const setClauses: string[] = [
       `title = COALESCE(NULLIF(?, ''), title)`,
@@ -427,7 +662,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `status = 'draft'`,
       `updated_at = CURRENT_TIMESTAMP`,
     ];
-    const replacements: any[] = [
+    const replacements: unknown[] = [
       articleTitle,
       metaTitle,
       metaDescription,
@@ -435,7 +670,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       featuredImage,
       wordCount || classify.word_count_estimate || 0,
       JSON.stringify(scoreData),
-      computedScore || ruleBase,
+      seoScore || ruleBase,
     ];
 
     if (rankingScore !== null) {
@@ -458,43 +693,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await replaceCompetitors(articleId, serp.competitors);
     }
 
+    // Cache competitor outlines for the panel (avoids empty/skeleton state after analysis).
+    const outlineKeyword = resolvedKeyword || keyword || '';
+    if (outlineKeyword) {
+      try {
+        const outlineRes = await fetch(`${sidecarUrl}/competitor-outlines`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '',
+          },
+          body: JSON.stringify({
+            keyword: outlineKeyword,
+            language: langForCountry(country),
+            num: 5,
+          }),
+        });
+        if (outlineRes.ok) {
+          const outlineData = await outlineRes.json();
+          if (outlineData?.competitors?.length) {
+            await db.query(
+              `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+              { replacements: [JSON.stringify(outlineData), articleId] },
+            );
+            console.log(`[deep-analysis] cached ${outlineData.competitors.length} competitor outlines`);
+          }
+        }
+      } catch (err) {
+        console.warn('[deep-analysis] competitor outlines cache failed (non-fatal):', getErrorMessage(err));
+      }
+    }
+
     // Save terms
-    if (allTerms.length) {
+    if (mergedTerms.length) {
       await db.query('DELETE FROM article_terms WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
-      for (const t of allTerms) {
+      for (const t of mergedTerms) {
         await db.query(
           `INSERT INTO article_terms (article_id, term, term_type, source, current_count, target_min, target_max, importance, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-          { replacements: [articleId, t.term, t.type || 'topic', 'serp', 0, Math.max(1, Math.round(t.target_count * 0.7)), Math.max(1, Math.round(t.target_count * 1.5)), t.target_count || 1] },
+          { replacements: [
+            articleId,
+            t.term,
+            'topic',
+            'serp',
+            countOccurrences(plainText, t.term),
+            t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
+            t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
+            t.target_count || 1,
+          ] },
         ).catch(() => {});
       }
     }
 
-    // AI Search "info to cover" — prefer DataForSEO People Also Ask; fall back to
-    // the sidecar (serper) result. Persisted so the editor list is ready without a
-    // manual run. Non-fatal — the article is already saved.
+    // AI Search facts pipeline — SERP corpus + LLM (Option B), merged with PAA/sidecar.
+    let articleFacts: ArticleFact[] = [];
+    let aiVisibilitySummary: AiVisibilitySummary | null = null;
     try {
       let ownDomain = '';
       try { ownDomain = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
-      let summary: AiVisibilitySummary | null = await getAiSearchInfo({
-        keyword: keyword || '', articleText: plainText, ownDomain, country, languageCode: langForCountry(country),
+      const sidecarSummary = summaryFromSidecar(result.ai_search);
+      const pipelineResult = await runArticleAiPipeline({
+        keyword: resolvedKeyword || keyword || '',
+        articleText: plainText,
+        corpusTexts,
+        country,
+        languageCode: langForCountry(country),
+        ownDomain,
+        sidecarSummary,
       });
-      const aiSearch = result.ai_search;
-      if (!summary && aiSearch && Array.isArray(aiSearch.citations)) {
-        summary = {
-          prompts_total: aiSearch.prompts_total || 0,
-          prompts_cited: aiSearch.prompts_cited || 0,
-          competitor_citations: aiSearch.competitor_citations || 0,
-          extractability_score: aiSearch.extractability_score || 0,
-          citations: aiSearch.citations || [],
-        };
-      }
-      if (summary && summary.citations.length) {
-        await persistAiVisibilityRun(articleId, keyword || '', summary);
-        console.log(`[deep-analysis] AI search stored: ${summary.prompts_cited}/${summary.prompts_total} covered`);
+      articleFacts = pipelineResult.facts;
+      aiVisibilitySummary = pipelineResult.summary;
+      if (aiVisibilitySummary?.citations?.length) {
+        console.log(`[deep-analysis] AI facts pipeline: ${articleFacts.length} facts, ${aiVisibilitySummary.prompts_cited}/${aiVisibilitySummary.prompts_total} covered`);
+      } else {
+        console.warn('[deep-analysis] AI search: no citations from facts pipeline or PAA');
       }
     } catch (err) {
-      console.log('[deep-analysis] AI search persist failed (non-fatal):', getErrorMessage(err));
+      console.warn('[deep-analysis] AI facts pipeline failed (non-fatal):', getErrorMessage(err));
     }
 
     // Coverage snapshot — builds CoverageItems from PAA + intro-intent + article_terms
@@ -512,8 +787,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const introSection = splitSections(pageContent)[0];
         const introPlain = introSection ? introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
 
-        const paaItems = paaCoverageItems((serp.paa_questions || []).map((q: string) => ({ question: q })));
-        const intentResult = await analyzeIntroduction(introPlain, keyword || '', deepseekIntroJudge);
+        const paaFromSerp = (serp.paa_questions || []).map((q: string) => ({ question: q }));
+        const paaFromDfs = (aiVisibilitySummary?.citations || [])
+          .filter((c) => c.answer && c.answer.length > 20 && c.prompt === c.answer)
+          .map((c) => ({ question: c.prompt, answer: c.answer }));
+        const paaQuestionsOnly = (aiVisibilitySummary?.citations || [])
+          .filter((c) => c.prompt && (!c.answer || c.prompt !== c.answer))
+          .map((c) => ({ question: c.prompt, answer: c.answer || '' }));
+        const paaMerged = [
+          ...paaFromSerp,
+          ...paaQuestionsOnly,
+          ...paaFromDfs,
+        ];
+        const paaItems = paaCoverageItems(paaMerged);
+        const factItems = paaFactsCoverageItems(paaMerged);
+        const llmFactItems = factsToCoverageItems(articleFacts);
+        const intentResult = await analyzeIntroduction(introPlain, resolvedKeyword || keyword || '', deepseekIntroJudge);
         // checkCoverage/analyzeIntroduction don't surface each deepseek call's usage.total_tokens
         // (CoverageResult/IntroVerdict carry no usage field, and checkCoverage caches by content
         // hash so a "real" count would also have to model cache hits as free). Record a documented
@@ -530,7 +819,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const readabilityItems: CoverageItem[] = []; // standalone ai-readability run (Task 11) fills these
 
         const items = mergeCoverageItems({
-          paa: paaItems, intent: baseIntent, readability: readabilityItems, entity: entityItems,
+          paa: [...paaItems, ...factItems, ...llmFactItems], intent: baseIntent, readability: readabilityItems, entity: entityItems,
         });
 
         // Judge only paa + future fact/definition (intent already graded by intro analyzer; entity/readability deterministic).
@@ -559,9 +848,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(coverageSnapshot), articleId] },
         );
+
+        const intentBucket = coverageSnapshot.buckets.find((b) => b.key === 'intent');
+        const aiScore = articleFacts.length
+          ? computeAiSearchScoreV2({
+            facts: articleFacts,
+            articleText: plainText,
+            intentScore: intentBucket?.score,
+            answersMainQuestionEarly: coverageResult.answersMainQuestionEarly,
+          })
+          : 0;
+        const contentScore = computeOverallContentScore(seoScore, aiScore);
+        scoreData.seo_score = seoScore;
+        scoreData.ai_score = aiScore;
+        scoreData._computed_score = contentScore;
+        scoreData._content_score = contentScore;
+        await db.query(
+          `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
+        );
+
+        if (aiVisibilitySummary?.citations?.length) {
+          await persistAiVisibilityRun(
+            articleId,
+            resolvedKeyword || keyword || '',
+            aiVisibilitySummary,
+            aiScore,
+          );
+        }
       }
     } catch (err) {
       console.warn('[coverage] deep-analysis snapshot compute failed', err);
+      if (aiVisibilitySummary?.citations?.length && articleFacts.length) {
+        const fallbackAi = computeAiSearchScoreV2({ facts: articleFacts, articleText: plainText });
+        const contentScore = computeOverallContentScore(seoScore, fallbackAi);
+        scoreData.ai_score = fallbackAi;
+        scoreData._content_score = contentScore;
+        scoreData._computed_score = contentScore;
+        await db.query(
+          `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
+          { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
+        ).catch(() => {});
+        await persistAiVisibilityRun(
+          articleId,
+          resolvedKeyword || keyword || '',
+          aiVisibilitySummary,
+          fallbackAi,
+        ).catch(() => {});
+      }
       // never block deep-analysis on coverage errors; the gauge falls back to computeAiSearchScore
     } finally {
       // Record tokens actually spent even if a later step (buildSnapshot/UPDATE) throws,
@@ -570,6 +904,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await recordAiTokens(orgId, coverageTokens);
       }
     }
+
+    await db.query(
+      `UPDATE analysis_jobs
+       SET status = 'done', current_stage = 'done', progress_message = 'Analysis complete', updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      { replacements: [jobId] },
+    );
 
     sse(res, 'done', {
       articleId,

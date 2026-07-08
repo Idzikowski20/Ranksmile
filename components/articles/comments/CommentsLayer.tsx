@@ -6,6 +6,7 @@ import CommentPin from './CommentPin';
 import { commentsUrl } from './commentApi';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
 import { ABLY_EVENTS } from '../../../lib/ably/channel';
+import { ablyIgnore } from '../../../lib/ably/safe';
 
 const F = 'var(--font-family-primary)';
 
@@ -93,7 +94,7 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
   useEffect(() => {
     if (!liveCommentChannel) return undefined;
     const onComment = () => reload();
-    liveCommentChannel.subscribe(ABLY_EVENTS.comment, onComment).catch(() => {});
+    ablyIgnore(liveCommentChannel.subscribe(ABLY_EVENTS.comment, onComment));
     return () => { liveCommentChannel.unsubscribe(ABLY_EVENTS.comment, onComment); };
   }, [liveCommentChannel, reload]);
 
