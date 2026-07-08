@@ -20,6 +20,8 @@ type ArticleRow = {
    wp_post_id: number | null;
 };
 
+type WpSelectField = { value?: string | number | null } | string | number | null | undefined;
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -63,17 +65,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // Build metadata from the modal's selections, falling back to the article's own values.
    // post types/categories/tags/authors are all { value, label } from the plugin; the importer
    // wants { value } (categories/tags as arrays of { value }).
-   const toValue = (x: any) => ({ value: x && typeof x === 'object' ? x.value : x });
+   const toValue = (x: WpSelectField) => ({ value: x && typeof x === 'object' ? x.value : x });
    const metadata: Record<string, unknown> = {
       // The WP post title defaults to the SEO/meta title (the article's `title` is the in-editor
       // heading and can be a stale/generic default), but the modal may override it.
       postTitle: (typeof title === 'string' && title.trim()) || article.meta_title || article.title || '',
       postStatus: { value: postStatus },
-      postType: type && (type as any).value ? { value: (type as any).value } : { value: 'post' },
+      postType: type && typeof type === 'object' && type.value ? { value: type.value } : { value: 'post' },
       postMetaTitle: (typeof metaTitle === 'string' ? metaTitle : article.meta_title) || '',
       postMetaDescription: (typeof metaDescription === 'string' ? metaDescription : article.meta_description) || '',
    };
-   if (author && (author as any).value) metadata.postAuthor = { value: (author as any).value };
+   if (author && typeof author === 'object' && author.value) metadata.postAuthor = { value: author.value };
    const catValues = Array.isArray(categories) ? categories.map(toValue).filter((c) => c.value != null && c.value !== '') : [];
    if (catValues.length) metadata.postCategory = catValues;
    const tagValues = Array.isArray(tags) ? tags.map(toValue).filter((t) => t.value != null && t.value !== '') : [];

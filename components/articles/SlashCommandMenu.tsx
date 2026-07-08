@@ -1,11 +1,12 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import type { Editor } from '@tiptap/core';
 
 export type SlashItem = {
   title: string;
   hint: string; // e.g. "/ask"
   section?: string; // group header (undefined = top, ungrouped)
   icon: React.ReactNode;
-  command: (props: { editor: any; range: { from: number; to: number } }) => void;
+  command: (props: { editor: Editor; range: { from: number; to: number } }) => void;
 };
 
 export interface SlashMenuRef {

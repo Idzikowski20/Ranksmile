@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import type * as cheerio from 'cheerio';
 import { countOccurrences } from '../contentScore';
-import { scoreContent } from '../seo/scoreContentClient';
+import { scoreContent, type RankingSignal } from '../seo/scoreContentClient';
 import { callSidecar } from '../sidecar';
 import { computeAiSearchScore } from '../aiSearchScore';
 import type { AiVisibilitySummary } from '../aiSearchScore';
@@ -10,6 +10,31 @@ import { reindexSids, buildOutline, sanitizeFragment, stripSids, makeWorkingDoc 
 import { resolveArticleSeoMeta } from './articleMeta';
 import { getErrorMessage } from '../errors';
 import type { ToolCtx } from './types';
+
+type SocialPostsResponse = { variants?: unknown[]; posts?: unknown[] };
+type PlagiarismMatch = { text?: string; domain?: string; url?: string };
+type PlagiarismSidecarResponse = { uniqueness?: number; matched?: number; checked?: number; matches?: PlagiarismMatch[] };
+type CompetitorHeading = { level?: number; text?: string };
+type CompetitorOutline = { title?: string; url?: string; headings?: CompetitorHeading[] };
+type CompetitorOutlinesResponse = { competitors?: CompetitorOutline[] };
+type AiReadabilityCriterion = { met?: boolean; suggestions?: string[] };
+type AiReadabilityResponse = { score?: number; criteria?: AiReadabilityCriterion[] };
+type ApplyReadabilityResponse = { content?: string };
+
+function rankingSignalsList(payload: Record<string, unknown> | null | undefined): RankingSignal[] {
+  const sigs = payload?.signals;
+  if (!Array.isArray(sigs)) return [];
+  return sigs.filter((s): s is RankingSignal =>
+    !!s && typeof s === 'object' && typeof (s as RankingSignal).name === 'string' && typeof (s as RankingSignal).score === 'number',
+  );
+}
+
+function weakestSignals(signals: RankingSignal[]) {
+  return [...signals]
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 5)
+    .map((s) => ({ name: s.name, score: s.score, recommendation: s.recommendation }));
+}
 
 const MAX_WRITES = 12; // cap on write-tool executions per turn
 
@@ -44,7 +69,7 @@ const ACTION_TIMEOUT = 60_000;
 
 // The /social-posts sidecar returns { variants: string[] } (SocialMediaModal reads data.variants).
 // Normalize to a stable { posts: string[] } so the tool result shape never depends on the sidecar.
-function normalizeSocialPosts(d: any): string[] {
+function normalizeSocialPosts(d: SocialPostsResponse | Record<string, unknown>): string[] {
   if (Array.isArray(d?.variants)) return d.variants.filter((v: unknown) => typeof v === 'string');
   if (Array.isArray(d?.posts)) return d.posts.filter((v: unknown) => typeof v === 'string');
   return [];
@@ -147,21 +172,15 @@ export function buildTools(ctx: ToolCtx) {
         if (!ctx.htmlDirty && ctx.articleId != null) {
           const m = await getSeoMeta(ctx);
           if (m?.rankingScore != null) {
-            const weakest = [...(m.rankingSignals?.signals || [])]
-              .sort((a: any, b: any) => a.score - b.score)
-              .slice(0, 5)
-              .map((s: any) => ({ name: s.name, score: s.score, recommendation: s.recommendation }));
+            const weakest = weakestSignals(rankingSignalsList(m.rankingSignals));
             return { ranking_score: m.rankingScore, weakest_signals: weakest };
           }
         }
         try {
-          const r: any = await scoreContent(
-            ctx.$.html(), ctx.keyword, (ctx.scoreData as any) || {}, ctx.articleTitle, ctx.articleMetaDescription,
+          const r = await scoreContent(
+            ctx.$.html(), ctx.keyword, ctx.scoreData || {}, ctx.articleTitle, ctx.articleMetaDescription,
           );
-          const weakest = [...(r?.ranking_signals?.signals || [])]
-            .sort((a: any, b: any) => a.score - b.score)
-            .slice(0, 5)
-            .map((s: any) => ({ name: s.name, score: s.score, recommendation: s.recommendation }));
+          const weakest = weakestSignals(r?.ranking_signals?.signals || []);
           return { ranking_score: r?.ranking_score ?? null, weakest_signals: weakest };
         } catch (e) {
           return { ok: false, error: `ranking analysis unavailable: ${getErrorMessage(e) || 'error'}` };
@@ -207,7 +226,7 @@ export function buildTools(ctx: ToolCtx) {
         // re-run the live sidecar check only after the article changed.
         if (!ctx.htmlDirty) {
           const pm = await getSeoMeta(ctx);
-          const v: any = pm?.aiVisibility;
+          const v = pm?.aiVisibility;
           if (v && (v.prompts_total || v.citations)) {
             const out = {
               score: computeAiSearchScore(v),
@@ -222,7 +241,7 @@ export function buildTools(ctx: ToolCtx) {
         }
         try {
           const m = await getSeoMeta(ctx);
-          const sc: any = await callSidecar('/ai-visibility', {
+          const sc = await callSidecar<AiVisibilitySummary>('/ai-visibility', {
             keyword: ctx.keyword || m?.targetKeyword || '',
             own_domain: m?.domain || '',
             competitor_domains: m?.competitorDomains || [],
@@ -259,7 +278,7 @@ export function buildTools(ctx: ToolCtx) {
         if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
         try {
           const m = await getSeoMeta(ctx);
-          const d: any = await callSidecar('/plagiarism', {
+          const d = await callSidecar<PlagiarismSidecarResponse>('/plagiarism', {
             text: ctx.$.root().text(),
             domain: m?.domain || '',
             language: m?.language || 'pl',
@@ -268,7 +287,7 @@ export function buildTools(ctx: ToolCtx) {
             uniqueness: d.uniqueness ?? null,
             matched: d.matched ?? 0,        // TOTAL flagged passages (model can say "37 found, showing 3")
             checked: d.checked ?? 0,
-            sample_matches: (d.matches || []).slice(0, 3).map((x: any) => ({ text: x.text, domain: x.domain, url: x.url })),
+            sample_matches: (d.matches || []).slice(0, 3).map((x) => ({ text: x.text, domain: x.domain, url: x.url })),
           };
           ctx.cache.plagiarism = out;
           return out;
@@ -291,11 +310,11 @@ export function buildTools(ctx: ToolCtx) {
           } else {
             try {
               const m = ctx.articleId != null ? await getSeoMeta(ctx) : undefined;
-              const d: any = await callSidecar('/competitor-outlines', { keyword: ctx.keyword, language: m?.language || 'pl', num: 5 }, SIDECAR_TIMEOUT);
-              outlines = (d.competitors || []).slice(0, 5).map((c: any) => ({
-                title: c.title,
-                url: c.url,
-                headings_outline: (c.headings || []).map((h: any) => `${'  '.repeat(Math.max(0, (h.level || 2) - 2))}${h.text}`).join('\n'),
+              const d = await callSidecar<CompetitorOutlinesResponse>('/competitor-outlines', { keyword: ctx.keyword, language: m?.language || 'pl', num: 5 }, SIDECAR_TIMEOUT);
+              outlines = (d.competitors || []).slice(0, 5).map((c) => ({
+                title: c.title || '',
+                url: c.url || '',
+                headings_outline: (c.headings || []).map((h) => `${'  '.repeat(Math.max(0, (h.level || 2) - 2))}${h.text || ''}`).join('\n'),
               }));
               ctx.cache.competitors = outlines;
             } catch {
@@ -313,7 +332,7 @@ export function buildTools(ctx: ToolCtx) {
       execute: async () => {
         if (ctx.articleId == null) return { ok: false, summary: 'article id unavailable' };
         try {
-          const d: any = await callSidecar('/social-posts', {
+          const d = await callSidecar<SocialPostsResponse>('/social-posts', {
             article_content: stripSids(ctx.$.html()),
             keyword: ctx.keyword || '',
           }, ACTION_TIMEOUT);
@@ -335,15 +354,15 @@ export function buildTools(ctx: ToolCtx) {
         try {
           const current = stripSids(ctx.$.html());
           const kw = ctx.keyword || '';
-          const rub: any = await callSidecar('/ai-readability', {
+          const rub = await callSidecar<AiReadabilityResponse>('/ai-readability', {
             article_content: `${ctx.articleTitle}\n${ctx.articleMetaDescription}\n${current}`,
             keyword: kw,
           }, ACTION_TIMEOUT);
           const suggestions: string[] = (rub.criteria || [])
-            .filter((c: any) => !c.met)
-            .flatMap((c: any) => c.suggestions || []);
+            .filter((c) => !c.met)
+            .flatMap((c) => c.suggestions || []);
           if (suggestions.length === 0) return { ok: true, summary: 'readability already strong; no changes', score: rub.score };
-          const applied: any = await callSidecar('/apply-ai-readability', { content: current, suggestions, keyword: kw }, ACTION_TIMEOUT);
+          const applied = await callSidecar<ApplyReadabilityResponse>('/apply-ai-readability', { content: current, suggestions, keyword: kw }, ACTION_TIMEOUT);
           const newHtml = (applied.content || '').trim();
           if (!newHtml) return { ok: false, summary: 'readability rewrite returned empty' };
           const wd = makeWorkingDoc(newHtml);    // re-annotates sids; flows into finalHtml diff

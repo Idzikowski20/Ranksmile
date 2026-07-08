@@ -42,7 +42,7 @@ export const Heading = styled(
   (props: HeadingProps & {className?: string}) => {
     const {children, as, ...rest} = props as HeadingProps;
     const HeadingComponent = as!;
-    return <HeadingComponent {...(rest as any)}>{children}</HeadingComponent>;
+    return <HeadingComponent {...(rest as React.ComponentPropsWithoutRef<typeof HeadingComponent>)}>{children}</HeadingComponent>;
   },
   {
     shouldForwardProp: p => isPropValid(p),

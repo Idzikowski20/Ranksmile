@@ -17,6 +17,7 @@ import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import type { ToolCtx } from '../../../lib/ai/types';
 import { getErrorMessage } from '../../../lib/errors';
+import { flushSse } from '../../../lib/types/api';
 
 // maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
 // calls (apply_readability), so it must be >= the sum of the action tool budgets (ACTION_TIMEOUT).
@@ -54,16 +55,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pendingAction: null,
     };
 
-    const priorTurns = (Array.isArray(history) ? history : [])
-      .filter((h: any) => h && typeof h.message === 'string' && h.message.trim())
-      .map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' as const : 'user' as const, content: h.message }));
+    type HistoryTurn = { role?: string; message?: string };
+    const priorTurns = (Array.isArray(history) ? history as HistoryTurn[] : [])
+      .filter((h) => h && typeof h.message === 'string' && h.message.trim())
+      .map((h) => ({ role: h.role === 'assistant' ? 'assistant' as const : 'user' as const, content: h.message as string }));
 
     // ── Switch to SSE: validations above already ran with JSON status codes. ──
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
-    const send = (event: string, data: unknown) => { res.write(sseEvent(event, data)); (res as any).flush?.(); };
+    const send = (event: string, data: unknown) => { res.write(sseEvent(event, data)); flushSse(res); };
 
     // Abort the model when the client disconnects (Stop button closes the socket).
     const ac = new AbortController();
@@ -96,7 +98,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           case 'tool-call': send('step', { phase: 'start', tool: part.toolName }); break;
           case 'tool-result': thinkingLen = streamedText.length; send('step', { phase: 'end', tool: part.toolName }); break;
           case 'tool-error': thinkingLen = streamedText.length; send('step', { phase: 'error', tool: part.toolName }); break;
-          case 'error': send('error', { error: String((part as any).error?.message || (part as any).error || 'stream error') }); break;
+          case 'error': {
+            const errPart = part as { error?: { message?: string } | string };
+            send('error', { error: String(errPart.error && typeof errPart.error === 'object' ? errPart.error.message : errPart.error || 'stream error') });
+            break;
+          }
           default: break; // start/finish-step etc. → covered by onStepFinish + totalUsage
         }
       }

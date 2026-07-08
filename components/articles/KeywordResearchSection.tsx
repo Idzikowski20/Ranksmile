@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-interface KeywordItem {
+export interface KeywordItem {
   id?: number;
   keyword: string;
   gsc_volume_range?: string | null;

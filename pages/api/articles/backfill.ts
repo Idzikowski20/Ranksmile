@@ -9,6 +9,7 @@ import { kwScore, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryRows } from '../../../lib/db/query';
+import { queryAffected } from '../../../lib/types/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -33,20 +34,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             AND (score_data::jsonb->>'_computed_score')::int > 0`,
          { replacements: [domainId] },
       );
-      const scoreUpdated = (scoreResult as any)?.affectedRows ?? (scoreResult as any)?.changes ?? 0;
+      const scoreUpdated = queryAffected(scoreResult);
 
       // ── 2. Fetch GSC data for keyword assignment ──
       const domain = await Domain.findByPk(domainId, { attributes: ['domain'] });
-      const domainName = (domain as any)?.domain || '';
+      const domainName = domain?.get({ plain: true })?.domain as string || '';
       let keywordAssigned = 0;
 
       if (domainName) {
          const scData = await readLocalSCData(domainName);
-         const thirtyDays: any[] = (scData && scData.thirtyDays) || [];
+         const thirtyDays: SearchAnalyticsItem[] = (scData && scData.thirtyDays) || [];
 
          // Build URL → best keyword map
          const urlKeywordMap = new Map<string, { keyword: string; clicks: number; impressions: number; position: number }>();
-         thirtyDays.forEach((kw: any) => {
+         thirtyDays.forEach((kw) => {
             if (!kw.page || !kw.keyword) return;
             const urlKey = normalizeUrlForMatch(kw.page);
             const ex = urlKeywordMap.get(urlKey);
@@ -94,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             AND (publish_url LIKE 'http://%' OR publish_url LIKE 'https://%')`,
          { replacements: [domainId] },
       );
-      let metaUrlFixed = (urlFixResult as any)?.affectedRows ?? (urlFixResult as any)?.changes ?? 0;
+      let metaUrlFixed = queryAffected(urlFixResult);
 
       // Case 2: try to match remaining article titles to site_context URLs by slug
       const noMetaArticles = await queryRows<{ id: number; title: string | null }>(
@@ -158,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                )`,
             { replacements: [domainId] },
          );
-         siteContextCleaned = (dupResult as any)?.affectedRows ?? (dupResult as any)?.changes ?? 0;
+         siteContextCleaned = queryAffected(dupResult);
       } catch { /* site_context may not exist */ }
 
       return res.status(200).json({

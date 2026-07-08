@@ -11,8 +11,8 @@ import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
-import { queryOne } from '../../../lib/db/query';
-import type { ArticleRow } from '../../../lib/db/query';
+import { queryOne, type ArticleRow } from '../../../lib/db/query';
+import type { SqlReplacements } from '../../../lib/types/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -42,7 +42,7 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
    try {
       const articleIdSql = await getArticleIdSql();
       let where = '';
-      const replacements: any[] = [];
+      const replacements: SqlReplacements = [];
 
       const allowedIds = await getUserDomainIds(userId);
 

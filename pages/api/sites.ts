@@ -29,7 +29,7 @@ type SitesResponse = {
   error?: string;
 };
 
-async function getOAuthClientFromDomain(domainRecord: any) {
+async function getOAuthClientFromDomain(domainRecord: { search_console?: string | null }) {
   const domainSC = domainRecord.search_console ? JSON.parse(domainRecord.search_console) : {};
   if (domainSC.auth_type !== 'oauth' || !domainSC.oauth_refresh_token) return null;
 
@@ -77,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       impressions: plain.scImpressions || 0,
       clicks: plain.scVisits || 0,
       position: plain.scPosition ? Math.round(plain.scPosition) : 0,
-      chart: recentStats.map((s: any) => ({
+      chart: recentStats.map((s: SearchAnalyticsStat) => ({
         date: s.date,
         clicks: s.clicks || 0,
         impressions: s.impressions || 0,

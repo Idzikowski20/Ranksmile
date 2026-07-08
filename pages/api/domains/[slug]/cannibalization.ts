@@ -4,6 +4,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { queryRows } from '../../../../lib/db/query';
+import type { SqlReplacements } from '../../../../lib/types/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
@@ -27,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     JOIN articles a ON a.id = ak.article_id
     WHERE a.domain_id = ?
   `;
-  const replacements: any[] = [domain.ID];
+  const replacements: SqlReplacements = [domain.ID];
 
   if (checkKeyword) {
     sql += ` AND ak.keyword = ?`;
