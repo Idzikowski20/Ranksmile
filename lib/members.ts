@@ -3,8 +3,10 @@ import { ensureUserTenancy } from './tenancy';
 
 export type MemberRole = 'owner' | 'admin' | 'member';
 export type Member = { id: number; user_id: string; email: string | null; role: string; status: string; workspace_ids: string | null; created_at: string | null };
-type Row = Record<string, any>;
-const select = async (sql: string, r: any[]): Promise<Row[]> => { const [rows] = await db.query(sql, { replacements: r }) as [Row[], unknown]; return rows; };
+import type { DbRow, SqlReplacements } from './types/db';
+
+type Row = DbRow;
+const select = async (sql: string, r: SqlReplacements): Promise<Row[]> => { const [rows] = await db.query(sql, { replacements: r }) as [Row[], unknown]; return rows; };
 
 export async function listMembers(userId: string): Promise<Member[]> {
    const { orgId } = await ensureUserTenancy(userId);

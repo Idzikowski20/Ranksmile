@@ -1,4 +1,5 @@
-import { buildReviewDoc } from '../../lib/optimizeReviewDoc';
+import { buildReviewDoc, buildStreamingDoc } from '../../lib/optimizeReviewDoc';
+import { splitSections } from '../../lib/articleSections';
 import type { SectionEvent } from '../../lib/optimizeSectionEvents';
 
 const ev = (over: Partial<SectionEvent>): SectionEvent => ({
@@ -62,5 +63,30 @@ describe('buildReviewDoc', () => {
     ]);
     expect(out).toContain('data-section-id="sec&quot;evil"');
     expect(out).not.toContain('data-section-id="sec"evil"');
+  });
+});
+
+describe('buildStreamingDoc', () => {
+  const pre = '<p>Intro</p>\n<h2>One</h2><p>A</p>\n<h2>Two</h2><p>B</p>';
+  const sections = splitSections(pre);
+
+  it('marks all sections queued except the scanning one', () => {
+    const firstId = sections[0].id;
+    const out = buildStreamingDoc(pre, [], firstId);
+    expect(out).toContain(`data-section-id="${firstId}"`);
+    expect(out).toContain('data-status="scanning"');
+    expect(out).toContain('data-status="queued"');
+    expect(out).not.toContain('data-status="improved"');
+  });
+
+  it('replaces changed sections with improved atoms and advances scanning', () => {
+    const sec1 = sections[1];
+    const sec2 = sections[2];
+    const out = buildStreamingDoc(pre, [
+      ev({ sectionId: sec1.id, index: sec1.index, oldHtml: sec1.html, newHtml: '<h2>One</h2><p>A!</p>', changed: true }),
+    ], sec2.id);
+    expect(out).toContain(`data-section-id="${sec1.id}"`);
+    expect(out).toContain('data-status="improved"');
+    expect(out).toContain('data-status="scanning"');
   });
 });

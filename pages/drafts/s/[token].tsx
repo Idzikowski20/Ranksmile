@@ -13,6 +13,7 @@ import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import ViewerEditor, { ViewerEditorHandle } from '../../../components/articles/ViewerEditor';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
 import { ABLY_EVENTS } from '../../../lib/ably/channel';
+import { ablyIgnore } from '../../../lib/ably/safe';
 
 const F = 'var(--font-family-primary)';
 const NAME_KEY = 'preview-author-name';
@@ -126,24 +127,29 @@ const SharePreviewPage: NextPage = () => {
       if (rev > renderedRevRef.current) { pendingCaretRef.current = { from, rev }; return; }
       drawCaret(from);
     };
-    liveChannel.subscribe(ABLY_EVENTS.content, onContent).catch(() => {});
-    liveChannel.subscribe(ABLY_EVENTS.caret, onCaret).catch(() => {});
-    liveChannel.presence.enter({ name: authorName || 'Guest', role: 'viewer' }).catch(() => {});
+    ablyIgnore(liveChannel.subscribe(ABLY_EVENTS.content, onContent));
+    ablyIgnore(liveChannel.subscribe(ABLY_EVENTS.caret, onCaret));
+    ablyIgnore(liveChannel.presence.enter({ name: authorName || 'Guest', role: 'viewer' }));
     return () => {
       liveChannel.unsubscribe(ABLY_EVENTS.content, onContent);
       liveChannel.unsubscribe(ABLY_EVENTS.caret, onCaret);
+      ablyIgnore(liveChannel.presence.leave());
     };
   }, [liveChannel, resyncFromShare, drawCaret, authorName]);
 
   const [ownerLive, setOwnerLive] = useState(false);
   useEffect(() => {
     if (!liveChannel) return undefined;
-    const refresh = () => liveChannel.presence.get()
-      .then((members) => setOwnerLive(members.some((m) => (m.data as { role?: string } | undefined)?.role === 'owner')))
-      .catch(() => {});
-    liveChannel.presence.subscribe(['enter', 'leave', 'update'], refresh).catch(() => {});
+    const refresh = () => ablyIgnore(
+      liveChannel.presence.get()
+        .then((members) => setOwnerLive(members.some((m) => (m.data as { role?: string } | undefined)?.role === 'owner'))),
+    );
+    ablyIgnore(liveChannel.presence.subscribe(['enter', 'leave', 'update'], refresh));
     refresh();
-    return () => { liveChannel.presence.unsubscribe(); };
+    return () => {
+      liveChannel.presence.unsubscribe();
+      ablyIgnore(liveChannel.presence.leave());
+    };
   }, [liveChannel]);
 
   // Don't let a pending editing-indicator timeout fire after unmount.

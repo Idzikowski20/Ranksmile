@@ -13,6 +13,8 @@ from collections import defaultdict
 import httpx
 from bs4 import BeautifulSoup
 
+from analyzers.competitor_terms import extract_nlp_terms, is_useful_phrase
+
 
 _cache: dict[str, list[dict]] = {}
 MAX_CACHE = 500
@@ -99,9 +101,12 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     n_docs = max(1, len(texts))
     lower_texts = [t.lower() for t in texts]
     aggregated = []
-    stopwords = {"article", "information", "website", "site", "page", "web", "blog", "post"}
+    stopwords = {"article", "information", "website", "site", "page", "web", "blog", "post",
+                 "oraz", "jest", "czy", "jak", "lub", "warto", "wielu", "informacji"}
     for term, group in term_groups.items():
         if term in stopwords or keyword.lower() in term:
+            continue
+        if not is_useful_phrase(term):
             continue
         doc_freq = len(group["relevances"])
         avg_relevance = sum(group["relevances"]) / len(group["relevances"])
@@ -144,7 +149,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             "relevance": t["relevance"], "doc_freq": t["doc_freq"],
             "suggested_min": t["suggested_min"], "suggested_max": t["suggested_max"],
         }
-        for t in aggregated[:50]
+        for t in aggregated[:120]
     ]
 
 
@@ -206,23 +211,20 @@ TEXT:
 
 
 def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
-    """Fallback when no DeepSeek key available."""
+    """TF-IDF phrase extraction when DeepSeek is unavailable — Surfer-style n-grams."""
     if not texts:
-        return [{"term": keyword, "target_count": 3, "type": "core"}]
+        return [{"term": keyword, "target_count": 3, "type": "core"}] if keyword else []
 
-    word_counts: dict[str, int] = {}
-    for text in texts:
-        words = re.findall(r"\b[a-z]{4,}\b", text.lower())
-        for w in words:
-            word_counts[w] = word_counts.get(w, 0) + 1
+    tfidf_terms = extract_nlp_terms(texts, keyword)
+    if tfidf_terms:
+        return [
+            {
+                "term": t["term"], "target_count": t["target_count"], "type": "supporting",
+                "relevance": 0.6, "doc_freq": t.get("doc_freq", 1),
+                "suggested_min": max(1, t["target_count"] - 1),
+                "suggested_max": max(t["target_count"], t["target_count"] + 2),
+            }
+            for t in tfidf_terms[:80]
+        ]
 
-    sorted_terms = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:30]
-    n = max(1, len(texts))
-    return [
-        {
-            "term": term, "target_count": max(1, round(count / n)), "type": "supporting",
-            "relevance": 0.5, "doc_freq": n,
-            "suggested_min": 1, "suggested_max": max(1, round(count / n)),
-        }
-        for term, count in sorted_terms if term != keyword.lower()
-    ][:50]
+    return [{"term": keyword, "target_count": 3, "type": "core"}] if keyword else []

@@ -20,6 +20,7 @@ export interface OptimizerNodeRef {
    sectionId: string;
    pos: number;
    nodeSize: number;
+   status: string;
 }
 
 /** Collect all contentOptimizer nodes in `doc`, sorted by position DESCENDING. */
@@ -27,7 +28,12 @@ export function collectOptimizerPositions(doc: PMDocLike): OptimizerNodeRef[] {
    const refs: OptimizerNodeRef[] = [];
    doc.descendants((node, pos) => {
       if (node.type.name === 'contentOptimizer') {
-         refs.push({ sectionId: String(node.attrs.sectionId ?? ''), pos, nodeSize: node.nodeSize });
+         refs.push({
+            sectionId: String(node.attrs.sectionId ?? ''),
+            pos,
+            nodeSize: node.nodeSize,
+            status: String(node.attrs.status ?? 'improved'),
+         });
       }
    });
    // Highest position first so splices don't invalidate not-yet-processed positions.

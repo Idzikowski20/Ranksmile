@@ -12,6 +12,7 @@ import {
   SentryPanelHeader,
 } from '../../components/sentry-pages';
 import { useFetchDomains } from '../../services/domains';
+import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
 
 // ── Must match the API handler ────────────────────────────────────────
 const STEPS = [
@@ -121,6 +122,7 @@ const DeepAnalysisPage: NextPage = () => {
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [legacyImporting, setLegacyImporting] = useState(false);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastStageRef = useRef<string | null>(null);
@@ -132,6 +134,43 @@ const DeepAnalysisPage: NextPage = () => {
   const backHref = flow === 'import' ? '/articles/import' : '/articles/new';
   const backLabel = flow === 'import' ? 'Back to import' : 'Back to new content';
 
+  // Legacy import URLs — quick scrape + open editor with background analysis.
+  useEffect(() => {
+    if (!router.isReady || flow !== 'import' || !urlStr) return undefined;
+    let cancelled = false;
+    setLegacyImporting(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/articles/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: urlStr,
+            keywords,
+            country: country || 'PL',
+            startAnalysis: true,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Import failed');
+        const id = Number(data.articleId);
+        if (!Number.isFinite(id)) throw new Error('Import succeeded but article id is missing');
+        writeAnalyzeSession(id, {
+          url: urlStr,
+          keywords,
+          country: (country as string) || 'PL',
+        });
+        if (!cancelled) router.replace(`/articles/${id}`);
+      } catch (err) {
+        if (!cancelled) {
+          setOverallError(err instanceof Error ? err.message : 'Import failed');
+          setLegacyImporting(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router.isReady, flow, urlStr, keywords, country, router]);
+
   const STAGE_ORDER = ['fetch_page', 'scrape_serp', 'classify_content', 'extract_terms', 'score_ranking'] as const;
   const STAGE_TO_STEPS: Record<string, string[]> = {
     fetch_page: ['fetch', 'metadata', 'structure'],
@@ -142,7 +181,7 @@ const DeepAnalysisPage: NextPage = () => {
   };
 
   useEffect(() => {
-    if (!router.isReady || startedRef.current) return;
+    if (!router.isReady || startedRef.current || flow === 'import') return;
     const domainIdStr = (domainIdParam as string || '').trim();
     const isKeywordMode = !urlStr && keywords.length > 0 && !!domainIdStr;
     if (!urlStr && !isKeywordMode) {
@@ -240,7 +279,7 @@ const DeepAnalysisPage: NextPage = () => {
       controller.abort();
       startedRef.current = false;
     };
-  }, [router.isReady, url, kwParam, country, domainIdParam, retryCount, urlStr, keywords]);
+  }, [router.isReady, url, kwParam, country, domainIdParam, retryCount, urlStr, keywords, flow]);
 
   useEffect(() => {
     if (!jobId || allDone || overallError) {
@@ -341,6 +380,17 @@ const DeepAnalysisPage: NextPage = () => {
   ) : (
     <span className="deep-analysis-meta-badge">{completedCount}/{STEPS.length} steps</span>
   );
+
+  if (flow === 'import' && legacyImporting && !overallError) {
+    return (
+      <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
+        <Head><title>Opening editor — SerpBear</title></Head>
+        <div style={{ padding: 48, textAlign: 'center', fontFamily: 'var(--font-family-primary)', color: '#52525C' }}>
+          Importing content and opening editor…
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>

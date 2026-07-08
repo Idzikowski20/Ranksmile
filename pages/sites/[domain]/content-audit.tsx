@@ -63,6 +63,18 @@ const ProcessingPill = ({ status }: { status: PendingStatus }) => {
 const CELL_FONT = { fontFamily: FONT, fontSize: 13, color: '#09090B' };
 const CELL_MUTED = { fontFamily: FONT, fontSize: 13, color: '#9F9FA9' };
 
+type DomainArticle = {
+   id: number | string;
+   title: string;
+   publish_url?: string | null;
+   meta_url?: string | null;
+   target_keyword?: string | null;
+   content_score?: number;
+   status?: string;
+   created_at?: string;
+   updated_at?: string;
+};
+
 type AuditRow = {
    id: number | string; title: string; url: string; keyword: string;
    content_score: number; position: number; clicks: number; impressions: number;
@@ -139,14 +151,14 @@ const ContentAuditPage: NextPage = () => {
    );
 
    const rows = useMemo(() => {
-      const articles: any[] = articlesData?.articles || [];
-      const scItems: any[] = scData?.data?.thirtyDays || [];
+      const articles: DomainArticle[] = articlesData?.articles || [];
+      const scItems: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
       // Aggregate the last-30-days GSC data per PAGE (not per target keyword): a page
       // ranks for many queries, so clicks/impressions are summed across all of them and
       // position is an impression-weighted average. Matching by keyword missed every page
       // whose target_keyword didn't exactly equal a GSC query → "—" everywhere.
       const pageMetrics = new Map<string, { clicks: number; impressions: number; posWeight: number }>();
-      scItems.forEach((it: any) => {
+      scItems.forEach((it) => {
          if (!it.page) return;
          const path = toPath(it.page);
          if (!path) return;
@@ -157,7 +169,7 @@ const ContentAuditPage: NextPage = () => {
          e.posWeight += (it.position || 0) * imp;
          pageMetrics.set(path, e);
       });
-      return articles.map((a: any) => {
+      return articles.map((a) => {
          const url = a.publish_url || a.meta_url || '';
          const m = url ? pageMetrics.get(toPath(url)) : undefined;
          return {
@@ -169,7 +181,7 @@ const ContentAuditPage: NextPage = () => {
             position: m && m.impressions > 0 ? m.posWeight / m.impressions : 0,
             clicks: m?.clicks ?? 0,
             impressions: m?.impressions ?? 0,
-            status: a.status,
+            status: a.status || '',
             created_at: a.created_at,
             updatedAt: a.updated_at || a.created_at,
          };
@@ -179,7 +191,7 @@ const ContentAuditPage: NextPage = () => {
    // GSC pages available to add (page-level, excluding already-tracked & pending). Carries the
    // page's full URL + top-performing query, used to kick off the sidecar analysis on add.
    const availablePages = useMemo<(AvailablePage & { url: string; keyword: string })[]>(() => {
-      const items: any[] = scData?.data?.thirtyDays || [];
+      const items: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
       const exclude = new Set([
          ...rows.map((r) => toPath(r.url)),
          ...pending.map((p) => p.path),
@@ -203,7 +215,7 @@ const ContentAuditPage: NextPage = () => {
 
    // POST the sidecar deep-analysis and read the SSE stream to completion. Resolves to whether it errored.
    const streamDeepAnalysis = async (opts: { url: string; keyword: string; articleId?: number | string }): Promise<boolean> => {
-      const body: any = { url: opts.url, domainId: activeDomain?.ID, keywords: opts.keyword ? [opts.keyword] : [] };
+      const body: Record<string, unknown> = { url: opts.url, domainId: activeDomain?.ID, keywords: opts.keyword ? [opts.keyword] : [] };
       if (opts.articleId !== undefined) body.articleId = opts.articleId;
       const res = await fetch('/api/articles/deep-analysis', {
          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -262,9 +274,9 @@ const ContentAuditPage: NextPage = () => {
 
    // All GSC keywords for the domain — used by the "Change main keyword" modal.
    const allGscKeywords = useMemo<GscKeyword[]>(() => {
-      const raw: any[] = scData?.data?.thirtyDays || [];
+      const raw: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
       const seen = new Map<string, GscKeyword>();
-      raw.forEach((kw: any) => {
+      raw.forEach((kw) => {
          if (!kw.keyword) return;
          const k = kw.keyword.toLowerCase();
          const ex = seen.get(k);
@@ -291,10 +303,10 @@ const ContentAuditPage: NextPage = () => {
          out = out.filter((r) => r.title.toLowerCase().includes(q) || r.keyword.toLowerCase().includes(q));
       }
       out = [...out].sort((a, b) => {
-         const va = (a as any)[sortKey] ?? 0;
-         const vb = (b as any)[sortKey] ?? 0;
-         if (typeof va === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
-         return sortDir === 'desc' ? vb - va : va - vb;
+         const va = a[sortKey] ?? 0;
+         const vb = b[sortKey] ?? 0;
+         if (typeof va === 'string' && typeof vb === 'string') return sortDir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+         return sortDir === 'desc' ? Number(vb) - Number(va) : Number(va) - Number(vb);
       });
       return out;
    }, [rows, search, sortKey, sortDir]);

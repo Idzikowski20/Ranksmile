@@ -24,7 +24,7 @@ describe('collectOptimizerPositions', () => {
     ]);
     const refs = collectOptimizerPositions(doc);
     expect(refs).toHaveLength(1);
-    expect(refs[0]).toEqual({ sectionId: 's1', pos: 6, nodeSize: 1 });
+    expect(refs[0]).toEqual({ sectionId: 's1', pos: 6, nodeSize: 1, status: 'improved' });
   });
 
   it('sorts positions DESCENDING so high-pos splices run first', () => {

@@ -9,7 +9,8 @@ import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
 import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
 import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
 import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/core';
-import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
+import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '../../../../lib/aiVisibility';
+import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, useUpdateAiVisPriority, useAiVisConfig, type DomainOverview } from '../../../../services/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -107,6 +108,8 @@ const AiVisibilityOverview: NextPage = () => {
    const histData = historyQ.isFetching ? undefined : historyQ.data;
 
    const startScan = useStartAiVisScan(slug);
+   const configQ = useAiVisConfig(slug);
+   const updatePriority = useUpdateAiVisPriority(slug);
    const [confirmDays, setConfirmDays] = useState<number | null>(null);
    // Own scan-status subscription (shared react-query key with the shell) so the
    // Refresh button — which lives in the toolbar, above the children render — can
@@ -122,14 +125,30 @@ const AiVisibilityOverview: NextPage = () => {
    };
 
    const refreshBtn = (
-      <Button
-         variant="secondary"
-         size="sm"
-         disabled={startScan.isLoading || crunchingTop}
-         onClick={() => runScan(false)}
-      >
-         {crunchingTop ? 'Scanning…' : 'Refresh data'}
-      </Button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+         <select
+            value={ov?.priority || configQ.data?.config?.priority || 'supporting'}
+            disabled={updatePriority.isLoading}
+            onChange={(e) => updatePriority.mutate(e.target.value as AiVisPriority)}
+            style={{
+               height: 32, padding: '0 10px', borderRadius: 8, border: '1px solid #D4D4D8',
+               fontSize: 13, fontFamily: FONT, color: '#18181B', background: '#fff',
+            }}
+            title="Częstotliwość automatycznego odświeżania"
+         >
+            {(Object.keys(AI_VIS_PRIORITY_LABEL) as AiVisPriority[]).map((p) => (
+               <option key={p} value={p}>{AI_VIS_PRIORITY_LABEL[p]}</option>
+            ))}
+         </select>
+         <Button
+            variant="secondary"
+            size="sm"
+            disabled={startScan.isLoading || crunchingTop}
+            onClick={() => runScan(false)}
+         >
+            {crunchingTop ? 'Scanning…' : 'Refresh data'}
+         </Button>
+      </div>
    );
 
    return (
@@ -204,7 +223,9 @@ const AiVisibilityOverview: NextPage = () => {
             }
 
             const updatedTxt = daysAgo(ov?.finishedAt) !== null ? `last updated ${daysAgo(ov?.finishedAt) === 0 ? 'today' : `${daysAgo(ov?.finishedAt)}d ago`}` : '';
-            const refreshTxt = typeof ov?.daysUntilRefresh === 'number' ? `next auto refresh in ${ov.daysUntilRefresh}d` : '';
+            const refreshTxt = typeof ov?.daysUntilRefresh === 'number'
+               ? `auto refresh in ${ov.daysUntilRefresh}d (${AI_VIS_PRIORITY_LABEL[(ov?.priority || 'supporting') as AiVisPriority]})`
+               : '';
             const scoreHint = [compareDomain, updatedTxt, refreshTxt].filter(Boolean).join(' · ');
 
             return (
