@@ -7,6 +7,7 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { readLocalSCData } from '../../../utils/searchConsole';
 import { kwScore, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryRows } from '../../../lib/db/query';
 import { queryAffected } from '../../../lib/types/db';
@@ -19,6 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const userId = await getCurrentUserId(req, res);
    const { domainId } = req.body;
    if (!domainId) return res.status(400).json({ error: 'domainId is required' });
+   const owns = await verifyDomainOwnershipById(Number(domainId), userId ? String(userId) : null);
+   if (owns === null) return res.status(404).json({ error: 'Domain not found' });
+   if (owns === false) return res.status(403).json({ error: 'Access denied.' });
 
    try {
       const articleIdSql = await getArticleIdSql();
