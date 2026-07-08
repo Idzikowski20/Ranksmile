@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
          });
 
          const rows = response.data.rows || [];
-         const pages: GscPage[] = rows.map((row: any) => ({
+         const pages: GscPage[] = rows.map((row) => ({
             url: row.keys?.[0] || '',
             clicks: row.clicks || 0,
             impressions: row.impressions || 0,

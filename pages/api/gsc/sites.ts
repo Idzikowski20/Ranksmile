@@ -7,6 +7,8 @@ import GscAccount from '../../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../../lib/gscAccounts';
 import { getErrorMessage } from '../../../lib/errors';
 
+type GscSiteEntry = { siteUrl?: string | null; permissionLevel?: string | null };
+
 type GscSite = {
    siteUrl: string;
    permissionLevel: string;
@@ -45,11 +47,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
          const client = new searchconsole_v1.Searchconsole({ auth: oauthClient });
 
          const response = await client.sites.list({});
-         const entries = response.data.siteEntry || [];
+         const entries: GscSiteEntry[] = response.data.siteEntry || [];
 
          const sites: GscSite[] = entries
-            .filter((entry: any) => entry.permissionLevel !== 'siteUnverifiedUser')
-            .map((entry: any) => ({
+            .filter((entry) => entry.permissionLevel !== 'siteUnverifiedUser')
+            .map((entry) => ({
                siteUrl: entry.siteUrl || '',
                permissionLevel: entry.permissionLevel || '',
             }));

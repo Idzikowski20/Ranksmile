@@ -26,14 +26,14 @@ type Response = {
 export default async function handler(req: NextApiRequest, res: NextApiResponse<Response>) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
-      return res.status(401).json({ error: authorized } as any);
+      return res.status(401).json({ error: authorized });
    }
 
-   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' } as any);
+   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
    const { q, country = 'US' } = req.query;
    if (!q || typeof q !== 'string' || q.trim().length < 3) {
-      return res.status(400).json({ error: 'q must be at least 3 characters' } as any);
+      return res.status(400).json({ error: 'q must be at least 3 characters' });
    }
 
    // Try Google Ads first

@@ -85,7 +85,7 @@ const getKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
          }));
          const historySorted = historyArray.sort((a, b) => a.date - b.date);
          const lastWeekHistory :KeywordHistory = {};
-         historySorted.slice(-7).forEach((x:any) => { lastWeekHistory[x.dateRaw] = x.position; });
+         historySorted.slice(-7).forEach((x) => { lastWeekHistory[x.dateRaw] = x.position; });
          const keywordWithSlimHistory = { ...keyword, lastResult: [], history: lastWeekHistory };
          const finalKeyword = domainSCData ? integrateKeywordSCData(keywordWithSlimHistory, domainSCData) : keywordWithSlimHistory;
          return finalKeyword;
@@ -109,7 +109,22 @@ const addKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGet
          if (ownership === false || ownership === null) return res.status(403).json({ error: 'Access denied.' });
       }
       // const keywordsArray = keywords.replaceAll('\n', ',').split(',').map((item:string) => item.trim());
-      const keywordsToAdd: any = []; // QuickFIX for bug: https://github.com/sequelize/sequelize-typescript/issues/936
+      type KeywordCreateRow = {
+         keyword: string;
+         device: string;
+         domain: string;
+         country: string;
+         city: string | undefined;
+         position: number;
+         updating: boolean;
+         history: string;
+         url: string;
+         tags: string;
+         sticky: boolean;
+         lastUpdated: string;
+         added: string;
+      };
+      const keywordsToAdd: KeywordCreateRow[] = []; // QuickFIX for bug: https://github.com/sequelize/sequelize-typescript/issues/936
 
       keywords.forEach((kwrd: KeywordAddPayload) => {
          const { keyword, device, country, domain, tags, city } = kwrd;

@@ -48,7 +48,7 @@ export const Text = styled(
     }
     const {children, ...rest} = props as TextProps<T>;
     const Component = props.as || 'span';
-    return <Component {...(rest as any)}>{children}</Component>;
+    return <Component {...(rest as Record<string, unknown>)}>{children}</Component>;
   },
   {
     shouldForwardProp: p => isPropValid(p),

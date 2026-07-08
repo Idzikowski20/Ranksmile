@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Editor } from '@tiptap/core';
 
 export interface HighlightColor {
   label: string;
@@ -24,6 +25,6 @@ export const HighlightSwatchIcon = ({ color }: { color: string }) => (
 );
 
 /** Check if a highlight color is active on the editor */
-export function isHighlightActive(editor: any, color: string | null): boolean {
+export function isHighlightActive(editor: Editor, color: string | null): boolean {
   return color === null ? !editor.isActive('highlight') : editor.isActive('highlight', { color });
 }

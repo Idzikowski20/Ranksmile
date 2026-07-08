@@ -87,6 +87,11 @@ export function splitSections(html: string): Section[] {
   return sections;
 }
 
+/** Reassemble section HTML in order (inverse of splitSections). */
+export function joinSections(sections: Section[]): string {
+  return sections.map((s) => s.html).join('\n');
+}
+
 /**
  * Normalizes HTML for diffing:
  * - Removes all HTML comment nodes

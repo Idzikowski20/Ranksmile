@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, type ChartData, type ChartOptions, type TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
@@ -56,7 +56,7 @@ const InsightStats = ({ stats = [], totalKeywords = 0, totalPages = 0, dateRange
       return `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
    });
 
-   const datasets: any[] = [];
+   const datasets: ChartData<'line'>['datasets'] = [];
    if (activeMetrics.includes('clicks')) {
       datasets.push({
          label: 'Clicks',
@@ -117,7 +117,7 @@ const InsightStats = ({ stats = [], totalKeywords = 0, totalPages = 0, dateRange
    const showLeft = activeMetrics.includes('clicks') || activeMetrics.includes('ctr');
    const showRight = activeMetrics.includes('impressions') || activeMetrics.includes('position');
 
-   const chartOptions: any = {
+   const chartOptions: ChartOptions<'line'> = {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
@@ -150,7 +150,7 @@ const InsightStats = ({ stats = [], totalKeywords = 0, totalPages = 0, dateRange
             bodyColor: '#555',
             padding: 10,
             callbacks: {
-               label: (ctx: any) => ` ${ctx.dataset.label}: ${ctx.parsed.y}`,
+               label: (ctx: TooltipItem<'line'>) => ` ${ctx.dataset.label}: ${ctx.parsed.y}`,
             },
          },
       },
