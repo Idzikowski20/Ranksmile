@@ -1,12 +1,13 @@
 import db from '../database/database';
+import type { DbRow, SqlReplacements } from './types/db';
 
 export type UserProfile = { name: string | null; avatarUrl: string | null; productUpdates: boolean };
-type Row = Record<string, any>;
+type Row = DbRow;
 
 const NOW = 'CURRENT_TIMESTAMP';
 let tableChecked = false;
 
-async function select(sql: string, replacements: any[]): Promise<Row[]> {
+async function select(sql: string, replacements: SqlReplacements): Promise<Row[]> {
    const [rows] = await db.query(sql, { replacements }) as [Row[], unknown];
    return rows;
 }
@@ -28,11 +29,13 @@ async function ensureTable(): Promise<void> {
    tableChecked = true;
 }
 
+const strOrNull = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+
 export async function readProfile(userId: string): Promise<UserProfile> {
    await ensureTable();
    const rows = await select('SELECT name, avatar_url, notify_product_updates FROM user_profiles WHERE user_id = ? LIMIT 1', [userId]);
    const r = rows[0] || {};
-   return { name: r.name ?? null, avatarUrl: r.avatar_url ?? null, productUpdates: !!r.notify_product_updates };
+   return { name: strOrNull(r.name), avatarUrl: strOrNull(r.avatar_url), productUpdates: !!r.notify_product_updates };
 }
 
 export async function writeProfile(userId: string, patch: { name?: string; avatarUrl?: string; productUpdates?: boolean }): Promise<UserProfile> {
@@ -42,7 +45,7 @@ export async function writeProfile(userId: string, patch: { name?: string; avata
       try { await db.query('INSERT INTO user_profiles (user_id) VALUES (?)', { replacements: [userId] }); } catch { /* possible race — fall through to UPDATE */ }
    }
    const sets: string[] = [];
-   const vals: any[] = [];
+   const vals: SqlReplacements = [];
    if (patch.name !== undefined) { sets.push('name = ?'); vals.push(patch.name); }
    if (patch.avatarUrl !== undefined) { sets.push('avatar_url = ?'); vals.push(patch.avatarUrl); }
    if (patch.productUpdates !== undefined) { sets.push('notify_product_updates = ?'); vals.push(patch.productUpdates ? 1 : 0); }

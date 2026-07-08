@@ -15,7 +15,9 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows, queryOne } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
 
-const parse = (v: any) => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
+import { parseJsonish } from '../../../../../lib/types/json';
+
+const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Not found' });
@@ -44,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const internalLinks = (content.match(/<a\s[^>]*href=/gi) || []).length;
       const keyword: string = article.target_keyword || '';
 
-      const sd: ScoreData = parse(article.score_data) || ({} as ScoreData);
+      const sd: ScoreData = parseJsonish<ScoreData>(article.score_data) || ({} as ScoreData);
       if (Array.isArray(sd.terms)) sd.terms = updateTermsCoverage(plainText, sd.terms);
 
       const score = computeContentScore(plainText, wordCount, headingCount, sd, paragraphCount, internalLinks, content, keyword);
@@ -54,7 +56,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const job = await queryOne<{ payload: string | null; result: string | null; status: string | null; created_at: string | null }>('SELECT payload, result, status, created_at FROM analysis_jobs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', [id]);
       const aiv = await queryOne<{ summary_json: string | null; score: number | null; created_at: string | null }>('SELECT summary_json, score, created_at FROM ai_visibility_runs WHERE article_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', [id]);
 
-      const range = (actual: number, target: any, min: any, max: any) => ({ actual, target: target ?? null, min: min ?? null, max: max ?? null });
+      const range = (actual: number, target: unknown, min: unknown, max: unknown) => ({
+         actual, target: target ?? null, min: min ?? null, max: max ?? null,
+      });
 
       const out = {
          generatedAt: new Date().toISOString(),

@@ -6,9 +6,9 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
-import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels } from '../../../../lib/aiVisibility';
+import { AiVisConfig, AiVisTopic, AI_VIS_DEFAULT_MODELS, AI_VIS_PROMPT_LIMIT, sanitizeModels, normalizeAiVisPriority, type AiVisPriority } from '../../../../lib/aiVisibility';
 
-type ConfigRow = { id: number, brand_name: string, prompt_limit: number, models: string | null, completed_at: string | null };
+type ConfigRow = { id: number, brand_name: string, prompt_limit: number, models: string | null, completed_at: string | null, priority: string | null };
 type PromptRow = { id: number, topic: string, text: string, provenance: string | null, selected: number };
 
 const parseJsonArray = (raw: string | null): string[] => {
@@ -33,6 +33,7 @@ async function loadConfig(domainId: number): Promise<AiVisConfig | null> {
       brandName: row.brand_name,
       promptLimit: row.prompt_limit || AI_VIS_PROMPT_LIMIT,
       models: sanitizeModels(parseJsonArray(row.models)),
+      priority: normalizeAiVisPriority(row.priority),
       completedAt: row.completed_at,
       topics,
    };
@@ -54,8 +55,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return res.status(200).json({ config: await loadConfig(domain.ID) });
       }
       if (req.method === 'POST') {
-         const { brandName, topics } = req.body as { brandName?: string, topics?: AiVisTopic[] };
+         const { brandName, topics, priority } = req.body as { brandName?: string, topics?: AiVisTopic[], priority?: AiVisPriority };
          if (!brandName || !Array.isArray(topics)) return res.status(400).json({ error: 'brandName and topics are required' });
+         const tier = normalizeAiVisPriority(priority);
          const selectedCount = topics.reduce((n, t) => n + t.prompts.filter((p) => p.selected).length, 0);
          if (selectedCount === 0) return res.status(400).json({ error: 'Select at least one prompt' });
          if (selectedCount > AI_VIS_PROMPT_LIMIT) return res.status(400).json({ error: `Prompt limit is ${AI_VIS_PROMPT_LIMIT}` });
@@ -65,13 +67,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          if (existing) {
             configId = existing.id;
             await db.query(
-               'UPDATE ai_vis_configs SET brand_name = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-               { replacements: [brandName, configId] },
+               'UPDATE ai_vis_configs SET brand_name = ?, priority = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+               { replacements: [brandName, tier, configId] },
             );
          } else {
             await db.query(
-               'INSERT INTO ai_vis_configs (domain_id, brand_name, prompt_limit, models, completed_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
-               { replacements: [domain.ID, brandName, AI_VIS_PROMPT_LIMIT, JSON.stringify(AI_VIS_DEFAULT_MODELS)] },
+               'INSERT INTO ai_vis_configs (domain_id, brand_name, prompt_limit, models, priority, completed_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+               { replacements: [domain.ID, brandName, AI_VIS_PROMPT_LIMIT, JSON.stringify(AI_VIS_DEFAULT_MODELS), tier] },
             );
             const created = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
             if (!created) throw new Error('Failed to create config');
@@ -120,7 +122,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          }
          return res.status(200).json({ config: await loadConfig(domain.ID) });
       }
-      res.setHeader('Allow', 'GET, POST');
+      if (req.method === 'PATCH') {
+         const { priority } = req.body as { priority?: AiVisPriority };
+         if (!priority) return res.status(400).json({ error: 'priority is required' });
+         const tier = normalizeAiVisPriority(priority);
+         const existing = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
+         if (!existing) return res.status(400).json({ error: 'Complete the AI Visibility setup first' });
+         await db.query('UPDATE ai_vis_configs SET priority = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', { replacements: [tier, existing.id] });
+         return res.status(200).json({ config: await loadConfig(domain.ID) });
+      }
+      res.setHeader('Allow', 'GET, POST, PATCH');
       return res.status(405).json({ error: 'Method not allowed' });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'Config failed' });

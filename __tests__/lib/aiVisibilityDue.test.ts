@@ -12,6 +12,7 @@ describe('findDueConfigIds', () => {
       expect(captured).toMatch(/finished_at/i);                      // cadence measured on finished_at
       expect(captured).toMatch(/IN\s*\(\s*'queued'\s*,\s*'running'\s*\)/i); // excludes active
       expect(captured).toMatch(/ORDER BY[\s\S]*last_done ASC/i);     // oldest first
-      expect(captured).toMatch(/LIMIT\s+5/i);                        // batch cap
+      expect(captured).toMatch(/CASE[\s\S]*priority/i);
+      expect(captured).toMatch(/LIMIT\s+5/i);
    });
 });

@@ -55,9 +55,9 @@ const updateSettings = async (req: NextApiRequest, res: NextApiResponse<Settings
       const search_console_private_key = settings.search_console_private_key ? cryptr.encrypt(settings.search_console_private_key.trim()) : '';
 
       // Strip scraper and adwords fields — they live in .env, not settings.json
-      const stripped = { ...settings };
+      const stripped: Record<string, unknown> = { ...settings };
       SCRAPER_FIELDS.forEach((f) => { delete stripped[f]; });
-      ADWORDS_FIELDS.forEach((f) => { delete (stripped as any)[f]; });
+      ADWORDS_FIELDS.forEach((f) => { delete stripped[f]; });
 
       const securedSettings = {
          ...stripped,
@@ -74,7 +74,7 @@ const updateSettings = async (req: NextApiRequest, res: NextApiResponse<Settings
    }
 };
 
-const safeReadJSON = async (filePath: string, fallback: any): Promise<any> => {
+const safeReadJSON = async <T>(filePath: string, fallback: T): Promise<T> => {
    try {
       const raw = await readFile(filePath, { encoding: 'utf-8' });
       return raw ? JSON.parse(raw) : fallback;

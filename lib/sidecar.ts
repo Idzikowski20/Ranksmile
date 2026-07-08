@@ -13,7 +13,7 @@ export function sidecarHeaders(extra?: Record<string, string>): Record<string, s
 }
 
 /** POST JSON to a sidecar path and return the parsed result. Throws on non-2xx. */
-export async function callSidecar<T = any>(path: string, body: unknown, timeoutMs = 60000): Promise<T> {
+export async function callSidecar<T = unknown>(path: string, body: unknown, timeoutMs = 60000): Promise<T> {
    const res = await fetch(`${sidecarBase()}${path}`, {
       method: 'POST',
       headers: sidecarHeaders(),

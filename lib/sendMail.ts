@@ -17,7 +17,10 @@ export async function sendMail(opts: { to: string; subject: string; html: string
       return { sent: false };
    }
 
-   const mailerSettings: any = { host: smtp_server, port: parseInt(smtp_port, 10) };
+   const mailerSettings: { host: string; port: number; auth?: { user?: string; pass?: string } } = {
+      host: smtp_server,
+      port: parseInt(smtp_port, 10),
+   };
    if (smtp_username || smtp_password) {
       mailerSettings.auth = {};
       if (smtp_username) mailerSettings.auth.user = smtp_username;

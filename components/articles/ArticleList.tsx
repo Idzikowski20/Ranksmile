@@ -122,7 +122,7 @@ const EMPTY_START_OPTIONS: Array<{
     key: 'topicalMap',
     title: 'Topical Map',
     description: 'Create content based on your existing topics',
-    href: '/sites/configure',
+    href: '/dashboard',
     icon: <TopicalMapIcon />,
   },
 ];
@@ -177,6 +177,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={`article-skel-${i}`}
+            className="article-list-card"
             style={{
               height: 133,
               display: 'flex',
@@ -295,8 +296,9 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
         // Analyzing state — simplified row with spinner
         if (article.status === 'analyzing') {
           return (
+            <Link href={`/articles/${article.id}`} key={article.id} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div
-              key={article.id}
+              className="article-list-card"
               style={{
                 height: 133,
                 display: 'flex',
@@ -308,6 +310,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
                 gap: 12,
                 userSelect: 'none',
                 opacity: 0.7,
+                cursor: 'pointer',
               }}
             >
               {/* Left: Spinner */}
@@ -368,7 +371,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
               <button
                 type="button"
                 title="Delete"
-                onClick={() => onDelete(article.id)}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(article.id); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -400,13 +403,14 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
                 </svg>
               </button>
             </div>
+            </Link>
           );
         }
 
         return (
           <div
             key={article.id}
-            className={`article-list-item group/selectable-item select-none gap-md relative flex h-[133px] w-full items-center justify-between border border-solid hover:shadow-sm cursor-pointer pr-lg border-gray-20 rounded-xl${selectedIds.has(article.id) ? ' is-selected' : ''}`}
+            className={`article-list-card article-list-item group/selectable-item select-none gap-md relative flex h-[133px] w-full items-center justify-between border border-solid hover:shadow-sm cursor-pointer pr-lg border-gray-20 rounded-xl${selectedIds.has(article.id) ? ' is-selected' : ''}`}
             style={{
               height: 133,
               display: 'flex',

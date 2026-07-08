@@ -8,10 +8,10 @@ import AddKeywords from './AddKeywords';
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
-function safeJsonParse(v: any, fallback: any = []) {
-   if (Array.isArray(v)) return v;
+function safeJsonParse<T>(v: unknown, fallback: T): T {
+   if (Array.isArray(v)) return v as T;
    if (typeof v !== 'string') return fallback;
-   try { const p = JSON.parse(v); return Array.isArray(p) ? p : fallback; } catch { return fallback; }
+   try { const p = JSON.parse(v); return Array.isArray(p) ? p as T : fallback; } catch { return fallback; }
 }
 
 function normalizeDevice(device?: string) {
@@ -36,15 +36,15 @@ interface TrackedRow {
    lastUpdated: string | null;
 }
 
-function normalizeTrackedKeyword(raw: any): TrackedRow {
+function normalizeTrackedKeyword(raw: KeywordType): TrackedRow {
    return {
-      id: raw.ID ?? raw.id,
+      id: raw.ID,
       keyword: raw.keyword ?? '',
       position: raw.position ?? null,
       volume: raw.volume ?? null,
       country: raw.country || 'US',
       device: raw.device || 'desktop',
-      tags: safeJsonParse(raw.tags, []),
+      tags: safeJsonParse<string[]>(raw.tags, []),
       sticky: raw.sticky ?? false,
       updating: raw.updating ?? false,
       lastUpdated: raw.lastUpdated ?? raw.added ?? null,
@@ -62,7 +62,7 @@ interface SCRow {
    uid: string;
 }
 
-function aggregateSCKeywords(items: any[]): SCRow[] {
+function aggregateSCKeywords(items: SearchAnalyticsItem[]): SCRow[] {
    const map = new Map<string, { keyword: string; impressions: number; clicks: number; posWeight: number; device: string; country: string; uid: string }>();
    for (const item of items) {
       const key = (item.keyword || '').trim().toLowerCase();
@@ -123,7 +123,7 @@ const SkeletonRow = () => (
 /* ── Props ────────────────────────────────────────────────────────────────── */
 
 type KeywordTrackerPanelProps = {
-   domain: any;
+   domain: DomainType;
    isConsoleConnected: boolean;
    router: NextRouter;
    scraperName: string;
@@ -137,11 +137,11 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
 
    /* ── Data ─────────────────────────────────────────────────────────────── */
    const { keywordsData, keywordsLoading } = useFetchKeywords(router, domainName);
-   const rawTracked: any[] = keywordsData?.keywords || [];
+   const rawTracked: KeywordType[] = keywordsData?.keywords || [];
    const trackedKeywords: TrackedRow[] = useMemo(() => rawTracked.map(normalizeTrackedKeyword), [rawTracked]);
 
    const { data: scData, isLoading: scLoading } = useFetchSCKeywords(router, !!domain);
-   const rawSCItems: Record<string, any[]> = useMemo(() => (scData?.data ? scData.data : {}), [scData]);
+   const rawSCItems: Record<string, SearchAnalyticsItem[]> = useMemo(() => (scData?.data ? scData.data : {}), [scData]);
 
    const deleteMutation = useDeleteKeywords(() => {});
    const favMutation = useFavKeywords(() => {});
@@ -195,7 +195,7 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
    }, [filteredTracked, sortKey, sortDir]);
 
    /* ── Derived: SC ──────────────────────────────────────────────────────── */
-   const scItemsForRange: any[] = useMemo(() => rawSCItems[scDateRange] || [], [rawSCItems, scDateRange]);
+   const scItemsForRange: SearchAnalyticsItem[] = useMemo(() => rawSCItems[scDateRange] || [], [rawSCItems, scDateRange]);
    const aggregatedSC = useMemo(() => aggregateSCKeywords(scItemsForRange), [scItemsForRange]);
 
    const trackedSet = useMemo(
@@ -516,7 +516,7 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
          {/* ─── Add Keywords modal ─────────────────────────────────────── */}
          <CSSTransition in={showAddKeywords} timeout={300} classNames="modal_anim" unmountOnExit mountOnEnter>
             <AddKeywords
-               keywords={trackedKeywords as any}
+               keywords={trackedKeywords as unknown as KeywordType[]}
                scraperName={scraperName}
                allowsCity={allowsCity}
                closeModal={() => setShowAddKeywords(false)}

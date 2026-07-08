@@ -103,7 +103,7 @@ const AiVisPageShell = ({
       >
         {ready ? children({ crunching: !!crunching }) : (
           loadingFallback ?? (
-            <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}>
+            <div style={{ borderRadius: 12, padding: 24, background: '#fff' }}>
               <SkeletonBars />
             </div>
           )

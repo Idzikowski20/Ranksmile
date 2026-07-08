@@ -11,7 +11,7 @@ import { slugToDomain } from '../../../../utils/slugToDomain';
 import PromptSelector from '../../../../components/aiVisibility/PromptSelector';
 import type { WizardTopic, WizardPrompt } from '../../../../components/aiVisibility/wizardTypes';
 import { useAiVisConfig, useSaveAiVisConfig, useStartAiVisScan, useGeneratePrompts } from '../../../../services/aiVisibility';
-import { AI_VIS_PROMPT_LIMIT } from '../../../../lib/aiVisibility';
+import { AI_VIS_PROMPT_LIMIT, type AiVisPriority } from '../../../../lib/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -98,6 +98,7 @@ const AiVisibilityManage: NextPage = () => {
       try {
          await save.mutateAsync({
             brandName: configQ.data?.config?.brandName || domain,
+            priority: (configQ.data?.config?.priority || 'supporting') as AiVisPriority,
             topics: topics.map((t) => ({
                title: t.title,
                prompts: t.prompts.map((p) => ({ id: p.id ?? 0, text: p.text, provenance: p.provenance, selected: p.selected, isCustom: p.isCustom })),

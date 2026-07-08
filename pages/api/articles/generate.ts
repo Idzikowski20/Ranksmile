@@ -12,6 +12,7 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, queryRows } from '../../../lib/db/query';
+import type { GenerateSidecarResponse } from '../../../lib/types/sidecar';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -70,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Wywołaj Python sidecar
       const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
 
-      let sidecarData: any = null;
+      let sidecarData: GenerateSidecarResponse;
       try {
          console.log(`[generate] Calling sidecar: ${sidecarUrl}/generate with ${domainArticles.length} domain articles`);
          const sidecarRes = await axios.post(

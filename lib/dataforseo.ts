@@ -10,10 +10,17 @@
  * auth). When unset, `isDataForSeoConfigured()` is false and callers fall back to
  * the free stack — same graceful-degradation pattern as the serper integration.
  *
+ * SERP calls use budget params from `lib/dataforseoBudget.ts` (depth, max_crawl_pages).
  * Requests are NOT cached here; wrap calls in `lib/cache/fileCache.cached()`
  * (the routing layer in `lib/seo/keywordData.ts` does this).
  */
 import axios from 'axios';
+import {
+   DFS_DEFAULT_KEYWORD_LIMIT,
+   DFS_DEFAULT_RANKED_LIMIT,
+   DFS_SERP_PAA,
+   serpCrawlBudget,
+} from './dataforseoBudget';
 
 const BASE = 'https://api.dataforseo.com/v3';
 
@@ -54,15 +61,55 @@ export const locationCodeFor = (country?: string): number => (
 
 type Task = Record<string, unknown>;
 
+type DfsTaskResult = { items?: unknown[] };
+type DfsApiResponse = {
+   status_code?: number,
+   status_message?: string,
+   tasks?: Array<{
+      status_code?: number,
+      status_message?: string,
+      result?: DfsTaskResult[],
+   }>,
+};
+
+type DfsKeywordItem = {
+   keyword?: string,
+   keyword_info?: {
+      search_volume?: number,
+      cpc?: number,
+      competition?: number,
+      competition_level?: DfsKeyword['competition_level'],
+   },
+   keyword_data?: {
+      keyword?: string,
+      keyword_info?: DfsKeywordItem['keyword_info'],
+      keyword_properties?: { keyword_difficulty?: number, search_intent?: string },
+      search_intent_info?: { main_intent?: string },
+   },
+   keyword_properties?: { keyword_difficulty?: number, search_intent?: string },
+   ranked_serp_element?: { serp_item?: { rank_absolute?: number } },
+   search_intent_info?: { main_intent?: string },
+};
+
+type DfsSerpItem = {
+   type?: string,
+   items?: Array<string | {
+      title?: string,
+      expanded_element?: Array<{ description?: string, domain?: string, url?: string }>,
+   }>,
+};
+
+type DfsVolumeRow = { keyword?: string, search_volume?: number };
+
 /**
  * POST a single task to a DataForSEO `/live` endpoint and return its result
  * items. Throws on API- or task-level error codes (anything but 20000).
  */
-async function dfsPost(path: string, task: Task): Promise<any[]> {
+async function dfsPost(path: string, task: Task): Promise<unknown[]> {
    if (!isDataForSeoConfigured()) {
       throw new Error('DataForSEO not configured — set DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD.');
    }
-   const res = await axios.post(`${BASE}${path}`, [task], {
+   const res = await axios.post<DfsApiResponse>(`${BASE}${path}`, [task], {
       headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
       timeout: 60000,
    });
@@ -78,7 +125,7 @@ async function dfsPost(path: string, task: Task): Promise<any[]> {
 }
 
 /** Normalises both the flat (keyword_ideas) and nested (ranked_keywords) item shapes. */
-const mapItem = (item: any): DfsKeyword => {
+const mapItem = (item: DfsKeywordItem): DfsKeyword => {
    const info = item?.keyword_info ?? item?.keyword_data?.keyword_info ?? {};
    const props = item?.keyword_properties ?? item?.keyword_data?.keyword_properties ?? {};
    const rank = item?.ranked_serp_element?.serp_item?.rank_absolute ?? null;
@@ -105,9 +152,9 @@ export async function getKeywordIdeas(opts: {
       keywords: opts.keywords.slice(0, 200).map((k) => k.toLowerCase()),
       location_code: locationCodeFor(opts.country),
       language_code: opts.languageCode || 'en',
-      limit: Math.min(opts.limit || 700, 1000),
+      limit: Math.min(opts.limit || DFS_DEFAULT_KEYWORD_LIMIT, 1000),
    });
-   return items.map(mapItem).filter((k) => k.keyword);
+   return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
 }
 
 /** Keyword Suggestions — full-phrase ("long-tail") expansions of a single seed. */
@@ -121,9 +168,9 @@ export async function getKeywordSuggestions(opts: {
       keyword: opts.keyword.toLowerCase(),
       location_code: locationCodeFor(opts.country),
       language_code: opts.languageCode || 'en',
-      limit: Math.min(opts.limit || 700, 1000),
+      limit: Math.min(opts.limit || DFS_DEFAULT_KEYWORD_LIMIT, 1000),
    });
-   return items.map(mapItem).filter((k) => k.keyword);
+   return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
 }
 
 /**
@@ -136,11 +183,11 @@ export async function getSearchVolumes(keywords: string[], country?: string): Pr
    const list = Array.from(new Set(keywords.map((k) => k.toLowerCase().trim()).filter(Boolean))).slice(0, 200);
    if (!list.length || !isDataForSeoConfigured()) return {};
    try {
-      const res = await axios.post(`${BASE}/keywords_data/google_ads/search_volume/live`, [{
+      const res = await axios.post<DfsApiResponse>(`${BASE}/keywords_data/google_ads/search_volume/live`, [{
          keywords: list, location_code: locationCodeFor(country),
       }], { headers: { Authorization: authHeader(), 'Content-Type': 'application/json' }, timeout: 60000 });
       if (res.data?.status_code !== 20000) return {};
-      const rows: any[] = res.data?.tasks?.[0]?.result ?? [];
+      const rows = (res.data?.tasks?.[0]?.result ?? []) as DfsVolumeRow[];
       const out: Record<string, number> = {};
       rows.forEach((r) => {
          if (r?.keyword && typeof r?.search_volume === 'number') out[String(r.keyword).toLowerCase()] = r.search_volume;
@@ -154,25 +201,28 @@ export type PaaQuestion = { question: string, answer: string, domain: string, ur
 /**
  * People Also Ask + related searches for a keyword — the real questions Google
  * (and the LLMs that read it) answer. Used to build the AI Search "info to cover"
- * list. One SERP request (~$0.002), expanded one click-depth for more questions.
+ * list. Budget: one SERP page (max_crawl_pages: 1), shallow PAA click depth.
  */
 export async function getPeopleAlsoAsk(opts: {
    keyword: string,
    country?: string,
    languageCode?: string,
+   ownDomain?: string,
 }): Promise<{ questions: PaaQuestion[], related: string[] }> {
    const items = await dfsPost('/serp/google/organic/live/advanced', {
       keyword: opts.keyword,
       location_code: locationCodeFor(opts.country),
       language_code: opts.languageCode || 'en',
-      depth: 20,
-      people_also_ask_click_depth: 2,
+      ...DFS_SERP_PAA,
+      ...serpCrawlBudget({ ownDomain: opts.ownDomain, withSubdomains: true }),
    });
    const questions: PaaQuestion[] = [];
    const related: string[] = [];
-   for (const item of items) {
+   for (const raw of items) {
+      const item = raw as DfsSerpItem;
       if (item?.type === 'people_also_ask' && Array.isArray(item.items)) {
          for (const q of item.items) {
+            if (typeof q === 'string') continue;
             const exp = Array.isArray(q?.expanded_element) ? q.expanded_element[0] : null;
             if (q?.title) {
                questions.push({
@@ -184,7 +234,7 @@ export async function getPeopleAlsoAsk(opts: {
             }
          }
       } else if (item?.type === 'related_searches' && Array.isArray(item.items)) {
-         related.push(...item.items.filter((s: any) => typeof s === 'string'));
+         related.push(...item.items.filter((s): s is string => typeof s === 'string'));
       }
    }
    return { questions, related };
@@ -202,14 +252,14 @@ export async function getRankedKeywords(opts: {
       target: opts.target.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
       location_code: locationCodeFor(opts.country),
       language_code: opts.languageCode || 'en',
-      limit: Math.min(opts.limit || 100, 1000),
+      limit: Math.min(opts.limit || DFS_DEFAULT_RANKED_LIMIT, 1000),
       order_by: ['keyword_data.keyword_info.search_volume,desc'],
    };
    if (opts.topOnly) {
       task.filters = [['ranked_serp_element.serp_item.rank_group', '<=', 10]];
    }
    const items = await dfsPost('/dataforseo_labs/google/ranked_keywords/live', task);
-   return items.map(mapItem).filter((k) => k.keyword);
+   return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
 }
 
 /**

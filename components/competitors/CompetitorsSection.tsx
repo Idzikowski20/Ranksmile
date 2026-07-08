@@ -3,6 +3,7 @@ import { CompetitorDTO } from '../../lib/competitorTypes';
 import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../services/competitors';
 import { Gauge } from '../core';
 import { Toggle } from '../core';
+import AuthorityBadge from './AuthorityBadge';
 
 const FONT = 'var(--font-family-primary)';
 const favicon = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
@@ -13,22 +14,6 @@ const Spinner = () => (
       <path d="M21 12a9 9 0 0 0-9-9" stroke="#783AFB" strokeWidth="3" strokeLinecap="round" />
    </svg>
 );
-
-/** Small shield badge for the Authority score (0–10), tinted by tier. */
-const AuthorityBadge = ({ value }: { value: number | null }) => {
-   if (value === null) {
-      return <span style={{ fontSize: 13, fontWeight: 500, color: '#9F9FA9', fontFamily: FONT }}>—</span>;
-   }
-   const color = value >= 6 ? '#16A34A' : value >= 3 ? '#D97706' : '#DC2626';
-   return (
-      <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 28 }}>
-         <svg width="24" height="28" viewBox="0 0 24 28" fill="none" aria-hidden="true" style={{ position: 'absolute', inset: 0 }}>
-            <path d="M12 1 21 5v8c0 6-3.8 10.2-9 13-5.2-2.8-9-7-9-13V5l9-4Z" fill={color} fillOpacity="0.14" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-         </svg>
-         <span style={{ position: 'relative', fontSize: 11, fontWeight: 700, color, fontFamily: FONT, lineHeight: 1 }}>{value}</span>
-      </span>
-   );
-};
 
 interface Props {
    slug: string | undefined;
@@ -141,9 +126,11 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }
                                  <span style={{ fontSize: 13, fontWeight: 500, color: '#18181B' }}>{c.position}</span>
                               </td>
                               <td style={{ ...td, ...dim, maxWidth: 440 }}>
-                                 <div style={{ display: 'flex', gap: 10 }}>
-                                    { /* eslint-disable-next-line @next/next/no-img-element */ }
-                                    <img alt="" src={favicon(c.domain)} width={16} height={16} style={{ borderRadius: 3, flexShrink: 0, marginTop: 3 }} />
+                                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                    <span style={{ display: 'inline-flex', flexShrink: 0, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                                       { /* eslint-disable-next-line @next/next/no-img-element */ }
+                                       <img alt="" src={favicon(c.domain)} width={16} height={16} style={{ display: 'block', width: 16, height: 16, objectFit: 'contain', borderRadius: 3 }} />
+                                    </span>
                                     <div style={{ minWidth: 0 }}>
                                        <a
                                           href={c.url}

@@ -66,16 +66,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Deduplicate, score, return top 15
-  const suggestions = ideas
-    .filter((kw: any) => !existingSet.has(kw.keyword?.toLowerCase()))
-    .map((kw: any) => ({
-      keyword: kw.keyword,
+  type AdKeywordIdea = {
+    keyword?: string;
+    avgMonthlySearches?: number;
+    competition?: string;
+    competitionIndex?: number;
+  };
+
+  const suggestions = (ideas as AdKeywordIdea[])
+    .filter((kw) => kw.keyword && !existingSet.has(kw.keyword.toLowerCase()))
+    .map((kw) => ({
+      keyword: kw.keyword as string,
       avgMonthlySearches: kw.avgMonthlySearches || 0,
       competition: kw.competition || 'MEDIUM',
       competitionIndex: kw.competitionIndex || 50,
-      relevance_score: computeRelevanceScore(kw.keyword, tk),
+      relevance_score: computeRelevanceScore(kw.keyword as string, tk),
     }))
-    .sort((a: any, b: any) => b.relevance_score - a.relevance_score)
+    .sort((a, b) => b.relevance_score - a.relevance_score)
     .slice(0, 15);
 
   return res.status(200).json({ suggestions });

@@ -25,9 +25,9 @@ export interface OptimizeReviewBarProps {
    /** Right-panel width reserved by the editor column, so the bar centres on the editor
     *  content (not the whole viewport). 0 when the panel is collapsed. */
    rightReserve?: number;
-   /** Task 12: focus-derived status for the currently-streaming section (e.g. "Improving
-    *  readability…"), from lib/optimizeMessaging.sectionStatusLabel. Shown as the subtitle
-    *  while optimizing; ignored while reviewing. */
+   /** 1-based index of the section currently being scanned (optimizing only). */
+   currentSection?: number;
+   /** Focus-derived status for the currently-streaming section. */
    activeStatusLabel?: string;
 }
 
@@ -53,6 +53,7 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
    onSave,
    saving,
    rightReserve = 0,
+   currentSection,
    activeStatusLabel,
 }) => {
    const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
@@ -84,7 +85,9 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
                      />
                   )}
                   <span className="text-md text-white-base">
-                     {optimizing ? `Processing section ${processed} of ${total}` : 'All sections processed'}
+                     {optimizing
+                        ? (total > 0 ? `Processing section ${currentSection ?? Math.min(processed + 1, total)} of ${total}` : 'Preparing…')
+                        : 'All sections processed'}
                   </span>
                </div>
                <span className="text-gray-60 text-sm">

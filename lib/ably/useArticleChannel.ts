@@ -16,6 +16,18 @@ type Params = {
   onReconnect?: () => void;
 };
 
+/** Close a Realtime client without surfacing Ably's expected teardown rejections. */
+function safeCloseClient(client: Ably.Realtime) {
+  const state = client.connection.state;
+  if (state === 'closed' || state === 'closing') return;
+  try {
+    const result = client.close() as void | Promise<unknown>;
+    if (result && typeof result.catch === 'function') result.catch(() => {});
+  } catch { /* ignore */ }
+}
+
+const OFFLINE_STATES = new Set<Ably.ConnectionState>(['closed', 'failed', 'suspended', 'disconnected']);
+
 export type UseArticleChannel = {
   channel: Ably.RealtimeChannel | null;
   connectionState: Ably.ConnectionState | 'idle';
@@ -25,6 +37,9 @@ export type UseArticleChannel = {
  * Returns a live Ably channel for the article (or null while idle), plus the live
  * connection state for UX (toast). One Realtime connection per mount; authed by
  * /api/ably-token (capability-scoped). Resync is the caller's job via onReconnect.
+ *
+ * The channel is only exposed once the connection is `connected` so presence/subscribe
+ * never attach against a closing socket (avoids Next.js "Connection closed" overlay).
  */
 export function useArticleChannel({ articleId, shareToken, clientId, onReconnect }: Params): UseArticleChannel {
   const [channel, setChannel] = useState<Ably.RealtimeChannel | null>(null);
@@ -36,6 +51,8 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
   useEffect(() => {
     if (articleId == null) return undefined;
 
+    let active = true;
+
     const authParams: Record<string, string> = { articleId: String(articleId) };
     if (shareToken) authParams.token = shareToken;
     if (clientId) authParams.clientId = clientId;
@@ -44,30 +61,40 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
       authUrl: '/api/ably-token',
       authMethod: 'GET',
       authParams,
-      closeOnUnload: true,
+      // Lifecycle is managed by this effect's cleanup — avoid double-close on unload.
+      closeOnUnload: false,
     });
 
+    const ch = client.channels.get(articleChannelName(articleId));
+
     let hasConnectedOnce = false;
+
     const onState = (change: Ably.ConnectionStateChange) => {
+      if (!active) return;
       setConnectionState(change.current);
       if (change.current === 'connected') {
-        if (hasConnectedOnce) onReconnectRef.current?.(); // a RE-connect → resync
+        setChannel(ch);
+        if (hasConnectedOnce) onReconnectRef.current?.();
         hasConnectedOnce = true;
+      } else if (OFFLINE_STATES.has(change.current)) {
+        setChannel(null);
       }
     };
     client.connection.on(onState);
 
-    const ch = client.channels.get(articleChannelName(articleId));
-    setChannel(ch);
+    if (client.connection.state === 'connected') {
+      setChannel(ch);
+      hasConnectedOnce = true;
+      setConnectionState('connected');
+    }
 
     return () => {
+      active = false;
+      try { client.connection.off(onState); } catch { /* ignore */ }
       setChannel(null);
       setConnectionState('idle');
-      try { client.connection.off(onState); } catch { /* ignore */ }
-      // detach() returns a Promise that rejects with "Connection closed" during teardown —
-      // try/catch only traps a sync throw, so swallow the async rejection explicitly.
-      try { ch.detach().catch(() => {}); } catch { /* ignore */ }
-      try { client.close(); } catch { /* ignore */ }
+      const clientToClose = client;
+      queueMicrotask(() => safeCloseClient(clientToClose));
     };
   }, [articleId, shareToken, clientId]);
 

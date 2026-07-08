@@ -7,7 +7,7 @@ import type { ScoreData } from '../../../lib/contentScore';
 import { countOccurrences } from '../../../lib/contentScore';
 import { SIGNAL_TACTICS } from '../../../lib/seo/signalTactics';
 import { ANTI_HALLUCINATION_RULES } from '../../../lib/seo/antiHallucinationRules';
-import { scoreContent } from '../../../lib/seo/scoreContentClient';
+import { scoreContent, type RankingSignal } from '../../../lib/seo/scoreContentClient';
 import { extractJsonObject, isSurfyReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
 import { stripEmoji } from '../../../lib/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
@@ -16,6 +16,10 @@ import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
+
+type ScoredRankingSignal = RankingSignal & { verdict?: string };
+
+type SurfyHistoryTurn = { role?: string; message?: string };
 
 type SurfyAction =
   | 'analysis_only'
@@ -179,14 +183,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (scoreResult?.ranking_signals?.signals?.length) {
           const weakSignals = [...scoreResult.ranking_signals.signals]
-            .sort((a: any, b: any) => a.score - b.score)
+            .sort((a: ScoredRankingSignal, b: ScoredRankingSignal) => a.score - b.score)
             .slice(0, 3);
 
           scoringBlock = `
 RANKING SCORE: ${scoreResult.ranking_score}/100
 
 WEAKEST SIGNALS:
-${weakSignals.map((s: any, i: number) =>
+${weakSignals.map((s: ScoredRankingSignal, i: number) =>
   `${i + 1}. ${s.name}: ${s.score}/100 (${s.verdict}) — ${s.recommendation || 'needs improvement'}
    HOW TO FIX: ${SIGNAL_TACTICS[s.name] || 'Improve this signal.'}`
 ).join('\n\n')}
@@ -276,8 +280,8 @@ RULES:
     // Prior conversation turns (text only) so Surfy has memory across the chat.
     // The client sends history WITHOUT the current prompt, so we append it last.
     const priorTurns = (Array.isArray(history) ? history : [])
-      .filter((h: any) => h && typeof h.message === 'string' && h.message.trim())
-      .map((h: any) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.message }));
+      .filter((h: SurfyHistoryTurn) => h && typeof h.message === 'string' && h.message.trim())
+      .map((h: SurfyHistoryTurn) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.message }));
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',

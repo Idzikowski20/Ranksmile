@@ -8,7 +8,7 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
-import { AI_VIS_SETTINGS } from '../../../../lib/aiVisibility';
+import { refreshIntervalDays } from '../../../../lib/aiVisibility';
 
 // Compare never renders a competitor's Sources → drop them to bound the payload.
 const withoutSources = (s: DomainSnapshot): DomainSnapshot => ({ ...s, sources: [] });
@@ -44,8 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Brand-aware views (sources/source-detail) load full ResultRows (incl. brands) and
       // support prompt/model filtering via CSV query params.
-      const cfg = await queryOne<{ brand_name: string }>(
-         'SELECT c.brand_name FROM ai_vis_configs c WHERE c.domain_id = ? ORDER BY c.id DESC LIMIT 1', [domain.ID],
+      const cfg = await queryOne<{ brand_name: string, priority: string | null }>(
+         'SELECT c.brand_name, c.priority FROM ai_vis_configs c WHERE c.domain_id = ? ORDER BY c.id DESC LIMIT 1', [domain.ID],
       );
       const ownBrand = cfg?.brand_name || domain.domain;
       const parseIds = (v: unknown): number[] => (typeof v === 'string' && v ? v.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : []);
@@ -222,8 +222,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanResultRows(prev.id)), own)) : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
+         const refreshDays = refreshIntervalDays(cfg?.priority);
          const nextRefreshAt = scan.finished_at
-            ? new Date(new Date(scan.finished_at).getTime() + AI_VIS_SETTINGS.REFRESH_INTERVAL_DAYS * 86_400_000).toISOString()
+            ? new Date(new Date(scan.finished_at).getTime() + refreshDays * 86_400_000).toISOString()
             : null;
          const daysUntilRefresh = nextRefreshAt
             ? Math.max(0, Math.ceil((new Date(nextRefreshAt).getTime() - Date.now()) / 86_400_000))
@@ -246,6 +247,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             previousScanAt: prev ? prev.finished_at : null,
             nextRefreshAt,
             daysUntilRefresh,
+            refreshIntervalDays: refreshDays,
+            priority: cfg?.priority ?? 'supporting',
             promptOptions,
          });
       }

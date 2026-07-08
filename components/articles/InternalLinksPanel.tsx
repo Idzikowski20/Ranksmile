@@ -123,7 +123,7 @@ const InternalLinksPanel: React.FC<Props> = ({
             if (matched) {
               const res = await fetch(`/api/articles/${matched.id}/keywords`);
               const data = await res.json();
-              const linkedKws = (data.keywords || []).map((k: any) => k.keyword?.toLowerCase()).filter(Boolean);
+              const linkedKws = (data.keywords || []).map((k: { keyword?: string }) => k.keyword?.toLowerCase()).filter(Boolean);
               const overlapping = linkedKws.filter((k: string) => ourKws.has(k)).length;
               return { url: r.url, overlapping };
             }

@@ -37,6 +37,12 @@ jest.mock('../../lib/optimizationPlanner', () => ({
   ...jest.requireActual('../../lib/optimizationPlanner'),
   buildOptimizationPlan: jest.fn(),
 }));
+const mockEnrichNlpTermsIfNeeded = jest.fn(async (opts: { terms: { term: string; target_count: number }[] }) => opts.terms);
+jest.mock('../../lib/articleKeywordDiscovery', () => ({
+  __esModule: true,
+  needsTermEnrichment: jest.fn(() => false),
+  enrichNlpTermsIfNeeded: (opts: { terms: { term: string; target_count: number }[] }) => mockEnrichNlpTermsIfNeeded(opts),
+}));
 
 import handler from '../../pages/api/articles/optimize-sections';
 import verifyUser from '../../utils/verifyUser';
@@ -45,7 +51,10 @@ import { assertArticleAccess, ensureUserTenancy } from '../../lib/tenancy';
 import { getOrgUsage5h } from '../../lib/aiTokenUsage';
 import { buildArticleContext } from '../../lib/articleContext';
 import { buildOptimizationPlan } from '../../lib/optimizationPlanner';
+import { needsTermEnrichment } from '../../lib/articleKeywordDiscovery';
 import type { Plan, PlanStep } from '../../lib/optimizationPlanner';
+
+const mockNeedsTermEnrichment = needsTermEnrichment as jest.MockedFunction<typeof needsTermEnrichment>;
 
 const mockBuildArticleContext = buildArticleContext as jest.MockedFunction<typeof buildArticleContext>;
 const mockBuildOptimizationPlan = buildOptimizationPlan as jest.MockedFunction<typeof buildOptimizationPlan>;
@@ -107,6 +116,8 @@ beforeEach(() => {
   // Default: delegate to the real planner so pre-existing tests keep exercising real routing logic.
   // Tests below that need a specific mode/focus override via mockBuildOptimizationPlan.mockReturnValueOnce.
   mockBuildOptimizationPlan.mockImplementation(realBuildOptimizationPlan);
+  mockNeedsTermEnrichment.mockReturnValue(false);
+  mockEnrichNlpTermsIfNeeded.mockImplementation(async (opts) => opts.terms);
 });
 
 it('rejects an unauthenticated caller with 401 before any work', async () => {
@@ -231,5 +242,27 @@ it('changed step emits a section event carrying focus/mode/reason from the step 
   expect(sectionEvt?.data.focus).toBe('ai-coverage');
   expect(sectionEvt?.data.mode).toBe('less');
   expect(sectionEvt?.data.reason).toBe('Optimize: 1 guidelines');
+});
+
+it('emits a terms SSE event when NLP enrichment grows the term list', async () => {
+  const thinTerms = [{ term: 'detektyw', target_count: 2 }, { term: 'warszawa', target_count: 2 }];
+  const enrichedTerms = [
+    ...thinTerms,
+    { term: 'detektyw warszawa', target_count: 3 },
+    { term: 'prywatny detektyw', target_count: 2 },
+  ];
+  mockBuildArticleContext.mockResolvedValueOnce({
+    articleId: 1, keyword: 'detektyw warszawa',
+    scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 } as any,
+    breakdown: null,
+    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 } as any,
+    paa: [], terms: [], competitors: [],
+  });
+  mockNeedsTermEnrichment.mockReturnValueOnce(true);
+  mockEnrichNlpTermsIfNeeded.mockResolvedValueOnce(enrichedTerms);
+  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ focus: 'skip', reason: 'skip for test' }));
+  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  const termsEvt = events.find((e) => e.event === 'terms');
+  expect(termsEvt?.data.terms).toHaveLength(4);
 });
 

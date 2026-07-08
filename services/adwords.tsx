@@ -40,15 +40,14 @@ export async function fetchAdwordsKeywordIdeas(router: NextRouter, domainSlug: s
 }
 
 export function useFetchKeywordIdeas(router: NextRouter, adwordsConnected = false) {
-   const isResearch = router.pathname === '/research';
-   const domainSlug = isResearch ? 'research' : (router.query.slug as string);
+   const domainSlug = router.query.slug as string;
    const enabled = !!(adwordsConnected && domainSlug);
    return useQuery(`keywordIdeas-${domainSlug}`, () => domainSlug && fetchAdwordsKeywordIdeas(router, domainSlug), { enabled, retry: false });
 }
 
 export function useMutateKeywordIdeas(router:NextRouter, onSuccess?: Function) {
    const queryClient = useQueryClient();
-   const domainSlug = router.pathname === '/research' ? 'research' : router.query.slug as string;
+   const domainSlug = router.query.slug as string;
    return useMutation(async (data:Record<string, any>) => {
       const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'application/json' });
       const fetchOpts = { method: 'POST', headers, body: JSON.stringify({ ...data }) };
@@ -75,7 +74,7 @@ export function useMutateKeywordIdeas(router:NextRouter, onSuccess?: Function) {
 
 export function useMutateFavKeywordIdeas(router:NextRouter, onSuccess?: Function) {
    const queryClient = useQueryClient();
-   const domainSlug = router.pathname === '/research' ? 'research' : router.query.slug as string;
+   const domainSlug = router.query.slug as string;
    return useMutation(async (payload:Record<string, any>) => {
       const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'application/json' });
       const fetchOpts = { method: 'PUT', headers, body: JSON.stringify({ ...payload }) };

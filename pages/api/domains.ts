@@ -78,7 +78,15 @@ export const getDomains = async (req: NextApiRequest, res: NextApiResponse<Domai
 export const addDomain = async (req: NextApiRequest, res: NextApiResponse<DomainsAddResponse>, userId?: string | null) => {
    const { domains } = req.body;
    if (domains && Array.isArray(domains) && domains.length > 0) {
-      const domainsToAdd: any = [];
+      type DomainCreateRow = {
+         domain: string;
+         slug: string;
+         lastUpdated: string;
+         added: string;
+         userId: string | null;
+         workspace_id: number | null;
+      };
+      const domainsToAdd: DomainCreateRow[] = [];
       const workspaceId = userId ? await getActiveWorkspaceId(req, userId) : null;
 
       domains.forEach((domain: string) => {

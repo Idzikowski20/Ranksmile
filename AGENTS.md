@@ -91,3 +91,23 @@ Rules:
 - Use always /frontend-design
 - Read before do anything design.md
 - Stick design.md
+
+## 7. TypeScript — no `any`
+
+**Nigdy nie pisz kodu z typem `any`.** Dotyczy nowego kodu i każdej edycji dotykanej linii.
+
+Zabronione:
+- `: any`, `as any`, `<any>`, `any[]`, `Record<string, any>`, domyślne `T = any`
+
+Zamiast tego:
+- **`unknown`** + zawężenie (`typeof`, type guard, `parseJsonish<T>()`)
+- **`Record<string, unknown>`** dla obiektów o dynamicznym kształcie
+- **Konkretne typy / interfejsy** — definiuj lokalnie lub w `lib/types/` (`db.ts`, `sidecar.ts`, `editor.ts`, `json.ts`, `api.ts`)
+- **Generyki** — `callSidecar<T>()`, `parseJsonish<T>()`, `queryOne<Row>()`
+- **Typy bibliotek** — np. `Editor` / `JSONContent` z `@tiptap/core`, `NextApiResponse`, typy Sequelize
+
+Wyjątki (tylko gdy absolutnie konieczne, z komentarzem `// eslint-disable` + uzasadnienie):
+- pliki testowe/mocki (`__tests__`, `__mocks__`) — preferuj typowane fixture’y
+- legacy pliki poza scope’em zadania — nie rozszerzaj `any`; typuj tylko zmieniane fragmenty
+
+Przy refaktorze: jeśli dotykasz linii z `any`, zamień ją na właściwy typ w tej samej zmianie.

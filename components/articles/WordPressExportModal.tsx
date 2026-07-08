@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../lib/errors';
 import { Checkbox } from '../core';
 import Modal from '../core/modal/modal';
 import Button from '../core/button/button';
@@ -194,8 +195,8 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
       if (!res.ok) throw new Error(data?.error || 'WordPress export failed');
       setResult(data);
       setStep('success');
-    } catch (e: any) {
-      toast.error(e?.message || 'WordPress export failed');
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e) || 'WordPress export failed');
     } finally {
       setSubmitting(false);
     }

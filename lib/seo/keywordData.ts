@@ -15,9 +15,13 @@ import {
    isDataForSeoConfigured, getKeywordIdeas as dfsKeywordIdeas,
    getKeywordSuggestions as dfsKeywordSuggestions, getRankedKeywords, getPeopleAlsoAsk, DfsKeyword,
 } from '../dataforseo';
+import { DFS_DEFAULT_KEYWORD_LIMIT, DFS_DEFAULT_RANKED_LIMIT } from '../dataforseoBudget';
 import { readLocalSCData } from '../../utils/searchConsole';
 import { AiVisibilitySummary } from '../aiSearchScore';
 import { CoverageItem, hashId } from '../aiCoverage';
+import { normalizePl, tokenize } from '../termMatch';
+import { isUsefulTerm } from '../termUtils';
+import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
 
 export type KeywordSource = 'dataforseo' | 'gsc' | 'none';
 
@@ -61,7 +65,7 @@ export async function getKeywordIdeas(opts: {
 
    const keywords = await cached({
       namespace: 'kw-ideas',
-      key: [opts.seed.toLowerCase(), opts.country || 'US', opts.languageCode || 'en', opts.limit || 700],
+      key: [opts.seed.toLowerCase(), opts.country || 'US', opts.languageCode || 'en', opts.limit || DFS_DEFAULT_KEYWORD_LIMIT],
       ttlMs: TTL.KEYWORD_METRICS,
       producer: () => dfsKeywordIdeas({
          keywords: [opts.seed],
@@ -89,7 +93,7 @@ export async function getKeywordSuggestions(opts: {
 
    const keywords = await cached({
       namespace: 'kw-suggest',
-      key: [opts.seed.toLowerCase(), opts.country || 'US', opts.languageCode || 'en', opts.limit || 700],
+      key: [opts.seed.toLowerCase(), opts.country || 'US', opts.languageCode || 'en', opts.limit || DFS_DEFAULT_KEYWORD_LIMIT],
       ttlMs: TTL.KEYWORD_METRICS,
       producer: () => dfsKeywordSuggestions({
          keyword: opts.seed,
@@ -102,14 +106,8 @@ export async function getKeywordSuggestions(opts: {
 }
 
 /**
- * Term ENRICHMENT for weak entity lists. Pulls real keyword data when competitor
- * text-extraction came back thin, so we cover relevant entities instead of
- * placeholders. Combines:
- *   - keyword_ideas      → related entities + search volume for the seed
- *   - ranked_keywords    → what the top competitor domains actually rank for
- * Results are filtered to stay on-topic (must share a token with the seed) and
- * deduped. target_count is a modest discovery default (no real density evidence):
- * 1–2 word terms → 3×, 3 words → 2×, longer → 1×. Cached via the underlying calls.
+ * Term ENRICHMENT — only phrase-match suggestions + competitor ranked keywords,
+ * strictly filtered to the seed topic. keyword_ideas is excluded (drifts off-topic).
  */
 export async function enrichTerms(opts: {
    keyword: string,
@@ -120,12 +118,6 @@ export async function enrichTerms(opts: {
 }): Promise<{ source: KeywordSource, terms: Array<{ term: string, target_count: number }> }> {
    if (!isDataForSeoConfigured() || !opts.keyword.trim()) { return { source: 'none', terms: [] }; }
 
-   const seedTokens = opts.keyword.toLowerCase().split(/\s+/).filter((w) => w.length >= 4);
-   const isRelevant = (kw: string) => {
-      if (!seedTokens.length) return true;
-      const words = kw.toLowerCase().split(/\s+/);
-      return seedTokens.some((st) => words.some((w) => w.includes(st) || st.includes(w)));
-   };
    const targetFor = (kw: string) => {
       const wc = kw.trim().split(/\s+/).length;
       if (wc <= 2) return 3;
@@ -134,24 +126,23 @@ export async function enrichTerms(opts: {
    };
 
    const domains = (opts.competitorDomains || []).filter(Boolean).slice(0, 3);
-   const [suggestions, ideas, ...rankedLists] = await Promise.all([
-      getKeywordSuggestions({ seed: opts.keyword, country: opts.country, languageCode: opts.languageCode, limit: 300 })
-         .then((r) => r.keywords).catch(() => [] as KeywordMetric[]),
-      getKeywordIdeas({ seed: opts.keyword, country: opts.country, languageCode: opts.languageCode, limit: 300 })
+   const enrichLimit = 100;
+   const [suggestions, ...rankedLists] = await Promise.all([
+      getKeywordSuggestions({ seed: opts.keyword, country: opts.country, languageCode: opts.languageCode, limit: enrichLimit })
          .then((r) => r.keywords).catch(() => [] as KeywordMetric[]),
       ...domains.map((d) => cached({
          namespace: 'ranked',
          key: [d.toLowerCase(), opts.country || 'US', opts.languageCode || 'en'],
          ttlMs: TTL.RANKED_KEYWORDS,
-         producer: () => getRankedKeywords({ target: d, country: opts.country, languageCode: opts.languageCode, limit: 200, topOnly: true }),
+         producer: () => getRankedKeywords({ target: d, country: opts.country, languageCode: opts.languageCode, limit: DFS_DEFAULT_RANKED_LIMIT, topOnly: true }),
       }).then((ks) => ks.map(toMetric)).catch(() => [] as KeywordMetric[])),
    ]);
 
-   // Suggestions first (phrase-match, most on-topic), then ideas, then competitor footprint.
-   const pool: KeywordMetric[] = [...suggestions, ...ideas, ...rankedLists.flat()];
+   const pool: KeywordMetric[] = [...suggestions, ...rankedLists.flat()];
    const seen = new Set<string>();
    const scored = pool
-      .filter((k) => k.keyword && isRelevant(k.keyword))
+      .filter((k) => k.keyword && isKeywordOnTopic(k.keyword, opts.keyword))
+      .filter((k) => isUsefulTerm(k.keyword.toLowerCase()))
       .filter((k) => { const lk = k.keyword.toLowerCase(); if (seen.has(lk)) return false; seen.add(lk); return true; })
       .sort((a, b) => (b.search_volume || 0) - (a.search_volume || 0))
       .slice(0, opts.limit || 80)
@@ -161,6 +152,21 @@ export async function enrichTerms(opts: {
 }
 
 const AI_STOP = new Set(['jak', 'czy', 'co', 'ile', 'gdzie', 'kiedy', 'dlaczego', 'które', 'która', 'który', 'jakie', 'jaki', 'oraz', 'dla', 'the', 'and', 'for', 'what', 'how', 'why', 'where', 'when', 'who', 'does', 'are', 'with']);
+
+function readinessScore(text: string, promptOrFact: string): number {
+   const bodyTokens = new Set(tokenize(text));
+   const words = tokenize(promptOrFact).filter((w) => w.length >= 4 && !AI_STOP.has(w));
+   if (!words.length) return 0;
+   const matched = words.filter((w) => bodyTokens.has(w)).length;
+   return Math.round((matched / words.length) * 100);
+}
+
+function splitFactSentences(answer: string): string[] {
+   return (answer || '')
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 20 && s.length <= 220);
+}
 
 /**
  * AI Search "info to cover" from DataForSEO — People Also Ask + related searches.
@@ -181,33 +187,61 @@ export async function getAiSearchInfo(opts: {
    const paa = await cached({
       namespace: 'paa',
       key: [opts.keyword.toLowerCase(), opts.country || 'US', opts.languageCode || 'en'],
-      ttlMs: TTL.RANKED_KEYWORDS,
-      producer: () => getPeopleAlsoAsk({ keyword: opts.keyword, country: opts.country, languageCode: opts.languageCode }),
+      ttlMs: TTL.SERP,
+      producer: () => getPeopleAlsoAsk({
+         keyword: opts.keyword,
+         country: opts.country,
+         languageCode: opts.languageCode,
+         ownDomain: opts.ownDomain,
+      }),
    }).catch(() => ({ questions: [] as Array<{ question: string; answer: string; domain: string; url: string }>, related: [] as string[] }));
 
-   if (!paa.questions.length) return null;
+   if (!paa.questions.length && !paa.related.length) return null;
 
-   const text = (opts.articleText || '').toLowerCase();
+   const text = normalizePl(opts.articleText || '');
    const own = (opts.ownDomain || '').replace(/^www\./, '').toLowerCase();
 
-   const citations = paa.questions.map((q) => {
-      const words = q.question.toLowerCase().replace(/[^\wąćęłńóśźż\s]/g, ' ').split(/\s+/)
-         .filter((w) => w.length >= 4 && !AI_STOP.has(w));
-      const matched = words.filter((w) => text.includes(w)).length;
-      const readiness = words.length ? Math.round((matched / words.length) * 100) : 0;
-      const isOwn = !!(own && q.domain && q.domain.replace(/^www\./, '').toLowerCase().includes(own));
-      return {
-         prompt: q.question,
-         answer: q.answer,
-         cited_url: q.url,
-         cited_domain: q.domain,
-         is_own_domain: isOwn,
-         is_competitor: !!q.domain && !isOwn,
-         answer_readiness_score: readiness,
-      };
-   });
+   const citations = [
+      ...paa.questions.map((q) => {
+         const readiness = readinessScore(text, q.question);
+         const isOwn = !!(own && q.domain && q.domain.replace(/^www\./, '').toLowerCase().includes(own));
+         return {
+            prompt: q.question,
+            answer: q.answer,
+            cited_url: q.url,
+            cited_domain: q.domain,
+            is_own_domain: isOwn,
+            is_competitor: !!q.domain && !isOwn,
+            answer_readiness_score: readiness,
+         };
+      }),
+      ...paa.related.map((related) => ({
+         prompt: related,
+         answer: '',
+         cited_url: '',
+         cited_domain: '',
+         is_own_domain: false,
+         is_competitor: false,
+         answer_readiness_score: readinessScore(text, related),
+      })),
+   ];
 
-   const cited = citations.filter((c) => c.answer_readiness_score >= 60).length;
+   // Surfer-style fact snippets from PAA answers (grouped in UI via infoToCoverTopics).
+   for (const q of paa.questions) {
+      for (const sentence of splitFactSentences(q.answer)) {
+         citations.push({
+            prompt: sentence,
+            answer: sentence,
+            cited_url: q.url,
+            cited_domain: q.domain,
+            is_own_domain: false,
+            is_competitor: !!q.domain,
+            answer_readiness_score: readinessScore(text, sentence),
+         });
+      }
+   }
+
+   const cited = citations.filter((c) => (c.answer_readiness_score ?? 0) >= 60).length;
    const competitor = citations.filter((c) => c.is_competitor).length;
    const extractability = Math.round(citations.reduce((s, c) => s + c.answer_readiness_score, 0) / citations.length);
 
@@ -247,8 +281,7 @@ export async function getOwnVisibleKeywords(opts: {
    return { source: 'gsc', keywords };
 }
 
-/** Map People-Also-Ask questions to coverage items with STABLE ids (hash of question text,
- *  not array index — DataForSEO may reorder results). */
+/** Map PAA questions to coverage items with STABLE ids (hash of question text). */
 export function paaCoverageItems(questions: Array<{ question: string }>): CoverageItem[] {
   return questions.map((q) => ({
     id: `paa-${hashId(q.question)}`,
@@ -260,6 +293,30 @@ export function paaCoverageItems(questions: Array<{ question: string }>): Covera
     covered: false,
     quality: 0,
   }));
+}
+
+/** Surfer-style "Facts to include" — one coverage item per PAA answer sentence. */
+export function paaFactsCoverageItems(questions: Array<{ question: string; answer?: string }>): CoverageItem[] {
+  const out: CoverageItem[] = [];
+  const seen = new Set<string>();
+  for (const q of questions) {
+    for (const sentence of splitFactSentences(q.answer || '')) {
+      const key = sentence.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        id: `fact-${hashId(sentence)}`,
+        label: sentence,
+        type: 'fact',
+        category: 'knowledge',
+        importance: 'recommended',
+        source: 'paa',
+        covered: false,
+        quality: 0,
+      });
+    }
+  }
+  return out;
 }
 
 /**

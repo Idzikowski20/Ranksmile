@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
-import type { AiVisConfig, AiVisTopic } from '../lib/aiVisibility';
+import type { AiVisConfig, AiVisTopic, AiVisPriority } from '../lib/aiVisibility';
 
 export type AiVisScanStatus = {
    status: 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
@@ -91,12 +91,28 @@ export function useStartAiVisScan(slug: string | undefined) {
 export function useSaveAiVisConfig(slug: string | undefined) {
    const qc = useQueryClient();
    return useMutation(
-      (body: { brandName: string, topics: AiVisTopic[] }) => fetchJson<{ config: AiVisConfig }>(`/api/ai-visibility/${slug}/config`, jsonPost(body)),
+      (body: { brandName: string, topics: AiVisTopic[], priority?: AiVisPriority }) => fetchJson<{ config: AiVisConfig }>(`/api/ai-visibility/${slug}/config`, jsonPost(body)),
       {
          onSuccess: (data) => {
             // Prime the guard's cache with the freshly-saved (completed) config so the
             // redirect-to-overview after "Finish" reads completedAt immediately instead
             // of a stale { config: null } — which bounced the user back to setup.
+            qc.setQueryData(['ai-vis-config', slug], data);
+            qc.invalidateQueries(['ai-vis-data', slug]);
+         },
+         onError: toastError,
+      },
+   );
+}
+
+export function useUpdateAiVisPriority(slug: string | undefined) {
+   const qc = useQueryClient();
+   return useMutation(
+      (priority: AiVisPriority) => fetchJson<{ config: AiVisConfig }>(`/api/ai-visibility/${slug}/config`, {
+         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }),
+      }),
+      {
+         onSuccess: (data) => {
             qc.setQueryData(['ai-vis-config', slug], data);
             qc.invalidateQueries(['ai-vis-data', slug]);
          },
@@ -121,7 +137,8 @@ export type OverviewPayload = {
    competitorsAll?: Array<{ domain: string; visibilityScore: number }>;     // all, for the picker
    compare?: { competitorDomain: string; snapshot: DomainSnapshotDTO } | null; // long-tail fallback
    delta?: unknown; nextRefreshAt?: string | null; daysUntilRefresh?: number | null;
-   promptOptions?: Array<{ id: number; text: string; topic: string }>; // full prompt list for the filter (never shrinks with the selection)
+   refreshIntervalDays?: number; priority?: AiVisPriority;
+   promptOptions?: Array<{ id: number; text: string; topic: string }>;
 };
 
 export function useAiVisOverview(slug: string | undefined, competitor?: string, prompts?: number[]) {

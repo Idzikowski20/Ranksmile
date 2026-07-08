@@ -166,7 +166,7 @@ const ArticlesPage: NextPage = () => {
           ))}
         </SentryPageFilters>
 
-        <SentryPanel noPadding>
+        <SentryPanel noPadding className="sentry-panel--cards">
           <ArticleList
             articles={articles}
             onDelete={handleDelete}

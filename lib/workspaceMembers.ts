@@ -3,8 +3,10 @@ import { assertCanManage } from './members';
 import { ensureUserTenancy } from './tenancy';
 import { assertInOrg } from './workspaces';
 
-type Row = Record<string, any>;
-const select = async (sql: string, r: any[]): Promise<Row[]> => {
+import type { DbRow, SqlReplacements } from './types/db';
+
+type Row = DbRow;
+const select = async (sql: string, r: SqlReplacements): Promise<Row[]> => {
    const [rows] = await db.query(sql, { replacements: r }) as [Row[], unknown];
    return rows;
 };
@@ -12,7 +14,7 @@ const select = async (sql: string, r: any[]): Promise<Row[]> => {
 /** Parses a member's workspace_ids JSON column into a number[], tolerating malformed values. */
 function parseWsIds(raw: unknown): number[] {
    if (raw == null || raw === '') return [];
-   try { return (JSON.parse(String(raw)) as any[]).map((n) => Number(n)); } catch { return []; }
+   try { return (JSON.parse(String(raw)) as unknown[]).map((n) => Number(n)).filter((n) => !Number.isNaN(n)); } catch { return []; }
 }
 
 export type WorkspaceAccessRow = { id: number; email: string | null; role: string; hasAccess: boolean };

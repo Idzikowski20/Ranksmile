@@ -149,3 +149,13 @@ styles/globals.css             — CSS variables + shell styles
 - Dropdowny: `animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)'`, z-index 150
 - Wszystkie hover/transitions: min `150ms ease`
 - Nie dodawaj `outline: none` bez własnego focus style
+
+## 7. TypeScript — no `any`
+
+**Nigdy nie pisz kodu z typem `any`.** Dotyczy nowego kodu i każdej edycji dotykanej linii.
+
+Zabronione: `: any`, `as any`, `<any>`, `any[]`, `Record<string, any>`, domyślne `T = any`.
+
+Zamiast tego używaj `unknown` + zawężenie, `Record<string, unknown>`, konkretnych typów z `lib/types/` (`db.ts`, `sidecar.ts`, `editor.ts`, `json.ts`, `api.ts`), generyków (`callSidecar<T>`, `parseJsonish<T>`, `queryOne<Row>`) oraz typów z bibliotek (TipTap `Editor`, Next.js API types).
+
+Wyjątki tylko w `__tests__` / `__mocks__` (preferuj typowane fixture’y). Legacy poza scope zadania — nie dodawaj nowego `any`; typuj tylko zmieniane linie. Dotykasz `any` → zamień w tej samej zmianie.

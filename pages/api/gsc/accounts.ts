@@ -7,6 +7,7 @@ import {
   getAccountsForUser,
   refreshAccountProfileFromGoogle,
   verifyAccountToken,
+  type GscAccountRecord,
 } from '../../../lib/gscAccounts';
 
 type GscAccountsResponse = {
@@ -15,7 +16,7 @@ type GscAccountsResponse = {
   error?: string;
 };
 
-const normalizeAccount = (account: any) => ({
+const normalizeAccount = (account: GscAccountRecord & { status?: string }) => ({
   id: account.ID,
   userId: account.userId,
   googleSub: account.google_sub,

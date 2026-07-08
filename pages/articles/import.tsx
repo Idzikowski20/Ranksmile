@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
+import { useWorkspaces } from '../../services/workspaces';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
+import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
+import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import toast from 'react-hot-toast';
 
 const COUNTRIES: Record<string, { name: string; flag: string }> = {
   US: { name: 'United States', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/us.svg' },
@@ -20,8 +24,16 @@ const ImportPage: NextPage = () => {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [country, setCountry] = useState('PL');
   const [showCountryMenu, setShowCountryMenu] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { data: domainsData } = useFetchDomains(router);
+  const { data: wsData } = useWorkspaces();
   const domains: DomainType[] = domainsData?.domains || [];
+  const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const addKeyword = (kw: string) => {
     const trimmed = kw.trim();
@@ -35,16 +47,43 @@ const ImportPage: NextPage = () => {
   };
 
   const handleNext = async () => {
-    if (!url.trim()) return;
-    const params = new URLSearchParams({
-      url: url.trim(),
-      keywords: keywords.join(','),
-      country,
-    });
-    router.push(`/articles/deep-analysis?${params.toString()}`);
+    if (!url.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/articles/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: url.trim(),
+          keywords,
+          country,
+          startAnalysis: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Import failed');
+        return;
+      }
+      const articleId = Number(data.articleId);
+      if (!Number.isFinite(articleId)) {
+        toast.error('Import succeeded but could not open the editor');
+        return;
+      }
+      writeAnalyzeSession(articleId, {
+        url: url.trim(),
+        keywords,
+        country,
+      });
+      await router.replace(workspaceHref(wsId, `/articles/${articleId}`));
+    } catch {
+      toast.error('Import failed');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const canProceed = url.trim().length > 0;
+  const canProceed = url.trim().length > 0 && !isSubmitting;
   const countryData = COUNTRIES[country] || COUNTRIES.US;
 
   return (
@@ -326,7 +365,7 @@ const ImportPage: NextPage = () => {
                   }}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    Next<span style={{ fontWeight: 400 }}> — Deep analysis</span>
+                    {isSubmitting ? 'Importing…' : 'Open in editor'}
                   </span>
                 </button>
               </div>
