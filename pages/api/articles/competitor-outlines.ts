@@ -10,6 +10,8 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -22,6 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await ensureArticlesTables();
   const { keyword, language = 'pl', num = 5, articleId } = req.body;
   if (!keyword) return res.status(400).json({ error: 'keyword is required' });
+
+  if (articleId) {
+    const userId = await getCurrentUserId(req, res);
+    if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+  }
 
   // ── Return from DB cache if available ─────────────────────────────
   if (articleId) {
