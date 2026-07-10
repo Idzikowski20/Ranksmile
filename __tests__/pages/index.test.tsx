@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import Home from '../../pages/index';
 
 const routerPush = jest.fn();
 const routerReplace = jest.fn();
+
 jest.mock('next/router', () => ({
    useRouter: () => ({
       push: routerPush,
@@ -11,6 +11,20 @@ jest.mock('next/router', () => ({
       prefetch: jest.fn(),
    }),
 }));
+
+jest.mock('next/dynamic', () => () => function MockDigitX() {
+   return (
+      <main role="main">
+         <h1>Digital Solutions</h1>
+      </main>
+   );
+});
+
+jest.mock('../../lib/getBootstrap', () => ({
+   getBootstrap: jest.fn(),
+}));
+
+import Home from '../../pages/index';
 
 describe('Home Page', () => {
    const queryClient = new QueryClient();
@@ -21,27 +35,24 @@ describe('Home Page', () => {
       localStorage.clear();
    });
 
-   it('Renders without crashing', async () => {
-      fetchMock.mockResponse(JSON.stringify({ workspaces: [] }));
+   it('Renders marketing homepage without crashing', async () => {
       render(
           <QueryClientProvider client={queryClient}>
-              <Home />
+              <Home marketing={true} />
           </QueryClientProvider>,
       );
-      // console.log(prettyDOM(renderer.container.firstChild));
-      expect(await screen.findByRole('main')).toBeInTheDocument();
-      expect(screen.queryByText('Add Domain')).not.toBeInTheDocument();
+      expect(await screen.findByText(/Digital Solutions/i)).toBeInTheDocument();
    });
    it('Should redirect to the first workspace dashboard.', async () => {
        fetchMock.mockResponse(async (req) => {
-          if (req.url.includes('/api/workspaces')) {
-             return JSON.stringify({ workspaces: [{ id: 7, name: 'idztech.pl' }] });
+          if (req.url.includes('/api/session/bootstrap')) {
+             return JSON.stringify({ redirectTo: '/workspace/7/dashboard', onboarding: { completed: true }, email: { confirmed: true, email: null }, workspaces: [{ id: 7 }], activeId: 7, role: 'owner', setupWorkspaceId: null, canCreateSetup: true });
           }
           return JSON.stringify({});
        });
        render(
            <QueryClientProvider client={queryClient}>
-               <Home />
+               <Home marketing={false} />
            </QueryClientProvider>,
        );
        await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/workspace/7/dashboard'));

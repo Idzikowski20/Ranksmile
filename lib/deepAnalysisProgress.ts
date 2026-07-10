@@ -27,7 +27,7 @@ export interface JobProgressSnapshot {
 const STALE_RUNNING_MS = 90_000;
 const STALE_QUEUED_MS = 45_000;
 const STALE_NO_STAGE_MS = 45_000;
-const STALE_STARTING_MS = 180_000;
+const STALE_STARTING_MS = 300_000;
 
 export function isStaleDeepAnalysisJob(snap: JobProgressSnapshot): boolean {
   if (snap.status !== 'running' && snap.status !== 'queued') return false;

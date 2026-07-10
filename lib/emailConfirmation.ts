@@ -42,8 +42,10 @@ interface EmailConfirmationRow {
   confirmed_ms: number | string | null;
 }
 
+const EMAIL_CONFIRMATION_COLS = 'user_id, email, token_hash, expires_ms, last_sent_ms, confirmed_ms';
+
 const getRow = (userId: string) => queryOne<EmailConfirmationRow>(
-  'SELECT * FROM email_confirmations WHERE user_id = ?',
+  `SELECT ${EMAIL_CONFIRMATION_COLS} FROM email_confirmations WHERE user_id = ?`,
   [userId],
 );
 
@@ -112,7 +114,7 @@ export async function confirmEmailToken(rawToken: string, now: number = Date.now
   await ensureEmailConfirmationsTable();
   const tokenHash = hashToken(rawToken);
   const row = await queryOne<EmailConfirmationRow>(
-    'SELECT * FROM email_confirmations WHERE token_hash = ?',
+    `SELECT ${EMAIL_CONFIRMATION_COLS} FROM email_confirmations WHERE token_hash = ?`,
     [tokenHash],
   );
   if (!row || row.expires_ms === null || Number(row.expires_ms) < now) return { ok: false };

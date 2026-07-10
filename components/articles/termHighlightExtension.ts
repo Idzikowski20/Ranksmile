@@ -8,7 +8,14 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { findTermRangesBatch, termCoverage, termUsageHint } from '../../lib/contentScore';
 
-export type HlTerm = { term: string; current_count?: number; target_count: number };
+export type HlTerm = {
+  term: string;
+  current_count?: number;
+  target_count: number;
+  /** Competitor-derived usage range (Surfer "suggested" column). */
+  suggested_min?: number;
+  suggested_max?: number;
+};
 
 export const termHighlightKey = new PluginKey('termHighlight');
 
@@ -50,10 +57,20 @@ export const TermHighlight = Extension.create<Options>({
                 const t = ordered[i];
                 const cls = covClass(t);
                 const title = termUsageHint(t);
+                const color = termCoverage(t);
                 for (const [s, e] of res.ranges) {
                   if (occupied.some(([os, oe]) => s < oe && e > os)) continue; // skip overlaps
                   occupied.push([s, e]);
-                  decos.push(Decoration.inline(pos + s, pos + e, { class: cls, 'data-term-tip': title }));
+                  decos.push(Decoration.inline(pos + s, pos + e, {
+                    class: cls,
+                    'data-term-tip': title,
+                    'data-term-hl-keyword': t.term,
+                    'data-term-hl-color': color,
+                    'data-term-hl-usage': String(t.current_count ?? 0),
+                    'data-term-hl-min-usage': String(t.suggested_min ?? t.target_count),
+                    'data-term-hl-max-usage': String(t.suggested_max ?? t.target_count),
+                    'data-term-hl-match': `${t.term}-${pos + s}`,
+                  }));
                 }
               });
             });

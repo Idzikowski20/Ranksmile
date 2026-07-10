@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { useOrganization, useUpdateOrganization } from '../../services/organization';
 import { Button, Input } from '../core';
@@ -83,7 +84,14 @@ const OrganizationGeneralSettings = () => {
               }}
             >
               {displayLogo ? (
-                <img src={displayLogo} alt="Organization logo" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
+                <Image
+                  src={displayLogo}
+                  alt="Organization logo"
+                  width={64}
+                  height={64}
+                  unoptimized
+                  style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }}
+                />
               ) : (
                 <span style={{ fontSize: 20, fontWeight: 600, color: '#783AFB', textTransform: 'uppercase', fontFamily: 'var(--font-family-primary)', userSelect: 'none' }}>
                   {initial}

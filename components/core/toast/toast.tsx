@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion, type Transition } from 'framer-motion';
+import { AnimatePresence, motion, type Transition } from 'motion/react';
 import styled from '@emotion/styled';
 import type { SentryTheme } from '../theme';
 

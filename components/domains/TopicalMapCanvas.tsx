@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { TopicCluster } from '../../lib/topicalMap';
 import {
    MAP_VIEWBOX, MAP_CENTER, MAP_AXIS_HALF_LENGTH, MAP_RING_COUNT, MAP_RING_COLORS, MAP_AXIS_STOPS,
@@ -56,10 +56,16 @@ const COLOR_MODES: Array<{ value: ColorMode; label: string }> = [
 
 type HoverInfo = { title: string; c: TopicCluster; isSatellite: boolean; x: number; y: number };
 
-const TopicalMapCanvas = ({ clusters, showTitles, onKeywordClick }: {
+const TopicalMapCanvas = ({ clusters, showTitles, onKeywordClick, onNodeClick, satelliteOffsets = MAP_SATELLITE_OFFSETS }: {
    clusters: TopicCluster[];
    showTitles: boolean;
    onKeywordClick?: (c: TopicCluster) => void;
+   /** When provided, clicking a main node calls this instead of opening the built-in
+    *  selected-cluster card (used by Topic Research to open its idea drawer). */
+   onNodeClick?: (c: TopicCluster) => void;
+   /** Satellite hex placement (local units). Defaults to the 3-hex topical-map cluster;
+    *  Topic Research passes a larger honeycomb spiral for a SurferSEO-style blob. */
+   satelliteOffsets?: Array<[number, number]>;
 }) => {
    const [zoom, setZoom] = useState(100);
    const [mode, setMode] = useState<ColorMode>('coverage');
@@ -67,6 +73,19 @@ const TopicalMapCanvas = ({ clusters, showTitles, onKeywordClick }: {
    const [selected, setSelected] = useState<TopicCluster | null>(null);
    const [hover, setHover] = useRafThrottledState<HoverInfo | null>(null);
    const boxRef = useRef<HTMLDivElement>(null);
+
+   // Zoom with the mouse wheel. A native, non-passive listener is required so we can
+   // preventDefault() and stop the page from scrolling while over the map.
+   useEffect(() => {
+      const el = boxRef.current;
+      if (!el) return undefined;
+      const onWheel = (e: WheelEvent) => {
+         e.preventDefault();
+         setZoom((z) => Math.round(Math.min(200, Math.max(100, z - e.deltaY * 0.25))));
+      };
+      el.addEventListener('wheel', onWheel, { passive: false });
+      return () => el.removeEventListener('wheel', onWheel);
+   }, []);
 
    const maxKd = useMemo(() => Math.max(1, ...clusters.map((c) => c.kd)), [clusters]);
    const kdFill = (kd: number): string => {
@@ -144,7 +163,7 @@ const TopicalMapCanvas = ({ clusters, showTitles, onKeywordClick }: {
                {clusters.map((c) => {
                   const st = nodeStyle(c);
                   const { cx, cy } = nodeCenter(c.map.x, c.map.y);
-                  const sats = Math.min(MAP_SATELLITE_OFFSETS.length, Math.max(0, c.keywords.length - 1));
+                  const sats = Math.min(satelliteOffsets.length, Math.max(0, c.keywords.length - 1));
                   // More keywords → smaller hex, so busy clusters stay readable.
                   const kwFactor = Math.max(0.55, 1.25 - c.keywords.length * 0.07);
                   const hexScale = MAP_HEX_SCALE * c.map.size * kwFactor;
@@ -158,14 +177,14 @@ const TopicalMapCanvas = ({ clusters, showTitles, onKeywordClick }: {
                               strokeWidth={st.strokeWidth}
                               tabIndex={0}
                               style={{ cursor: 'pointer', outline: 'none' }}
-                              onClick={() => setSelected(c)}
+                              onClick={() => (onNodeClick ? onNodeClick(c) : setSelected(c))}
                               onMouseMove={onNodeMove(c, c.name, false)}
                               onMouseLeave={() => setHover(null)}
                            />
                            {Array.from({ length: sats }, (_, i) => {
                               const kwText = c.keywords[i + 1]?.text ?? c.mainKeyword;
                               return (
-                                 <g key={MAP_SATELLITE_OFFSETS[i].join(',')} transform={`translate(${MAP_SATELLITE_OFFSETS[i][0]} ${MAP_SATELLITE_OFFSETS[i][1]})`}>
+                                 <g key={satelliteOffsets[i].join(',')} transform={`translate(${satelliteOffsets[i][0]} ${satelliteOffsets[i][1]})`}>
                                     <path
                                        d={MAP_HEX_SATELLITE}
                                        fill={st.fill}

@@ -29,8 +29,10 @@ class StageContext:
 
         stage_percent: 0-100 within the current stage.
         message: human-readable progress string."""
+        current_stage = stage.name or self._state.get("current_stage", "")
+        if current_stage:
+            self._state["current_stage"] = current_stage
         self._state["progress_message"] = message
-        current_stage = self._state.get("current_stage", "")
 
         stage_contribution = stage_percent * stage.progress_weight
         total = self.total_progress + stage_contribution

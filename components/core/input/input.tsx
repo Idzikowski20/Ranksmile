@@ -23,8 +23,9 @@ const StyledInput = styled.input<{ $sz: InputSize; $mono: boolean; $err: boolean
     display: 'block',
     width: '100%',
     color: '#302E36',
-    backgroundColor: '#10103008',
-    boxShadow: `0px 1px 0px 0px ${chonk} inset`,
+    backgroundColor: '#FFFFFF',
+    // Convex "button" look: white surface with a solid bottom edge (like the secondary button).
+    boxShadow: `0px 2px 0px 0px ${chonk}`,
     border: $err ? '1px solid #FF002B' : '1px solid #DAD9DE',
     fontFamily: $mono
       ? "'Roboto Mono', Monaco, Consolas, 'Courier New', monospace"
@@ -52,7 +53,7 @@ const StyledInput = styled.input<{ $sz: InputSize; $mono: boolean; $err: boolean
     },
     '&:focus, &:focus-visible': {
       borderColor: '#7553FF',
-      boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #7553FF, 0px 1px 0px 0px #DAD9DE inset',
+      boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #7553FF, 0px 2px 0px 0px #DAD9DE',
     },
     '&[type="number"]': {
       appearance: 'textfield',

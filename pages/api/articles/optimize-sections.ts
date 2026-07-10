@@ -14,7 +14,9 @@ import { buildArticleContext } from '../../../lib/articleContext';
 import type { ArticleContext } from '../../../lib/articleContext';
 import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articleKeywordDiscovery';
 import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
-import { filterOnTopicTerms } from '../../../lib/topicRelevance';
+import { termsForOptimize } from '../../../lib/mergeArticleTerms';
+import { liveCoverageItems } from '../../../lib/liveCoverage';
+import { computeCoverageScores } from '../../../lib/aiCoverage';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
@@ -27,6 +29,12 @@ import {
   TARGET_SEO,
   type OptimizeMode,
 } from '../../../lib/optimizeMode';
+import {
+  maxRoundsForPhase,
+  resolveOptimizePhase,
+  targetContentForPhase,
+  type AoMeta,
+} from '../../../lib/optimizeRunPhase';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
 import { flushSse, flushHeaders } from '../../../lib/types/api';
@@ -44,9 +52,33 @@ function scoreSeo(html: string, scoreData: ScoreData | undefined, keyword: strin
    return computeContentScore(plain, wc, hc, scoreData, pc, undefined, html, keyword);
 }
 
-function scoreAiFromContext(ctx: ArticleContext | null, latestAiScore: number): number {
+function scoreAiFromContext(ctx: ArticleContext | null, html: string, latestAiScore: number): number {
+   if (ctx?.coverage?.items?.length) {
+      const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const live = liveCoverageItems(ctx.coverage.items, plain, html);
+      return computeCoverageScores(live, !!ctx.coverage.answersMainQuestionEarly).overall;
+   }
    if (ctx?.scoreData?.ai_score != null) return ctx.scoreData.ai_score;
    return latestAiScore;
+}
+
+async function persistScoreDataTerms(
+   articleId: number | undefined,
+   nextScoreData: ScoreData,
+   scoreData: ScoreData | undefined,
+   res: NextApiResponse,
+   previousCount: number,
+): Promise<void> {
+   if (!articleId || nextScoreData.terms.length <= previousCount) return;
+   try {
+      const articleIdSql = await getArticleIdSql();
+      await db.query(
+         `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
+         { replacements: [JSON.stringify(nextScoreData), articleId] },
+      );
+   } catch { /* non-fatal */ }
+   if (scoreData) Object.assign(scoreData, { terms: nextScoreData.terms });
+   sse(res, 'terms', { terms: nextScoreData.terms });
 }
 
 function globalOptimizeBrief(ctx: ArticleContext, html: string, mode: OptimizeMode): string {
@@ -57,18 +89,20 @@ function globalOptimizeBrief(ctx: ArticleContext, html: string, mode: OptimizeMo
          lines.push(`Missing SEO entities (use verbatim where natural): ${missing.map((t) => `"${t}"`).join(', ')}`);
       }
    }
-   const uncoveredFacts = (ctx.coverage?.items || [])
-      .filter((i) => !i.covered && i.type === 'fact')
-      .slice(0, 15);
-   if (uncoveredFacts.length) {
-      lines.push(`AI Search — cover these facts:\n${uncoveredFacts.map((i) => `- ${i.label}`).join('\n')}`);
+
+   const uncoveredAi = (ctx.coverage?.items || []).filter((i) =>
+     (i.category === 'intent' || i.category === 'knowledge')
+     && (i.type === 'paa' || i.type === 'fact' || i.type === 'intent' || i.type === 'definition' || i.type === 'comparison')
+     && (!i.covered || i.quality < 4),
+   );
+
+   if (uncoveredAi.length) {
+      lines.push(
+        `AI Search — the article MUST answer ALL ${uncoveredAi.length} checkpoints below (every one is required for a high AI score):\n`
+        + uncoveredAi.map((i) => `- ${i.label}`).join('\n'),
+      );
    }
-   const uncovered = (ctx.coverage?.items || [])
-      .filter((i) => !i.covered && (i.category === 'knowledge' || i.category === 'intent') && i.type !== 'fact')
-      .slice(0, 20);
-   if (uncovered.length) {
-      lines.push(`AI Search — cover these points:\n${uncovered.map((i) => `- ${i.label}`).join('\n')}`);
-   }
+
    return lines.length ? `\n\nGLOBAL OBJECTIVES (this section must contribute):\n${lines.join('\n\n')}` : '';
 }
 
@@ -194,59 +228,85 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    req.on('close', onClose);
 
    try {
-      const TARGET_SEO_SCORE = Math.min(100, Math.max(50, Number(targetScore) || TARGET_SEO));
-      const TARGET_AI_SCORE = TARGET_AI;
-      const MAX_ROUNDS = Math.min(6, Math.max(1, Number(maxRounds) || DEFAULT_MAX_ROUNDS));
       const allowNewSections = writeNewSections === true;
       let workingHtml = content;
       let ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
 
-      // Strip off-topic DFS noise from score_data before optimizing.
-      if (ctx?.scoreData?.terms?.length && ctx.keyword) {
-         const cleaned = filterOnTopicTerms(filterUsefulNlpTerms(ctx.scoreData.terms), ctx.keyword);
-         if (cleaned.length !== ctx.scoreData.terms.length) {
-            const nextScoreData = { ...ctx.scoreData, terms: cleaned };
+      const aoMeta = (scoreData as (ScoreData & { _ao_meta?: AoMeta }) | undefined)?._ao_meta
+         ?? (ctx?.scoreData as (ScoreData & { _ao_meta?: AoMeta }) | null)?._ao_meta;
+
+      // Restore full term list from article_terms + score_data (never shrink to PK splits).
+      if (ctx?.scoreData && ctx.keyword) {
+         const mergedTerms = termsForOptimize({
+            scoreDataTerms: ctx.scoreData.terms,
+            tableTerms: ctx.terms,
+         });
+         const prevCount = ctx.scoreData.terms?.length ?? 0;
+         if (mergedTerms.length > prevCount) {
+            const nextScoreData = { ...ctx.scoreData, terms: mergedTerms };
             ctx = { ...ctx, scoreData: nextScoreData };
-            if (scoreData) Object.assign(scoreData, { terms: cleaned });
-            try {
-               const articleIdSql = await getArticleIdSql();
-               await db.query(
-                  `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
-                  { replacements: [JSON.stringify(nextScoreData), articleId] },
-               );
-            } catch { /* non-fatal */ }
-            sse(res, 'terms', { terms: cleaned });
+            await persistScoreDataTerms(articleId, nextScoreData, scoreData, res, prevCount);
+         } else if (mergedTerms.length !== prevCount) {
+            const nextScoreData = { ...ctx.scoreData, terms: mergedTerms };
+            ctx = { ...ctx, scoreData: nextScoreData };
+            if (scoreData) Object.assign(scoreData, { terms: mergedTerms });
          }
       }
 
-      // Enrich only when still thin after cleanup.
+      // Enrich only when still thin after merge.
       if (ctx && ctx.scoreData && ctx.keyword) {
          const competitorDomains = (ctx.competitors || []).map((c) => c.domain).filter(Boolean);
-         const baseTerms = filterOnTopicTerms(filterUsefulNlpTerms(ctx.scoreData.terms), ctx.keyword);
+         const baseTerms = termsForOptimize({
+            scoreDataTerms: ctx.scoreData.terms,
+            tableTerms: ctx.terms,
+         });
          if (needsTermEnrichment(baseTerms, ctx.keyword)) {
+            let ownDomain: string | undefined;
+            try {
+               const articleIdSql = await getArticleIdSql();
+               const row = await queryOne<{ meta_url: string | null }>(
+                  `SELECT meta_url FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+                  [articleId],
+               );
+               if (row?.meta_url) {
+                  ownDomain = new URL(row.meta_url.startsWith('http') ? row.meta_url : `https://${row.meta_url}`).hostname.replace(/^www\./, '');
+               }
+            } catch { /* optional */ }
             const merged = await enrichNlpTermsIfNeeded({
                terms: baseTerms,
                primaryKeyword: ctx.keyword,
                languageCode: ctx.language,
                competitorDomains,
+               ownDomain,
                plainText: workingHtml.replace(/<[^>]+>/g, ' '),
             });
-            const useful = filterOnTopicTerms(filterUsefulNlpTerms(merged), ctx.keyword);
+            const useful = filterUsefulNlpTerms(merged);
             if (useful.length > baseTerms.length) {
                const nextScoreData = { ...ctx.scoreData, terms: useful };
                ctx = { ...ctx, scoreData: nextScoreData };
-               if (scoreData) Object.assign(scoreData, { terms: useful });
-               try {
-                  const articleIdSql = await getArticleIdSql();
-                  await db.query(
-                     `UPDATE articles SET score_data = ? WHERE ${articleIdSql} = ?`,
-                     { replacements: [JSON.stringify(nextScoreData), articleId] },
-                  );
-               } catch { /* non-fatal */ }
-               sse(res, 'terms', { terms: useful });
+               await persistScoreDataTerms(articleId, nextScoreData, scoreData, res, baseTerms.length);
             }
          }
       }
+
+      const initialSeo = scoreData?.seo_score
+         ?? (ctx?.scoreData as (ScoreData & { seo_score?: number }) | null)?.seo_score
+         ?? scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+      const initialAi = ctx && articleId != null
+         ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+         : 0;
+      const initialContent = computeOverallContentScore(initialSeo, initialAi);
+      const phase = resolveOptimizePhase({
+         contentScore: initialContent,
+         aoMeta,
+         hasPriorAutoOptimizeVersion: (aoMeta?.runs ?? 0) >= 1,
+      });
+      const TARGET_SEO_SCORE = phase === 'first_run'
+         ? Math.min(100, Math.max(TARGET_SEO, Number(targetScore) || TARGET_SEO))
+         : Math.min(100, Math.max(85, Number(targetScore) || 90));
+      const TARGET_AI_SCORE = TARGET_AI;
+      const TARGET_CONTENT_SCORE = targetContentForPhase(phase);
+      const MAX_ROUNDS = Math.min(6, Math.max(1, Number(maxRounds) || maxRoundsForPhase(phase) || DEFAULT_MAX_ROUNDS));
 
       let changedCount = 0;
       let aiTokens = 0;
@@ -254,12 +314,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let finalSeo = 0;
       let finalAi = 0;
       let finalContent = 0;
+      let trimmedMeta: { trimmed: boolean; ignoredLift: number } = { trimmed: false, ignoredLift: 0 };
 
       sse(res, 'meta', {
          total: splitSections(workingHtml).length,
          targetSeo: TARGET_SEO_SCORE,
          targetAi: TARGET_AI_SCORE,
+         targetContent: TARGET_CONTENT_SCORE,
          maxRounds: MAX_ROUNDS,
+         phase,
       });
 
       try {
@@ -273,13 +336,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                ?? (ctx?.scoreData as (ScoreData & { seo_score?: number }) | null)?.seo_score
                ?? scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
             const aiScore = ctx && articleId != null
-               ? scoreAiFromContext(ctx, await readLatestAiScore(Number(articleId)))
+               ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
                : 0;
-            const mode = selectOptimizeMode(seoScore, aiScore);
+            const mode = selectOptimizeMode(seoScore, aiScore, phase);
 
             let plan: Plan = ctx
                ? buildOptimizationPlan({
-                  sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used, seoScore, aiScore,
+                  sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used,
+                  seoScore, aiScore, phase, mode,
                })
                : legacyPlan(sections, scoreData, workingHtml);
 
@@ -294,7 +358,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                };
             }
 
-            if (plan.trimmed && round === 1) sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
+            if (plan.trimmed && round === 1) {
+               trimmedMeta = { trimmed: true, ignoredLift: plan.ignoredLift };
+               sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
+            }
 
             let roundChanged = 0;
             const brief = ctx ? globalOptimizeBrief(ctx, workingHtml, mode) : '';
@@ -302,9 +369,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             for (const step of plan.steps) {
                if (aborted) break;
 
-               const section: Section = { id: step.sectionId, index: step.index, headingText: step.headingText, html: step.html };
+               const liveSection = sections[step.index];
+               const section: Section = liveSection ?? {
+                  id: step.sectionId,
+                  index: step.index,
+                  headingText: step.headingText,
+                  html: step.html,
+               };
 
                if (step.focus === 'skip') {
+                  sse(res, 'section', buildSectionEvent(section, undefined, step));
                   continue;
                }
 
@@ -344,15 +418,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
                if (changed) {
                   roundChanged += 1;
-                  const idx = sections.findIndex((s) => s.id === section.id);
-                  if (idx >= 0) sections[idx] = { ...sections[idx], html: newHtml };
+                  changedCount += 1;
+                  if (liveSection) {
+                     sections[step.index] = { ...liveSection, html: newHtml };
+                  }
                }
+               sse(res, 'section', buildSectionEvent(
+                  section,
+                  { oldHtml: section.html, newHtml, changed },
+                  step,
+               ));
             }
 
             workingHtml = joinSections(sections);
             finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
             finalAi = ctx && articleId != null
-               ? scoreAiFromContext(ctx, await readLatestAiScore(Number(articleId)))
+               ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
                : 0;
             finalContent = computeOverallContentScore(finalSeo, finalAi);
             sse(res, 'progress', {
@@ -361,28 +442,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                ai: finalAi,
                content: finalContent,
                mode,
+               phase,
                targetSeo: TARGET_SEO_SCORE,
                targetAi: TARGET_AI_SCORE,
+               targetContent: TARGET_CONTENT_SCORE,
                changed: roundChanged,
             });
 
-            if ((finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE) || roundChanged === 0) break;
+            const hitContentTarget = finalContent >= TARGET_CONTENT_SCORE;
+            const hitSeoAi = finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE;
+            if ((hitContentTarget || hitSeoAi) || roundChanged === 0) break;
          }
 
-         // One review diff: original → final (after all rounds).
-         const originalSections = splitSections(content);
-         const finalSections = splitSections(workingHtml);
-         for (let i = 0; i < originalSections.length; i += 1) {
-            const old = originalSections[i];
-            const neu = finalSections[i] ?? old;
-            const changed = normalizeHtmlForDiff(old.html) !== normalizeHtmlForDiff(neu.html);
-            if (changed) changedCount += 1;
-            sse(res, 'section', buildSectionEvent(
-               old,
-               { oldHtml: old.html, newHtml: neu.html, changed },
-               { sectionId: old.id, index: old.index, headingText: old.headingText, focus: 'seo-terms', systemPrompt: '', guidelines: [], missingTerms: [], estimatedTokens: 0, expectedLift: 0, reason: 'Multi-round optimize', mode: 'normal' },
-            ));
-         }
       } finally {
          if (!aborted && orgId != null && shouldChargeCredit(changedCount, aiTokens)) {
             await recordAiTokens(orgId, aiTokens);
@@ -395,9 +466,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       sse(res, 'done', {
          changedCount, total: splitSections(content).length, promptVersion: PROMPT_VERSION,
-         creditDeducted, rounds: roundsRun,
+         creditDeducted, rounds: roundsRun, phase,
          seo: finalSeo, ai: finalAi, content: finalContent,
-         targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE,
+         targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
+         trimmed: trimmedMeta.trimmed, ignoredLift: trimmedMeta.ignoredLift,
       });
    } catch (error) {
       if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });

@@ -7,6 +7,7 @@ import { computeOpportunityScore } from '../../lib/keywordEnrichment';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';
 import KeywordResearchSection from './KeywordResearchSection';
+import DomainFavicon from '../common/DomainFavicon';
 import WriteOptimizePanel from './WriteOptimizePanel';
 import DeepAnalysisProgressPanel from './DeepAnalysisProgressPanel';
 import type { DeepAnalysisUiState } from '../../lib/deepAnalysisProgress';
@@ -209,12 +210,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, flex: 1, minWidth: 0 }}>
           <span style={{ display: 'inline-flex', flexShrink: 0, width: 14, height: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
-              alt="" width={14} height={14}
-              style={{ display: 'block', width: 14, height: 14, objectFit: 'contain', borderRadius: 2 }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
+            <DomainFavicon domain={domain} size={14} style={{ borderRadius: 2 }} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
@@ -685,7 +681,6 @@ const ContentScorePanel = ({
     <div className="editor-side-panel">
       <div data-tour="content-score" className="editor-side-panel-score">
         <SentryPanelHeader
-          borderless
           title={(
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               Content Score

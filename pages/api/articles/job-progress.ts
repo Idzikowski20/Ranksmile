@@ -4,6 +4,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -27,8 +29,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
+      if (!isInternal && articleId) {
+        const userId = await getCurrentUserId(req, res);
+        if (!(await assertArticleAccess(userId, Number(articleId)))) {
+          return res.status(403).json({ error: 'Access denied.' });
+        }
+      }
+
       const rows = await db.query<{
         id: string;
+        article_id: number | null;
         status: string;
         current_stage: string | null;
         stage_progress: number | null;
@@ -37,9 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updated_at: string | Date | null;
       }>(
         jobId
-          ? `SELECT id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          ? `SELECT id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
              FROM analysis_jobs WHERE id = ?`
-          : `SELECT id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          : `SELECT id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
              FROM analysis_jobs
              WHERE article_id = ? AND job_type = 'deep_analysis'
              ORDER BY created_at DESC, id DESC
@@ -50,6 +60,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!rows.length) return res.status(404).json({ error: 'job not found' });
 
       const j = rows[0];
+
+      if (!isInternal) {
+        const userId = await getCurrentUserId(req, res);
+        const aid = j.article_id ?? (articleId ? Number(articleId) : null);
+        if (aid == null || !(await assertArticleAccess(userId, aid))) {
+          return res.status(403).json({ error: 'Access denied.' });
+        }
+      }
       return res.status(200).json({
         jobId: j.id,
         status: j.status,
@@ -117,10 +135,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (status === 'done') {
           const html = (result?.article_html as string) || '';
           const wordCount = html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+          const { reconcilePostGenerateArticle } = await import('../../../lib/reconcilePostGenerateArticle');
+          const sidecarScore = (result?.score_data && typeof result.score_data === 'object')
+            ? result.score_data as import('../../../lib/contentScore').ScoreData
+            : { terms: [], words_target: 2000, words_min: 1500, words_max: 2500, headings_target: 15, headings_min: 10, headings_max: 20 };
+          const reconciled = await reconcilePostGenerateArticle({
+            articleId: Number(genArticleId),
+            html,
+            sidecarScoreData: sidecarScore,
+          }).catch((err) => {
+            console.warn('[job-progress] post-generate reconcile failed (non-fatal):', err);
+            return null;
+          });
+          const scoreJson = JSON.stringify(reconciled?.scoreData ?? sidecarScore);
+          const contentScore = reconciled?.contentScore ?? null;
           await db.query(
             `UPDATE articles SET
                title = COALESCE(?, title), content = ?, meta_title = ?, meta_description = ?, meta_url = ?,
                schema_json = ?, score_data = ?, internal_links_cache = ?, word_count = ?,
+               ai_info_to_cover = COALESCE(?, ai_info_to_cover),
+               content_score = COALESCE(?, content_score),
                status = 'draft', updated_at = CURRENT_TIMESTAMP
              WHERE ${articleIdSql} = ?`,
             { replacements: [
@@ -130,9 +164,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               result?.meta_description || '',
               result?.meta_url || '',
               JSON.stringify(result?.article_schema || result?.schema_json || {}),
-              JSON.stringify(result?.score_data || {}),
+              scoreJson,
               JSON.stringify({ suggestions: result?.internal_links || [] }),
               wordCount,
+              reconciled?.aiInfoToCover ?? null,
+              contentScore,
               genArticleId,
             ] },
           );

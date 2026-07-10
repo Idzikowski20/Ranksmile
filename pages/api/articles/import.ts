@@ -12,6 +12,7 @@ import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
 import { renderPage } from '../../../utils/spaScraper';
 import { getErrorMessage } from '../../../lib/errors';
 import { countOccurrences } from '../../../lib/contentScore';
+import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
 async function fetchWithHttp(url: string): Promise<string> {
    const res = await fetch(url, {
@@ -20,6 +21,7 @@ async function fetchWithHttp(url: string): Promise<string> {
          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
          'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
       },
+      redirect: 'manual',
       signal: AbortSignal.timeout(10000),
    });
    if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -49,10 +51,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       device = 'Desktop',
       domainId: bodyDomainId,
       startAnalysis = false,
+      extractOnly = false,
    } = req.body;
 
-   if (!url) {
+   if (!url || typeof url !== 'string') {
       return res.status(400).json({ error: 'url is required' });
+   }
+
+   try {
+      await assertPublicUrl(url);
+   } catch (e) {
+      return res.status(400).json({ error: getErrorMessage(e) || 'Invalid or blocked URL' });
    }
 
    try {
@@ -227,6 +236,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const contentHtml = contentParts.length > 2
          ? contentParts.join('\n')
          : plainText.match(/[^\n]{80,}/g)?.map(c => `<p>${c.trim()}</p>`).join('\n') || `<p>${title}</p>`;
+
+      // Extract-only mode — the Content Editor imports directly into the current
+      // (already-created) article, so we just return the parsed HTML and metadata
+      // without creating a new article row.
+      if (extractOnly) {
+         return res.status(200).json({ contentHtml, title, metaTitle, metaDescription });
+      }
 
       // Count meaningful paragraphs from scraped page
       const paragraphCount = $body.find('p').filter((_, el) => {
