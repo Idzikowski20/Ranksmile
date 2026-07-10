@@ -7,6 +7,9 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { queryOne } from '../../../lib/db/query';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -16,8 +19,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: authorized });
    }
 
+   const userId = await getCurrentUserId(req, res);
+
    if (req.method === 'GET') {
       const { domainId } = req.query;
+      const owns = await verifyDomainOwnershipById(Number(domainId), userId);
+      if (!owns) return res.status(403).json({ error: 'Access denied.' });
+
       const [rows] = await db.query(
          `SELECT id, domain_id, type, url, created_at FROM publish_targets WHERE domain_id = ?`,
          { replacements: [domainId] },
@@ -30,6 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!domain_id || !type || !url) {
          return res.status(400).json({ error: 'domain_id, type and url are required' });
       }
+      const owns = await verifyDomainOwnershipById(Number(domain_id), userId);
+      if (!owns) return res.status(403).json({ error: 'Access denied.' });
+
       // Upsert — nadpisz jeśli istnieje
       await db.query(
          `DELETE FROM publish_targets WHERE domain_id = ? AND type = ?`,
@@ -45,6 +56,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (req.method === 'DELETE') {
       const { id } = req.query;
+      const target = await queryOne<{ domain_id: number }>(
+         `SELECT domain_id FROM publish_targets WHERE id = ? LIMIT 1`,
+         [id],
+      );
+      if (!target) return res.status(404).json({ error: 'Publish target not found' });
+      const owns = await verifyDomainOwnershipById(Number(target.domain_id), userId);
+      if (!owns) return res.status(403).json({ error: 'Access denied.' });
+
       await db.query(`DELETE FROM publish_targets WHERE id = ?`, { replacements: [id] });
       return res.status(200).json({ deleted: true });
    }
