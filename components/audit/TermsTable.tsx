@@ -45,11 +45,13 @@ function parseRange(suggested: string): [number, number] {
    const [a, b] = suggested.split('-').map((n) => Number(n));
    return [a || 0, Number.isFinite(b) ? (b as number) : (a || 0)];
 }
-function actionLabel(t: AuditTerm): string {
+// Verb + amount kept separate so the range ("12-13") never breaks across lines while the
+// verb can wrap above it — matching SurferSEO's two-line Action cell.
+function actionParts(t: AuditTerm): { verb: string; amount: string } {
    const [sMin, sMax] = parseRange(t.suggested);
-   if (t.action === 'add') { const g1 = Math.max(0, sMin - t.you); const g2 = Math.max(0, sMax - t.you); return g2 > g1 ? `Add ${g1}-${g2}` : `Add ${g1}`; }
-   if (t.action === 'remove') { const g1 = Math.max(0, t.you - sMax); const g2 = Math.max(0, t.you - sMin); return g2 > g1 ? `Remove ${g1}-${g2}` : `Remove ${g1}`; }
-   return '';
+   if (t.action === 'add') { const g1 = Math.max(0, sMin - t.you); const g2 = Math.max(0, sMax - t.you); return { verb: 'Add', amount: g2 > g1 ? `${g1}-${g2}` : `${g1}` }; }
+   if (t.action === 'remove') { const g1 = Math.max(0, t.you - sMax); const g2 = Math.max(0, t.you - sMin); return { verb: 'Remove', amount: g2 > g1 ? `${g1}-${g2}` : `${g1}` }; }
+   return { verb: '', amount: '' };
 }
 
 const ExportButton = () => (
@@ -110,7 +112,7 @@ const TermsTable = ({ terms }: { terms: AuditTerm[] }) => {
                <tbody>
                   {rows.map((t) => {
                      const expanded = open.has(t.term);
-                     const label = actionLabel(t);
+                     const action = actionParts(t);
                      // Guard legacy audits: result_json persisted before this feature has no
                      // examples/forms fields, so default them rather than crashing the page.
                      const examples = t.examples ?? [];
@@ -134,8 +136,13 @@ const TermsTable = ({ terms }: { terms: AuditTerm[] }) => {
                               <td style={{ ...td, textAlign: 'center' }}>{t.searchVolume === null ? '—' : t.searchVolume.toLocaleString('en-US')}</td>
                               <td style={{ ...td }}>
                                  {t.action === 'ok'
-                                    ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><GreenCheck /></span>
-                                    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><RedDiamond /><span>{label}</span></span>}
+                                    ? <GreenCheck />
+                                    : (
+                                       <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 6, color: '#18181B' }}>
+                                          <span style={{ flexShrink: 0, marginTop: 1 }}><RedDiamond /></span>
+                                          <span style={{ lineHeight: 1.35 }}>{action.verb} <span style={{ whiteSpace: 'nowrap' }}>{action.amount}</span></span>
+                                       </span>
+                                    )}
                               </td>
                            </tr>
                            {expanded && examples.length > 0 && (

@@ -6,14 +6,36 @@ import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+
+type JobAccessRow = {
+  id: string;
+  job_type: string | null;
+  domain_id: number | null;
+  article_id: number | null;
+};
+
+async function canReadJob(userId: string | null, job: JobAccessRow): Promise<boolean> {
+  if (job.domain_id && job.job_type === 'domain_setup') {
+    return Boolean(await verifyDomainOwnershipById(Number(job.domain_id), userId));
+  }
+  if (job.article_id && Number(job.article_id) > 0) {
+    return assertArticleAccess(userId, Number(job.article_id));
+  }
+  return false;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await ensureArticlesTables();
 
-  // Auth: internal token (Python sidecar) or session cookie (browser)
+  // Auth: internal token (Python sidecar) or session cookie (browser polling).
   const internalToken = req.headers['x-internal-token'];
-  const isInternal = internalToken && internalToken === process.env.INTERNAL_PIPELINE_TOKEN;
+  const isInternal = Boolean(
+    process.env.INTERNAL_PIPELINE_TOKEN
+      && typeof internalToken === 'string'
+      && internalToken === process.env.INTERNAL_PIPELINE_TOKEN,
+  );
 
   if (!isInternal) {
     const authorized = await verifyUser(req, res);
@@ -36,9 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      const rows = await db.query<{
-        id: string;
-        article_id: number | null;
+      const rows = await db.query<JobAccessRow & {
         status: string;
         current_stage: string | null;
         stage_progress: number | null;
@@ -47,9 +67,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updated_at: string | Date | null;
       }>(
         jobId
-          ? `SELECT id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          ? `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
              FROM analysis_jobs WHERE id = ?`
-          : `SELECT id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
+          : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
              FROM analysis_jobs
              WHERE article_id = ? AND job_type = 'deep_analysis'
              ORDER BY created_at DESC, id DESC
@@ -60,14 +80,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!rows.length) return res.status(404).json({ error: 'job not found' });
 
       const j = rows[0];
-
       if (!isInternal) {
         const userId = await getCurrentUserId(req, res);
-        const aid = j.article_id ?? (articleId ? Number(articleId) : null);
-        if (aid == null || !(await assertArticleAccess(userId, aid))) {
+        if (!(await canReadJob(userId, j))) {
           return res.status(403).json({ error: 'Access denied.' });
         }
       }
+
       return res.status(200).json({
         jobId: j.id,
         status: j.status,
@@ -86,6 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ── POST: update progress (Python sidecar) ──────────────────────
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!isInternal) return res.status(401).json({ error: 'Unauthorized' });
 
   const { jobId, currentStage, stageProgress, totalProgress, message, status, result } = req.body;
   if (!jobId) return res.status(400).json({ error: 'jobId is required' });

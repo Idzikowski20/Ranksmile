@@ -393,8 +393,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         { replacements: [errText, jobId] },
       );
       await db.query(
-        `UPDATE articles SET status = 'error', content = ? WHERE ${articleIdSql} = ?`,
-        { replacements: [errText, articleId] },
+        `UPDATE articles SET status = 'error', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [articleId] },
       );
       sse(res, 'error', { step: 'pipeline', message: errText });
       return res.end();
@@ -858,8 +858,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { replacements: [errorMessage, jobId] },
     ).catch(() => {});
     await db.query(
-      `UPDATE articles SET status = 'error', content = ? WHERE ${articleIdSql} = ?`,
-      { replacements: [errorMessage, articleId] },
+      `UPDATE articles SET status = 'error', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+      { replacements: [articleId] },
     ).catch(() => {});
     sse(res, 'error', { step: 'pipeline', message: errorMessage });
     return res.end();

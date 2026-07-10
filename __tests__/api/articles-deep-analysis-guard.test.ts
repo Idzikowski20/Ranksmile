@@ -18,6 +18,13 @@ jest.mock('../../database/database', () => ({ __esModule: true, default: { query
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 
 import handler from '../../pages/api/articles/deep-analysis';
+import db from '../../database/database';
+import { assertArticleAccess } from '../../lib/tenancy';
+import { sidecarBase } from '../../lib/sidecar';
+
+const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
+const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;
+const mockSidecarBase = sidecarBase as jest.MockedFunction<typeof sidecarBase>;
 
 const makeRes = () => {
   const res: any = {};
@@ -29,6 +36,11 @@ const makeRes = () => {
   res.flushHeaders = jest.fn();
   return res;
 };
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockAssertArticleAccess.mockResolvedValue(false);
+});
 
 it('denies re-analyzing an existing article the caller cannot reach', async () => {
   const res = makeRes();
@@ -46,4 +58,31 @@ it('denies URL-mode creation with no domainId when the caller can reach no domai
   const res = makeRes();
   await handler({ method: 'POST', body: { url: 'http://victim.example' }, query: {}, cookies: {} } as any, res);
   expect(res.status).toHaveBeenCalledWith(403);
+});
+
+it('preserves existing article content when the sidecar pipeline fails', async () => {
+  mockAssertArticleAccess.mockResolvedValueOnce(true);
+  mockSidecarBase.mockReturnValue('http://sidecar.test');
+  (global.fetch as unknown) = jest.fn().mockResolvedValue({
+    ok: false,
+    text: async () => 'sidecar exploded',
+  });
+  mockDbQuery
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce([{ status: 'running', attempts: 1 }])
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce(undefined)
+    .mockResolvedValueOnce(undefined);
+
+  const res = makeRes();
+  await handler({ method: 'POST', body: { articleId: 123, url: 'http://example.com/page' }, query: {}, cookies: {} } as any, res);
+
+  const articleErrorSql = mockDbQuery.mock.calls
+    .map(([sql]) => String(sql))
+    .find((sql) => sql.includes("UPDATE articles SET status = 'error'"));
+  expect(articleErrorSql).toBeDefined();
+  expect(articleErrorSql).not.toContain('content');
 });
