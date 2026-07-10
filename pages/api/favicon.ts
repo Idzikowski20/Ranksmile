@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          // Akceptuj tylko prawdziwe formaty graficzne
          if (ct && (ct.startsWith('image/') || ct === 'application/octet-stream') && upstream.data?.length > 100) {
             res.setHeader('Content-Type', ct === 'image/x-icon' ? 'image/png' : ct);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
             return res.status(200).send(Buffer.from(upstream.data));
          }
       } catch { /* próbuj kolejne źródło */ }
@@ -53,6 +53,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    // Fallback — SVG z literą domeny (zawsze działa)
    res.setHeader('Content-Type', 'image/svg+xml');
-   res.setHeader('Cache-Control', 'public, max-age=86400');
+   res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
    return res.status(200).send(svgPlaceholder(domain));
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
+import { WizardNextButton } from '../../components/articles/WizardShell';
 
 const LANGUAGES = [
   { value: 'pl', label: 'Polski' },
@@ -258,24 +259,12 @@ const NewContentPage: NextPage = () => {
 
             {/* Sticky bottom action bar */}
             <div style={{ padding: 12, display: 'flex', justifyContent: 'center', width: '100%', borderTop: '1px solid #E4E4E7' }}>
-              <div style={{ width: '100%', maxWidth: 512 }}>
-                <button
-                  type="button"
+              <div style={{ width: '100%', maxWidth: 512, display: 'flex' }}>
+                <WizardNextButton
+                  label="Deep research"
                   disabled={!canNext}
                   onClick={goNext}
-                  style={{
-                    width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '10px 24px', borderRadius: 8, fontSize: 16, lineHeight: '24px', fontWeight: 600,
-                    border: 'none', fontFamily: 'var(--font-family-primary)',
-                    background: canNext ? '#2F2F34' : '#9F9FA9', color: '#fff',
-                    cursor: canNext ? 'pointer' : 'not-allowed', opacity: canNext ? 1 : 0.6,
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={(e) => { if (canNext) (e.currentTarget as HTMLButtonElement).style.background = '#783AFB'; }}
-                  onMouseLeave={(e) => { if (canNext) (e.currentTarget as HTMLButtonElement).style.background = '#2F2F34'; }}
-                >
-                  <span className="line-clamp-1">Next<span style={{ fontWeight: 400 }}>—Deep research</span></span>
-                </button>
+                />
               </div>
             </div>
           </div>

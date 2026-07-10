@@ -15,7 +15,7 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows, queryOne } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
 
-import { parseJsonish } from '../../../../../lib/types/json';
+import { parseJsonish } from '../../../../lib/types/json';
 
 const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 

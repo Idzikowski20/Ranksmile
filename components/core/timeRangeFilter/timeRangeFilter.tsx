@@ -1,8 +1,13 @@
 import React, { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { CompactSelect } from '../compactSelect/compactSelect';
-import { DateRangePicker } from '../calendar/dateRangePicker';
 import { Button } from '../button/button';
 import type { ButtonSize } from '../button/types';
+
+const DateRangePicker = dynamic(
+  () => import('../calendar/dateRangePicker').then((m) => m.DateRangePicker),
+  { ssr: false },
+);
 
 export type TimeRangeValue = {
   start: Date;

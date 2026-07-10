@@ -8,6 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (!conn) return res.status(401).json({ message: 'Invalid api-key.' });
 
    const a = await getArticleRow(Number(req.body?.draft_id));
-   const iso = (() => { try { return new Date(a?.updated_at || a?.created_at || Date.now()).toISOString(); } catch { return new Date().toISOString(); } })();
+   const raw = a?.updated_at ?? a?.created_at;
+   const iso = new Date(raw != null ? String(raw) : Date.now()).toISOString();
    return res.status(200).json({ surfer_last_update_date: iso, last_sync_date: iso, last_sync_direction: 'from Surfer to WordPress' });
 }

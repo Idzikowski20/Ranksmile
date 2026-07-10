@@ -3,6 +3,7 @@ import { Flex, Stack, Container } from '../core/layout';
 import { Text } from '../core/text';
 import { SentryPanel, SentryPanelHeader } from '../sentry-pages';
 import Skeleton from './Skeleton';
+import DomainFavicon from '../common/DomainFavicon';
 
 const BoltIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="flex-shrink-0">
@@ -113,7 +114,7 @@ const Row = ({ item, faviconDomain, divider }: { item: RecommendationItem; favic
     <OptimizeGlyph />
     <Text as="span" size="sm" variant="muted" wrap="nowrap">{isCreate ? 'Create' : 'Optimize'}</Text>
     {faviconDomain && (
-      <img alt="" width={16} height={16} className="rounded flex-shrink-0" src={`https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=32`} />
+      <DomainFavicon domain={faviconDomain} size={16} className="rounded flex-shrink-0" />
     )}
     <Text as="span" size="md" bold variant="muted" ellipsis className="rec-title flex-1 transition-colors">
       {item.title}

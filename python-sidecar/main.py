@@ -308,6 +308,37 @@ async def analyze_serp_endpoint(body: dict):
     return await analyze_serp(keyword, language)
 
 
+@app.post("/extract-terms-from-urls")
+async def extract_terms_from_urls(body: dict):
+    """Scrape known competitor URLs and extract NLP terms (semantic + TF-IDF fallback)."""
+    keyword = body.get("keyword", "")
+    urls = [u.strip() for u in (body.get("urls") or []) if isinstance(u, str) and u.strip()][:8]
+    if not keyword or not urls:
+        raise HTTPException(status_code=400, detail="keyword and urls are required")
+
+    from analyzers.serp_analyzer import _scrape_pages
+    from analyzers.semantic_terms import extract_semantic_terms
+    from analyzers.competitor_terms import extract_nlp_terms
+
+    print(f"[extract-terms-from-urls] Scraping {len(urls)} pages for: {keyword}")
+    texts, _ = await _scrape_pages(urls)
+    if not texts:
+        return {"terms": []}
+
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
+    terms = await extract_semantic_terms(keyword, texts, deepseek_key)
+    if len(terms) < 12:
+        tfidf = extract_nlp_terms(texts, keyword)
+        seen = {t["term"] for t in terms}
+        for t in tfidf:
+            if t["term"] not in seen:
+                terms.append(t)
+                seen.add(t["term"])
+
+    print(f"[extract-terms-from-urls] Extracted {len(terms)} terms")
+    return {"terms": terms[:80]}
+
+
 @app.post("/competitor-outlines")
 async def competitor_outlines_endpoint(body: dict):
     """Research & Outline — zwraca heading structure konkurencyjnych stron."""

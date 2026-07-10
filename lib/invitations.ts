@@ -8,6 +8,8 @@ import type { DbRow, SqlReplacements } from './types/db';
 type Row = DbRow;
 const select = async (sql: string, r: SqlReplacements): Promise<Row[]> => { const [rows] = await db.query(sql, { replacements: r }) as [Row[], unknown]; return rows; };
 
+const INVITATION_COLS = 'id, org_id, email, role, workspace_ids, token, status, expires_at';
+
 export async function createInvitation(userId: string, p: { email: string; role: string; workspaceIds: number[] | null }): Promise<Invitation> {
    const { orgId } = await ensureUserTenancy(userId);
    const token = crypto.randomBytes(24).toString('base64url');
@@ -16,18 +18,18 @@ export async function createInvitation(userId: string, p: { email: string; role:
    const expires = new Date(Date.now() + 7 * 864e5).toISOString();
    await db.query("INSERT INTO invitations (org_id, email, role, workspace_ids, token, status, invited_by, expires_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)",
       { replacements: [orgId, p.email.trim().toLowerCase(), role, ws, token, userId, expires] });
-   const back = await select('SELECT * FROM invitations WHERE token = ? LIMIT 1', [token]);
+   const back = await select(`SELECT ${INVITATION_COLS} FROM invitations WHERE token = ? LIMIT 1`, [token]);
    return back[0] as Invitation;
 }
 
 export async function getInvitationByToken(token: string): Promise<Invitation | null> {
-   const rows = await select('SELECT * FROM invitations WHERE token = ? LIMIT 1', [token]);
+   const rows = await select(`SELECT ${INVITATION_COLS} FROM invitations WHERE token = ? LIMIT 1`, [token]);
    return (rows[0] as Invitation) || null;
 }
 
 export async function listInvitations(userId: string): Promise<Invitation[]> {
    const { orgId } = await ensureUserTenancy(userId);
-   return await select("SELECT * FROM invitations WHERE org_id = ? AND status = 'pending' ORDER BY id DESC", [orgId]) as Invitation[];
+   return await select(`SELECT ${INVITATION_COLS} FROM invitations WHERE org_id = ? AND status = 'pending' ORDER BY id DESC`, [orgId]) as Invitation[];
 }
 
 export async function revokeInvitation(userId: string, id: number): Promise<void> {

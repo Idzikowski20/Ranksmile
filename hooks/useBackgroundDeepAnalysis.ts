@@ -28,6 +28,9 @@ type PollOutcome =
 
 const MIN_RESTART_MS = 60_000;
 
+/** One in-flight deep-analysis POST per article — prevents strict-mode / multi-hook duplicates. */
+const deepAnalysisInflight = new Set<number>();
+
 /** job IDs are `job_{articleId}_{timestamp}` — reject foreign jobs after a misrouted stream. */
 export function jobArticleId(jobId: string): number | null {
   const m = /^job_(\d+)_/.exec(jobId);
@@ -158,6 +161,7 @@ export function useBackgroundDeepAnalysis({
 
         console.warn('[deep-analysis] job stalled — restarting pipeline', jobId);
         lastRestartAtRef.current = Date.now();
+        deepAnalysisInflight.delete(currentAid);
         stopPolling();
         try {
           await startAnalysisStreamRef.current(currentAid, restartCtxRef.current);
@@ -191,15 +195,16 @@ export function useBackgroundDeepAnalysis({
 
   startAnalysisStreamRef.current = async (id: number, body: RunCtx) => {
     if (authFailedRef.current) return;
-    if (streamInFlightRef.current) return;
+    if (streamInFlightRef.current || deepAnalysisInflight.has(id)) return;
 
     streamInFlightRef.current = true;
+    deepAnalysisInflight.add(id);
     try {
       const res = await fetch('/api/articles/deep-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: body.url,
+          ...(body.url ? { url: body.url } : {}),
           keywords: body.keywords,
           country: body.country,
           articleId: id,
@@ -266,6 +271,7 @@ export function useBackgroundDeepAnalysis({
       if (buffer.trim()) processLine(buffer.trim());
     } finally {
       streamInFlightRef.current = false;
+      deepAnalysisInflight.delete(id);
     }
   };
 
@@ -300,7 +306,7 @@ export function useBackgroundDeepAnalysis({
         const country = session?.country || 'PL';
         const runCtx: RunCtx = { url, keywords, country };
 
-        if (!url) {
+        if (!url && !keywords.length) {
           setIsActive(false);
           return;
         }

@@ -1,4 +1,6 @@
 import React from 'react';
+import { useGSAP } from '@gsap/react';
+import { registerMotionPlugins } from '../../lib/motion/gsap';
 import SentryNav from './nav/SentryNav';
 import GlobalTopbar from './GlobalTopbar';
 import MobileBottomNav from './MobileBottomNav';
@@ -31,6 +33,7 @@ const AppShell = ({
    contentClassName = '',
    hideMobileNav = false,
 }: AppShellProps) => {
+   useGSAP(() => { registerMotionPlugins(); });
    const contentRef = useRouteTransition<HTMLElement>();
    return (
       <div className="app-shell">

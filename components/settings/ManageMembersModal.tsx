@@ -110,7 +110,7 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
             />
 
-            <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
+            <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                      <colgroup>

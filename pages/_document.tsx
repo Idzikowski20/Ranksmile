@@ -14,6 +14,7 @@ class MyDocument extends Document {
               had no effect. This build (InterVariable) includes them. */}
           <link rel="preconnect" href="https://rsms.me/" />
           <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+          <style dangerouslySetInnerHTML={{ __html: '@font-face{font-family:"InterVariable";font-style:normal;font-weight:100 900;font-display:swap;src:url("https://rsms.me/inter/font-files/InterVariable.woff2?v=4.0") format("woff2")}' }} />
         </Head>
         <body>
           <Main />

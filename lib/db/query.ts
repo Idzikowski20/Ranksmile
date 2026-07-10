@@ -75,3 +75,20 @@ export interface AuditRunRow {
   finished_at: string | null;
   created_at: string | null;
 }
+
+/** A row of `topic_research_runs` (see lib/ensureTopicResearchTables). */
+export interface TopicResearchRunRow {
+  id: number;
+  domain_id: number;
+  seed: string;
+  country: string;
+  status: string;
+  result_json: string | null;
+  stats_json: string | null;
+  progress_done: number | null;
+  progress_total: number | null;
+  error: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+}

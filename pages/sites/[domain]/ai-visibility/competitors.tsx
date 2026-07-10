@@ -1,12 +1,17 @@
 import type { NextPage } from 'next';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import CompetitorsTable, { CompetitorRow } from '../../../../components/aiVisibility/CompetitorsTable';
-import CompetitorDetailModal from '../../../../components/aiVisibility/CompetitorDetailModal';
 import { SkeletonRows } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { useAiVisCompetitors, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
+
+const CompetitorDetailModal = dynamic(
+  () => import('../../../../components/aiVisibility/CompetitorDetailModal'),
+  { ssr: false },
+);
 
 type PromptRow = { id: number; topic: string; text: string; perModel: Array<{ model: string }> };
 type PromptsData = { pending?: boolean; prompts?: PromptRow[] };
@@ -61,7 +66,7 @@ const AiVisibilityCompetitors: NextPage = () => {
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {pending ? (
-                     <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}><SkeletonRows count={10} withIcon /></div>
+                     <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 24 }}><SkeletonRows count={10} withIcon /></div>
                   ) : (
                      <CompetitorsTable
                         competitors={competitors}

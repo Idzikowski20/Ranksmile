@@ -298,31 +298,52 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
       {/* Formatting */}
       <div data-tour="format" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
-        {/* Headings dropdown */}
+        {/* Headings dropdown — Paragraph + H1…H6 */}
         {(() => {
-          const curLevel = ([1, 2, 3] as const).find((l) => editor.isActive('heading', { level: l }));
+          const curLevel = ([1, 2, 3, 4, 5, 6] as const).find((l) => editor.isActive('heading', { level: l }));
+          const label = curLevel ? `H${curLevel}` : editor.isActive('paragraph') ? 'P' : 'H';
           return (
             <ToolbarMenu
-              title="Heading"
+              title="Text style"
               active={!!curLevel}
-              trigger={<span style={{ fontWeight: 600, fontSize: 13 }}>{curLevel ? `H${curLevel}` : 'H'}</span>}
+              trigger={<span style={{ fontWeight: 600, fontSize: 13 }}>{label}</span>}
             >
-              {(close) => ([1, 2, 3] as const).map((lvl) => {
-                const active = editor.isActive('heading', { level: lvl });
-                return (
-                  <button
-                    key={lvl}
-                    type="button"
-                    onClick={() => { editor.chain().focus().toggleHeading({ level: lvl }).run(); close(); }}
-                    title={`Heading ${lvl}`}
-                    style={{ ...btnStyle, fontWeight: 600, fontSize: lvl === 1 ? 15 : lvl === 2 ? 14 : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
-                  >
-                    H{lvl}
-                  </button>
-                );
-              })}
+              {(close) => (
+                <>
+                  {(() => {
+                    const active = editor.isActive('paragraph');
+                    return (
+                      <button
+                        key="p"
+                        type="button"
+                        onClick={() => { editor.chain().focus().setParagraph().run(); close(); }}
+                        title="Paragraph"
+                        style={{ ...btnStyle, fontWeight: 500, fontSize: 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+                      >
+                        P
+                      </button>
+                    );
+                  })()}
+                  {([1, 2, 3, 4, 5, 6] as const).map((lvl) => {
+                    const active = editor.isActive('heading', { level: lvl });
+                    return (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => { editor.chain().focus().toggleHeading({ level: lvl }).run(); close(); }}
+                        title={`Heading ${lvl}`}
+                        style={{ ...btnStyle, fontWeight: 600, fontSize: lvl <= 2 ? 15 - lvl : 13, color: active ? '#630DE3' : '#18181B', background: active ? '#F3EEFF' : 'transparent' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : '#F4F4F5'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#F3EEFF' : 'transparent'; }}
+                      >
+                        H{lvl}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
             </ToolbarMenu>
           );
         })()}
@@ -1046,6 +1067,33 @@ const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() 
   return all.filter((i) => i.title.toLowerCase().includes(q) || i.hint.slice(1).startsWith(q));
 };
 
+/* ── Empty-article "get started" CTA ──────────────────────────────────
+ * Surfer-style blank state shown under the title/first line when the doc is
+ * empty: import from URL, insert a competitor-derived outline, or open Surfy. */
+const CTA_FONT = 'var(--font-family-primary)';
+const IconGlobe = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18M5.25 6h.008v.008H5.25zM7.5 6h.008v.008H7.5zm2.25 0h.008v.008H9.75z" /></svg>);
+const IconOutline = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.008v.008H3.75zm0 5.25h.008v.008H3.75zm0 5.25h.008v.008H3.75z" /></svg>);
+const IconSpark = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="currentColor" d="M9 3l1.2 3.3L13.5 7.5L10.2 8.7L9 12L7.8 8.7L4.5 7.5L7.8 6.3zm7 6l.9 2.4l2.4.9l-2.4.9l-.9 2.4l-.9-2.4l-2.4-.9l2.4-.9z" /></svg>);
+const IconClose = () => (<svg viewBox="0 0 20 20" width={18} height={18}><path fill="currentColor" d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" /></svg>);
+
+const CtaButton = ({ icon, children, onClick, busy }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void; busy?: boolean }) => (
+  <button type="button" onClick={onClick} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 16px', borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 500, fontFamily: CTA_FONT, cursor: busy ? 'default' : 'pointer', boxShadow: '0px 1px 2px rgba(24,26,34,0.06)', opacity: busy ? 0.7 : 1, transition: 'background 150ms ease, border-color 150ms ease' }} onMouseEnter={(e) => { if (!busy) { e.currentTarget.style.background = '#F4F4F5'; e.currentTarget.style.borderColor = '#D4D4D8'; } }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E4E4E7'; }}>
+    {busy ? <span style={{ width: 16, height: 16, border: '2px solid #D4D4D8', borderTopColor: '#52525C', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> : <span style={{ display: 'inline-flex', color: '#52525C' }}>{icon}</span>}
+    {children}
+  </button>
+);
+
+const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; onChange: (v: string) => void; onImport: () => void; onClose: () => void; busy?: boolean }) => (
+  <form onSubmit={(e) => { e.preventDefault(); onImport(); }} style={{ display: 'flex', width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, background: '#F4F4F5', borderRadius: 8, padding: '6px 8px' }}>
+    <span style={{ display: 'inline-flex', alignSelf: 'center', color: '#52525C', marginLeft: 6 }}><IconGlobe /></span>
+    <input value={url} onChange={(e) => onChange(e.target.value)} placeholder="https://example.com/article.html" aria-label="URL" autoFocus style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: '#18181B', fontFamily: CTA_FONT }} />
+    <button type="submit" disabled={busy || !url.trim()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 6, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: CTA_FONT, padding: '6px 12px', cursor: busy || !url.trim() ? 'default' : 'pointer', opacity: busy || !url.trim() ? 0.6 : 1 }}>
+      <span>Import</span>
+    </button>
+    <button type="button" onClick={onClose} aria-label="Clear value" style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', color: '#52525C', cursor: 'pointer', padding: 4, marginRight: 4 }}><IconClose /></button>
+  </form>
+);
+
 const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
@@ -1084,6 +1132,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyOpen, setSurfyOpen] = useState(false);
     const [surfyPrompt, setSurfyPrompt] = useState('');
     const [surfyLoading, setSurfyLoading] = useState(false);
+    // Empty-document "get started" state (Surfer-style CTA on a blank article).
+    const [docEmpty, setDocEmpty] = useState(true);
+    const [ctaMode, setCtaMode] = useState<'menu' | 'import'>('menu');
+    const [importUrl, setImportUrl] = useState('');
+    const [importBusy, setImportBusy] = useState(false);
+    const [outlineBusy, setOutlineBusy] = useState(false);
     const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
     const [publishing, setPublishing] = useState(false);
     // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
@@ -1181,6 +1235,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const next = [...prev, { role: 'user' as const, message: prompt }];
         return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
       });
+      // Clear the composer once the message is sent (restored below only if the
+      // request is blocked by the shared budget).
+      setSurfyPrompt('');
 
       try {
         const htmlContent = editor.getHTML();
@@ -1228,6 +1285,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           if (ej.error === 'org_limit') {
             setOrgUsage({ used: ej.used ?? 0, limit: ej.limit ?? 0, resetsAt: ej.resetsAt ?? 0, over: true });
             setSurfyHistory((prev) => prev.slice(0, -1)); // drop the optimistic user bubble; keep their prompt in the box
+            setSurfyPrompt(prompt); // restore the composer so they can retry after the reset
             return;
           }
         }
@@ -1426,6 +1484,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
 
     const calcAndEmit = useCallback((ed: Editor) => {
+      setDocEmpty(ed.getText().trim().length === 0);
       let html = ed.getHTML();
       // Strip highlight marks when Surfy is open to prevent leaking into saved content
       if (surfyOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
@@ -1458,13 +1517,26 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         // link: false — StarterKit v3 includes Link by default; disable it so
         // our explicit Link.configure() below is the only Link extension.
         // Underline is bundled in StarterKit v3, so it is NOT registered separately.
-        StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: false }),
+        StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, link: false }),
         SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
         // contentOptimizer nodes are ephemeral review markers — never persisted to the saved article.
         // The orchestration layer (auto-optimize flow) suspends autosave while these nodes exist.
         ContentOptimizer,
         TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
-        Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
+        Link.extend({
+          addAttributes() {
+            return {
+              ...this.parent?.(),
+              'data-surfer-link': {
+                default: null,
+                parseHTML: (el: HTMLElement) => el.getAttribute('data-surfer-link'),
+                renderHTML: (attrs: Record<string, unknown>) => (
+                  attrs['data-surfer-link'] ? { 'data-surfer-link': String(attrs['data-surfer-link']) } : {}
+                ),
+              },
+            };
+          },
+        }).configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
         Highlight.configure({ multicolor: true }),
         CommentHighlight.configure({
           getComments: () => commentsRef.current,
@@ -1492,10 +1564,14 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         DetailsSummary,
         DetailsContent,
         Youtube.configure({ width: 640, height: 360, nocookie: true, HTMLAttributes: { class: 'art-youtube' } }),
-        Placeholder.configure({ placeholder: 'Start writing or type a slash /', includeChildren: false }),
+        Placeholder.configure({
+          placeholder: ({ node }) => (node.type.name === 'heading' && node.attrs.level === 1 ? 'Untitled' : 'Start writing or type a slash /'),
+          includeChildren: false,
+          showOnlyCurrent: false,
+        }),
         SlashCommand.configure({ items: (query: string) => filterSlashItems(query, slashAskSurfyRef) }),
       ],
-      content,
+      content: content || '<h1></h1><p></p>',
       immediatelyRender: false,
       editable: !readOnly,
       onCreate({ editor: ed }) { calcAndEmit(ed); },
@@ -1565,6 +1641,61 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     }, [content, editor]);
 
+    // ── "Get started" CTA actions (blank-article empty state) ──────────
+    const handleImportUrl = async () => {
+      const url = importUrl.trim();
+      if (!url || !editor) return;
+      setImportBusy(true);
+      try {
+        const res = await fetch('/api/articles/import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, extractOnly: true }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.contentHtml) throw new Error(data.error || 'Import failed');
+        editor.commands.setContent(data.contentHtml, { emitUpdate: true });
+        setCtaMode('menu'); setImportUrl('');
+      } catch (e) {
+        toast.error(getErrorMessage(e) || 'Could not import content from that URL.');
+      } finally {
+        setImportBusy(false);
+      }
+    };
+
+    const handleInsertOutline = async () => {
+      const kw = (keyword || articleKeyword || '').trim();
+      const articleId = commentArticleId ? Number(commentArticleId) : undefined;
+      if (!kw && !articleId) { toast.error('No keyword available to build an outline.'); return; }
+      if (!editor) return;
+      setOutlineBusy(true);
+      try {
+        const res = await fetch('/api/articles/generate-outline', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keyword: kw, articleId, language: 'pl' }),
+        });
+        const data = await res.json();
+        const headings: Array<{ level: number; text: string }> = Array.isArray(data.headings) ? data.headings : [];
+        if (!res.ok || headings.length === 0) throw new Error(data.error || 'Could not generate an outline.');
+        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = `${headings.map((h) => {
+          const lvl = Math.min(Math.max(h.level, 1), 4);
+          return `<h${lvl}>${esc(h.text)}</h${lvl}>`;
+        }).join('')}<p></p>`;
+        editor.commands.setContent(html, { emitUpdate: true });
+      } catch (e) {
+        toast.error(getErrorMessage(e) || 'Could not generate an outline.');
+      } finally {
+        setOutlineBusy(false);
+      }
+    };
+
+    const handleWriteWithAi = () => {
+      setSurfyOpen(true);
+      setSurfyResponse(null);
+      setSurfySelection(null);
+      setTimeout(() => surfyInputRef.current?.focus(), 100);
+    };
+
     // Repaint comment decorations when the comment list changes (no-op tx forces
     // the decorations prop to re-run, reading the latest commentsRef).
     useEffect(() => {
@@ -1627,18 +1758,18 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror > ul,
           .art-editor-scroll .ProseMirror > ol,
           .art-editor-scroll .ProseMirror > blockquote { position: relative; }
-          .art-editor-scroll .ProseMirror > h1::before { content: 'h1'; }
-          .art-editor-scroll .ProseMirror > h2::before { content: 'h2'; }
-          .art-editor-scroll .ProseMirror > h3::before { content: 'h3'; }
-          .art-editor-scroll .ProseMirror > p::before { content: 'p'; }
-          .art-editor-scroll .ProseMirror > ul::before { content: 'ul'; }
-          .art-editor-scroll .ProseMirror > ol::before { content: 'ol'; }
-          .art-editor-scroll .ProseMirror > h1::before,
-          .art-editor-scroll .ProseMirror > h2::before,
-          .art-editor-scroll .ProseMirror > h3::before,
-          .art-editor-scroll .ProseMirror > p::before,
-          .art-editor-scroll .ProseMirror > ul::before,
-          .art-editor-scroll .ProseMirror > ol::before {
+          .art-editor-scroll .ProseMirror > h1::after { content: 'h1'; }
+          .art-editor-scroll .ProseMirror > h2::after { content: 'h2'; }
+          .art-editor-scroll .ProseMirror > h3::after { content: 'h3'; }
+          .art-editor-scroll .ProseMirror > p::after { content: 'p'; }
+          .art-editor-scroll .ProseMirror > ul::after { content: 'ul'; }
+          .art-editor-scroll .ProseMirror > ol::after { content: 'ol'; }
+          .art-editor-scroll .ProseMirror > h1::after,
+          .art-editor-scroll .ProseMirror > h2::after,
+          .art-editor-scroll .ProseMirror > h3::after,
+          .art-editor-scroll .ProseMirror > p::after,
+          .art-editor-scroll .ProseMirror > ul::after,
+          .art-editor-scroll .ProseMirror > ol::after {
             position: absolute; left: -36px; top: 5px;
             font-size: 11px; font-weight: 400; color: #d1d5db;
             font-family: var(--font-family-primary); line-height: 1;
@@ -1659,7 +1790,13 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           /* New-line placeholder — Surfer-style: inherits the paragraph's size/line-height/spacing
              (so a fresh line sits as a normal paragraph and nothing shifts when you start typing),
              soft gray, NOT italic. */
-          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; font-style: italic; }
+          .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+          /* Empty-title placeholder ("Untitled") — inherits the h1 size/weight, soft gray, not italic. */
+          .art-editor-scroll .ProseMirror h1.is-empty::before { color: #a1a1aa; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+          /* On a blank article the ProseMirror min-height / bottom padding collapse so the "get started" CTA sits right under the first line. */
+          .art-editor-scroll[data-empty="true"] .ProseMirror { min-height: 0; padding-bottom: 8px; }
+          /* Hide the paragraph placeholder while importing so only "Importing your content…" shows. */
+          .art-editor-scroll[data-importing="true"] .ProseMirror p.is-empty::before { content: none; }
           .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
           .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
@@ -1706,7 +1843,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             Wrapped in a relative container so the progressive-blur fades pin to the
             scroll-area edges (below the toolbar) and don't scroll with the content. */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'}>
+        <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'}>
           <div
             ref={editorWrapRef}
             className={surfySelection ? 'surfy-selection-highlight' : ''}
@@ -1733,6 +1870,27 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             }}
           >
             <EditorContent editor={editor} style={{ background: '#fff' }} />
+            {editor && docEmpty && !readOnly && (
+              <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
+                {importBusy ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#52525C', fontSize: 14 }}>
+                    <span style={{ width: 16, height: 16, border: '2px solid #D4D4D8', borderTopColor: '#52525C', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    Importing your content…
+                  </div>
+                ) : ctaMode === 'import' ? (
+                  <ImportBar url={importUrl} onChange={setImportUrl} onImport={handleImportUrl} onClose={() => { setCtaMode('menu'); setImportUrl(''); }} busy={importBusy} />
+                ) : (
+                  <>
+                    <div style={{ fontSize: 14, color: '#9ca3af', margin: '0 0 12px' }}>or get started with</div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <CtaButton icon={<IconGlobe />} onClick={() => setCtaMode('import')}>Import content from URL</CtaButton>
+                      <CtaButton icon={<IconOutline />} onClick={handleInsertOutline} busy={outlineBusy}>Insert Outline</CtaButton>
+                      <CtaButton icon={<IconSpark />} onClick={handleWriteWithAi}>Write with Surfer AI</CtaButton>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {linkTip && (
               <div style={{ ...TIP_BUBBLE_BASE, top: linkTip.top - 8, left: linkTip.left, transform: 'translate(-50%, -100%)', maxWidth: 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {linkTip.text}

@@ -1,150 +1,61 @@
 /* eslint-disable max-len, no-nested-ternary */
 import type { NextPage } from 'next';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { SentryPanel, SentryPanelHeader } from '../../../components/sentry-pages';
-import { Button, Modal, ModalBody, ModalFooter, Input, Select, DateRangePicker, Skeleton, CompactSelect, PageFilterBar, ToolRibbon } from '../../../components/core';
+import { Button, CompactSelect, PageFilterBar } from '../../../components/core';
+import PerformanceLineChart from '../../../components/performance/PerformanceLineChart';
 import { useFetchDomains } from '../../../services/domains';
 import countries from '../../../utils/countries';
-
-type MetricKey = 'clicks' | 'impressions' | 'ctr' | 'position';
-type SortMetric = 'clicks' | 'impressions' | 'ctr' | 'position';
-type SortOrder = 'highest' | 'lowest';
-type Delta = 'up' | 'down' | 'neutral';
-type DatePreset = '30' | '60' | '90' | '480' | 'custom';
-type DeviceFilter = 'all' | 'desktop' | 'mobile' | 'tablet';
-type PageFilter = 'all' | 'optimized' | 'tracked' | 'custom';
-type KeywordMode = 'all' | 'custom' | 'nonBranded' | 'branded';
-type KeywordOperator = 'contains' | 'equals' | 'notContains';
-
-type DateRangeValue = {
-  start: string;
-  end: string;
-};
-
-type KeywordRule = {
-  operator: KeywordOperator;
-  value: string;
-};
-
-type TableRow = {
-  key: string;
-  label: string;
-  href?: string;
-  path?: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
-  clickDir: Delta;
-  impressionDir: Delta;
-  ctrDir: Delta;
-  positionDir: Delta;
-};
-
-type ChartPoint = {
-  date: string;
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
-};
-
-type AuditItemData = {
-  url: string;
-  contentScore: number;
-};
-
-type AuditResponseData = {
-  items: AuditItemData[];
-};
-
-type CalendarCell = {
-  value: string;
-  label: number;
-  outside: boolean;
-  disabled: boolean;
-  today: boolean;
-};
-
-type GoalPeriod = 'MONTH' | 'QUARTER';
-
-type TrafficGoal = {
-  percentage: number;
-  period: GoalPeriod;
-  startDate: string;
-  baseClicks: number;
-};
-
-const DATE_PRESETS: Array<{ value: DatePreset; label: string; days?: number; months?: number }> = [
-  { value: '30', label: 'Last 30 days', days: 30 },
-  { value: '60', label: 'Last 60 days', days: 60 },
-  { value: '90', label: 'Last 90 days', days: 90 },
-  { value: '480', label: 'Last 16 months', months: 16 },
-];
-
-const DEVICE_OPTIONS: Array<{ value: DeviceFilter; label: string }> = [
-  { value: 'all', label: 'All devices' },
-  { value: 'desktop', label: 'Desktop' },
-  { value: 'mobile', label: 'Mobile' },
-  { value: 'tablet', label: 'Tablet' },
-];
-
-const PAGE_OPTIONS: Array<{ value: PageFilter; label: string }> = [
-  { value: 'all', label: 'All pages' },
-  { value: 'optimized', label: 'Optimized with Content Audit' },
-  { value: 'tracked', label: 'Tracked with Content Audit' },
-  { value: 'custom', label: 'Custom' },
-];
-
-const KEYWORD_OPERATOR_OPTIONS: Array<{ value: KeywordOperator; label: string }> = [
-  { value: 'contains', label: 'Contains' },
-  { value: 'equals', label: 'Exact match' },
-  { value: 'notContains', label: 'Does not contain' },
-];
-
-const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-const MONTH_LABELS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
+import {
+  DATE_PRESETS,
+  DEVICE_OPTIONS,
+  PAGE_OPTIONS,
+  type AuditResponseData,
+  type DatePreset,
+  type DateRangeValue,
+  type Delta,
+  type DeviceFilter,
+  type GoalPeriod,
+  type KeywordMode,
+  type KeywordOperator,
+  type KeywordRule,
+  type MetricKey,
+  type PageFilter,
+  type SortMetric,
+  type SortOrder,
+  type TableRow,
+  type TrafficGoal,
+} from '../../../lib/performance/types';
+import {
+  addDays,
+  buildKeywordQuery,
+  compactNumber,
+  formatDateKey,
+  formatPercent,
+  getChangePercent,
+  getDelta,
+  getDomainTokens,
+  getPresetRange,
+  getRangeLabel,
+  getRangeLength,
+  getToday,
+  normalizePath,
+  parseDateKey,
+} from '../../../lib/performance/formatters';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
-function compactNumber(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return String(Math.round(value));
-}
-
-function formatPercent(value: number): string {
-  return `${value.toFixed(1)}%`;
-}
-
-function getDelta(current: number, previous: number, higherIsBetter = true): Delta {
-  if (current === previous) return 'neutral';
-  if ((current > previous) === higherIsBetter) return 'up';
-  return 'down';
-}
-
-function getChangePercent(current: number, previous: number) {
-  if (!previous) return null;
-  return ((current - previous) / previous) * 100;
-}
+const TrafficGoalModal = dynamic(() => import('../../../components/performance/TrafficGoalModal'), { ssr: false });
+const KeywordFilterModal = dynamic(() => import('../../../components/performance/KeywordFilterModal'), { ssr: false });
+const DateRangePicker = dynamic(
+  () => import('../../../components/core/calendar/dateRangePicker').then((m) => m.DateRangePicker),
+  { ssr: false },
+);
 
 const ROW_COLUMNS = [60, 50, 40, 40] as const;
 
@@ -167,158 +78,6 @@ function TableSkeleton({ headerLabelWidth }: { headerLabelWidth: number }) {
       ))}
     </section>
   );
-}
-
-function buildChartTicks(maxValue: number) {
-  const safeMax = Math.max(maxValue, 1);
-  const roundedMax = Math.ceil(safeMax / 3) * 3;
-  return [0, roundedMax / 3, (roundedMax / 3) * 2, roundedMax];
-}
-
-function padDate(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-function formatDateKey(date: Date) {
-  return `${date.getFullYear()}-${padDate(date.getMonth() + 1)}-${padDate(date.getDate())}`;
-}
-
-function parseDateKey(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day, 12);
-}
-
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
-}
-
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1, 12);
-}
-
-function addDays(date: Date, amount: number) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount, 12);
-}
-
-function addMonths(date: Date, amount: number) {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1, 12);
-}
-
-function getToday() {
-  const now = new Date();
-  return startOfDay(now);
-}
-
-function getPresetRange(preset: DatePreset, existingRange?: DateRangeValue): DateRangeValue {
-  const today = getToday();
-  const config = DATE_PRESETS.find((item) => item.value === preset);
-
-  if (!config) {
-    return existingRange || { start: formatDateKey(today), end: formatDateKey(today) };
-  }
-
-  if (config.days) {
-    return {
-      start: formatDateKey(addDays(today, -(config.days - 1))),
-      end: formatDateKey(today),
-    };
-  }
-
-  const start = new Date(today.getFullYear(), today.getMonth() - (config.months || 0), today.getDate(), 12);
-  return {
-    start: formatDateKey(start),
-    end: formatDateKey(today),
-  };
-}
-
-function getRangeLength(range: DateRangeValue) {
-  const start = parseDateKey(range.start);
-  const end = parseDateKey(range.end);
-  return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
-}
-
-function getRangeLabel(preset: DatePreset, range: DateRangeValue) {
-  if (preset !== 'custom') {
-    return DATE_PRESETS.find((item) => item.value === preset)?.label || 'Last 90 days';
-  }
-
-  const start = parseDateKey(range.start);
-  const end = parseDateKey(range.end);
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-}
-
-function getCalendarCells(month: Date, selectedRange: DateRangeValue) {
-  const today = getToday();
-  const firstDay = startOfMonth(month);
-  const startWeekDay = firstDay.getDay();
-  const firstCellDate = addDays(firstDay, -startWeekDay);
-  const selectedStart = parseDateKey(selectedRange.start);
-  const selectedEnd = parseDateKey(selectedRange.end);
-  const cells: CalendarCell[][] = [];
-
-  for (let week = 0; week < 6; week += 1) {
-    const row: CalendarCell[] = [];
-    for (let day = 0; day < 7; day += 1) {
-      const currentDate = addDays(firstCellDate, week * 7 + day);
-      row.push({
-        value: formatDateKey(currentDate),
-        label: currentDate.getDate(),
-        outside: currentDate.getMonth() !== month.getMonth(),
-        disabled: currentDate.getTime() > today.getTime(),
-        today: formatDateKey(currentDate) === formatDateKey(today),
-      });
-    }
-    cells.push(row);
-  }
-
-  return {
-    cells,
-    isSelected: (value: string) => {
-      const current = parseDateKey(value).getTime();
-      return current >= selectedStart.getTime() && current <= selectedEnd.getTime();
-    },
-    isRangeStart: (value: string) => value === selectedRange.start,
-    isRangeEnd: (value: string) => value === selectedRange.end,
-  };
-}
-
-function normalizePath(value?: string) {
-  if (!value) return '/';
-  try {
-    return new URL(value.startsWith('http') ? value : `https://placeholder.test${value.startsWith('/') ? value : `/${value}`}`).pathname || '/';
-  } catch {
-    return value.startsWith('/') ? value : `/${value}`;
-  }
-}
-
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function getDomainTokens(domain: string) {
-  const base = domain.split('.')[0] || '';
-  return base
-    .split(/[^a-zA-Z0-9]+/)
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function buildKeywordQuery(mode: KeywordMode, customRule: KeywordRule | null, brandTerms: string[]) {
-  if (mode === 'custom' && customRule?.value.trim()) {
-    return {
-      operator: customRule.operator,
-      value: customRule.value.trim(),
-    };
-  }
-
-  if ((mode === 'branded' || mode === 'nonBranded') && brandTerms.length) {
-    return {
-      operator: mode === 'branded' ? 'includingRegex' : 'excludingRegex',
-      value: brandTerms.map((item) => escapeRegex(item)).join('|'),
-    };
-  }
-
-  return null;
 }
 
 function ChevronDown({ size = 18 }: { size?: number }) {
@@ -494,7 +253,7 @@ function TableSortButton({
       variant="secondary"
       size="sm"
       onClick={onClick}
-      style={{ borderRadius: 9999, border: '1px solid #D4D4D8', background: 'transparent', color: '#18181B' }}
+      style={{ borderRadius: 8, border: '1px solid #D4D4D8', background: 'transparent', color: '#18181B' }}
     >
       <span style={{ textTransform: 'lowercase' }}>{value}</span>
       <ChevronDown size={18} />
@@ -523,8 +282,8 @@ function MetricCard({
 }) {
   return (
     <div
+      className="perf-3d-card"
       style={{
-      border: 'none',
       borderRadius: 12,
       padding: 16,
         display: 'flex',
@@ -533,7 +292,6 @@ function MetricCard({
         background: gradientColor
           ? `linear-gradient(to right, color-mix(in oklab, ${gradientColor} 5%, transparent), transparent)`
           : '#FFFFFF',
-        boxShadow: '0px 1px 2px 0px #1A1D280F',
         minHeight: 110,
       }}
     >
@@ -580,7 +338,7 @@ function SummaryCard({
   direction?: Delta;
 }) {
   return (
-    <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 8, borderRadius: 12, background: '#FFFFFF', padding: 16, border: 'none' }}>
+    <div className="perf-3d-card" style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 8, borderRadius: 12, background: '#FFFFFF', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
         <span style={{ color: '#52525C', display: 'inline-flex' }}><InfoIcon /></span>
@@ -602,327 +360,6 @@ function DeltaValue({ value, direction }: { value: string; direction: Delta }) {
   );
 }
 
-function LineChart({ data, visibleMetrics }: { data: ChartPoint[]; visibleMetrics: { clicks: boolean; impressions: boolean; ctr: boolean; position: boolean } }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [hoverState, setHoverState] = useState<{ index: number; lineX: number; cursorPx: number } | null>(null);
-
-  if (!data.length) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, color: '#52525C', fontSize: 14 }}>
-        No chart data for this filter.
-      </div>
-    );
-  }
-
-  const width = 1230;
-  const height = 368;
-  const leftPad = 45;
-  const topPad = 10;
-  const svgWidth = width + 90;
-  const svgHeight = height + 64;
-  const innerWidth = width;
-  const innerHeight = height;
-
-  const maxClicks = Math.max(...data.map((item) => item.clicks), 1);
-  const maxImpressions = Math.max(...data.map((item) => item.impressions), 1);
-  const maxCtr = Math.max(...data.map((item) => item.ctr), 0.0001);
-  const maxPosition = Math.max(...data.map((item) => item.position), 1);
-  const clickTicks = buildChartTicks(maxClicks);
-  const impressionTicks = buildChartTicks(maxImpressions);
-
-  const getX = (index: number) => (index / Math.max(data.length - 1, 1)) * innerWidth;
-  const getClicksY = (value: number) => innerHeight - (value / clickTicks[3]) * innerHeight;
-  const getImpressionsY = (value: number) => innerHeight - (value / impressionTicks[3]) * innerHeight;
-  const getCtrY = (value: number) => innerHeight - (value / maxCtr) * innerHeight;
-  const getPositionY = (value: number) => (value / maxPosition) * innerHeight;
-
-  const buildLinePath = (getY: (item: ChartPoint) => number) =>
-    data.map((item, index) => `${index === 0 ? 'M' : 'L'}${getX(index).toFixed(3)},${getY(item).toFixed(3)}`).join('');
-
-  const clickPath = buildLinePath((item) => getClicksY(item.clicks));
-  const impressionPath = buildLinePath((item) => getImpressionsY(item.impressions));
-  const ctrPath = buildLinePath((item) => getCtrY(item.ctr));
-  const positionPath = buildLinePath((item) => getPositionY(item.position));
-
-  const clickArea = `${clickPath}L${getX(data.length - 1).toFixed(3)},${innerHeight}L0,${innerHeight}Z`;
-  const impressionArea = `${impressionPath}L${getX(data.length - 1).toFixed(3)},${innerHeight}L0,${innerHeight}Z`;
-  const ctrArea = `${ctrPath}L${getX(data.length - 1).toFixed(3)},${innerHeight}L0,${innerHeight}Z`;
-  const positionArea = `${positionPath}L${getX(data.length - 1).toFixed(3)},${innerHeight}L0,${innerHeight}Z`;
-
-  const labelStep = Math.max(1, Math.floor(data.length / 14));
-  const xLabels = data.filter((_, index) => index % labelStep === 0).slice(0, 15);
-
-  const formatAxisDate = (value: string) => {
-    const date = new Date(value);
-    return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }).toUpperCase();
-  };
-
-  const formatTooltipDate = (value: string) => {
-    const date = new Date(value);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const hoveredPoint = hoverState ? data[hoverState.index] : null;
-  const hoveredPointX = hoverState ? getX(hoverState.index) : null;
-
-  const handlePointerMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const plotLeftPx = (leftPad / svgWidth) * rect.width;
-    const plotWidthPx = (innerWidth / svgWidth) * rect.width;
-    const cursorPx = Math.max(plotLeftPx, Math.min(event.clientX - rect.left, plotLeftPx + plotWidthPx));
-    const relativePlotPx = cursorPx - plotLeftPx;
-    const lineX = (relativePlotPx / plotWidthPx) * innerWidth;
-    const nextIndex = Math.round((lineX / innerWidth) * Math.max(data.length - 1, 1));
-    setHoverState({ index: nextIndex, lineX, cursorPx });
-  };
-
-  let tooltipStyle: { left: number; top: number } | undefined;
-  if (hoverState && hoveredPoint) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      const plotTopPx = (topPad / svgHeight) * rect.height;
-      const plotHeightPx = (innerHeight / svgHeight) * rect.height;
-      const yValues = [
-        visibleMetrics.clicks ? getClicksY(hoveredPoint.clicks) : null,
-        visibleMetrics.impressions ? getImpressionsY(hoveredPoint.impressions) : null,
-        visibleMetrics.ctr ? getCtrY(hoveredPoint.ctr) : null,
-        visibleMetrics.position ? getPositionY(hoveredPoint.position) : null,
-      ].filter((v): v is number => v !== null);
-      const minY = yValues.length > 0 ? Math.min(...yValues) : 0;
-      const anchorYPx = plotTopPx + (Math.min(minY, innerHeight) / innerHeight) * plotHeightPx;
-      const tooltipWidth = 220;
-      const tooltipHeight = 160;
-      const left = Math.max(12, Math.min(rect.width - tooltipWidth - 12, hoverState.cursorPx + 10));
-      const top = Math.max(16, Math.min(rect.height - tooltipHeight - 12, anchorYPx - tooltipHeight - 12));
-      tooltipStyle = { left, top };
-    }
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ position: 'relative', height: 400, width: '100%' }}
-      onMouseMove={handlePointerMove}
-      onMouseLeave={() => setHoverState(null)}
-    >
-        <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
-          <g transform={`translate(${leftPad},${topPad})`}>
-            {[0, 1, 2, 3].map((index) => {
-              const y = innerHeight - (innerHeight / 3) * index;
-              return <line key={index} x1="0" x2={innerWidth} y1={y} y2={y} stroke="#F4F4F5" strokeWidth="1" />;
-            })}
-
-            {[0, 1, 2, 3].map((index) => {
-              const y = innerHeight - (innerHeight / 3) * index;
-              return (
-                <text key={`left-${index}`} x="-10" y={y} textAnchor="end" dominantBaseline="middle" fill={visibleMetrics.clicks ? '#52525C' : '#C4C4C4'} fontSize="12" fontFamily="var(--font-family-primary)">
-                  {compactNumber(clickTicks[index])}
-                </text>
-              );
-            })}
-
-            {[0, 1, 2, 3].map((index) => {
-              const y = innerHeight - (innerHeight / 3) * index;
-              return (
-                <text key={`right-${index}`} x={innerWidth + 10} y={y} textAnchor="start" dominantBaseline="middle" fill={visibleMetrics.impressions ? '#52525C' : '#C4C4C4'} fontSize="12" fontFamily="var(--font-family-primary)">
-                  {compactNumber(impressionTicks[index])}
-                </text>
-              );
-            })}
-
-            <defs>
-              <linearGradient id="perf-clicks-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#BEDBFF" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="#BEDBFF" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="perf-impressions-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#C5B8FE" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="#C5B8FE" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="perf-ctr-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#86EFAC" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="#86EFAC" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="perf-position-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FDBA74" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="#FDBA74" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-
-            {visibleMetrics.clicks ? (
-              <>
-                <path d={clickArea} fill="url(#perf-clicks-gradient)" opacity="0.9" />
-                <path d={clickPath} fill="none" stroke="#74A9FF" strokeWidth="2.2" />
-              </>
-            ) : null}
-            {visibleMetrics.impressions ? (
-              <>
-                <path d={impressionArea} fill="url(#perf-impressions-gradient)" opacity="0.9" />
-                <path d={impressionPath} fill="none" stroke="#8B73F6" strokeWidth="2.2" />
-              </>
-            ) : null}
-            {visibleMetrics.ctr ? (
-              <>
-                <path d={ctrArea} fill="url(#perf-ctr-gradient)" opacity="0.9" />
-                <path d={ctrPath} fill="none" stroke="#22C55E" strokeWidth="2.2" />
-              </>
-            ) : null}
-            {visibleMetrics.position ? (
-              <>
-                <path d={positionArea} fill="url(#perf-position-gradient)" opacity="0.9" />
-                <path d={positionPath} fill="none" stroke="#F97316" strokeWidth="2.2" />
-              </>
-            ) : null}
-
-            {hoverState && hoveredPointX !== null && hoveredPoint ? (
-              <>
-                <line x1={hoverState.lineX} x2={hoverState.lineX} y1={0} y2={innerHeight} stroke="#D4D4D8" strokeWidth="1" strokeDasharray="6 6" />
-                {visibleMetrics.clicks ? <circle cx={hoveredPointX} cy={getClicksY(hoveredPoint.clicks)} r="5.5" fill="#74A9FF" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
-                {visibleMetrics.impressions ? <circle cx={hoveredPointX} cy={getImpressionsY(hoveredPoint.impressions)} r="5.5" fill="#8B73F6" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
-                {visibleMetrics.ctr ? <circle cx={hoveredPointX} cy={getCtrY(hoveredPoint.ctr)} r="5.5" fill="#22C55E" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
-                {visibleMetrics.position ? <circle cx={hoveredPointX} cy={getPositionY(hoveredPoint.position)} r="5.5" fill="#F97316" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
-              </>
-            ) : null}
-
-            {xLabels.map((item) => {
-              const index = data.indexOf(item);
-              const x = getX(index);
-              return (
-                <g key={`${item.date}-${index}`} transform={`translate(${x},${innerHeight})`}>
-                  <line x1="0" x2="0" y1="0" y2="14" stroke="#E4E4E7" strokeWidth="1" />
-                  <text x="4" y="16" textAnchor="start" dominantBaseline="hanging" fill="#52525C" fontSize="11" fontFamily="var(--font-family-primary)">
-                    {formatAxisDate(item.date)}
-                  </text>
-                </g>
-              );
-            })}
-          </g>
-        </svg>
-
-        {hoveredPoint && tooltipStyle ? (
-          <div
-            style={{
-              position: 'absolute',
-              zIndex: 150,
-              display: 'inline-flex',
-              maxWidth: '14rem',
-              flexDirection: 'column',
-              borderRadius: 4,
-              background: '#18181B',
-              color: '#FFFFFF',
-              padding: '4px 8px',
-              textAlign: 'left',
-              fontSize: '0.8125rem',
-              lineHeight: '1rem',
-              fontWeight: 400,
-              boxShadow: '0px 8px 16px 0px #181a220a, 0px 2px 8px 0px #181a2205, 0px 1px 2px 0px #181a220f',
-              pointerEvents: 'none',
-              left: tooltipStyle.left,
-              top: tooltipStyle.top,
-              transition: 'left 90ms linear, top 90ms linear',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px', fontSize: '0.8125rem', lineHeight: '1rem' }}>
-              <span style={{ marginBottom: 2 }}>{formatTooltipDate(hoveredPoint.date)}</span>
-              {visibleMetrics.clicks ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#74A9FF', flexShrink: 0 }} />
-                    <span>Clicks</span>
-                  </span>
-                  <span style={{ fontWeight: 600 }}>{hoveredPoint.clicks}</span>
-                </div>
-              ) : null}
-              {visibleMetrics.impressions ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#8B73F6', flexShrink: 0 }} />
-                    <span>Impressions</span>
-                  </span>
-                  <span style={{ fontWeight: 600 }}>{hoveredPoint.impressions}</span>
-                </div>
-              ) : null}
-              {visibleMetrics.ctr ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#22C55E', flexShrink: 0 }} />
-                    <span>Avg. CTR</span>
-                  </span>
-                  <span style={{ fontWeight: 600 }}>{formatPercent(hoveredPoint.ctr)}</span>
-                </div>
-              ) : null}
-              {visibleMetrics.position ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#F97316', flexShrink: 0 }} />
-                    <span>Avg. Position</span>
-                  </span>
-                  <span style={{ fontWeight: 600 }}>{hoveredPoint.position.toFixed(1)}</span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-    </div>
-  );
-}
-
-function GoalProjectionChart({ baseClicks, percentage, period }: { baseClicks: number; percentage: number; period: GoalPeriod }) {
-  const months = 12;
-  const rate = period === 'MONTH' ? percentage / 100 : (percentage / 100) / 3;
-  const data = Array.from({ length: months }, (_, i) => ({
-    value: Math.round(baseClicks * (1 + rate) ** i),
-    label: new Date(new Date().getFullYear(), new Date().getMonth() + i, 1).toLocaleDateString('en-US', { month: 'short' }),
-  }));
-
-  const maxVal = Math.max(...data.map((d) => d.value), 1);
-  const chartWidth = 500;
-  const chartHeight = 160;
-  const barWidth = Math.floor(chartWidth / months) - 4;
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <svg width={chartWidth + 40} height={chartHeight + 32} style={{ display: 'block' }}>
-        <g transform="translate(30, 10)">
-          {[0, 1, 2, 3].map((i) => {
-            const y = chartHeight - (chartHeight / 3) * i;
-            return (
-              <g key={i}>
-                <line x1={0} x2={chartWidth} y1={y} y2={y} stroke="#E4E4E7" strokeWidth={1} />
-                <text x={-4} y={y} textAnchor="end" dominantBaseline="middle" fill="#52525C" fontSize={10} fontFamily="var(--font-family-primary)">
-                  {compactNumber(Math.round((maxVal / 3) * i))}
-                </text>
-              </g>
-            );
-          })}
-          {data.map((d, i) => {
-            const x = i * (chartWidth / months);
-            const barH = maxVal > 0 ? (d.value / maxVal) * chartHeight : 0;
-            const isFirst = i === 0;
-            return (
-              <g key={i}>
-                <rect
-                  x={x + 2}
-                  y={chartHeight - barH}
-                  width={barWidth}
-                  height={barH}
-                  fill={isFirst ? '#E4E4E7' : '#8B73F6'}
-                  rx={3}
-                />
-                {i % 3 === 0 ? (
-                  <text x={x + barWidth / 2 + 2} y={chartHeight + 14} textAnchor="middle" fill="#52525C" fontSize={10} fontFamily="var(--font-family-primary)">
-                    {d.label}
-                  </text>
-                ) : null}
-              </g>
-            );
-          })}
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 const PerformancePage: NextPage = () => {
   const router = useRouter();
@@ -1529,7 +966,7 @@ const PerformancePage: NextPage = () => {
           <>
               <SentryPanel noPadding>
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <PageFilterBar condensed>
+                <PageFilterBar condensed className="performance-filter-bar">
                 <div className="performance-filters" style={{ display: 'contents' }}>
                     <CompactSelect
                       prefix={<CalendarIcon />}
@@ -1654,12 +1091,9 @@ const PerformancePage: NextPage = () => {
                     ))}
                   </div>
 
-                  <LineChart data={computed.chart} visibleMetrics={visibleMetrics} />
-                </div>
-              </SentryPanel>
+                  <PerformanceLineChart data={computed.chart} visibleMetrics={visibleMetrics} />
 
-                <SentryPanel>
-                <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14 }}>
+                  <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14, borderTop: '1px solid #F4F4F5', paddingTop: 20, marginTop: 4 }}>
                   {trafficGoal ? (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
@@ -1719,8 +1153,9 @@ const PerformancePage: NextPage = () => {
                       </div>
                     </>
                   )}
+                  </div>
                 </div>
-                </SentryPanel>
+              </SentryPanel>
 
               <section className="performance-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 <SummaryCard label="All Keywords" value={String(computed.keywordSummary.allKeywords)} />
@@ -1846,61 +1281,32 @@ const PerformancePage: NextPage = () => {
         )}
 
         {goalModalOpen ? (
-          <Modal title="Create clicks goal" onClose={() => setGoalModalOpen(false)} width={600}>
-            <ModalBody>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: 'inherit' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12, background: '#F8F8F9', padding: 16, flexWrap: 'wrap', fontSize: 14, color: '#3F3F47' }}>
-                  <span>Increase clicks by</span>
-                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                    <Input size="sm" type="number" min={1} max={999} value={goalPercentage}
-                      onChange={(e) => setGoalPercentage(Math.max(1, Math.min(999, Number(e.target.value))))}
-                      style={{ width: 80, paddingRight: 24 }} />
-                    <span style={{ position: 'absolute', right: 8, color: '#52525C', fontSize: 14, pointerEvents: 'none' }}>%</span>
-                  </div>
-                  <span>each</span>
-                  <Select size="sm" value={goalPeriod} onChange={(v) => setGoalPeriod(v as GoalPeriod)} width={120}
-                    options={[{ value: 'MONTH', label: 'month' }, { value: 'QUARTER', label: 'quarter' }]} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#18181B' }}>Projected growth</h3>
-                  <GoalProjectionChart baseClicks={parseInt(String(currentClicks).replace(/[^0-9]/g, ''), 10) || 0} percentage={goalPercentage} period={goalPeriod} />
-                </div>
-              </div>
-            </ModalBody>
-            <ModalFooter>
-              {trafficGoal ? (
-                <Button variant="link" size="sm" onClick={handleDeleteGoal} style={{ color: '#FF6F77', padding: 0, marginRight: 'auto' }}>Delete goal</Button>
-              ) : <div style={{ flex: 1 }} />}
-              <Button variant="secondary" size="sm" onClick={() => setGoalModalOpen(false)}>Cancel</Button>
-              <Button variant="primary" size="sm" onClick={handleSaveGoal} busy={goalSaving} disabled={goalSaving}>
-                {goalSaving ? 'Saving...' : 'Create goal'}
-              </Button>
-            </ModalFooter>
-          </Modal>
+          <TrafficGoalModal
+            onClose={() => setGoalModalOpen(false)}
+            goalPercentage={goalPercentage}
+            onGoalPercentageChange={setGoalPercentage}
+            goalPeriod={goalPeriod}
+            onGoalPeriodChange={setGoalPeriod}
+            currentClicks={currentClicks}
+            trafficGoal={trafficGoal}
+            onDeleteGoal={handleDeleteGoal}
+            onSaveGoal={handleSaveGoal}
+            goalSaving={goalSaving}
+          />
         ) : null}
 
         {keywordModalMode ? (
-          <Modal title={keywordModalMode === 'custom' ? 'Custom keyword' : 'Manage branded keywords'} onClose={closeKeywordModal} width={600}>
-            <ModalBody>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {keywordModalMode === 'custom' ? (
-                  <div style={{ display: 'flex', width: '50%', minWidth: 180 }}>
-                    <Select size="sm" value={keywordOperatorDraft}
-                      onChange={(v) => setKeywordOperatorDraft(v as KeywordOperator)}
-                      options={KEYWORD_OPERATOR_OPTIONS} />
-                  </div>
-                ) : null}
-                <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>{keywordModalMode === 'custom' ? 'Keyword' : 'Keywords'}</label>
-                <Input size="sm" value={keywordModalMode === 'custom' ? keywordValueDraft : brandKeywordDraft}
-                  onChange={(e) => { if (keywordModalMode === 'custom') setKeywordValueDraft(e.target.value); else setBrandKeywordDraft(e.target.value); }}
-                  placeholder={keywordModalMode === 'custom' ? '' : 'brand-1, brand-2'} />
-              </div>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="secondary" size="sm" onClick={closeKeywordModal}>Cancel</Button>
-              <Button variant="primary" size="sm" disabled={keywordModalMode === 'custom' ? !keywordValueDraft.trim() : !brandKeywordDraft.trim()} onClick={handleKeywordModalSubmit}>Choose</Button>
-            </ModalFooter>
-          </Modal>
+          <KeywordFilterModal
+            mode={keywordModalMode}
+            onClose={closeKeywordModal}
+            keywordOperatorDraft={keywordOperatorDraft}
+            onKeywordOperatorDraftChange={setKeywordOperatorDraft}
+            keywordValueDraft={keywordValueDraft}
+            onKeywordValueDraftChange={setKeywordValueDraft}
+            brandKeywordDraft={brandKeywordDraft}
+            onBrandKeywordDraftChange={setBrandKeywordDraft}
+            onSubmit={handleKeywordModalSubmit}
+          />
         ) : null}
 
         <style jsx>{`

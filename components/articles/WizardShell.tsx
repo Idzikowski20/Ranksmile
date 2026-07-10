@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../common/DashboardLayout';
+import { Button } from '../core';
 import { useFetchDomains } from '../../services/domains';
 
 /**
@@ -43,26 +44,21 @@ const WizardShell = ({ title, children, footer }: {
   );
 };
 
-/** Dark primary wizard button ("Next—…"). */
+/** Sentry chonk primary CTA for wizard steps. */
 export const WizardNextButton = ({ label, sublabel, onClick, disabled }: {
   label: string; sublabel?: string; onClick: () => void; disabled?: boolean;
 }) => (
-  <button
+  <Button
     type="button"
+    variant="primary"
+    size="md"
     disabled={disabled}
     onClick={onClick}
-    style={{
-      flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      padding: '10px 24px', borderRadius: 8, fontSize: 16, lineHeight: '24px', fontWeight: 600,
-      border: 'none', fontFamily: 'var(--font-family-primary)',
-      background: disabled ? '#9F9FA9' : '#18181B', color: '#fff',
-      cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 0.15s',
-    }}
-    onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = '#783AFB'; }}
-    onMouseLeave={(e) => { if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = '#18181B'; }}
+    style={{ flex: 1, width: '100%', minHeight: 40, height: 40, fontWeight: 600 }}
   >
-    <span>{label}{sublabel && <span style={{ fontWeight: 400 }}>{sublabel}</span>}</span>
-  </button>
+    {label}
+    {sublabel && <span style={{ fontWeight: 400 }}>{sublabel}</span>}
+  </Button>
 );
 
 /** Light "Back" wizard button. */

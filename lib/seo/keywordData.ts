@@ -113,6 +113,7 @@ export async function enrichTerms(opts: {
    keyword: string,
    country?: string,
    languageCode?: string,
+   ownDomain?: string,
    competitorDomains?: string[],
    limit?: number,
 }): Promise<{ source: KeywordSource, terms: Array<{ term: string, target_count: number }> }> {
@@ -125,17 +126,36 @@ export async function enrichTerms(opts: {
       return 1;
    };
 
-   const domains = (opts.competitorDomains || []).filter(Boolean).slice(0, 3);
+   const own = (opts.ownDomain || '').replace(/^www\./, '').toLowerCase();
+   const competitors = (opts.competitorDomains || [])
+      .map((d) => d.replace(/^www\./, '').toLowerCase())
+      .filter((d) => d && d !== own)
+      .slice(0, 3);
    const enrichLimit = 100;
+
+   const rankedFor = (domain: string) => cached({
+      namespace: 'ranked',
+      key: [domain.toLowerCase(), opts.country || 'US', opts.languageCode || 'en', '15'],
+      ttlMs: TTL.RANKED_KEYWORDS,
+      producer: () => getRankedKeywords({
+         target: domain,
+         country: opts.country,
+         languageCode: opts.languageCode,
+         limit: DFS_DEFAULT_RANKED_LIMIT,
+         topOnly: true,
+         maxRankGroup: 15,
+      }),
+   }).then((ks) => ks.map(toMetric)).catch(() => [] as KeywordMetric[]);
+
+   const rankedPromises = [
+      ...(own ? [rankedFor(own)] : []),
+      ...competitors.map((d) => rankedFor(d)),
+   ];
+
    const [suggestions, ...rankedLists] = await Promise.all([
       getKeywordSuggestions({ seed: opts.keyword, country: opts.country, languageCode: opts.languageCode, limit: enrichLimit })
          .then((r) => r.keywords).catch(() => [] as KeywordMetric[]),
-      ...domains.map((d) => cached({
-         namespace: 'ranked',
-         key: [d.toLowerCase(), opts.country || 'US', opts.languageCode || 'en'],
-         ttlMs: TTL.RANKED_KEYWORDS,
-         producer: () => getRankedKeywords({ target: d, country: opts.country, languageCode: opts.languageCode, limit: DFS_DEFAULT_RANKED_LIMIT, topOnly: true }),
-      }).then((ks) => ks.map(toMetric)).catch(() => [] as KeywordMetric[])),
+      ...rankedPromises,
    ]);
 
    const pool: KeywordMetric[] = [...suggestions, ...rankedLists.flat()];
@@ -225,21 +245,6 @@ export async function getAiSearchInfo(opts: {
          answer_readiness_score: readinessScore(text, related),
       })),
    ];
-
-   // Surfer-style fact snippets from PAA answers (grouped in UI via infoToCoverTopics).
-   for (const q of paa.questions) {
-      for (const sentence of splitFactSentences(q.answer)) {
-         citations.push({
-            prompt: sentence,
-            answer: sentence,
-            cited_url: q.url,
-            cited_domain: q.domain,
-            is_own_domain: false,
-            is_competitor: !!q.domain,
-            answer_readiness_score: readinessScore(text, sentence),
-         });
-      }
-   }
 
    const cited = citations.filter((c) => (c.answer_readiness_score ?? 0) >= 60).length;
    const competitor = citations.filter((c) => c.is_competitor).length;

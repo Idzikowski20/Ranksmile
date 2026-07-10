@@ -1,16 +1,19 @@
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import CompetitorBarChart from '../../../../components/aiVisibility/CompetitorBarChart';
-import TrendLineChart from '../../../../components/aiVisibility/TrendLineChart';
-import TopCompetitorsList from '../../../../components/aiVisibility/TopCompetitorsList';
-import MetricTrendChart from '../../../../components/aiVisibility/MetricTrendChart';
+import DomainFavicon from '../../../../components/common/DomainFavicon';
 import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/core';
 import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '../../../../lib/aiVisibility';
-import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, useUpdateAiVisPriority, useAiVisConfig, type DomainOverview } from '../../../../services/aiVisibility';
+import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
+
+const CompetitorBarChart = dynamic(() => import('../../../../components/aiVisibility/CompetitorBarChart'), { ssr: false });
+const TrendLineChart = dynamic(() => import('../../../../components/aiVisibility/TrendLineChart'), { ssr: false });
+const MetricTrendChart = dynamic(() => import('../../../../components/aiVisibility/MetricTrendChart'), { ssr: false });
+const TopCompetitorsList = dynamic(() => import('../../../../components/aiVisibility/TopCompetitorsList'), { ssr: false });
 
 const FONT = 'var(--font-family-primary)';
 
@@ -22,7 +25,7 @@ type OverviewDelta = {
    prompts: { gained: number[]; lost: number[] };
 };
 
-const card: React.CSSProperties = { border: 'none', borderRadius: 12, background: '#fff' };
+const card: React.CSSProperties = { border: '1px solid #DAD9DE', borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' };
 const cardHeader: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 24px 0' };
 const cardTitle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: '#3F3F47', fontFamily: FONT };
 
@@ -37,9 +40,7 @@ const Panel = ({ title, action, children }: { title: React.ReactNode; action?: R
    </section>
 );
 
-const faviconFor = (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-
-const BarIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7" width="3" height="6" rx="1" fill="currentColor" /><rect x="5.5" y="4" width="3" height="9" rx="1" fill="currentColor" /><rect x="10" y="1" width="3" height="12" rx="1" fill="currentColor" /></svg>);
+const BarIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 12.5V8M7 12.5V3.5M11.5 12.5V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const LineIcon = () => (<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,10 5,6 8,8 13,2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const HashIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 3L6.5 21M17.5 3L14.5 21M20.5 8H3.5M19.5 16H2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const PromptIcon = () => (<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path fillRule="evenodd" clipRule="evenodd" d="M3.29289 4.29289C3.68342 3.90237 4.31658 3.90237 4.70711 4.29289L10.7071 10.2929C11.0976 10.6834 11.0976 11.3166 10.7071 11.7071L4.70711 17.7071C4.31658 18.0976 3.68342 18.0976 3.29289 17.7071C2.90237 17.3166 2.90237 16.6834 3.29289 16.2929L8.58579 11L3.29289 5.70711C2.90237 5.31658 2.90237 4.68342 3.29289 4.29289Z" fill="currentColor" /><path fillRule="evenodd" clipRule="evenodd" d="M11 19C11 18.4477 11.4477 18 12 18H20C20.5523 18 21 18.4477 21 19C21 19.5523 20.5523 20 20 20H12C11.4477 20 11 19.5523 11 19Z" fill="currentColor" /></svg>);
@@ -108,8 +109,6 @@ const AiVisibilityOverview: NextPage = () => {
    const histData = historyQ.isFetching ? undefined : historyQ.data;
 
    const startScan = useStartAiVisScan(slug);
-   const configQ = useAiVisConfig(slug);
-   const updatePriority = useUpdateAiVisPriority(slug);
    const [confirmDays, setConfirmDays] = useState<number | null>(null);
    // Own scan-status subscription (shared react-query key with the shell) so the
    // Refresh button — which lives in the toolbar, above the children render — can
@@ -125,30 +124,14 @@ const AiVisibilityOverview: NextPage = () => {
    };
 
    const refreshBtn = (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-         <select
-            value={ov?.priority || configQ.data?.config?.priority || 'supporting'}
-            disabled={updatePriority.isLoading}
-            onChange={(e) => updatePriority.mutate(e.target.value as AiVisPriority)}
-            style={{
-               height: 32, padding: '0 10px', borderRadius: 8, border: '1px solid #D4D4D8',
-               fontSize: 13, fontFamily: FONT, color: '#18181B', background: '#fff',
-            }}
-            title="Częstotliwość automatycznego odświeżania"
-         >
-            {(Object.keys(AI_VIS_PRIORITY_LABEL) as AiVisPriority[]).map((p) => (
-               <option key={p} value={p}>{AI_VIS_PRIORITY_LABEL[p]}</option>
-            ))}
-         </select>
-         <Button
-            variant="secondary"
-            size="sm"
-            disabled={startScan.isLoading || crunchingTop}
-            onClick={() => runScan(false)}
-         >
-            {crunchingTop ? 'Scanning…' : 'Refresh data'}
-         </Button>
-      </div>
+      <Button
+         variant="secondary"
+         size="sm"
+         disabled={startScan.isLoading || crunchingTop}
+         onClick={() => runScan(false)}
+      >
+         {crunchingTop ? 'Scanning…' : 'Refresh data'}
+      </Button>
    );
 
    return (
@@ -224,7 +207,7 @@ const AiVisibilityOverview: NextPage = () => {
 
             const updatedTxt = daysAgo(ov?.finishedAt) !== null ? `last updated ${daysAgo(ov?.finishedAt) === 0 ? 'today' : `${daysAgo(ov?.finishedAt)}d ago`}` : '';
             const refreshTxt = typeof ov?.daysUntilRefresh === 'number'
-               ? `auto refresh in ${ov.daysUntilRefresh}d (${AI_VIS_PRIORITY_LABEL[(ov?.priority || 'supporting') as AiVisPriority]})`
+               ? `auto refresh in ${ov.daysUntilRefresh}d (${AI_VIS_PRIORITY_LABEL[(ov?.priority || 'long_tail') as AiVisPriority]})`
                : '';
             const scoreHint = [compareDomain, updatedTxt, refreshTxt].filter(Boolean).join(' · ');
 
@@ -310,8 +293,7 @@ const AiVisibilityOverview: NextPage = () => {
                               return (
                                  <div key={s.url} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                                     <a href={s.url} target="_blank" rel="noopener noreferrer" title={s.url} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0, textDecoration: 'none' }}>
-                                       { /* eslint-disable-next-line @next/next/no-img-element */ }
-                                       <img alt="" src={faviconFor(s.domain)} width={20} height={20} style={{ borderRadius: 4, flexShrink: 0 }} />
+                                       <DomainFavicon domain={s.domain} size={20} />
                                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontFamily: FONT }}>
                                           <span style={{ fontWeight: 600, color: '#18181B' }}>{host}</span>
                                           <span style={{ color: '#9F9FA9' }}>{path}</span>

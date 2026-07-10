@@ -573,7 +573,8 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
             key={plan.name}
             style={{
               position: 'relative',
-              border: plan.recommended ? '2px solid #783AFB' : '1px solid #E4E4E7',
+              border: plan.recommended ? '2px solid #783AFB' : '1px solid #DAD9DE',
+              boxShadow: '0 4px 0 0 #e4e4e7',
               borderRadius: plan.recommended ? '0 0 12px 12px' : 12,
               padding: '24px',
               background: plan.recommended
@@ -812,16 +813,9 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
                       </div>
                     )}
                     <div style={{ padding: p.recommended ? '12px 16px 14px' : '14px 16px' }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', marginBottom: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                         {p.name}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 12 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
-                          €{billing === 'yearly' ? p.priceYearly : p.priceMonthly}
-                        </span>
-                        <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>/mo</span>
-                      </div>
-                      <CtaButton label={p.cta} style={p.ctaStyle} href={getPlanCheckoutHref(p.name, billing)} fullWidth />
                     </div>
                   </th>
                 ))}

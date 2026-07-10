@@ -3,6 +3,7 @@
 // Supports both local dev (puppeteer with bundled Chromium) and serverless (puppeteer-core + @sparticuz/chromium-min).
 import type { Browser } from 'puppeteer-core';
 import type { Page } from 'puppeteer-core';
+import { assertPublicUrl } from '../lib/ssrfGuard';
 
 let browserPromise: Promise<Browser> | null = null;
 let renderMutex: Promise<void> = Promise.resolve();
@@ -66,6 +67,8 @@ export interface RenderedPage {
  *  Serialises concurrent calls via a mutex so the shared page is never
  *  navigated by two requests at the same time. */
 export async function renderPage(url: string, timeoutMs = 20_000): Promise<RenderedPage> {
+  await assertPublicUrl(url);
+
   // Serialise concurrent renders: only one caller drives the shared page at a time.
   const prev = renderMutex;
   let release!: () => void;

@@ -6,6 +6,7 @@ import type { CoverageSnapshot } from './aiCoverage';
 import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from './optimizeMode';
+import type { OptimizePhase } from './optimizeRunPhase';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';
 
@@ -54,6 +55,8 @@ export interface PlanInput {
   budgetRemaining: number;
   seoScore: number;
   aiScore: number;
+  phase?: OptimizePhase;
+  mode?: OptimizeMode;
 }
 
 const PROMPT_CONSTANT = 500;   // system-prompt + user-wrapper overhead (~400-600)
@@ -144,8 +147,10 @@ function focusFor(rgs: RoutedGuideline[], secTerms: string[]): StepFocus {
 
 export function buildOptimizationPlan(input: PlanInput): Plan {
   const routed = assignGuidelinesToSections(input.guidelines, input.sections);
-  const mode = selectOptimizeMode(input.seoScore, input.aiScore);
-  const aiTakeover = mode === 'ai-only' || mode === 'minimal'
+  const phase = input.phase ?? 'first_run';
+  const mode = input.mode ?? selectOptimizeMode(input.seoScore, input.aiScore, phase);
+  const followUp = phase === 'follow_up';
+  const aiTakeover = followUp || mode === 'ai-only' || mode === 'minimal'
     || (input.seoScore >= SEO_HIGH && (input.seoScore - input.aiScore) > AI_GAP_LEGACY);
   const seoOnly = mode === 'seo-first';
   const snapshot = input.context.coverage;
@@ -153,13 +158,23 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
   const steps: PlanStep[] = input.sections.map((section) => {
     const rgs = routed.get(section.id) ?? [];
     const secText = plainText(section.html);
-    const secTerms = aiTakeover && mode !== 'seo-first' ? [] : sectionMissingTerms(secText, input.context);
+    const skipTerms = followUp && input.seoScore >= SEO_READY;
+    const secTerms = (aiTakeover && mode !== 'seo-first') || skipTerms ? [] : sectionMissingTerms(secText, input.context);
     let filteredRgs = rgs;
     if (seoOnly) {
       filteredRgs = rgs.filter((r) => r.guideline.group !== 'knowledge' && r.guideline.group !== 'authority');
     }
     if (aiTakeover && mode === 'ai-only') {
       filteredRgs = rgs.filter((r) => r.guideline.group === 'knowledge' || r.guideline.group === 'intent' || r.guideline.group === 'authority');
+    }
+    if (followUp && (snapshot?.items.length ?? 0) > 25) {
+      filteredRgs = filteredRgs.filter((r) => r.guideline.group !== 'knowledge' || r.guideline.importance === 'critical');
+    }
+    // first_run: intro gets intent guidelines first when present
+    if (!followUp && section.index === 0) {
+      const intentRgs = filteredRgs.filter((r) => r.guideline.group === 'intent');
+      const rest = filteredRgs.filter((r) => r.guideline.group !== 'intent');
+      if (intentRgs.length) filteredRgs = [...intentRgs, ...rest];
     }
     const expectedLift = diminishingLift(filteredRgs.map((r) => r.guideline.projectedLift));
 
@@ -176,8 +191,8 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
     let editMode: EditMode = snapshot
       ? selectMode({ section, expectedLift, rgs: filteredRgs, snapshot, aiTakeover })
       : 'normal';
-    if (mode === 'ai-only' || mode === 'minimal') editMode = 'less';
-    if (mode === 'full' && focus === 'expand') editMode = 'expand';
+    if (mode === 'ai-only' || mode === 'minimal' || followUp) editMode = 'less';
+    if (mode === 'full' && focus === 'expand' && !followUp) editMode = 'expand';
 
     const draft: PlanStep = {
       ...base, focus, expectedLift,
@@ -195,7 +210,7 @@ export function buildOptimizationPlan(input: PlanInput): Plan {
 
   const { trimmed, ignoredLift } = trimToBudget(steps, input.budgetRemaining);
   const survivingNonSkip = steps.filter((s) => s.focus !== 'skip');
-  const rationale = `${mode}: ${survivingNonSkip.length}/${steps.length} sections${trimmed ? ` (trimmed, ignored ${ignoredLift} lift)` : ''}`;
+  const rationale = `${phase}/${mode}: ${survivingNonSkip.length}/${steps.length} sections${trimmed ? ` (trimmed, ignored ${ignoredLift} lift)` : ''}`;
   return {
     steps,
     estimatedTokens: survivingNonSkip.reduce((sum, s) => sum + s.estimatedTokens, 0),
@@ -229,6 +244,7 @@ const SHARED_RULES = `You are an expert SEO content editor making MINIMAL, surgi
 
 RULES:
 - Apply MINIMAL surgical edits — refine, do not rewrite
+- When AI Search checkpoints are listed, this section must help answer EVERY uncovered checkpoint — not just some
 - Tighten weak sentences and remove AI-sounding filler ("It's worth noting that", "In today's world", "Furthermore", "In conclusion", "Delve into")
 - Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
 - Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written
@@ -257,9 +273,16 @@ function focusBlock(step: PlanStep): string {
   }
 }
 
+function brandBlock(context: ArticleContext): string {
+  const parts: string[] = [];
+  if (context.brandKnowledge) parts.push(`Brand context: ${context.brandKnowledge}`);
+  if (context.voiceTone) parts.push(`Match this brand voice: ${context.voiceTone}`);
+  return parts.length ? `\n\n${parts.join('\n')}` : '';
+}
+
 export function buildStepPrompt(step: PlanStep, context: ArticleContext): string {
   if (step.focus === 'skip') return '';
-  const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
+  const brand = brandBlock(context);
   const block = focusBlock(step);
   return `${SHARED_RULES}\n\n${block}${brand}\n\n${NEGATIVE_CONSTRAINTS}\n\n${OUTPUT_RULE}`;
 }
@@ -268,13 +291,14 @@ const LESS_RULES = `You are an expert SEO content editor making a MINIMAL PATCH 
 
 RULES:
 - Make a MAXIMUM of 2-5 local edits. Preserve MORE THAN 95% of the original wording verbatim.
+- When AI Search checkpoints are listed globally, your patch must help answer EVERY uncovered checkpoint — not just one
 - Do NOT add paragraphs. Do NOT rewrite. Do NOT expand or lengthen the section.
 - Only patch the specific uncovered AI-search signals listed below — change nothing else.
 - Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
 - Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written`;
 
 function buildLessPrompt(step: PlanStep, context: ArticleContext): string {
-  const brand = context.voiceTone ? `\n\nMatch this brand voice: ${context.voiceTone}` : '';
+  const brand = brandBlock(context);
   // LESS never deepens/expands (intro protection depends on this): a step with focus 'expand' would
   // otherwise render "deepen this section; it is currently shallow", which contradicts LESS_RULES'
   // "Do NOT expand or lengthen". Map 'expand' -> 'ai-coverage' framing for the LESS block only —

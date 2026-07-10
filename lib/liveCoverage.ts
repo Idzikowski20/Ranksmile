@@ -4,7 +4,7 @@
 import type { CoverageItem, CoverageType, BucketScore } from './aiCoverage';
 import { countOccurrences } from './contentScore';
 
-export const PRESENCE_CHECKABLE: ReadonlySet<CoverageType> = new Set(['entity', 'structure', 'readability', 'paa']);
+export const PRESENCE_CHECKABLE: ReadonlySet<CoverageType> = new Set(['entity', 'structure', 'readability', 'paa', 'intent']);
 
 /** Re-derive `covered` for presence-checkable items from the current text/HTML; carry frozen items
  *  verbatim. Immutable — returns a NEW readonly array, never mutates an item. */
@@ -14,9 +14,12 @@ export function liveCoverageItems(
   html: string,
 ): readonly CoverageItem[] {
   return snapshotItems.map((it) => {
-    if (!PRESENCE_CHECKABLE.has(it.type)) return it;                 // frozen — verbatim
+    if (!PRESENCE_CHECKABLE.has(it.type)) return it;
     const covered = presenceCovered(it, plainText, html);
-    return covered === it.covered ? it : { ...it, covered };         // spread, never mutate
+    if (covered === it.covered && !(covered && it.quality === 0)) return it;
+    if (!covered) return { ...it, covered: false };
+    const floor = it.importance === 'critical' ? 4 : it.importance === 'recommended' ? 3 : 2;
+    return { ...it, covered: true, quality: Math.max(it.quality, floor) };
   });
 }
 
@@ -28,6 +31,7 @@ function presenceCovered(it: CoverageItem, plainText: string, html: string): boo
     case 'structure':   return hasStructure(html);                                     // headings/lists/question-format
     case 'readability': return readableParagraphs(html);                               // paragraph-length metric
     case 'paa':         return faqAnswered(it.label, html);                            // question answered in body/heading
+    case 'intent':      return faqAnswered(it.label, html);
     default:            return it.covered;
   }
 }

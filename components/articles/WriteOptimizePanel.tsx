@@ -5,6 +5,8 @@ import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/conten
 import { AiVisibilitySummary } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicGroup } from '../../lib/infoToCoverTopics';
+import { faviconUrl } from '../../lib/faviconUrl';
+import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 
@@ -199,7 +201,7 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
                 {it.domains && it.domains.length > 0 && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
                     {it.domains.slice(0, 2).map((d) => (
-                      <img key={d} alt="" width={14} height={14} style={{ borderRadius: 3 }} src={`https://www.google.com/s2/favicons?domain=${d}&sz=32`} />
+                      <DomainFavicon key={d} domain={d} size={14} style={{ borderRadius: 3 }} />
                     ))}
                   </span>
                 )}
@@ -219,8 +221,6 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
     </div>
   );
 };
-
-const faviconUrl = (domain: string) => `https://website-info.yourseo.pro/favicon/?domain=${encodeURIComponent(domain)}`;
 
 const AiOverviewIcon = () => (
   <svg width={14} height={14} viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
