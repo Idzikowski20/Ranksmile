@@ -1,8 +1,8 @@
 import { isStaleDeepAnalysisJob } from '../../lib/deepAnalysisProgress';
 
 describe('isStaleDeepAnalysisJob', () => {
-  it('treats claimed-but-never-started jobs as stale after 3 minutes', () => {
-    const updatedAt = new Date(Date.now() - 181_000).toISOString();
+  it('treats claimed-but-never-started jobs as stale after 5 minutes', () => {
+    const updatedAt = new Date(Date.now() - 301_000).toISOString();
     expect(isStaleDeepAnalysisJob({
       status: 'running',
       currentStage: 'fetch_page',

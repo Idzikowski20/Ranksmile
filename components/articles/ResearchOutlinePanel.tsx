@@ -76,6 +76,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
   const [generatedHeadings, setGeneratedHeadings] = useState<Array<{ level: number; text: string }> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [usedBrand, setUsedBrand] = useState(false);
 
   useEffect(() => {
     onAiActivity?.(loading || isGenerating);
@@ -107,11 +108,14 @@ const ResearchOutlinePanel: React.FC<Props> = ({
       const res = await fetch('/api/articles/generate-outline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, competitors, language, currentHeadings }),
+        body: JSON.stringify({
+          keyword, competitors, language, currentHeadings, articleId, paaQuestions,
+        }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
       setGeneratedHeadings(data.headings);
+      setUsedBrand(!!data.usedBrand);
     } catch (err) {
       setGenerateError(getErrorMessage(err) || 'Generation failed');
     } finally {
@@ -274,6 +278,11 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   >
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#52525c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       Generated outline · {generatedHeadings.length} headings
+                      {usedBrand && (
+                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: '#783afb', textTransform: 'none', letterSpacing: 0 }}>
+                          Brand voice
+                        </span>
+                      )}
                     </span>
                     <button
                       type="button"

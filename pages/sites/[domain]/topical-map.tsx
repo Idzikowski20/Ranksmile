@@ -141,7 +141,7 @@ const TopicalMapPage: NextPage = () => {
             <title>{`Topical Map — ${domain} — SerpBear`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Topical Map" heading="Topical Map" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Topical Map" contentMaxWidth="100%">
             {/* ─── Title row ─── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -195,9 +195,9 @@ const TopicalMapPage: NextPage = () => {
                   {view === 'map' ? (
                      <TopicalMapCanvas clusters={shown} showTitles={showTitles} onKeywordClick={(c) => openPanel(c, 'keywords')} />
                   ) : (
-                  <div style={{ display: 'flex', border: '1px solid #F4F4F5', borderRadius: 8, background: '#F8F8F9', gap: 16, overflow: 'hidden', minHeight: 400 }}>
+                  <div style={{ display: 'flex', gap: 16, minHeight: 400 }}>
                      {/* Left: Topic cluster */}
-                     <div className="styled-scrollbar" style={{ width: 330, flexShrink: 0, background: '#fff', borderRight: '1px solid #F4F4F5', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                     <div className="styled-scrollbar" style={{ width: 330, flexShrink: 0, background: '#fff', display: 'flex', flexDirection: 'column', overflowY: 'auto', borderRadius: 12, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7' }}>
                         <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
                            <div style={{ flex: 1, padding: '12px 16px', fontSize: 13, color: '#52525C', fontFamily: FONT }}>Topic cluster</div>
                            <div style={{ width: 50, flexShrink: 0, alignSelf: 'stretch', borderLeft: '1px solid #F4F4F5' }} />
@@ -226,7 +226,7 @@ const TopicalMapPage: NextPage = () => {
                      </div>
 
                      {/* Right: Main keyword */}
-                     <div className="styled-scrollbar" style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+                     <div className="styled-scrollbar" style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', borderRadius: 12, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7' }}>
                         <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'stretch', background: '#fff', borderBottom: '1px solid #F4F4F5', minWidth: 850 }}>
                            <div style={{ width: 50, flexShrink: 0 }} />
                            <div style={{ flex: 1, minWidth: 300, padding: '12px 16px', display: 'flex', alignItems: 'center', borderLeft: '1px solid #F4F4F5', fontSize: 13, color: '#52525C', fontFamily: FONT }}>Main keyword</div>

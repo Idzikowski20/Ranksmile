@@ -65,7 +65,7 @@ export const FanoutPageSkeleton = () => (
             <SkeletonBox w={148} h={32} radius={8} />
          </div>
       </div>
-      <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}>
+      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 24 }}>
          <SkeletonRows count={6} />
       </div>
    </div>

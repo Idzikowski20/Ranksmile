@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../core';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 type Card = { domain: string; gap: number; shared: number; you: number };
 
 /** Two overlapping circles: competitor (orange, ∝ gap+shared), you (violet, ∝ shared+you),
@@ -66,8 +66,7 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
             <div className="aiv-gap-scroll" style={{ maxHeight: 260, overflow: 'auto', background: 'transparent' }}>
                {list.map((c) => (
                   <Button key={c} type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); onPick(c); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start', textAlign: 'left', fontFamily: FONT, borderRadius: 8, padding: '8px 10px' }}>
-                     { /* eslint-disable-next-line @next/next/no-img-element */ }
-                     <img alt="" src={faviconFor(c)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                     <DomainFavicon domain={c} size={16} />
                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c}</span>
                   </Button>
                ))}
@@ -96,13 +95,12 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                   role={onCompare ? 'button' : undefined}
                   tabIndex={onCompare ? 0 : undefined}
                   onKeyDown={(e) => { if (!onCompare || e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCompare(card.domain); } }}
-                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#783AFB' : '#F4F4F5'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
+                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#783AFB' : '#DAD9DE'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(120,58,251,0.1)' : '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                      <div style={{ position: 'relative', minWidth: 0 }}>
                         <Button type="button" variant="transparent" size="sm" onClick={(e) => { stop(e); const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setSwapFor((s) => (s === card.domain ? null : card.domain)); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, fontWeight: 600, fontFamily: FONT, maxWidth: 220 }}>
-                           { /* eslint-disable-next-line @next/next/no-img-element */ }
-                           <img alt="" src={faviconFor(card.domain)} width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                           <DomainFavicon domain={card.domain} size={16} />
                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.domain}</span> <ChevronDown /></Button>
                         {swapFor === card.domain ? <Picker rect={pickerRect} candidates={candidates} exclude={selected} onPick={(b) => { onSelected(selected.map((x) => (x === card.domain ? b : x))); setSwapFor(null); }} onClose={() => setSwapFor(null)} /> : null}
                      </div>
@@ -118,8 +116,8 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                   </div>
                </div>
             ))}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-               <Button type="button" variant="secondary" size="sm" aria-label="Add brand" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setAddOpen((o) => !o); }} icon={<PlusIcon />} style={{ width: 56, height: 144, color: '#71717B' }} />
+            <div style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
+               <Button type="button" variant="secondary" size="sm" aria-label="Add brand" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setPickerRect(r); setAddOpen((o) => !o); }} icon={<PlusIcon />} style={{ width: 56, height: '100%', color: '#71717B' }} />
                {addOpen ? <Picker rect={pickerRect} candidates={candidates} exclude={selected} onPick={(b) => { onSelected([...selected, b]); setAddOpen(false); }} onClose={() => setAddOpen(false)} /> : null}
             </div>
          </div>

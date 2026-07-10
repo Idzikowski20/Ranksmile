@@ -1,13 +1,18 @@
 import type { NextPage } from 'next';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import FanoutTable from '../../../../components/aiVisibility/FanoutTable';
-import AiVisDetailModal from '../../../../components/aiVisibility/AiVisDetailModal';
 import { FanoutPageSkeleton } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { SearchBar, SegmentedControl, Button } from '../../../../components/core';
 import { useAiVisData, useAiVisFanout, type FanoutByQueryRow, type FanoutByPromptRow } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
+
+const AiVisDetailModal = dynamic(
+  () => import('../../../../components/aiVisibility/AiVisDetailModal'),
+  { ssr: false },
+);
 
 const FONT = 'var(--font-family-primary)';
 
@@ -18,8 +23,10 @@ type PromptsData = { pending?: boolean; prompts?: PromptRowRaw[] };
 type AiVisDetailItem = { promptId?: number; query?: string; title: string };
 type GroupBy = 'fanout' | 'prompt';
 
+const CARD_3D: React.CSSProperties = { border: '1px solid #DAD9DE', borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' };
+
 const RobotEmpty = ({ title, hint }: { title: string; hint: string }) => (
-   <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '56px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, background: '#fff' }}>
+   <div style={{ ...CARD_3D, padding: '56px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
       <style>{'@keyframes aivBlink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(0.1)}}'}</style>
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
          <rect x="10" y="16" width="28" height="22" rx="6" fill="#F4F4F5" stroke="#E4E4E7" strokeWidth="2" />
@@ -114,7 +121,7 @@ const AiVisibilityFanoutQueries: NextPage = () => {
                                  variant="secondary"
                                  size="sm"
                                  onClick={() => setSearch(p.phrase)}
-                                 style={{ borderRadius: 9999, background: '#F4F4F5', border: 'none', gap: 6 }}
+                                 style={{ borderRadius: 9999, gap: 6 }}
                               >
                                  <span>{p.phrase}</span>
                                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9999, background: '#fff', color: '#71717B', fontSize: 12, fontWeight: 600 }}>{p.count}</span>

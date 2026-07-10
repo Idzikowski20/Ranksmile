@@ -1,0 +1,19 @@
+/** Feature flags for gradual rollout — default false in production until verified. */
+function envFlag(name: string): boolean {
+  const v = process.env[name];
+  if (v === '1' || v === 'true') return true;
+  if (v === '0' || v === 'false') return false;
+  return false;
+}
+
+export function isNewCoverageIdsEnabled(): boolean {
+  return envFlag('ENABLE_NEW_COVERAGE_IDS');
+}
+
+export function isNewRecommendationsEnabled(): boolean {
+  return envFlag('ENABLE_NEW_RECOMMENDATIONS');
+}
+
+export function isQueueRunnerEnabled(): boolean {
+  return envFlag('ENABLE_QUEUE_RUNNER');
+}

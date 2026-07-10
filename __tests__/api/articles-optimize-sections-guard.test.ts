@@ -44,6 +44,10 @@ jest.mock('../../lib/articleKeywordDiscovery', () => ({
   enrichNlpTermsIfNeeded: (opts: { terms: { term: string; target_count: number }[] }) => mockEnrichNlpTermsIfNeeded(opts),
 }));
 
+jest.mock('../../lib/articleSql', () => ({
+  getArticleIdSql: jest.fn(async () => 'id'),
+}));
+
 import handler from '../../pages/api/articles/optimize-sections';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
@@ -52,6 +56,8 @@ import { getOrgUsage5h } from '../../lib/aiTokenUsage';
 import { buildArticleContext } from '../../lib/articleContext';
 import { buildOptimizationPlan } from '../../lib/optimizationPlanner';
 import { needsTermEnrichment } from '../../lib/articleKeywordDiscovery';
+import db from '../../database/database';
+import { getArticleIdSql } from '../../lib/articleSql';
 import type { Plan, PlanStep } from '../../lib/optimizationPlanner';
 
 const mockNeedsTermEnrichment = needsTermEnrichment as jest.MockedFunction<typeof needsTermEnrichment>;
@@ -158,7 +164,7 @@ it('records tokens in finally even if a mid-run step throws', async () => {
   // An under-target NLP term routes BOTH sections to focus:seo-terms (non-skip),
   // so section A's fetch succeeds and section B's fetch exhausts its retries.
   mockBuildArticleContext.mockResolvedValueOnce({
-    articleId: 1, keyword: 'k',
+    articleId: 1, keyword: 'widget',
     scoreData: { terms: [{ term: 'widget', target_count: 5 }], words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 } as any,
     breakdown: null,
     coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 } as any,
@@ -199,7 +205,7 @@ it('NORMAL step sends the "Improve this section" user message (byte-for-byte)', 
   await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
   const body = JSON.parse(opts.body);
-  expect(body.messages[1].content).toBe('Improve this section:\n\n<p>aaa</p>');
+  expect(body.messages[1].content).toBe('Improve this section:\n\n<h2>A</h2><p>aaa</p>');
 });
 
 it('LESS step sends step.userInstruction as the user message (not "Improve this section")', async () => {
@@ -264,5 +270,34 @@ it('emits a terms SSE event when NLP enrichment grows the term list', async () =
   const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const termsEvt = events.find((e) => e.event === 'terms');
   expect(termsEvt?.data.terms).toHaveLength(4);
+});
+
+it('restores terms from article_terms instead of shrinking score_data', async () => {
+  const thinTerms = [
+    { term: 'detektyw warszawa', target_count: 4 },
+    { term: 'detektyw', target_count: 36 },
+    { term: 'warszawa', target_count: 8 },
+  ];
+  const tableTerms = Array.from({ length: 12 }, (_, i) => ({
+    term: `prywatny detektyw usluga ${i + 1}`,
+    target_min: 1,
+    target_max: 2,
+    importance: 1,
+    current_count: 0,
+    term_type: 'topic',
+    source: 'serp',
+  }));
+  mockBuildArticleContext.mockResolvedValueOnce({
+    articleId: 1, keyword: 'detektyw warszawa',
+    scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 } as any,
+    breakdown: null,
+    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 } as any,
+    paa: [], terms: tableTerms, competitors: [],
+  });
+  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ focus: 'skip', reason: 'skip for test' }));
+  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
+  const termsEvt = events.find((e) => e.event === 'terms');
+  expect(termsEvt?.data.terms.length).toBeGreaterThanOrEqual(12);
+  expect(termsEvt?.data.terms.length).not.toBe(3);
 });
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import type { LinkSuggestion } from '../../pages/api/articles/suggest-internal-links';
 import { getErrorMessage } from '../../lib/errors';
+import DomainFavicon from '../common/DomainFavicon';
 
 export interface InsertResult {
   url: string;
@@ -324,7 +325,7 @@ const InternalLinksPanel: React.FC<Props> = ({
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: '1px solid #e4e4e7', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
               >
                 {selectedHost && (
-                  <img alt="" src={`https://www.google.com/s2/favicons?domain=${selectedHost}&sz=32`} style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                  <DomainFavicon domain={selectedHost} size={18} />
                 )}
                 <span style={{ flex: 1, textAlign: 'left', fontSize: 13, color: selectedHost ? '#09090b' : '#9f9fa9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {selectedHost || 'Select a site'}
@@ -361,7 +362,7 @@ const InternalLinksPanel: React.FC<Props> = ({
                           onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = '#f8f8f9'; }}
                           onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <img alt="" src={`https://www.google.com/s2/favicons?domain=${d}&sz=32`} style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0 }} />
+                          <DomainFavicon domain={d} size={20} />
                           <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: 13, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d}</span>
                             <span style={{ fontSize: 10, color: '#71717b', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 1 }}>Domain property</span>

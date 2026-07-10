@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import { useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
 import { Button } from '../core';
 import { SentryPanel, SentryPanelBody } from '../sentry-pages';
 import PricingPlansSettings from './PricingPlansSettings';
+import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
+import type { UpcomingPaymentDetails } from '../../lib/subscriptionFormat';
+import { formatMoney, formatUpcomingTotal } from '../../lib/subscriptionFormat';
 
 // ─── SVG atoms ────────────────────────────────────────────────────────────────
 
@@ -114,7 +118,18 @@ export const showCancellationApprovedToast = () => {
   ));
 };
 
-const UpcomingBillsModal = ({ onClose }: { onClose: () => void }) => {
+const UpcomingBillsModal = ({ upcoming, canceled, onClose }: {
+  upcoming: UpcomingPaymentDetails | null;
+  canceled: boolean;
+  onClose: () => void;
+}) => {
+  const planName = upcoming?.planName ?? '—';
+  const planAmount = upcoming ? formatMoney(upcoming.planAmountCents, upcoming.currency) : '—';
+  const taxAmount = upcoming ? formatMoney(upcoming.taxAmountCents, upcoming.currency) : '—';
+  const totalAmount = formatUpcomingTotal(upcoming, canceled);
+  const renewalDate = canceled ? '—' : (upcoming?.renewalDateLabel ?? '—');
+  const taxLabel = upcoming?.taxLabel ?? 'TAX';
+
   return (
     <div
       onClick={onClose}
@@ -150,26 +165,28 @@ const UpcomingBillsModal = ({ onClose }: { onClose: () => void }) => {
           <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 12 }}>Plan</span>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>Growth</span>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>€59.00</span>
+            <span style={{ fontSize: 14, color: '#3F3F47' }}>{planName}</span>
+            <span style={{ fontSize: 14, color: '#3F3F47' }}>{planAmount}</span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>TAX (23%)</span>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>€13.57</span>
-          </div>
+          {!canceled && upcoming && upcoming.taxAmountCents > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
+              <span style={{ fontSize: 14, color: '#3F3F47' }}>{taxLabel}</span>
+              <span style={{ fontSize: 14, color: '#3F3F47' }}>{taxAmount}</span>
+            </div>
+          )}
 
           {/* Divider */}
           <div style={{ minHeight: 1, background: '#E4E4E7', margin: '8px 0' }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>TOTAL</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>€72.57</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>{totalAmount}</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
             <span style={{ fontSize: 14, color: '#3F3F47' }}>Renewal date</span>
-            <span style={{ fontSize: 14, color: '#52525C' }}>30 June 2026</span>
+            <span style={{ fontSize: 14, color: '#52525C' }}>{renewalDate}</span>
           </div>
         </div>
 
@@ -193,7 +210,11 @@ const LOSS_ITEMS = [
   'Keyword Research tools and saved data',
 ];
 
-const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; onProceed: () => void }) => {
+const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
+  accessUntilLabel: string;
+  onClose: () => void;
+  onProceed: () => void;
+}) => {
   return (
     <div
       onClick={onClose}
@@ -260,7 +281,7 @@ const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; 
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ margin: 0, fontSize: 14, color: '#3F3F47', lineHeight: '1.55' }}>
-                Your subscription stays active until <strong>Jun 30th</strong>.{' '}
+                Your subscription stays active until <strong>{accessUntilLabel}</strong>.{' '}
                 After that, you will lose access and your data will be{' '}
                 <strong>permanently removed</strong>:
               </p>
@@ -304,8 +325,9 @@ const CancelSubscriptionModal = ({ onClose, onProceed }: { onClose: () => void; 
             style={{
               flex: '1 1 0',
               minWidth: 240,
-              border: '1px solid #E4E4E7',
-              borderRadius: 8,
+              border: '1px solid #DAD9DE',
+              boxShadow: '0 4px 0 0 #e4e4e7',
+              borderRadius: 12,
               padding: 24,
               display: 'flex',
               flexDirection: 'column',
@@ -536,8 +558,9 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               {/* Card 1 — Masterclass */}
               <div
                 style={{
-                  border: '1px solid #E4E4E7',
-                  borderRadius: 8,
+                  border: '1px solid #DAD9DE',
+                  boxShadow: '0 4px 0 0 #e4e4e7',
+                  borderRadius: 12,
                   padding: 24,
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -588,8 +611,9 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               {/* Card 2 — Live Support */}
               <div
                 style={{
-                  border: '1px solid #E4E4E7',
-                  borderRadius: 8,
+                  border: '1px solid #DAD9DE',
+                  boxShadow: '0 4px 0 0 #e4e4e7',
+                  borderRadius: 12,
                   padding: 24,
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -682,22 +706,33 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
 // ─── Subscription Page ────────────────────────────────────────────────────────
 
 const SubscriptionPage = ({
+  subscription,
+  loading,
   onChangePlan,
   onOpenUpcoming,
   onOpenCancel,
-  canceled,
 }: {
+  subscription: SubscriptionDetails | null;
+  loading: boolean;
   onChangePlan: () => void;
   onOpenUpcoming: () => void;
   onOpenCancel: () => void;
-  canceled: boolean;
 }) => {
+  const canceled = subscription?.cancelAtPeriodEnd ?? false;
+  const periodLabel = subscription?.periodLabel ?? (loading ? 'Loading…' : null);
+  const planName = subscription?.planName ?? 'Growth';
+  const transitionDate = subscription?.isTrialing
+    ? subscription.trialEndsAtLabel
+    : subscription?.currentPeriodEndLabel;
+  const upcomingTotal = formatUpcomingTotal(subscription?.upcoming ?? null, canceled);
+  const showTrialFlow = subscription?.isTrialing && !canceled && !!transitionDate;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', fontFamily: 'var(--font-family-primary)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>Plan</span>
         <span style={{ fontSize: 14, color: '#52525C' }}>
-          {canceled ? 'Ends in 7 days' : 'Renews in 7 days'}
+          {periodLabel ?? '—'}
         </span>
       </div>
 
@@ -709,22 +744,26 @@ const SubscriptionPage = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 {canceled ? (
                   <>
-                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
+                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>{planName}</span>
                     <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#1AB25E', flexShrink: 0 }} />
-                    <span style={{ fontSize: 14, color: '#52525C' }}>Active until 30 June 2026</span>
+                    <span style={{ fontSize: 14, color: '#52525C' }}>
+                      Active until {transitionDate ?? '—'}
+                    </span>
                   </>
-                ) : (
+                ) : showTrialFlow ? (
                   <>
                     <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
                     <ChevronRight />
-                    <span style={{ fontSize: 14, color: '#3F3F47' }}>on 30 June 2026</span>
+                    <span style={{ fontSize: 14, color: '#3F3F47' }}>on {transitionDate}</span>
                     <ChevronRight />
-                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Growth</span>
+                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>{planName}</span>
                   </>
+                ) : (
+                  <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>{planName}</span>
                 )}
               </div>
               <Button type="button" variant="primary" size="sm" onClick={onChangePlan}>
-                Change plan
+                {subscription?.hasStripeSubscription ? 'Change plan' : 'Choose plan'}
               </Button>
             </div>
           </SentryPanelBody>
@@ -738,7 +777,7 @@ const SubscriptionPage = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={{ fontSize: 14, color: '#18181B' }}>Upcoming payments</span>
                   <span style={{ fontSize: 20, fontWeight: 600, color: '#18181B' }}>
-                    {canceled ? '€0.00' : '€72.57'}
+                    {upcomingTotal}
                   </span>
                 </div>
                 <Button type="button" variant="secondary" size="sm" onClick={onOpenUpcoming}>
@@ -750,7 +789,7 @@ const SubscriptionPage = ({
         </div>
       </div>
 
-      {!canceled && (
+      {!canceled && subscription?.hasStripeSubscription && (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button type="button" variant="transparent" size="sm" icon={<XIcon size={20} />} onClick={onOpenCancel}>
             Cancel subscription
@@ -765,11 +804,27 @@ const SubscriptionPage = ({
 
 const SubscriptionSettings = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [view, setView] = useState<'subscription' | 'plans'>('subscription');
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
-  const [canceled, setCanceled] = useState(false);
+
+  const { data, isLoading } = useQuery(
+    'subscriptionDetails',
+    async () => {
+      const res = await fetch('/api/billing/subscription');
+      if (!res.ok) throw new Error('Failed to load subscription');
+      return res.json() as Promise<{ subscription: SubscriptionDetails }>;
+    },
+    { staleTime: 30 * 1000, retry: false },
+  );
+
+  const subscription = data?.subscription ?? null;
+  const canceled = subscription?.cancelAtPeriodEnd ?? false;
+  const accessUntilLabel = subscription?.currentPeriodEndLabel
+    ?? subscription?.trialEndsAtLabel
+    ?? 'the end of your billing period';
 
   React.useEffect(() => {
     if (!router.isReady) return;
@@ -786,6 +841,21 @@ const SubscriptionSettings = () => {
     router.replace('/settings/billing_subscription', undefined, { shallow: true });
   };
 
+  const handleConfirmCancel = async () => {
+    try {
+      const res = await fetch('/api/billing/cancel', { method: 'POST' });
+      const body = await res.json() as { error?: string };
+      if (!res.ok) {
+        toast.error(body.error ?? 'Could not cancel subscription');
+        return;
+      }
+      await queryClient.invalidateQueries('subscriptionDetails');
+      showCancellationApprovedToast();
+    } catch {
+      toast.error('Could not cancel subscription');
+    }
+  };
+
   if (view === 'plans') {
     return (
       <div style={{ width: '100%', fontFamily: 'var(--font-family-primary)' }}>
@@ -800,15 +870,23 @@ const SubscriptionSettings = () => {
   return (
     <>
       <SubscriptionPage
+        subscription={subscription}
+        loading={isLoading}
         onChangePlan={showPlans}
         onOpenUpcoming={() => setUpcomingOpen(true)}
         onOpenCancel={() => setCancelOpen(true)}
-        canceled={canceled}
       />
 
-      {upcomingOpen && <UpcomingBillsModal onClose={() => setUpcomingOpen(false)} />}
+      {upcomingOpen && (
+        <UpcomingBillsModal
+          upcoming={subscription?.upcoming ?? null}
+          canceled={canceled}
+          onClose={() => setUpcomingOpen(false)}
+        />
+      )}
       {cancelOpen && (
         <CancelSubscriptionModal
+          accessUntilLabel={accessUntilLabel}
           onClose={() => setCancelOpen(false)}
           onProceed={() => { setCancelOpen(false); setFlowOpen(true); }}
         />
@@ -816,10 +894,7 @@ const SubscriptionSettings = () => {
       {flowOpen && (
         <CancelFlowModal
           onClose={() => setFlowOpen(false)}
-          onConfirm={() => {
-            setCanceled(true);
-            showCancellationApprovedToast();
-          }}
+          onConfirm={() => { void handleConfirmCancel(); setFlowOpen(false); }}
         />
       )}
     </>

@@ -1,4 +1,5 @@
-jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
+jest.mock('../../lib/articleAiPipeline', () => ({ runArticleAiPipeline: jest.fn() }));
+jest.mock('sequelize', () => ({ Op: { in: 'Op.in' }, QueryTypes: { SELECT: 'SELECT' } }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('intruder') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn().mockResolvedValue(false) }));
 jest.mock('../../lib/ensureArticlesTables', () => ({ ensureArticlesTables: jest.fn().mockResolvedValue(undefined) }));

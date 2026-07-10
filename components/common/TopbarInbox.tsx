@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
+import DomainFavicon from './DomainFavicon';
 
 const font = 'var(--font-family-primary)';
 
@@ -186,7 +187,7 @@ const TopbarInbox = () => {
                   >
                     {/* favicon + flame */}
                     <div style={{ position: 'relative', width: 24, flexShrink: 0, paddingTop: 6 }}>
-                      <img alt="" width={24} height={24} style={{ borderRadius: 4, display: 'block' }} src={`https://www.google.com/s2/favicons?domain=${n.domain}&sz=32`} />
+                      <DomainFavicon domain={n.domain} size={24} style={{ display: 'block' }} />
                       <span style={{ position: 'absolute', left: 12, top: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 16, minHeight: 16, borderRadius: 9999, background: '#F8F8F9' }}>
                         <FlameIcon />
                       </span>

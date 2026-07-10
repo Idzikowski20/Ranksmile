@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DomainFavicon from '../common/DomainFavicon';
 
 interface Heading {
   level: number;
@@ -30,7 +31,6 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
   const domain = competitor.domain || (() => {
     try { return new URL(competitor.url).hostname.replace(/^www\./, ''); } catch { return competitor.url; }
   })();
-  const faviconSrc = `https://www.google.com/s2/favicons?domain=${domain}&sz=20`;
   const pos = competitor.serp_position;
 
   return (
@@ -49,14 +49,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1, minWidth: 0 }}>
           <span style={{ display: 'inline-flex', flexShrink: 0, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-            <img
-              src={faviconSrc}
-              alt=""
-              width={16}
-              height={16}
-              style={{ display: 'block', width: 16, height: 16, objectFit: 'contain', borderRadius: 3 }}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
+            <DomainFavicon domain={domain} size={16} style={{ borderRadius: 3 }} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Title */}
@@ -172,6 +165,36 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [briefHeadings, setBriefHeadings] = useState<Array<{ level: number; text: string }> | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+
+  const handleGenerateBrief = async () => {
+    if (!keyword || briefLoading) return;
+    setBriefLoading(true);
+    setBriefHeadings(null);
+    try {
+      const mapped = competitors.map((c) => ({
+        url: c.url,
+        title: c.title,
+        favicon: '',
+        headings: c.headings,
+        heading_count: c.heading_count ?? c.headings.length,
+        word_count: c.word_count,
+      }));
+      const res = await fetch('/api/articles/generate-outline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword, competitors: mapped, language: 'pl', articleId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
+      setBriefHeadings(data.headings || []);
+    } catch {
+      setError('Could not generate brief from competitors.');
+    } finally {
+      setBriefLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Try cache first
@@ -241,6 +264,20 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
             </span>
           )}
         </div>
+        {competitors.length > 0 && (
+          <button
+            type="button"
+            disabled={briefLoading}
+            onClick={handleGenerateBrief}
+            style={{
+              padding: '6px 12px', borderRadius: 8, border: 'none', cursor: briefLoading ? 'wait' : 'pointer',
+              background: '#18181b', color: '#fff', fontSize: 12, fontWeight: 600,
+              fontFamily: 'var(--font-family-primary)', opacity: briefLoading ? 0.7 : 1,
+            }}
+          >
+            {briefLoading ? 'Generating…' : 'Generate brief'}
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -273,6 +310,21 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
         {!isLoading && !error && competitors.map((comp, i) => (
           <CompetitorCard key={comp.url + i} competitor={comp} defaultOpen={i === 0} />
         ))}
+
+        {briefHeadings && briefHeadings.length > 0 && (
+          <div style={{ marginTop: 8, padding: 12, border: '1px solid #f4f4f5', borderRadius: 12, background: '#fff' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#18181b', marginBottom: 8, fontFamily: 'var(--font-family-primary)' }}>
+              Generated brief · {briefHeadings.length} headings
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {briefHeadings.map((h, idx) => (
+                <div key={`${h.level}-${idx}`} style={{ fontSize: 13, color: '#52525c', paddingLeft: (h.level - 1) * 12, fontFamily: 'var(--font-family-primary)' }}>
+                  H{h.level}: {h.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

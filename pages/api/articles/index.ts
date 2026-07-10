@@ -37,7 +37,18 @@ export async function getUserDomainIds(userId: string | null): Promise<number[]>
 }
 
 async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: string | null) {
-   const { domainId, domain: domainSlug } = req.query;
+   const { domainId, domain: domainSlug, limit: limitRaw, offset: offsetRaw, sort, q } = req.query;
+
+   const limit = Math.min(Math.max(parseInt(String(limitRaw ?? '30'), 10) || 30, 1), 100);
+   const offset = Math.max(parseInt(String(offsetRaw ?? '0'), 10) || 0, 0);
+   const search = typeof q === 'string' ? q.trim() : '';
+   const sortKey = typeof sort === 'string' ? sort : 'ContentUpdatedAt';
+
+   const orderBy = (() => {
+      if (sortKey === 'Title') return 'title ASC';
+      if (sortKey === 'CreatedAt') return 'created_at DESC';
+      return 'updated_at DESC';
+   })();
 
    try {
       const articleIdSql = await getArticleIdSql();
@@ -46,7 +57,6 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
 
       const allowedIds = await getUserDomainIds(userId);
 
-      // Resolve domain ID — support both domainId (int) and domain (slug)
       let resolvedDomainId: number | undefined;
       if (domainId) {
          resolvedDomainId = parseInt(domainId as string, 10);
@@ -57,32 +67,43 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
       }
 
       if (resolvedDomainId) {
-         // Empty allow-list must DENY (not skip the check) — a user with no accessible domains
-         // could otherwise read any domain's articles by supplying its id.
          if (!allowedIds.includes(resolvedDomainId)) {
             return res.status(403).json({ error: 'Access denied.' });
          }
          where = 'WHERE domain_id = ?';
          replacements.push(resolvedDomainId);
       } else if (allowedIds.length === 0) {
-         return res.status(200).json({ articles: [] });
+         return res.status(200).json({ articles: [], total: 0, hasMore: false, limit, offset });
       } else {
          where = `WHERE domain_id IN (${allowedIds.map(() => '?').join(',')})`;
          replacements.push(...allowedIds);
       }
 
+      if (search) {
+         where += ' AND (LOWER(title) LIKE ? OR LOWER(target_keyword) LIKE ?)';
+         const pattern = `%${search.toLowerCase()}%`;
+         replacements.push(pattern, pattern);
+      }
+
+      const countReplacements = [...replacements];
+      const [countRows] = await db.query(
+         `SELECT COUNT(*) AS total FROM articles ${where}`,
+         { replacements: countReplacements },
+      );
+      const total = Number((countRows as Array<{ total: number | string }>)[0]?.total ?? 0);
+
       const [articles] = await db.query(
          `SELECT ${articleIdSql} AS id, domain_id, title, slug, status, target_keyword, meta_title, word_count,
                  published_at, publish_target, publish_url, meta_url, created_at, updated_at, content_score
           FROM articles ${where}
-          ORDER BY created_at DESC`,
-         { replacements },
+          ORDER BY ${orderBy}
+          LIMIT ? OFFSET ?`,
+         { replacements: [...replacements, limit, offset] },
       );
 
-      // Merge site_context entries that don't have matching articles yet.
-      // Pages imported during /sites configuration live in site_context and may
-      // not have corresponding articles — include them so they show in recommendations.
-      if (resolvedDomainId) {
+      let result = articles as unknown[];
+
+      if (resolvedDomainId && offset === 0 && !search) {
          const [scRows] = await db.query(
             `SELECT sc.id, sc.domain_id, COALESCE(NULLIF(sc.title,''), sc.url) AS title,
                     sc.url AS publish_url, sc.language, sc.created_at
@@ -114,10 +135,11 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
             content_score: 0,
             source: 'site_context',
          }));
-         return res.status(200).json({ articles: [...(articles as unknown[]), ...merged] });
+         result = [...result, ...merged];
       }
 
-      return res.status(200).json({ articles });
+      const hasMore = offset + limit < total;
+      return res.status(200).json({ articles: result, total, hasMore, limit, offset });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }

@@ -9,11 +9,13 @@ import { useWorkspaces } from '../../../services/workspaces';
 import { useOnboardingChecklist, type OnboardingStep } from '../../../lib/useOnboardingChecklist';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../../lib/activeWorkspace';
 import fetchJson from '../../../lib/fetchJson';
+import type { PlanLimitMetric, PlanSummaryData } from '../../../lib/planLimits';
+import { formatMetricUsage } from '../../../lib/planLimits';
 import { countActionableRecommendations } from '../../../lib/recommendations';
 import { Avatar } from '../../core/avatar';
 import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings,
-  IconBusiness, IconFire, IconBroadcast, IconEllipsis, IconChevron,
+  IconCreditCard, IconFire, IconBroadcast, IconEllipsis, IconChevron,
   IconQuestion, IconGroup, IconSentryLogo, IconDocs, IconSupport,
   IconBuilding, IconMegaphone, IconGlobe, IconOpen,
 } from './sentryIcons';
@@ -282,6 +284,83 @@ const OnboardingMenu = ({ anchor, onClose, steps, beyondSteps, done, pct }: {
   );
 };
 
+type PlanSummaryResponse = {
+  summary: PlanSummaryData;
+  statusLine: string;
+};
+
+const PLAN_SUMMARY_FALLBACK: PlanSummaryResponse = {
+  summary: {
+    planSlug: 'starter',
+    planName: 'Starter',
+    billingPeriod: null,
+    subscriptionStatus: null,
+    trialEndsAt: null,
+    currentPeriodEnd: null,
+    metrics: [],
+    overallPct: 0,
+  },
+  statusLine: '',
+};
+
+const PlanMetricRow = ({ metric }: { metric: PlanLimitMetric }) => {
+  const warn = (metric.pct ?? 0) >= 85;
+  const width = metric.limit == null ? 0 : Math.min(100, metric.pct ?? 0);
+  return (
+    <li className="sentry-plan-metric">
+      <div className="sentry-plan-metric-head">
+        <span className="sentry-plan-metric-label">{metric.label}</span>
+        <span className={`sentry-plan-metric-value${warn ? ' sentry-plan-metric-value--warn' : ''}`}>
+          {formatMetricUsage(metric)}
+        </span>
+      </div>
+      {metric.limit != null && (
+        <div className="sentry-plan-bar" aria-hidden="true">
+          <div
+            className={`sentry-plan-bar-fill${warn ? ' sentry-plan-bar-fill--warn' : ''}`}
+            style={{ width: `${width}%` }}
+          />
+        </div>
+      )}
+    </li>
+  );
+};
+
+const PlanMenu = ({
+  anchor,
+  onClose,
+  summary,
+  statusLine,
+  loading,
+}: {
+  anchor: DOMRect;
+  onClose: () => void;
+  summary: PlanSummaryData;
+  statusLine: string;
+  loading: boolean;
+}) => {
+  const ref = useDismiss(onClose);
+  return (
+    <div ref={ref} className="sentry-nav-popover sentry-nav-popover--wide" style={{ left: anchor.right + 8, bottom: 12, top: 'auto' }}>
+      <div className="sentry-menu-title">{summary.planName} plan</div>
+      <div className="sentry-menu-sub">
+        {loading ? 'Loading usage…' : `${statusLine || 'Subscription'} · ${summary.overallPct}% peak usage`}
+      </div>
+      <ul className="sentry-menu-list" style={{ marginTop: 8 }}>
+        {summary.metrics.map((metric) => (
+          <PlanMetricRow key={metric.key} metric={metric} />
+        ))}
+      </ul>
+      <Link href="/settings/billing_subscription" passHref>
+        <a className="sentry-plan-settings" onClick={onClose}>
+          Manage plan
+          <IconChevron rotate={90} size={10} />
+        </a>
+      </Link>
+    </div>
+  );
+};
+
 const UserMenu = ({ anchor, onClose, name, email, pic, initial }: { anchor: DOMRect; onClose: () => void; name: string; email: string; pic: string; initial: string }) => {
   const ref = useDismiss(onClose);
   return (
@@ -325,6 +404,14 @@ const SentryNav = ({ domains = [] }: Props) => {
   const { data: gscAccount } = useGscAccount();
   const session = authClient.useSession?.();
   const { steps: onboardingSteps, beyondSteps: onboardingBeyond, done: onboardingDone, pct: onboardingPct } = useOnboardingChecklist();
+
+  const { data: planSummaryData, isLoading: planSummaryLoading } = useQuery(
+    'planSummary',
+    () => fetchJson<PlanSummaryResponse>('/api/billing/plan-summary', PLAN_SUMMARY_FALLBACK),
+    { staleTime: 60 * 1000, retry: false },
+  );
+  const planSummary = planSummaryData?.summary ?? PLAN_SUMMARY_FALLBACK.summary;
+  const planStatusLine = planSummaryData?.statusLine ?? '';
 
   const activeId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
   const activeWorkspace = (wsData?.workspaces || []).find((w) => w.id === activeId) ?? null;
@@ -565,7 +652,7 @@ const SentryNav = ({ domains = [] }: Props) => {
   }, [flyoutItem, isDocked]);
 
   // Footer popovers
-  type PopKind = 'help' | 'whatsnew' | 'status' | 'onboarding' | 'user';
+  type PopKind = 'help' | 'whatsnew' | 'status' | 'onboarding' | 'plan' | 'user';
   const [popover, setPopover] = useState<{ kind: PopKind; rect: DOMRect } | null>(null);
   const openPopover = (kind: PopKind) => (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -618,8 +705,8 @@ const SentryNav = ({ domains = [] }: Props) => {
             <button type="button" aria-label="Onboarding" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'onboarding'} onClick={openPopover('onboarding')}>
               <NavProgressRing pct={onboardingPct} />
             </button>
-            <button type="button" aria-label="Try Business" className="sentry-nav-utilbtn" onClick={() => router.push('/settings/billing_subscription')}>
-              <IconBusiness />
+            <button type="button" aria-label="Your plan" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'plan'} onClick={openPopover('plan')}>
+              <IconCreditCard />
             </button>
             <button type="button" aria-label="Service status" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'status'} onClick={openPopover('status')}>
               <IconFire />
@@ -706,6 +793,15 @@ const SentryNav = ({ domains = [] }: Props) => {
           beyondSteps={onboardingBeyond}
           done={onboardingDone}
           pct={onboardingPct}
+        />
+      )}
+      {popover?.kind === 'plan' && (
+        <PlanMenu
+          anchor={popover.rect}
+          onClose={closePopover}
+          summary={planSummary}
+          statusLine={planStatusLine}
+          loading={planSummaryLoading}
         />
       )}
       {popover?.kind === 'user' && <UserMenu anchor={popover.rect} onClose={closePopover} name={userName} email={userEmail} pic={userPic} initial={userInitial} />}
