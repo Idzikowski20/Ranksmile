@@ -567,7 +567,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       competitorDomains,
       plainText: plainTextEarly,
     });
-    let mergedTerms = mergeNlpTerms(
+    let mergedTerms: NlpTerm[] = mergeNlpTerms(
       filterUsefulNlpTerms(allTerms),
       filterUsefulNlpTerms(enrichedTerms),
     ).map((t) => ({

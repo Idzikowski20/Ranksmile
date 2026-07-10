@@ -28,6 +28,7 @@ const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;
 const mockSidecarBase = sidecarBase as jest.MockedFunction<typeof sidecarBase>;
 const mockAssertPublicUrl = assertPublicUrl as jest.MockedFunction<typeof assertPublicUrl>;
+const dbResult = (value: unknown) => value as Awaited<ReturnType<typeof db.query>>;
 
 const makeRes = () => {
   const res: any = {};
@@ -82,15 +83,15 @@ it('preserves existing article content when the sidecar pipeline fails', async (
     text: async () => 'sidecar exploded',
   });
   mockDbQuery
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce([{ status: 'running', attempts: 1 }])
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce([{ id: 'job_123_current' }])
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined);
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult([{ status: 'running', attempts: 1 }]))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult([{ id: 'job_123_current' }]))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined));
 
   const res = makeRes();
   await handler({ method: 'POST', body: { articleId: 123, url: 'http://example.com/page' }, query: {}, cookies: {} } as any, res);
@@ -110,13 +111,13 @@ it('does not mark the article error when a failing job was already superseded', 
     text: async () => 'late failure',
   });
   mockDbQuery
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce([{ status: 'running', attempts: 1 }])
-    .mockResolvedValueOnce(undefined)
-    .mockResolvedValueOnce([]);
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult([{ status: 'running', attempts: 1 }]))
+    .mockResolvedValueOnce(dbResult(undefined))
+    .mockResolvedValueOnce(dbResult([]));
 
   const res = makeRes();
   await handler({ method: 'POST', body: { articleId: 123, url: 'http://example.com/page' }, query: {}, cookies: {} } as any, res);
