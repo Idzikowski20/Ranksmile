@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getOrgBillingState } from '../../../lib/orgBilling';
+import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
 import { getAppOrigin } from '../../../lib/appOrigin';
 import { ensureUserTenancy } from '../../../lib/tenancy';
@@ -15,6 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
   const { orgId } = await ensureUserTenancy(userId);
+  try { await assertCanManage(userId); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billing = await getOrgBillingState(orgId);
   if (!billing?.stripeCustomerId) {
     return res.status(400).json({ error: 'No Stripe customer on file' });

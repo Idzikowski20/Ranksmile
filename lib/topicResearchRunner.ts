@@ -29,7 +29,8 @@ const STALE_SECS = 5 * 60;
 const ON_CONFLICT = `ON CONFLICT (domain_id, seed, country) DO UPDATE SET
    status = 'queued', result_json = NULL, stats_json = NULL, error = NULL,
    progress_done = 0, progress_total = 1,
-   started_at = NULL, finished_at = NULL, created_at = CURRENT_TIMESTAMP`;
+   started_at = NULL, finished_at = NULL, created_at = CURRENT_TIMESTAMP
+   WHERE topic_research_runs.status <> 'running'`;
 
 const TOPIC_QUEUE: QueueRunnerConfig = {
   table: 'topic_research_runs',
@@ -53,8 +54,13 @@ export async function enqueueTopicResearch(domainId: number, seed: string, count
          `INSERT INTO topic_research_runs (${cols}) ${values} ${ON_CONFLICT} RETURNING id`,
          repl,
       );
-      if (!created) throw new Error('Failed to enqueue topic research');
-      return created.id;
+      if (created) return created.id;
+      const existing = await queryOne<{ id: number }>(
+         'SELECT id FROM topic_research_runs WHERE domain_id = ? AND seed = ? AND country = ? LIMIT 1',
+         repl,
+      );
+      if (!existing) throw new Error('Failed to enqueue topic research');
+      return existing.id;
    }
    await db.query(
       `INSERT INTO topic_research_runs (${cols}) ${values} ${ON_CONFLICT}`,
@@ -196,12 +202,12 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
       try {
          const { result, stats } = await computeTopicResearch(candidate.seed, candidate.country, domainHost);
          await db.query(
-            "UPDATE topic_research_runs SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE topic_research_runs SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'",
             { replacements: [JSON.stringify(result), JSON.stringify(stats), candidate.id] },
          );
       } catch (e) {
          await db.query(
-            "UPDATE topic_research_runs SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE topic_research_runs SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'",
             { replacements: [getErrorMessage(e), candidate.id] },
          ).catch(() => { /* best effort */ });
       }

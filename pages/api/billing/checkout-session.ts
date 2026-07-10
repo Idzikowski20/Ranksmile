@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { BillingPeriod } from '../../../lib/billingPlans';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
-import { getOrgBillingState } from '../../../lib/orgBilling';
+import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
+import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
 import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
@@ -47,38 +48,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { orgId } = await ensureUserTenancy(user.id);
+  try { await assertCanManage(user.id); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billingState = await getOrgBillingState(orgId);
+  if (hasNonTerminalStripeSubscription(billingState)) {
+    return res.status(409).json({ error: 'An active Stripe subscription already exists for this organization' });
+  }
   const origin = getAppOrigin(req);
 
   const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/billing/checkout/${plan.slug}?billing=${billing}&mode=${mode}`,
-    customer: billingState?.stripeCustomerId ?? undefined,
-    customer_email: billingState?.stripeCustomerId ? undefined : user.email ?? undefined,
-    client_reference_id: String(orgId),
-    metadata: {
-      org_id: String(orgId),
-      user_id: user.id,
-      plan_slug: plan.slug,
-      billing_period: billing,
-      checkout_mode: mode,
-    },
-    subscription_data: {
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/billing/checkout/${plan.slug}?billing=${billing}&mode=${mode}`,
+      customer: billingState?.stripeCustomerId ?? undefined,
+      customer_email: billingState?.stripeCustomerId ? undefined : user.email ?? undefined,
+      client_reference_id: String(orgId),
       metadata: {
         org_id: String(orgId),
+        user_id: user.id,
         plan_slug: plan.slug,
         billing_period: billing,
+        checkout_mode: mode,
       },
-      ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
+      subscription_data: {
+        metadata: {
+          org_id: String(orgId),
+          plan_slug: plan.slug,
+          billing_period: billing,
+        },
+        ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
+      },
+      allow_promotion_codes: true,
+      billing_address_collection: 'auto',
+      tax_id_collection: { enabled: true },
     },
-    allow_promotion_codes: true,
-    billing_address_collection: 'auto',
-    tax_id_collection: { enabled: true },
-  });
+    { idempotencyKey: `org-${orgId}-checkout-${plan.slug}-${billing}-${mode}` },
+  );
 
   if (!session.url) return res.status(502).json({ error: 'Stripe did not return a checkout URL' });
   return res.status(200).json({ url: session.url });
