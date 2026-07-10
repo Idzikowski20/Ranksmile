@@ -68,7 +68,7 @@ export async function enqueueQueueRun(
 
 async function claimNextQueued(config: QueueRunnerConfig, domainId: number): Promise<QueueRunRow | null> {
   if (isPg) {
-    return queryOne<QueueRunRow>(
+    const claimed = await queryOne<QueueRunRow>(
       `UPDATE ${config.table} SET status = 'running', started_at = CURRENT_TIMESTAMP, progress_done = 0, progress_total = 1
        WHERE id = (
          SELECT id FROM ${config.table}
@@ -79,6 +79,7 @@ async function claimNextQueued(config: QueueRunnerConfig, domainId: number): Pro
        RETURNING id, seed, country`,
       [domainId],
     );
+    return claimed ?? null;
   }
   const candidate = await queryOne<QueueRunRow>(
     `SELECT id, seed, country FROM ${config.table} WHERE domain_id = ? AND status = 'queued' ORDER BY id ASC LIMIT 1`,
