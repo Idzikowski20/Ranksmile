@@ -4,6 +4,7 @@
 import type { CoverageItem, CoverageSnapshot, CoverageType, Importance } from './aiCoverage';
 import type { ArticleContext } from './articleContext';
 import { scoreContribution } from './coverage/derived/scoreContribution';
+import { isNewRecommendationsEnabled } from './featureFlags';
 
 export type GuidelineGroupKey = 'intent' | 'knowledge' | 'authority' | 'quality' | 'structure';
 export type GuidelineEffort = 'Easy' | 'Medium' | 'Large';
@@ -60,13 +61,28 @@ const INTENT_INSTRUCTIONS: Record<string, (subject: string) => string> = {
 
 const intentTemplate: TemplateFn = (item, context) => {
   const keyword = context?.keyword;
-  const subject = keyword ? `**${keyword}**` : 'the main question';
   const reasonSuffix = item.reason ? ` — currently: ${item.reason}` : '';
+  const citationStyle = isNewRecommendationsEnabled()
+    || item.id.startsWith('intent-citation-')
+    || (item.id.startsWith('citation-') && item.type === 'intent');
+  if (citationStyle) {
+    return {
+      title: item.label,
+      instruction: `Answer the user question "${item.label}" clearly in the article.${reasonSuffix}`,
+    };
+  }
   const build = INTENT_INSTRUCTIONS[item.id];
-  if (!build) return fallbackTemplate(item);
+  if (build) {
+    const subject = keyword ? `**${keyword}**` : 'the main question';
+    return {
+      title: item.label,
+      instruction: `${build(subject)}${reasonSuffix}`,
+    };
+  }
+  const checklist = bullets(item.missing);
   return {
     title: item.label,
-    instruction: `${build(subject)}${reasonSuffix}`,
+    instruction: `Answer this AI search prompt clearly in the article: **${item.label}**${reasonSuffix}.${checklist ? `\nStill missing:\n${checklist}` : ''}`,
   };
 };
 

@@ -123,7 +123,7 @@ const SkeletonRow = () => (
 /* ── Props ────────────────────────────────────────────────────────────────── */
 
 type KeywordTrackerPanelProps = {
-   domain: DomainType;
+   domain: DomainType | null;
    isConsoleConnected: boolean;
    router: NextRouter;
    scraperName: string;

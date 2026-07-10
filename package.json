@@ -14,10 +14,17 @@
     "lint": "next lint",
     "test": "jest --watch --verbose",
     "test:ci": "jest --ci",
+    "analyze": "cross-env ANALYZE=true next build",
+    "budget": "node scripts/check-bundle-budget.mjs",
+    "digitx:assets": "node scripts/download-digitx-assets.mjs",
     "test:cv": "jest --coverage --coverageDirectory='coverage'",
     "db:migrate": "sequelize-cli db:migrate --env production",
     "db:revert": "sequelize-cli db:migrate:undo --env production",
-    "release": "standard-version"
+    "release": "standard-version",
+    "stripe:seed": "tsx scripts/seed-stripe-products.ts",
+    "stripe:seed:cli": "powershell -ExecutionPolicy Bypass -File scripts/seed-stripe-products.ps1",
+    "stripe:login": "powershell -ExecutionPolicy Bypass -File scripts/stripe.ps1 login",
+    "stripe:listen": "powershell -ExecutionPolicy Bypass -File scripts/stripe.ps1 listen --forward-to localhost:3000/api/webhooks/stripe"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "3.0.1",
@@ -34,6 +41,8 @@
     "@neondatabase/auth": "^0.4.1-beta",
     "@sentry/nextjs": "^10.63.0",
     "@sparticuz/chromium-min": "^133.0.0",
+    "@stripe/react-stripe-js": "^6.7.0",
+    "@stripe/stripe-js": "^9.9.0",
     "@tiptap/extension-character-count": "3.23.4",
     "@tiptap/extension-details": "3.23.4",
     "@tiptap/extension-highlight": "^3.23.4",
@@ -95,10 +104,12 @@
     "sequelize": "^6.37.7",
     "sequelize-typescript": "^2.1.6",
     "sqlite3": "^5.1.7",
+    "stripe": "^22.3.0",
     "umzug": "^3.8.2",
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.10",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^14.0.0",
     "@types/cookies": "^0.7.7",
@@ -114,6 +125,7 @@
     "@types/react-timeago": "^4.1.3",
     "@types/react-window": "^1.8.5",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
     "eslint": "8.25.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-next": "12.3.1",

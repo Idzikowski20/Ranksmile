@@ -1,14 +1,19 @@
 import type { NextPage } from 'next';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import SourcesTable, { SourceRow } from '../../../../components/aiVisibility/SourcesTable';
-import SourceDetailModal from '../../../../components/aiVisibility/SourceDetailModal';
 import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
+
+const SourceDetailModal = dynamic(
+  () => import('../../../../components/aiVisibility/SourceDetailModal'),
+  { ssr: false },
+);
 
 const FONT = 'var(--font-family-primary)';
 
@@ -22,8 +27,11 @@ const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="no
 
 const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
 
+// Shared 3D "card" surface — matches the AI Visibility overview cards.
+const CARD_3D: React.CSSProperties = { border: '1px solid #DAD9DE', borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' };
+
 const StatCard = ({ label, value, hint, pending }: { label: string; value: string; hint: string; pending: boolean }) => (
-   <section style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+   <section style={{ ...CARD_3D, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#71717B', fontFamily: FONT }}>
          {label}
          <HoverTooltip label={hint} align="center"><span style={{ display: 'inline-flex', cursor: 'help' }}><InfoIcon /></span></HoverTooltip>
@@ -183,7 +191,7 @@ const AiVisibilitySources: NextPage = () => {
 
                   {/* Table */}
                   {tablePending ? (
-                     <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}><SkeletonRows count={8} withIcon /></div>
+                     <div style={{ ...CARD_3D, padding: 24 }}><SkeletonRows count={8} withIcon /></div>
                   ) : (
                      <SourcesTable
                         sources={filtered}

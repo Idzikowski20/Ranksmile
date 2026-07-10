@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WordPressExportModal from './WordPressExportModal';
@@ -200,7 +201,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           {featuredImage?.url ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e4e4e7' }}>
-                <img src={featuredImage.url} alt={featuredImage.alt || 'Featured'} style={{ width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                <Image src={featuredImage.url} alt={featuredImage.alt || 'Featured'} width={800} height={180} unoptimized style={{ width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block', height: 'auto' }} />
               </div>
               <input
                 type="text" value={featuredImage.alt} placeholder="Alt text…" readOnly={readOnly}

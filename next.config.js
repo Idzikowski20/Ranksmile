@@ -9,9 +9,13 @@ if (typeof globalThis.crypto === 'undefined') {
 
 const { version } = require('./package.json');
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: false,
+  swcMinify: true,
   output: 'standalone',
   // Lint is a separate step (`npm run lint`); don't fail the production build on
   // style-only ESLint rules. The codebase's inline-style density (per DESIGN.md)
@@ -21,6 +25,13 @@ const nextConfig = {
   // Next's build-time font inlining so the build doesn't fetch Google Fonts (which
   // hangs/times-out the page-data collection in restricted-network build environments).
   optimizeFonts: false,
+  images: {
+    domains: [
+      'lh3.googleusercontent.com',
+      'cdn.jsdelivr.net',
+      'avatars.githubusercontent.com',
+    ],
+  },
   async rewrites() {
     return [
       { source: '/content-editor', destination: '/articles' },
@@ -98,4 +109,4 @@ if (sentryWrapped.experimental) {
   delete sentryWrapped.experimental.serverComponentsExternalPackages;
 }
 
-module.exports = sentryWrapped;
+module.exports = withBundleAnalyzer(sentryWrapped);

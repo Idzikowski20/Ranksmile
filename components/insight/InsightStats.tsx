@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, type ChartData, type ChartOptions, type TooltipItem } from 'chart.js';
+import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+import '../../lib/chartSetup';
 
 type InsightStatsProps = {
    stats: SearchAnalyticsStat[],

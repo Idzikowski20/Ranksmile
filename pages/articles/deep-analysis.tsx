@@ -11,6 +11,7 @@ import {
   SentryPanelBody,
   SentryPanelHeader,
 } from '../../components/sentry-pages';
+import { WizardStepper } from '../../components/articles/NewContentWizard';
 import { useFetchDomains } from '../../services/domains';
 import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
 
@@ -33,6 +34,66 @@ interface StepState {
   label: string;
   status: StepStatus;
   errorMessage?: string;
+}
+
+type StageName = 'fetch_page' | 'scrape_serp' | 'classify_content' | 'extract_terms' | 'score_ranking' | 'ai_search' | 'finalizing' | 'done';
+
+const STAGE_ORDER: StageName[] = [
+  'fetch_page', 'scrape_serp', 'classify_content', 'extract_terms', 'score_ranking', 'ai_search', 'finalizing',
+];
+
+const STAGE_TO_STEPS: Record<string, string[]> = {
+  fetch_page: ['fetch', 'metadata', 'structure'],
+  scrape_serp: ['serp'],
+  classify_content: ['nlp'],
+  extract_terms: ['nlp'],
+  score_ranking: ['score'],
+  ai_search: [],
+  finalizing: ['image', 'save'],
+};
+
+const PAGE_RUN_PREFIX = 'serpbear-deep-analysis-page:';
+
+function pageRunKey(flow: string, urlStr: string, kwStr: string, domainId: string) {
+  return `${PAGE_RUN_PREFIX}${flow}:${urlStr}:${kwStr}:${domainId}`;
+}
+
+function readPageRun(key: string): { articleId: number; jobId: string } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { articleId?: number; jobId?: string };
+    if (parsed.articleId && parsed.jobId) return { articleId: parsed.articleId, jobId: parsed.jobId };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writePageRun(key: string, articleId: number, jobId: string) {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(key, JSON.stringify({ articleId, jobId }));
+}
+
+function clearPageRun(key: string) {
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(key);
+}
+
+function applyStageToSteps(stage: string, prev: StepState[]): StepState[] {
+  if (stage === 'done') return prev.map((s) => ({ ...s, status: 'done' as StepStatus }));
+  const stageIdx = STAGE_ORDER.indexOf(stage as StageName);
+  if (stageIdx === -1) return prev;
+  return prev.map((s) => {
+    for (let i = 0; i < stageIdx; i += 1) {
+      const completedStepKeys = STAGE_TO_STEPS[STAGE_ORDER[i]] || [];
+      if (completedStepKeys.includes(s.key)) return { ...s, status: 'done' as StepStatus };
+    }
+    const currentStepKeys = STAGE_TO_STEPS[stage] || [];
+    if (currentStepKeys.includes(s.key) && s.status !== 'done') return { ...s, status: 'running' as StepStatus };
+    return s;
+  });
 }
 
 const SearchEngineIcons = () => (
@@ -123,14 +184,19 @@ const DeepAnalysisPage: NextPage = () => {
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [legacyImporting, setLegacyImporting] = useState(false);
+  const [apiProgressPct, setApiProgressPct] = useState<number | null>(null);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastStageRef = useRef<string | null>(null);
 
   const urlStr = (url as string || '').trim();
   const kwStr = (kwParam as string || '');
   const keywords = kwStr ? kwStr.split(',').filter(Boolean) : [];
   const flow = (flowParam as string) || (urlStr ? 'import' : 'new');
+  const domainIdStr = (domainIdParam as string || '').trim();
+  const runSessionKey = useMemo(
+    () => pageRunKey(flow, urlStr, kwStr, domainIdStr),
+    [flow, urlStr, kwStr, domainIdStr],
+  );
   const backHref = flow === 'import' ? '/articles/import' : '/articles/new';
   const backLabel = flow === 'import' ? 'Back to import' : 'Back to new content';
 
@@ -171,26 +237,23 @@ const DeepAnalysisPage: NextPage = () => {
     return () => { cancelled = true; };
   }, [router.isReady, flow, urlStr, keywords, country, router]);
 
-  const STAGE_ORDER = ['fetch_page', 'scrape_serp', 'classify_content', 'extract_terms', 'score_ranking'] as const;
-  const STAGE_TO_STEPS: Record<string, string[]> = {
-    fetch_page: ['fetch', 'metadata', 'structure'],
-    scrape_serp: ['serp'],
-    classify_content: ['nlp'],
-    extract_terms: ['nlp'],
-    score_ranking: ['score'],
-  };
-
   useEffect(() => {
-    if (!router.isReady || startedRef.current || flow === 'import') return;
-    const domainIdStr = (domainIdParam as string || '').trim();
+    if (!router.isReady || startedRef.current || flow === 'import') return undefined;
     const isKeywordMode = !urlStr && keywords.length > 0 && !!domainIdStr;
     if (!urlStr && !isKeywordMode) {
       setOverallError('No URL or keyword provided.');
-      return;
+      return undefined;
+    }
+
+    const resumed = readPageRun(runSessionKey);
+    if (resumed) {
+      startedRef.current = true;
+      setArticleId(resumed.articleId);
+      setJobId(resumed.jobId);
+      return undefined;
     }
 
     startedRef.current = true;
-    const controller = new AbortController();
 
     (async () => {
       try {
@@ -202,18 +265,19 @@ const DeepAnalysisPage: NextPage = () => {
               ? { keywords, country: country || 'PL', domainId: Number(domainIdStr) }
               : { url: urlStr, keywords, country: country || 'PL' },
           ),
-          signal: controller.signal,
         });
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: 'Analysis failed' }));
           setOverallError(data.error || 'Analysis failed');
+          startedRef.current = false;
           return;
         }
 
         const reader = res.body?.getReader();
         if (!reader) {
           setOverallError('Stream not available');
+          startedRef.current = false;
           return;
         }
 
@@ -229,14 +293,11 @@ const DeepAnalysisPage: NextPage = () => {
             try {
               const data = JSON.parse(jsonStr);
               if (currentEvent === 'created') {
-                setArticleId(data.articleId);
-                if (data.jobId) setJobId(data.jobId);
-              } else if (currentEvent === 'progress') {
-                setSteps((prev) =>
-                  prev.map((s) =>
-                    s.key === data.step ? { ...s, status: data.status as StepStatus } : s,
-                  ),
-                );
+                if (data.articleId) setArticleId(data.articleId);
+                if (data.articleId && data.jobId) {
+                  setJobId(data.jobId);
+                  writePageRun(runSessionKey, data.articleId, data.jobId);
+                }
               } else if (currentEvent === 'error') {
                 setSteps((prev) =>
                   prev.map((s) =>
@@ -246,10 +307,12 @@ const DeepAnalysisPage: NextPage = () => {
                   ),
                 );
                 setOverallError(data.message || 'Analysis failed');
+                clearPageRun(runSessionKey);
               } else if (currentEvent === 'done') {
-                setArticleId(data.articleId);
+                if (data.articleId) setArticleId(data.articleId);
                 setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as StepStatus })));
                 setAllDone(true);
+                clearPageRun(runSessionKey);
               }
             } catch { /* skip parse errors from partial chunks */ }
             currentEvent = '';
@@ -268,71 +331,63 @@ const DeepAnalysisPage: NextPage = () => {
         }
         if (buffer.trim()) processLine(buffer.trim());
       } catch (err) {
-        const e = err as { name?: string; message?: string };
-        if (e.name !== 'AbortError') {
-          setOverallError(e.message || 'Connection lost');
-        }
+        const e = err as { message?: string };
+        setOverallError(e.message || 'Connection lost');
+        startedRef.current = false;
       }
     })();
 
-    return () => {
-      controller.abort();
-      startedRef.current = false;
-    };
-  }, [router.isReady, url, kwParam, country, domainIdParam, retryCount, urlStr, keywords, flow]);
+    return undefined;
+  }, [router.isReady, url, kwParam, country, domainIdParam, retryCount, urlStr, keywords, flow, domainIdStr, runSessionKey]);
 
   useEffect(() => {
-    if (!jobId || allDone || overallError) {
+    if ((!jobId && !articleId) || allDone || overallError) {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      return;
+      return undefined;
     }
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`);
+        const query = jobId
+          ? `jobId=${encodeURIComponent(jobId)}`
+          : `articleId=${articleId}`;
+        const res = await fetch(`/api/articles/job-progress?${query}`);
         if (!res.ok) return;
         const data = await res.json();
 
+        if (data.jobId && !jobId) setJobId(data.jobId);
+
         if (data.status === 'failed') {
           setOverallError(data.progressMessage || 'Analysis failed');
+          clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
         }
         if (data.status === 'done') {
+          setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as StepStatus })));
+          setAllDone(true);
+          clearPageRun(runSessionKey);
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
           return;
         }
 
+        if (typeof data.totalProgress === 'number') {
+          setApiProgressPct(Math.max(0, Math.min(100, data.totalProgress)));
+        }
+
         const stage = data.currentStage as string | undefined;
-        if (!stage || stage === lastStageRef.current) return;
-        lastStageRef.current = stage;
-
-        const stageIdx = STAGE_ORDER.indexOf(stage as typeof STAGE_ORDER[number]);
-        if (stageIdx === -1) return;
-
-        setSteps((prev) =>
-          prev.map((s) => {
-            for (let i = 0; i < stageIdx; i++) {
-              const completedStepKeys = STAGE_TO_STEPS[STAGE_ORDER[i]] || [];
-              if (completedStepKeys.includes(s.key) && s.status !== 'done') {
-                return { ...s, status: 'done' as StepStatus };
-              }
-            }
-            const currentStepKeys = STAGE_TO_STEPS[stage] || [];
-            if (currentStepKeys.includes(s.key) && s.status !== 'done') {
-              return { ...s, status: 'running' as StepStatus };
-            }
-            return s;
-          }),
-        );
+        if (stage) {
+          setSteps((prev) => applyStageToSteps(stage, prev));
+        }
       } catch { /* network errors are non-fatal for polling */ }
     };
 
+    void poll();
     pollRef.current = setInterval(poll, 1000);
     return () => {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     };
-  }, [jobId, allDone, overallError]);
+  }, [jobId, articleId, allDone, overallError, runSessionKey]);
 
   useEffect(() => {
     if (!allDone || !articleId) return undefined;
@@ -347,7 +402,7 @@ const DeepAnalysisPage: NextPage = () => {
   }, [allDone, articleId, flow, router]);
 
   const completedCount = steps.filter((s) => s.status === 'done').length;
-  const progressPct = Math.round((completedCount / STEPS.length) * 100);
+  const progressPct = apiProgressPct ?? Math.round((completedCount / STEPS.length) * 100);
 
   const subtitle = useMemo(() => {
     if (allDone) return 'Analysis complete — opening your article…';
@@ -368,7 +423,9 @@ const DeepAnalysisPage: NextPage = () => {
   const handleRetry = () => {
     setOverallError(null);
     setJobId(null);
+    setApiProgressPct(null);
     setSteps(STEPS.map((s) => ({ key: s.key, label: s.label, status: 'pending' })));
+    clearPageRun(runSessionKey);
     startedRef.current = false;
     setRetryCount((c) => c + 1);
   };
@@ -398,13 +455,14 @@ const DeepAnalysisPage: NextPage = () => {
         <title>Deep Analysis — SerpBear</title>
       </Head>
 
-      <SentryPage maxWidth={560}>
+      <SentryPage maxWidth={560} className={flow === 'new' ? 'nc-wizard-page' : undefined}>
         <SentryPageHeader
           borderless
           title="Deep analysis"
           subtitle={subtitle}
           meta={statusBadge}
         />
+        {flow === 'new' && <WizardStepper current="research" />}
 
         <div className="sentry-page-content">
           {sourceLabel && !overallError && (

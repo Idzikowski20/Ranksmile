@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import Image from 'next/image';
 
 type AvatarVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
 
@@ -23,7 +24,7 @@ const VARIANT_COLORS: Record<AvatarVariant, { bg: string; text: string }> = {
 };
 
 const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(
-  ({ src, alt = '', initials = '', size = 32, variant = 'primary', className = '', fallback = false, onError, ...rest }, ref) => {
+  ({ src, alt = '', initials = '', size = 32, variant = 'primary', className = '', fallback = false, onError }, ref) => {
     const [imgError, setImgError] = React.useState(false);
     const showImage = !!src && !fallback && !imgError;
     const initial = (initials || alt || '?').charAt(0).toUpperCase();
@@ -36,7 +37,16 @@ const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(
         aria-hidden={!alt ? 'true' : undefined}
       >
         {showImage ? (
-          <img alt={alt} src={src} className="sentry-avatar-image" referrerPolicy="no-referrer" onError={() => { setImgError(true); onError?.(); }} {...rest} />
+          <Image
+            alt={alt}
+            src={src}
+            width={size}
+            height={size}
+            className="sentry-avatar-image"
+            referrerPolicy="no-referrer"
+            unoptimized
+            onError={() => { setImgError(true); onError?.(); }}
+          />
         ) : (
           <span className="sentry-avatar-initial" style={{ background: colors.bg, color: colors.text }}>
             {initial}

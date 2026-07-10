@@ -37,7 +37,7 @@ const ToneIcon = ({ tone }: { tone: Tone }) => {
 
 // ─── Shared building blocks ───
 const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-   <div style={{ border: '1px solid #E4E4E7', borderRadius: 16, background: '#fff', padding: 24 }}>
+   <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 24 }}>
       <div style={{ fontSize: 18, fontWeight: 500, color: '#18181B', fontFamily: FONT, marginBottom: 16 }}>{title}</div>
       {children}
    </div>
@@ -161,10 +161,12 @@ const AuditDetailPage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`${run?.keyword || 'Audit'} — ${domain}`}</title></Head>
          <style>{'@keyframes spin{to{transform:rotate(360deg)}}@keyframes auditPulse{0%,100%{opacity:.5}50%{opacity:1}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" heading="Audit" contentMaxWidth="100%">
-            <div style={{ maxWidth: 1040, margin: '0 auto' }}>
-            {/* Sticky title row: keyword + audited URL + actions */}
-            <div style={{ position: 'sticky', top: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fff', padding: '16px 0', marginBottom: 4 }}>
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
+           <div style={{ width: '100%', maxWidth: 1040, margin: '0 auto', position: 'relative' }}>
+           {/* Progressive-blur fade at the top scroll edge (à la content editor) */}
+           <div aria-hidden style={{ position: 'sticky', top: 0, height: 72, marginBottom: -72, zIndex: 80, pointerEvents: 'none', background: 'linear-gradient(to bottom, #f8f8f9 30%, rgba(248,249,249,0))', WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, transparent 100%)', maskImage: 'linear-gradient(to bottom, #000 0%, transparent 100%)', WebkitBackdropFilter: 'blur(3px)', backdropFilter: 'blur(3px)' }} />
+           {/* Sticky title row: keyword + audited URL + actions */}
+              <div style={{ position: 'relative', zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'transparent', padding: '16px 0', marginBottom: 4 }}>
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, minWidth: 0 }}>
                   <Button type="button" variant="transparent" size="sm" onClick={() => router.push(`/sites/${slug}/audit-tool`)} aria-label="Back" style={{ color: '#71717B', fontSize: 18, padding: 0, flexShrink: 0 }}>‹</Button>
                   <span style={{ fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT, flexShrink: 0 }}>{run?.keyword || '…'}</span>
@@ -182,7 +184,7 @@ const AuditDetailPage: NextPage = () => {
             </div>
 
             {failed && (
-               <div style={{ border: '1px solid #FECACA', background: '#FEF2F2', borderRadius: 12, padding: 20, color: '#B91C1C', fontFamily: FONT, fontSize: 14 }}>
+               <div style={{ border: '1px solid #FECACA', boxShadow: '0 4px 0 0 #f6d5d5', background: '#FEF2F2', borderRadius: 12, padding: 20, color: '#B91C1C', fontFamily: FONT, fontSize: 14 }}>
                   {run?.status === 'failed' ? `Audit failed${run?.error ? `: ${run.error}` : '.'}` : 'Could not load this audit. Please try again.'}
                </div>
             )}
@@ -193,7 +195,7 @@ const AuditDetailPage: NextPage = () => {
                      <svg viewBox="0 0 24 24" width={16} height={16} style={{ animation: 'spin 0.7s linear infinite' }}><path fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M12 3a9 9 0 1 0 9 9" /></svg>
                      Analyzing the page…
                   </div>
-                  {[0, 1, 2].map((i) => <div key={i} style={{ border: '1px solid #E4E4E7', borderRadius: 16, height: 120, background: '#F8F8F9', animation: `auditPulse 1.4s ease-in-out ${i * 0.15}s infinite` }} />)}
+                  {[0, 1, 2].map((i) => <div key={i} style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, height: 120, background: '#F8F8F9', animation: `auditPulse 1.4s ease-in-out ${i * 0.15}s infinite` }} />)}
                </div>
             )}
 
@@ -297,6 +299,8 @@ const AuditDetailPage: NextPage = () => {
                   ))}
                </div>
             )}
+            {/* Progressive-blur fade at the bottom scroll edge (à la content editor) */}
+            <div aria-hidden style={{ position: 'sticky', bottom: 0, height: 80, marginTop: -80, zIndex: 80, pointerEvents: 'none', background: 'linear-gradient(to top, #f8f8f9 30%, rgba(248,249,249,0))', WebkitMaskImage: 'linear-gradient(to top, #000 0%, transparent 100%)', maskImage: 'linear-gradient(to top, #000 0%, transparent 100%)', WebkitBackdropFilter: 'blur(3px)', backdropFilter: 'blur(3px)' }} />
             </div>
          </DomainSubLayout>
 

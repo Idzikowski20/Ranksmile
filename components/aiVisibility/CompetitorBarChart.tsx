@@ -1,7 +1,7 @@
 import React from 'react';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const favicon = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 // A bar may be an "outsider": the compared competitor ranked outside the top-5, shown
 // as the last bar behind a dashed divider with its real rank (#N).
 type Bar = { domain: string; overview: { visibilityScore: number }; rank?: number; outsider?: boolean };
@@ -38,8 +38,7 @@ const CompetitorBarChart = ({ competitors, selected, onSelect }: { competitors: 
                   </div>
                   <div style={{ height: 1, width: '100%', background: '#F4F4F5' }} />
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '10px 0 0', maxWidth: '100%', padding: '0 8px' }}>
-                     { /* eslint-disable-next-line @next/next/no-img-element */ }
-                     <img alt="" src={favicon(c.domain)} width={16} height={16} style={{ borderRadius: 3, flexShrink: 0 }} />
+                     <DomainFavicon domain={c.domain} size={16} style={{ borderRadius: 3 }} />
                      <span title={c.domain} style={{ fontSize: 13, fontWeight: isSel ? 600 : 500, color: isSel ? '#18181B' : '#52525C', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.domain}</span>
                   </span>
                </button>

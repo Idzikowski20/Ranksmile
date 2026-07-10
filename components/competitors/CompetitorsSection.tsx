@@ -4,9 +4,9 @@ import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../
 import { Gauge } from '../core';
 import { Toggle } from '../core';
 import AuthorityBadge from './AuthorityBadge';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const favicon = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 const Spinner = () => (
    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.7s linear infinite' }}>
@@ -128,8 +128,7 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }
                               <td style={{ ...td, ...dim, maxWidth: 440 }}>
                                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                     <span style={{ display: 'inline-flex', flexShrink: 0, width: 16, height: 16, alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-                                       { /* eslint-disable-next-line @next/next/no-img-element */ }
-                                       <img alt="" src={favicon(c.domain)} width={16} height={16} style={{ display: 'block', width: 16, height: 16, objectFit: 'contain', borderRadius: 3 }} />
+                                       <DomainFavicon domain={c.domain} size={16} style={{ borderRadius: 3 }} />
                                     </span>
                                     <div style={{ minWidth: 0 }}>
                                        <a
