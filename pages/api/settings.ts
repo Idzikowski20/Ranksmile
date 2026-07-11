@@ -3,6 +3,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Cryptr from 'cryptr';
 import getConfig from 'next/config';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { assertCanManage } from '../../lib/members';
 import allScrapers from '../../scrapers/index';
 import { readSettingsBlob, writeSettingsBlob } from '../../lib/appSettingsStore';
 
@@ -15,6 +17,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
+   }
+   const userId = await getCurrentUserId(req, res);
+   if (userId) {
+      try {
+         await assertCanManage(userId);
+      } catch {
+         return res.status(403).json({ error: 'Admin only.' });
+      }
    }
    if (req.method === 'GET') {
       return getSettings(req, res);
