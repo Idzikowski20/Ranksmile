@@ -1,4 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import settingsHandler from '../../pages/api/settings';
+import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { assertCanManage } from '../../lib/members';
+import { readSettingsBlob } from '../../lib/appSettingsStore';
 
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('owner') }));
@@ -12,12 +17,6 @@ jest.mock('fs/promises', () => ({
   rename: jest.fn().mockResolvedValue(undefined),
   stat: jest.fn().mockRejectedValue(new Error('missing')),
 }));
-
-import settingsHandler from '../../pages/api/settings';
-import verifyUser from '../../utils/verifyUser';
-import { getCurrentUserId } from '../../utils/getUser';
-import { assertCanManage } from '../../lib/members';
-import { readSettingsBlob } from '../../lib/appSettingsStore';
 
 type MockResponse = {
   status: jest.Mock<MockResponse, [number]>;
