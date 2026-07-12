@@ -6,6 +6,8 @@ import { isDataForSeoConfigured } from './dataforseo';
 import { runModelPrompt } from './dataforseoLlm';
 import { hashId, type CoverageItem } from './aiCoverage';
 import { cached } from './cache/fileCache';
+import { buildCitationPrompts } from './citationPrompts';
+import { isCorpusNoiseSentence } from './corpusNoiseFilter';
 import type { AiCitation, AiVisibilitySummary } from './aiSearchScore';
 import type { ArticleFact, FactSourceKind } from './articleFactTypes';
 import { factReadinessScore } from './factReadiness';
@@ -49,16 +51,7 @@ function mergeFact(
   });
 }
 
-function extractFromCorpus(corpusTexts: string[], map: Map<string, ArticleFact>): void {
-  for (const raw of corpusTexts) {
-    const plain = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    for (const sentence of splitFactSentences(plain)) {
-      mergeFact(map, sentence, { kind: 'serp' });
-    }
-  }
-}
-
-/** Fetch facts from competitor corpus + DataForSEO LLM engines (Option B). */
+/** Fetch citation prompts + LLM answers for AI visibility scoring. */
 export async function fetchArticleFacts(opts: {
   keyword: string;
   corpusTexts?: string[];
@@ -81,25 +74,24 @@ async function fetchArticleFactsUncached(opts: {
   country?: string;
 }): Promise<ArticleFact[]> {
   const map = new Map<string, ArticleFact>();
-  const corpus = (opts.corpusTexts || []).filter(Boolean).slice(0, 20);
-  extractFromCorpus(corpus, map);
-
   const keyword = opts.keyword.trim();
   const country = opts.country || 'PL';
 
+  const citationPrompts = buildCitationPrompts(keyword, [], 12);
+  for (const prompt of citationPrompts) {
+    mergeFact(map, prompt, { kind: 'serp' });
+  }
+
   if (keyword && isDataForSeoConfigured()) {
-    const prompts = [
-      keyword,
-      `Jakie są najważniejsze informacje o: ${keyword}?`,
-    ];
     const models = ['ai_overview', 'chat_gpt'] as const;
     const tasks: Promise<void>[] = [];
     for (const model of models) {
-      for (const prompt of prompts) {
+      for (const prompt of citationPrompts.slice(0, 5)) {
         tasks.push(
           runModelPrompt(model, prompt, country)
             .then((ans) => {
               for (const sentence of splitFactSentences(ans.text)) {
+                if (isCorpusNoiseSentence(sentence)) continue;
                 const cite = ans.citations[0];
                 mergeFact(map, sentence, {
                   kind: model,
@@ -117,7 +109,7 @@ async function fetchArticleFactsUncached(opts: {
 
   return Array.from(map.values())
     .sort((a, b) => b.sourceFrequency - a.sourceFrequency)
-    .slice(0, 45);
+    .slice(0, 30);
 }
 
 /** Map facts → AiVisibilitySummary citations for editor UI + legacy store. */
@@ -125,7 +117,9 @@ export function factsToVisibilitySummary(
   facts: ArticleFact[],
   articleText: string,
 ): AiVisibilitySummary {
-  const citations: AiCitation[] = facts.map((f) => {
+  const citations: AiCitation[] = facts
+    .filter((f) => f.text.includes('?') || /^(czy|jak|ile|polecany|najlepsz)/i.test(f.text))
+    .map((f) => {
     const readiness = factReadinessScore(articleText, f.text);
     const src = f.sources[0];
     return {

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HoverTooltip, Button } from '../core';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 export type SourceBrand = { domain: string; brand: string };
 export type SourceRow = { url: string; domain: string; timesShown: number; models: string[]; mentioned?: boolean; brands?: SourceBrand[]; compMentioned?: boolean };
@@ -13,7 +13,6 @@ export const splitSourceUrl = (url: string, fallback: string): { host: string; p
 };
 
 const PAGE_SIZE = 50;
-const GRAY_FALLBACK = 'https://www.google.com/s2/favicons?domain=example.com&sz=32';
 
 const ChevronRight = ({ open }: { open: boolean }) => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -38,8 +37,13 @@ const BrandStack = ({ brands }: { brands: SourceBrand[] }) => {
    return (
       <span style={{ display: 'inline-flex', alignItems: 'center' }}>
          {shown.map((b, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={b.brand} alt="" title={b.brand} src={b.domain ? faviconFor(b.domain) : GRAY_FALLBACK} width={16} height={16} style={{ borderRadius: 9999, border: '1px solid #fff', marginLeft: i ? -5 : 0, background: '#fff', opacity: b.domain ? 1 : 0.4 }} />
+            <span key={b.brand} title={b.brand} style={{ marginLeft: i ? -5 : 0, display: 'inline-flex' }}>
+               <DomainFavicon
+                  domain={b.domain || 'example.com'}
+                  size={16}
+                  style={{ borderRadius: 9999, border: '1px solid #fff', background: '#fff', opacity: b.domain ? 1 : 0.4 }}
+               />
+            </span>
          ))}
          {brands.length > 3 ? <span style={{ marginLeft: 6, fontSize: 13, color: '#71717B' }}>+{brands.length - 3}</span> : null}
       </span>
@@ -55,8 +59,7 @@ const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: 
    <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, position: 'relative', gap: 8, paddingLeft: indent ? 44 : 16 }}>
       <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, fillPct)}%`, background: 'linear-gradient(to right, rgba(244,244,245,0), #F0F0F2)', pointerEvents: 'none' }} />
       {chevronOpen !== undefined ? <span style={{ zIndex: 1, display: 'inline-flex', color: '#71717B' }}><ChevronRight open={chevronOpen} /></span> : null}
-      { /* eslint-disable-next-line @next/next/no-img-element */ }
-      <img alt="" src={faviconFor(icon)} width={20} height={20} style={{ borderRadius: 4, flexShrink: 0, zIndex: 1 }} />
+      <DomainFavicon domain={icon} size={20} style={{ zIndex: 1 }} />
       <span style={{ zIndex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, fontFamily: FONT }}>
          <span style={{ fontWeight: 600, color: '#18181B' }}>{host}</span>
          <span style={{ color: '#9F9FA9' }}>{path}</span>
@@ -135,14 +138,14 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    const remaining = Math.max(0, total - visible);
 
    if (!sources.length) {
-      return <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
+      return <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
    }
 
    // Compare mode: two Mentioned columns ({you} vs {competitor}) + Price, no Brands/grouping.
    if (compare) {
       const truncLabel: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
       return (
-         <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' }}>
+         <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
             <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>
                <div style={{ ...headCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.ownLabel} Mentioned`}><HeadTip label={`${compare.ownLabel} Mentioned`} tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></span></div>
@@ -178,7 +181,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    }
 
    return (
-      <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' }}>
+      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
          {/* Header */}
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>

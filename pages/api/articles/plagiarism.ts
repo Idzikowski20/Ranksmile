@@ -6,6 +6,8 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { callSidecar } from '../../../lib/sidecar';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -19,6 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    const { articleId } = req.body;
    if (!articleId) return res.status(400).json({ error: 'articleId is required' });
+
+   const userId = await getCurrentUserId(req, res);
+   if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      return res.status(403).json({ error: 'Access denied.' });
+   }
 
    try {
       const articleIdSql = await getArticleIdSql();

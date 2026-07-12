@@ -1,12 +1,12 @@
 /* eslint-disable import/no-unresolved */
-import '@neondatabase/auth-ui/css';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 // @ts-ignore
 import { AuthView } from '@neondatabase/auth/react';
+import AuthShell from '../../components/auth/AuthShell';
 
 const SignUp: NextPage = () => (
-   <>
+   <AuthShell>
       <Head>
          <title>Sign up - SerpBear</title>
       </Head>
@@ -19,7 +19,7 @@ const SignUp: NextPage = () => (
       }}>
          <AuthView path="sign-up" redirectTo="/" />
       </div>
-   </>
+   </AuthShell>
 );
 
 export default SignUp;

@@ -1,14 +1,14 @@
 /* eslint-disable import/no-unresolved */
-import '@neondatabase/auth-ui/css';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 // @ts-ignore
 import { AuthView } from '@neondatabase/auth/react';
+import AuthShell from '../../components/auth/AuthShell';
 
 const PAGE_PATH = 'two-factor';
 
 const AuthPage: NextPage = () => (
-   <>
+   <AuthShell>
       <Head><title>SerpBear</title></Head>
       <div style={{
          minHeight: '100vh',
@@ -19,7 +19,7 @@ const AuthPage: NextPage = () => (
       }}>
          <AuthView path={PAGE_PATH} redirectTo="/" />
       </div>
-   </>
+   </AuthShell>
 );
 
 export default AuthPage;

@@ -5,6 +5,16 @@ import { useRouter } from 'next/router';
 import React from 'react';
 import toast from 'react-hot-toast';
 import AppShell from '../../../components/common/AppShell';
+import { Button } from '../../../components/core';
+import {
+  addressFromStripeEvent,
+  CheckoutCompanyFields,
+  CheckoutStripePayment,
+  CheckoutStripeProvider,
+  type CheckoutStripeHandle,
+  type CompanyState,
+} from '../../../components/billing/CheckoutStripeProvider';
+import type { CheckoutFieldErrors } from '../../../lib/checkoutValidation';
 import {
   BillingPeriod,
   CheckoutPlan,
@@ -14,6 +24,7 @@ import {
   getPlanPeriodPrice,
   getTrialEndDateLabel,
 } from '../../../lib/billingPlans';
+import { isStripeCheckoutConfigured, type PlanSlug } from '../../../lib/stripePrices';
 
 const F = 'var(--font-family-primary)';
 
@@ -55,31 +66,56 @@ const LockIcon = () => (
   </svg>
 );
 
-const Input = ({ placeholder = '', disabled = false }: { placeholder?: string; disabled?: boolean }) => (
+const Input = ({
+  placeholder = '',
+  disabled = false,
+  value,
+  onChange,
+  type = 'text',
+  hasError = false,
+  autoComplete,
+}: {
+  placeholder?: string;
+  disabled?: boolean;
+  value?: string;
+  onChange?: (value: string) => void;
+  type?: string;
+  hasError?: boolean;
+  autoComplete?: string;
+}) => (
   <input
+    type={type}
     disabled={disabled}
+    value={value}
+    onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+    autoComplete={autoComplete}
     placeholder={placeholder}
     style={{
       width: '100%',
       height: 38,
-      border: '1px solid #D4D4D8',
+      border: `1px solid ${hasError ? '#FF6F77' : '#D4D4D8'}`,
       borderRadius: 10,
       padding: '0 10px',
       fontSize: 14,
       fontFamily: F,
       color: '#18181B',
       background: disabled ? '#F8F8F9' : '#fff',
-      boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
+      boxShadow: hasError ? '0 0 0 2px rgba(255,111,119,0.12)' : disabled ? 'none' : '0px 2px 0px 0px #DAD9DE',
       outline: 'none',
       boxSizing: 'border-box',
     }}
   />
 );
 
-const Field = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
+const FieldError = ({ message }: { message?: string }) => (
+  message ? <span style={{ fontSize: 13, color: '#FF6F77', lineHeight: '18px' }} role="alert">{message}</span> : null
+);
+
+const Field = ({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) => (
   <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>
     {label}
     {children}
+    <FieldError message={error} />
     {hint && <span style={{ fontSize: 13, fontWeight: 400, color: '#3F3F47', lineHeight: '20px' }}>{hint}</span>}
   </label>
 );
@@ -95,9 +131,12 @@ type CheckoutProps = {
   trialStartLabel: string;
   trialEndLabel: string;
   nextChargeLabel: string;
+  stripeCheckoutEnabled: boolean;
 };
 
-const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStartLabel, trialEndLabel, nextChargeLabel }) => {
+const CheckoutPage: NextPage<CheckoutProps> = ({
+  plan, billing, mode, trialStartLabel, trialEndLabel, nextChargeLabel, stripeCheckoutEnabled,
+}) => {
   const isUpfront = mode === 'upfront';
   const router = useRouter();
   const [countryOpen, setCountryOpen] = React.useState(false);
@@ -159,17 +198,90 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
     ));
   };
 
-  return (
-    <AppShell domains={[]} showAddModal={() => {}} showSettings={() => {}} showSidebar={false} hideMobileNav>
-      <Head><title>{isUpfront ? 'Complete your purchase' : 'Start your trial'} - SerpBear</title></Head>
-      <style>{`
-        .checkout-grid { display: grid; grid-template-columns: minmax(0, 1fr) 328px; gap: 20px; align-items: start; }
-        @media (max-width: 960px) { .checkout-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 640px) { .checkout-page { padding: 16px !important; } .checkout-card { padding: 16px !important; } }
-      `}</style>
-      <div className="relative flex-1 overflow-auto rounded-xl bg-white-base [color-scheme:light] styled-scrollbar">
-        <div className="checkout-page" style={{ color: '#18181B', fontFamily: F, padding: '48px 24px', boxSizing: 'border-box' }}>
-          <div style={{ width: '100%', maxWidth: 1094, margin: '0 auto' }}>
+  const [checkoutLoading, setCheckoutLoading] = React.useState(false);
+  const stripeRef = React.useRef<CheckoutStripeHandle>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<CheckoutFieldErrors>({});
+  const [company, setCompany] = React.useState<CompanyState>({
+    billingEmail: '',
+    taxId: '',
+    addressComplete: false,
+    addressValue: null,
+  });
+
+  // Mock card fields (dev / no Stripe)
+  const [cardholderName, setCardholderName] = React.useState('');
+  const [cardNumber, setCardNumber] = React.useState('');
+  const [cardExpiry, setCardExpiry] = React.useState('');
+  const [cardCvc, setCardCvc] = React.useState('');
+  const [mockErrors, setMockErrors] = React.useState<Record<string, string>>({});
+
+  const handleAddressChange = React.useCallback((event: Parameters<typeof addressFromStripeEvent>[0]) => {
+    const parsed = addressFromStripeEvent(event);
+    setCompany((prev) => ({
+      ...prev,
+      addressComplete: parsed.complete,
+      addressValue: parsed.value,
+    }));
+    setFieldErrors((prev) => ({ ...prev, address: undefined, taxId: undefined }));
+  }, []);
+
+  const validateMockCard = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!cardholderName.trim() || cardholderName.trim().length < 2) {
+      errors.cardholderName = 'Enter the cardholder name';
+    }
+    const digits = cardNumber.replace(/\s/g, '');
+    if (!/^\d{13,19}$/.test(digits)) {
+      errors.cardNumber = 'Enter a valid card number';
+    }
+    if (!/^\d{2}\/\d{2}$/.test(cardExpiry.trim())) {
+      errors.cardExpiry = 'Use MM/YY format';
+    }
+    if (!/^\d{3,4}$/.test(cardCvc.trim())) {
+      errors.cardCvc = 'Enter a valid CVC';
+    }
+    if (!stripeCheckoutEnabled && !isUpfront && !country) {
+      errors.country = 'Select your country';
+    }
+    setMockErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleTrialStart = async () => {
+    if (stripeCheckoutEnabled) {
+      await stripeRef.current?.submit();
+      return;
+    }
+    if (!validateMockCard()) {
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
+    goToDashboardWithTrialToast();
+  };
+
+  const handleUpfrontPurchase = async () => {
+    if (stripeCheckoutEnabled) {
+      await stripeRef.current?.submit();
+      return;
+    }
+    if (!validateMockCard()) {
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
+    goToDashboardWithPurchaseToast();
+  };
+
+  const handleStripeSuccess = () => {
+    if (isUpfront) goToDashboardWithPurchaseToast();
+    else goToDashboardWithTrialToast();
+  };
+
+  const handleStripeError = (message: string) => {
+    toast.error(message);
+  };
+
+  const checkoutBody = (
+    <>
           <h1 style={{ margin: '0 0 28px', textAlign: 'center', fontSize: 24, lineHeight: '32px', fontWeight: 700, letterSpacing: 0 }}>
             {isUpfront ? `Finalize your order for the ${plan.name} plan` : 'Try Surfer free for 7 days'}
           </h1>
@@ -188,7 +300,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                     </a>
                   </Link>
                 </div>
-                <div className="checkout-card" style={{ border: '2px solid #18181B', borderRadius: 12, padding: 16, background: '#fff' }}>
+                <div className="checkout-card" style={{ border: '2px solid #18181B', borderRadius: 12, padding: 16, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, lineHeight: '20px' }}>{plan.name}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 6, marginTop: 4, fontSize: 14, lineHeight: '20px' }}>
                     {isYearly && <span style={{ color: '#71717B', textDecoration: 'line-through' }}>{formatEuro(originalYearPrice)}/year</span>}
@@ -198,7 +310,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                 </div>
               </section>
 
-              <section className="checkout-card" style={{ border: '1px solid #E4E4E7', borderRadius: 12, padding: 20, background: '#fff' }}>
+              <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#fff' }}>
                 <h2 style={{ margin: '0 0 12px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Plan Features</h2>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {plan.features.map((feature) => (
@@ -210,10 +322,12 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                 </ul>
               </section>
 
-              <section className="checkout-card" style={{ border: '1px solid #E4E4E7', borderRadius: 12, padding: 20, background: '#fff' }}>
+              <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#fff' }}>
                 <h2 style={{ margin: '0 0 18px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Payment Details</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
-                  {isUpfront ? (
+                  {stripeCheckoutEnabled ? (
+                    <CheckoutStripePayment />
+                  ) : isUpfront ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <span style={{ fontSize: 14 }}>Cardholder name: {MOCK_CARDHOLDER}</span>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -222,20 +336,52 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                           <span style={{ fontSize: 14 }}><span style={{ paddingRight: 2 }}>•••• •••• ••••</span> 3692</span>
                           <span style={{ fontSize: 14, paddingLeft: 8 }}><span style={{ color: '#71717B' }}>Exp: </span>7/2031</span>
                         </div>
-                        <button type="button" style={{ padding: '10px 20px', borderRadius: 10, background: '#F4F4F5', color: '#18181B', border: 'none', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}>Update</button>
+                        <Button type="button" variant="secondary" size="sm">Update</Button>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <Field label="Cardholder Name"><Input placeholder="e.g. John Doe" /></Field>
-                      <Field label="Card Number"><Input placeholder="Card Number" /></Field>
+                      <Field label="Cardholder Name" error={mockErrors.cardholderName}>
+                        <Input
+                          placeholder="e.g. John Doe"
+                          value={cardholderName}
+                          onChange={setCardholderName}
+                          hasError={Boolean(mockErrors.cardholderName)}
+                          autoComplete="cc-name"
+                        />
+                      </Field>
+                      <Field label="Card Number" error={mockErrors.cardNumber}>
+                        <Input
+                          placeholder="Card Number"
+                          value={cardNumber}
+                          onChange={setCardNumber}
+                          hasError={Boolean(mockErrors.cardNumber)}
+                          autoComplete="cc-number"
+                        />
+                      </Field>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        <Field label="Expiration Date"><Input placeholder="MM/YY" /></Field>
-                        <Field label="CVC"><Input placeholder="CVC" /></Field>
+                        <Field label="Expiration Date" error={mockErrors.cardExpiry}>
+                          <Input
+                            placeholder="MM/YY"
+                            value={cardExpiry}
+                            onChange={setCardExpiry}
+                            hasError={Boolean(mockErrors.cardExpiry)}
+                            autoComplete="cc-exp"
+                          />
+                        </Field>
+                        <Field label="CVC" error={mockErrors.cardCvc}>
+                          <Input
+                            placeholder="CVC"
+                            value={cardCvc}
+                            onChange={setCardCvc}
+                            hasError={Boolean(mockErrors.cardCvc)}
+                            autoComplete="cc-csc"
+                          />
+                        </Field>
                       </div>
                     </>
                   )}
-                  {isUpfront ? (
+                  {!stripeCheckoutEnabled && (isUpfront ? (
                     <Field label="Country">
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', height: 42, border: '1px solid #D4D4D8', borderRadius: 10, background: '#F8F8F9', padding: '0 12px', opacity: 0.75 }}>
                         <span style={{ flex: 1, fontSize: 14, color: '#18181B' }}>Poland</span>
@@ -246,14 +392,14 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                     </Field>
                   ) : (
                   <div style={{ position: 'relative' }}>
-                    <Field label="Country">
+                    <Field label="Country" error={mockErrors.country}>
                       <button
                         type="button"
                         onClick={() => setCountryOpen((open) => !open)}
                         style={{
                           width: '100%',
                           height: 42,
-                          border: '1px solid #D4D4D8',
+                          border: `1px solid ${mockErrors.country ? '#FF6F77' : '#D4D4D8'}`,
                           borderRadius: 10,
                           background: '#fff',
                           padding: '0 12px',
@@ -263,7 +409,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                           fontSize: 14,
                           fontFamily: F,
                           color: country ? '#18181B' : '#52525C',
-                          boxShadow: countryOpen ? '0 0 0 2px rgba(120,58,251,0.1)' : '0px 1px 2px 0px rgba(26,29,40,0.06)',
+                          boxShadow: countryOpen ? '0 0 0 2px rgba(120,58,251,0.1)' : '0px 2px 0px 0px #DAD9DE',
                           cursor: 'pointer',
                         }}
                       >
@@ -288,16 +434,36 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                       </div>
                     )}
                   </div>
-                  )}
+                  ))}
                 </div>
               </section>
 
-              <section className="checkout-card" style={{ border: '1px solid #E4E4E7', borderRadius: 12, padding: 20, background: '#F8F8F9' }}>
+              <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#F8F8F9' }}>
                 <h2 style={{ margin: 0, fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Company Information (Optional)</h2>
                 <p style={{ margin: '4px 0 16px', fontSize: 14, lineHeight: '20px', color: '#3F3F47' }}>If you&apos;d like your company details listed on your invoices, enter them here</p>
                 <div style={{ display: 'grid', gap: 14 }}>
-                  <Field label="Billing email" hint="Fill in to receive invoices on an email address other than the one associated with your account"><Input /></Field>
-                  <Field label="Tax ID" hint={country ? 'Tax ID will be shown on your invoices.' : 'Please select a country to be able to add a tax ID'}><Input disabled={!country} /></Field>
+                  {stripeCheckoutEnabled ? (
+                    <CheckoutCompanyFields
+                      billingEmail={company.billingEmail}
+                      taxId={company.taxId}
+                      fieldErrors={fieldErrors}
+                      onBillingEmailChange={(v) => {
+                        setCompany((p) => ({ ...p, billingEmail: v }));
+                        setFieldErrors((e) => ({ ...e, billingEmail: undefined }));
+                      }}
+                      onTaxIdChange={(v) => {
+                        setCompany((p) => ({ ...p, taxId: v }));
+                        setFieldErrors((e) => ({ ...e, taxId: undefined }));
+                      }}
+                    />
+                  ) : (
+                    <>
+                  <Field label="Billing email" hint="Fill in to receive invoices on an email address other than the one associated with your account">
+                    <Input />
+                  </Field>
+                  <Field label="Tax ID" hint={country ? 'Tax ID will be shown on your invoices.' : 'Please select a country to be able to add a tax ID'}>
+                    <Input disabled={!country} />
+                  </Field>
                   <Field label="Name/Company name"><Input /></Field>
                   <Field label="Address"><Input /></Field>
                   <Field label="City"><Input /></Field>
@@ -305,13 +471,15 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                     <Field label="State/Province/Region"><Input /></Field>
                     <Field label="ZIP Code"><Input /></Field>
                   </div>
+                    </>
+                  )}
                 </div>
               </section>
             </div>
 
             <aside style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {isUpfront ? (
-                <section style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: 20 }}>
+                <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
                   <h2 style={{ margin: '0 0 16px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Order summary</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -327,15 +495,9 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                       <span style={{ fontSize: 18, fontWeight: 500, textTransform: 'uppercase' }}>Total today</span>
                       <span style={{ fontSize: 24, fontWeight: 500 }}>{formatEuro2(totalToday)}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={goToDashboardWithPurchaseToast}
-                      style={{ width: '100%', background: '#18181B', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 16px', fontSize: 16, fontWeight: 700, fontFamily: F, cursor: 'pointer', transition: 'background 150ms ease' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
-                    >
+                    <Button type="button" variant="primary" size="md" onClick={handleUpfrontPurchase} disabled={checkoutLoading} style={{ width: '100%' }}>
                       Pay {formatEuro2(totalToday)}
-                    </button>
+                    </Button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, lineHeight: '20px', fontWeight: 600 }}>
                       <InfoIcon />
                       <span>You will be charged every {isYearly ? 'year' : 'month'} until canceled. The next payment will be charged at {nextChargeLabel}.</span>
@@ -344,7 +506,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                 </section>
               ) : (
               <>
-              <section style={{ background: '#F8F8F9', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <section style={{ background: '#F8F8F9', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <h2 style={{ margin: 0, fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>How your free trial works</h2>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: '22px' }}>Your free trial includes a 7-day access to our most popular plan - <strong>{plan.name}</strong>.</p>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10, fontSize: 14 }}>
@@ -367,20 +529,20 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
                 </div>
               </section>
 
-              <section style={{ background: '#fff', border: '1px solid #E4E4E7', borderRadius: 12, padding: 20 }}>
+              <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
                 <h2 style={{ margin: '0 0 14px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Order Summary</h2>
-                <button
-                  type="button"
-                  onClick={goToDashboardWithTrialToast}
-                  style={{ width: '100%', background: '#18181B', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 14, lineHeight: '20px', fontWeight: 700, fontFamily: F, cursor: 'pointer', transition: 'background 150ms ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
-                >
+                <Button type="button" variant="primary" size="md" onClick={handleTrialStart} disabled={checkoutLoading} style={{ width: '100%' }}>
                   Start my trial
-                </button>
-                <a href={`/billing/checkout/${plan.slug}?billing=${billing}&mode=upfront`} style={{ display: 'block', textAlign: 'center', boxSizing: 'border-box', marginTop: 12, width: '100%', background: '#fff', color: '#3F3F47', border: '1px solid #E4E4E7', borderRadius: 8, padding: '9px 14px', fontSize: 14, lineHeight: '20px', fontWeight: 700, fontFamily: F, cursor: 'pointer', textDecoration: 'none' }}>
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => router.push(`/billing/checkout/${plan.slug}?billing=${billing}&mode=upfront`)}
+                  style={{ width: '100%', marginTop: 12 }}
+                >
                   Skip trial and buy {plan.name} now
-                </a>
+                </Button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, fontSize: 14, lineHeight: '20px', fontWeight: 600 }}>
                   <InfoIcon />
                   <span>On {trialEndLabel}, you will be charged {formatEuro(periodPrice)} for the {plan.name} plan.</span>
@@ -401,6 +563,37 @@ const CheckoutPage: NextPage<CheckoutProps> = ({ plan, billing, mode, trialStart
               )}
             </aside>
           </div>
+    </>
+  );
+
+  return (
+    <AppShell domains={[]} showAddModal={() => {}} showSettings={() => {}} showSidebar={false} hideMobileNav>
+      <Head><title>{isUpfront ? 'Complete your purchase' : 'Start your trial'} - SerpBear</title></Head>
+      <style>{`
+        .checkout-grid { display: grid; grid-template-columns: minmax(0, 1fr) 328px; gap: 20px; align-items: start; }
+        @media (max-width: 960px) { .checkout-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .checkout-page { padding: 16px !important; } .checkout-card { padding: 16px !important; } }
+      `}</style>
+      <div className="relative flex-1 overflow-auto rounded-xl bg-white-base [color-scheme:light] styled-scrollbar">
+        <div className="checkout-page" style={{ color: '#18181B', fontFamily: F, padding: '48px 24px', boxSizing: 'border-box' }}>
+          <div style={{ width: '100%', maxWidth: 1094, margin: '0 auto' }}>
+          {stripeCheckoutEnabled ? (
+            <CheckoutStripeProvider
+              ref={stripeRef}
+              planSlug={plan.slug}
+              billing={billing}
+              mode={mode}
+              company={company}
+              fieldErrors={fieldErrors}
+              onFieldErrors={setFieldErrors}
+              onAddressChange={handleAddressChange}
+              onSuccess={handleStripeSuccess}
+              onError={handleStripeError}
+              onSubmittingChange={setCheckoutLoading}
+            >
+              {checkoutBody}
+            </CheckoutStripeProvider>
+          ) : checkoutBody}
         </div>
         </div>
       </div>
@@ -438,6 +631,7 @@ export const getServerSideProps: GetServerSideProps<CheckoutProps> = async (ctx)
       trialStartLabel: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
       trialEndLabel: getTrialEndDateLabel(now),
       nextChargeLabel,
+      stripeCheckoutEnabled: isStripeCheckoutConfigured(plan.slug as PlanSlug, billing),
     },
   };
 };

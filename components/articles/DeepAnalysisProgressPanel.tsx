@@ -1,5 +1,6 @@
 import React from 'react';
 import type { DeepAnalysisUiState, DeepAnalysisUiStep } from '../../lib/deepAnalysisProgress';
+import DomainFavicon from '../common/DomainFavicon';
 
 const Spinner = () => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.8s linear infinite' }}>
@@ -54,14 +55,7 @@ const StepRow = ({ step }: { step: DeepAnalysisUiStep }) => {
             overflow: 'hidden',
           }}
         >
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(step.detail.split(' ')[0])}&sz=16`}
-            alt=""
-            width={14}
-            height={14}
-            style={{ flexShrink: 0, borderRadius: 2 }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+          <DomainFavicon domain={step.detail.split(' ')[0]} size={14} style={{ borderRadius: 2 }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{step.detail}</span>
         </div>
       )}

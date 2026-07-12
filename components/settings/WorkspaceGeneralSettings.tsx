@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { useWorkspaces, useRenameWorkspace, useDeleteWorkspace, Workspace } from '../../services/workspaces';
 import { useWorkspaceSettings, useUpdateWorkspaceLogo } from '../../services/workspaceSettings';
 import ConfirmModal from '../common/ConfirmModal';
 import { Button, Input } from '../core';
 import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
+import { faviconUrl } from '../../lib/faviconUrl';
 
 const font = 'var(--font-family-primary)';
 
@@ -71,7 +73,7 @@ const WorkspaceGeneralSettings = () => {
   }, []);
 
   const domain = current?.domain ? cleanDomain(current.domain) : '';
-  const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
+  const workspaceFaviconSrc = domain ? faviconUrl(domain, 64) : '';
   const storedLogo = settings?.logoUrl || null;
   const displayLogo = pendingLogo || storedLogo;
   const country = settings?.country || null;
@@ -138,7 +140,7 @@ const WorkspaceGeneralSettings = () => {
                 width: 64,
                 height: 64,
                 borderRadius: 8,
-                background: displayLogo || (faviconUrl && !faviconError) ? 'transparent' : 'rgba(120,58,251,0.10)',
+                background: displayLogo || (workspaceFaviconSrc && !faviconError) ? 'transparent' : 'rgba(120,58,251,0.10)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -147,9 +149,16 @@ const WorkspaceGeneralSettings = () => {
               }}
             >
               {displayLogo ? (
-                <img src={displayLogo} alt="Workspace logo" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} />
-              ) : faviconUrl && !faviconError ? (
-                <img src={faviconUrl} alt="Workspace favicon" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} onError={() => setFaviconError(true)} />
+                <Image
+                  src={displayLogo}
+                  alt="Workspace logo"
+                  width={64}
+                  height={64}
+                  unoptimized
+                  style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }}
+                />
+              ) : workspaceFaviconSrc && !faviconError ? (
+                <img src={workspaceFaviconSrc} alt="Workspace favicon" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} onError={() => setFaviconError(true)} />
               ) : (
                 <span style={{ fontSize: 20, fontWeight: 600, color: '#783AFB', textTransform: 'uppercase', fontFamily: font, userSelect: 'none' }}>
                   {initial}

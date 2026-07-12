@@ -78,9 +78,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       device = 'Desktop',
       domainId: bodyDomainId,
       startAnalysis = false,
+      extractOnly = false,
    } = req.body;
 
-   if (!url) {
+   if (!url || typeof url !== 'string') {
       return res.status(400).json({ error: 'url is required' });
    }
 
@@ -95,6 +96,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const fallback = await firstAccessibleDomainId(userId ? String(userId) : null);
       if (!fallback) return res.status(403).json({ error: 'No accessible domain to create the article under.' });
       domainId = fallback;
+   }
+
+   try {
+      await assertPublicUrl(url);
+   } catch (e) {
+      return res.status(400).json({ error: getErrorMessage(e) || 'Invalid or blocked URL' });
    }
 
    try {
@@ -275,6 +282,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const contentHtml = contentParts.length > 2
          ? contentParts.join('\n')
          : plainText.match(/[^\n]{80,}/g)?.map(c => `<p>${c.trim()}</p>`).join('\n') || `<p>${title}</p>`;
+
+      // Extract-only mode — the Content Editor imports directly into the current
+      // (already-created) article, so we just return the parsed HTML and metadata
+      // without creating a new article row.
+      if (extractOnly) {
+         return res.status(200).json({ contentHtml, title, metaTitle, metaDescription });
+      }
 
       // Count meaningful paragraphs from scraped page
       const paragraphCount = $body.find('p').filter((_, el) => {

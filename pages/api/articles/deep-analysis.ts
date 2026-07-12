@@ -9,9 +9,9 @@ import verifyUser from '../../../utils/verifyUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
-import { getPeopleAlsoAsk, isDataForSeoConfigured } from '../../../lib/dataforseo';
-import { paaCoverageItems, paaFactsCoverageItems } from '../../../lib/seo/keywordData';
-import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult, RankingSourceEntry } from '../../../lib/types/sidecar';
+import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
+import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
+import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '../../../lib/types/sidecar';
 import { flushHeaders, flushSse } from '../../../lib/types/api';
 import type { NlpTerm, ScoreData } from '../../../lib/contentScore';
 import {
@@ -20,7 +20,6 @@ import {
   hasMinCompetitorDomains,
   scaleTermRangesToWordCount,
 } from '../../../lib/competitorTermCalibration';
-import { factsToCoverageItems } from '../../../lib/articleFacts';
 import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
 import { computeAiSearchScoreV2, computeOverallContentScore } from '../../../lib/aiSearchScore';
 import type { ArticleFact } from '../../../lib/articleFacts';
@@ -29,24 +28,21 @@ type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: numbe
 import {
   discoverRankingKeywords,
   enrichNlpTermsIfNeeded,
+  hostFromUrl,
   mergeNlpTerms,
   saveArticleKeywords,
 } from '../../../lib/articleKeywordDiscovery';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
-import { callSidecar, sidecarBase } from '../../../lib/sidecar';
+import { sidecarBase } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
 import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
-import { checkCoverage, deepseekJudge, CoverageItem } from '../../../lib/aiCoverage';
-import { analyzeIntroduction, introCoverageItems, deepseekIntroJudge } from '../../../lib/introductionAnalyzer';
-import { readArticleTerms, articleTermsToCoverageItems } from '../../../lib/articleTerms';
-import { mergeCoverageItems, buildSnapshot } from '../../../lib/coverageStore';
-import { splitSections } from '../../../lib/articleSections';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
+import { buildRankingSourcesPayload } from '../../../lib/rankingSources';
 import { enrichTermsWithSalience } from '../../../lib/termSalience';
 import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
 import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCompute';
@@ -156,6 +152,32 @@ function mapSerpTerms(rawTerms: RawSerpTerm[]): NlpTerm[] {
   })).filter((t) => t.term);
 }
 
+/** Replace an article's stored SERP terms with a single batched insert. */
+async function replaceArticleTerms(
+  articleId: number,
+  terms: NlpTerm[],
+  plainText: string,
+): Promise<void> {
+  await db.query('DELETE FROM article_terms WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
+  const rows = terms.filter((t) => t.term);
+  if (!rows.length) return;
+  const placeholders = rows.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
+  const replacements = rows.flatMap((t) => [
+    articleId,
+    t.term,
+    'topic',
+    'serp',
+    countOccurrences(plainText, t.term),
+    t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
+    t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
+    t.target_count || 1,
+  ]);
+  await db.query(
+    `INSERT INTO article_terms (article_id, term, term_type, source, current_count, target_min, target_max, importance, created_at) VALUES ${placeholders}`,
+    { replacements },
+  ).catch(() => {});
+}
+
 /** Replace an article's stored SERP competitors with a single batched insert. */
 async function replaceCompetitors(articleId: number, competitors: SerpCompetitor[]): Promise<void> {
   await db.query('DELETE FROM article_competitors WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
@@ -170,105 +192,27 @@ async function replaceCompetitors(articleId: number, competitors: SerpCompetitor
 }
 
 /**
- * New-content path (no URL): gather the ranking content (SERP) for a keyword via
- * the sidecar /analyze-serp, create the draft article, store competitors + a
- * ranking_sources payload (Google Search + AI-cited), and stream SSE progress so
- * the deep-analysis screen animates and then advances to content-type.
+ * Keyword mode: fold the modal-selected keywords into the competitor-derived term
+ * list so they show up as "important terms" in the editor. The main keyword is
+ * already stored as target_keyword; these are the rest of the cluster selection.
  */
-async function runKeywordMode(
-  res: NextApiResponse,
-  opts: { keyword: string; country: string; domainId: number },
-) {
-  const { keyword, country, domainId } = opts;
-  const articleIdSql = await getArticleIdSql();
-  const language = langForCountry(country);
-
-  // 1. Create the draft article (no content yet — body is written at generation).
-  let articleId: number;
-  try {
-    if (process.env.DATABASE_URL) {
-      const rows = await db.query<{ id: number }>(
-        `INSERT INTO articles (domain_id, title, content, target_keyword, language, status, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         RETURNING ${articleIdSql} AS id`,
-        { replacements: [domainId, keyword, keyword, language], type: QueryTypes.SELECT },
-      );
-      articleId = rows[0]?.id;
-    } else {
-      const [newId] = await db.query(
-        `INSERT INTO articles (domain_id, title, content, target_keyword, language, status, created_at, updated_at)
-         VALUES (?, ?, '', ?, ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        { replacements: [domainId, keyword, keyword, language], type: QueryTypes.INSERT },
-      );
-      articleId = newId as unknown as number;
-    }
-  } catch (err) {
-    console.error('[deep-analysis:keyword] skeleton insert failed:', getErrorMessage(err));
-    sse(res, 'error', { step: 'save', message: 'Failed to initialize analysis' });
-    return;
+function addSelectedKeywordTerms(terms: NlpTerm[], selected: string[], plainText: string): NlpTerm[] {
+  const have = new Set(terms.map((t) => t.term.toLowerCase().trim()));
+  const extra: NlpTerm[] = [];
+  for (const kw of selected || []) {
+    const term = (kw || '').toLowerCase().trim();
+    if (!term || have.has(term)) continue;
+    have.add(term);
+    extra.push({
+      term,
+      target_count: 3,
+      suggested_min: 1,
+      suggested_max: 3,
+      current_count: countOccurrences(plainText, term),
+    });
   }
-  sse(res, 'created', { articleId });
-
-  // URL-only steps don't apply — mark them done so the UI doesn't stall.
-  for (const k of ['fetch', 'metadata', 'structure']) sse(res, 'progress', { step: k, status: 'done' });
-  sse(res, 'progress', { step: 'serp', status: 'running' });
-
-  // 2. Gather SERP for the keyword (no page fetch needed).
-  let serp: SerpAnalysis = {};
-  try {
-    serp = await callSidecar<SerpAnalysis>('/analyze-serp', { keyword, language });
-  } catch (err) {
-    console.log('[deep-analysis:keyword] analyze-serp failed (non-fatal):', getErrorMessage(err));
-  }
-  sse(res, 'progress', { step: 'serp', status: 'done' });
-
-  const competitors: SerpCompetitor[] = serp.competitors || [];
-
-  // 3. Store competitors → article_competitors (same store the editor reads).
-  await replaceCompetitors(articleId, competitors);
-  sse(res, 'progress', { step: 'nlp', status: 'done' });
-
-  // 4. Terms come from competitor CONTENT (sidecar extract_semantic_terms) — like
-  //    Surfer's "important terms". We deliberately do NOT layer DataForSEO keyword
-  //    ideas here: for brand keywords (e.g. containing "google") they flood the list
-  //    with irrelevant suggestions (google maps, translate, minecraft…) that tank the
-  //    NLP-terms score because the article never naturally contains them.
-  const terms: NlpTerm[] = serp.terms || [];
-
-  // 5. AI-cited sources (People Also Ask) — lightweight PAA fetch, no article scoring.
-  const aiSources: Array<{ domain: string; url: string; title: string }> = [];
-  try {
-    if (isDataForSeoConfigured()) {
-      const paa = await getPeopleAlsoAsk({ keyword, country, languageCode: language });
-      const seen = new Set<string>();
-      for (const q of paa.questions) {
-        const d = (q.domain || '').replace(/^www\./, '');
-        if (!d) continue;
-        const key = q.url || `${d}|${q.question}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        aiSources.push({ domain: d, url: q.url || '', title: q.question });
-        if (aiSources.length >= 20) break;
-      }
-    }
-  } catch { /* non-fatal */ }
-  sse(res, 'progress', { step: 'score', status: 'done' });
-
-  // 6. Persist score_data + ranking_sources on the article.
-  const scoreData = buildScoreData(serp, terms, competitors.length);
-  const rankingSources = {
-    google: competitors.map((c, i): RankingSourceEntry => ({ rank: i + 1, domain: (c.domain || '').replace(/^www\./, ''), url: c.url || '', title: c.title || '' })),
-    ai: aiSources,
-  };
-  try {
-    await db.query(
-      `UPDATE articles SET score_data = ?, ranking_sources = ?, status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
-      { replacements: [JSON.stringify(scoreData), JSON.stringify(rankingSources), articleId] },
-    );
-  } catch { /* non-fatal */ }
-
-  for (const k of ['image', 'save']) sse(res, 'progress', { step: k, status: 'done' });
-  sse(res, 'done', { articleId });
+  // Selected keywords first — they carry the cluster's intent.
+  return [...extra, ...terms];
 }
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
@@ -282,9 +226,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { url, keywords = [], country = 'US', articleId: existingArticleId, domainId: reqDomainId } = req.body;
+  const { url: rawUrl, keywords = [], country = 'US', articleId: existingArticleId, domainId: reqDomainId } = req.body;
+  const url: string = (rawUrl as string) || '';
   const primaryKeyword = (keywords as string[])[0] || '';
-  const isKeywordMode = !url && !!primaryKeyword && !!reqDomainId;
+  const isKeywordMode = !url && !!primaryKeyword && (!!reqDomainId || !!existingArticleId);
+  if (!url && !primaryKeyword) return res.status(400).json({ error: 'url or keywords is required' });
   if (!url && !isKeywordMode) return res.status(400).json({ error: 'url or (keywords + domainId) is required' });
   if (url) {
     try {
@@ -335,12 +281,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   flushHeaders(res);
   res.write(':ok\n\n');
 
-  // New-content keyword mode: gather SERP (no URL fetch), create draft, store
-  // competitors + ranking_sources, then signal done → wizard goes to content-type.
-  if (isKeywordMode) {
-    await runKeywordMode(res, { keyword: primaryKeyword, country, domainId: resolvedDomainId! });
-    return res.end();
-  }
+  // New-content keyword mode runs the SAME deep-analysis pipeline as URL import —
+  // just without a page to fetch. The sidecar skips fetch_page/classify_content
+  // when the url is empty, so SERP competitors, semantic terms and AI search are
+  // still gathered from the keyword, and the modal-selected keywords are folded
+  // into the term list below.
 
   const articleIdSql = await getArticleIdSql();
   const keyword = (keywords as string[])[0] || '';
@@ -357,22 +302,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       // Already verified to belong to the caller's workspace in the guard above.
       const domainId = resolvedDomainId!;
-      const skeletonSlug = url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
       const language = langForCountry(country);
+      // Keyword mode has no page: title = keyword, no slug/meta_url. URL mode
+      // seeds title/slug/meta_url from the page URL (enriched later by fetch_page).
+      const skeletonTitle = isKeywordMode ? keyword : url;
+      const skeletonSlug = isKeywordMode ? '' : url.replace(/https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 60);
+      const skeletonMetaUrl = isKeywordMode ? '' : url;
 
       if (process.env.DATABASE_URL) {
         const rows = await db.query<{ id: number }>(
           `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, language, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, '', ?, ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
            RETURNING ${articleIdSql} AS id`,
-          { replacements: [domainId, url, skeletonSlug, url, keyword, language], type: QueryTypes.SELECT },
+          { replacements: [domainId, skeletonTitle, skeletonSlug, skeletonMetaUrl, keyword, language], type: QueryTypes.SELECT },
         );
         articleId = rows[0]?.id;
       } else {
         const [newId] = await db.query(
           `INSERT INTO articles (domain_id, title, slug, meta_url, content, target_keyword, language, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, '', ?, ?, 'analyzing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          { replacements: [domainId, url, skeletonSlug, url, keyword, language], type: QueryTypes.INSERT },
+          { replacements: [domainId, skeletonTitle, skeletonSlug, skeletonMetaUrl, keyword, language], type: QueryTypes.INSERT },
         );
         articleId = newId as unknown as number;
       }
@@ -457,6 +406,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('[deep-analysis] calling sidecar', `${sidecarUrl}/pipeline/deep-analysis`, jobId);
 
+    const heartbeat = setInterval(() => {
+      void db.query(
+        `UPDATE analysis_jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'`,
+        { replacements: [jobId] },
+      ).catch(() => {});
+    }, 25_000);
+
     try {
       sidecarResp = await fetch(`${sidecarUrl}/pipeline/deep-analysis`, {
         method: 'POST',
@@ -465,6 +421,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         signal: controller.signal,
       });
     } finally {
+      clearInterval(heartbeat);
       clearTimeout(timeout);
     }
 
@@ -565,17 +522,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       country,
       languageCode: langForCountry(country),
       competitorDomains,
+      ownDomain: hostFromUrl(url),
       plainText: plainTextEarly,
     });
-    let mergedTerms: NlpTerm[] = mergeNlpTerms(
-      filterUsefulNlpTerms(allTerms),
-      filterUsefulNlpTerms(enrichedTerms),
-    ).map((t) => ({
+    const normalizeMergedTerms = (terms: NlpTerm[]) => terms.map((t) => ({
       ...t,
       suggested_min: t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
       suggested_max: t.suggested_max ?? Math.max(t.suggested_min ?? 1, Math.round((t.target_count || 1) * 1.5)),
-      current_count: countOccurrences(plainTextEarly, t.term),
+      current_count: t.current_count ?? countOccurrences(plainTextEarly, t.term),
     }));
+    let mergedTerms = normalizeMergedTerms(mergeNlpTerms(
+      filterUsefulNlpTerms(allTerms),
+      filterUsefulNlpTerms(enrichedTerms),
+    ));
 
     let competitorBenchmarks: Awaited<ReturnType<typeof buildCompetitorBenchmarks>> = null;
     try {
@@ -586,16 +545,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         mergedTerms,
       );
       if (competitorBenchmarks?.real.terms?.length) {
-        mergedTerms = competitorBenchmarks.real.terms;
+        mergedTerms = normalizeMergedTerms(competitorBenchmarks.real.terms);
       }
     } catch (err) {
       console.log('[deep-analysis] competitor benchmarks failed (non-fatal):', getErrorMessage(err));
     }
 
-    mergedTerms = filterNlpTermsForAnalysis(
+    mergedTerms = normalizeMergedTerms(filterNlpTermsForAnalysis(
       filterUsefulNlpTerms(mergedTerms),
       resolvedKeyword || keyword || '',
-    );
+    ));
     console.log(`[deep-analysis] terms after filter: ${mergedTerms.length} (keyword: ${resolvedKeyword || keyword || ''})`);
 
     if (!hasMinCompetitorDomains(competitorDomains)) {
@@ -605,7 +564,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const corpusTexts = competitorBenchmarks?.corpusTexts ?? [];
     const corpusHtmls = competitorBenchmarks?.corpusHtmls ?? [];
     if (corpusTexts.length) {
-      mergedTerms = calibrateTermRangesFromCorpus(mergedTerms, corpusTexts);
+      mergedTerms = normalizeMergedTerms(calibrateTermRangesFromCorpus(mergedTerms, corpusTexts));
     }
 
     const contentTargets = competitorBenchmarks?.targets ?? {
@@ -677,9 +636,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const plainText = pageContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = plainText ? plainText.split(/\s+/).length : 0;
 
-    mergedTerms = scaleTermRangesToWordCount(mergedTerms, wordCount, contentTargets.avgWords);
+    mergedTerms = normalizeMergedTerms(scaleTermRangesToWordCount(mergedTerms, wordCount, contentTargets.avgWords));
     if (corpusHtmls.length) {
-      mergedTerms = enrichTermsWithSalience(mergedTerms, corpusHtmls);
+      mergedTerms = normalizeMergedTerms(enrichTermsWithSalience(mergedTerms, corpusHtmls));
+    }
+    // Keyword mode: the modal-selected keywords are the intent of this cluster —
+    // fold them into the term list (main keyword is already the target_keyword).
+    if (isKeywordMode) {
+      mergedTerms = normalizeMergedTerms(addSelectedKeywordTerms(mergedTerms, keywords as string[], plainText));
     }
     scoreData.terms = mergedTerms;
 
@@ -689,9 +653,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       plainText, wordCount, headingCount, scoreData, paragraphCount, undefined,
       pageContent, resolvedKeyword || '',
     );
-    scoreData.seo_score = seoScore;
-    scoreData._computed_score = seoScore;
-    scoreData._content_score = seoScore;
+    // Keyword mode creates an EMPTY draft — a score computed on empty content is a
+    // misleading 0 that the editor panel would prefer over its live computation.
+    // Leave the numeric scores unset so the gauge scores the generated content.
+    if (!isKeywordMode) {
+      scoreData.seo_score = seoScore;
+      scoreData._computed_score = seoScore;
+      scoreData._content_score = seoScore;
+    }
 
     const setClauses: string[] = [
       `title = COALESCE(NULLIF(?, ''), title)`,
@@ -702,7 +671,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `word_count = ?`,
       `score_data = ?`,
       `content_score = COALESCE(?, content_score)`,
-      `status = 'draft'`,
       `updated_at = CURRENT_TIMESTAMP`,
     ];
     const replacements: unknown[] = [
@@ -713,7 +681,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       featuredImage,
       wordCount || classify.word_count_estimate || 0,
       JSON.stringify(scoreData),
-      seoScore || ruleBase,
+      isKeywordMode ? null : (seoScore || ruleBase),
     ];
 
     if (rankingScore !== null) {
@@ -773,23 +741,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Save terms
     if (mergedTerms.length) {
       if (await abortIfSuperseded(res, articleId, jobId)) return;
-      await db.query('DELETE FROM article_terms WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
-      for (const t of mergedTerms) {
-        await db.query(
-          `INSERT INTO article_terms (article_id, term, term_type, source, current_count, target_min, target_max, importance, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-          { replacements: [
-            articleId,
-            t.term,
-            'topic',
-            'serp',
-            countOccurrences(plainText, t.term),
-            t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-            t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
-            t.target_count || 1,
-          ] },
-        ).catch(() => {});
-      }
+      await replaceArticleTerms(articleId, mergedTerms, plainText);
     }
 
     if (await abortIfSuperseded(res, articleId, jobId)) return;
@@ -833,65 +785,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (coverageUsage?.over) {
         console.warn('[coverage] org over 5h token budget — skipping coverage compute');
       } else {
-        const introSection = splitSections(pageContent)[0];
-        const introPlain = introSection ? introSection.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
-
         const paaFromSerp = (serp.paa_questions || []).map((q: string) => ({ question: q }));
         const paaFromDfs = (aiVisibilitySummary?.citations || [])
-          .filter((c) => c.answer && c.answer.length > 20 && c.prompt === c.answer)
-          .map((c) => ({ question: c.prompt, answer: c.answer }));
-        const paaQuestionsOnly = (aiVisibilitySummary?.citations || [])
-          .filter((c) => c.prompt && (!c.answer || c.prompt !== c.answer))
+          .filter((c) => c.prompt && c.prompt !== c.answer)
           .map((c) => ({ question: c.prompt, answer: c.answer || '' }));
-        const paaMerged = [
-          ...paaFromSerp,
-          ...paaQuestionsOnly,
-          ...paaFromDfs,
-        ];
-        const paaItems = paaCoverageItems(paaMerged);
-        const factItems = paaFactsCoverageItems(paaMerged);
-        const llmFactItems = factsToCoverageItems(articleFacts);
-        const intentResult = await analyzeIntroduction(introPlain, resolvedKeyword || keyword || '', deepseekIntroJudge);
-        // checkCoverage/analyzeIntroduction don't surface each deepseek call's usage.total_tokens
-        // (CoverageResult/IntroVerdict carry no usage field, and checkCoverage caches by content
-        // hash so a "real" count would also have to model cache hits as free). Record a documented
-        // conservative fixed estimate instead: ~3000 tokens for the intro judge (short ~500-word
-        // input) + ~6000 for the coverage judge (full article text as input), both deepseek-chat
-        // JSON-mode calls. Follow-up: thread real usage out of the judges for precise accounting.
-        coverageTokens += 3000;
-        const baseIntent = introCoverageItems(intentResult);
+        const paaMerged = dedupePaaQuestions([...paaFromSerp, ...paaFromDfs]);
 
-        const termRows = await readArticleTerms(articleId);
-        const countedTermRows = termRows.map((r) => ({ ...r, current_count: countOccurrences(plainText, r.term) }));
-        const entityItems = articleTermsToCoverageItems(countedTermRows);
-
-        const readabilityItems: CoverageItem[] = []; // standalone ai-readability run (Task 11) fills these
-
-        const items = mergeCoverageItems({
-          paa: [...paaItems, ...factItems, ...llmFactItems], intent: baseIntent, readability: readabilityItems, entity: entityItems,
+        const graded = await buildGradedCoverageSnapshot({
+          keyword: resolvedKeyword || keyword || '',
+          plainText,
+          html: pageContent,
+          paaQuestions: paaMerged,
         });
-
-        // Judge only paa + future fact/definition (intent already graded by intro analyzer; entity/readability deterministic).
-        const judgeable = items.filter((i) => i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison' || i.type === 'example');
-        const coverageResult = await checkCoverage(plainText, judgeable, deepseekJudge);
-        coverageTokens += 6000;
-
-        // Fold the intent verdict's early-answer flag into the result the snapshot scores against.
-        coverageResult.answersMainQuestionEarly = intentResult.answerStartsEarly;
-        // Intent + entity items are already "graded" on their items; include them as pre-covered
-        // verdicts so buildSnapshot's bucket math sees them.
-        for (const it of [...baseIntent, ...entityItems]) {
-          coverageResult.items.push({ id: it.id, covered: it.covered, quality: it.quality, confidence: 1 });
-        }
-
-        // judge.version is 'promptVersion|model|temperature' → split for the snapshot's separate version fields.
-        const [promptVersion, model] = deepseekJudge.version.split('|');
-        coverageSnapshot = buildSnapshot(items, coverageResult, {
-          judgeVersion: deepseekJudge.version,
-          promptVersion,
-          model,
-          createdAt: new Date().toISOString(),
-        });
+        coverageSnapshot = graded.snapshot;
+        coverageTokens += graded.introTokens + graded.judgeTokens;
 
         if (await abortIfSuperseded(res, articleId, jobId)) return;
         await db.query(
@@ -905,19 +812,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             facts: articleFacts,
             articleText: plainText,
             intentScore: intentBucket?.score,
-            answersMainQuestionEarly: coverageResult.answersMainQuestionEarly,
+            answersMainQuestionEarly: coverageSnapshot.answersMainQuestionEarly,
           })
           : 0;
         const contentScore = computeOverallContentScore(seoScore, aiScore);
-        scoreData.seo_score = seoScore;
-        scoreData.ai_score = aiScore;
-        scoreData._computed_score = contentScore;
-        scoreData._content_score = contentScore;
-        if (await abortIfSuperseded(res, articleId, jobId)) return;
-        await db.query(
-          `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
-          { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
-        );
+        // Keyword mode: empty draft — don't persist content-based scores (see above).
+        // The ai_info_to_cover snapshot is already saved; scores stay live in the editor.
+        if (!isKeywordMode) {
+          scoreData.seo_score = seoScore;
+          scoreData.ai_score = aiScore;
+          scoreData._computed_score = contentScore;
+          scoreData._content_score = contentScore;
+          if (await abortIfSuperseded(res, articleId, jobId)) return;
+          await db.query(
+            `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
+            { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
+          );
+        }
 
         if (aiVisibilitySummary?.citations?.length) {
           await persistAiVisibilityRun(
@@ -930,7 +841,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } catch (err) {
       console.warn('[coverage] deep-analysis snapshot compute failed', err);
-      if (aiVisibilitySummary?.citations?.length && articleFacts.length) {
+      if (!isKeywordMode && aiVisibilitySummary?.citations?.length && articleFacts.length) {
         const fallbackAi = computeAiSearchScoreV2({ facts: articleFacts, articleText: plainText });
         const contentScore = computeOverallContentScore(seoScore, fallbackAi);
         scoreData.ai_score = fallbackAi;
@@ -958,11 +869,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (await abortIfSuperseded(res, articleId, jobId)) return;
+
+    const rankingSources = buildRankingSourcesPayload({
+      competitors: serp.competitors || [],
+      aiSummary: aiVisibilitySummary,
+    });
+    if (rankingSources.google.length || rankingSources.ai.length) {
+      await db.query(
+        `UPDATE articles SET ranking_sources = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [JSON.stringify(rankingSources), articleId] },
+      ).catch((err) => {
+        console.warn('[deep-analysis] ranking_sources persist failed (non-fatal):', getErrorMessage(err));
+      });
+    }
+
     await db.query(
       `UPDATE analysis_jobs
        SET status = 'done', current_stage = 'done', progress_message = 'Analysis complete', updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       { replacements: [jobId] },
+    );
+
+    await db.query(
+      `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+      { replacements: [articleId] },
     );
 
     sse(res, 'done', {

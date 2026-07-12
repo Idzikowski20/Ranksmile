@@ -246,7 +246,8 @@ export async function getRankedKeywords(opts: {
    country?: string,
    languageCode?: string,
    limit?: number,
-   topOnly?: boolean, // restrict to top-10 positions
+   topOnly?: boolean, // restrict by rank_group
+   maxRankGroup?: number,
 }): Promise<DfsKeyword[]> {
    const task: Task = {
       target: opts.target.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
@@ -256,7 +257,8 @@ export async function getRankedKeywords(opts: {
       order_by: ['keyword_data.keyword_info.search_volume,desc'],
    };
    if (opts.topOnly) {
-      task.filters = [['ranked_serp_element.serp_item.rank_group', '<=', 10]];
+      const cap = opts.maxRankGroup ?? 10;
+      task.filters = [['ranked_serp_element.serp_item.rank_group', '<=', cap]];
    }
    const items = await dfsPost('/dataforseo_labs/google/ranked_keywords/live', task);
    return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);

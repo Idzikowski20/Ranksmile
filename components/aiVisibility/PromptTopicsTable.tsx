@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '../core';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 export type PromptRow = { id: number; text: string; visibility: number; mentionRate: number; avgPosition: number | null; brands: string[] };
 export type TopicRow = { topic: string; promptCount: number; visibility: number; mentionRate: number; avgPosition: number | null; brands: string[]; prompts: PromptRow[] };
@@ -21,8 +21,9 @@ const BrandStack = ({ brands }: { brands: string[] }) => {
    return (
       <span style={{ display: 'inline-flex', alignItems: 'center' }}>
          {shown.map((d, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={d} alt="" title={d} src={faviconFor(d)} width={16} height={16} style={{ borderRadius: 9999, border: '1px solid #fff', marginLeft: i ? -5 : 0, background: '#fff' }} />
+            <span key={d} title={d} style={{ marginLeft: i ? -5 : 0, display: 'inline-flex' }}>
+               <DomainFavicon domain={d} size={16} style={{ borderRadius: 9999, border: '1px solid #fff', background: '#fff' }} />
+            </span>
          ))}
          {brands.length > 3 ? <span style={{ marginLeft: 6, fontSize: 13, color: '#71717B' }}>+{brands.length - 3}</span> : null}
       </span>
@@ -61,7 +62,7 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    const toggle = (t: string) => setOpen((prev) => { const n = new Set(prev); if (n.has(t)) n.delete(t); else n.add(t); return n; });
 
    if (!topics.length) {
-      return <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No prompts yet.</div>;
+      return <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No prompts yet.</div>;
    }
 
    const metricCells = (o: { avgPosition: number | null; mentionRate: number; visibility: number }, boldVis = false) => (
@@ -73,7 +74,7 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    );
 
    return (
-      <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' }}>
+      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Topic</div>
             <div style={{ ...headCell, width: 110, flexShrink: 0 }}>Brands</div>

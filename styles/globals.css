@@ -160,11 +160,20 @@ body {
       height: 100%;
    }
 
-   /* Page wrapper divs (e.g. .Domain, .Research) — override Tailwind min-h-screen */
-   #__next > div {
+   /* Page wrapper divs (e.g. .Domain, .Research) — override Tailwind min-h-screen.
+      Exclude global overlays mounted as direct #__next children (progress bar, caret). */
+   #__next > div:not(.top-progress-bar):not(.global-smooth-caret) {
       height: 100% !important;
       min-height: 0 !important;
    }
+}
+
+/* Global overlays — direct #__next children; must NOT inherit the height chain above. */
+.top-progress-bar {
+   height: 2px !important;
+   max-height: 2px !important;
+   min-height: 0 !important;
+   overflow: hidden !important;
 }
 
 .app-content {
@@ -510,7 +519,7 @@ html.editor-route body {
    box-sizing: border-box;
 }
 html.editor-route #__next { height: 100%; }
-html.editor-route #__next > div {
+html.editor-route #__next > div:not(.top-progress-bar):not(.global-smooth-caret) {
    height: 100% !important;
    min-height: 0 !important;
 }
@@ -1313,7 +1322,7 @@ html.editor-route .app-content {
    flex-direction: column;
    align-items: center;
    flex-shrink: 0;
-   width: 52px;
+   width: 60px;
    background: var(--color-surface-strong);
    border-right: 1px solid var(--color-border-strong);
    padding: 10px 0;
@@ -1353,6 +1362,19 @@ html.editor-route .app-content {
    width: 100%;
 }
 .sentry-nav-item { width: 100%; display: flex; justify-content: center; }
+/* Primary nav icons framed in the same "pill" as the topbar / footer utility bar. */
+.sentry-nav-list.sentry-nav-btnbar { width: auto; gap: 0; }
+.sentry-nav-list.sentry-nav-btnbar > .sentry-nav-item { position: relative; width: 36px; }
+.sentry-nav-list.sentry-nav-btnbar > .sentry-nav-item:not(:last-child)::after {
+   content: '';
+   position: absolute;
+   left: 8px;
+   right: 8px;
+   bottom: -1px;
+   height: 1px;
+   background: rgba(255, 255, 255, 0.06);
+   pointer-events: none;
+}
 .sentry-nav-link {
    position: relative;
    display: grid;
@@ -1476,7 +1498,7 @@ html.editor-route .app-content {
    width: 7px;
    height: 7px;
    border-radius: 9999px;
-   background: #FF002B;
+   background: #1AB25E;
    border: 1.5px solid var(--color-surface-strong);
 }
 .sentry-nav-avatar {
@@ -1505,7 +1527,7 @@ html.editor-route .app-content {
 .sentry-secondary {
    position: absolute;
    top: 0;
-   left: 52px;
+   left: 60px;
    height: 100%;
    width: 208px;
    background: var(--color-surface-strong);
@@ -1741,17 +1763,19 @@ html.editor-route .app-content {
 }
 .sentry-status-link:hover { text-decoration: underline; }
 .sentry-status-list { list-style: none; margin: 0; padding: 0 10px 8px; max-height: 360px; overflow-y: auto; }
-.sentry-status-update { position: relative; padding: 0 0 14px 18px; border-left: 1px solid rgba(255,255,255,0.12); }
-.sentry-status-update:last-child { border-left-color: transparent; }
-.sentry-status-dot { position: absolute; left: -4px; top: 3px; width: 8px; height: 8px; border-radius: 9999px; }
+.sentry-status-update { position: relative; padding: 0 0 14px 0; }
+.sentry-status-head { display: flex; align-items: center; gap: 8px; }
+.sentry-status-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 9999px; }
 .sentry-status-dot--red { background: #FF4444; }
 .sentry-status-dot--yellow { background: #FFC53D; }
 .sentry-status-dot--green { background: #1AB25E; }
 .sentry-status-label { font-size: 13px; font-weight: 700; }
 .sentry-status-label--red { color: #FF6B6B; }
 .sentry-status-label--yellow { color: #FFC53D; }
-.sentry-status-time { font-size: 12px; color: #9F9FA9; margin-left: 4px; }
-.sentry-status-msg { font-size: 13px; color: #D4D4D8; margin: 4px 0 0; line-height: 1.4; }
+.sentry-status-label--green { color: #1AB25E; }
+.sentry-status-time { font-size: 12px; color: #9F9FA9; }
+/* Align the message under the label text (dot 8px + gap 8px). */
+.sentry-status-msg { font-size: 13px; color: #D4D4D8; margin: 4px 0 0 16px; line-height: 1.4; }
 
 /* Avatar fallback initials */
 .sentry-nav-initial { color: #fff; font-size: 14px; font-weight: 600; font-family: var(--font-family-primary); }
@@ -1914,17 +1938,20 @@ html.editor-route .app-content {
 /* ─── Segmented control ──────────────────────────────────────────────────── */
 .sentry-segmented-control {
   display: inline-flex; align-items: stretch; padding: 2px;
-  background: #F0F0F2; border-radius: 8px; gap: 0;
+  /* 3D "button" look — matches the secondary button beside it. */
+  background: #FFFFFF; border: 1px solid #DAD9DE; border-radius: 6px; gap: 0;
+  box-shadow: 0 2px 0 0 #DAD9DE;
 }
 .sentry-segmented-control-item {
   position: relative; display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  padding: 6px 12px; border-radius: 5px; cursor: pointer;
   font-size: 14px; font-weight: 500; color: #6A6772;
   transition: background 150ms ease, color 150ms ease;
 }
-.sentry-segmented-control--sm .sentry-segmented-control-item { padding: 4px 10px; font-size: 13px; }
+.sentry-segmented-control--sm { min-height: 32px; box-sizing: border-box; }
+.sentry-segmented-control--sm .sentry-segmented-control-item { padding: 4px 12px; font-size: 13px; }
 .sentry-segmented-control-item--selected {
-  background: #fff; color: #181225; box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  background: #F0F0F2; color: #181225;
 }
 .sentry-segmented-control-input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
 .sentry-segmented-control-item[data-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
@@ -1991,6 +2018,62 @@ html.editor-route .app-content {
    color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .sentry-onb-section-toggle:hover { color: #fff; }
+
+/* Plan usage popover (sidebar) */
+.sentry-plan-metric {
+   display: flex;
+   flex-direction: column;
+   gap: 6px;
+   padding: 8px 10px;
+   border-radius: 8px;
+}
+.sentry-plan-metric-head {
+   display: flex;
+   align-items: baseline;
+   justify-content: space-between;
+   gap: 8px;
+   font-size: 13px;
+   color: #E4E4E7;
+}
+.sentry-plan-metric-label { flex: 1; min-width: 0; }
+.sentry-plan-metric-value {
+   font-size: 12px;
+   color: #9F9FA9;
+   white-space: nowrap;
+}
+.sentry-plan-metric-value--warn { color: #FF6F77; }
+.sentry-plan-bar {
+   height: 4px;
+   border-radius: 9999px;
+   background: rgba(255,255,255,0.12);
+   overflow: hidden;
+}
+.sentry-plan-bar-fill {
+   height: 100%;
+   border-radius: 9999px;
+   background: #653DE9;
+   transition: width 150ms ease;
+}
+.sentry-plan-bar-fill--warn { background: #FF6F77; }
+.sentry-plan-settings {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   width: 100%;
+   margin-top: 8px;
+   padding: 8px 12px;
+   border: none;
+   border-radius: 8px;
+   background: transparent;
+   color: rgba(255,255,255,0.7);
+   font-size: 12px;
+   font-weight: 600;
+   font-family: var(--font-family-primary);
+   text-decoration: none;
+   cursor: pointer;
+   transition: color 150ms ease, background 150ms ease;
+}
+.sentry-plan-settings:hover { color: #fff; background: rgba(255,255,255,0.08); }
 
 /* Centered command palette (Sentry-style) */
 .command-palette-overlay {
@@ -2227,6 +2310,12 @@ html.editor-route .app-content {
   flex-direction: column;
   gap: 32px;
 }
+.sentry-page--settings .sentry-empty-state {
+  border: 1px solid #DAD9DE;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 0 0 #e4e4e7;
+}
 .sentry-page-content {
   display: flex;
   flex-direction: column;
@@ -2235,13 +2324,38 @@ html.editor-route .app-content {
 }
 .sentry-panel {
   background: #ffffff;
-  border: none;
+  border: 1px solid #DAD9DE;
   border-radius: 12px;
-  box-shadow: none;
+  /* 3D "button" look: a solid bottom edge that peeks out, plus a lift on hover. */
+  box-shadow: 0 4px 0 0 #e4e4e7;
+  transition: box-shadow 0.15s ease;
   overflow: hidden;
+}
+.sentry-panel:hover {
+  box-shadow: 0 4px 0 0 #d4d4d8, 0 6px 10px 0 rgba(24, 26, 34, 0.06);
 }
 .sentry-panel--cards {
   background: transparent;
+  /* Transparent grouping panels have no card body — no 3D edge, no border. */
+  box-shadow: none;
+  border: none;
+}
+.sentry-panel--cards:hover {
+  box-shadow: none;
+}
+/* Metric / summary cards (performance) share the same 3D "button" look. */
+.perf-3d-card {
+  border: 1px solid #DAD9DE;
+  box-shadow: 0 4px 0 0 #e4e4e7;
+  transition: box-shadow 0.15s ease;
+}
+.perf-3d-card:hover {
+  box-shadow: 0 4px 0 0 #d4d4d8, 0 6px 10px 0 rgba(24, 26, 34, 0.06);
+}
+/* Filter bars that split the segmented control into separate spaced buttons. */
+.performance-filter-bar,
+.ai-vis-filter-bar {
+  gap: 6px;
 }
 .article-list-card {
   background: #ffffff;
@@ -2281,19 +2395,33 @@ html.editor-route .app-content {
   padding: 16px;
 }
 .sentry-settings-section {
-  border: none;
-  border-radius: 0;
-  overflow: visible;
-  background: transparent;
+  background: #ffffff;
+  border: 1px solid #DAD9DE;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 0 #e4e4e7;
+  transition: box-shadow 0.15s ease;
+  overflow: hidden;
   margin-bottom: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
+}
+.sentry-settings-section:hover {
+  box-shadow: 0 4px 0 0 #d4d4d8, 0 6px 10px 0 rgba(24, 26, 34, 0.06);
+}
+/* Nested panels inside a settings section are inner surfaces — no double 3D edge. */
+.sentry-settings-section .sentry-panel {
+  border: 1px solid #F0F0F2;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.sentry-settings-section .sentry-panel:hover {
+  box-shadow: none;
 }
 .sentry-settings-section-header {
-  padding: 0;
-  background: transparent;
-  border-bottom: none;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f2;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -2301,7 +2429,7 @@ html.editor-route .app-content {
   color: #6a6772;
 }
 .sentry-settings-section-body {
-  padding: 0;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -2416,6 +2544,13 @@ html.editor-route .app-content {
   display: flex;
   flex-direction: column;
 }
+/* Country picker inside the (overflow-clipped) Topic Research modal footer:
+   open the menu upward so it isn't cut off by the dialog's bottom edge. */
+.tr-country-select .sentry-compact-select-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+.tr-country-select .sentry-compact-select-list { max-height: 220px; }
 .sentry-compact-select-menu-header {
   display: flex;
   align-items: center;
@@ -2527,6 +2662,15 @@ html.editor-route .app-content {
 }
 .sentry-page-filter-bar > .sentry-compact-select:focus-within,
 .sentry-page-filter-bar > div:focus-within { z-index: 3; }
+/* Spaced filter bars (gap between controls) keep each control fully rounded and
+   un-overlapped, like a standalone button — overrides the segment-joining rules above. */
+.performance-filter-bar > .sentry-compact-select > button,
+.performance-filter-bar > div > button,
+.ai-vis-filter-bar > .sentry-compact-select > button,
+.ai-vis-filter-bar > div > button {
+  border-radius: 6px !important;
+  margin-left: 0 !important;
+}
 
 .sentry-tool-ribbon {
   display: flex;

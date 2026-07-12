@@ -1,5 +1,6 @@
 import db from '../database/database';
 import { ensureUserTenancy } from './tenancy';
+import { assertCanManage } from './members';
 import type { DbRow, SqlReplacements } from './types/db';
 
 export type Workspace = { id: number; name: string; domain?: string | null };
@@ -26,11 +27,6 @@ export async function listWorkspaces(userId: string): Promise<Workspace[]> {
    return rows.map((r) => ({ id: Number(r.id), name: String(r.name ?? ''), domain: r.domain ? String(r.domain) : null }));
 }
 
-/**
- * Returns the org's in-progress setup workspace, creating one if none exists.
- * Reuse keeps a user who reloads or re-enters the wizard on the SAME workspace
- * instead of spawning a fresh orphan setup workspace on every entry.
- */
 export async function createSetupWorkspace(userId: string): Promise<number> {
    const { orgId } = await ensureUserTenancy(userId);
    const existing = await select("SELECT id FROM workspaces WHERE org_id = ? AND status = 'setup' ORDER BY id DESC LIMIT 1", [orgId]);
@@ -40,6 +36,13 @@ export async function createSetupWorkspace(userId: string): Promise<number> {
    } catch { /* UNIQUE(org_id,'') race with a concurrent setup-create — re-read the winner below */ }
    const back = await select("SELECT id FROM workspaces WHERE org_id = ? AND status = 'setup' ORDER BY id DESC LIMIT 1", [orgId]);
    return Number(back[0].id);
+}
+
+/** Read-only lookup of an in-progress setup workspace (no insert). */
+export async function findSetupWorkspaceId(userId: string): Promise<number | null> {
+   const { orgId } = await ensureUserTenancy(userId);
+   const existing = await select("SELECT id FROM workspaces WHERE org_id = ? AND status = 'setup' ORDER BY id DESC LIMIT 1", [orgId]);
+   return existing.length ? Number(existing[0].id) : null;
 }
 
 /** Returns a workspace (any status) if it belongs to the caller's org, else null. */
@@ -77,6 +80,7 @@ export async function createWorkspace(userId: string, name: string): Promise<Wor
 }
 
 export async function renameWorkspace(userId: string, wsId: number, name: string): Promise<void> {
+   await assertCanManage(userId);
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
@@ -89,6 +93,7 @@ export async function renameWorkspace(userId: string, wsId: number, name: string
  * lands on `/`, which routes a 0-workspace owner into the new-workspace creator.
  */
 export async function deleteWorkspace(userId: string, wsId: number): Promise<void> {
+   await assertCanManage(userId);
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
 

@@ -4,10 +4,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
-import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 
 type JobAccessRow = {
   id: string;
@@ -51,11 +51,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      const rows = await db.query<{
-        id: string;
-        job_type: string | null;
-        domain_id: number | null;
-        article_id: number | null;
+      if (!isInternal && articleId) {
+        const userId = await getCurrentUserId(req, res);
+        if (!(await assertArticleAccess(userId, Number(articleId)))) {
+          return res.status(403).json({ error: 'Access denied.' });
+        }
+      }
+
+      const rows = await db.query<JobAccessRow & {
         status: string;
         current_stage: string | null;
         stage_progress: number | null;
@@ -152,10 +155,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (status === 'done') {
           const html = (result?.article_html as string) || '';
           const wordCount = html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+          const { reconcilePostGenerateArticle } = await import('../../../lib/reconcilePostGenerateArticle');
+          const sidecarScore = (result?.score_data && typeof result.score_data === 'object')
+            ? result.score_data as import('../../../lib/contentScore').ScoreData
+            : { terms: [], words_target: 2000, words_min: 1500, words_max: 2500, headings_target: 15, headings_min: 10, headings_max: 20 };
+          const reconciled = await reconcilePostGenerateArticle({
+            articleId: Number(genArticleId),
+            html,
+            sidecarScoreData: sidecarScore,
+          }).catch((err) => {
+            console.warn('[job-progress] post-generate reconcile failed (non-fatal):', err);
+            return null;
+          });
+          const scoreJson = JSON.stringify(reconciled?.scoreData ?? sidecarScore);
+          const contentScore = reconciled?.contentScore ?? null;
           await db.query(
             `UPDATE articles SET
                title = COALESCE(?, title), content = ?, meta_title = ?, meta_description = ?, meta_url = ?,
                schema_json = ?, score_data = ?, internal_links_cache = ?, word_count = ?,
+               ai_info_to_cover = COALESCE(?, ai_info_to_cover),
+               content_score = COALESCE(?, content_score),
                status = 'draft', updated_at = CURRENT_TIMESTAMP
              WHERE ${articleIdSql} = ?`,
             { replacements: [
@@ -165,9 +184,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               result?.meta_description || '',
               result?.meta_url || '',
               JSON.stringify(result?.article_schema || result?.schema_json || {}),
-              JSON.stringify(result?.score_data || {}),
+              scoreJson,
               JSON.stringify({ suggestions: result?.internal_links || [] }),
               wordCount,
+              reconciled?.aiInfoToCover ?? null,
+              contentScore,
               genArticleId,
             ] },
           );

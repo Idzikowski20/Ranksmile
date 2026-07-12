@@ -6,6 +6,7 @@ import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import GlobalTopbar from '../components/common/GlobalTopbar';
 import BlogPathsField from '../components/domains/BlogPathsField';
+import DomainFavicon from '../components/common/DomainFavicon';
 
 // ─── Shared button classes (Surfer canonical, from invite/[token].tsx) ────────
 const btnBase =
@@ -64,17 +65,8 @@ const ChevronDown = ({ open }: { open: boolean }) => (
    </span>
 );
 
-// ─── Site favicon (background-image avoids the <img> lint rule) ────────────────
 const SiteFavicon = ({ domain }: { domain: string }) => (
-   <span
-      aria-hidden="true"
-      style={{
-         width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-         backgroundColor: '#f4f4f5',
-         backgroundImage: `url(https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32)`,
-         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
-      }}
-   />
+   <DomainFavicon domain={domain} size={18} style={{ borderRadius: 4, flexShrink: 0 }} />
 );
 
 // ─── Country flag (flag-icons CDN; emoji flags don't render on Windows) ────────

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import DomainFavicon from '../common/DomainFavicon';
 
 const F = 'var(--font-family-primary)';
 
@@ -55,8 +56,7 @@ const ResultArt = ({ ok }: { ok: boolean }) => {
 };
 
 const Favicon = ({ domain }: { domain: string }) => (
-  // eslint-disable-next-line @next/next/no-img-element
-  <img alt="" width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} />
+  <DomainFavicon domain={domain} size={16} />
 );
 
 const Stat = ({ label, value }: { label: string; value: number }) => (

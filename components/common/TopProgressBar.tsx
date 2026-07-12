@@ -55,10 +55,12 @@ const TopProgressBar = () => {
 
    return (
       <div
+         className="top-progress-bar"
          aria-hidden="true"
          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, height: 1, zIndex: 2000,
+            position: 'fixed', top: 0, left: 0, right: 0, height: 2, maxHeight: 2, zIndex: 2000,
             pointerEvents: 'none', opacity: visible ? 1 : 0, transition: 'opacity 300ms ease',
+            overflow: 'hidden',
          }}
       >
          <div

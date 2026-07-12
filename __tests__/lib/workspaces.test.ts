@@ -1,14 +1,21 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({})) } }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
+jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
 
 import db from '../../database/database';
 import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace, createSetupWorkspace, markWorkspaceReady, finishWorkspaceSetup } from '../../lib/workspaces';
+import { assertCanManage } from '../../lib/members';
 
 const mockQuery = db.query as jest.Mock;
+const mockAssertCanManage = assertCanManage as jest.MockedFunction<typeof assertCanManage>;
 const rows = (r: unknown[]) => [r, {}];
 
 describe('workspaces helpers', () => {
-  beforeEach(() => mockQuery.mockReset());
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockAssertCanManage.mockReset();
+    mockAssertCanManage.mockResolvedValue(undefined);
+  });
 
   it('listWorkspaces returns the org workspaces', async () => {
     mockQuery.mockResolvedValueOnce(rows([{ id: 9, name: 'Default' }, { id: 10, name: 'Blog' }]));
@@ -41,12 +48,17 @@ describe('workspaces helpers', () => {
   it('deleteWorkspace cascades the domain(s) then removes the workspace', async () => {
     mockQuery
       .mockResolvedValueOnce(rows([{ id: 10 }]))                  // assertInOrg ownership
-      .mockResolvedValueOnce(rows([{ n: 3 }]))                    // workspace count in org (>1)
       .mockResolvedValueOnce(rows([{ id: 42, domain: 'x.pl' }])); // domains in the workspace
     await expect(deleteWorkspace('u1', 10)).resolves.toBeUndefined();
     const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
     expect(sqls.some((s) => s.includes('DELETE FROM domain'))).toBe(true);
     expect(sqls.some((s) => s.includes('DELETE FROM workspaces'))).toBe(true);
+  });
+
+  it('deleteWorkspace rejects callers who cannot manage the org before deleting data', async () => {
+    mockAssertCanManage.mockRejectedValueOnce(new Error('FORBIDDEN'));
+    await expect(deleteWorkspace('member', 10)).rejects.toThrow('FORBIDDEN');
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 
   it('deleteWorkspace removes even the last workspace (caller then routes to the creator)', async () => {

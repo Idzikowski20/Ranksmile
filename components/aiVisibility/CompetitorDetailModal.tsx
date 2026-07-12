@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SkeletonBox } from './SkeletonBlocks';
 import { HoverTooltip, Button } from '../core';
+import DomainFavicon from '../common/DomainFavicon';
 import { useAiVisCompetitorDetail } from '../../services/aiVisibility';
 
 const FONT = 'var(--font-family-primary)';
-const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 const brandName = (d: string) => { const base = d.replace(/^www\./, '').split('.')[0]; return base.charAt(0).toUpperCase() + base.slice(1); };
 
 const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
@@ -78,8 +78,7 @@ const SourcesMini = ({ title, subtitle, sources }: { title: string; subtitle: st
                   const href = safeHref(s.url);
                   const sourceInner = (
                      <>
-                        { /* eslint-disable-next-line @next/next/no-img-element */ }
-                        <img alt="" src={faviconFor(s.domain)} width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+                        <DomainFavicon domain={s.domain} size={18} />
                         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                            <span style={{ fontWeight: 500, color: '#18181B' }}>{host}</span>
                            <span style={{ color: '#9F9FA9' }}>{path}</span>
@@ -169,7 +168,7 @@ const MentionTable = ({ rows, brand, ownLabel }: { rows: MentionSource[]; brand:
                const sourceInner = (
                   <>
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
-                     <img alt="" src={faviconFor(s.domain)} width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+                     <DomainFavicon domain={s.domain} size={18} />
                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <span style={{ fontWeight: 500, color: '#18181B' }}>{host}</span>
                         <span style={{ color: '#9F9FA9' }}>{path}</span>
@@ -289,7 +288,7 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
                </div>
                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   { /* eslint-disable-next-line @next/next/no-img-element */ }
-                  <img alt="" src={faviconFor(domain)} width={22} height={22} style={{ borderRadius: 4, flexShrink: 0 }} />
+                  <DomainFavicon domain={domain} size={22} />
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>
                </h2>
             </div>

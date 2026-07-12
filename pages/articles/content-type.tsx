@@ -93,7 +93,7 @@ const ContentTypePage: NextPage = () => {
   return (
     <WizardShell
       title="Select content type"
-      footer={<WizardNextButton label="Next" sublabel="—Context & instructions" onClick={next} />}
+      footer={<WizardNextButton label="Context & instructions" onClick={next} />}
     >
       <h2 style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 600, color: '#000', fontFamily: 'var(--font-family-primary)' }}>
         Select content type

@@ -9,7 +9,6 @@ export { default as Input } from './input/input';
 export { default as Modal, ModalHeader, ModalBody, ModalFooter } from './modal/modal';
 export { default as SlideOverPanel } from './slideOverPanel/slideOverPanel';
 export { default as Select } from './select/select';
-export { DateRangePicker } from './calendar/dateRangePicker';
 export { theme } from './theme';
 export { IconDefaultsProvider } from './IconDefaultsProvider';
 
@@ -45,8 +44,6 @@ export { CompactSelect } from './compactSelect/compactSelect';
 export type { SelectOption, SelectSection, SelectOptionOrSection, CompactSelectProps } from './compactSelect/compactSelect';
 export { PageFilterBar } from './pageFilterBar/pageFilterBar';
 export { ToolRibbon } from './toolRibbon/toolRibbon';
-export { TimeRangeFilter } from './timeRangeFilter/timeRangeFilter';
-export type { TimeRangeValue } from './timeRangeFilter/timeRangeFilter';
 
 // KEEP_UNIQUE — Surfer widgets (see components/surfer/)
 export { default as Gauge } from '../surfer/Gauge';
