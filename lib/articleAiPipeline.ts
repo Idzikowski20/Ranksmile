@@ -8,6 +8,7 @@ import {
   mergeVisibilitySummaries,
   type ArticleFact,
 } from './articleFacts';
+import { resolveFactKeyword } from './resolveFactKeyword';
 import { getAiSearchInfo } from './seo/keywordData';
 import {
   computeAiSearchScoreV2,
@@ -24,21 +25,34 @@ export async function runArticleAiPipeline(opts: {
   keyword: string;
   articleText: string;
   corpusTexts?: string[];
+  title?: string;
+  pageUrl?: string;
   country?: string;
   languageCode?: string;
   ownDomain?: string;
   sidecarSummary?: AiVisibilitySummary | null;
   intentScore?: number;
   answersMainQuestionEarly?: boolean;
+  /** When set, skip resolveFactKeyword in fetchArticleFacts. */
+  resolvedKeyword?: string;
 }): Promise<ArticleAiPipelineResult> {
-  const keyword = opts.keyword.trim();
   const articleText = opts.articleText || '';
+  const keyword = opts.resolvedKeyword ?? resolveFactKeyword({
+    keyword: opts.keyword,
+    articleText,
+    title: opts.title,
+    pageUrl: opts.pageUrl,
+  });
 
   let facts: ArticleFact[] = [];
   if (keyword) {
     facts = await fetchArticleFacts({
       keyword,
+      resolvedKeyword: keyword,
       corpusTexts: opts.corpusTexts,
+      articleText,
+      title: opts.title,
+      pageUrl: opts.pageUrl,
       country: opts.country,
     });
   }

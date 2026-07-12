@@ -7,7 +7,7 @@ import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTabl
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
-import { parseCitations as parseCitationsShared, loadScanResultRows } from '../../../../lib/aiVisibilityRead';
+import { parseCitations as parseCitationsShared, loadScanResultRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibilityRead';
 import { refreshIntervalDays } from '../../../../lib/aiVisibility';
 
 // Compare never renders a competitor's Sources → drop them to bound the payload.
@@ -33,14 +33,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const view = String(req.query.view || 'overview');
 
    try {
-      const scan = await queryOne<{ id: number, finished_at: string | null }>(
-         `SELECT s.id, s.finished_at FROM ai_vis_scans s
-          JOIN ai_vis_configs c ON c.id = s.config_id
-          WHERE c.domain_id = ? AND s.status = 'completed'
-          ORDER BY s.finished_at DESC LIMIT 1`,
-         [domain.ID],
-      );
-      if (!scan) return res.status(200).json({ pending: true });
+      const display = await getDisplayScan(domain.ID);
+      if (!display) return res.status(200).json({ pending: true });
+      const scan = display.scan;
 
       // Brand-aware views (sources/source-detail) load full ResultRows (incl. brands) and
       // support prompt/model filtering via CSV query params.
@@ -212,13 +207,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
          // "Previous" = the completed scan that finished before this one (chronology
          // by finished_at, NOT id — a retry may have a higher id but earlier finish).
-         const prev = scan.finished_at ? await queryOne<{ id: number, finished_at: string | null }>(
-            `SELECT s.id, s.finished_at FROM ai_vis_scans s
-             JOIN ai_vis_configs c ON c.id = s.config_id
-             WHERE c.domain_id = ? AND s.status = 'completed' AND s.finished_at < ?
-             ORDER BY s.finished_at DESC LIMIT 1`,
-            [domain.ID, scan.finished_at],
-         ) : undefined;
+         const prev = scan.finished_at
+            ? await getPreviousDisplayScan(domain.ID, scan.finished_at)
+            : undefined;
          const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanResultRows(prev.id)), own)) : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
@@ -239,6 +230,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return res.status(200).json({
             scanId: scan.id,
             finishedAt: scan.finished_at,
+            usingFallbackScan: display.usingFallbackScan,
+            latestAttemptFailedAt: display.usingFallbackScan ? display.latestAttemptFinishedAt : null,
             snapshot: ownSnap,
             competitors,
             competitorsAll,

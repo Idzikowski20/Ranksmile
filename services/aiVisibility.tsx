@@ -132,6 +132,7 @@ export type DomainOverview = { visibilityScore: number; mentionRate: number; avg
 export type DomainSnapshotDTO = { overview: DomainOverview; sources: Array<{ url: string; domain: string; timesShown: number; models: string[] }>; prompts: Array<{ promptId: number; topic: string; text: string; score: number }>; topics: Array<{ topic: string; score: number }>; citedPromptIds: number[] };
 export type OverviewPayload = {
    pending?: boolean; scanId?: number; finishedAt?: string | null;
+   usingFallbackScan?: boolean; latestAttemptFailedAt?: string | null;
    snapshot?: DomainSnapshotDTO;
    competitors?: Array<{ domain: string; snapshot: DomainSnapshotDTO }>;   // top-5, sources emptied
    competitorsAll?: Array<{ domain: string; visibilityScore: number }>;     // all, for the picker

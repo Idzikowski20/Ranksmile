@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from analyzers.html_parse import parse_html
 from analyzers.semantic_terms import extract_semantic_terms
 
 
@@ -158,13 +159,13 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
             response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
             html = response.text
             # SPA fallback: if content looks thin, retry with headless browser
-            text_check = BeautifulSoup(html, "lxml").get_text(separator=" ", strip=True)
+            text_check = parse_html(html).get_text(separator=" ", strip=True)
             if len(text_check) < 200:
                 rendered = await _fetch_via_spa_fallback(url, text_check)
                 if rendered:
                     html = rendered
 
-            soup = BeautifulSoup(html, "lxml")
+            soup = parse_html(html)
             for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                 tag.decompose()
             text = soup.get_text(separator=" ", strip=True)
@@ -289,13 +290,13 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
             html = response.text
 
             # SPA fallback: if content is thin, retry with headless browser
-            text_check = BeautifulSoup(html, "lxml").get_text(" ", strip=True)
+            text_check = parse_html(html).get_text(" ", strip=True)
             if len(text_check.split()) < 200:
                 rendered = await _fetch_via_spa_fallback(url, text_check)
                 if rendered:
                     html = rendered
 
-            soup = BeautifulSoup(html, "lxml")
+            soup = parse_html(html)
             for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                 tag.decompose()
             text = soup.get_text(" ", strip=True)

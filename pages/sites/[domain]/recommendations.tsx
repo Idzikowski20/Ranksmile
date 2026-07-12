@@ -9,8 +9,13 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { SentryPanel } from '../../../components/sentry-pages';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
-import { normalizeUrlForMatch, kwScore } from '../../../utils/gsc';
+import { useWorkspaces } from '../../../services/workspaces';
+import { deriveActiveId, workspaceHref } from '../../../lib/activeWorkspace';
+import { writeAnalyzeSession } from '../../../lib/deepAnalysisProgress';
+import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
+import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
+import toast from 'react-hot-toast';
 import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
@@ -20,6 +25,22 @@ function compactNum(n: number): string {
    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
    return String(Math.round(n));
 }
+
+/** Drop trailing " | Brand name" from scraped meta titles so rows stay scannable. */
+function displayPageTitle(raw: string): string {
+   const t = (raw || '').trim();
+   if (!t) return '';
+   const idx = t.lastIndexOf(' | ');
+   if (idx >= 24) return t.slice(0, idx).trim();
+   return t;
+}
+
+function absPageUrl(url: string, domainHost: string): string {
+   if (/^https?:\/\//i.test(url)) return url;
+   return `https://${domainHost}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+const IMPORT_COUNTRY = 'PL';
 
 function timeAgo(date: string | null | undefined): string {
    if (!date) return 'recently';
@@ -185,6 +206,10 @@ const RecommendationsPage: NextPage = () => {
    const domain = slug ? slugToDomain(slug) : '';
 
    const { data: domainsData, isLoading: domainsLoading } = useFetchDomains(router, true);
+   const { data: wsData } = useWorkspaces();
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => { setMounted(true); }, []);
+   const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
    const domains = domainsData?.domains || [];
    const activeDomain = domains.find((d: DomainType) => d.slug === slug);
 
@@ -243,17 +268,7 @@ const RecommendationsPage: NextPage = () => {
    // URL → best keyword map for site_context entries (no target_keyword — match by page URL)
    const urlKeywordMap = useMemo(() => {
       const raw: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
-      const map = new Map<string, GscKeyword>();
-      raw.forEach((kw) => {
-         if (!kw.page) return;
-         const urlKey = normalizeUrlForMatch(kw.page);
-         const ex = map.get(urlKey);
-         const candidate = { keyword: kw.keyword, position: kw.position ?? 0, clicks: kw.clicks ?? 0, impressions: kw.impressions ?? 0 };
-         if (!ex || kwScore(candidate) > kwScore(ex)) {
-            map.set(urlKey, candidate);
-         }
-      });
-      return map;
+      return buildGscUrlKeywordMap(raw);
    }, [scData]);
 
    // Auto-backfill: extract content_score from score_data + assign GSC keywords
@@ -384,24 +399,77 @@ const RecommendationsPage: NextPage = () => {
    // Stagger-reveal table rows (both tabs render `.rec-row`; only the active tab is in the DOM).
    const rowsRef = useStaggerReveal<HTMLDivElement>('.rec-row');
 
-   // Optimize: real articles (numeric id) open straight in the editor; scanned pages
-   // (audit/site_context rows, no article yet) are scraped into a draft via the import
-   // endpoint and then opened — the "pull the page into the Content Editor" step.
+   // Optimize → same path as Articles → Import content: scrape URL, startAnalysis, editor + deep analysis.
    const handleOptimize = async (row: RecommRow, e: React.MouseEvent) => {
       e.stopPropagation();
-      if (typeof row.id === 'number') { router.push(`/articles/${row.id}`); return; }
-      if (!row.url) return;
+      if (!activeDomain?.ID) return;
+
+      if (!row.url) {
+         if (typeof row.id === 'number') router.push(workspaceHref(wsId, `/articles/${row.id}`));
+         return;
+      }
+
+      const pageUrl = absPageUrl(row.url, domain);
+      const gscRows: SearchAnalyticsItem[] = scData?.data?.thirtyDays || [];
+      const { primaryKeyword, keywords } = buildImportKeywordList({
+         pageUrl,
+         title: row.title,
+         userKeywords: row.keyword ? [row.keyword] : [],
+         gscRows,
+      });
+      if (!primaryKeyword && !keywords.length) {
+         toast.error('Brak słów kluczowych dla tej strony — ustaw keyword w GSC lub ręcznie.');
+         return;
+      }
+
+      // Existing article: re-run URL import analysis in the editor (no duplicate draft).
+      if (typeof row.id === 'number') {
+         writeAnalyzeSession(row.id, { url: pageUrl, keywords, country: IMPORT_COUNTRY });
+         void fetch('/api/articles/deep-analysis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+               url: pageUrl,
+               keywords,
+               country: IMPORT_COUNTRY,
+               articleId: row.id,
+               domainId: activeDomain.ID,
+            }),
+         }).catch(() => {});
+         router.push(workspaceHref(wsId, `/articles/${row.id}`));
+         return;
+      }
+
       setOptimizingId(row.id);
       try {
          const res = await fetch('/api/articles/import', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: row.url, keywords: row.keyword ? [row.keyword] : [], domainId: activeDomain?.ID }),
+            body: JSON.stringify({
+               url: pageUrl,
+               keywords,
+               country: IMPORT_COUNTRY,
+               domainId: activeDomain.ID,
+               startAnalysis: true,
+            }),
          });
-         const data = await res.json();
-         if (data.articleId) { router.push(`/articles/${data.articleId}`); return; }
-      } catch { /* ignore */ }
-      setOptimizingId(null);
+         const data = await res.json() as { articleId?: number; error?: string };
+         if (!res.ok) {
+            toast.error(data.error || 'Import failed');
+            return;
+         }
+         const articleId = Number(data.articleId);
+         if (!Number.isFinite(articleId)) {
+            toast.error('Import succeeded but could not open the editor');
+            return;
+         }
+         writeAnalyzeSession(articleId, { url: pageUrl, keywords, country: IMPORT_COUNTRY });
+         await router.push(workspaceHref(wsId, `/articles/${articleId}`));
+      } catch {
+         toast.error('Import failed');
+      } finally {
+         setOptimizingId(null);
+      }
    };
 
 
@@ -598,16 +666,16 @@ const RecommendationsPage: NextPage = () => {
 
                {/* ── Optimize tab ── */}
                {tab === 'optimize' && (
-                  <div style={{ minWidth: '100%', display: 'table', width: '100%' }}>
+                  <div style={{ width: '100%', overflow: 'hidden' }}>
 
                      {/* Header */}
-                     <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5', borderRadius: '8px 8px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
+                     <div style={{ display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden', background: '#fff', borderBottom: '1px solid #F4F4F5', borderRadius: '8px 8px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
                         {/* Checkbox */}
                         <div style={{ padding: '10px 16px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', flexShrink: 0, height: '100%' }}>
                            <Checkbox checked={someChecked && !allChecked ? 'indeterminate' : allChecked} onChange={toggleAll} />
                         </div>
                         {/* Page / Main keyword */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flexGrow: 1, minWidth: 256 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}>
                            <Button type="button" variant="transparent" size="sm" onClick={() => handleSort('content_score')} style={{ gap: 4, padding: 0, color: '#52525C' }}>
                               <span style={{ fontSize: 13 }}>Page</span>
                               <SortUpDown active={false} dir={null} />
@@ -640,6 +708,8 @@ const RecommendationsPage: NextPage = () => {
                               style={{
                                  display: 'flex',
                                  alignItems: 'stretch',
+                                 width: '100%',
+                                 overflow: 'hidden',
                                  borderBottom: i < filtered.length - 1 ? '1px solid #F4F4F5' : 'none',
                                  minHeight: 72,
                                  background: isSelected ? 'rgba(120,58,251,0.04)' : '#fff',
@@ -653,11 +723,16 @@ const RecommendationsPage: NextPage = () => {
                               </div>
 
                               {/* Page info + hover actions */}
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', flexGrow: 1, minWidth: 256, gap: 12, cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
-                                 {/* Left: title + keyword + url */}
-                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                       {row.title}
+                              <div
+                                 style={{ position: 'relative', flex: '1 1 0', minWidth: 0, overflow: 'hidden', padding: '12px 16px', cursor: 'pointer' }}
+                                 onClick={() => setPanelRow(row)}
+                              >
+                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                                    <span
+                                       title={row.title}
+                                       style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                                    >
+                                       {displayPageTitle(row.title)}
                                     </span>
                                     {/* Keyword — clickable to change */}
                                     <Button type="button" variant="link" size="xs" className="kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={(
@@ -665,17 +740,17 @@ const RecommendationsPage: NextPage = () => {
                                           <g><path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" /></g>
                                        </svg>
                                     )} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0 }}>
-                                       <span className="kw-btn-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword || 'Set keyword'}</span>
+                                       <span className="kw-btn-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{row.keyword || 'Set keyword'}</span>
                                     </Button>
                                     {showUrls && row.url && (
-                                       <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                       <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                                           {row.url}
                                        </span>
                                     )}
                                  </div>
 
-                                 {/* Right: hover actions */}
-                                 <div className="row-actions" style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, opacity: 0, transition: 'opacity 150ms ease' }}>
+                                 {/* Right: hover actions (overlay — must not steal column width) */}
+                                 <div className="row-actions" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 32px', flexShrink: 0, opacity: 0, transition: 'opacity 150ms ease', background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, #fff 28%)' }}>
                                     {row.url && (
                                        <a href={row.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', color: '#3F3F47', textDecoration: 'none' }}>
                                           <ExternalLinkIcon />
@@ -762,7 +837,7 @@ const RecommendationsPage: NextPage = () => {
 
          <style dangerouslySetInnerHTML={{ __html: `
             .rec-row:hover { background: #F8F8F9 !important; }
-            .rec-row:hover .row-actions { opacity: 1 !important; }
+            .rec-row:hover .row-actions { opacity: 1 !important; background: linear-gradient(90deg, rgba(248,248,249,0) 0%, #F8F8F9 28%) !important; }
             .rec-row:hover .kw-btn-text { text-decoration-color: #D4D4D8 !important; }
             .rec-row:hover .kw-btn-icon { opacity: 1 !important; }
             .rec-row:hover .analyze-btn { opacity: 1 !important; }

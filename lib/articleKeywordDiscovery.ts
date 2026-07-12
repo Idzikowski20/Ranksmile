@@ -20,9 +20,9 @@ import { computeRelevanceScore, checkCoverage } from './keywordEnrichment';
 
 import type { NlpTerm } from './contentScore';
 import { isWeakTermList } from './competitorTermCalibration';
-import { filterOnTopicKeywords, filterOnTopicTerms } from './topicRelevance';
-
-
+import { filterOnTopicTerms, isKeywordOnTopic } from './topicRelevance';
+import { keywordFromUrl } from './inferPageKeyword';
+import { kwScore } from '../utils/gsc';
 
 export type DiscoveredKeyword = {
 
@@ -112,162 +112,116 @@ export function mergeNlpTerms(existing: NlpTerm[], incoming: NlpTerm[]): NlpTerm
 
 }
 
-
+async function rankedKeywordsForDomain(
+  domain: string,
+  country?: string,
+  languageCode?: string,
+  cacheNs = 'discover-ranked',
+): Promise<Array<{ keyword: string; position?: number }>> {
+  return cached({
+    namespace: cacheNs,
+    key: [domain.toLowerCase(), country || 'US', languageCode || 'en'],
+    ttlMs: TTL.RANKED_KEYWORDS,
+    producer: () => getRankedKeywords({
+      target: domain,
+      country,
+      languageCode,
+      limit: DFS_DEFAULT_RANKED_LIMIT,
+      topOnly: true,
+      maxRankGroup: 15,
+    }),
+  });
+}
 
 /**
 
- * Fetch keywords the page actually ranks for (GSC page report) plus DFS domain footprint.
-
+ * Fetch keywords the page ranks for (GSC) plus on-topic competitor / domain gaps (DFS).
  */
-
 export async function discoverRankingKeywords(opts: {
-
   pageUrl: string;
-
   workspaceDomain: string;
-
   userKeywords?: string[];
-
   country?: string;
-
   languageCode?: string;
-
+  competitorDomains?: string[];
 }): Promise<{ primaryKeyword: string; keywords: DiscoveredKeyword[] }> {
-
   const userKw = (opts.userKeywords || []).map((k) => k.trim()).filter(Boolean);
-
   const pageHost = hostFromUrl(opts.pageUrl);
-
   const wsDomain = (opts.workspaceDomain || '').replace(/^www\./, '');
-
   const gscDomain = wsDomain || pageHost;
-
-
 
   const found = new Map<string, DiscoveredKeyword>();
 
-
-
   const add = (kw: string, patch: Partial<DiscoveredKeyword> & { source: DiscoveredKeyword['source'] }) => {
-
     const k = kw.trim();
-
     if (!k) return;
-
     const lk = k.toLowerCase();
-
     const prev = found.get(lk);
-
     if (!prev || (patch.impressions || 0) > (prev.impressions || 0)) {
-
       found.set(lk, { keyword: k, ...prev, ...patch });
-
     }
-
   };
-
-
 
   for (const k of userKw) add(k, { source: 'user' });
 
-
-
   try {
-
     const gsc = await getOwnVisibleKeywords({ domain: gscDomain, page: opts.pageUrl });
-
     for (const row of gsc.keywords) {
-
       add(row.keyword, {
-
         source: 'gsc',
-
         position: row.position,
-
         impressions: row.impressions,
-
         clicks: row.clicks,
-
       });
-
     }
-
   } catch { /* GSC optional */ }
 
+  const gscOnly = [...found.values()].filter((k) => k.source === 'gsc');
+  const bestGsc = gscOnly.sort((a, b) => kwScore(b) - kwScore(a))[0]?.keyword;
 
+  const seedForFilter = userKw[0] || bestGsc || keywordFromUrl(opts.pageUrl) || '';
 
-  // One ranked_keywords call — prefer page host, fall back to workspace domain.
-
-  const dfsTarget = pageHost || wsDomain;
-
-  if (dfsTarget && isDataForSeoConfigured()) {
-
+  const addRankedOnTopic = async (domain: string, cacheNs: string) => {
+    if (!domain || !seedForFilter || !isDataForSeoConfigured()) return;
     try {
-
-      const ranked = await cached({
-
-        namespace: 'discover-ranked',
-
-        key: [dfsTarget.toLowerCase(), opts.country || 'US', opts.languageCode || 'en'],
-
-        ttlMs: TTL.RANKED_KEYWORDS,
-
-        producer: () => getRankedKeywords({
-
-          target: dfsTarget,
-
-          country: opts.country,
-
-          languageCode: opts.languageCode,
-
-          limit: DFS_DEFAULT_RANKED_LIMIT,
-
-          topOnly: true,
-
-          maxRankGroup: 15,
-
-        }),
-
-      });
-
+      const ranked = await rankedKeywordsForDomain(domain, opts.country, opts.languageCode, cacheNs);
       for (const r of ranked) {
-
+        if (!r.keyword || !isKeywordOnTopic(r.keyword, seedForFilter)) continue;
         add(r.keyword, { source: 'dataforseo', position: r.position ?? undefined });
-
       }
-
     } catch { /* non-fatal */ }
+  };
 
+  const ownDomain = pageHost || wsDomain;
+  const competitors = (opts.competitorDomains || [])
+    .map((d) => d.replace(/^www\./, '').toLowerCase())
+    .filter((d) => d && d !== ownDomain.replace(/^www\./, '').toLowerCase())
+    .slice(0, 3);
+
+  // On-topic domain footprint — never dump the whole domain when we lack a seed.
+  if (ownDomain) await addRankedOnTopic(ownDomain, 'discover-ranked-own');
+  for (const comp of competitors) {
+    await addRankedOnTopic(comp, `discover-ranked-comp-${comp}`);
   }
 
-
-
-  const seedForFilter = userKw[0] || '';
-
   const keywords = [...found.values()]
-    .filter((k) => !seedForFilter || k.source === 'gsc' || k.source === 'user' || filterOnTopicKeywords([k], seedForFilter).length > 0)
+    .filter((k) => {
+      if (k.source === 'gsc' || k.source === 'user') return true;
+      if (!seedForFilter) return false;
+      return isKeywordOnTopic(k.keyword, seedForFilter);
+    })
     .sort((a, b) => {
+      const score = (k: DiscoveredKeyword) => kwScore(k) + (k.source === 'gsc' ? 500 : 0);
+      return score(b) - score(a);
+    });
 
-    const score = (k: DiscoveredKeyword) => (k.clicks || 0) * 1000 + (k.impressions || 0) + (k.position ? Math.max(0, 100 - k.position) : 0);
-
-    return score(b) - score(a);
-
-  });
-
-
-
-  // When the user explicitly picked keywords (new-content / import seeds), that seed
-  // is the primary — never replace it with a higher-scoring domain-wide DFS keyword
-  // (e.g. "gemini chatgpt" ranking #1 for the workspace while the user chose "detektyw").
   const primaryKeyword = userKw[0]
     || keywords.find((k) => k.source === 'gsc')?.keyword
+    || seedForFilter
     || keywords[0]?.keyword
     || '';
 
-
-
   return { primaryKeyword, keywords };
-
 }
 
 

@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { QueryTypes } from 'sequelize';
+import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
@@ -14,6 +16,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (ownership === null) return res.status(404).json({ error: 'Domain not found' });
    const domainId = (ownership as { ID: number }).ID;
    const jobId = await enqueueDomainSetup(domainId);
-   void kickDomainSetup(jobId); // fire-and-forget; the atomic claim guards double-run
+   const statusRows = await db.query<{ status: string }>(
+      'SELECT status FROM analysis_jobs WHERE id = ? LIMIT 1',
+      { replacements: [jobId], type: QueryTypes.SELECT },
+   );
+   if (statusRows[0]?.status === 'done') {
+      void import('../../../../lib/scoreDomainPages')
+         .then((m) => m.scoreDomainPages(domainId))
+         .catch((err) => { console.warn('[run-setup] rescore failed:', err); });
+      return res.status(202).json({ jobId, rescoring: true });
+   }
+   void kickDomainSetup(jobId);
    return res.status(202).json({ jobId });
 }

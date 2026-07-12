@@ -32,6 +32,8 @@ import {
   mergeNlpTerms,
   saveArticleKeywords,
 } from '../../../lib/articleKeywordDiscovery';
+import { keywordFromUrl } from '../../../lib/inferPageKeyword';
+import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { sidecarBase } from '../../../lib/sidecar';
@@ -347,8 +349,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const jobId = `job_${articleId}_${Date.now()}`;
-  const pipelineKeyword = keyword || (keywords as string[]).find((k) => k?.trim()) || '';
-  const payload = { url, keyword: pipelineKeyword, keywords, language: langForCountry(country), tone: 'professional' };
+  let pipelineKeyword = keyword || (keywords as string[]).find((k) => k?.trim()) || '';
+
+  // Resolve SERP seed before sidecar — empty keyword → wrong competitors / NLP terms.
+  if (!pipelineKeyword && url) {
+    try {
+      const artRow = await db.query<{ domain_id: number | null }>(
+        `SELECT domain_id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+        { replacements: [articleId], type: QueryTypes.SELECT },
+      );
+      let workspaceDomain = '';
+      if (artRow[0]?.domain_id) {
+        const dom = await db.query<{ domain: string | null }>(
+          `SELECT domain FROM domain WHERE "ID" = ? LIMIT 1`,
+          { replacements: [artRow[0].domain_id], type: QueryTypes.SELECT },
+        );
+        workspaceDomain = dom[0]?.domain || '';
+      }
+      const pre = await discoverRankingKeywords({
+        pageUrl: url,
+        workspaceDomain,
+        userKeywords: (keywords as string[]) || [],
+        country,
+        languageCode: langForCountry(country),
+      });
+      if (pre.primaryKeyword) pipelineKeyword = pre.primaryKeyword;
+    } catch {
+      pipelineKeyword = keywordFromUrl(url) || pipelineKeyword;
+    }
+  }
+
+  const pipelineKeywords = pipelineKeyword
+    ? [...new Set([pipelineKeyword, ...(keywords as string[]).map((k) => k.trim()).filter(Boolean)])]
+    : (keywords as string[]).map((k) => k.trim()).filter(Boolean);
+  const payload = {
+    url,
+    keyword: pipelineKeyword,
+    keywords: pipelineKeywords,
+    language: langForCountry(country),
+    tone: 'professional',
+  };
 
   try {
     await db.query(
@@ -496,9 +536,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const discovered = await discoverRankingKeywords({
         pageUrl: url,
         workspaceDomain,
-        userKeywords: (keywords as string[]) || [],
+        userKeywords: pipelineKeywords,
         country,
         languageCode: langForCountry(country),
+        competitorDomains,
       });
       if (discovered.keywords.length) {
         if (await abortIfSuperseded(res, articleId, jobId)) return;
@@ -749,14 +790,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // AI Search facts pipeline — SERP corpus + LLM (Option B), merged with PAA/sidecar.
     let articleFacts: ArticleFact[] = [];
     let aiVisibilitySummary: AiVisibilitySummary | null = null;
+    const factKeyword = resolveFactKeyword({
+      keyword: resolvedKeyword || keyword || '',
+      articleText: plainText,
+      title: classify.title || fetchPage.title || '',
+      pageUrl: url,
+    });
     try {
       let ownDomain = '';
       try { ownDomain = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
       const sidecarSummary = summaryFromSidecar(result.ai_search);
       const pipelineResult = await runArticleAiPipeline({
-        keyword: resolvedKeyword || keyword || '',
+        keyword: factKeyword,
+        resolvedKeyword: factKeyword,
         articleText: plainText,
         corpusTexts,
+        title: classify.title || fetchPage.title || '',
+        pageUrl: url,
         country,
         languageCode: langForCountry(country),
         ownDomain,
@@ -792,7 +842,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const paaMerged = dedupePaaQuestions([...paaFromSerp, ...paaFromDfs]);
 
         const graded = await buildGradedCoverageSnapshot({
-          keyword: resolvedKeyword || keyword || '',
+          keyword: factKeyword,
           plainText,
           html: pageContent,
           paaQuestions: paaMerged,
@@ -833,7 +883,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (aiVisibilitySummary?.citations?.length) {
           await persistAiVisibilityRun(
             articleId,
-            resolvedKeyword || keyword || '',
+            factKeyword,
             aiVisibilitySummary,
             aiScore,
           );

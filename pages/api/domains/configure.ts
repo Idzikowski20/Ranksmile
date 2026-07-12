@@ -8,7 +8,9 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/tenancy';
+import { getWorkspace } from '../../../lib/workspaces';
 import { getErrorMessage } from '../../../lib/errors';
+import { mergeGscProperty } from '../../../lib/gscProperty';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -18,7 +20,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
    const userId = await getCurrentUserId(req, res);
-   const { domain: domainName, language = 'pl', country = null, languageName = null, pages = [] } = req.body;
+   const {
+      domain: domainName,
+      language = 'pl',
+      country = null,
+      languageName = null,
+      pages = [],
+      workspaceId: bodyWorkspaceId,
+      gscSiteUrl,
+   } = req.body;
 
    if (!domainName) return res.status(400).json({ error: 'domain is required' });
 
@@ -29,7 +39,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          .replaceAll('.', '-')
          .replaceAll('/', '-');
 
-      const workspaceId = userId ? await getActiveWorkspaceId(req, userId) : null;
+      let workspaceId = userId ? await getActiveWorkspaceId(req, userId) : null;
+      if (userId && bodyWorkspaceId != null && bodyWorkspaceId !== '') {
+         const explicitWs = Number(bodyWorkspaceId);
+         const accessible = await getAccessibleWorkspaceIds(userId);
+         if (Number.isInteger(explicitWs) && explicitWs > 0 && accessible.includes(explicitWs)) {
+            workspaceId = explicitWs;
+         }
+      }
 
       // Create or find existing domain
       const [domain, created] = await Domain.findOrCreate({
@@ -44,7 +61,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          } as CreationAttributes<Domain>,
       });
 
-      if (!created) {
+      if (!created && userId && workspaceId) {
+         const existingWs = (domain as unknown as { workspace_id: number | null }).workspace_id;
+         const wsIds = await getAccessibleWorkspaceIds(userId);
+         const targetWs = await getWorkspace(userId, workspaceId);
+         if (targetWs?.status === 'setup') {
+            // Setup wizard: always attach the domain to the in-progress workspace.
+            await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', {
+               replacements: [workspaceId, domain.ID],
+            });
+         } else if (existingWs == null || !wsIds.includes(Number(existingWs))) {
+            return res.status(403).json({ error: 'Access denied.' });
+         } else if (Number(existingWs) !== workspaceId) {
+            return res.status(409).json({ error: 'This domain already belongs to another workspace.' });
+         }
+      } else if (!created) {
          const existingWs = (domain as unknown as { workspace_id: number | null }).workspace_id;
          const wsIds = await getAccessibleWorkspaceIds(userId);
          if (existingWs == null || !wsIds.includes(Number(existingWs))) {
@@ -63,6 +94,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             });
          } catch {
             // non-fatal — location is a display nicety, not required for setup
+         }
+      }
+
+      // Persist the GSC property the user picked in setup so Performance uses the
+      // correct siteUrl (URL-prefix vs sc-domain:), not a blind sc-domain: default.
+      const gscSite = typeof gscSiteUrl === 'string' ? gscSiteUrl.trim() : '';
+      if (gscSite) {
+         try {
+            const scJson = mergeGscProperty(domain.search_console, gscSite);
+            await db.query('UPDATE domain SET search_console = ? WHERE "ID" = ?', {
+               replacements: [scJson, domainId],
+            });
+         } catch {
+            // non-fatal
          }
       }
 

@@ -2,7 +2,7 @@
 import hashlib
 from urllib.parse import urlparse
 
-from bs4 import BeautifulSoup
+from analyzers.html_parse import parse_html
 
 CONTENT_SELECTORS = [
     "article", "main", ".post-content", ".entry-content",
@@ -10,7 +10,7 @@ CONTENT_SELECTORS = [
 ]
 
 
-def _main_node(soup: BeautifulSoup):
+def _main_node(soup):
     for sel in CONTENT_SELECTORS:
         node = soup.select_one(sel)
         if node and len(node.get_text(separator=" ", strip=True).split()) >= 50:
@@ -19,7 +19,7 @@ def _main_node(soup: BeautifulSoup):
 
 
 def extract_page_signals(html: str, url: str) -> dict:
-    soup = BeautifulSoup(html or "", "lxml")
+    soup = parse_html(html)
 
     title_tag = soup.find("title")
     title = title_tag.get_text(strip=True) if title_tag else ""
@@ -58,4 +58,5 @@ def extract_page_signals(html: str, url: str) -> dict:
         "image_alt_ratio": round(image_alt_ratio, 3),
         "internal_links": internal_links,
         "content_hash": content_hash,
+        "body_text": text[:12000],
     }

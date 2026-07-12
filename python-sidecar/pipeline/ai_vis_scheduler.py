@@ -10,11 +10,44 @@ SCHEDULER_TICK_HOURS mirrors AI_VIS_SETTINGS.SCHEDULER_TICK_HOURS in lib/aiVisib
 import asyncio
 import os
 import random
+import time
 
 import httpx
 
 SCHEDULER_TICK_HOURS = 6
+CONNECT_RETRY_SEC = 30
+CONNECT_RETRY_MAX_WAIT_SEC = 180
 _tick_lock = asyncio.Lock()
+
+
+async def _wait_for_nextjs(nextjs_url: str) -> None:
+    """Block until Next.js accepts HTTP (mprocs starts sidecar before Next compiles)."""
+    base = nextjs_url.rstrip("/")
+    deadline = time.monotonic() + CONNECT_RETRY_MAX_WAIT_SEC
+    attempt = 0
+    while time.monotonic() < deadline:
+        attempt += 1
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(f"{base}/")
+            if resp.status_code < 500:
+                if attempt > 1:
+                    print(f"[ai_vis_scheduler] Next.js ready at {nextjs_url}")
+                return
+        except httpx.ConnectError:
+            pass
+        except httpx.HTTPError:
+            pass
+        wait = min(CONNECT_RETRY_SEC, max(0, deadline - time.monotonic()))
+        if wait <= 0:
+            break
+        if attempt == 1:
+            print(f"[ai_vis_scheduler] waiting for Next.js at {nextjs_url}…")
+        await asyncio.sleep(wait)
+    print(
+        f"[ai_vis_scheduler] Next.js still unreachable at {nextjs_url} "
+        f"after {CONNECT_RETRY_MAX_WAIT_SEC}s — will retry every {CONNECT_RETRY_SEC}s"
+    )
 
 
 async def _tick(nextjs_url: str) -> None:
@@ -54,9 +87,14 @@ async def scheduler_loop(nextjs_url: str) -> None:
     # due-scans in the same second. Tiny (0–60s) — keeps the first tick effectively
     # immediate for fast post-restart recovery.
     await asyncio.sleep(random.uniform(0, 60))
+    await _wait_for_nextjs(nextjs_url)
     while True:
+        sleep_sec = SCHEDULER_TICK_HOURS * 3600
         try:
             await _tick(nextjs_url)
+        except httpx.ConnectError as exc:
+            print(f"[ai_vis_scheduler] tick failed: Next.js unreachable at {nextjs_url}: {exc}")
+            sleep_sec = CONNECT_RETRY_SEC
         except Exception as exc:  # noqa: BLE001 — best-effort; keep the loop alive
             print(f"[ai_vis_scheduler] tick failed: {type(exc).__name__}: {exc}")
-        await asyncio.sleep(SCHEDULER_TICK_HOURS * 3600)
+        await asyncio.sleep(sleep_sec)

@@ -136,7 +136,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // domain's top keywords so they're ready in the audit/editor modal.
           void import('../../../lib/competitorPrescan')
             .then((m) => m.prescanDomainCompetitors(Number(domainId)))
-            .catch(() => { /* best-effort; never blocks setup */ });
+            .then(() => import('../../../lib/scoreDomainPages').then((m) => m.scoreDomainPages(Number(domainId))))
+            .catch((err) => { console.warn('[job-progress] domain page scoring failed (non-fatal):', err); });
         } catch (e) {
           // Materialization (delete+insert tx) failed — DON'T leave the job 'running'
           // (Retry only re-claims queued/failed/stale-running, so a stuck 'running' job

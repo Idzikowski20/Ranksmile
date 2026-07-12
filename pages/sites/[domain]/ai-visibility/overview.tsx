@@ -213,6 +213,24 @@ const AiVisibilityOverview: NextPage = () => {
 
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  {ov?.usingFallbackScan ? (
+                     <div style={{
+                        padding: '12px 16px',
+                        borderRadius: 12,
+                        border: '1px solid #F4F4F5',
+                        background: '#FFFBEB',
+                        color: '#52525C',
+                        fontSize: 14,
+                        fontFamily: FONT,
+                        lineHeight: '20px',
+                     }}>
+                        Ostatni skan nie powiódł się (brak środków na koncie DataForSEO).
+                        {' '}
+                        Pokazujemy dane z {ov.finishedAt ? new Date(ov.finishedAt).toLocaleDateString() : 'poprzedniego skanu'}.
+                        {' '}
+                        Doładuj konto DFS i kliknij „Refresh data”.
+                     </div>
+                  ) : null}
                   {/* Visibility score — competitor ranking + Compare */}
                   <Panel
                      title={(

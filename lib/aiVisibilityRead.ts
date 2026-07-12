@@ -2,7 +2,7 @@
  *  all load a scan's rows the same way. Pure mapping helpers (parseCitations,
  *  mapDbRowsToResultRows) are exported for unit tests. Rows carry the prompt's
  *  topic/text so snapshotForDomain can compose prompts/topics without re-querying. */
-import { queryRows } from './db/query';
+import { queryRows, queryOne } from './db/query';
 import { ResultRow, BrandMention } from './aiVisibilityMetrics';
 import type { LlmCitation } from './dataforseoLlm';
 
@@ -78,4 +78,60 @@ export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
       [scanId],
    );
    return mapDbRowsToResultRows(dbRows);
+}
+
+async function queryCompletedScan(
+   domainId: number,
+   opts: { requireUsableRows?: boolean; beforeFinishedAt?: string } = {},
+): Promise<{ id: number; finished_at: string | null } | null> {
+   const filters = ['c.domain_id = ?', "s.status = 'completed'"];
+   const params: unknown[] = [domainId];
+   if (opts.beforeFinishedAt) {
+      filters.push('s.finished_at < ?');
+      params.push(opts.beforeFinishedAt);
+   }
+   if (opts.requireUsableRows) {
+      filters.push('EXISTS (SELECT 1 FROM ai_vis_results r WHERE r.scan_id = s.id AND r.error IS NULL)');
+   }
+   return queryOne<{ id: number; finished_at: string | null }>(
+      `SELECT s.id, s.finished_at FROM ai_vis_scans s
+       JOIN ai_vis_configs c ON c.id = s.config_id
+       WHERE ${filters.join(' AND ')}
+       ORDER BY s.finished_at DESC LIMIT 1`,
+      params,
+   );
+}
+
+/** Latest completed scan for a domain, even when every row failed (e.g. DFS 402). */
+export async function getLatestCompletedScan(
+   domainId: number,
+): Promise<{ id: number; finished_at: string | null } | null> {
+   return queryCompletedScan(domainId);
+}
+
+/** Scan to show in the UI: newest completed scan with at least one successful result row. */
+export async function getDisplayScan(domainId: number): Promise<{
+   scan: { id: number; finished_at: string | null };
+   usingFallbackScan: boolean;
+   latestAttemptFinishedAt: string | null;
+} | null> {
+   const latest = await getLatestCompletedScan(domainId);
+   if (!latest) return null;
+
+   const usable = await queryCompletedScan(domainId, { requireUsableRows: true });
+   if (!usable) return null;
+
+   return {
+      scan: usable,
+      usingFallbackScan: usable.id !== latest.id,
+      latestAttemptFinishedAt: latest.finished_at,
+   };
+}
+
+/** Previous display scan (for delta), chronologically before `beforeFinishedAt`. */
+export async function getPreviousDisplayScan(
+   domainId: number,
+   beforeFinishedAt: string,
+): Promise<{ id: number; finished_at: string | null } | null> {
+   return queryCompletedScan(domainId, { requireUsableRows: true, beforeFinishedAt });
 }
