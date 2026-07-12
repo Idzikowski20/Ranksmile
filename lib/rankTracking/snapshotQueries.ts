@@ -60,15 +60,16 @@ export function baselineDate(comparePeriod: ComparePeriod): string {
 }
 
 export async function getKeywordHistory(
+  configId: number,
   trackingKeywordId: number,
   device: RankDevice,
   limit = 365,
 ): Promise<RankSnapshotRow[]> {
   return queryRows<RankSnapshotRow>(
     `SELECT * FROM rank_snapshots
-     WHERE tracking_keyword_id = ? AND device = ?
+     WHERE config_id = ? AND tracking_keyword_id = ? AND device = ?
      ORDER BY checked_at ASC LIMIT ?`,
-    [trackingKeywordId, device, limit],
+    [configId, trackingKeywordId, device, limit],
   );
 }
 
@@ -80,7 +81,7 @@ export async function getHistorySummaryForConfig(
 
   for (const kid of keywordIds) {
     for (const device of ['desktop', 'mobile'] as RankDevice[]) {
-      const rows = await getKeywordHistory(kid, device, 90);
+      const rows = await getKeywordHistory(configId, kid, device, 90);
       const positions = rows.filter((r) => r.found && r.position != null).map((r) => r.position as number);
       summaries.push({
         trackingKeywordId: kid,

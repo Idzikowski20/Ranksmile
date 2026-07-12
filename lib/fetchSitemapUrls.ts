@@ -5,6 +5,7 @@ import { SERPBEAR_UA } from './httpConstants';
 const LOC_RE = /<loc>\s*([^<\s]+)\s*<\/loc>/gi;
 const MAX_CHILD_SITEMAPS = 12;
 const MAX_URLS = 5000;
+const MAX_REDIRECTS = 5;
 
 export type SitemapEntry = {
   url: string;
@@ -17,10 +18,20 @@ function parseLocs(xml: string): string[] {
 
 async function fetchXml(url: string): Promise<string | null> {
    try {
-      await assertPublicUrl(url);
-      const r = await fetch(url, { headers: { 'User-Agent': SERPBEAR_UA } });
-      if (!r.ok) return null;
-      return await r.text();
+      let current = url;
+      for (let hop = 0; hop < MAX_REDIRECTS; hop += 1) {
+         await assertPublicUrl(current);
+         const r = await fetch(current, { headers: { 'User-Agent': SERPBEAR_UA }, redirect: 'manual' });
+         if (r.status >= 300 && r.status < 400) {
+            const location = r.headers.get('location');
+            if (!location) return null;
+            current = new URL(location, current).toString();
+            continue;
+         }
+         if (!r.ok) return null;
+         return await r.text();
+      }
+      return null;
    } catch {
       return null;
    }
@@ -57,9 +68,14 @@ export async function fetchSitemapEntries(domainName: string): Promise<SitemapEn
    const seen = new Set<string>();
    const out: SitemapEntry[] = [];
 
-   const addUrl = (raw: string, sitemapUrl: string) => {
+   const addUrl = async (raw: string, sitemapUrl: string) => {
       const key = raw.split('#')[0].split('?')[0];
       if (!isPageUrl(key) || seen.has(key)) return;
+      try {
+         await assertPublicUrl(key);
+      } catch {
+         return;
+      }
       seen.add(key);
       out.push({ url: key, sitemapUrl });
    };
@@ -80,13 +96,13 @@ export async function fetchSitemapEntries(domainName: string): Promise<SitemapEn
             const childSitemapUrl = childLocs[i];
             if (!childXml) continue;
             for (const loc of parseLocs(childXml)) {
-               addUrl(loc, childSitemapUrl);
+               await addUrl(loc, childSitemapUrl);
                if (out.length >= MAX_URLS) return out;
             }
          }
       } else {
          for (const loc of rootLocs) {
-            addUrl(loc, rootUrl);
+            await addUrl(loc, rootUrl);
             if (out.length >= MAX_URLS) return out;
          }
       }

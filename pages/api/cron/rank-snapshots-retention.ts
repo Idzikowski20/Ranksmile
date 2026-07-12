@@ -4,7 +4,8 @@ import { pruneOldSnapshotPartitions } from '../../../lib/rankTracking/partitions
 import { getErrorMessage } from '../../../lib/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
