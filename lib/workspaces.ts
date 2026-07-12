@@ -1,5 +1,6 @@
 import db from '../database/database';
 import { ensureUserTenancy } from './tenancy';
+import { assertCanManage } from './members';
 import type { DbRow, SqlReplacements } from './types/db';
 
 export type Workspace = { id: number; name: string; domain?: string | null };
@@ -79,6 +80,7 @@ export async function createWorkspace(userId: string, name: string): Promise<Wor
 }
 
 export async function renameWorkspace(userId: string, wsId: number, name: string): Promise<void> {
+   await assertCanManage(userId);
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
@@ -91,6 +93,7 @@ export async function renameWorkspace(userId: string, wsId: number, name: string
  * lands on `/`, which routes a 0-workspace owner into the new-workspace creator.
  */
 export async function deleteWorkspace(userId: string, wsId: number): Promise<void> {
+   await assertCanManage(userId);
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
 
