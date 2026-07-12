@@ -2,7 +2,12 @@
  * Strict topic matching for keyword/term enrichment — prevents DFS/GSC noise
  * (e.g. "test z lektury…" matching seed "warszawa" via substring "a").
  */
-import { isUsefulTerm, normalizeTerm } from './termUtils';
+import { isDictionaryQueryNoise, isUsefulTerm, normalizeTerm } from './termUtils';
+import { keywordFromUrl, urlAnchorSeed } from './inferPageKeyword';
+
+const SEED_NOISE_TOKENS = new Set([
+  'znaczy', 'znaczenie', 'definicja', 'slownik', 'tlumacz', 'tlumaczenie', 'oznacza',
+]);
 
 const OFF_TOPIC_PATTERNS = [
   /\btest z lektury\b/,
@@ -29,7 +34,9 @@ const OFF_TOPIC_PATTERNS = [
 
 /** Seed words used for whole-token matching (min 3 chars). */
 export function seedTokens(seedKeyword: string): string[] {
-  return normalizeTerm(seedKeyword).split(/\s+/).filter((w) => w.length >= 3);
+  return normalizeTerm(seedKeyword)
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !SEED_NOISE_TOKENS.has(w));
 }
 
 /** True when `candidate` is on the same topic as `seedKeyword` (whole-word overlap). */
@@ -37,6 +44,7 @@ export function isKeywordOnTopic(candidate: string, seedKeyword: string): boolea
   const cand = normalizeTerm(candidate);
   const normSeed = normalizeTerm(seedKeyword);
   if (!cand || !normSeed) return false;
+  if (isDictionaryQueryNoise(cand)) return false;
   if (!isUsefulTerm(cand)) return false;
 
   for (const re of OFF_TOPIC_PATTERNS) {
@@ -89,11 +97,10 @@ export function filterNlpTermsForAnalysis<T extends { term: string }>(terms: T[]
   const soft = terms.filter((t) => {
     const term = normalizeTerm(t.term);
     if (!term || !isUsefulTerm(term)) return false;
+    if (isDictionaryQueryNoise(term)) return false;
     for (const re of OFF_TOPIC_PATTERNS) {
       if (re.test(term)) return false;
     }
-    // Generic "co to znaczy X" queries — keep only when on-topic for the seed.
-    if (/\b(co to znaczy|co znaczy)\b/.test(term) && !isKeywordOnTopic(term, seedKeyword)) return false;
     if (term.split(/\s+/).filter((w) => w.length >= 3).length >= 2) {
       return seedTokens(seedKeyword).some((sw) => term.split(/\s+/).includes(sw));
     }

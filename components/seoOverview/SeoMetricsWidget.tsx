@@ -43,7 +43,7 @@ const SeoMetricsWidget = ({ data, slug, workspaceId, loading }: Props) => {
       <div style={{ padding: '12px 24px 24px', flex: 1 }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 4 }).map((_, i) => (
               <WidgetSkeletonBar key={i} />
             ))}
           </div>
@@ -56,21 +56,6 @@ const SeoMetricsWidget = ({ data, slug, workspaceId, loading }: Props) => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center',
-              padding: '14px 0', borderBottom: '1px solid #F4F4F5',
-            }}
-            >
-              <div>
-                <div style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT, marginBottom: 4 }}>Authority Score</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 22, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>
-                    {data.authorityScore ?? '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             <div style={{
               display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center',
               padding: '14px 0', borderBottom: '1px solid #F4F4F5',

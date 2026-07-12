@@ -2,7 +2,6 @@ import { AI_VIS_MODEL_LABEL } from '../aiVisibility';
 import { getDisplayScan, loadScanResultRows } from '../aiVisibilityRead';
 import type { ResultRow } from '../aiVisibilityMetrics';
 import { computeOverview, isOwnDomainCitation } from '../aiVisibilityMetricsOverview';
-import { domainRanks } from '../dataforseo';
 import { getConfigsForDomain } from '../rankTracking/service';
 import { buildRankResultsPage } from '../rankTracking/results';
 import {
@@ -104,16 +103,6 @@ async function buildSeoMetrics(domainHost: string): Promise<SeoMetricsSection> {
   const sc = scRaw && typeof scRaw === 'object' ? scRaw : null;
   const connected = !!(sc && sc.thirtyDays?.length);
 
-  let authorityScore: number | null = null;
-  try {
-    const ranks = await domainRanks([domainHost]);
-    const key = domainHost.replace(/^www\./, '');
-    const raw = ranks[key] ?? ranks[domainHost] ?? null;
-    authorityScore = raw != null ? raw * 10 : null;
-  } catch {
-    authorityScore = null;
-  }
-
   const stats = sc?.stats ?? [];
   const last14 = stats.slice(-14);
   const prev7 = last14.slice(0, 7);
@@ -132,7 +121,6 @@ async function buildSeoMetrics(domainHost: string): Promise<SeoMetricsSection> {
 
   return {
     connected,
-    authorityScore,
     organicTraffic: metricDelta(curClicks, prev7.length ? prevClicks : null),
     organicKeywords: metricDelta(kwCount, connected ? prevKwCount : null),
     paidKeywords: 0,

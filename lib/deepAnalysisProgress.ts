@@ -31,6 +31,8 @@ const STALE_STARTING_MS = 300_000;
 
 export function isStaleDeepAnalysisJob(snap: JobProgressSnapshot): boolean {
   if (snap.status !== 'running' && snap.status !== 'queued') return false;
+  // Node post-processing (coverage, outlines, facts) runs after sidecar returns — not stale.
+  if (snap.currentStage === 'finalizing') return false;
   const updatedMs = snap.updatedAt ? new Date(snap.updatedAt).getTime() : 0;
   const age = updatedMs > 0 ? Date.now() - updatedMs : 0;
   const msg = snap.progressMessage || '';

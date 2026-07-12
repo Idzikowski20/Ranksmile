@@ -20,7 +20,7 @@ import { readLocalSCData } from '../../utils/searchConsole';
 import { AiVisibilitySummary } from '../aiSearchScore';
 import { CoverageItem, hashId } from '../aiCoverage';
 import { normalizePl, tokenize } from '../termMatch';
-import { isUsefulTerm } from '../termUtils';
+import { isUsefulTerm, isDictionaryQueryNoise } from '../termUtils';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
 
 export type KeywordSource = 'dataforseo' | 'gsc' | 'none';
@@ -218,11 +218,20 @@ export async function getAiSearchInfo(opts: {
 
    if (!paa.questions.length && !paa.related.length) return null;
 
+   const seed = opts.keyword.trim();
+   const onTopicQuestions = paa.questions.filter(
+     (q) => q.question && !isDictionaryQueryNoise(q.question) && isKeywordOnTopic(q.question, seed),
+   );
+   const onTopicRelated = paa.related.filter(
+     (r) => r && !isDictionaryQueryNoise(r) && isKeywordOnTopic(r, seed),
+   );
+   if (!onTopicQuestions.length && !onTopicRelated.length) return null;
+
    const text = normalizePl(opts.articleText || '');
    const own = (opts.ownDomain || '').replace(/^www\./, '').toLowerCase();
 
    const citations = [
-      ...paa.questions.map((q) => {
+      ...onTopicQuestions.map((q) => {
          const readiness = readinessScore(text, q.question);
          const isOwn = !!(own && q.domain && q.domain.replace(/^www\./, '').toLowerCase().includes(own));
          return {
@@ -235,7 +244,7 @@ export async function getAiSearchInfo(opts: {
             answer_readiness_score: readiness,
          };
       }),
-      ...paa.related.map((related) => ({
+      ...onTopicRelated.map((related) => ({
          prompt: related,
          answer: '',
          cited_url: '',

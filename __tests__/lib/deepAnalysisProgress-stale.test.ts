@@ -29,4 +29,14 @@ describe('isStaleDeepAnalysisJob', () => {
       updatedAt: null,
     })).toBe(false);
   });
+
+  it('keeps finalizing post-processing jobs alive even when updatedAt is old', () => {
+    const updatedAt = new Date(Date.now() - 180_000).toISOString();
+    expect(isStaleDeepAnalysisJob({
+      status: 'running',
+      currentStage: 'finalizing',
+      progressMessage: 'Saving analysis results...',
+      updatedAt,
+    })).toBe(false);
+  });
 });

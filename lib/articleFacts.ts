@@ -1,18 +1,17 @@
 /**
- * Surfer-style Facts pipeline — extract factual statements from competitor corpus
- * + LLM answers (ai_overview, chat_gpt), weighted by source frequency.
+ * Surfer-style Facts pipeline — factual statements from DataForSEO People Also Ask.
+ * No synthetic citation templates ("X czy warto?") — only real SERP questions + answers.
  */
-import { isDataForSeoConfigured } from './dataforseo';
-import { runModelPrompt } from './dataforseoLlm';
+import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';
 import { hashId, type CoverageItem } from './aiCoverage';
-import { cached } from './cache/fileCache';
-import { buildCitationPrompts } from './citationPrompts';
+import { cached, TTL } from './cache/fileCache';
 import { isCorpusNoiseSentence } from './corpusNoiseFilter';
 import { resolveFactKeyword } from './resolveFactKeyword';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';
+import { isDictionaryQueryNoise } from './termUtils';
 import { factReadinessScore } from './factReadiness';
 import type { AiCitation, AiVisibilitySummary } from './aiSearchScore';
-import type { ArticleFact, FactSourceKind } from './articleFactTypes';
+import type { ArticleFact } from './articleFactTypes';
 
 export type { ArticleFact, FactSourceKind } from './articleFactTypes';
 export { factReadinessScore } from './factReadiness';
@@ -53,7 +52,7 @@ function mergeFact(
   });
 }
 
-/** Fetch citation prompts + LLM answers for AI visibility scoring. */
+/** Fetch facts from DataForSEO PAA answers for the resolved keyword. */
 export async function fetchArticleFacts(opts: {
   keyword: string;
   corpusTexts?: string[];
@@ -61,6 +60,7 @@ export async function fetchArticleFacts(opts: {
   title?: string;
   pageUrl?: string;
   country?: string;
+  languageCode?: string;
   /** When set, skip resolveFactKeyword (caller already resolved). */
   resolvedKeyword?: string;
 }): Promise<ArticleFact[]> {
@@ -75,59 +75,58 @@ export async function fetchArticleFacts(opts: {
 
   return cached({
     namespace: 'article-facts',
-    key: [keyword.toLowerCase(), opts.country || 'PL', articleText.length],
-    ttlMs: 24 * 60 * 60 * 1000,
+    key: [keyword.toLowerCase(), opts.country || 'PL', opts.languageCode || 'pl', articleText.length],
+    ttlMs: TTL.SERP,
     producer: () => fetchArticleFactsUncached({ ...opts, keyword, articleText }),
   });
 }
 
 function factMatchesArticle(factText: string, keyword: string, articleText: string): boolean {
   if (isCorpusNoiseSentence(factText)) return false;
+  if (isDictionaryQueryNoise(factText)) return false;
   if (isKeywordOnTopic(factText, keyword)) return true;
-  if (factReadinessScore(articleText, factText) >= 28) return true;
+  if (factReadinessScore(articleText, factText) >= 35) return true;
   const seeds = seedTokens(keyword);
   const low = factText.toLowerCase();
-  return seeds.some((s) => low.includes(s));
+  return seeds.filter((s) => low.includes(s)).length >= 2;
+}
+
+function paaQuestionPasses(question: string, keyword: string): boolean {
+  const q = question.trim();
+  if (q.length < 10 || isDictionaryQueryNoise(q)) return false;
+  return isKeywordOnTopic(q, keyword);
 }
 
 async function fetchArticleFactsUncached(opts: {
   keyword: string;
   corpusTexts?: string[];
   articleText?: string;
-  title?: string;
-  pageUrl?: string;
   country?: string;
+  languageCode?: string;
 }): Promise<ArticleFact[]> {
   const map = new Map<string, ArticleFact>();
   const keyword = opts.keyword.trim();
   const country = opts.country || 'PL';
+  const languageCode = opts.languageCode || 'pl';
   const articleText = opts.articleText || opts.corpusTexts?.join(' ') || '';
 
-  const citationPrompts = buildCitationPrompts(keyword, [], 12);
+  if (!keyword || !isDataForSeoConfigured()) {
+    return [];
+  }
 
-  if (keyword && isDataForSeoConfigured()) {
-    const models = ['ai_overview', 'chat_gpt'] as const;
-    const tasks: Promise<void>[] = [];
-    for (const model of models) {
-      for (const prompt of citationPrompts.slice(0, 5)) {
-        tasks.push(
-          runModelPrompt(model, prompt, country)
-            .then((ans) => {
-              for (const sentence of splitFactSentences(ans.text)) {
-                if (!factMatchesArticle(sentence, keyword, articleText)) continue;
-                const cite = ans.citations[0];
-                mergeFact(map, sentence, {
-                  kind: model,
-                  url: cite?.url,
-                  domain: cite?.domain,
-                });
-              }
-            })
-            .catch(() => { /* non-fatal */ }),
-        );
-      }
+  const paa = await getPeopleAlsoAsk({
+    keyword,
+    country,
+    languageCode,
+  }).catch(() => ({ questions: [] as Array<{ question: string; answer: string; domain: string; url: string }>, related: [] as string[] }));
+
+  for (const q of paa.questions) {
+    if (!paaQuestionPasses(q.question, keyword)) continue;
+    const source = { kind: 'paa' as const, url: q.url, domain: q.domain };
+    for (const sentence of splitFactSentences(q.answer || '')) {
+      if (!factMatchesArticle(sentence, keyword, articleText)) continue;
+      mergeFact(map, sentence, source);
     }
-    await Promise.all(tasks);
   }
 
   return Array.from(map.values())
@@ -135,27 +134,27 @@ async function fetchArticleFactsUncached(opts: {
     .slice(0, 30);
 }
 
-/** Map facts → AiVisibilitySummary citations for editor UI + legacy store. */
+/** Map PAA answer facts → AiVisibilitySummary (prompts come from getAiSearchInfo merge). */
 export function factsToVisibilitySummary(
   facts: ArticleFact[],
   articleText: string,
 ): AiVisibilitySummary {
   const citations: AiCitation[] = facts
     .filter((f) => !isCorpusNoiseSentence(f.text))
-    .filter((f) => f.text.includes('?') || /^(czy|jak|ile|polecany|najlepsz)/i.test(f.text))
+    .filter((f) => !f.text.includes('?'))
     .map((f) => {
-    const readiness = factReadinessScore(articleText, f.text);
-    const src = f.sources[0];
-    return {
-      prompt: f.text,
-      answer: f.text,
-      cited_url: src?.url || '',
-      cited_domain: src?.domain || '',
-      is_own_domain: false,
-      is_competitor: !!src?.domain,
-      answer_readiness_score: readiness,
-    };
-  });
+      const readiness = factReadinessScore(articleText, f.text);
+      const src = f.sources[0];
+      return {
+        prompt: f.text,
+        answer: f.text,
+        cited_url: src?.url || '',
+        cited_domain: src?.domain || '',
+        is_own_domain: false,
+        is_competitor: !!src?.domain,
+        answer_readiness_score: readiness,
+      };
+    });
   const cited = citations.filter((c) => (c.answer_readiness_score ?? 0) >= 60).length;
   const avg = citations.length
     ? Math.round(citations.reduce((s, c) => s + (c.answer_readiness_score ?? 0), 0) / citations.length)
@@ -169,23 +168,23 @@ export function factsToVisibilitySummary(
   };
 }
 
-/** Map LLM/SERP facts to coverage items for deep-analysis snapshot. */
+/** Map PAA facts to coverage items for deep-analysis snapshot. */
 export function factsToCoverageItems(facts: ArticleFact[]): CoverageItem[] {
   return facts
-    .filter((f) => !f.text.trim().endsWith('?') || f.sources.some((s) => s.kind === 'chat_gpt' || s.kind === 'ai_overview'))
+    .filter((f) => !f.text.trim().endsWith('?'))
     .map((f) => ({
-    id: f.id,
-    label: f.text,
-    type: 'fact' as const,
-    category: 'knowledge' as const,
-    importance: f.sourceFrequency >= 2 ? 'critical' as const : 'recommended' as const,
-    source: 'llm' as const,
-    covered: false,
-    quality: 0,
-  }));
+      id: f.id,
+      label: f.text,
+      type: 'fact' as const,
+      category: 'knowledge' as const,
+      importance: f.sourceFrequency >= 2 ? 'critical' as const : 'recommended' as const,
+      source: 'paa' as const,
+      covered: false,
+      quality: 0,
+    }));
 }
 
-/** Merge primary (facts/LLM) with secondary (PAA/sidecar) visibility summaries. */
+/** Merge primary (PAA facts) with secondary (PAA questions / sidecar) visibility summaries. */
 export function mergeVisibilitySummaries(
   primary: AiVisibilitySummary,
   secondary: AiVisibilitySummary | null,

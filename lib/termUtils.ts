@@ -27,6 +27,24 @@ const GENERIC_WORDS = new Set([
   'nalezy', 'czas', 'czasem', 'sytuacja', 'sytuacji', 'ktos', 'cos',
 ]);
 
+/** Polish dictionary / “what does X mean” SERP spam — not content entities. */
+const DICTIONARY_QUERY_PATTERNS = [
+  /\bco to znaczy\b/,
+  /\bco znaczy\b/,
+  /^\d+\s+co znaczy\b/,
+  /\bco znaczy\s+\d+\b/,
+  /^znaczy$/,
+  /^co to znaczy$/,
+  /\bco to jest\b/,
+  /\bco oznacza\b/,
+];
+
+export function isDictionaryQueryNoise(term: string): boolean {
+  const normalized = normalizeTerm(term);
+  if (!normalized) return true;
+  return DICTIONARY_QUERY_PATTERNS.some((re) => re.test(normalized));
+}
+
 export function normalizeTerm(term: string): string {
   return term
     .toLowerCase()
@@ -44,6 +62,7 @@ function isStopword(token: string): boolean {
 export function isUsefulTerm(term: string): boolean {
   const normalized = normalizeTerm(term);
   if (normalized.length < 4) return false;
+  if (isDictionaryQueryNoise(normalized)) return false;
   if (/^\d+$/.test(normalized)) return false;
 
   const tokens = normalized.split(' ').filter(Boolean);
