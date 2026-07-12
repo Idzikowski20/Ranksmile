@@ -2,7 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import type { BillingPeriod } from '../../../lib/billingPlans';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
-import { getOrgBillingState } from '../../../lib/orgBilling';
+import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
+import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer';
 import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
@@ -71,7 +72,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { orgId } = await ensureUserTenancy(user.id);
+  try { await assertCanManage(user.id); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billingState = await getOrgBillingState(orgId);
+  if (hasNonTerminalStripeSubscription(billingState)) {
+    return res.status(409).json({ error: 'An active Stripe subscription already exists for this organization' });
+  }
   const stripe = getStripe();
 
   const customerId = await ensureStripeCustomer(
@@ -81,21 +86,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     billingState?.stripeCustomerId ?? null,
   );
 
-  const subscription = await stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: priceId }],
-    payment_behavior: 'default_incomplete',
-    payment_settings: { save_default_payment_method: 'on_subscription' },
-    expand: ['pending_setup_intent', 'latest_invoice.payment_intent'],
-    metadata: {
-      org_id: String(orgId),
-      user_id: user.id,
-      plan_slug: plan.slug,
-      billing_period: billing,
-      checkout_mode: mode,
+  const subscription = await stripe.subscriptions.create(
+    {
+      customer: customerId,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['pending_setup_intent', 'latest_invoice.payment_intent'],
+      metadata: {
+        org_id: String(orgId),
+        user_id: user.id,
+        plan_slug: plan.slug,
+        billing_period: billing,
+        checkout_mode: mode,
+      },
+      ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
     },
-    ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
-  });
+    { idempotencyKey: `org-${orgId}-subscription-${plan.slug}-${billing}-${mode}` },
+  );
 
   const secret = clientSecretFromSubscription(subscription, mode);
   if (!secret) {
