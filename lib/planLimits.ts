@@ -1,0 +1,101 @@
+import type { BillingPeriod } from './billingPlans';
+import type { PlanSlug } from './stripePrices';
+import type { OrgPlanUsage } from './planUsage';
+
+export interface PlanLimitDefinition {
+  key: string;
+  label: string;
+  limit: number | null;
+}
+
+export interface PlanLimitMetric extends PlanLimitDefinition {
+  used: number;
+  pct: number | null;
+}
+
+export interface PlanSummaryData {
+  planSlug: PlanSlug;
+  planName: string;
+  billingPeriod: BillingPeriod | null;
+  subscriptionStatus: string | null;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  metrics: PlanLimitMetric[];
+  overallPct: number;
+}
+
+const PLAN_LIMITS: Record<PlanSlug, PlanLimitDefinition[]> = {
+  starter: [
+    { key: 'documents', label: 'Documents', limit: 10 },
+    { key: 'aiPrompts', label: 'AI Prompts', limit: 15 },
+    { key: 'brandSpaces', label: 'Brand Spaces', limit: 1 },
+    { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 50 },
+  ],
+  growth: [
+    { key: 'documents', label: 'Documents', limit: 30 },
+    { key: 'aiPrompts', label: 'AI Prompts', limit: 50 },
+    { key: 'brandSpaces', label: 'Brand Spaces', limit: 5 },
+    { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 200 },
+  ],
+  scale: [
+    { key: 'documents', label: 'Documents', limit: 100 },
+    { key: 'aiPrompts', label: 'AI Prompts', limit: 100 },
+    { key: 'brandSpaces', label: 'Brand Spaces', limit: 15 },
+    { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 500 },
+  ],
+  agency: [
+    { key: 'documents', label: 'Documents', limit: null },
+    { key: 'aiPrompts', label: 'AI Prompts', limit: 250 },
+    { key: 'brandSpaces', label: 'Brand Spaces', limit: null },
+    { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 2000 },
+  ],
+};
+
+export const DEFAULT_PLAN_SLUG: PlanSlug = 'growth';
+
+export function resolvePlanSlug(slug: string | null | undefined): PlanSlug {
+  if (slug === 'starter' || slug === 'growth' || slug === 'scale' || slug === 'agency') return slug;
+  return DEFAULT_PLAN_SLUG;
+}
+
+export function buildPlanMetrics(
+  planSlug: PlanSlug,
+  usage: OrgPlanUsage,
+): PlanLimitMetric[] {
+  const defs = PLAN_LIMITS[planSlug];
+  return defs.map((def) => {
+    const key = def.key as keyof OrgPlanUsage;
+    const used = usage[key] ?? 0;
+    const pct = def.limit == null ? null : Math.min(100, Math.round((used / def.limit) * 100));
+    return { ...def, used, pct };
+  });
+}
+
+export function overallUsagePct(metrics: PlanLimitMetric[]): number {
+  const limited = metrics.filter((m) => m.limit != null && m.limit > 0);
+  if (!limited.length) return 0;
+  const peak = Math.max(...limited.map((m) => m.pct ?? 0));
+  return Math.round(peak);
+}
+
+export function formatPlanStatus(
+  subscriptionStatus: string | null,
+  trialEndsAt: string | null,
+  billingPeriod: BillingPeriod | null,
+): string {
+  const period = billingPeriod === 'yearly' ? 'Billed yearly' : billingPeriod === 'monthly' ? 'Billed monthly' : 'Subscription';
+  if (subscriptionStatus === 'trialing' && trialEndsAt) {
+    const date = new Date(trialEndsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return `Trial · ends ${date}`;
+  }
+  if (subscriptionStatus === 'active') return `${period} · Active`;
+  if (subscriptionStatus === 'past_due') return `${period} · Payment due`;
+  if (subscriptionStatus === 'canceled') return 'Canceled';
+  if (!subscriptionStatus) return 'No active subscription';
+  return `${period} · ${subscriptionStatus}`;
+}
+
+export function formatMetricUsage(metric: PlanLimitMetric): string {
+  if (metric.limit == null) return `${metric.used} used · Unlimited`;
+  return `${metric.used} / ${metric.limit} used`;
+}

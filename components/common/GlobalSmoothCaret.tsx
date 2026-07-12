@@ -346,6 +346,7 @@ const GlobalSmoothCaret = () => {
       <style>{'@keyframes smoothCaretBlink{0%,100%{opacity:1}50%{opacity:0}}.smooth-caret-bar{animation:smoothCaretBlink 1.1s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.smooth-caret-bar{animation:none}}'}</style>
       {/* Outer: position (spring x/y) + show/hide (caretOpacity 0|1). */}
       <motion.div
+        className="global-smooth-caret"
         aria-hidden
         style={{
           position: 'fixed',

@@ -6,6 +6,7 @@ import { Flex, Stack, Container } from '../core/layout';
 import { Text } from '../core/text';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId } from '../../lib/activeWorkspace';
+import DomainFavicon from '../common/DomainFavicon';
 
 // Mirrors the /api/gsc/traffic-alerts response (no `any` — project rule).
 type AlertEntry = { page: string; prevPos: number | null; nowPos: number | null };
@@ -73,13 +74,7 @@ const TrafficAlertsSection = () => {
                 borderTop={i === 0 ? undefined : 'md'}
               >
                 <Flex align="center" gap="md" minWidth={0}>
-                  <img
-                    alt=""
-                    width={16}
-                    height={16}
-                    className="rounded flex-shrink-0"
-                    src={`https://www.google.com/s2/favicons?domain=${e.domain}&sz=32`}
-                  />
+                  <DomainFavicon domain={e.domain} size={16} />
                   <Text as="span" size="md" ellipsis>{e.page}</Text>
                 </Flex>
                 <Flex align="center" gap="lg" flexShrink={0}>

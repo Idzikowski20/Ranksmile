@@ -118,7 +118,7 @@ const AiVisibilityManage: NextPage = () => {
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head><title>{`Manage Prompts — ${domain}`}</title></Head>
          <style>{'@keyframes aivPulse{0%,100%{opacity:1}50%{opacity:.5}}.aiv-pulse{animation:aivPulse 1.5s ease-in-out infinite}@keyframes aivSpin{to{transform:rotate(360deg)}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" heading="AI Visibility" contentMaxWidth="100%">
+         <DomainSubLayout domain={domain} slug={slug || ''} section="AI Visibility" contentMaxWidth="100%">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800, width: '100%', margin: '0 auto' }}>
                {/* Heading + usage */}
                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>

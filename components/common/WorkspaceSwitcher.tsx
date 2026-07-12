@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Button } from '../core';
+import { faviconUrl } from '../../lib/faviconUrl';
 import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '../../services/workspaces';
 
 const font = 'var(--font-family-primary)';
@@ -47,7 +49,7 @@ const WorkspaceAvatar = ({ domain, size = 24 }: { domain?: string | null; size?:
       alt=""
       width={size}
       height={size}
-      src={`https://www.google.com/s2/favicons?domain=${host}&sz=64`}
+      src={faviconUrl(host, 64)}
       onError={() => setErr(true)}
       style={{ width: size, height: size, borderRadius: 6, flexShrink: 0, objectFit: 'cover', background: '#fff' }}
     />
@@ -66,8 +68,8 @@ const CheckIcon = () => (
   </svg>
 );
 
-const PlusIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#3F3F47' }}>
+const PlusIcon = ({ color = '#3F3F47' }: { color?: string }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color }}>
     <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -200,34 +202,23 @@ const WorkspaceSwitcher = () => {
           <div style={{ height: 1, background: '#F4F4F5' }} />
 
           <div style={{ padding: 8 }}>
-            <button
+            <Button
               type="button"
               role="menuitem"
+              variant="primary"
+              size="sm"
+              busy={createSetup.isLoading}
               onClick={() => {
-                setOpen(false);
                 createSetup.mutate(undefined, {
-                  onSuccess: (id) => { if (id && typeof window !== 'undefined') window.location.href = `/workspace/${id}/setup`; },
+                  onSuccess: (id) => { setOpen(false); if (id && typeof window !== 'undefined') window.location.href = `/workspace/${id}/setup`; },
                   onError: (err: unknown) => { toast.error(friendly((err as { message?: string })?.message)); },
                 });
               }}
-              className="workspace-switcher-row"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                width: '100%',
-                padding: '8px',
-                border: 'none',
-                borderRadius: 8,
-                background: 'transparent',
-                cursor: 'pointer',
-                fontFamily: font,
-                textAlign: 'left',
-              }}
+              icon={<PlusIcon color="currentColor" />}
+              style={{ width: '100%' }}
             >
-              <span style={{ width: 24, display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}><PlusIcon /></span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>Add new workspace</span>
-            </button>
+              Add new workspace
+            </Button>
           </div>
         </div>
       )}

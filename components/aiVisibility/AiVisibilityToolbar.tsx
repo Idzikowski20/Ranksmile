@@ -3,15 +3,13 @@ import {
   Button,
   CompactSelect,
   PageFilterBar,
-  TimeRangeFilter,
   type SelectOption,
   type SelectSection,
-  type TimeRangeValue,
 } from '../core';
+import { TimeRangeFilter, type TimeRangeValue } from '../core/timeRangeFilter/timeRangeFilter';
+import DomainFavicon from '../common/DomainFavicon';
 import { ModelIcon, isKnownModel } from './modelIcons';
 import type { PromptOption } from './types';
-
-const favicon = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 type AiVisibilityToolbarProps = {
   dateRange?: TimeRangeValue;
@@ -78,8 +76,7 @@ const AiVisibilityToolbar = ({
       value: c.domain,
       label: c.domain,
       leadingItems: (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img alt="" src={favicon(c.domain)} width={16} height={16} style={{ borderRadius: 3 }} />
+        <DomainFavicon domain={c.domain} size={16} style={{ borderRadius: 3 }} />
       ),
     }))
   ), [compareCompetitors]);
@@ -91,7 +88,7 @@ const AiVisibilityToolbar = ({
   };
 
   return (
-    <PageFilterBar condensed>
+    <PageFilterBar condensed className="ai-vis-filter-bar">
       <TimeRangeFilter
         value={dateRange ?? defaultDate}
         onChange={onDateRangeChange ?? (() => {})}
@@ -131,8 +128,7 @@ const AiVisibilityToolbar = ({
           triggerLabel={
             compareSelected ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt="" src={favicon(compareSelected)} width={16} height={16} style={{ borderRadius: 3, flexShrink: 0 }} />
+                <DomainFavicon domain={compareSelected} size={16} style={{ borderRadius: 3 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{compareSelected}</span>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#653DE9', flexShrink: 0 }} />
               </span>

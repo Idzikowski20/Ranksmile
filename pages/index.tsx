@@ -1,44 +1,86 @@
-import type { NextPage } from 'next';
-import { useEffect } from 'react';
+import type { GetServerSideProps, NextPage } from 'next';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { dehydrate, QueryClient } from 'react-query';
 import AppLoading from '../components/common/AppLoading';
+import { getCurrentUser } from '../utils/getUser';
+import { getBootstrap } from '../lib/getBootstrap';
+import type { BootstrapData } from '../lib/getBootstrap';
 
-const Home: NextPage = () => {
-   const router = useRouter();
-   useEffect(() => {
-      if (!router) return;
-      let stashed: string | null = null;
-      try { stashed = localStorage.getItem('post_login_redirect'); if (stashed) localStorage.removeItem('post_login_redirect'); } catch { /* ignore */ }
-      if (stashed) { router.replace(stashed); return; }
-      (async () => {
-         try {
-            const res = await fetch('/api/workspaces');
-            if (res.status === 401) { router.replace('/auth/sign-in'); return; }
-            const d = await res.json().catch(() => ({}));
-            const first = (d.workspaces || [])[0];
-            if (first?.id) { router.replace(`/workspace/${first.id}/dashboard`); return; }
-            // No ready workspace. Onboarded users go straight into the workspace
-            // creator (so they add their first domain); everyone else onboards first.
-            const ob = await fetch('/api/onboarding')
-               .then((r) => (r.ok ? r.json() : { completed: false }))
-               .catch(() => ({ completed: false }));
-            if (!ob.completed) { router.replace('/onboarding'); return; }
-            // Onboarded with no ready workspace: owners/admins go to the creator; a member who
-            // has lost (or never had) workspace access lands on a clear "no access" screen.
-            const role: string | null = await fetch('/api/members')
-               .then((r) => (r.ok ? r.json() : {}))
-               .then((data: { role?: string | null }) => data.role ?? null)
-               .catch(() => null);
-            if (role !== 'owner' && role !== 'admin') { router.replace('/no-access'); return; }
-            const created = await fetch('/api/workspaces/setup', { method: 'POST' })
-               .then((r) => (r.ok ? r.json() : null))
-               .catch(() => null);
-            if (created?.id) { router.replace(`/workspace/${created.id}/setup`); return; }
-         } catch { /* fall through */ }
-         router.replace('/onboarding');
-      })();
-   }, [router]);
+const DigitXHomepage = dynamic(
+  () => import('../components/marketing/digitx/DigitXHomepage'),
+  { ssr: false, loading: () => <AppLoading /> },
+);
+
+type HomeProps = {
+  marketing: boolean;
+  dehydratedState?: unknown;
+};
+
+const Home: NextPage<HomeProps> = ({ marketing: marketingFromServer }) => {
+  const router = useRouter();
+  const [showMarketing, setShowMarketing] = useState(marketingFromServer);
+
+  useEffect(() => {
+    if (marketingFromServer) {
+      setShowMarketing(true);
+      return;
+    }
+    if (!router) return;
+    let stashed: string | null = null;
+    try {
+      stashed = localStorage.getItem('post_login_redirect');
+      if (stashed) localStorage.removeItem('post_login_redirect');
+    } catch { /* ignore */ }
+    if (stashed) {
+      router.replace(stashed);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch('/api/session/bootstrap');
+        if (res.status === 401) {
+          setShowMarketing(true);
+          return;
+        }
+        if (!res.ok) {
+          router.replace('/onboarding');
+          return;
+        }
+        const bootstrap = await res.json() as BootstrapData;
+        if (bootstrap.redirectTo) {
+          router.replace(bootstrap.redirectTo);
+          return;
+        }
+      } catch {
+        router.replace('/onboarding');
+      }
+    })();
+  }, [router, marketingFromServer]);
+
+  if (showMarketing) {
+    return (
+      <>
+        <Head>
+          <title>DigitX | Digital Agency Portfolio</title>
+          <meta
+            name="description"
+            content="DigitX delivers web design, development, and digital marketing solutions that drive business growth."
+          />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap"
+            rel="stylesheet"
+          />
+        </Head>
+        <DigitXHomepage />
+      </>
+    );
+  }
 
   return (
     <div>
@@ -47,12 +89,47 @@ const Home: NextPage = () => {
         <meta name="description" content="SerpBear Google Keyword Position Tracking App" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <main role={'main'}>
+      <main role="main">
         <AppLoading />
       </main>
     </div>
   );
+};
+
+export const getServerSideProps: GetServerSideProps<HomeProps> = async (ctx) => {
+  const req = ctx.req as NextApiRequest;
+  const res = ctx.res as NextApiResponse;
+  const user = await getCurrentUser(req, res);
+
+  if (!user) {
+    return { props: { marketing: true } };
+  }
+
+  const cookie = typeof req.cookies?.active_workspace === 'string'
+    ? req.cookies.active_workspace
+    : undefined;
+
+  const bootstrap = await getBootstrap(user.id, {
+    activeWorkspaceCookie: cookie,
+    resolveRedirect: true,
+    createSetupIfNeeded: true,
+  });
+
+  if (bootstrap.redirectTo) {
+    return {
+      redirect: { destination: bootstrap.redirectTo, permanent: false },
+    };
+  }
+
+  const queryClient = new QueryClient();
+  queryClient.setQueryData(['bootstrap'], bootstrap);
+
+  return {
+    props: {
+      marketing: false,
+      dehydratedState: dehydrate(queryClient),
+    },
+  };
 };
 
 export default Home;

@@ -3,7 +3,7 @@ import 'react-date-range/dist/theme/default.css';
 
 import React, { useCallback, useMemo } from 'react';
 import { DateRange, type Range, type RangeKeyDict } from 'react-date-range';
-import { enUS } from 'react-date-range/dist/locale';
+import enUS from 'date-fns/locale/en-US';
 import styled from '@emotion/styled';
 
 export interface DateRangePickerProps {

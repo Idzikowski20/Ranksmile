@@ -1,5 +1,5 @@
-import React from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, animate, motion, useReducedMotion } from 'motion/react';
 import { scoreColor } from '../../lib/scoreColor';
 
 interface Props {
@@ -52,6 +52,29 @@ const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 
   );
 };
 
+/** Count-up number (Surfer number-flow style) — animates from the previous value
+ *  to the new one, rounding on each frame. Used for the large central gauge. */
+const CountUpNumber = ({ value, font }: { value: number; font: number }) => {
+  const reduced = useReducedMotion();
+  const [display, setDisplay] = useState(value);
+  const prev = useRef(value);
+  useEffect(() => {
+    if (reduced) { setDisplay(value); prev.current = value; return undefined; }
+    const controls = animate(prev.current, value, {
+      duration: 0.6,
+      ease: [0.34, 2, 0.64, 1],
+      onUpdate: (v) => setDisplay(Math.round(v)),
+    });
+    prev.current = value;
+    return () => controls.stop();
+  }, [value, reduced]);
+  return (
+    <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: font, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+      {display}
+    </span>
+  );
+};
+
 const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlacement = 'below' }: Props) => {
   const reduced = useReducedMotion();
   const s = Math.max(0, Math.min(100, Math.round(score || 0)));
@@ -82,6 +105,8 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {pending ? (
           <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#9f9fa9', fontVariantNumeric: 'tabular-nums' }}>—</span>
+        ) : size >= 90 ? (
+          <CountUpNumber value={s} font={numberFont} />
         ) : (
           <span style={{ position: 'relative', display: 'inline-flex', height: numberFont * 1.1, overflow: 'hidden', lineHeight: 1 }}>
             <AnimatePresence mode="popLayout" initial={false}>

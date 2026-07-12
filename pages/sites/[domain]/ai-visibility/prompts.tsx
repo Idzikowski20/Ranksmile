@@ -16,8 +16,10 @@ type PromptsData = { pending?: boolean; prompts?: PromptRowRaw[] };
 const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: '#9F9FA9', flexShrink: 0 }}><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 const PlusIcon = () => (<svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13 5a1 1 0 1 0-2 0v6H5a1 1 0 1 0 0 2h6v6a1 1 0 1 0 2 0v-6h6a1 1 0 1 0 0-2h-6z" /></svg>);
 
+const CARD_3D: React.CSSProperties = { border: '1px solid #DAD9DE', borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' };
+
 const StatCard = ({ label, value, hint, pending }: { label: string; value: string; hint: string; pending: boolean }) => (
-   <section style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+   <section style={{ ...CARD_3D, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#71717B', fontFamily: FONT }}>
          {label}
          <HoverTooltip label={hint} align="center"><span style={{ display: 'inline-flex', cursor: 'help' }}><InfoIcon /></span></HoverTooltip>
@@ -77,7 +79,7 @@ const AiVisibilityPrompts: NextPage = () => {
                   </div>
 
                   {pending ? (
-                     <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 24 }}><SkeletonRows count={6} /></div>
+                     <div style={{ ...CARD_3D, padding: 24 }}><SkeletonRows count={6} /></div>
                   ) : (
                      <>
                         <PromptTopicsTable topics={topics} />

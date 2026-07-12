@@ -34,18 +34,19 @@ describe('articleFacts', () => {
     expect(items[0].importance).toBe('critical');
   });
 
-  it('builds visibility summary from facts', () => {
+  it('builds visibility summary from citation prompts only', () => {
     const facts: ArticleFact[] = [
-      { id: 'f1', text: 'Detektyw prywatny moze prowadzic sprawy cywilne.', sourceFrequency: 1, sources: [{ kind: 'chat_gpt' }] },
+      { id: 'f1', text: 'prywatny detektyw Warszawa czy warto?', sourceFrequency: 1, sources: [{ kind: 'chat_gpt' }] },
+      { id: 'f2', text: 'Lubimyczytac.pl nie prowadzi sprzedazy.', sourceFrequency: 1, sources: [{ kind: 'serp' }] },
     ];
     const summary = factsToVisibilitySummary(facts, 'Detektyw prywatny prowadzi sprawy cywilne w biurze.');
     expect(summary.prompts_total).toBe(1);
-    expect(summary.citations[0].answer_readiness_score).toBeGreaterThan(0);
+    expect(summary.citations[0].prompt).toContain('czy warto');
   });
 
   it('dedupes citations when merging visibility summaries', () => {
     const primary: AiVisibilitySummary = factsToVisibilitySummary(
-      [{ id: 'f1', text: 'Prywatny detektyw oferuje uslugi w Warszawie.', sourceFrequency: 1, sources: [{ kind: 'serp' }] }],
+      [{ id: 'f1', text: 'prywatny detektyw Warszawa czy warto?', sourceFrequency: 1, sources: [{ kind: 'serp' }] }],
       '',
     );
     const secondary: AiVisibilitySummary = {
@@ -53,7 +54,7 @@ describe('articleFacts', () => {
       prompts_cited: 0,
       competitor_citations: 0,
       extractability_score: 0,
-      citations: [{ prompt: 'prywatny detektyw oferuje uslugi w warszawie.', answer_readiness_score: 50 }],
+      citations: [{ prompt: 'prywatny detektyw warszawa czy warto?', answer_readiness_score: 50 }],
     };
     const merged = mergeVisibilitySummaries(primary, secondary);
     expect(merged.citations).toHaveLength(1);

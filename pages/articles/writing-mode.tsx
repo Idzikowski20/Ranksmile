@@ -104,7 +104,7 @@ const WritingModePage: NextPage = () => {
       title="Select writing mode"
       footer={<>
         <WizardBackButton onClick={goBack} />
-        <WizardNextButton label="Next" onClick={goNext} />
+        <WizardNextButton label={mode === 'write' ? 'Open editor' : 'Generate draft'} onClick={goNext} />
       </>}
     >
       <h2 style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 600, color: '#000', fontFamily: 'var(--font-family-primary)' }}>

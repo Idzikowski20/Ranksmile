@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '../core';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 export type CompetitorRow = { domain: string; visibilityScore: number; mentionRate: number; avgPosition: number | null };
 type SortKey = 'avgPosition' | 'mentionRate' | 'visibilityScore';
@@ -51,11 +51,11 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
    const toggle = (k: SortKey, def: 'asc' | 'desc') => { if (sort === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc')); else { setSort(k); setDir(def); } };
 
    if (!competitors.length) {
-      return <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
+      return <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
    }
 
    return (
-      <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, background: '#fff' }}>
+      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Competitor</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Avg. pos." active={sort === 'avgPosition'} dir={dir} onClick={() => toggle('avgPosition', 'asc')} /></div>
@@ -68,8 +68,7 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
                <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, position: 'relative', gap: 8, justifyContent: 'space-between' }}>
                   <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${(c.visibilityScore / maxVis) * 100}%`, background: 'linear-gradient(to right, rgba(244,244,245,0), #F0F0F2)', pointerEvents: 'none' }} />
                   <span style={{ zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                     { /* eslint-disable-next-line @next/next/no-img-element */ }
-                     <img alt="" src={faviconFor(c.domain)} width={20} height={20} style={{ borderRadius: 4, flexShrink: 0 }} />
+                     <DomainFavicon domain={c.domain} size={20} />
                      <span style={{ fontWeight: 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.domain}</span>
                   </span>
                   <span data-open style={{ zIndex: 1, opacity: 0, transition: 'opacity 120ms ease', color: '#71717B', display: 'inline-flex', flexShrink: 0 }}><OpenDetailsIcon /></span>

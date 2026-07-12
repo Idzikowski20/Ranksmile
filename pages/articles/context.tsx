@@ -6,6 +6,9 @@ import WizardShell, { WizardNextButton, WizardBackButton } from '../../component
 import { saveWizardState } from '../../lib/wizardState';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 import { useArticle } from '../../services/article';
+import DomainFavicon from '../../components/common/DomainFavicon';
+import { parseRankingSources, buildAiRankingSources } from '../../lib/rankingSources';
+import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
 
@@ -76,13 +79,14 @@ const ContextPage: NextPage = () => {
     if (!articleId) { setHydrated(true); return; }
     if (!articleFetched) return;
     const art = article;
-    if (art?.ranking_sources) {
-      try {
-        const rs = typeof art.ranking_sources === 'string' ? JSON.parse(art.ranking_sources) : art.ranking_sources;
-        setRankGoogle(Array.isArray(rs.google) ? rs.google : []);
-        setRankAi(Array.isArray(rs.ai) ? rs.ai : []);
-      } catch { /* ignore */ }
+    const parsed = parseRankingSources(art?.ranking_sources);
+    let google = parsed.google;
+    let ai = parsed.ai;
+    if (!ai.length && art?.ai_visibility_summary) {
+      ai = buildAiRankingSources(art.ai_visibility_summary as AiVisibilitySummary);
     }
+    setRankGoogle(google);
+    setRankAi(ai);
     if (art?.wizard_state) {
       try {
         const ws = JSON.parse(art.wizard_state);
@@ -166,7 +170,7 @@ const ContextPage: NextPage = () => {
       title="Add context & instructions"
       footer={<>
         <WizardBackButton onClick={goBack} />
-        <WizardNextButton label="Next" sublabel="—Writing mode" onClick={goNext} />
+        <WizardNextButton label="Writing mode" onClick={goNext} />
       </>}
     >
       <h2 style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 600, color: '#000', fontFamily: 'var(--font-family-primary)' }}>
@@ -287,8 +291,7 @@ const ContextPage: NextPage = () => {
               {rankGoogle.map((s) => (
                 <div key={`g-${s.rank}-${s.domain}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`https://www.google.com/s2/favicons?domain=${s.domain}&sz=32`} alt="" width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                    <DomainFavicon domain={s.domain} size={16} />
                     <span>{s.domain}</span>
                     <span style={{ color: '#D4D4D8' }}>·</span>
                     <svg width="13" height="13" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
@@ -318,8 +321,7 @@ const ContextPage: NextPage = () => {
               {rankAi.map((s, i) => (
                 <div key={`ai-${i}-${s.domain}`} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`https://www.google.com/s2/favicons?domain=${s.domain}&sz=32`} alt="" width={16} height={16} style={{ borderRadius: 4, flexShrink: 0 }} />
+                    <DomainFavicon domain={s.domain} size={16} />
                     <span>{s.domain}</span>
                     <span style={{ color: '#D4D4D8' }}>·</span>
                     <span style={{ color: '#783AFB', fontWeight: 600 }}>cited in AI Overview</span>

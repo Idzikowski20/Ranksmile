@@ -85,6 +85,7 @@ async function continueIfPublic(request: HTTPRequest): Promise<void> {
  *  navigated by two requests at the same time. */
 export async function renderPage(url: string, timeoutMs = 20_000): Promise<RenderedPage> {
   await assertPublicUrl(url);
+
   // Serialise concurrent renders: only one caller drives the shared page at a time.
   const prev = renderMutex;
   let release!: () => void;

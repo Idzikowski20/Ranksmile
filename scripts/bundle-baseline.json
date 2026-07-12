@@ -1,0 +1,20 @@
+{
+  "measuredAt": "2026-07-09T09:57:35.116Z",
+  "results": {
+    "pages/_app": {
+      "bytes": 521112,
+      "limit": 800000,
+      "ok": true
+    },
+    "pages/sites/[domain]/performance": {
+      "bytes": 72198,
+      "limit": 650000,
+      "ok": true
+    },
+    "pages/articles/[id]": {
+      "bytes": 154799,
+      "limit": 1100000,
+      "ok": true
+    }
+  }
+}

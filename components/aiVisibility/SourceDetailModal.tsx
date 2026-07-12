@@ -5,9 +5,9 @@ import MetricTrendChart from './MetricTrendChart';
 import { SkeletonBox } from './SkeletonBlocks';
 import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
 import { useAiVisSourceDetail } from '../../services/aiVisibility';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
-const faviconFor = (d: string) => `https://www.google.com/s2/favicons?domain=${d}&sz=32`;
 
 /** Only allow http/https citation URLs as an href — reject `javascript:`/`data:`/malformed
  *  so a hostile scan URL can't execute when the external-link button is clicked. */
@@ -169,7 +169,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                <h2 style={{ margin: 0, minWidth: 0 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
-                     <img alt="" src={faviconFor(s.domain)} width={20} height={20} style={{ borderRadius: 4, flexShrink: 0 }} />
+                     <DomainFavicon domain={s.domain} size={20} />
                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 16 }}>
                         <span style={{ fontWeight: 600, color: '#18181B' }}>{host}</span>
                         <span style={{ fontWeight: 400, color: '#9F9FA9' }}>{path}</span>

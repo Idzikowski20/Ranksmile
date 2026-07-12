@@ -174,8 +174,8 @@ describe('buildOptimizationPlan AI-takeover (pillar 5 / OD-3)', () => {
     expect(plan.steps.some((s) => s.focus === 'seo-terms')).toBe(false);
   });
 
-  it('no takeover when the gap is small (seo 90, ai 80, gap 10 <= 25) - terms survive', () => {
-    const planInput = makePlanInput({ seoScore: 90, aiScore: 80 });
+  it('no takeover when SEO still needs terms (seo-first mode)', () => {
+    const planInput = makePlanInput({ seoScore: 60, aiScore: 80 });
     const plan = buildOptimizationPlan(planInput);
     expect(plan.steps.some((s) => s.missingTerms.length > 0)).toBe(true);
   });
@@ -188,6 +188,7 @@ describe('buildOptimizationPlan mode wiring (Task 6)', () => {
     seoScore: number;
     aiScore: number;
     termOnlyEverySection?: boolean;
+    mode?: PlanInput['mode'];
   }): PlanInput => {
     const context = ctx({
       coverage: healthySnap,
@@ -207,7 +208,7 @@ describe('buildOptimizationPlan mode wiring (Task 6)', () => {
         { id: 's0', index: 0, headingText: 'Intro', html: '<h2>Intro</h2><p>plain text</p>' },
         { id: 's1', index: 1, headingText: 'Body', html: '<h2>Body</h2><p>plain text</p>' },
       ];
-      return input({ sections, guidelines: [], context, seoScore: over.seoScore, aiScore: over.aiScore });
+      return input({ sections, guidelines: [], context, seoScore: over.seoScore, aiScore: over.aiScore, mode: over.mode });
     }
 
     // Mixed lifts: sec_hi gets a high-lift (>NORMAL_MIN=12) guideline -> NORMAL;
@@ -221,17 +222,17 @@ describe('buildOptimizationPlan mode wiring (Task 6)', () => {
       gl({ coverageItemId: 'g-hi', title: 'Cover: High', instruction: 'high', projectedLift: 20, sectionId: 'sec_hi' }),
       gl({ coverageItemId: 'g-mid', title: 'Cover: Mid', instruction: 'mid', projectedLift: 9, sectionId: 'sec_mid' }),
     ];
-    return input({ sections, guidelines, context, seoScore: over.seoScore, aiScore: over.aiScore });
+    return input({ sections, guidelines, context, seoScore: over.seoScore, aiScore: over.aiScore, mode: over.mode });
   };
 
   it('term-only section (no guidelines, under-target terms) gets a LESS edit, not skip (OD-2 [RATIFIED])', () => {
-    const planInput = makePlanInput({ seoScore: 50, aiScore: 50, termOnlyEverySection: true });
+    const planInput = makePlanInput({ seoScore: 50, aiScore: 50, termOnlyEverySection: true, mode: 'full' });
     const plan = buildOptimizationPlan(planInput);
     expect(plan.steps.every((s) => s.mode === 'less' && s.focus !== 'skip')).toBe(true);
   });
 
   it('assigns modes: high-lift (non-intro) -> normal, mid-lift -> less', () => {
-    const planInput = makePlanInput({ seoScore: 50, aiScore: 50 }); // sec_hi lift>12, sec_mid 6..12
+    const planInput = makePlanInput({ seoScore: 50, aiScore: 50, mode: 'full' });
     const plan = buildOptimizationPlan(planInput);
     const modeById = new Map(plan.steps.map((s) => [s.sectionId, s.mode]));
     expect(modeById.get('sec_hi')).toBe('normal'); // high-lift, non-intro → NORMAL (would be LESS if intro-protected)
@@ -377,7 +378,7 @@ describe('NORMAL byte-for-byte regression', () => {
       gl({ coverageItemId: 'g-c', title: 'Cover: C', instruction: 'c', projectedLift: 30, effort: 'Easy', importance: 'recommended', sectionId: 'sec_c' }),
     ];
     const planInput = input({
-      sections, guidelines, context, seoScore: 50, aiScore: 50, // no takeover: seoScore(50) < SEO_HIGH(85)
+      sections, guidelines, context, seoScore: 50, aiScore: 50, mode: 'full',
     });
     const plan = buildOptimizationPlan(planInput);
     expect(plan.steps.length).toBe(3);

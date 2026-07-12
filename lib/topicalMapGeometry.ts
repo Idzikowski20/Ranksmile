@@ -54,6 +54,30 @@ export const MAP_COVERAGE_FILL: Record<'covered' | 'not_covered' | 'recommended'
 /** Ring radius for the i-th concentric ring (0-indexed, 0 = innermost). */
 export const ringRadius = (i: number): number => (i + 1) * MAP_RING_STEP;
 
+/**
+ * Flat-top honeycomb spiral offsets (local, pre-hexScale units), excluding the
+ * center cell. Used to pack a cluster's satellite hexes into a tight SurferSEO-style
+ * blob around its main node. Cells are emitted ring-by-ring so smaller clusters fill
+ * the inner rings first.
+ */
+export const honeycombOffsets = (count: number, size = 7.6): Array<[number, number]> => {
+   if (count <= 0) return [];
+   const dirs: Array<[number, number]> = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+   const cells: Array<[number, number]> = [];
+   for (let ring = 1; cells.length < count; ring += 1) {
+      let q = dirs[4][0] * ring;
+      let r = dirs[4][1] * ring;
+      for (let side = 0; side < 6; side += 1) {
+         for (let step = 0; step < ring; step += 1) {
+            cells.push([q, r]);
+            q += dirs[side][0];
+            r += dirs[side][1];
+         }
+      }
+   }
+   return cells.slice(0, count).map(([q, r]) => [size * 1.5 * q, size * Math.sqrt(3) * (r + q / 2)]);
+};
+
 /** Absolute SVG coordinates for a cluster's node, from its normalized map.x/y ∈ [-1,1]. */
 export const nodeCenter = (mapX: number, mapY: number): { cx: number; cy: number } => ({
    cx: MAP_CENTER.x + mapX * MAP_NODE_RANGE,

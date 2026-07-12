@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs } from '../core';
 import type { KeywordGroup, TopicCluster } from '../../lib/topicalMap';
+import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -241,7 +242,7 @@ const TopicalClusterPanel = ({ cluster, initialTab = 'overview', onClose }: { cl
                               <tr key={cp.domain} style={{ borderBottom: '1px solid #F4F4F5' }}>
                                  <td style={{ padding: 12, width: 300 }}>
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                       <img alt="" width={20} height={20} style={{ borderRadius: 4, flexShrink: 0 }} src={`https://www.google.com/s2/favicons?domain=${cp.domain}&sz=32`} />
+                                       <DomainFavicon domain={cp.domain} size={20} />
                                        <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT }}>{cp.domain}</span>
                                     </span>
                                  </td>

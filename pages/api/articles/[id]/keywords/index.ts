@@ -30,8 +30,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     const { keywordId, is_covered, relevance_score } = req.body;
     await db.query(
-      `UPDATE article_keywords SET is_covered = ?, relevance_score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      { replacements: [is_covered ? 1 : 0, relevance_score, keywordId] },
+      `UPDATE article_keywords SET is_covered = ?, relevance_score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND article_id = ?`,
+      { replacements: [is_covered ? 1 : 0, relevance_score, keywordId, articleId] },
     );
     return res.status(200).json({ success: true });
   }

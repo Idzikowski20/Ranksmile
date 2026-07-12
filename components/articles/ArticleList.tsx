@@ -17,10 +17,25 @@ interface Article {
 }
 
 interface Props {
-  articles: Article[];
-  onDelete: (id: number) => void;
-  onDeleteMultiple: (ids: number[]) => Promise<void>;
+  articles: Array<{
+    id: number | string;
+    title: string;
+    status: string;
+    score_data?: string;
+    content_score?: number;
+    target_keyword: string;
+    word_count: number | null;
+    publish_target: string | null;
+    publish_url: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+  onDelete: (id: number | string) => void;
+  onDeleteMultiple: (ids: Array<number | string>) => Promise<void>;
   isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
   startLinks?: {
     recommendations: string;
     keyword: string;
@@ -127,10 +142,22 @@ const EMPTY_START_OPTIONS: Array<{
   },
 ];
 
-const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLinks }: Props) => {
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore, onLoadMore, isLoadingMore, startLinks }: Props) => {
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasMore || !onLoadMore || isLoadingMore) return undefined;
+    const el = loadMoreRef.current;
+    if (!el) return undefined;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) onLoadMore();
+    }, { rootMargin: '200px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, onLoadMore, isLoadingMore]);
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
   const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -150,7 +177,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
     setMounted(true);
   }, []);
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: number | string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -422,10 +449,14 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
               gap: 12,
               userSelect: 'none',
               cursor: 'pointer',
-              transition: 'box-shadow 0.2s, border-color 0.2s',
+              // 3D button: a solid bottom "edge" that collapses when pressed.
+              boxShadow: '0 4px 0 0 #E4E4E7',
+              transition: 'box-shadow 0.12s ease, transform 0.12s ease, border-color 0.2s',
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0px 4px 4px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.08), 0px -1px 1px 0px rgba(0,0,0,0.02)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+            onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0 4px 0 0 #D4D4D8, 0px 6px 10px 0px rgba(24,26,34,0.06)'; }}
+            onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'none'; el.style.boxShadow = '0 4px 0 0 #E4E4E7'; }}
+            onMouseDown={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translateY(4px)'; el.style.boxShadow = '0 0 0 0 #E4E4E7'; }}
+            onMouseUp={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'none'; el.style.boxShadow = '0 4px 0 0 #D4D4D8, 0px 6px 10px 0px rgba(24,26,34,0.06)'; }}
           >
             {/* Left: Score gauge / Checkbox */}
             <div
@@ -811,10 +842,15 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, startLin
         );
       })}
 
-      {/* No more results */}
-      <div className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
-        No more results found.
-      </div>
+      {hasMore ? (
+        <div ref={loadMoreRef} className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
+          {isLoadingMore ? 'Loading more…' : ''}
+        </div>
+      ) : (
+        <div className="text-gray-80 text-md py-lg block text-center" style={{ fontFamily: 'var(--font-family-primary)' }}>
+          No more results found.
+        </div>
+      )}
 
       {/* ── Bulk selection bar ── */}
       {selectedIds.size > 0 && (

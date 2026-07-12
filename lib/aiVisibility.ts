@@ -61,8 +61,9 @@ export const AI_VIS_PRIORITY_LABEL: Record<AiVisPriority, string> = {
 };
 
 export function normalizeAiVisPriority(raw: unknown): AiVisPriority {
-   if (raw === 'core' || raw === 'long_tail') return raw;
-   return 'supporting';
+   if (raw === 'core' || raw === 'supporting') return raw;
+   // Auto-refresh cadence is fixed to every 2 weeks (long_tail) by default.
+   return 'long_tail';
 }
 
 export function refreshIntervalDays(priority?: AiVisPriority | string | null): number {

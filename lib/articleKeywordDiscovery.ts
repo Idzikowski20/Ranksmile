@@ -20,7 +20,7 @@ import { computeRelevanceScore, checkCoverage } from './keywordEnrichment';
 
 import type { NlpTerm } from './contentScore';
 import { isWeakTermList } from './competitorTermCalibration';
-import { filterOnTopicTerms } from './topicRelevance';
+import { filterOnTopicKeywords, filterOnTopicTerms } from './topicRelevance';
 
 
 
@@ -40,7 +40,7 @@ export type DiscoveredKeyword = {
 
 
 
-function hostFromUrl(url: string): string {
+export function hostFromUrl(url: string): string {
 
   try {
 
@@ -224,6 +224,8 @@ export async function discoverRankingKeywords(opts: {
 
           topOnly: true,
 
+          maxRankGroup: 15,
+
         }),
 
       });
@@ -240,7 +242,11 @@ export async function discoverRankingKeywords(opts: {
 
 
 
-  const keywords = [...found.values()].sort((a, b) => {
+  const seedForFilter = userKw[0] || '';
+
+  const keywords = [...found.values()]
+    .filter((k) => !seedForFilter || k.source === 'gsc' || k.source === 'user' || filterOnTopicKeywords([k], seedForFilter).length > 0)
+    .sort((a, b) => {
 
     const score = (k: DiscoveredKeyword) => (k.clicks || 0) * 1000 + (k.impressions || 0) + (k.position ? Math.max(0, 100 - k.position) : 0);
 
@@ -250,10 +256,12 @@ export async function discoverRankingKeywords(opts: {
 
 
 
-  const primaryKeyword = keywords[0]?.keyword
-
-    || userKw[0]
-
+  // When the user explicitly picked keywords (new-content / import seeds), that seed
+  // is the primary — never replace it with a higher-scoring domain-wide DFS keyword
+  // (e.g. "gemini chatgpt" ranking #1 for the workspace while the user chose "detektyw").
+  const primaryKeyword = userKw[0]
+    || keywords.find((k) => k.source === 'gsc')?.keyword
+    || keywords[0]?.keyword
     || '';
 
 
@@ -344,6 +352,8 @@ export async function enrichNlpTermsIfNeeded(opts: {
 
   competitorDomains?: string[];
 
+  ownDomain?: string;
+
   plainText?: string;
 
 }): Promise<NlpTerm[]> {
@@ -357,6 +367,8 @@ export async function enrichNlpTermsIfNeeded(opts: {
     country: opts.country,
 
     languageCode: opts.languageCode,
+
+    ownDomain: opts.ownDomain,
 
     competitorDomains: opts.competitorDomains,
 

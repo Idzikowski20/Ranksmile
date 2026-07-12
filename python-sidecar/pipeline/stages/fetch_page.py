@@ -14,6 +14,11 @@ class FetchPageStage(AnalysisStage):
     name = "fetch_page"
     progress_weight = 0.15
 
+    def can_skip(self, ctx: StageContext) -> bool:
+        # New-content (keyword-only) analysis has no page to fetch — the rest of
+        # the pipeline (SERP, terms, AI search) runs off the keyword alone.
+        return not ctx.payload.get("url")
+
     async def run(self, ctx: StageContext) -> dict:
         url = ctx.payload.get("url", "")
         if not url:

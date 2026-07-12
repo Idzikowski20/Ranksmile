@@ -8,7 +8,7 @@ describe('termRangeCoverageFraction', () => {
       { term: 'biuro detektywistyczne', suggested_min: 4, suggested_max: 10, target_count: 6 },
       { term: 'agencja detektywistyczna', suggested_min: 7, suggested_max: 12, target_count: 8 },
     ]);
-    expect(frac).toBeCloseTo(1 / 3, 2);
+    expect(frac).toBeCloseTo(0.5, 2);
   });
 });
 

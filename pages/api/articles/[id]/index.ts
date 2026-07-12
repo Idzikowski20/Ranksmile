@@ -9,8 +9,14 @@ import { getArticleIdSql } from '../../../../lib/articleSql';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
-import { queryOne } from '../../../../lib/db/query';
+import { queryOne, queryRows } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
+import type { AiVisibilitySummary } from '../../../../lib/aiSearchScore';
+import {
+  buildAiRankingSources,
+  buildGoogleRankingSourcesFromRows,
+  parseRankingSources,
+} from '../../../../lib/rankingSources';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -61,6 +67,27 @@ async function getArticle(id: string, res: NextApiResponse) {
             article.ai_visibility_summary = null;
          }
       }
+
+      const parsed = parseRankingSources(article.ranking_sources);
+      let google = parsed.google;
+      let ai = parsed.ai;
+
+      if (!google.length) {
+         const competitorRows = await queryRows<{ url: string; domain: string; title: string; snippet: string | null }>(
+            `SELECT url, domain, title, snippet FROM article_competitors WHERE article_id = ? ORDER BY id ASC LIMIT 20`,
+            [id],
+         );
+         google = buildGoogleRankingSourcesFromRows(competitorRows);
+      }
+
+      if (!ai.length && article.ai_visibility_summary) {
+         ai = buildAiRankingSources(article.ai_visibility_summary as AiVisibilitySummary);
+      }
+
+      if (google.length || ai.length) {
+         article.ranking_sources = JSON.stringify({ google, ai });
+      }
+
       return res.status(200).json({ article });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });

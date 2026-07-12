@@ -6,6 +6,10 @@ class ClassifyContentStage(AnalysisStage):
     name = "classify_content"
     progress_weight = 0.15
 
+    def can_skip(self, ctx: StageContext) -> bool:
+        # No fetched page (keyword-only new-content mode) → nothing to classify.
+        return not (ctx.get_state("fetch_page") or {}).get("html")
+
     async def run(self, ctx: StageContext) -> dict:
         fetch = ctx.get_state("fetch_page") or {}
         html = fetch.get("html", "")
