@@ -86,8 +86,16 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
       { href: workspaceHref(activeId, '/articles'), label: 'Content Editor', icon: <IcoContent />, active: isMatch('/articles') },
    ];
 
+   const toolsLinks = activeSlug ? [
+      { label: 'Audit Tool', href: workspaceHref(activeId, `/sites/${activeSlug}/audit-tool`), match: '/audit-tool' },
+      { label: 'Keyword Research', href: workspaceHref(activeId, `/sites/${activeSlug}/keyword-research`), match: '/keyword-research' },
+      { label: 'Topic Research', href: workspaceHref(activeId, `/sites/${activeSlug}/topic-research`), match: '/topic-research' },
+      { label: 'AI Humanizer', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-humanizer`), match: '/ai-humanizer' },
+   ] : [];
+
    const seoLinks = activeSlug ? [
-      { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}`), match: `/sites/${activeSlug}` },
+      { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/seo-overview`), match: '/seo-overview' },
+      { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}/performance`), match: '/performance' },
       { label: 'Recommendations', href: workspaceHref(activeId, `/sites/${activeSlug}/recommendations`), match: '/recommendations' },
       { label: 'Content Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/content-audit`), match: '/content-audit' },
       { label: 'Topical Map', href: workspaceHref(activeId, `/sites/${activeSlug}/topical-map`), match: '/topical-map' },
@@ -215,6 +223,23 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
                   <p className="mobile-sheet-section-label">AI Visibility</p>
                   <ul className="mobile-sheet-list">
                      {aiVisLinks.map((ln) => (
+                        <MobileSheetLink
+                           key={ln.href}
+                           href={ln.href}
+                           label={ln.label}
+                           active={isMatch(ln.match)}
+                           onNavigate={closeSheet}
+                        />
+                     ))}
+                  </ul>
+               </div>
+            )}
+
+            {toolsLinks.length > 0 && (
+               <div className="mobile-sheet-section">
+                  <p className="mobile-sheet-section-label">Tools</p>
+                  <ul className="mobile-sheet-list">
+                     {toolsLinks.map((ln) => (
                         <MobileSheetLink
                            key={ln.href}
                            href={ln.href}

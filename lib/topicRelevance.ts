@@ -92,7 +92,11 @@ export function filterNlpTermsForAnalysis<T extends { term: string }>(terms: T[]
     for (const re of OFF_TOPIC_PATTERNS) {
       if (re.test(term)) return false;
     }
-    if (term.split(/\s+/).filter((w) => w.length >= 3).length >= 2) return true;
+    // Generic "co to znaczy X" queries — keep only when on-topic for the seed.
+    if (/\b(co to znaczy|co znaczy)\b/.test(term) && !isKeywordOnTopic(term, seedKeyword)) return false;
+    if (term.split(/\s+/).filter((w) => w.length >= 3).length >= 2) {
+      return seedTokens(seedKeyword).some((sw) => term.split(/\s+/).includes(sw));
+    }
     return isKeywordOnTopic(term, seedKeyword);
   });
 

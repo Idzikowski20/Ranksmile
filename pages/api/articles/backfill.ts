@@ -5,7 +5,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { readLocalSCData } from '../../../utils/searchConsole';
-import { kwScore, normalizeUrlForMatch } from '../../../utils/gsc';
+import { buildGscUrlKeywordMap, normalizeUrlForMatch } from '../../../utils/gsc';
 import Domain from '../../../database/models/domain';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { getErrorMessage } from '../../../lib/errors';
@@ -48,18 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (domainName) {
          const scData = await readLocalSCData(domainName);
          const thirtyDays: SearchAnalyticsItem[] = (scData && scData.thirtyDays) || [];
-
-         // Build URL → best keyword map
-         const urlKeywordMap = new Map<string, { keyword: string; clicks: number; impressions: number; position: number }>();
-         thirtyDays.forEach((kw) => {
-            if (!kw.page || !kw.keyword) return;
-            const urlKey = normalizeUrlForMatch(kw.page);
-            const ex = urlKeywordMap.get(urlKey);
-            const candidate = { keyword: kw.keyword, clicks: kw.clicks ?? 0, impressions: kw.impressions ?? 0, position: kw.position ?? 0 };
-            if (!ex || kwScore(candidate) > kwScore(ex)) {
-               urlKeywordMap.set(urlKey, candidate);
-            }
-         });
+         const urlKeywordMap = buildGscUrlKeywordMap(thirtyDays);
 
          // Find articles missing a proper target_keyword (null, empty, or fallback to title)
          const articles = await queryRows<{ id: number; publish_url: string | null; meta_url: string | null; target_keyword: string | null; title: string | null }>(

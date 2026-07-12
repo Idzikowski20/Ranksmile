@@ -2,30 +2,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { rankBlogSegments } from '../../../lib/detectBlogPaths';
+import { fetchSitemapUrls } from '../../../lib/fetchSitemapUrls';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
-const UA = 'Mozilla/5.0 (compatible; SerpBearBot/1.0)';
-
-async function fetchSitemapUrls(domain: string): Promise<string[]> {
-   const base = domain.startsWith('http') ? domain : `https://${domain}`;
-   for (const path of ['/sitemap.xml', '/sitemap_index.xml']) {
-      try {
-         await assertPublicUrl(`${base}${path}`); // SSRF: domain is user-supplied
-         const r = await fetch(`${base}${path}`, { headers: { 'User-Agent': UA } });
-         if (!r.ok) continue;
-         const xml = await r.text();
-         const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1]);
-         if (locs.length) return locs.slice(0, 2000);
-      } catch { /* try next */ }
-   }
-   return [];
-}
+import { SERPBEAR_UA } from '../../../lib/httpConstants';
 
 /** True if a page shows article signals: JSON-LD Article/BlogPosting, datePublished, <article>, or RSS link. */
 async function hasArticleSignals(url: string): Promise<boolean> {
    try {
       await assertPublicUrl(url); // second-order SSRF: url comes from the fetched sitemap's <loc>
-      const r = await fetch(url, { headers: { 'User-Agent': UA } });
+      const r = await fetch(url, { headers: { 'User-Agent': SERPBEAR_UA } });
       if (!r.ok) return false;
       const html = (await r.text()).slice(0, 200_000);
       return /"@type"\s*:\s*"(Article|BlogPosting|NewsArticle)"/i.test(html)

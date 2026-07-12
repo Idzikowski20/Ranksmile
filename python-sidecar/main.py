@@ -4,9 +4,20 @@ Uruchomienie: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 """
 import os
 import re
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load sidecar-local overrides first, then project-root env (Next.js .env.local holds
+# INTERNAL_PIPELINE_TOKEN + DATABASE_URL shared with the app). python-sidecar/.env
+# was removed from git — without this the scheduler sends an empty x-internal-token.
+_ROOT = Path(__file__).resolve().parent.parent
+for _env_file in (
+    Path(__file__).resolve().parent / ".env",
+    _ROOT / ".env.local",
+    _ROOT / ".env",
+):
+    if _env_file.is_file():
+        load_dotenv(_env_file, override=False)
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware

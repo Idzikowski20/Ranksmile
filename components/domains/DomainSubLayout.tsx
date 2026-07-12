@@ -13,6 +13,7 @@ type DomainSubLayoutProps = {
   contentMaxWidth?: number | string;
   heading?: React.ReactNode;
   subtitle?: React.ReactNode;
+  meta?: React.ReactNode;
   filters?: React.ReactNode;
 };
 
@@ -22,6 +23,7 @@ const DomainSubLayout = ({
   contentMaxWidth = 1200,
   heading,
   subtitle,
+  meta,
   filters,
 }: DomainSubLayoutProps) => (
   <SentryPage maxWidth={contentMaxWidth}>
@@ -30,6 +32,7 @@ const DomainSubLayout = ({
         title={heading}
         subtitle={subtitle}
         actions={actions}
+        meta={meta}
         borderless={!filters}
       />
     )}

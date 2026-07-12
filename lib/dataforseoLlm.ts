@@ -8,6 +8,7 @@
  * Docs: docs.dataforseo.com/v3/ai_optimization/* and /v3/serp/google/{ai_mode,organic}/live/advanced
  */
 import axios from 'axios';
+import { z } from 'zod';
 import { isDataForSeoConfigured } from './dataforseo';
 import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 
@@ -159,6 +160,21 @@ type DfsTaskPayload = {
    result?: Array<{ items?: unknown[], fan_out_queries?: unknown, refinement_chips?: unknown }>,
 };
 
+const dfsApiEnvelopeSchema = z.object({
+  status_code: z.number(),
+  status_message: z.string().optional(),
+  tasks: z.array(z.object({
+    status_code: z.number(),
+    status_message: z.string().optional(),
+    cost: z.number().optional(),
+    result: z.array(z.object({
+      items: z.array(z.unknown()).optional(),
+      fan_out_queries: z.unknown().optional(),
+      refinement_chips: z.unknown().optional(),
+    })).optional(),
+  })).optional(),
+});
+
 async function postWithRetry(path: string, task: Record<string, unknown>): Promise<{ taskData: DfsTaskPayload, costUsd: number }> {
    const MAX_ATTEMPTS = 3;
    let lastErr: unknown;
@@ -168,14 +184,19 @@ async function postWithRetry(path: string, task: Record<string, unknown>): Promi
             headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
             timeout: 120000,
          });
-         if (res.data?.status_code !== 20000) {
-            throw new Error(`DataForSEO API ${res.data?.status_code}: ${res.data?.status_message}`);
+         const parsed = dfsApiEnvelopeSchema.safeParse(res.data);
+         if (!parsed.success) {
+            throw new Error('Invalid DataForSEO response shape');
          }
-         const taskData = res.data?.tasks?.[0];
-         if (taskData?.status_code !== 20000) {
+         const envelope = parsed.data;
+         if (envelope.status_code !== 20000) {
+            throw new Error(`DataForSEO API ${envelope.status_code}: ${envelope.status_message}`);
+         }
+         const taskData = envelope.tasks?.[0];
+         if (!taskData || taskData.status_code !== 20000) {
             throw new Error(`DataForSEO task ${taskData?.status_code}: ${taskData?.status_message}`);
          }
-         return { taskData, costUsd: Number(taskData?.cost ?? 0) };
+         return { taskData, costUsd: Number(taskData.cost ?? 0) };
       } catch (e) {
          lastErr = e;
          if (attempt >= MAX_ATTEMPTS || !isRetryable(e)) break;

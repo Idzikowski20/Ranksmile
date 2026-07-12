@@ -17,3 +17,15 @@ export function isNewRecommendationsEnabled(): boolean {
 export function isQueueRunnerEnabled(): boolean {
   return envFlag('ENABLE_QUEUE_RUNNER');
 }
+
+export function isRankTrackingUiEnabled(): boolean {
+  if (envFlag('ENABLE_RANK_TRACKING_UI')) return true;
+  if (process.env.ENABLE_RANK_TRACKING_UI === '0' || process.env.ENABLE_RANK_TRACKING_UI === 'false') return false;
+  return process.env.NODE_ENV === 'development';
+}
+
+export function isRankTrackingRunnerEnabled(): boolean {
+  if (envFlag('ENABLE_RANK_TRACKING_RUNNER')) return true;
+  if (process.env.ENABLE_RANK_TRACKING_RUNNER === '0' || process.env.ENABLE_RANK_TRACKING_RUNNER === 'false') return false;
+  return process.env.NODE_ENV === 'development';
+}

@@ -270,6 +270,21 @@ export async function getRankedKeywords(opts: {
  * (the editor's tip describes authority as "a number between 1 and 10").
  * Returns {} when unconfigured so callers degrade to "no authority" rather than fail.
  */
+export async function getKeywordOverview(opts: {
+   keywords: string[],
+   locationCode: number,
+   languageCode?: string,
+}): Promise<DfsKeyword[]> {
+   const list = opts.keywords.map((k) => k.toLowerCase().trim()).filter(Boolean).slice(0, 700);
+   if (!list.length || !isDataForSeoConfigured()) return [];
+   const items = await dfsPost('/dataforseo_labs/google/keyword_overview/live', {
+      keywords: list,
+      location_code: opts.locationCode,
+      language_code: opts.languageCode || 'en',
+   });
+   return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
+}
+
 export async function domainRanks(domains: string[]): Promise<Record<string, number>> {
    const targets = Array.from(new Set(domains.map((d) => d.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '')).filter(Boolean)));
    if (!targets.length || !isDataForSeoConfigured()) return {};

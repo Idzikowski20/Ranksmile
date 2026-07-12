@@ -44,10 +44,18 @@ describe('articleFacts', () => {
     expect(summary.citations[0].prompt).toContain('czy warto');
   });
 
+  it('filters off-topic LLM filler from visibility summary', () => {
+    const facts: ArticleFact[] = [
+      { id: 'f2', text: 'Czy chcesz, żebym pomógł znaleźć więcej informacji na ten temat?', sourceFrequency: 1, sources: [{ kind: 'chat_gpt' }] },
+    ];
+    const summary = factsToVisibilitySummary(facts, 'Detektyw prywatny prowadzi sprawy cywilne w biurze.');
+    expect(summary.prompts_total).toBe(0);
+  });
+
   it('dedupes citations when merging visibility summaries', () => {
     const primary: AiVisibilitySummary = factsToVisibilitySummary(
-      [{ id: 'f1', text: 'prywatny detektyw Warszawa czy warto?', sourceFrequency: 1, sources: [{ kind: 'serp' }] }],
-      '',
+      [{ id: 'f1', text: 'prywatny detektyw Warszawa czy warto?', sourceFrequency: 1, sources: [{ kind: 'chat_gpt' }] }],
+      'Detektyw prywatny w Warszawie.',
     );
     const secondary: AiVisibilitySummary = {
       prompts_total: 1,

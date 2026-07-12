@@ -8,9 +8,11 @@ import { hashId, type CoverageItem } from './aiCoverage';
 import { cached } from './cache/fileCache';
 import { buildCitationPrompts } from './citationPrompts';
 import { isCorpusNoiseSentence } from './corpusNoiseFilter';
+import { resolveFactKeyword } from './resolveFactKeyword';
+import { isKeywordOnTopic, seedTokens } from './topicRelevance';
+import { factReadinessScore } from './factReadiness';
 import type { AiCitation, AiVisibilitySummary } from './aiSearchScore';
 import type { ArticleFact, FactSourceKind } from './articleFactTypes';
-import { factReadinessScore } from './factReadiness';
 
 export type { ArticleFact, FactSourceKind } from './articleFactTypes';
 export { factReadinessScore } from './factReadiness';
@@ -55,32 +57,53 @@ function mergeFact(
 export async function fetchArticleFacts(opts: {
   keyword: string;
   corpusTexts?: string[];
+  articleText?: string;
+  title?: string;
+  pageUrl?: string;
   country?: string;
+  /** When set, skip resolveFactKeyword (caller already resolved). */
+  resolvedKeyword?: string;
 }): Promise<ArticleFact[]> {
-  const keyword = opts.keyword.trim();
-  if (!keyword) return [];
+  const articleText = opts.articleText || opts.corpusTexts?.join(' ') || '';
+  const keyword = opts.resolvedKeyword ?? resolveFactKeyword({
+    keyword: opts.keyword,
+    articleText,
+    title: opts.title,
+    pageUrl: opts.pageUrl,
+  });
+  if (!keyword.trim()) return [];
 
   return cached({
     namespace: 'article-facts',
-    key: [keyword.toLowerCase(), opts.country || 'PL', (opts.corpusTexts || []).length],
+    key: [keyword.toLowerCase(), opts.country || 'PL', articleText.length],
     ttlMs: 24 * 60 * 60 * 1000,
-    producer: () => fetchArticleFactsUncached(opts),
+    producer: () => fetchArticleFactsUncached({ ...opts, keyword, articleText }),
   });
+}
+
+function factMatchesArticle(factText: string, keyword: string, articleText: string): boolean {
+  if (isCorpusNoiseSentence(factText)) return false;
+  if (isKeywordOnTopic(factText, keyword)) return true;
+  if (factReadinessScore(articleText, factText) >= 28) return true;
+  const seeds = seedTokens(keyword);
+  const low = factText.toLowerCase();
+  return seeds.some((s) => low.includes(s));
 }
 
 async function fetchArticleFactsUncached(opts: {
   keyword: string;
   corpusTexts?: string[];
+  articleText?: string;
+  title?: string;
+  pageUrl?: string;
   country?: string;
 }): Promise<ArticleFact[]> {
   const map = new Map<string, ArticleFact>();
   const keyword = opts.keyword.trim();
   const country = opts.country || 'PL';
+  const articleText = opts.articleText || opts.corpusTexts?.join(' ') || '';
 
   const citationPrompts = buildCitationPrompts(keyword, [], 12);
-  for (const prompt of citationPrompts) {
-    mergeFact(map, prompt, { kind: 'serp' });
-  }
 
   if (keyword && isDataForSeoConfigured()) {
     const models = ['ai_overview', 'chat_gpt'] as const;
@@ -91,7 +114,7 @@ async function fetchArticleFactsUncached(opts: {
           runModelPrompt(model, prompt, country)
             .then((ans) => {
               for (const sentence of splitFactSentences(ans.text)) {
-                if (isCorpusNoiseSentence(sentence)) continue;
+                if (!factMatchesArticle(sentence, keyword, articleText)) continue;
                 const cite = ans.citations[0];
                 mergeFact(map, sentence, {
                   kind: model,
@@ -118,6 +141,7 @@ export function factsToVisibilitySummary(
   articleText: string,
 ): AiVisibilitySummary {
   const citations: AiCitation[] = facts
+    .filter((f) => !isCorpusNoiseSentence(f.text))
     .filter((f) => f.text.includes('?') || /^(czy|jak|ile|polecany|najlepsz)/i.test(f.text))
     .map((f) => {
     const readiness = factReadinessScore(articleText, f.text);
@@ -147,7 +171,9 @@ export function factsToVisibilitySummary(
 
 /** Map LLM/SERP facts to coverage items for deep-analysis snapshot. */
 export function factsToCoverageItems(facts: ArticleFact[]): CoverageItem[] {
-  return facts.map((f) => ({
+  return facts
+    .filter((f) => !f.text.trim().endsWith('?') || f.sources.some((s) => s.kind === 'chat_gpt' || s.kind === 'ai_overview'))
+    .map((f) => ({
     id: f.id,
     label: f.text,
     type: 'fact' as const,

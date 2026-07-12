@@ -3311,3 +3311,222 @@ html.editor-route .app-content {
   }
 }
 
+/* ─── Setup wizard (Sentry onboarding) ─────────────────────────────────── */
+@keyframes sentry-setup-spin { to { transform: rotate(360deg); } }
+
+.sentry-setup-center {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 100%;
+  padding: 48px 0 64px;
+  box-sizing: border-box;
+}
+.sentry-setup-center--narrow { max-width: 480px; }
+.sentry-setup-center--wide { max-width: 880px; }
+.sentry-setup-card {
+  width: 100%;
+  max-width: 100%;
+}
+.sentry-setup-card .sentry-panel--setup,
+.sentry-setup-card .sentry-panel {
+  width: 100%;
+  box-sizing: border-box;
+}
+.sentry-panel--setup {
+  overflow: visible;
+}
+.sentry-setup-menu--portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  z-index: 200;
+  max-width: min(880px, calc(100vw - 24px));
+}
+.sentry-setup-card .sentry-panel-body {
+  padding: 24px;
+}
+.sentry-setup-progress {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+.sentry-setup-progress-seg {
+  height: 3px;
+  border-radius: 9999px;
+  background: #e4e4e7;
+  flex: 1;
+  transition: background 150ms ease;
+}
+.sentry-setup-progress-seg--active { background: #653DE9; }
+.sentry-setup-progress-seg--complete { background: #7553FF; }
+.sentry-setup-field-label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #302e36;
+  font-family: var(--font-family-shell);
+}
+.sentry-setup-field-hint {
+  margin: -4px 0 8px;
+  font-size: 12px;
+  color: #6a6772;
+  line-height: 1.45;
+  font-family: var(--font-family-shell);
+}
+.sentry-setup-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #dad9de;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 0 0 #dad9de;
+  font-size: 14px;
+  color: #302e36;
+  font-family: var(--font-family-shell);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.sentry-setup-trigger:hover:not(:disabled) { border-color: #c4c3ca; }
+.sentry-setup-trigger:focus-visible {
+  outline: none;
+  border-color: #7553FF;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #7553FF, 0 2px 0 0 #dad9de;
+}
+.sentry-setup-trigger:disabled { opacity: 0.6; cursor: not-allowed; }
+.sentry-setup-trigger-placeholder { color: #6a6772; }
+.sentry-setup-menu {
+  position: absolute;
+  z-index: 150;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  border: 1px solid #dad9de;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(24, 18, 37, 0.12);
+  animation: growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.sentry-setup-menu-search { padding: 8px; border-bottom: 1px solid #ececee; }
+.sentry-setup-menu-list { max-height: 220px; overflow-y: auto; }
+.sentry-setup-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #302e36;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-family-shell);
+  transition: background 150ms ease;
+}
+.sentry-setup-menu-item:hover { background: #f4f4f5; }
+.sentry-setup-menu-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-top: 1px solid #ececee;
+  background: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
+  color: #302e36;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-family-shell);
+  transition: background 150ms ease;
+}
+.sentry-setup-menu-footer:hover { background: #f4f4f5; }
+.sentry-setup-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: #6a6772;
+  font-size: 13px;
+  font-family: var(--font-family-shell);
+}
+.sentry-setup-or::before,
+.sentry-setup-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #dad9de;
+}
+.sentry-setup-gsc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #dad9de;
+  border-radius: 12px;
+  background: #f8f8f9;
+  box-shadow: 0 4px 0 0 #e4e4e7;
+}
+.sentry-setup-benefit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #302e36;
+  font-family: var(--font-family-shell);
+}
+.sentry-setup-benefit-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #653DE9;
+  flex-shrink: 0;
+}
+.sentry-setup-brand-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dad9de;
+  border-radius: 8px;
+  background: #fafafa;
+  box-shadow: 0 2px 0 0 #ececee;
+}
+.sentry-setup-brand-block-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #181225;
+  font-family: var(--font-family-shell);
+}
+.sentry-setup-brand-block-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6a6772;
+  line-height: 1.45;
+  font-family: var(--font-family-shell);
+}
+.sentry-setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.sentry-setup-actions > button:last-child { margin-left: auto; }

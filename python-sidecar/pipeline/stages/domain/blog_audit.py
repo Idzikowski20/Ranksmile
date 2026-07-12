@@ -1,4 +1,4 @@
-"""BlogAuditStage — fetch each blog post, compute a no-LLM triage score (P3d)."""
+"""BlogAuditStage — fetch each blog post and extract on-page signals (P3d)."""
 import asyncio
 import os
 import time
@@ -7,7 +7,8 @@ import httpx
 
 from pipeline.contracts import AnalysisStage, StageContext
 from pipeline.stages.domain.page_signals import extract_page_signals
-from pipeline.stages.domain.triage_scorer import score_triage
+
+# Score is computed post-setup in Node (Surfer-style SERP benchmark). Placeholder here.
 
 MAX_POSTS = 100
 CONCURRENCY = 8
@@ -59,7 +60,7 @@ async def _audit_one(client: httpx.AsyncClient, url: str) -> dict:
             rendered = await _spa_render(url)
             if rendered:
                 signals = extract_page_signals(rendered, url)
-        score = score_triage(signals)
+        score = 0  # filled by lib/scoreDomainPages after materialize
         return {
             "url": url,
             "path": signals["path"],

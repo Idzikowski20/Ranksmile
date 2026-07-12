@@ -29,6 +29,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const { enqueueDomainSetup, kickDomainSetup } = await import('../../../../lib/domainPipeline');
          const jobId = await enqueueDomainSetup(Number(domainId));
          void kickDomainSetup(jobId);
+         // Warm Performance cache — domain.search_console is set during configure when GSC site was picked.
+         try {
+            const Domain = (await import('../../../../database/models/domain')).default;
+            const { fetchDomainSCData, getSearchConsoleApiInfo, hasValidSCAuth } = await import('../../../../utils/searchConsole');
+            const row = await Domain.findOne({ where: { ID: domainId } });
+            if (row) {
+               const plain = row.get({ plain: true }) as DomainType;
+               const scApi = await getSearchConsoleApiInfo(plain, userId);
+               if (hasValidSCAuth(scApi)) void fetchDomainSCData(plain, scApi);
+            }
+         } catch { /* best-effort */ }
       }
    } catch { /* pipeline kickoff is best-effort; dashboard fallback covers it */ }
    return res.status(200).json({ ok: true });

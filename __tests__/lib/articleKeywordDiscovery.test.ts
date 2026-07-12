@@ -55,7 +55,7 @@ describe('discoverRankingKeywords', () => {
     ]);
 
     const { primaryKeyword, keywords } = await discoverRankingKeywords({
-      pageUrl: '',
+      pageUrl: 'https://example.com/prywatny-detektyw',
       workspaceDomain: 'example.com',
       userKeywords: ['detektyw'],
       country: 'PL',
@@ -64,5 +64,26 @@ describe('discoverRankingKeywords', () => {
 
     expect(primaryKeyword).toBe('detektyw');
     expect(keywords.some((k) => k.keyword === 'detektyw')).toBe(true);
+    expect(keywords.some((k) => k.keyword === 'gemini chatgpt')).toBe(false);
+  });
+
+  it('drops off-topic DFS domain keywords when no user seed', async () => {
+    mockGetRankedKeywords.mockResolvedValue([
+      { keyword: 'cuckolding', position: 4 },
+      { keyword: 'co to znaczy inwigilacja', position: 9 },
+      { keyword: 'prywatny detektyw warszawa', position: 12 },
+    ]);
+
+    const { keywords } = await discoverRankingKeywords({
+      pageUrl: 'https://prodetektyw.pl/prywatny-detektyw-warszawa',
+      workspaceDomain: 'prodetektyw.pl',
+      userKeywords: [],
+      country: 'PL',
+      languageCode: 'pl',
+    });
+
+    expect(keywords.some((k) => k.keyword === 'cuckolding')).toBe(false);
+    expect(keywords.some((k) => k.keyword === 'co to znaczy inwigilacja')).toBe(false);
+    expect(keywords.some((k) => k.keyword === 'prywatny detektyw warszawa')).toBe(true);
   });
 });

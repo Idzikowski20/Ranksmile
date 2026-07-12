@@ -31,6 +31,12 @@ const CORPUS_NOISE: RegExp[] = [
   /\bo nas\s*-->/i,
   /\bpolecane księgarnie\b/i,
   /\boferta dnia\b/i,
+  /\bczy chcesz,?\s*żebym\b/i,
+  /\bczy chciałbyś\b/i,
+  /\bczy chcesz\b.*\b(pomóc|wyjaśni)/i,
+  /\bpomógł (?:ci )?(znaleźć|wyjaśni)/i,
+  /\bwyjaśnił coś bardziej szczegółowo\b/i,
+  /\bwięcej informacji na (?:ten )?temat\b/i,
 ];
 
 const BOILERPLATE_STARTS = [

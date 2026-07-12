@@ -63,26 +63,33 @@ const DashboardPage: NextPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showAddDomain, setShowAddDomain] = useState(false);
 
+  const domains: DomainType[] = domainsData?.domains || [];
+  const activeWorkspace = wsData?.workspaces.find((w) => w.id === activeWsId) ?? null;
+  const primaryDomain = resolveActiveDomain(domains, activeWsId, activeWorkspace?.domain) ?? null;
+  const primaryDomainId = primaryDomain?.ID ?? null;
+  const primaryDomainName = primaryDomain?.domain ?? null;
+  const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
+
   const { data: sitesData, isLoading: sitesLoading } = useQuery(
-    'dashboardSites', () => fetchJson('/api/sites', { domainStats: {} as Record<string, unknown> }), { retry: false },
+    ['dashboardSites', activeWsId, primaryDomainName],
+    () => fetchJson('/api/sites', { domainStats: {} as Record<string, unknown> }),
+    { enabled: !!primaryDomainName, retry: false },
   );
 
   const { data: articlesData, isLoading: articlesLoading } = useQuery(
-    'dashboardArticles', () => fetchJson('/api/articles', { articles: [] as DashboardArticle[] }),
+    ['dashboardArticles', activeWsId, primaryDomainId],
+    () => fetchJson(`/api/articles?domainId=${primaryDomainId}&limit=100`, { articles: [] as DashboardArticle[] }),
+    { enabled: !!primaryDomainId, retry: false },
   );
 
-  // ── Clicks: aggregate GSC daily clicks across all domains ──
+  // ── Clicks: GSC daily clicks for the active workspace's domain only ──
   const clickSeries = useMemo(() => {
+    if (!primaryDomainName) return [];
     const stats = sitesData?.domainStats || {};
-    const byDate = new Map<string, number>();
-    Object.values(stats).forEach((s: unknown) => {
-      type StatEntry = { chart?: Array<{ date: string; clicks?: number }> };
-      ((s as StatEntry)?.chart || []).forEach((p) => {
-        byDate.set(p.date, (byDate.get(p.date) || 0) + (p.clicks || 0));
-      });
-    });
-    return [...byDate.keys()].sort().map((date) => ({ date, clicks: byDate.get(date) || 0 }));
-  }, [sitesData]);
+    type StatEntry = { chart?: Array<{ date: string; clicks?: number }> };
+    const chart = (stats[primaryDomainName] as StatEntry | undefined)?.chart || [];
+    return chart.map((p) => ({ date: p.date, clicks: p.clicks || 0 }));
+  }, [sitesData, primaryDomainName]);
 
   // Period-over-period like SurferSEO: the last 30 days vs the previous 30 days —
   // NOT the two halves of one window. The chart + total reflect the last 30 days.
@@ -95,16 +102,6 @@ const DashboardPage: NextPage = () => {
   const deltaPct = prevSum > 0 ? Math.round(((currSum - prevSum) / prevSum) * 100) : (currSum > 0 ? 100 : 0);
   const hasData = recent30.length > 0;
 
-  const domains: DomainType[] = domainsData?.domains || [];
-  // `domains` spans every workspace the user can access (GET /api/domains isn't
-  // workspace-scoped), so `domains[0]` picked whichever domain happened to sort first
-  // overall — NOT the currently active workspace's domain. That's why a freshly
-  // created workspace's dashboard/pipeline silently tracked a different, unrelated
-  // (already-"done") domain and the "Analyzing your domain…" card never progressed:
-  // the auto-kick effect below never fired for the new domain at all.
-  const activeWorkspace = wsData?.workspaces.find((w) => w.id === activeWsId) ?? null;
-  const primaryDomain = resolveActiveDomain(domains, activeWsId, activeWorkspace?.domain) ?? domains[0];
-  const activeDomainSlug: string | null = primaryDomain?.slug ?? null;
   const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
   const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/dashboard');
   const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
@@ -146,8 +143,8 @@ const DashboardPage: NextPage = () => {
   // On transition to done, refresh the dashboard data queries
   useEffect(() => {
     if (setup?.status === 'done') {
-      queryClient.invalidateQueries('dashboardArticles');
-      queryClient.invalidateQueries('dashboardSites');
+      queryClient.invalidateQueries(['dashboardArticles', activeWsId, primaryDomainId]);
+      queryClient.invalidateQueries(['dashboardSites', activeWsId, primaryDomainName]);
       queryClient.invalidateQueries(['domainRecs', activeDomainSlug]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
