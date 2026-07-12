@@ -66,7 +66,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const wsIds = await getAccessibleWorkspaceIds(userId);
          const targetWs = await getWorkspace(userId, workspaceId);
          if (targetWs?.status === 'setup') {
-            // Setup wizard: always attach the domain to the in-progress workspace.
+            if (existingWs != null && !wsIds.includes(Number(existingWs))) {
+               return res.status(403).json({ error: 'Access denied.' });
+            }
+            // Setup wizard: attach only unclaimed or already-accessible domains.
             await db.query('UPDATE domain SET workspace_id = ? WHERE "ID" = ?', {
                replacements: [workspaceId, domain.ID],
             });

@@ -82,4 +82,26 @@ describe('materializeDomainSetup', () => {
     expect(deleteIdx).toBeLessThan(firstInsertIdx); // delete before insert
     expect((db.transaction as jest.Mock)).toHaveBeenCalled();
   });
+
+  it('keeps existing page audits when a rerun returns no audited URLs', async () => {
+    const tx = {};
+    (db.transaction as jest.Mock).mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('SELECT url FROM page_audits')) {
+        return [{ url: 'https://example.com/old-post' }];
+      }
+      return [[], {}];
+    });
+
+    await materializeDomainSetup(99, {
+      keywords: [],
+      topics: [],
+      competitors: [],
+      recommendations: [],
+      page_audits: [],
+    });
+
+    const sqls = mockQuery.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(sqls.some((s) => s.includes('DELETE FROM page_audits'))).toBe(false);
+  });
 });

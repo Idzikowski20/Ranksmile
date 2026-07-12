@@ -1,4 +1,4 @@
-"""BlogAuditStage — BFS crawl domain pages and extract on-page signals (P3d)."""
+"""BlogAuditStage ? BFS crawl domain pages and extract on-page signals (P3d)."""
 import asyncio
 import os
 import time
@@ -8,6 +8,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.ssrf_guard import assert_public_url
 from pipeline.stages.domain.page_signals import extract_page_signals
 
 MAX_CRAWL_URLS_DEFAULT = 100
@@ -78,6 +79,7 @@ async def _audit_one(client: httpx.AsyncClient, url: str, host: str) -> tuple[di
     start = time.monotonic()
     discovered: list[str] = []
     try:
+        assert_public_url(url)
         r = await client.get(
             url,
             headers={"User-Agent": UA},

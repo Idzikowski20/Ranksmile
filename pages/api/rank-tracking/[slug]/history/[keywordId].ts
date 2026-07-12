@@ -22,10 +22,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!config) return res.status(404).json({ error: 'Config not found' });
 
   const device = (req.query.device === 'mobile' ? 'mobile' : 'desktop') as RankDevice;
-  const limit = req.query.limit ? Math.min(500, Number(req.query.limit)) : 100;
+  const rawLimit = req.query.limit ? Number(req.query.limit) : 100;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(500, Math.floor(rawLimit)) : 100;
 
   try {
-    const snapshots = await getKeywordHistory(keywordId, device, limit);
+    const snapshots = await getKeywordHistory(configId, keywordId, device, limit);
     return res.status(200).json({ snapshots });
   } catch (e) {
     return res.status(500).json({ error: getErrorMessage(e) });

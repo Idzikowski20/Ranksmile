@@ -140,10 +140,13 @@ export async function materializeDomainSetup(domainId: number, result: DomainRes
             );
          }
       }
-      // delete ONLY rows whose URL no longer exists on the site
-      for (const url of existingUrls)
-         if (!incomingUrls.has(url))
-            await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
+      // Empty audits usually mean discovery/fetch failed; do not treat that as "all pages removed".
+      if (incomingUrls.size > 0) {
+         // delete ONLY rows whose URL no longer exists on the site
+         for (const url of existingUrls)
+            if (!incomingUrls.has(url))
+               await q(`DELETE FROM page_audits WHERE domain_id=? AND url=?`, [domainId, url]);
+      }
 
       for (const r of result.recommendations || [])
          await q(`INSERT INTO domain_recommendations (domain_id, topic_id, title, rationale, priority, type, url, score, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [domainId, r.topic_index != null ? topicIds[r.topic_index] ?? null : null, r.title, r.rationale || '', r.priority || 'medium', r.type || 'content', r.url ?? null, r.score ?? null]);
