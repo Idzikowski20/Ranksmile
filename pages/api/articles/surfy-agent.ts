@@ -13,7 +13,7 @@ import { sseEvent } from '../../../lib/ai/sse';
 import { extractJsonObject, isSurfyReplyShape } from '../../../lib/ai/extractJson';
 import { stripEmoji } from '../../../lib/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { ensureUserTenancy } from '../../../lib/tenancy';
+import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import type { ToolCtx } from '../../../lib/ai/types';
 import { getErrorMessage } from '../../../lib/errors';
@@ -36,6 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!prompt || !content) return res.status(400).json({ error: 'prompt and content are required' });
   if (!process.env.DEEPSEEK_API_KEY) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
 
+  const normalizedArticleId = articleId != null ? Number(articleId) : null;
+  if (normalizedArticleId != null) {
+    const userId = await getCurrentUserId(req, res);
+    if (!(await assertArticleAccess(userId, normalizedArticleId))) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+  }
+
   // ── Org-wide AI token budget (shared 5h pool). Block before doing any work if exhausted. ──
   let orgId: number | null = null;
   try { const uid = await getCurrentUserId(req, res); orgId = (await ensureUserTenancy(String(uid))).orgId; } catch { orgId = null; }
@@ -51,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ctx: ToolCtx = {
       $, keyword, scoreData, internalArticles, articleTitle, articleMetaDescription,
       changelog: [], htmlDirty: false, writeCount: 0, meta: null,
-      articleId: articleId != null ? Number(articleId) : null, cache: {},
+      articleId: normalizedArticleId, cache: {},
       pendingAction: null,
     };
 

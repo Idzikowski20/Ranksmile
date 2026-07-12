@@ -12,6 +12,8 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
+import { getCurrentUserId } from '../../../utils/getUser';
+import { assertArticleAccess } from '../../../lib/tenancy';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -37,6 +39,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!content) return res.status(400).json({ error: 'content is required' });
   if (!articles?.length) return res.status(200).json({ suggestions: [] });
+
+  if (articleId) {
+    const userId = await getCurrentUserId(req, res);
+    if (!(await assertArticleAccess(userId, Number(articleId)))) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+  }
 
   // ── Return from DB cache if available ────────────────────────────
   if (articleId) {
