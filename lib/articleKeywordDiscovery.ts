@@ -1,63 +1,54 @@
 /**
-
- * Discover real ranking keywords for an imported/ranked article page.
-
- * Combines GSC (first-party, page-specific), DataForSEO ranked keywords, and user seeds.
-
+ * Discover ranking keywords for an imported article page.
+ * Primary source: DataForSEO ranked keywords from SERP competitors.
+ * GSC is validation-only (page queries that match the URL anchor).
  */
-
 import db from '../database/database';
-
 import { cached, TTL } from './cache/fileCache';
-
 import { enrichTerms, getOwnVisibleKeywords } from './seo/keywordData';
-
 import { getRankedKeywords, isDataForSeoConfigured } from './dataforseo';
-
 import { DFS_DEFAULT_RANKED_LIMIT } from './dataforseoBudget';
-
 import { computeRelevanceScore, checkCoverage } from './keywordEnrichment';
-
 import type { NlpTerm } from './contentScore';
 import { isWeakTermList } from './competitorTermCalibration';
 import { filterOnTopicTerms, isKeywordOnTopic } from './topicRelevance';
-import { keywordFromUrl } from './inferPageKeyword';
+import { isDictionaryQueryNoise } from './termUtils';
+import { keywordFromUrl, urlAnchorSeed } from './inferPageKeyword';
 import { kwScore } from '../utils/gsc';
 
 export type DiscoveredKeyword = {
-
   keyword: string;
-
   position?: number;
-
   impressions?: number;
-
   clicks?: number;
-
   source: 'gsc' | 'dataforseo' | 'user';
-
 };
 
-
-
 export function hostFromUrl(url: string): string {
-
   try {
-
     return new URL(url).hostname.replace(/^www\./, '');
-
   } catch {
-
     return '';
-
   }
-
 }
 
+function passesKeywordGate(kw: string, anchorSeed: string, source: DiscoveredKeyword['source']): boolean {
+  const k = kw.trim();
+  if (!k || isDictionaryQueryNoise(k)) return false;
+  if (source === 'user') return true;
+  if (!anchorSeed) return false;
+  return isKeywordOnTopic(k, anchorSeed);
+}
 
+function keywordSortScore(k: DiscoveredKeyword): number {
+  if (k.source === 'dataforseo') {
+    return 2000 - Math.min(k.position ?? 50, 50) * 20;
+  }
+  if (k.source === 'user') return 1500;
+  return 500 + kwScore(k);
+}
 
 /** True when the term list is too thin, stopword-heavy, or mostly trivial PK splits. */
-
 export function needsTermEnrichment(terms: NlpTerm[], primaryKeyword: string): boolean {
   if (isWeakTermList(terms, primaryKeyword)) return true;
 
@@ -76,40 +67,25 @@ export function needsTermEnrichment(terms: NlpTerm[], primaryKeyword: string): b
   return trivial.length / terms.length >= 0.35;
 }
 
-
-
 /** Merge NLP terms — keep higher target_count on duplicates. */
-
 export function mergeNlpTerms(existing: NlpTerm[], incoming: NlpTerm[]): NlpTerm[] {
-
   const map = new Map<string, NlpTerm>();
 
   for (const t of existing) {
-
     const k = t.term.toLowerCase().trim();
-
     if (k) map.set(k, t);
-
   }
 
   for (const t of incoming) {
-
     const k = t.term.toLowerCase().trim();
-
     if (!k) continue;
-
     const prev = map.get(k);
-
     if (!prev || (t.target_count || 0) > (prev.target_count || 0)) {
-
       map.set(k, { ...t, term: k, current_count: prev?.current_count ?? t.current_count ?? 0 });
-
     }
-
   }
 
   return [...map.values()];
-
 }
 
 async function rankedKeywordsForDomain(
@@ -134,8 +110,7 @@ async function rankedKeywordsForDomain(
 }
 
 /**
-
- * Fetch keywords the page ranks for (GSC) plus on-topic competitor / domain gaps (DFS).
+ * Competitor-first keyword discovery: URL anchor → DFS competitor footprint → GSC validation.
  */
 export async function discoverRankingKeywords(opts: {
   pageUrl: string;
@@ -149,6 +124,8 @@ export async function discoverRankingKeywords(opts: {
   const pageHost = hostFromUrl(opts.pageUrl);
   const wsDomain = (opts.workspaceDomain || '').replace(/^www\./, '');
   const gscDomain = wsDomain || pageHost;
+  const urlSeed = urlAnchorSeed(opts.pageUrl) || keywordFromUrl(opts.pageUrl);
+  const anchorSeed = userKw[0] || urlSeed || '';
 
   const found = new Map<string, DiscoveredKeyword>();
 
@@ -164,9 +141,36 @@ export async function discoverRankingKeywords(opts: {
 
   for (const k of userKw) add(k, { source: 'user' });
 
+  const ownDomain = pageHost || wsDomain;
+  const competitors = (opts.competitorDomains || [])
+    .map((d) => d.replace(/^www\./, '').toLowerCase())
+    .filter((d) => d && d !== ownDomain.replace(/^www\./, '').toLowerCase())
+    .slice(0, 3);
+
+  const addRankedOnTopic = async (domain: string, cacheNs: string) => {
+    if (!domain || !anchorSeed || !isDataForSeoConfigured()) return;
+    try {
+      const ranked = await rankedKeywordsForDomain(domain, opts.country, opts.languageCode, cacheNs);
+      for (const r of ranked) {
+        if (!r.keyword || !isKeywordOnTopic(r.keyword, anchorSeed)) continue;
+        add(r.keyword, { source: 'dataforseo', position: r.position ?? undefined });
+      }
+    } catch { /* non-fatal */ }
+  };
+
+  // Competitors first — Surfer-style SERP footprint, not whole-domain noise.
+  for (const comp of competitors) {
+    await addRankedOnTopic(comp, `discover-ranked-comp-${comp}`);
+  }
+  if (!competitors.length && ownDomain) {
+    await addRankedOnTopic(ownDomain, 'discover-ranked-own');
+  }
+
+  // GSC validation — only queries on-topic for the URL anchor.
   try {
     const gsc = await getOwnVisibleKeywords({ domain: gscDomain, page: opts.pageUrl });
     for (const row of gsc.keywords) {
+      if (!passesKeywordGate(row.keyword, anchorSeed, 'gsc')) continue;
       add(row.keyword, {
         source: 'gsc',
         position: row.position,
@@ -176,158 +180,83 @@ export async function discoverRankingKeywords(opts: {
     }
   } catch { /* GSC optional */ }
 
-  const gscOnly = [...found.values()].filter((k) => k.source === 'gsc');
-  const bestGsc = gscOnly.sort((a, b) => kwScore(b) - kwScore(a))[0]?.keyword;
-
-  const seedForFilter = userKw[0] || bestGsc || keywordFromUrl(opts.pageUrl) || '';
-
-  const addRankedOnTopic = async (domain: string, cacheNs: string) => {
-    if (!domain || !seedForFilter || !isDataForSeoConfigured()) return;
-    try {
-      const ranked = await rankedKeywordsForDomain(domain, opts.country, opts.languageCode, cacheNs);
-      for (const r of ranked) {
-        if (!r.keyword || !isKeywordOnTopic(r.keyword, seedForFilter)) continue;
-        add(r.keyword, { source: 'dataforseo', position: r.position ?? undefined });
-      }
-    } catch { /* non-fatal */ }
-  };
-
-  const ownDomain = pageHost || wsDomain;
-  const competitors = (opts.competitorDomains || [])
-    .map((d) => d.replace(/^www\./, '').toLowerCase())
-    .filter((d) => d && d !== ownDomain.replace(/^www\./, '').toLowerCase())
-    .slice(0, 3);
-
-  // On-topic domain footprint — never dump the whole domain when we lack a seed.
-  if (ownDomain) await addRankedOnTopic(ownDomain, 'discover-ranked-own');
-  for (const comp of competitors) {
-    await addRankedOnTopic(comp, `discover-ranked-comp-${comp}`);
-  }
-
   const keywords = [...found.values()]
-    .filter((k) => {
-      if (k.source === 'gsc' || k.source === 'user') return true;
-      if (!seedForFilter) return false;
-      return isKeywordOnTopic(k.keyword, seedForFilter);
-    })
-    .sort((a, b) => {
-      const score = (k: DiscoveredKeyword) => kwScore(k) + (k.source === 'gsc' ? 500 : 0);
-      return score(b) - score(a);
-    });
+    .filter((k) => passesKeywordGate(k.keyword, anchorSeed, k.source))
+    .sort((a, b) => keywordSortScore(b) - keywordSortScore(a));
 
+  const dfsBest = keywords.find((k) => k.source === 'dataforseo');
+  const gscBest = keywords.find((k) => k.source === 'gsc');
   const primaryKeyword = userKw[0]
-    || keywords.find((k) => k.source === 'gsc')?.keyword
-    || seedForFilter
+    || urlSeed
+    || dfsBest?.keyword
+    || gscBest?.keyword
     || keywords[0]?.keyword
     || '';
 
   return { primaryKeyword, keywords };
 }
 
-
-
 /** Upsert discovered keywords into article_keywords. */
-
 export async function saveArticleKeywords(
-
   articleId: number,
-
   keywords: DiscoveredKeyword[],
-
   targetKeyword: string,
-
   plainText: string,
-
 ): Promise<void> {
-
   const isPostgres = !!process.env.DATABASE_URL;
+  const anchor = targetKeyword.trim() || '';
+  const toSave = keywords.filter((row) => {
+    if (isDictionaryQueryNoise(row.keyword)) return false;
+    if (row.source === 'user') return true;
+    if (!anchor) return false;
+    return isKeywordOnTopic(row.keyword, anchor);
+  }).slice(0, 80);
 
-  for (const row of keywords.slice(0, 80)) {
-
+  for (const row of toSave) {
     const uid = `${articleId}:${row.keyword}`;
-
     const relevance = computeRelevanceScore(row.keyword, targetKeyword);
-
     const covered = checkCoverage(row.keyword, plainText || '') ? 1 : 0;
 
     if (isPostgres) {
-
       await db.query(
-
         `INSERT INTO article_keywords (article_id, keyword, relevance_score, is_covered, gsc_position, uid, updated_at)
-
          VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-
          ON CONFLICT (uid) DO UPDATE SET
-
            relevance_score = GREATEST(article_keywords.relevance_score, EXCLUDED.relevance_score),
-
            is_covered = EXCLUDED.is_covered,
-
            gsc_position = COALESCE(EXCLUDED.gsc_position, article_keywords.gsc_position),
-
            updated_at = CURRENT_TIMESTAMP`,
-
         { replacements: [articleId, row.keyword, relevance, covered, row.position ?? null, uid] },
-
       ).catch(() => {});
-
     } else {
-
       await db.query(
-
         `INSERT OR REPLACE INTO article_keywords (id, article_id, keyword, relevance_score, is_covered, gsc_position, uid, updated_at)
-
          VALUES ((SELECT id FROM article_keywords WHERE uid = ?), ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-
         { replacements: [uid, articleId, row.keyword, relevance, covered, row.position ?? null, uid] },
-
       ).catch(() => {});
-
     }
-
   }
-
 }
 
-
-
 /** Enrich thin NLP term lists via DataForSEO (suggestions + competitor footprint). */
-
 export async function enrichNlpTermsIfNeeded(opts: {
-
   terms: NlpTerm[];
-
   primaryKeyword: string;
-
   country?: string;
-
   languageCode?: string;
-
   competitorDomains?: string[];
-
   ownDomain?: string;
-
   plainText?: string;
-
 }): Promise<NlpTerm[]> {
-
   if (!needsTermEnrichment(opts.terms, opts.primaryKeyword)) return opts.terms;
 
   const { terms: enriched } = await enrichTerms({
-
     keyword: opts.primaryKeyword,
-
     country: opts.country,
-
     languageCode: opts.languageCode,
-
     ownDomain: opts.ownDomain,
-
     competitorDomains: opts.competitorDomains,
-
     limit: 80,
-
   });
 
   if (!enriched.length) return opts.terms;
@@ -343,4 +272,3 @@ export async function enrichNlpTermsIfNeeded(opts: {
 
   return mergeNlpTerms(opts.terms, onTopic);
 }
-

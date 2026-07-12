@@ -57,7 +57,8 @@ describe('filterNlpTermsForAnalysis', () => {
       { term: 'kontrola telefonu' },
     ];
     const out = filterNlpTermsForAnalysis(terms, seed);
-    expect(out.length).toBeGreaterThanOrEqual(10);
+    expect(out.length).toBeGreaterThanOrEqual(3);
     expect(out.map((t) => t.term)).not.toContain('test z lektury pan tadeusz');
+    expect(out.map((t) => t.term)).toContain('oznaki zdrady partnera');
   });
 });

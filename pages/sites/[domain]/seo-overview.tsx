@@ -81,7 +81,6 @@ const SeoOverviewPage: NextPage = () => {
             <SeoMetricsWidget
               data={data?.seo ?? {
                 connected: false,
-                authorityScore: null,
                 organicTraffic: { value: 0, previous: null, deltaPct: null, trend: 'same' },
                 organicKeywords: { value: 0, previous: null, deltaPct: null, trend: 'same' },
                 paidKeywords: 0,

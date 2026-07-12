@@ -86,4 +86,31 @@ describe('discoverRankingKeywords', () => {
     expect(keywords.some((k) => k.keyword === 'co to znaczy inwigilacja')).toBe(false);
     expect(keywords.some((k) => k.keyword === 'prywatny detektyw warszawa')).toBe(true);
   });
+
+  it('prefers URL anchor as primary over off-topic GSC', async () => {
+    const { getOwnVisibleKeywords } = jest.requireMock('../../lib/seo/keywordData') as {
+      getOwnVisibleKeywords: jest.Mock;
+    };
+    getOwnVisibleKeywords.mockResolvedValueOnce({
+      keywords: [
+        { keyword: 'cuckolding co znaczy', impressions: 9000, clicks: 100, position: 3 },
+        { keyword: 'prywatny detektyw warszawa', impressions: 50, clicks: 2, position: 8 },
+      ],
+    });
+    mockGetRankedKeywords.mockResolvedValue([
+      { keyword: 'prywatny detektyw warszawa cennik', position: 5 },
+    ]);
+
+    const { primaryKeyword, keywords } = await discoverRankingKeywords({
+      pageUrl: 'https://prodetektyw.pl/prywatny-detektyw-warszawa',
+      workspaceDomain: 'prodetektyw.pl',
+      userKeywords: [],
+      competitorDomains: ['detektyw-krakow.pl'],
+      country: 'PL',
+      languageCode: 'pl',
+    });
+
+    expect(primaryKeyword).toBe('prywatny detektyw warszawa');
+    expect(keywords.some((k) => k.keyword.includes('cuckolding'))).toBe(false);
+  });
 });

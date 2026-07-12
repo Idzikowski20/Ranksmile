@@ -1,33 +1,30 @@
-import { inferPageKeyword, keywordFromUrl, pickBenchmarkKeyword } from '../../lib/inferPageKeyword';
+import { isDictionaryQueryNoise } from '../../lib/termUtils';
+import { resolveAnalysisSeedKeyword } from '../../lib/inferPageKeyword';
 
-describe('inferPageKeyword', () => {
-  it('prefers GSC keyword for the page URL', () => {
-    const gsc = new Map([['prodetektyw.pl/jak-sprawdzic', 'jak sprawdzic czy ktos mnie sledzi']]);
-    const kw = inferPageKeyword(
-      'https://prodetektyw.pl/jak-sprawdzic-czy-ktos-mnie-sledzi/',
-      'Jak sprawdzić…',
-      ['detektyw warszawa'],
-      gsc,
-    );
-    expect(kw).toBe('jak sprawdzic czy ktos mnie sledzi');
+describe('isDictionaryQueryNoise', () => {
+  it('rejects Polish dictionary-query spam', () => {
+    expect(isDictionaryQueryNoise('co to znaczy inwigilacja')).toBe(true);
+    expect(isDictionaryQueryNoise('67 co to znaczy')).toBe(true);
+    expect(isDictionaryQueryNoise('znaczy')).toBe(true);
+    expect(isDictionaryQueryNoise('prywatny detektyw warszawa')).toBe(false);
+  });
+});
+
+describe('resolveAnalysisSeedKeyword', () => {
+  it('prefers URL slug over off-topic GSC candidate', () => {
+    const seed = resolveAnalysisSeedKeyword({
+      candidate: 'cuckolding co znaczy',
+      pageUrl: 'https://prodetektyw.pl/prywatny-detektyw-warszawa',
+      userKeywords: [],
+    });
+    expect(seed).toBe('prywatny detektyw warszawa');
   });
 
-  it('uses URL slug when GSC is missing', () => {
-    const kw = inferPageKeyword(
-      'https://prodetektyw.pl/prywatny-detektyw-warszawa-kiedy-warto/',
-      'Prywatny detektyw Warszawa',
-      ['detektyw warszawa'],
-      new Map(),
-    );
-    expect(kw).toContain('detektyw');
-  });
-
-  it('keywordFromUrl strips hyphens', () => {
-    expect(keywordFromUrl('https://example.com/jak-sprawdzic-test/')).toBe('jak sprawdzic test');
-  });
-
-  it('pickBenchmarkKeyword reuses nearest cached SERP', () => {
-    expect(pickBenchmarkKeyword('cyber detektyw', ['detektyw warszawa', 'prywatny detektyw'], 'x'))
-      .toBe('detektyw warszawa');
+  it('keeps user seed when provided', () => {
+    expect(resolveAnalysisSeedKeyword({
+      candidate: 'cuckolding',
+      pageUrl: 'https://prodetektyw.pl/prywatny-detektyw-warszawa',
+      userKeywords: ['detektyw'],
+    })).toBe('detektyw');
   });
 });

@@ -19,7 +19,6 @@ import ScoreTrio from './ScoreTrio';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
-import AuthorityBadge from '../competitors/AuthorityBadge';
 import { Gauge } from '../core';
 
 interface CompetitorHeading {
@@ -35,7 +34,6 @@ interface Competitor {
   heading_count?: number;
   serp_position?: number;
   headings: CompetitorHeading[];
-  authority?: number | null;
   seoScore?: number;
 }
 
@@ -106,7 +104,7 @@ interface Props {
   readabilityAccepted?: number;
   /** Shared/preview mode — disables every mutating action. */
   readOnly?: boolean;
-  /** Workspace slug — loads authority + SEO scores from the shared competitors store. */
+  /** Workspace slug — loads SEO scores from the shared competitors store. */
   domainSlug?: string;
   /** AO-8b: live "↑N" content-score deltas — non-undefined ONLY during Auto-Optimize review.
    *  Task 11 adds `ai` (from the live coverage re-score) alongside the existing seo/overall. */
@@ -232,7 +230,6 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           <div style={{ display: 'inline-flex', transform: 'scale(0.72)', transformOrigin: 'center right' }}>
             <Gauge score={seoScore} size="sm" />
           </div>
-          <AuthorityBadge value={competitor.authority ?? null} />
           <svg viewBox="0 0 20 20" width={13} height={13} fill="currentColor"
             style={{ color: '#9f9fa9', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>
             <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
@@ -353,7 +350,6 @@ const ContentScorePanel = ({
       const api = byUrl.get(comp.url.replace(/\/$/, '')) || byDomain.get(stripWww(domain));
       return {
         ...comp,
-        authority: api?.authority ?? comp.authority ?? null,
         seoScore: api?.seoScore ?? comp.seoScore ?? peerSeoScore(comp, competitors),
       };
     });

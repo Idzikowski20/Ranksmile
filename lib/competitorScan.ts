@@ -1,12 +1,11 @@
 // Shared "Organic Competitors" store, keyed by (domain_id, keyword). Scans the top-10
 // SERP via the sidecar /competitor-outlines, scores each result relative to the peer set
-// (word/heading median), decorates it with a DataForSEO domain rank (Authority), and
+// (word/heading median), and
 // upserts into domain_serp_competitors WITHOUT clobbering the user's `selected` toggle.
 // Used by both the Audit tool and the Content Editor via the shared modal.
 import db from '../database/database';
 import { queryRows } from './db/query';
 import { callSidecar } from './sidecar';
-import { domainRanks } from './dataforseo';
 import { isContentCompetitor } from './competitorRelevance';
 import { CompetitorDTO, CompetitorRow, rowToCompetitorDTO } from './competitorTypes';
 
@@ -52,8 +51,6 @@ function competitorScore(comp: SidecarCompetitor, allComps: SidecarCompetitor[])
    return Math.round(wordScore * 0.7 + headingScore * 0.3);
 }
 
-const stripWww = (host: string): string => host.replace(/^www\./, '');
-
 /** Preserve the user's `selected` toggle on conflict — every other column is refreshed. */
 const ON_CONFLICT = `ON CONFLICT (domain_id, keyword, url) DO UPDATE SET
    position = EXCLUDED.position,
@@ -81,20 +78,11 @@ export async function scanCompetitors(domainId: number, keyword: string, languag
       .filter((c) => isContentCompetitor(c.domain || '', c.url))
       .slice(0, 10);
 
-   // Authority per host (best-effort — DataForSEO is optional; {} on failure/unconfigured).
-   let ranks: Record<string, number> = {};
-   try {
-      const distinctDomains = Array.from(new Set(competitors.map((c) => c.domain).filter(Boolean)));
-      if (distinctDomains.length) ranks = await domainRanks(distinctDomains);
-   } catch {
-      ranks = {};
-   }
-
    for (let i = 0; i < competitors.length; i += 1) {
       const comp = competitors[i];
       const seoScore = competitorScore(comp, competitors);
       const position = typeof comp.serp_position === 'number' && comp.serp_position > 0 ? comp.serp_position : i + 1;
-      const authority = ranks[stripWww(comp.domain || '')] ?? null;
+      const authority = null;
 
       const replacements = [
          domainId, keyword, position, comp.url, comp.domain || '', comp.title || '',

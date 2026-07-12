@@ -3,7 +3,6 @@ import { CompetitorDTO } from '../../lib/competitorTypes';
 import { useCompetitors, useScanCompetitors, useSelectCompetitors } from '../../services/competitors';
 import { Gauge } from '../core';
 import { Toggle } from '../core';
-import AuthorityBadge from './AuthorityBadge';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -109,7 +108,6 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }
                         <th style={{ ...th, width: 48, textAlign: 'center' }}>Pos.</th>
                         <th style={th}>Competitor</th>
                         <th style={{ ...th, width: 90, textAlign: 'center' }}>SEO Score</th>
-                        <th style={{ ...th, width: 80, textAlign: 'center' }}>Authority</th>
                         <th style={{ ...th, width: 80, textAlign: 'right' }}>Words</th>
                      </tr>
                   </thead>
@@ -153,9 +151,6 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }
                                  <div style={{ display: 'inline-flex' }}>
                                     <Gauge score={c.seoScore} size="sm" />
                                  </div>
-                              </td>
-                              <td style={{ ...td, textAlign: 'center', ...dim }}>
-                                 <AuthorityBadge value={c.authority} />
                               </td>
                               <td style={{ ...td, textAlign: 'right', ...dim }}>
                                  <span style={{ fontSize: 13, fontWeight: 500, color: '#18181B' }}>{c.wordCount.toLocaleString()}</span>

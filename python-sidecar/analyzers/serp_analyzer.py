@@ -47,21 +47,42 @@ def domain_from_url(url: str) -> str:
         return ""
 
 
+def _competitors_from_results(serp_results: list[dict], limit: int = 10) -> list[dict]:
+    """SERP URLs/titles/snippets — always returned even when page scrape fails."""
+    return [
+        {
+            "url": row["link"],
+            "domain": domain_from_url(row["link"]),
+            "title": row.get("title", ""),
+            "snippet": row.get("snippet", ""),
+        }
+        for row in serp_results[:limit]
+        if row.get("link")
+    ]
+
+
 async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10, include_texts: bool = False) -> dict:
     serper_key = os.getenv("SERPER_API_KEY", "")
 
     if not serper_key:
         print("[serp_analyzer] No SERPER_API_KEY - using keyword seed data")
-        return _placeholder_score_data(keyword)
+        return {**_placeholder_score_data(keyword), "competitors": [], "paa_questions": []}
 
     serp_results, paa_questions = await _fetch_serp_results(keyword, language, num_results, serper_key)
-    serp_urls = [r["link"] for r in serp_results]
-    if not serp_urls:
-        return _placeholder_score_data(keyword)
+    competitors = _competitors_from_results(serp_results)
+    if not serp_results:
+        print(f"[serp_analyzer] No SERP results for {keyword!r}")
+        return {**_placeholder_score_data(keyword), "competitors": [], "paa_questions": paa_questions}
 
+    serp_urls = [r["link"] for r in serp_results]
     serp_texts, soups = await _scrape_pages(serp_urls)
     if not serp_texts:
-        return _placeholder_score_data(keyword)
+        print(f"[serp_analyzer] SERP scrape failed for all {len(serp_urls)} URLs — keeping {len(competitors)} competitor URLs")
+        return {
+            **_placeholder_score_data(keyword),
+            "competitors": competitors,
+            "paa_questions": paa_questions,
+        }
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
     nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key)
@@ -76,15 +97,7 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     result = {
         "terms": nlp_terms,
         "paa_questions": paa_questions,
-        "competitors": [
-            {
-                "url": result["link"],
-                "domain": domain_from_url(result["link"]),
-                "title": result.get("title", ""),
-                "snippet": result.get("snippet", ""),
-            }
-            for result in serp_results[:10]
-        ],
+        "competitors": competitors,
         **targets,
     }
     if include_texts:
@@ -158,9 +171,9 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
         try:
             response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
             html = response.text
-            # SPA fallback: if content looks thin, retry with headless browser
+            # SPA fallback: if content is thin, retry with headless browser
             text_check = parse_html(html).get_text(separator=" ", strip=True)
-            if len(text_check) < 200:
+            if len(text_check.split()) < 200:
                 rendered = await _fetch_via_spa_fallback(url, text_check)
                 if rendered:
                     html = rendered
@@ -169,6 +182,8 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
             for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                 tag.decompose()
             text = soup.get_text(separator=" ", strip=True)
+            if len(text.split()) < 50:
+                return ("", None)
             return (text[:15000], soup)
         except Exception as exc:
             print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
@@ -266,6 +281,8 @@ def _keyword_seed_terms(keyword: str) -> list[dict]:
 def _placeholder_score_data(keyword: str = "") -> dict:
     return {
         "terms": _keyword_seed_terms(keyword),
+        "competitors": [],
+        "paa_questions": [],
         "words_min": 1500,
         "words_max": 3000,
         "words_target": 2200,

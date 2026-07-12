@@ -1,6 +1,6 @@
 /**
  * Shared AI Search pipeline for deep-analysis and manual ai-visibility runs.
- * Facts from SERP corpus + LLM (Option B), merged with PAA fallback.
+ * Facts from DataForSEO PAA answers, visibility from PAA questions + sidecar.
  */
 import {
   fetchArticleFacts,

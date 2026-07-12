@@ -284,16 +284,3 @@ export async function getKeywordOverview(opts: {
    });
    return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
 }
-
-export async function domainRanks(domains: string[]): Promise<Record<string, number>> {
-   const targets = Array.from(new Set(domains.map((d) => d.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '')).filter(Boolean)));
-   if (!targets.length || !isDataForSeoConfigured()) return {};
-   const items = await dfsPost('/backlinks/bulk_ranks/live', { targets });
-   const out: Record<string, number> = {};
-   for (const it of items) {
-      const target = String((it as { target?: unknown })?.target ?? '').replace(/^www\./, '');
-      const rank = Number((it as { rank?: unknown })?.rank ?? 0);
-      if (target) out[target] = Math.max(0, Math.min(10, Math.round(rank / 100)));
-   }
-   return out;
-}

@@ -26,7 +26,6 @@ export type AiSearchSection = {
 
 export type SeoMetricsSection = {
   connected: boolean;
-  authorityScore: number | null;
   organicTraffic: MetricWithDelta;
   organicKeywords: MetricWithDelta;
   paidKeywords: number;

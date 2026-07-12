@@ -3,7 +3,9 @@
  * Keep free of DB, GSC API, DataForSEO — safe to import from pages/.
  */
 import { normalizeUrlForMatch, kwScore, type GscKeywordRow } from '../utils/gsc';
-import { inferPageKeyword, keywordFromUrl } from './inferPageKeyword';
+import { inferPageKeyword, keywordFromUrl, urlAnchorSeed } from './inferPageKeyword';
+import { isDictionaryQueryNoise } from './termUtils';
+import { isKeywordOnTopic } from './topicRelevance';
 
 export type { GscKeywordRow };
 
@@ -20,22 +22,34 @@ export function buildImportKeywordList(opts: {
   const pageHits = (opts.gscRows || []).filter(
     (r) => r.keyword && (!pageNorm || !r.page || normalizeUrlForMatch(r.page) === pageNorm),
   );
-  const scored = pageHits.map((r) => ({
-    keyword: r.keyword.trim(),
-    score: kwScore(r),
-  }));
+  const anchor = opts.userKeywords?.[0]?.trim() || urlAnchorSeed(opts.pageUrl) || '';
+  const scored = pageHits
+    .filter((r) => {
+      const kw = r.keyword.trim();
+      if (isDictionaryQueryNoise(kw)) return false;
+      if (!anchor) return false;
+      return isKeywordOnTopic(kw, anchor);
+    })
+    .map((r) => ({
+      keyword: r.keyword.trim(),
+      score: kwScore(r),
+    }));
   scored.sort((a, b) => b.score - a.score);
   const gscKws = [...new Set(scored.map((s) => s.keyword))];
 
   const gscByUrl = new Map<string, string>();
   if (pageNorm && gscKws[0]) gscByUrl.set(pageNorm, gscKws[0]);
 
-  const primaryKeyword = inferPageKeyword(
-    opts.pageUrl,
-    opts.title || '',
-    gscKws,
-    gscByUrl,
-  ) || opts.userKeywords?.[0]?.trim() || keywordFromUrl(opts.pageUrl) || gscKws[0] || '';
+  const primaryKeyword = opts.userKeywords?.[0]?.trim()
+    || urlAnchorSeed(opts.pageUrl)
+    || (() => {
+      const inferred = inferPageKeyword(opts.pageUrl, opts.title || '', gscKws, gscByUrl);
+      if (inferred && anchor && isKeywordOnTopic(inferred, anchor)) return inferred;
+      return '';
+    })()
+    || keywordFromUrl(opts.pageUrl)
+    || gscKws[0]
+    || '';
 
   const seen = new Set<string>();
   const keywords: string[] = [];

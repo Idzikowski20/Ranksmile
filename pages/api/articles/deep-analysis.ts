@@ -32,7 +32,7 @@ import {
   mergeNlpTerms,
   saveArticleKeywords,
 } from '../../../lib/articleKeywordDiscovery';
-import { keywordFromUrl } from '../../../lib/inferPageKeyword';
+import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
@@ -349,9 +349,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const jobId = `job_${articleId}_${Date.now()}`;
-  let pipelineKeyword = keyword || (keywords as string[]).find((k) => k?.trim()) || '';
+  let pipelineKeyword = resolveAnalysisSeedKeyword({
+    candidate: keyword || (keywords as string[]).find((k) => k?.trim()) || '',
+    pageUrl: url,
+    userKeywords: (keywords as string[]) || [],
+  });
 
-  // Resolve SERP seed before sidecar — empty keyword → wrong competitors / NLP terms.
+  // Resolve SERP seed before sidecar when still empty.
   if (!pipelineKeyword && url) {
     try {
       const artRow = await db.query<{ domain_id: number | null }>(
@@ -500,6 +504,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const classify = result.classify_content || {};
     const terms = result.extract_terms || {};
     const score = result.score_ranking || {};
+    console.log(
+      `[deep-analysis] scrape_serp: ${(serp.competitors || []).length} competitors, `
+      + `${(serp.terms || []).length} serp terms, keyword=${pipelineKeyword}`,
+    );
 
     // Terms come from competitor CONTENT only (sidecar scrape_serp + extract_terms),
     // like Surfer's "important terms". We deliberately do NOT layer DataForSEO keyword
@@ -512,11 +520,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const allTerms = mapSerpTerms(rawTerms);
 
     const plainTextEarly = (fetchPage.html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const competitorDomains = (serp.competitors || [])
+    let serpCompetitors: SerpCompetitor[] = serp.competitors || [];
+    let competitorDomains = serpCompetitors
       .map((c: { domain?: string; url?: string }) => (c.domain || '').replace(/^www\./, '') || (() => {
         try { return new URL(c.url || '').hostname.replace(/^www\./, ''); } catch { return ''; }
       })())
       .filter(Boolean);
+    let cachedOutlinePayload: { competitors?: unknown[] } | null = null;
+
+    // When scrape_serp dropped URLs (all page fetches failed), recover via outline fetch
+    // before keyword discovery so DFS can use competitor domains.
+    if (!competitorDomains.length && pipelineKeyword) {
+      try {
+        const earlyOutlineRes = await fetch(`${sidecarUrl}/competitor-outlines`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '',
+          },
+          body: JSON.stringify({
+            keyword: pipelineKeyword,
+            language: langForCountry(country),
+            num: 5,
+          }),
+        });
+        if (earlyOutlineRes.ok) {
+          const earlyOutline = await earlyOutlineRes.json() as { competitors?: Array<{
+            url?: string; domain?: string; title?: string; serp_title?: string; snippet?: string;
+          }> };
+          const outlines = earlyOutline?.competitors || [];
+          if (outlines.length) {
+            cachedOutlinePayload = earlyOutline;
+            serpCompetitors = outlines.map((c) => ({
+              url: c.url || '',
+              domain: c.domain || '',
+              title: c.serp_title || c.title || '',
+              snippet: c.snippet || '',
+            })).filter((c) => c.url);
+            competitorDomains = serpCompetitors
+              .map((c) => (c.domain || '').replace(/^www\./, ''))
+              .filter(Boolean);
+            console.log(`[deep-analysis] early outline recovery: ${serpCompetitors.length} competitors for keyword discovery`);
+          }
+        }
+      } catch (err) {
+        console.warn('[deep-analysis] early competitor outline recovery failed (non-fatal):', getErrorMessage(err));
+      }
+    }
 
     // Discover real ranking keywords (GSC page + DataForSEO) — fixes thin 3-token lists.
     let resolvedKeyword = pipelineKeyword || keyword || '';
@@ -547,7 +597,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       if (discovered.primaryKeyword) {
         if (await abortIfSuperseded(res, articleId, jobId)) return;
-        resolvedKeyword = discovered.primaryKeyword;
+        resolvedKeyword = resolveAnalysisSeedKeyword({
+          candidate: discovered.primaryKeyword,
+          pageUrl: url,
+          userKeywords: pipelineKeywords,
+        });
         await db.query(
           `UPDATE articles SET target_keyword = ? WHERE ${articleIdSql} = ?`,
           { replacements: [resolvedKeyword, articleId] },
@@ -582,7 +636,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       competitorBenchmarks = await buildCompetitorBenchmarks(
         resolvedKeyword || keyword || '',
         url,
-        serp.competitors || [],
+        serpCompetitors,
         mergedTerms,
       );
       if (competitorBenchmarks?.real.terms?.length) {
@@ -645,7 +699,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const scoreData = buildScoreData(serp, mergedTerms, (serp.competitors || []).length, {
+    const scoreData = buildScoreData(serp, mergedTerms, serpCompetitors.length, {
       scoringModel: competitorBenchmarks ? 'competitor' : 'legacy',
       contentTargets,
       auditResult,
@@ -741,15 +795,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { replacements },
     );
 
-    // Save SERP competitors
-    if (serp.competitors?.length) {
-      if (await abortIfSuperseded(res, articleId, jobId)) return;
-      await replaceCompetitors(articleId, serp.competitors);
-    }
+    // Save SERP competitors (+ outline fallback when scrape_serp dropped URLs)
+    const outlineKeyword = resolvedKeyword || pipelineKeyword || keyword || '';
+    let competitorsToSave: SerpCompetitor[] = serpCompetitors;
 
-    // Cache competitor outlines for the panel (avoids empty/skeleton state after analysis).
-    const outlineKeyword = resolvedKeyword || keyword || '';
-    if (outlineKeyword) {
+    if (outlineKeyword && !cachedOutlinePayload) {
       try {
         const outlineRes = await fetch(`${sidecarUrl}/competitor-outlines`, {
           method: 'POST',
@@ -764,19 +814,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }),
         });
         if (outlineRes.ok) {
-          const outlineData = await outlineRes.json();
-          if (outlineData?.competitors?.length) {
+          const outlineData = await outlineRes.json() as { competitors?: Array<{
+            url?: string; domain?: string; title?: string; serp_title?: string; snippet?: string;
+          }> };
+          const outlines = outlineData?.competitors || [];
+          if (outlines.length) {
+            cachedOutlinePayload = outlineData;
             if (await abortIfSuperseded(res, articleId, jobId)) return;
             await db.query(
               `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
               { replacements: [JSON.stringify(outlineData), articleId] },
             );
-            console.log(`[deep-analysis] cached ${outlineData.competitors.length} competitor outlines`);
+            console.log(`[deep-analysis] cached ${outlines.length} competitor outlines`);
+          }
+          if (!competitorsToSave.length && outlines.length) {
+            competitorsToSave = outlines.map((c) => ({
+              url: c.url || '',
+              domain: c.domain || '',
+              title: c.serp_title || c.title || '',
+              snippet: c.snippet || '',
+            })).filter((c) => c.url);
+            console.log(`[deep-analysis] SERP scrape had 0 competitors — recovered ${competitorsToSave.length} from outlines`);
           }
         }
       } catch (err) {
         console.warn('[deep-analysis] competitor outlines cache failed (non-fatal):', getErrorMessage(err));
       }
+    } else if (cachedOutlinePayload?.competitors?.length) {
+      if (await abortIfSuperseded(res, articleId, jobId)) return;
+      await db.query(
+        `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
+        { replacements: [JSON.stringify(cachedOutlinePayload), articleId] },
+      );
+      console.log(`[deep-analysis] cached ${cachedOutlinePayload.competitors.length} competitor outlines (early fetch)`);
+    }
+
+    if (competitorsToSave.length) {
+      if (await abortIfSuperseded(res, articleId, jobId)) return;
+      await replaceCompetitors(articleId, competitorsToSave);
+    } else {
+      console.warn(`[deep-analysis] no competitors saved for article ${articleId} (keyword: ${outlineKeyword || pipelineKeyword})`);
     }
 
     // Save terms

@@ -422,19 +422,13 @@ const RecommendationsPage: NextPage = () => {
          return;
       }
 
-      // Existing article: re-run URL import analysis in the editor (no duplicate draft).
+      // Existing article: editor hook runs deep-analysis (avoid duplicate pipeline).
       if (typeof row.id === 'number') {
          writeAnalyzeSession(row.id, { url: pageUrl, keywords, country: IMPORT_COUNTRY });
-         void fetch('/api/articles/deep-analysis', {
-            method: 'POST',
+         void fetch(`/api/articles/${row.id}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-               url: pageUrl,
-               keywords,
-               country: IMPORT_COUNTRY,
-               articleId: row.id,
-               domainId: activeDomain.ID,
-            }),
+            body: JSON.stringify({ status: 'analyzing' }),
          }).catch(() => {});
          router.push(workspaceHref(wsId, `/articles/${row.id}`));
          return;
