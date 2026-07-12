@@ -2,10 +2,12 @@
 import asyncio
 import os
 import time
+from urllib.parse import urljoin
 
 import httpx
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.ssrf_guard import assert_public_url
 from pipeline.stages.domain.page_signals import extract_page_signals
 
 # Score is computed post-setup in Node (Surfer-style SERP benchmark). Placeholder here.
@@ -15,6 +17,7 @@ CONCURRENCY = 8
 FETCH_TIMEOUT = 15.0
 UA = "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
 NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+MAX_REDIRECTS = 5
 
 
 def _status_from_exc(exc: Exception) -> str:
@@ -45,7 +48,19 @@ async def _spa_render(url: str) -> str | None:
 async def _audit_one(client: httpx.AsyncClient, url: str) -> dict:
     start = time.monotonic()
     try:
-        r = await client.get(url, headers={"User-Agent": UA}, follow_redirects=True)
+        current_url = url
+        for _ in range(MAX_REDIRECTS):
+            assert_public_url(current_url)
+            r = await client.get(current_url, headers={"User-Agent": UA}, follow_redirects=False)
+            if 300 <= r.status_code < 400:
+                location = r.headers.get("location")
+                if not location:
+                    break
+                current_url = urljoin(current_url, location)
+                continue
+            break
+        else:
+            raise ValueError("Too many redirects")
         duration_ms = int((time.monotonic() - start) * 1000)
         if r.status_code == 403:
             return {"url": url, "fetch_status": "HTTP_403", "duration_ms": duration_ms}
