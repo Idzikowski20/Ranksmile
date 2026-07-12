@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import { formatTaxIdForStripe, stripeTaxIdType } from '../../../lib/checkoutValidation';
+import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
@@ -42,6 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { orgId } = await ensureUserTenancy(userId);
+  try { await assertCanManage(userId); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billing = await getOrgBillingState(orgId);
   if (!billing?.stripeCustomerId) {
     return res.status(400).json({ error: 'No Stripe customer on file' });

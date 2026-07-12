@@ -25,6 +25,19 @@ export interface OrgBillingState {
   currentPeriodEnd: string | null;
 }
 
+const TERMINAL_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
+  'canceled',
+  'incomplete_expired',
+]);
+
+export function hasNonTerminalStripeSubscription(
+  billing: Pick<OrgBillingState, 'stripeSubscriptionId' | 'subscriptionStatus'> | null | undefined,
+): boolean {
+  if (!billing?.stripeSubscriptionId) return false;
+  if (!billing.subscriptionStatus) return true;
+  return !TERMINAL_SUBSCRIPTION_STATUSES.has(billing.subscriptionStatus);
+}
+
 type OrgBillingRow = {
   id: number;
   stripe_customer_id: string | null;

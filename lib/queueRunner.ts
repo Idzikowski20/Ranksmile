@@ -46,8 +46,13 @@ export async function enqueueQueueRun(
       `INSERT INTO ${config.table} (${cols}) ${values} ${config.onConflict} RETURNING id`,
       repl,
     );
-    if (!created) throw new Error(`Failed to enqueue ${config.table}`);
-    return created.id;
+    if (created) return created.id;
+    const existing = await queryOne<{ id: number }>(
+      `SELECT id FROM ${config.table} WHERE domain_id = ? AND seed = ? AND country = ? LIMIT 1`,
+      repl,
+    );
+    if (!existing) throw new Error(`Failed to enqueue ${config.table}`);
+    return existing.id;
   }
   await db.query(
     `INSERT INTO ${config.table} (${cols}) ${values} ${config.onConflict}`,
@@ -63,7 +68,7 @@ export async function enqueueQueueRun(
 
 async function claimNextQueued(config: QueueRunnerConfig, domainId: number): Promise<QueueRunRow | null> {
   if (isPg) {
-    return queryOne<QueueRunRow>(
+    const claimed = await queryOne<QueueRunRow>(
       `UPDATE ${config.table} SET status = 'running', started_at = CURRENT_TIMESTAMP, progress_done = 0, progress_total = 1
        WHERE id = (
          SELECT id FROM ${config.table}
@@ -74,6 +79,7 @@ async function claimNextQueued(config: QueueRunnerConfig, domainId: number): Pro
        RETURNING id, seed, country`,
       [domainId],
     );
+    return claimed ?? null;
   }
   const candidate = await queryOne<QueueRunRow>(
     `SELECT id, seed, country FROM ${config.table} WHERE domain_id = ? AND status = 'queued' ORDER BY id ASC LIMIT 1`,
@@ -117,12 +123,12 @@ export async function processQueueForDomain(
     try {
       const { resultJson, statsJson } = await config.runJob(candidate, domainHost);
       await db.query(
-        `UPDATE ${config.table} SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        `UPDATE ${config.table} SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'`,
         { replacements: [resultJson, statsJson, candidate.id] },
       );
     } catch (e) {
       await db.query(
-        `UPDATE ${config.table} SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        `UPDATE ${config.table} SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'`,
         { replacements: [getErrorMessage(e), candidate.id] },
       ).catch(() => { /* best effort */ });
     }
