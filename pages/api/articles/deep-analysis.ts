@@ -47,6 +47,7 @@ import { enrichTermsWithSalience } from '../../../lib/termSalience';
 import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
 import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCompute';
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
+import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
 /** Map an ISO country code to the SERP analysis language the sidecar supports. */
 function langForCountry(country: string): string {
@@ -60,6 +61,37 @@ function langForCountry(country: string): string {
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   flushSse(res);
+}
+
+async function deepAnalysisJobIsCurrent(articleId: number, jobId: string): Promise<boolean> {
+  const rows = await db.query<{ id: string }>(
+    `SELECT current_job.id
+     FROM analysis_jobs current_job
+     WHERE current_job.id = ?
+       AND current_job.article_id = ?
+       AND current_job.job_type = 'deep_analysis'
+       AND current_job.status = 'running'
+       AND NOT EXISTS (
+         SELECT 1
+         FROM analysis_jobs newer
+         WHERE newer.article_id = current_job.article_id
+           AND newer.job_type = 'deep_analysis'
+           AND (
+             newer.created_at > current_job.created_at
+             OR (newer.created_at = current_job.created_at AND newer.id > current_job.id)
+           )
+       )
+     LIMIT 1`,
+    { replacements: [jobId, articleId], type: QueryTypes.SELECT },
+  );
+  return rows.length > 0;
+}
+
+async function abortIfSuperseded(res: NextApiResponse, articleId: number, jobId: string): Promise<boolean> {
+  if (await deepAnalysisJobIsCurrent(articleId, jobId)) return false;
+  sse(res, 'error', { step: 'save', message: 'Analysis superseded by a newer run' });
+  res.end();
+  return true;
 }
 
 function summaryFromSidecar(aiSearch: AiVisibilitySummary | null | undefined): AiVisibilitySummary | null {
@@ -200,6 +232,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const isKeywordMode = !url && !!primaryKeyword && (!!reqDomainId || !!existingArticleId);
   if (!url && !primaryKeyword) return res.status(400).json({ error: 'url or keywords is required' });
   if (!url && !isKeywordMode) return res.status(400).json({ error: 'url or (keywords + domainId) is required' });
+  if (url) {
+    try {
+      await assertPublicUrl(String(url));
+    } catch (err) {
+      return res.status(400).json({ error: getErrorMessage(err) || 'Blocked URL' });
+    }
+  }
 
   // Resolve the home domain for new-content creation up front, before the SSE stream
   // starts, so any access denial is a plain JSON status (not an SSE error frame) and
@@ -388,6 +427,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!sidecarResp.ok) {
       const errText = await sidecarResp.text();
+      if (await abortIfSuperseded(res, articleId, jobId)) return;
       await db.query(
         `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         { replacements: [errText, jobId] },
@@ -402,6 +442,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const sidecarData = await sidecarResp.json();
     const result = sidecarData.result || {};
+    if (await abortIfSuperseded(res, articleId, jobId)) return;
 
     // Store pipeline result but keep job running — post-processing (coverage, AI visibility)
     // still runs in Node. Marking done here caused the frontend to reload before
@@ -460,9 +501,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         languageCode: langForCountry(country),
       });
       if (discovered.keywords.length) {
+        if (await abortIfSuperseded(res, articleId, jobId)) return;
         await saveArticleKeywords(articleId, discovered.keywords, discovered.primaryKeyword, plainTextEarly);
       }
       if (discovered.primaryKeyword) {
+        if (await abortIfSuperseded(res, articleId, jobId)) return;
         resolvedKeyword = discovered.primaryKeyword;
         await db.query(
           `UPDATE articles SET target_keyword = ? WHERE ${articleIdSql} = ?`,
@@ -651,6 +694,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     replacements.push(articleId);
 
+    if (await abortIfSuperseded(res, articleId, jobId)) return;
     await db.query(
       `UPDATE articles SET ${setClauses.join(', ')} WHERE ${articleIdSql} = ?`,
       { replacements },
@@ -658,6 +702,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Save SERP competitors
     if (serp.competitors?.length) {
+      if (await abortIfSuperseded(res, articleId, jobId)) return;
       await replaceCompetitors(articleId, serp.competitors);
     }
 
@@ -680,6 +725,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (outlineRes.ok) {
           const outlineData = await outlineRes.json();
           if (outlineData?.competitors?.length) {
+            if (await abortIfSuperseded(res, articleId, jobId)) return;
             await db.query(
               `UPDATE articles SET competitor_outlines_cache = ?, updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,
               { replacements: [JSON.stringify(outlineData), articleId] },
@@ -694,8 +740,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Save terms
     if (mergedTerms.length) {
+      if (await abortIfSuperseded(res, articleId, jobId)) return;
       await replaceArticleTerms(articleId, mergedTerms, plainText);
     }
+
+    if (await abortIfSuperseded(res, articleId, jobId)) return;
 
     // AI Search facts pipeline — SERP corpus + LLM (Option B), merged with PAA/sidecar.
     let articleFacts: ArticleFact[] = [];
@@ -751,6 +800,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         coverageSnapshot = graded.snapshot;
         coverageTokens += graded.introTokens + graded.judgeTokens;
 
+        if (await abortIfSuperseded(res, articleId, jobId)) return;
         await db.query(
           `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(coverageSnapshot), articleId] },
@@ -773,6 +823,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           scoreData.ai_score = aiScore;
           scoreData._computed_score = contentScore;
           scoreData._content_score = contentScore;
+          if (await abortIfSuperseded(res, articleId, jobId)) return;
           await db.query(
             `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
             { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
@@ -796,6 +847,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         scoreData.ai_score = fallbackAi;
         scoreData._content_score = contentScore;
         scoreData._computed_score = contentScore;
+        if (await abortIfSuperseded(res, articleId, jobId)) return;
         await db.query(
           `UPDATE articles SET score_data = ?, content_score = ? WHERE ${articleIdSql} = ?`,
           { replacements: [JSON.stringify(scoreData), contentScore, articleId] },
@@ -815,6 +867,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await recordAiTokens(orgId, coverageTokens);
       }
     }
+
+    if (await abortIfSuperseded(res, articleId, jobId)) return;
 
     const rankingSources = buildRankingSourcesPayload({
       competitors: serp.competitors || [],
@@ -853,6 +907,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const e = err as { name?: string };
     const errorMessage = e.name === 'AbortError' ? 'Pipeline timed out after 180s' : getErrorMessage(err);
     console.error('[deep-analysis] sidecar error:', errorMessage);
+    if (!(await deepAnalysisJobIsCurrent(articleId, jobId).catch(() => false))) {
+      sse(res, 'error', { step: 'pipeline', message: 'Analysis superseded by a newer run' });
+      return res.end();
+    }
     await db.query(
       `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       { replacements: [errorMessage, jobId] },

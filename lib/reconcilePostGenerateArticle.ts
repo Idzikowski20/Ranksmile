@@ -82,7 +82,15 @@ export async function reconcilePostGenerateArticle(opts: {
   const paragraphCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
   const linkCount = (opts.html.match(/<a\s[^>]*href=/gi) || []).length;
 
-  const existingScore = parseJsonish<ScoreData>(row?.score_data) ?? { terms: [] };
+  const existingScore: ScoreData = parseJsonish<ScoreData>(row?.score_data) ?? {
+    terms: [],
+    words_target: 0,
+    words_min: 0,
+    words_max: 0,
+    headings_target: 0,
+    headings_min: 0,
+    headings_max: 0,
+  };
   const incomingScore = opts.sidecarScoreData;
   const tableRows = await readArticleTerms(opts.articleId).catch(() => []);
   const tableTerms: NlpTerm[] = tableRows.map((r) => ({

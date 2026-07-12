@@ -16,24 +16,49 @@ import { getErrorMessage } from '../../../lib/errors';
 import { countOccurrences } from '../../../lib/contentScore';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
-async function fetchWithHttp(url: string): Promise<string> {
-   const res = await fetch(url, {
-      headers: {
-         'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-         'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
-      },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(10000),
-   });
-   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-   const buf = await res.arrayBuffer();
-   return new TextDecoder('utf-8').decode(buf);
+class BlockedUrlError extends Error {}
+
+const FETCH_HEADERS = {
+   'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+   'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
+};
+
+async function assertImportUrl(url: string): Promise<void> {
+   try {
+      await assertPublicUrl(url);
+   } catch (err) {
+      throw new BlockedUrlError(getErrorMessage(err) || 'Blocked URL');
+   }
 }
 
-async function fetchWithPuppeteer(url: string): Promise<string> {
+async function fetchWithHttp(url: string): Promise<{ html: string; finalUrl: string }> {
+   let currentUrl = url;
+   for (let hop = 0; hop < 5; hop += 1) {
+      await assertImportUrl(currentUrl);
+      const res = await fetch(currentUrl, {
+         headers: FETCH_HEADERS,
+         redirect: 'manual',
+         signal: AbortSignal.timeout(10000),
+      });
+      if (res.status >= 300 && res.status < 400) {
+         const location = res.headers.get('location');
+         if (!location) break;
+         currentUrl = new URL(location, currentUrl).href;
+         continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+      return { html: new TextDecoder('utf-8').decode(buf), finalUrl: currentUrl };
+   }
+   throw new Error('Too many redirects');
+}
+
+async function fetchWithPuppeteer(url: string): Promise<{ html: string; finalUrl: string }> {
+   await assertImportUrl(url);
    const rendered = await renderPage(url, 30_000);
-   return rendered.html;
+   await assertImportUrl(rendered.url);
+   return { html: rendered.html, finalUrl: rendered.url };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -83,8 +108,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Try plain HTTP first — cheaper, and paywalled sites (e.g. Piano/Onet) often include
       // the full article in the raw server HTML before JS strips it for non-subscribers.
       let html = '';
+      let pageUrl = url;
       try {
-         html = await fetchWithHttp(url);
+         const fetched = await fetchWithHttp(url);
+         html = fetched.html;
+         pageUrl = fetched.finalUrl;
          const quickWc = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
          console.log(`[import] HTTP fetch: ${html.length} chars, ~${quickWc} words`);
          if (quickWc < 300) {
@@ -92,14 +120,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             html = '';
          }
       } catch (e) {
+         if (e instanceof BlockedUrlError) return res.status(400).json({ error: getErrorMessage(e) || 'Blocked URL' });
          console.log(`[import] HTTP fetch failed (${getErrorMessage(e)}), falling back to Puppeteer`);
       }
 
       // Fallback to Puppeteer for SPAs and sites requiring JS rendering
       if (!html) {
-         console.log(`[import] Fetching with Puppeteer: ${url}`);
+         console.log(`[import] Fetching with Puppeteer: ${pageUrl}`);
          try {
-            html = await fetchWithPuppeteer(url);
+            const rendered = await fetchWithPuppeteer(pageUrl);
+            html = rendered.html;
+            pageUrl = rendered.finalUrl;
             console.log(`[import] Puppeteer fetched ${html.length} chars`);
          } catch (fetchErr) {
             return res.status(400).json({ error: `Could not fetch URL: ${getErrorMessage(fetchErr) || 'unknown'}` });
@@ -128,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const toAbsUrl = (src: string) => {
          if (!src) return '';
          if (src.startsWith('data:')) return '';
-         try { return src.startsWith('http') ? src : new URL(src, url).href; } catch { return ''; }
+         try { return src.startsWith('http') ? src : new URL(src, pageUrl).href; } catch { return ''; }
       };
       const rawFeaturedImage = $('meta[property="og:image"]').attr('content')?.trim()
          || $('meta[name="twitter:image"]').attr('content')?.trim()

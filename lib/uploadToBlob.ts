@@ -11,6 +11,7 @@
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getErrorMessage } from './errors';
+import { assertPublicUrl } from './ssrfGuard';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -28,6 +29,28 @@ function getClient(): S3Client {
    });
 }
 
+async function fetchPublicImage(sourceUrl: string): Promise<Response> {
+   let currentUrl = sourceUrl;
+   for (let hop = 0; hop < 5; hop += 1) {
+      await assertPublicUrl(currentUrl);
+      const response = await fetch(currentUrl, {
+         headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+         },
+         redirect: 'manual',
+      });
+      if (response.status >= 300 && response.status < 400) {
+         const location = response.headers.get('location');
+         if (!location) return response;
+         currentUrl = new URL(location, currentUrl).href;
+         continue;
+      }
+      return response;
+   }
+   throw new Error('Too many redirects');
+}
+
 export async function uploadImageFromUrl(
    sourceUrl: string,
    filename: string,
@@ -41,12 +64,7 @@ export async function uploadImageFromUrl(
    }
 
    try {
-      const response = await fetch(sourceUrl, {
-         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-         },
-      });
+      const response = await fetchPublicImage(sourceUrl);
 
       if (!response.ok) {
          console.warn(`[R2] upstream ${response.status} for ${sourceUrl}`);

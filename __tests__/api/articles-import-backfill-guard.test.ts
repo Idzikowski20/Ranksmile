@@ -16,11 +16,15 @@ jest.mock('../../utils/gsc', () => ({
 jest.mock('../../database/models/domain', () => ({ __esModule: true, default: { findByPk: jest.fn() } }));
 jest.mock('../../lib/uploadToBlob', () => ({ uploadImageFromUrl: jest.fn() }));
 jest.mock('../../utils/spaScraper', () => ({ renderPage: jest.fn() }));
+jest.mock('../../lib/ssrfGuard', () => ({ assertPublicUrl: jest.fn().mockResolvedValue(new URL('https://safe.example/post')) }));
 
 import db from '../../database/database';
 import backfillHandler from '../../pages/api/articles/backfill';
 import importHandler from '../../pages/api/articles/import';
 import { firstAccessibleDomainId, verifyDomainOwnershipById } from '../../utils/verifyDomainOwnership';
+import { assertPublicUrl } from '../../lib/ssrfGuard';
+
+const mockAssertPublicUrl = assertPublicUrl as jest.MockedFunction<typeof assertPublicUrl>;
 
 const makeRes = () => {
    const res: any = {};
@@ -32,6 +36,7 @@ const makeRes = () => {
 describe('article import/backfill domain guards', () => {
    beforeEach(() => {
       jest.clearAllMocks();
+      mockAssertPublicUrl.mockResolvedValue(new URL('https://safe.example/post'));
       global.fetch = jest.fn() as unknown as typeof fetch;
    });
 
@@ -63,6 +68,18 @@ describe('article import/backfill domain guards', () => {
       await importHandler({ method: 'POST', body: { url: 'https://victim.example/post' } } as any, res);
 
       expect(res.status).toHaveBeenCalledWith(403);
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(db.query).not.toHaveBeenCalled();
+   });
+
+   it('blocks private import URLs before fetching or inserting', async () => {
+      (verifyDomainOwnershipById as jest.Mock).mockResolvedValue({ ID: 77 });
+      mockAssertPublicUrl.mockRejectedValueOnce(new Error('Blocked private address'));
+      const res = makeRes();
+
+      await importHandler({ method: 'POST', body: { url: 'http://169.254.169.254/latest/meta-data/', domainId: 77 } } as any, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
       expect(global.fetch).not.toHaveBeenCalled();
       expect(db.query).not.toHaveBeenCalled();
    });

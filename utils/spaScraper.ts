@@ -1,17 +1,20 @@
 // SPA scraper — headless browser fallback for JS-rendered pages.
 // Keeps a single browser instance alive across requests.
 // Supports both local dev (puppeteer with bundled Chromium) and serverless (puppeteer-core + @sparticuz/chromium-min).
-import type { Browser } from 'puppeteer-core';
-import type { Page } from 'puppeteer-core';
+import type { Browser, HTTPRequest, Page } from 'puppeteer-core';
 import { assertPublicUrl } from '../lib/ssrfGuard';
 
 let browserPromise: Promise<Browser> | null = null;
 let renderMutex: Promise<void> = Promise.resolve();
 
+type ChromiumMinModule = {
+  executablePath?: () => Promise<string> | string;
+};
+
 async function findChromiumPath(): Promise<string | undefined> {
   try {
     // @sparticuz/chromium-min — executablePath is available at runtime but not in TS types
-    const chromium: any = await import('@sparticuz/chromium-min');
+    const chromium = await import('@sparticuz/chromium-min') as unknown as ChromiumMinModule;
     return typeof chromium.executablePath === 'function'
       ? await chromium.executablePath()
       : undefined;
@@ -63,6 +66,20 @@ export interface RenderedPage {
   url: string; // final URL after redirects
 }
 
+async function continueIfPublic(request: HTTPRequest): Promise<void> {
+  const requestUrl = request.url();
+  try {
+    if (requestUrl === 'about:blank' || requestUrl.startsWith('data:') || requestUrl.startsWith('blob:')) {
+      await request.continue();
+      return;
+    }
+    await assertPublicUrl(requestUrl);
+    await request.continue();
+  } catch {
+    try { await request.abort('blockedbyclient'); } catch { /* request may already be handled */ }
+  }
+}
+
 /** Render a page using headless Chrome. Waits for network idle.
  *  Serialises concurrent calls via a mutex so the shared page is never
  *  navigated by two requests at the same time. */
@@ -90,11 +107,20 @@ export async function renderPage(url: string, timeoutMs = 20_000): Promise<Rende
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       );
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8' });
+      const handleRequest = (request: HTTPRequest) => { void continueIfPublic(request); };
+      await page.setRequestInterception(true);
+      page.on('request', handleRequest);
 
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: timeoutMs });
+      try {
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: timeoutMs });
+      } finally {
+        page.off('request', handleRequest);
+        await page.setRequestInterception(false).catch(() => {});
+      }
 
       const html = await page.content();
       const finalUrl = page.url();
+      await assertPublicUrl(finalUrl);
 
       return { html, url: finalUrl };
     } finally {

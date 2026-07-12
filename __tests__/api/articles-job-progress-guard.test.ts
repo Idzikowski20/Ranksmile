@@ -15,6 +15,7 @@ import { assertArticleAccess } from '../../lib/tenancy';
 const mockDbQuery = db.query as jest.MockedFunction<typeof db.query>;
 const mockVerifyUser = verifyUser as jest.MockedFunction<typeof verifyUser>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;
+const dbResult = (value: unknown) => value as Awaited<ReturnType<typeof db.query>>;
 
 const makeRes = (): NextApiResponse & { statusCode?: number } => {
   const res = {} as NextApiResponse & { statusCode?: number };
@@ -62,7 +63,7 @@ it('returns 403 when caller cannot access articleId query', async () => {
 });
 
 it('denies polling a job for an article the caller cannot reach', async () => {
-  mockDbQuery.mockResolvedValueOnce([{
+  mockDbQuery.mockResolvedValueOnce(dbResult([{
     id: 'job_123_456',
     job_type: 'deep_analysis',
     domain_id: null,
@@ -73,7 +74,7 @@ it('denies polling a job for an article the caller cannot reach', async () => {
     total_progress: null,
     progress_message: 'Starting analysis...',
     updated_at: new Date(),
-  }]);
+  }]));
   mockAssertArticleAccess.mockResolvedValueOnce(false);
   const res = makeRes();
 
