@@ -8,6 +8,7 @@ jest.mock('../../lib/cache/fileCache', () => ({
 }));
 
 import { getPeopleAlsoAsk } from '../../lib/dataforseo';
+import { cached } from '../../lib/cache/fileCache';
 import {
   factsToCoverageItems,
   factsToVisibilitySummary,
@@ -20,10 +21,12 @@ import {
 import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 
 const mockPaa = getPeopleAlsoAsk as jest.MockedFunction<typeof getPeopleAlsoAsk>;
+const mockCached = cached as jest.MockedFunction<typeof cached>;
 
 describe('articleFacts', () => {
   beforeEach(() => {
     mockPaa.mockReset();
+    mockCached.mockClear();
   });
 
   it('splits corpus text into fact-sized sentences', () => {
@@ -81,6 +84,36 @@ describe('articleFacts', () => {
     expect(facts.length).toBeGreaterThan(0);
     expect(facts.some((f) => f.text.toLowerCase().includes('cuckolding'))).toBe(false);
     expect(facts.every((f) => f.sources[0]?.kind === 'paa')).toBe(true);
+  });
+
+  it('uses article text content in the PAA facts cache key', async () => {
+    mockPaa.mockResolvedValue({ questions: [], related: [] });
+    const articleA = 'Prywatny detektyw w Warszawie prowadzi sprawy cywilne i rodzinne.';
+    const articleB = 'Prywatny detektyw w Krakowie prowadzi sprawy cywilne i rodzinne.'
+      .padEnd(articleA.length, '.')
+      .slice(0, articleA.length);
+
+    expect(articleB).toHaveLength(articleA.length);
+    expect(articleB).not.toBe(articleA);
+
+    await fetchArticleFacts({
+      keyword: 'prywatny detektyw',
+      resolvedKeyword: 'prywatny detektyw',
+      articleText: articleA,
+      country: 'PL',
+      languageCode: 'pl',
+    });
+    await fetchArticleFacts({
+      keyword: 'prywatny detektyw',
+      resolvedKeyword: 'prywatny detektyw',
+      articleText: articleB,
+      country: 'PL',
+      languageCode: 'pl',
+    });
+
+    const cacheKeys = mockCached.mock.calls.map(([opts]) => opts.key);
+    expect(cacheKeys).toHaveLength(2);
+    expect(cacheKeys[0]).not.toEqual(cacheKeys[1]);
   });
 
   it('does not surface synthetic template questions in visibility summary', () => {

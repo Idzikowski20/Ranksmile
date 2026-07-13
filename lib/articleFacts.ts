@@ -75,7 +75,7 @@ export async function fetchArticleFacts(opts: {
 
   return cached({
     namespace: 'article-facts',
-    key: [keyword.toLowerCase(), opts.country || 'PL', opts.languageCode || 'pl', articleText.length],
+    key: [keyword.toLowerCase(), opts.country || 'PL', opts.languageCode || 'pl', hashId(articleText)],
     ttlMs: TTL.SERP,
     producer: () => fetchArticleFactsUncached({ ...opts, keyword, articleText }),
   });
