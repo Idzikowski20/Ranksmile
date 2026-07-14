@@ -52,6 +52,7 @@ import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCo
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
+import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articleAnalysisStorage';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -145,45 +146,6 @@ function mapSerpTerms(rawTerms: RawSerpTerm[]): NlpTerm[] {
     doc_freq: t.doc_freq,
     salience: t.salience,
   })).filter((t) => t.term);
-}
-
-/** Replace an article's stored SERP terms with a single batched insert. */
-async function replaceArticleTerms(
-  articleId: number,
-  terms: NlpTerm[],
-  plainText: string,
-): Promise<void> {
-  await db.query('DELETE FROM article_terms WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
-  const rows = terms.filter((t) => t.term);
-  if (!rows.length) return;
-  const placeholders = rows.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
-  const replacements = rows.flatMap((t) => [
-    articleId,
-    t.term,
-    'topic',
-    'serp',
-    countOccurrences(plainText, t.term),
-    t.suggested_min ?? Math.max(1, Math.round((t.target_count || 1) * 0.7)),
-    t.suggested_max ?? Math.max(1, Math.round((t.target_count || 1) * 1.5)),
-    t.target_count || 1,
-  ]);
-  await db.query(
-    `INSERT INTO article_terms (article_id, term, term_type, source, current_count, target_min, target_max, importance, created_at) VALUES ${placeholders}`,
-    { replacements },
-  ).catch(() => {});
-}
-
-/** Replace an article's stored SERP competitors with a single batched insert. */
-async function replaceCompetitors(articleId: number, competitors: SerpCompetitor[]): Promise<void> {
-  await db.query('DELETE FROM article_competitors WHERE article_id = ?', { replacements: [articleId] }).catch(() => {});
-  const rows = (competitors || []).slice(0, 50);
-  if (!rows.length) return;
-  const placeholders = rows.map(() => '(?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
-  const replacements = rows.flatMap((c) => [articleId, c.url || '', c.domain || '', c.title || '', c.snippet || '']);
-  await db.query(
-    `INSERT INTO article_competitors (article_id, url, domain, title, snippet, created_at) VALUES ${placeholders}`,
-    { replacements },
-  ).catch(() => {});
 }
 
 /**
@@ -863,10 +825,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Save terms
-    if (mergedTerms.length) {
-      if (await abortIfSuperseded(res, articleId, jobId)) return;
-      await replaceArticleTerms(articleId, mergedTerms, plainText);
-    }
+    if (await abortIfSuperseded(res, articleId, jobId)) return;
+    await replaceArticleTerms(articleId, mergedTerms, plainText);
 
     if (await abortIfSuperseded(res, articleId, jobId)) return;
 
