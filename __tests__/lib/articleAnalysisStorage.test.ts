@@ -1,6 +1,7 @@
 import type { Transaction } from 'sequelize';
 
 jest.mock('../../database/database', () => ({
+  __esModule: true,
   default: {
     query: jest.fn(),
     transaction: jest.fn(),
