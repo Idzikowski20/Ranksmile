@@ -32,7 +32,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 // Heatmap palette (mirrors Surfer's var(--gray-20) / --purple-40 / --brand-orange).
 const DOT_IDLE = '#D4D4D8';
-const DOT_ACTIVE = '#AA93FD';
+const DOT_ACTIVE = '#F5C4A0';
 const DOT_PEAK = '#FB6A3C';
 
 type ApiArticle = {

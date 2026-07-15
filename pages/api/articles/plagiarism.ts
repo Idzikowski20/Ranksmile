@@ -8,6 +8,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { resolveContentLocale } from '../../../lib/domainLanguage';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -29,8 +30,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const article = await queryOne<{ content: string | null; language: string | null; domain: string | null }>(
-         `SELECT a.content, a.language, d.domain
+      const article = await queryOne<{ content: string | null; language: string | null; domain: string | null; domain_id: number | null }>(
+         `SELECT a.content, a.language, a.domain_id, d.domain
           FROM articles a
           LEFT JOIN domain d ON d."ID" = a.domain_id
           WHERE a.${articleIdSql} = ?
@@ -42,10 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const text = (article.content || '').toString();
       if (!text.trim()) return res.status(200).json({ available: true, checked: 0, matched: 0, uniqueness: 100, matches: [] });
 
+      const locale = await resolveContentLocale({ domainId: article.domain_id, articleId: Number(articleId) });
       const data = await callSidecar('/plagiarism', {
          text,
          domain: article.domain || '',
-         language: article.language || 'pl',
+         language: article.language || locale.languageCode,
       }, 90000);
       // Persist so the panel can restore it on reload without re-scanning.
       try {

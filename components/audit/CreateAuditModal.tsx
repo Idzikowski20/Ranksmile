@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
+import { Button } from '../core';
 import CountryFlag from './CountryFlag';
 
 const FONT = 'var(--font-family-primary)';
@@ -59,8 +60,8 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
    const selected = AUDIT_COUNTRIES.find((c) => c.code === country) || AUDIT_COUNTRIES[0];
 
    const fieldBorder = (name: string): React.CSSProperties => ({
-      border: `1px solid ${focus === name ? '#AA93FD' : '#D4D4D8'}`,
-      boxShadow: focus === name ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none',
+      border: `1px solid ${focus === name ? '#F5C4A0' : '#D4D4D8'}`,
+      boxShadow: focus === name ? '0 0 0 3px rgba(242,153,100,0.1)' : 'none',
       transition: 'border-color 150ms ease, box-shadow 150ms ease',
    });
 
@@ -151,19 +152,16 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
                </div>
 
                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                     type="button" onClick={onClose}
-                     style={{ border: 'none', background: 'transparent', color: '#71717B', borderRadius: 8, padding: '8px 12px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer' }}
-                     onMouseEnter={(e) => { e.currentTarget.style.color = '#3F3F47'; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.color = '#71717B'; }}
-                  >Cancel</button>
-                  <button
-                     type="button" disabled={!canSubmit}
+                  <Button type="button" variant="transparent" onClick={onClose}>Cancel</Button>
+                  <Button
+                     type="button"
+                     variant="primary"
+                     disabled={!canSubmit}
+                     busy={submitting}
                      onClick={() => onCreate(url.trim(), keywords, country)}
-                     style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 8, padding: '6px 13px', fontSize: 13, fontWeight: 600, fontFamily: FONT, cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.5, transition: 'background 150ms ease' }}
-                     onMouseEnter={(e) => { if (canSubmit) e.currentTarget.style.background = '#783AFB'; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-                  >{submitting ? 'Creating…' : 'Create Audit'}</button>
+                  >
+                     {submitting ? 'Creating…' : 'Create Audit'}
+                  </Button>
                </div>
             </div>
          </div>

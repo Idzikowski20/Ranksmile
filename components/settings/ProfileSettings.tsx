@@ -74,7 +74,7 @@ const ProfileSettings = () => {
           description="Drag an image or click Upload. PNG, JPG, GIF or WEBP — up to 5MB."
         >
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: 16, borderRadius: 8, outline: dragOver ? '2px dashed #7553FF' : 'none', padding: dragOver ? 8 : 0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 16, borderRadius: 8, outline: dragOver ? '2px dashed #F5A978' : 'none', padding: dragOver ? 8 : 0 }}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => { e.preventDefault(); setDragOver(false); ingestFile(e.dataTransfer.files?.[0]); }}

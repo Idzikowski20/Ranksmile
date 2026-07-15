@@ -38,14 +38,14 @@ const tokens = {
     overlay: '#FFFFFF',
     transparent: {
       neutral: { muted: '#0000200F', moderate: '#00002014' },
-      accent: { muted: '#0008F012', moderate: '#0008F01A' },
+      accent: { muted: '#F299641C', moderate: '#F2996426' },
       success: { muted: '#00B8001C', moderate: '#00B80026' },
       warning: { muted: '#E0B01030', moderate: '#E0B01040' },
       danger: { muted: '#F828081C', moderate: '#F8280826' },
       promotion: { muted: '#F000901A', moderate: '#F0009026' },
     },
     vibrant: {
-      accent: '#7553FF',
+      accent: '#F29964',
       success: '#00F261',
       warning: '#FFCE00',
       danger: '#FF002B',
@@ -65,7 +65,7 @@ const tokens = {
     headings: '#181225',
     primary: '#302E36',
     secondary: '#6A6772',
-    accent: '#653DE9',
+    accent: '#E07D42',
     success: '#008900',
     warning: '#A45200',
     danger: '#D50000',
@@ -80,7 +80,7 @@ const tokens = {
     primary: '#DAD9DE',
     secondary: '#E6E6E9',
     neutral: { muted: '#DAD9DE', moderate: '#C0BEC6', vibrant: '#A29FAA' },
-    accent: { muted: '#D4D3FF', moderate: '#B7B2FF', vibrant: '#7553FF' },
+    accent: { muted: '#F5D4BC', moderate: '#F0B88A', vibrant: '#F29964' },
     success: { muted: '#B5EABB', moderate: '#7CD88A', vibrant: '#009800' },
     warning: { muted: '#F2D88E', moderate: '#EDCA60', vibrant: '#FFCE00' },
     danger: { muted: '#FFC4BD', moderate: '#FF978F', vibrant: '#FF002B' },
@@ -91,7 +91,7 @@ const tokens = {
   interactive: {
     chonky: {
       embossed: {
-        accent: { background: '#7553FF', chonk: '#5827D6', content: '#FFFFFF' },
+        accent: { background: '#F29964', chonk: '#C97D52', content: '#FFFFFF' },
         neutral: { background: '#FFFFFF', chonk: '#DAD9DE', content: '#181225' },
         danger: { background: '#FF002B', chonk: '#C10000', content: '#FFFFFF' },
         warning: { background: '#FFCE00', chonk: '#D59600', content: '#000000' },
@@ -100,7 +100,7 @@ const tokens = {
       },
       debossed: {
         neutral: { background: '#10103008', chonk: '#DAD9DE', content: { primary: '#181225', secondary: '#6A6772', danger: '#D50000' } },
-        accent: { background: '#7553FF', chonk: '#5827D6', content: '#FFFFFF' },
+        accent: { background: '#F29964', chonk: '#C97D52', content: '#FFFFFF' },
       },
     },
     transparent: {
@@ -108,16 +108,16 @@ const tokens = {
     },
     link: {
       neutral: { rest: '#6A6772', hover: '#5B5864', active: '#4C4954' },
-      accent: { rest: '#653DE9', hover: '#5827D6', active: '#4C0FC0' },
+      accent: { rest: '#E07D42', hover: '#C97D52', active: '#B86A42' },
     },
   },
   focus: {
-    default: '#7553FF',
+    default: '#F29964',
     invalid: '#FF002B',
   },
   graphics: {
     neutral: { muted: '#DAD9DE', moderate: '#C0BEC6', vibrant: '#787581' },
-    accent: { muted: '#D4D3FF', moderate: '#B7B2FF', vibrant: '#7553FF' },
+    accent: { muted: '#F5D4BC', moderate: '#F0B88A', vibrant: '#F29964' },
     success: { muted: '#B5EABB', moderate: '#7CD88A', vibrant: '#009800' },
     warning: { muted: '#F2D88E', moderate: '#EDCA60', vibrant: '#D59600' },
     danger: { muted: '#FFC4BD', moderate: '#FF978F', vibrant: '#FF002B' },

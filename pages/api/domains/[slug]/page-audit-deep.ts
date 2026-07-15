@@ -10,6 +10,7 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { runDeepAnalysisForUrl, DeepResult } from '../../../../lib/deepAnalysis';
+import { getDomainLocale } from '../../../../lib/domainLanguage';
 
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -50,7 +51,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    let deep: DeepResult;
    try {
-      deep = await runDeepAnalysisForUrl(url);
+      const locale = await getDomainLocale(domainId);
+      deep = await runDeepAnalysisForUrl(url, '', locale.languageCode);
    } catch (e) {
       return res.status(502).json({ error: (e instanceof Error ? e.message : String(e)) || 'Deep analysis failed' });
    }

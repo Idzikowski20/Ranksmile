@@ -26,9 +26,9 @@ function KwRow({ keyword, position, clicks, impr, selected, onSelect, suggest, a
       <div onClick={onSelect} className="kw-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: selected ? '#F8F8F9' : '#fff', transition: 'background 100ms ease' }}>
          <label style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer' }}>
             <input type="radio" checked={selected} readOnly style={{ accentColor: '#18181B', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
-            <span style={{ minWidth: 0, fontSize: 14, fontWeight: addNew ? 500 : 400, color: addNew ? '#783AFB' : '#18181B', fontFamily: KW_FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{keyword}</span>
+            <span style={{ minWidth: 0, fontSize: 14, fontWeight: addNew ? 500 : 400, color: addNew ? '#F29964' : '#18181B', fontFamily: KW_FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{keyword}</span>
             {suggest && (
-               <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 8, background: 'rgba(120,58,251,0.08)', color: '#783AFB', fontSize: 12, fontWeight: 600, fontFamily: KW_FONT }}>suggest</span>
+               <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 8, background: 'rgba(242,153,100,0.08)', color: '#F29964', fontSize: 12, fontWeight: 600, fontFamily: KW_FONT }}>suggest</span>
             )}
          </label>
          {!addNew && (
@@ -186,7 +186,7 @@ function ChangeKeywordModal({ article, allKeywords, onClose, onSave }: {
                   onClick={handleSave}
                   disabled={!canSave}
                   style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: canSave ? '#18181B' : '#F4F4F5', color: canSave ? '#fff' : '#9F9FA9', fontSize: 16, fontWeight: 600, fontFamily: KW_FONT, cursor: canSave ? 'pointer' : 'default', transition: 'background 150ms ease' }}
-                  onMouseEnter={(e) => { if (canSave) e.currentTarget.style.background = '#783AFB'; }}
+                  onMouseEnter={(e) => { if (canSave) e.currentTarget.style.background = '#F29964'; }}
                   onMouseLeave={(e) => { if (canSave) e.currentTarget.style.background = '#18181B'; }}
                >
                   {saving ? 'Saving…' : 'Save'}

@@ -71,8 +71,8 @@ const stripeAppearance: StripeElementsOptions['appearance'] = {
       boxShadow: '0px 2px 0px 0px #DAD9DE',
     },
     '.Input:focus': {
-      border: '1px solid #AA93FD',
-      boxShadow: '0 0 0 2px rgba(120,58,251,0.1)',
+      border: '1px solid #F5C4A0',
+      boxShadow: '0 0 0 2px rgba(242,153,100,0.1)',
     },
     '.Label': { fontWeight: '500' },
   },

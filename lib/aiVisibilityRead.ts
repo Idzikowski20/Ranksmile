@@ -5,6 +5,7 @@
 import { queryRows, queryOne } from './db/query';
 import { ResultRow, BrandMention } from './aiVisibilityMetrics';
 import type { LlmCitation } from './dataforseoLlm';
+import { filterCitations } from './aiVisibilityBlockedDomains';
 
 export type DbResultRow = {
    prompt_id: number; model: string; own_cited: number; own_position: number | null;
@@ -49,9 +50,11 @@ export const parseCitations = (raw: unknown): LlmCitation[] => {
    if (!Array.isArray(v)) return [];
    // Coerce every field to a string: a stored citation with a url but missing
    // title/domain must not yield `undefined` (norm(domain) would throw downstream).
-   return v
-      .filter((c): c is { url: string, domain?: unknown, title?: unknown } => !!c && typeof (c as { url?: unknown }).url === 'string')
-      .map((c) => ({ url: c.url, domain: typeof c.domain === 'string' ? c.domain : '', title: typeof c.title === 'string' ? c.title : '' }));
+   return filterCitations(
+      v
+         .filter((c): c is { url: string, domain?: unknown, title?: unknown } => !!c && typeof (c as { url?: unknown }).url === 'string')
+         .map((c) => ({ url: c.url, domain: typeof c.domain === 'string' ? c.domain : '', title: typeof c.title === 'string' ? c.title : '' })),
+   );
 };
 
 export const mapDbRowsToResultRows = (dbRows: DbResultRow[]): ResultRow[] => dbRows.map((r) => ({
@@ -99,7 +102,7 @@ async function queryCompletedScan(
        WHERE ${filters.join(' AND ')}
        ORDER BY s.finished_at DESC LIMIT 1`,
       params,
-   );
+   ).then((row) => row ?? null);
 }
 
 /** Latest completed scan for a domain, even when every row failed (e.g. DFS 402). */

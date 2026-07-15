@@ -1,15 +1,18 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { SentryPanel } from '../../../components/sentry-pages';
 import AddKeywordsModal from '../../../components/rankTracking/AddKeywordsModal';
-import KeywordTrendModal from '../../../components/rankTracking/KeywordTrendModal';
+import RankKeywordDetailPanel from '../../../components/rankTracking/RankKeywordDetailPanel';
+import MiniSparkline from '../../../components/rankTracking/MiniSparkline';
 import {
   Button,
-  CompactSelect,
+  DeltaDown,
+  DeltaUp,
   Pagination,
   SearchBar,
   Skeleton,
@@ -17,15 +20,16 @@ import {
   ToolRibbon,
   getPaginationCaption,
 } from '../../../components/core';
-import type { SelectOption } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
-import type { ComparePeriod, RankTrackingRow } from '../../../lib/types/rankTracking';
+import { computeHistory7dStats, sparklineFromHistoryPoints } from '../../../lib/rankTracking/sparkline';
+import type { RankHistorySummaryPoint, RankTrackingRow } from '../../../lib/types/rankTracking';
 import { useFetchDomains } from '../../../services/domains';
 import {
   useAddRankKeywords,
   usePrefetchRankNextPage,
   useProcessRankRun,
   useRankConfigs,
+  useRankHistorySummary,
   useRankResults,
   useRankRunPolling,
   useTriggerRankCheck,
@@ -34,22 +38,27 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 
 const FONT = 'var(--font-family-primary)';
 
-const COMPARE_OPTIONS: SelectOption[] = [
-  { value: '1d', label: 'vs 1 day ago' },
-  { value: '7d', label: 'vs 7 days ago' },
-  { value: '30d', label: 'vs 30 days ago' },
-  { value: '90d', label: 'vs 90 days ago' },
-];
+type SortKey = 'keyword' | 'position' | 'best' | 'impressions' | 'visits';
 
-type SortKey = 'keyword' | 'position' | 'volume' | 'kd' | 'cpc';
+type ScMetrics = { impressions: number; visits: number };
 
-function compactNum(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(Math.round(n));
+function aggregateScByKeyword(items: SearchAnalyticsItem[]): Map<string, ScMetrics> {
+  const map = new Map<string, ScMetrics>();
+  for (const item of items) {
+    const key = (item.keyword || '').trim().toLowerCase();
+    if (!key) continue;
+    const existing = map.get(key);
+    if (existing) {
+      existing.impressions += item.impressions || 0;
+      existing.visits += item.clicks || 0;
+    } else {
+      map.set(key, { impressions: item.impressions || 0, visits: item.clicks || 0 });
+    }
+  }
+  return map;
 }
 
-function CellSpinner({ align = 'flex-end' }: { align?: 'flex-start' | 'center' | 'flex-end' }) {
+function CellSpinner({ align = 'center' }: { align?: 'flex-start' | 'center' | 'flex-end' }) {
   return (
     <span style={{ display: 'flex', justifyContent: align, alignItems: 'center', width: '100%' }}>
       <span
@@ -58,7 +67,7 @@ function CellSpinner({ align = 'flex-end' }: { align?: 'flex-start' | 'center' |
           width: 14,
           height: 14,
           border: '2px solid #E4E4E7',
-          borderTopColor: '#783AFB',
+          borderTopColor: '#F29964',
           borderRadius: '50%',
           animation: 'rt-spin 0.7s linear infinite',
           flexShrink: 0,
@@ -72,22 +81,66 @@ function rowRankPending(row: RankTrackingRow, checking: boolean): boolean {
   return checking && !row.desktop.hasSnapshot;
 }
 
-function PositionCell({ row, pending }: { row: RankTrackingRow; pending: boolean }) {
+const CELL_CENTER: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+};
+
+const METRIC_TEXT: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 500,
+  color: '#3F3F47',
+  fontFamily: FONT,
+  textAlign: 'center',
+};
+
+function MetricCell({ value, pending }: { value: React.ReactNode; pending?: boolean }) {
+  if (pending) return <CellSpinner />;
+  return (
+    <div style={CELL_CENTER}>
+      <span style={METRIC_TEXT}>{value}</span>
+    </div>
+  );
+}
+
+function PositionCell({ row, pending, position7dAgo }: { row: RankTrackingRow; pending: boolean; position7dAgo: number | null }) {
   const d = row.desktop;
   if (pending) return <CellSpinner />;
-  const delta = d.position != null && d.previousPosition != null
-    ? d.previousPosition - d.position
-    : null;
+  const current = d.found && d.position != null ? d.position : null;
+  if (current == null) {
+    return (
+      <div style={CELL_CENTER}>
+        <span style={METRIC_TEXT}>—</span>
+      </div>
+    );
+  }
+  const baseline = position7dAgo ?? d.previousPosition;
+  const delta = baseline != null ? baseline - current : null;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, width: '100%' }}>
-      {delta != null && delta !== 0 && (
-        <span style={{ fontSize: 12, fontWeight: 600, color: delta > 0 ? '#1AB25E' : '#FF6F77' }}>
-          {delta > 0 ? '↑' : '↓'}{Math.abs(delta)}
-        </span>
-      )}
-      <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: FONT }}>
-        {d.found && d.position != null ? d.position : '—'}
-      </span>
+    <div style={{ ...CELL_CENTER, gap: 4 }}>
+      {delta != null && delta !== 0 && (delta > 0 ? <DeltaUp /> : <DeltaDown />)}
+      <span style={METRIC_TEXT}>{current}</span>
+    </div>
+  );
+}
+
+function HistorySparkline({ points, pending, loading }: { points: RankHistorySummaryPoint[]; pending: boolean; loading?: boolean }) {
+  if (pending || loading) return <CellSpinner align="center" />;
+  const { values, color } = sparklineFromHistoryPoints(points);
+  if (!values.length) {
+    return (
+      <div style={CELL_CENTER}>
+        <span style={{ ...METRIC_TEXT, color: '#9F9FA9' }}>—</span>
+      </div>
+    );
+  }
+  return (
+    <div style={CELL_CENTER}>
+      <div style={{ border: '1px solid #E4E4E7', borderRadius: 6, padding: '2px 4px', background: '#FAFAFA' }}>
+        <MiniSparkline points={values} color={color} height={28} filled />
+      </div>
     </div>
   );
 }
@@ -103,30 +156,41 @@ const RankTrackingPage: NextPage = () => {
   const configId = configsQ.data?.configs?.[0]?.id;
 
   const [page, setPage] = useState(1);
-  const [comparePeriod, setComparePeriod] = useState<ComparePeriod>('7d');
   const [search, setSearch] = useState('');
   const [addModal, setAddModal] = useState(false);
-  const [trendRow, setTrendRow] = useState<RankTrackingRow | null>(null);
-  const [trendPoints, setTrendPoints] = useState<Array<{ date: string; position: number | null; found: boolean }>>([]);
+  const [detailRow, setDetailRow] = useState<RankTrackingRow | null>(null);
   const { sortKey, sortDir, handleSort } = useSortState<SortKey>('keyword', 'asc');
 
   const resultsQ = useRankResults(slug, configId, {
-    comparePeriod,
+    comparePeriod: '7d',
     page,
     pageSize: 50,
     search,
-    sort: sortKey,
+    sort: sortKey === 'impressions' || sortKey === 'visits' || sortKey === 'best' ? 'keyword' : sortKey,
     order: sortDir,
   });
+  const historySummaryQ = useRankHistorySummary(slug, configId);
+
+  const scQ = useQuery(
+    ['sckeywords', slug],
+    async () => {
+      const r = await fetch(`/api/searchconsole?domain=${slug}`);
+      if (!r.ok) throw new Error('Failed to load Search Console data');
+      return r.json() as Promise<{ data?: SCDomainDataType | null; error?: string | null }>;
+    },
+    { enabled: !!slug, staleTime: 120_000 },
+  );
+
   const runQ = useRankRunPolling(slug, configId);
   const addKeywordsM = useAddRankKeywords(slug, configId);
   const checkM = useTriggerRankCheck(slug);
   const runM = useProcessRankRun(slug);
-  const prefetchNext = usePrefetchRankNextPage(slug, configId, resultsQ.data?.nextCursor ?? null, { comparePeriod, pageSize: 50 });
+  const prefetchNext = usePrefetchRankNextPage(slug, configId, resultsQ.data?.nextCursor ?? null, { comparePeriod: '7d', pageSize: 50 });
 
   const lastKick = useRef(0);
   const runActive = runQ.data?.run?.status === 'pending' || runQ.data?.run?.status === 'running' || runQ.data?.run?.status === 'partial';
   const rankChecking = runActive || checkM.isLoading || addKeywordsM.isLoading;
+
   useEffect(() => {
     if (!runActive || !configId || runM.isLoading) return;
     const now = Date.now();
@@ -136,33 +200,53 @@ const RankTrackingPage: NextPage = () => {
       onSuccess: () => {
         resultsQ.refetch();
         runQ.refetch();
+        historySummaryQ.refetch();
       },
     });
-  }, [runActive, configId, runM, resultsQ, runQ]);
+  }, [runActive, configId, runM, resultsQ, runQ, historySummaryQ]);
 
-  const rows = resultsQ.data?.rows ?? [];
+  const scByKeyword = useMemo(() => {
+    const data = scQ.data?.data;
+    const items = (data?.sevenDays?.length ? data.sevenDays : data?.thirtyDays) ?? [];
+    return aggregateScByKeyword(items);
+  }, [scQ.data]);
+
+  const historyByKeywordId = useMemo(() => {
+    const map = new Map<number, RankHistorySummaryPoint[]>();
+    for (const s of historySummaryQ.data?.summaries ?? []) {
+      if (s.device && s.device !== 'desktop') continue;
+      map.set(s.trackingKeywordId, s.points);
+    }
+    return map;
+  }, [historySummaryQ.data]);
+
+  const rows = useMemo(() => {
+    const base = resultsQ.data?.rows ?? [];
+    if (sortKey !== 'impressions' && sortKey !== 'visits' && sortKey !== 'best') return base;
+    const sorted = [...base];
+    sorted.sort((a, b) => {
+      if (sortKey === 'impressions' || sortKey === 'visits') {
+        const aKey = a.keyword.trim().toLowerCase();
+        const bKey = b.keyword.trim().toLowerCase();
+        const aVal = scByKeyword.get(aKey)?.[sortKey === 'impressions' ? 'impressions' : 'visits'] ?? 0;
+        const bVal = scByKeyword.get(bKey)?.[sortKey === 'impressions' ? 'impressions' : 'visits'] ?? 0;
+        return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      const aPts = historyByKeywordId.get(a.trackingKeywordId) ?? [];
+      const bPts = historyByKeywordId.get(b.trackingKeywordId) ?? [];
+      const aBest = computeHistory7dStats(aPts, a.desktop.position, a.desktop.found).best ?? 999;
+      const bBest = computeHistory7dStats(bPts, b.desktop.position, b.desktop.found).best ?? 999;
+      return sortDir === 'asc' ? aBest - bBest : bBest - aBest;
+    });
+    return sorted;
+  }, [resultsQ.data?.rows, sortKey, sortDir, scByKeyword, historyByKeywordId]);
+
   const total = resultsQ.data?.total ?? 0;
   const pageSize = resultsQ.data?.pageSize ?? 50;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const loading = configsQ.isLoading || resultsQ.isLoading;
-
-  const openTrend = async (row: RankTrackingRow) => {
-    setTrendRow(row);
-    setTrendPoints([]);
-    if (!slug || !configId) return;
-    try {
-      const res = await fetch(`/api/rank-tracking/${slug}/history/summary?configId=${configId}`);
-      const data = await res.json() as {
-        summaries?: Array<{ trackingKeywordId: number; device: string; points: Array<{ date: string; position: number | null; found: boolean }> }>;
-      };
-      const match = data.summaries?.find(
-        (s) => s.trackingKeywordId === row.trackingKeywordId && s.device === 'desktop',
-      );
-      setTrendPoints(match?.points ?? []);
-    } catch {
-      setTrendPoints([]);
-    }
-  };
+  const scLoading = scQ.isLoading;
+  const scConnected = scQ.isSuccess && !!scQ.data?.data && !scQ.data?.error;
 
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
@@ -170,7 +254,7 @@ const RankTrackingPage: NextPage = () => {
       <style>{`
         @keyframes rt-spin { to { transform: rotate(360deg); } }
         .rt-row:hover { background: #F8F8F9 !important; }
-        .rt-row:hover .rt-row-link { color: #783AFB !important; }
+        .rt-row:hover .rt-kw-link { color: #F29964 !important; }
       `}</style>
 
       <DomainSubLayout
@@ -179,16 +263,13 @@ const RankTrackingPage: NextPage = () => {
         section="Rank Tracking"
         heading="Rank Tracking"
         contentMaxWidth="100%"
+        actions={(
+          <Button type="button" variant="primary" size="sm" onClick={() => setAddModal(true)}>
+            Add keywords
+          </Button>
+        )}
         filters={(
           <ToolRibbon>
-            <CompactSelect
-              prefix="Compare"
-              size="sm"
-              value={comparePeriod}
-              options={COMPARE_OPTIONS}
-              onChange={(opt) => setComparePeriod(String(opt.value) as ComparePeriod)}
-              menuMinWidth={180}
-            />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
               {configId && total > 0 && (
                 <Button
@@ -208,9 +289,6 @@ const RankTrackingPage: NextPage = () => {
                 placeholder="Search"
                 width={250}
               />
-              <Button type="button" variant="primary" size="sm" onClick={() => setAddModal(true)}>
-                Add keywords
-              </Button>
             </div>
           </ToolRibbon>
         )}
@@ -224,21 +302,18 @@ const RankTrackingPage: NextPage = () => {
                 position: 'sticky', top: 0, zIndex: 1,
               }}
               >
-                <div style={{ padding: '10px 16px', flexGrow: 1, minWidth: 220 }}>
+                <div style={{ padding: '10px 16px', flexGrow: 1, minWidth: 200 }}>
                   <Button type="button" variant="transparent" size="sm" onClick={() => handleSort('keyword')} style={{ gap: 4, padding: 0, color: '#52525C' }}>
                     <span style={{ fontSize: 13, fontWeight: sortKey === 'keyword' ? 600 : 400 }}>Keyword</span>
                   </Button>
                 </div>
-                <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={120} onSort={(k) => handleSort(k as SortKey)} />
-                <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 200, flexShrink: 0, fontSize: 13, fontWeight: 400, color: '#52525C', fontFamily: FONT }}>
-                  URL
+                <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={100} align="center" onSort={(k) => handleSort(k as SortKey)} />
+                <SortableHeader label="Best" sortKey="best" activeKey={sortKey} dir={sortDir} width={80} align="center" onSort={(k) => handleSort(k as SortKey)} />
+                <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 110, flexShrink: 0, fontSize: 13, fontWeight: 400, color: '#52525C', fontFamily: FONT, textAlign: 'center' }}>
+                  History
                 </div>
-                <SortableHeader label="Volume" sortKey="volume" activeKey={sortKey} dir={sortDir} width={100} onSort={(k) => handleSort(k as SortKey)} />
-                <SortableHeader label="KD" sortKey="kd" activeKey={sortKey} dir={sortDir} width={80} onSort={(k) => handleSort(k as SortKey)} />
-                <SortableHeader label="CPC" sortKey="cpc" activeKey={sortKey} dir={sortDir} width={90} onSort={(k) => handleSort(k as SortKey)} />
-                <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, fontSize: 13, color: '#52525C', fontFamily: FONT }}>
-                  SERP
-                </div>
+                <SortableHeader label="Impr" sortKey="impressions" activeKey={sortKey} dir={sortDir} width={80} align="center" onSort={(k) => handleSort(k as SortKey)} />
+                <SortableHeader label="Vis" sortKey="visits" activeKey={sortKey} dir={sortDir} width={80} align="center" onSort={(k) => handleSort(k as SortKey)} />
               </div>
 
               {loading ? (
@@ -248,17 +323,19 @@ const RankTrackingPage: NextPage = () => {
                   No keywords tracked yet. Use <strong style={{ color: '#52525C' }}>Add keywords</strong> to start monitoring positions.
                 </div>
               ) : rows.map((row, i) => {
-                const d = row.desktop;
                 const pending = rowRankPending(row, rankChecking);
-                const urlLabel = d.rankingUrl ? d.rankingUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
+                const sc = scByKeyword.get(row.keyword.trim().toLowerCase());
+                const historyPoints = historyByKeywordId.get(row.trackingKeywordId) ?? [];
+                const stats = computeHistory7dStats(historyPoints, row.desktop.position, row.desktop.found);
+                const position7dAgo = stats.position7dAgo ?? row.desktop.previousPosition;
                 return (
                   <div
                     key={row.trackingKeywordId}
                     className="rt-row"
                     role="button"
                     tabIndex={0}
-                    onClick={() => openTrend(row)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') openTrend(row); }}
+                    onClick={() => setDetailRow(row)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') setDetailRow(row); }}
                     style={{
                       display: 'flex',
                       alignItems: 'stretch',
@@ -269,66 +346,32 @@ const RankTrackingPage: NextPage = () => {
                       cursor: 'pointer',
                     }}
                   >
-                    <div style={{ padding: '12px 16px', flexGrow: 1, minWidth: 220, display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ padding: '12px 16px', flexGrow: 1, minWidth: 200, display: 'flex', alignItems: 'center' }}>
+                      <span className="rt-kw-link" style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 150ms ease' }}>
                         {row.keyword}
                       </span>
                     </div>
-                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
-                      <PositionCell row={row} pending={pending} />
+                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 100, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px' }}>
+                      <PositionCell row={row} pending={pending} position7dAgo={position7dAgo} />
                     </div>
-                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 200, flexShrink: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', minWidth: 0 }}>
-                      {pending ? (
-                        <CellSpinner align="flex-start" />
-                      ) : d.rankingUrl ? (
-                        <a
-                          href={d.rankingUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rt-row-link"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ fontSize: 12, color: '#52525C', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}
-                        >
-                          {urlLabel}
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>—</span>
-                      )}
+                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 80, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px' }}>
+                      <MetricCell value={stats.best ?? '—'} pending={pending} />
                     </div>
-                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 100, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
-                      {pending ? (
+                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 110, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px' }}>
+                      <HistorySparkline points={historyPoints} pending={pending} loading={historySummaryQ.isLoading} />
+                    </div>
+                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 80, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px' }}>
+                      {scLoading ? (
                         <CellSpinner />
                       ) : (
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: FONT }}>
-                          {row.searchVolume != null ? compactNum(row.searchVolume) : '—'}
-                        </span>
+                        <MetricCell value={sc ? sc.impressions : (scConnected ? 0 : '—')} />
                       )}
                     </div>
-                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 80, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
-                      {pending ? (
+                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 80, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 16px' }}>
+                      {scLoading ? (
                         <CellSpinner />
                       ) : (
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: FONT }}>
-                          {row.keywordDifficulty ?? '—'}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 90, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
-                      {pending ? (
-                        <CellSpinner />
-                      ) : (
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: FONT }}>
-                          {row.cpc != null ? row.cpc.toFixed(2) : '—'}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, display: 'flex', alignItems: 'center', padding: '12px 16px', minWidth: 0 }}>
-                      {pending ? (
-                        <CellSpinner align="flex-start" />
-                      ) : (
-                        <span style={{ fontSize: 12, color: '#52525C', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {d.serpFeatures.length ? d.serpFeatures.join(', ') : '—'}
-                        </span>
+                        <MetricCell value={sc ? sc.visits : (scConnected ? 0 : '—')} />
                       )}
                     </div>
                   </div>
@@ -361,11 +404,11 @@ const RankTrackingPage: NextPage = () => {
         onAdd={(keywords) => addKeywordsM.mutate(keywords)}
       />
 
-      <KeywordTrendModal
-        open={!!trendRow}
-        keyword={trendRow?.keyword ?? ''}
-        points={trendPoints}
-        onClose={() => setTrendRow(null)}
+      <RankKeywordDetailPanel
+        row={detailRow}
+        slug={slug || ''}
+        configId={configId}
+        onClose={() => setDetailRow(null)}
       />
     </AppShell>
   );

@@ -2,13 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast';
 import type { Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { liveCoverageItems, remainingOpportunities, scoreAttribution } from '../../lib/liveCoverage';
+import { liveCoverageItems } from '../../lib/liveCoverage';
 import { computeCoverageScores } from '../../lib/aiCoverage';
 import { computeOverallContentScore } from '../../lib/aiSearchScore';
+import { computeOptimizeLiveSnapshot } from '../../lib/computeLiveArticleScores';
 import { countOccurrences, computeContentScore, type ScoreData, type NlpTerm } from '../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { getErrorMessage } from '../../lib/errors';
+import { isAbortError } from '../../lib/abortSignal';
 import { buildStreamingDoc } from '../../lib/optimizeReviewDoc';
 import { substituteOptimizerPlaceholders } from '../../lib/optimizePostHtml';
 import { splitSections } from '../../lib/articleSections';
@@ -17,8 +19,6 @@ import { optimizeStore } from '../../components/articles/optimizeStore';
 import { collectOptimizerPositions, type PMDocLike } from '../../lib/optimizeResolveAll';
 import { prefersReducedMotion } from '../../lib/motion/gsap';
 import type { Article, ContentOverride, DoSaveVersionMeta } from './useArticleEditorState';
-
-const AO_RESCORE_DEBOUNCE_MS = 1200;
 
 function scrollToOptimizerSection(sectionId: string): void {
   document.querySelector(`[data-section-id="${sectionId}"]`)?.scrollIntoView({
@@ -32,7 +32,6 @@ export interface LiveRescoreState {
   aiNew: number;
   buckets: BucketScore[];
   remainingRows: Array<{ label: string; count: number }>;
-  attributionRows: Array<{ label: string; delta: number }>;
 }
 
 export interface UseArticleOptimizeOptions {
@@ -113,76 +112,51 @@ export function useArticleOptimize({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [savedBannerOpen, setSavedBannerOpen] = useState(false);
-  const [liveRescore, setLiveRescore] = useState<LiveRescoreState | null>(null);
   const [aoFloat, setAoFloat] = useState<{ key: number; label: string } | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const aiVisibilityBaselineRef = useRef<number>(0);
   const prevAiRef = useRef<number>(0);
   const floatSeqRef = useRef<number>(0);
   const attributionBeforeRef = useRef<BucketScore[]>([]);
-  const rescoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const remainingRows = liveRescore ? liveRescore.remainingRows : [];
-
-  const optimizeReview = useMemo(() => {
+  const aoLiveSnapshot = useMemo(() => {
     if (optimizeState === 'idle' || !scoreData) return null;
-    const postHtml = substituteOptimizerPlaceholders(editorHtml);
-    const postText = postHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-    const postWords = postText ? postText.split(/\s+/).length : 0;
-    const postHeadings = (postHtml.match(/<h[1-6][\s>]/gi) || []).length;
-    const postParas = (postHtml.match(/<p[\s>]/gi) || []).length;
-    const postScore = computeContentScore(
-      postText, postWords, postHeadings, scoreData, postParas,
-      (postHtml.match(/<a\s[^>]*href=/gi) || []).length, postHtml, article?.target_keyword || '',
-      undefined, coverageItems,
-    );
-    const seoDelta = Math.max(0, postScore - preScoreRef.current);
-    return { postScore, seoDelta, postHtml, postText };
-  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, optimizeDocTick]);
-
-  const runLiveRescore = useCallback((
-    postText: string, postHtml: string, reason: 'accept' | 'stream' | 'typing',
-  ) => {
-    const liveItems = liveCoverageItems(coverageItems, postText, postHtml);
-    const { overall: aiNew, buckets: after } = computeCoverageScores(
-      liveItems, coverageSnapshot?.answersMainQuestionEarly ?? false,
-    );
-    const attributionRows = scoreAttribution(attributionBeforeRef.current, after);
-    if (reason === 'accept') attributionBeforeRef.current = after;
-    setLiveRescore({
-      liveItems,
-      aiNew,
-      buckets: after,
-      remainingRows: remainingOpportunities(liveItems),
-      attributionRows,
+    return computeOptimizeLiveSnapshot({
+      editorHtml,
+      scoreData,
+      keyword: article?.target_keyword || '',
+      coverageItems,
+      coverageSnapshot,
+      substitutePlaceholders: substituteOptimizerPlaceholders,
     });
-    const tickDelta = Math.round(aiNew) - Math.round(prevAiRef.current);
-    prevAiRef.current = aiNew;
-    if ((reason === 'accept' || reason === 'stream') && tickDelta > 0) {
+  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, coverageSnapshot, optimizeDocTick]);
+
+  const liveRescore: LiveRescoreState | null = aoLiveSnapshot ? {
+    liveItems: aoLiveSnapshot.liveItems,
+    aiNew: aoLiveSnapshot.ai,
+    buckets: aoLiveSnapshot.buckets,
+    remainingRows: aoLiveSnapshot.remainingRows,
+  } : null;
+
+  const remainingRows = aoLiveSnapshot?.remainingRows ?? [];
+
+  useEffect(() => {
+    if (optimizeState === 'idle' || !aoLiveSnapshot) return undefined;
+    const tickDelta = Math.round(aoLiveSnapshot.ai) - Math.round(prevAiRef.current);
+    prevAiRef.current = aoLiveSnapshot.ai;
+    if ((optimizeState === 'optimizing' || optimizeState === 'reviewing') && tickDelta > 0) {
       floatSeqRef.current += 1;
       setAoFloat({ key: floatSeqRef.current, label: `Optimization Impact +${tickDelta}` });
     }
-  }, [coverageItems, coverageSnapshot]);
+    return undefined;
+  }, [aoLiveSnapshot, optimizeState]);
 
-  useEffect(() => {
-    if (optimizeState === 'idle' || !optimizeReview) {
-      if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; }
-      setLiveRescore(null);
-      return undefined;
-    }
-    const { postText, postHtml } = optimizeReview;
-    const immediate = optimizeState === 'optimizing' || optimizeState === 'reviewing';
-    if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; }
-    if (immediate) {
-      runLiveRescore(postText, postHtml, 'stream');
-      return undefined;
-    }
-    rescoreTimerRef.current = setTimeout(() => {
-      runLiveRescore(postText, postHtml, 'typing');
-    }, AO_RESCORE_DEBOUNCE_MS);
-    return () => { if (rescoreTimerRef.current) { clearTimeout(rescoreTimerRef.current); rescoreTimerRef.current = null; } };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [optimizeState, editorHtml, optimizeReview, optimizeDocTick]);
+  const optimizeReview = aoLiveSnapshot ? {
+    postScore: aoLiveSnapshot.seo,
+    seoDelta: Math.max(0, aoLiveSnapshot.seo - preScoreRef.current),
+    postHtml: aoLiveSnapshot.postHtml,
+    postText: aoLiveSnapshot.postText,
+  } : null;
 
   const handleApplyReadability = async (result: { criteria?: Array<{ suggestions?: string[] }> }) => {
     const editor = getEditor();
@@ -386,17 +360,24 @@ export function useArticleOptimize({
     const resetIdle = () => {
       optimizeStore.clear();
       changedSectionsRef.current = [];
+      setActiveSectionId(null);
       setOptimizeDocTick(0);
       setOptimizeState('idle');
       setIsAutoOptimizing(false);
       setOptimizeProgress({ processed: 0, total: 0 });
+      setOptimizeRemaining(0);
+      setAoFloat(null);
+      setAutoOptimizeStatus('');
     };
+
+    const aoSignal = optimizeStore.beginRun();
 
     try {
       const res = await fetch('/api/articles/optimize-sections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: preHtml, articleId: article?.id, scoreData, targetScore: 80, maxRounds: 4 }),
+        signal: aoSignal,
       });
       if (res.status === 429) {
         const ej = await res.json().catch(() => ({}));
@@ -415,6 +396,11 @@ export function useArticleOptimize({
       const orderedEvents: SectionEvent[] = [];
 
       while (true) {
+        if (aoSignal.aborted) {
+          try { await reader.cancel(); } catch { /* ignore */ }
+          resetIdle();
+          return;
+        }
         // eslint-disable-next-line no-await-in-loop
         const { done, value } = await reader.read();
         if (done) break;
@@ -529,6 +515,10 @@ export function useArticleOptimize({
       }
       resetIdle();
     } catch (err) {
+      if (isAbortError(err) || optimizeStore.isRunAborted()) {
+        resetIdle();
+        return;
+      }
       console.error('[optimize-sections] failed:', err);
       toast.error(getErrorMessage(err));
       resetIdle();
@@ -568,9 +558,7 @@ export function useArticleOptimize({
     const refs = collectOptimizerPositions(editor.state.doc as PMDocLike);
     refs.forEach((ref) => {
       const entry = optimizeStore.get(ref.sectionId);
-      const html = ref.status === 'rejected'
-        ? (entry?.oldHtml || '')
-        : (entry?.newHtml || entry?.oldHtml || '');
+      const html = entry?.newHtml || entry?.oldHtml || '';
       if (!html) return;
       editor.chain().insertContentAt({ from: ref.pos, to: ref.pos + ref.nodeSize }, html).run();
     });
@@ -594,16 +582,23 @@ export function useArticleOptimize({
   };
 
   const handleConfirmCancel = () => {
+    optimizeStore.cancelRun();
     const editor = getEditor();
+    const restored = preReviewHtmlRef.current;
     if (editor) {
-      try { editor.commands.setContent(preReviewHtmlRef.current, { emitUpdate: false }); } catch (e) { console.error('[optimize-cancel] setContent error', e); }
+      try { editor.commands.setContent(restored, { emitUpdate: false }); } catch (e) { console.error('[optimize-cancel] setContent error', e); }
     }
+    setEditorHtml(restored);
     optimizeStore.clear();
     changedSectionsRef.current = [];
+    setActiveSectionId(null);
+    setOptimizeDocTick(0);
     setOptimizeState('idle');
     setIsAutoOptimizing(false);
     setOptimizeProgress({ processed: 0, total: 0 });
     setOptimizeRemaining(0);
+    setAoFloat(null);
+    setAutoOptimizeStatus('');
     setCancelModalOpen(false);
   };
 
@@ -652,7 +647,6 @@ export function useArticleOptimize({
       setOptimizeState('idle');
       setIsAutoOptimizing(false);
       setOptimizeRemaining(0);
-      setLiveRescore(null);
     } catch (err) {
       console.error('[optimize-save] failed:', err);
       toast.error('Could not save Auto-Optimize changes');
@@ -701,6 +695,7 @@ export function useArticleOptimize({
     activeSectionId,
     aiVisibilityBaselineRef,
     remainingRows,
+    aoLiveSnapshot,
     optimizeReview,
     handleApplyReadability,
     compareVersionsButton,

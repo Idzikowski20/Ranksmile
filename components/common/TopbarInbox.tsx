@@ -21,7 +21,7 @@ const Toggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
     type="button"
     onClick={onClick}
     aria-pressed={on}
-    style={{ width: 36, height: 20, borderRadius: 9999, background: on ? '#783AFB' : '#E4E4E7', position: 'relative', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease' }}
+    style={{ width: 36, height: 20, borderRadius: 9999, background: on ? '#F29964' : '#E4E4E7', position: 'relative', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease' }}
   >
     <span style={{ position: 'absolute', top: 2, left: on ? 18 : 2, width: 16, height: 16, borderRadius: 9999, background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms ease' }} />
   </button>
@@ -203,7 +203,7 @@ const TopbarInbox = () => {
                       </span>
                       <span style={{ fontSize: 13, color: '#52525C' }}>{relTime(n.at)}</span>
                     </div>
-                    {!isRead && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#783AFB', flexShrink: 0, marginTop: 6 }} />}
+                    {!isRead && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F29964', flexShrink: 0, marginTop: 6 }} />}
                   </button>
                 );
               })}

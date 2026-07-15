@@ -3,6 +3,9 @@ import { QueryTypes, type Transaction } from 'sequelize';
 import db from '../database/database';
 import { ensurePipelineTables } from './ensurePipelineTables';
 import { gatherBlogUrls } from './gatherBlogUrls';
+import { getSiteAuditPageLimit, resolvePlanSlug } from './planLimits';
+import { getOrgBillingState } from './orgBilling';
+import { ensureUserTenancy } from './tenancy';
 
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
@@ -233,7 +236,19 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
       if (!blogUrls.length && gscPages.length) {
          blogUrls = Array.from(new Set(gscPages.map((u) => u.split('#')[0].split('?')[0])));
       }
-      const body = { jobId, nextjsUrl: selfUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, limits: { keywords: 20, competitorsPerKeyword: 10 } } };
+      const langRow = await selectRows<{ language: string }>(`SELECT language FROM site_context WHERE domain_id = ? ORDER BY id LIMIT 1`, [domainId]);
+      const language = langRow[0]?.language || 'pl';
+      const ownerRow = await selectRows<{ userId: string }>(`SELECT "userId" FROM domain WHERE "ID" = ? LIMIT 1`, [domainId]);
+      let siteAuditPages = 100;
+      try {
+         const ownerId = ownerRow[0]?.userId;
+         if (ownerId) {
+            const { orgId } = await ensureUserTenancy(ownerId);
+            const billing = await getOrgBillingState(orgId);
+            siteAuditPages = getSiteAuditPageLimit(resolvePlanSlug(billing?.planSlug));
+         }
+      } catch { /* default 100 */ }
+      const body = { jobId, nextjsUrl: selfUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };
       const resp = await fetch(`${sidecarBase()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
       // On success the sidecar will POST status='done' + result to job-progress, which materializes.

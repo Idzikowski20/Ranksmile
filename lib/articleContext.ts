@@ -6,6 +6,7 @@ import type { CoverageSnapshot } from './aiCoverage';
 import type { ScoreData } from './contentScore';
 import { readArticleTerms, type ArticleTermRow } from './articleTerms';
 import { readContentSettings } from './contentSettings';
+import { getDomainLocale } from './domainLanguage';
 import { getDomainVoices } from './domainVoices';
 
 export interface CompetitorContext {
@@ -78,10 +79,16 @@ export async function buildArticleContext(articleId: number): Promise<ArticleCon
   const voices = row?.domain_id != null ? await getDomainVoices(Number(row.domain_id)).catch(() => null) : null;
   const defaultVoice = voices?.find((v) => v.isDefault);
 
+  const domainId = row?.domain_id != null ? Number(row.domain_id) : null;
+  const domainLocale = domainId ? await getDomainLocale(domainId).catch(() => null) : null;
+  const resolvedLanguage = typeof row?.language === 'string' && row.language.trim()
+    ? row.language
+    : domainLocale?.languageCode;
+
   return {
     articleId,
     keyword: typeof row?.target_keyword === 'string' ? row.target_keyword : '',
-    language: typeof row?.language === 'string' ? row.language : undefined,
+    language: resolvedLanguage,
     scoreData,
     breakdown: null,
     coverage,

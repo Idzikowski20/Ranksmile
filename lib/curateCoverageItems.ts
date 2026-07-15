@@ -1,7 +1,6 @@
-import type { CoverageItem } from './aiCoverage';
+import type { CoverageItem, LlmCoverageSource } from './aiCoverage';
 import type { ArticleFact } from './articleFactTypes';
 import {
-  buildCitationPrompts,
   citationIntentItems,
   citationItemId,
   isUsefulCitationPrompt,
@@ -12,9 +11,9 @@ import { isKeywordOnTopic, seedTokens } from './topicRelevance';
 import { normalizeTerm } from './termUtils';
 
 /** Target curated AI Search checklist size (citation prompts + PAA). */
-export const AI_COVERAGE_MAX = 20;
-export const AI_COVERAGE_PAA_MAX = 12;
-export const AI_COVERAGE_INTENT_COUNT = 5;
+export const AI_COVERAGE_MAX = 35;
+export const AI_COVERAGE_PAA_MAX = 28;
+export const AI_COVERAGE_INTENT_COUNT = 8;
 
 const NOISE_PATTERNS: RegExp[] = [
   /\bpraca\b/i,
@@ -85,22 +84,23 @@ export function scorePaaQuestion(question: string, keyword: string): number {
 
 export function curateAiCoverageItems(opts: {
   keyword: string;
-  paaQuestions: Array<{ question: string; answer?: string }>;
+  paaQuestions?: Array<{ question: string; answer?: string }>;
+  llmQuestions?: Array<{ question: string; sources: LlmCoverageSource[] }>;
   articleFacts?: ArticleFact[];
 }): { knowledge: CoverageItem[]; entity: CoverageItem[] } {
   const keyword = opts.keyword.trim();
-  const deduped = dedupePaaQuestions(opts.paaQuestions);
+  const llmRows = opts.llmQuestions ?? [];
+  const paaRows = (opts.paaQuestions ?? []).map((q) => ({
+    question: q.question,
+    sources: ['ai_overview'] as LlmCoverageSource[],
+  }));
 
-  const citationSeeds = buildCitationPrompts(
-    keyword,
-    deduped.map((q) => q.question),
-    AI_COVERAGE_PAA_MAX,
-  );
-
-  const ranked = [
-    ...citationSeeds.map((question) => ({ question, score: scoreCitationPrompt(question, keyword) })),
-    ...deduped.map((q) => ({ question: q.question, score: scorePaaQuestion(q.question, keyword) })),
-  ]
+  const ranked = [...llmRows, ...paaRows]
+    .map((row) => ({
+      question: row.question,
+      score: scoreCitationPrompt(row.question, keyword) || scorePaaQuestion(row.question, keyword),
+      sources: row.sources,
+    }))
     .filter((row) => row.score > 0 && isUsefulCitationPrompt(row.question, keyword))
     .sort((a, b) => b.score - a.score || a.question.length - b.question.length);
 
@@ -116,9 +116,10 @@ export function curateAiCoverageItems(opts: {
       type: 'paa' as const,
       category: 'knowledge' as const,
       importance: row.score >= 70 ? 'critical' as const : 'recommended' as const,
-      source: 'paa' as const,
+      source: 'llm' as const,
       covered: false,
       quality: 0,
+      llmSources: row.sources.length ? row.sources : undefined,
     });
     if (knowledge.length >= AI_COVERAGE_MAX - AI_COVERAGE_INTENT_COUNT) break;
   }
@@ -134,11 +135,15 @@ export function compactCoverageSnapshotItems(
   if (items.length <= AI_COVERAGE_MAX) return [...items];
 
   const intent = items.filter((i) => i.category === 'intent' || i.type === 'intent');
-  const hasLegacyIntent = intent.some((i) => /answer the main question|set expectations/i.test(i.label));
-  const intentKept = hasLegacyIntent ? citationIntentItems(keyword) : intent;
   const knowledge = items.filter((i) =>
     i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison',
   );
+  const hasLegacyIntent = intent.some((i) => /answer the main question|set expectations/i.test(i.label));
+  const intentKept = hasLegacyIntent
+    ? citationIntentItems(keyword, undefined, {
+      serpQuestions: knowledge.map((i) => i.label),
+    })
+    : intent;
 
   const rankedKnowledge = knowledge
     .map((i) => ({

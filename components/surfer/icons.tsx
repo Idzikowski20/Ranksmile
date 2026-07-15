@@ -8,6 +8,12 @@ export const DeltaDown = () => (
    </svg>
 );
 
+export const DeltaUp = () => (
+   <svg width="8" height="6" viewBox="0 0 8 6" fill="none" style={{ flexShrink: 0, color: '#1AB25E' }}>
+      <path d="M3.29289 1.20711L0.707107 3.79289C0.077142 4.42286 0.523309 5.5 1.41421 5.5H6.58579C7.47669 5.5 7.92286 4.42286 7.2929 3.79289L4.70711 1.20711C4.31658 0.816582 3.68342 0.816582 3.29289 1.20711Z" fill="currentColor" />
+   </svg>
+);
+
 // ── Double ↑↓ sort arrow ──────────────────────────────────────────────────────
 // Source: pages/sites/[domain]/recommendations.tsx lines 81–90
 export const SortUpDown = ({ active, dir }: { active: boolean; dir: 'asc' | 'desc' | null }) => {

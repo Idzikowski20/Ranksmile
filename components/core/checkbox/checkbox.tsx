@@ -30,7 +30,7 @@ const FakeBox = styled.div<{ $checked: boolean | 'indeterminate'; $size: keyof t
       cursor: $disabled ? 'not-allowed' : 'pointer',
       opacity: $disabled ? 0.5 : 1,
       border: isOn ? 'none' : '1.5px solid #A29FAA',
-      background: isOn ? '#7553FF' : '#FFFFFF',
+      background: isOn ? '#F29964' : '#FFFFFF',
       color: isOn ? '#FFFFFF' : 'transparent',
       transition: 'background 120ms cubic-bezier(0.72, 0, 0.16, 1), border-color 120ms cubic-bezier(0.72, 0, 0.16, 1)',
       ...(isOn ? { animation: `${bounce} 250ms cubic-bezier(0.24, 1, 0.32, 1)` } : {}),

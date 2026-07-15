@@ -4,6 +4,7 @@
  */
 import { generateText } from 'ai';
 import { deepseek } from './ai/deepseek';
+import { languageInstructionForLlm } from './domainLanguagePrompts';
 import type {
    TopicCluster,
    TopicIdea,
@@ -125,14 +126,19 @@ function fallbackClusters(keywords: EnrichedKeyword[]): RawCluster[] {
 }
 
 /** LLM groups top keywords into 4–8 named topic clusters. */
-export async function clusterKeywords(seed: string, keywords: EnrichedKeyword[]): Promise<RawCluster[]> {
+export async function clusterKeywords(
+  seed: string,
+  keywords: EnrichedKeyword[],
+  languageCode = 'en',
+): Promise<RawCluster[]> {
    if (!process.env.DEEPSEEK_API_KEY) {
       throw new Error('DEEPSEEK_API_KEY is not configured');
    }
    const top = keywords.slice(0, 150);
    const lines = top.map((k, i) => `${i}. ${k.keyword} (vol: ${k.volume ?? 0}, kd: ${k.kd ?? 0})`).join('\n');
 
-   const prompt = `You are an SEO topic clustering expert. Group these keywords (seed topic: "${seed}") into 4-8 semantic topic clusters.
+   const langHint = languageInstructionForLlm(languageCode);
+   const prompt = `You are an SEO topic clustering expert. Group these keywords (seed topic: "${seed}") into 4-8 semantic topic clusters.${langHint}
 
 Keywords:
 ${lines}

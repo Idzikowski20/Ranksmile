@@ -36,7 +36,7 @@ const WordPressSettings = () => {
           gap: 2,
           fontSize: 14,
           fontWeight: 500,
-          color: hover ? '#783AFB' : '#18181B',
+          color: hover ? '#F29964' : '#18181B',
           textDecoration: 'none',
           transition: 'color 150ms ease',
           fontFamily: 'var(--font-family-primary)',

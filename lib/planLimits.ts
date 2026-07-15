@@ -30,28 +30,46 @@ const PLAN_LIMITS: Record<PlanSlug, PlanLimitDefinition[]> = {
     { key: 'aiPrompts', label: 'AI Prompts', limit: 15 },
     { key: 'brandSpaces', label: 'Brand Spaces', limit: 1 },
     { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 50 },
+    { key: 'siteAuditPages', label: 'Site Audit pages / crawl', limit: 100 },
   ],
   growth: [
     { key: 'documents', label: 'Documents', limit: 30 },
     { key: 'aiPrompts', label: 'AI Prompts', limit: 50 },
     { key: 'brandSpaces', label: 'Brand Spaces', limit: 5 },
     { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 200 },
+    { key: 'siteAuditPages', label: 'Site Audit pages / crawl', limit: 100 },
   ],
   scale: [
     { key: 'documents', label: 'Documents', limit: 100 },
     { key: 'aiPrompts', label: 'AI Prompts', limit: 100 },
     { key: 'brandSpaces', label: 'Brand Spaces', limit: 15 },
     { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 500 },
+    { key: 'siteAuditPages', label: 'Site Audit pages / crawl', limit: 100 },
   ],
   agency: [
     { key: 'documents', label: 'Documents', limit: null },
     { key: 'aiPrompts', label: 'AI Prompts', limit: 250 },
     { key: 'brandSpaces', label: 'Brand Spaces', limit: null },
     { key: 'keywordResearch', label: 'Keyword Research / mo', limit: 2000 },
+    { key: 'siteAuditPages', label: 'Site Audit pages / crawl', limit: 1000 },
   ],
 };
 
 export const DEFAULT_PLAN_SLUG: PlanSlug = 'growth';
+
+export const SITE_AUDIT_PAGE_LIMITS: Record<PlanSlug, number> = {
+  starter: 100,
+  growth: 100,
+  scale: 100,
+  agency: 1000,
+};
+
+export const DEFAULT_SITE_AUDIT_PAGE_LIMIT = 100;
+
+export function getSiteAuditPageLimit(planSlug: PlanSlug | null | undefined): number {
+  if (!planSlug) return DEFAULT_SITE_AUDIT_PAGE_LIMIT;
+  return SITE_AUDIT_PAGE_LIMITS[planSlug] ?? DEFAULT_SITE_AUDIT_PAGE_LIMIT;
+}
 
 export function resolvePlanSlug(slug: string | null | undefined): PlanSlug {
   if (slug === 'starter' || slug === 'growth' || slug === 'scale' || slug === 'agency') return slug;

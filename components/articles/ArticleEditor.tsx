@@ -489,7 +489,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
         {(() => {
           const TEXT_COLORS = [
             { label: 'Default', value: null, swatch: '#18181B' },
-            { label: 'Purple', value: '#783AFB', swatch: '#783AFB' },
+            { label: 'Purple', value: '#F29964', swatch: '#F29964' },
             { label: 'Green', value: '#1AB25E', swatch: '#1AB25E' },
             { label: 'Red', value: '#FF6F77', swatch: '#FF6F77' },
             { label: 'Gray', value: '#52525C', swatch: '#52525C' },
@@ -1594,7 +1594,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => {
       if (!editor) return;
       if (surfyOpen && surfySelection) {
-        editor.chain().unsetHighlight().setTextSelection({ from: surfySelection.from, to: surfySelection.to }).setHighlight({ color: 'rgba(120, 58, 251, 0.15)' }).run();
+        editor.chain().unsetHighlight().setTextSelection({ from: surfySelection.from, to: surfySelection.to }).setHighlight({ color: 'rgba(242, 153, 100, 0.15)' }).run();
         surfyHlRangeRef.current = { from: surfySelection.from, to: surfySelection.to };
       } else if (surfyHlRangeRef.current) {
         // Remove the Surfy highlight from its EXACT range. The cursor may have moved off it, so
@@ -1671,7 +1671,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       try {
         const res = await fetch('/api/articles/generate-outline', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keyword: kw, articleId, language: 'pl' }),
+          body: JSON.stringify({ keyword: kw, articleId }),
         });
         const data = await res.json();
         const headings: Array<{ level: number; text: string }> = Array.isArray(data.headings) ? data.headings : [];
@@ -1799,17 +1799,17 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll[data-importing="true"] .ProseMirror p.is-empty::before { content: none; }
           .art-editor-scroll .ProseMirror a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
           .art-editor-scroll .ProseMirror a:hover { color: #1d4ed8; }
-          .art-editor-scroll[data-review="true"] .ProseMirror a { background: #783afb; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
+          .art-editor-scroll[data-review="true"] .ProseMirror a { background: #f29964; color: #fff !important; text-decoration: none; border-radius: 3px; padding: 1px 3px; }
           .art-editor-scroll[data-review="true"] .ProseMirror a:hover { background: #6d28d9; color: #fff !important; }
           .art-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid #e4e4e7; margin: 22px 0; }
-          .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: #783AFB; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(120,58,251,0.08); cursor: pointer; }
-          .art-editor-scroll .ProseMirror .comment-mark-draft { background: rgba(120,58,251,0.22); }
+          .art-editor-scroll .ProseMirror .comment-mark { text-decoration: underline; text-decoration-color: #F29964; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(242,153,100,0.08); cursor: pointer; }
+          .art-editor-scroll .ProseMirror .comment-mark-draft { background: rgba(242,153,100,0.22); }
           .art-editor-scroll .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 18px 0; overflow: hidden; font-size: 14px; }
           .art-editor-scroll .ProseMirror table td, .art-editor-scroll .ProseMirror table th { border: 1px solid #e4e4e7; padding: 8px 12px; vertical-align: top; box-sizing: border-box; position: relative; min-width: 1em; color: #374151; line-height: 1.6; }
           .art-editor-scroll .ProseMirror table th { background: #f4f4f5; font-weight: 600; color: #18181b; text-align: left; }
           .art-editor-scroll .ProseMirror table p { margin: 0; }
-          .art-editor-scroll .ProseMirror table .selectedCell:after { content: ''; position: absolute; inset: 0; background: rgba(120,58,251,0.08); pointer-events: none; z-index: 2; }
-          .art-editor-scroll .ProseMirror table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: #783afb; pointer-events: none; }
+          .art-editor-scroll .ProseMirror table .selectedCell:after { content: ''; position: absolute; inset: 0; background: rgba(242,153,100,0.08); pointer-events: none; z-index: 2; }
+          .art-editor-scroll .ProseMirror table .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: #f29964; pointer-events: none; }
           .art-editor-scroll .ProseMirror.resize-cursor { cursor: col-resize; }
           /* Task list (checklist) */
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] { list-style: none; padding: 0; margin: 10px 0; }
@@ -1817,12 +1817,12 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 3px; user-select: none; }
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; }
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li > div > p { margin: 0; }
-          .art-editor-scroll .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: #783afb; cursor: pointer; }
+          .art-editor-scroll .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: #f29964; cursor: pointer; }
           .art-editor-scroll .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: #9f9fa9; text-decoration: line-through; }
           /* Details / FAQ (collapsible) */
           .art-editor-scroll .ProseMirror [data-type="details"] { display: flex; gap: 8px; border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: #fafafa; }
           .art-editor-scroll .ProseMirror [data-type="details"] > button { flex: 0 0 auto; width: 16px; height: 22px; background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
-          .art-editor-scroll .ProseMirror [data-type="details"] > button::before { content: '▶'; color: #783afb; font-size: 10px; transition: transform 0.15s ease; }
+          .art-editor-scroll .ProseMirror [data-type="details"] > button::before { content: '▶'; color: #f29964; font-size: 10px; transition: transform 0.15s ease; }
           .art-editor-scroll .ProseMirror [data-type="details"].is-open > button::before { transform: rotate(90deg); }
           .art-editor-scroll .ProseMirror [data-type="details"] > div { flex: 1 1 auto; min-width: 0; }
           .art-editor-scroll .ProseMirror [data-type="detailsSummary"] { font-weight: 600; color: #18181b; }
@@ -1936,7 +1936,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               <div style={{ position: 'absolute', top: commentDraft.top, left: commentDraft.left, transform: 'translateX(-50%)', zIndex: 250, width: 320, maxWidth: 'min(74vw, 360px)' }}>
                 <CommentComposer
                   authorName={commentAuthor?.name || 'You'}
-                  authorColor={commentAuthor?.color || '#783AFB'}
+                  authorColor={commentAuthor?.color || '#F29964'}
                   authorAvatar={commentAuthor?.avatar}
                   autoFocus
                   onSubmit={async (draft: DraftComment) => {

@@ -123,8 +123,8 @@ const AddKeywords = ({ closeModal, domain, keywords, scraperName = '', allowsCit
                      ...inputBaseStyle,
                      height: 160,
                      resize: 'vertical',
-                     borderColor: focusInput === 'keywords' ? '#AA93FD' : '#D4D4D8',
-                     boxShadow: focusInput === 'keywords' ? '0px 1px 2px 0px rgba(26,29,40,0.06), 0 0 0 2px rgba(120,58,251,0.1)' : 'none',
+                     borderColor: focusInput === 'keywords' ? '#F5C4A0' : '#D4D4D8',
+                     boxShadow: focusInput === 'keywords' ? '0px 1px 2px 0px rgba(26,29,40,0.06), 0 0 0 2px rgba(242,153,100,0.1)' : 'none',
                   }}
                   placeholder="Type or Paste Keywords here. Insert Each keyword in a New line."
                   value={newKeywordsData.keywords}
@@ -199,8 +199,8 @@ const AddKeywords = ({ closeModal, domain, keywords, scraperName = '', allowsCit
                      style={{
                         ...inputBaseStyle,
                         paddingLeft: 36,
-                        borderColor: focusInput === 'tags' ? '#AA93FD' : '#D4D4D8',
-                        boxShadow: focusInput === 'tags' ? '0px 1px 2px 0px rgba(26,29,40,0.06), 0 0 0 2px rgba(120,58,251,0.1)' : 'none',
+                        borderColor: focusInput === 'tags' ? '#F5C4A0' : '#D4D4D8',
+                        boxShadow: focusInput === 'tags' ? '0px 1px 2px 0px rgba(26,29,40,0.06), 0 0 0 2px rgba(242,153,100,0.1)' : 'none',
                      }}
                      placeholder="Insert Tags (Optional)"
                      value={newKeywordsData.tags}
@@ -248,7 +248,7 @@ const AddKeywords = ({ closeModal, domain, keywords, scraperName = '', allowsCit
                                     gap: 8,
                                     transition: 'color 150ms ease, background 150ms ease',
                                  }}
-                                 onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#783AFB'; (e.target as HTMLElement).style.background = '#F4F4F5'; }}
+                                 onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#F29964'; (e.target as HTMLElement).style.background = '#F4F4F5'; }}
                                  onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#3F3F47'; (e.target as HTMLElement).style.background = 'transparent'; }}
                                  onClick={() => {
                                     const tagInput = newKeywordsData.tags;
@@ -335,7 +335,7 @@ const AddKeywords = ({ closeModal, domain, keywords, scraperName = '', allowsCit
                      padding: '6px 16px',
                      borderRadius: 6,
                      cursor: isAdding ? 'wait' : 'pointer',
-                     background: isAdding ? '#783AFB' : '#2F2F34',
+                     background: isAdding ? '#F29964' : '#2F2F34',
                      border: 'none',
                      color: '#FFFFFF',
                      fontSize: 14,
@@ -344,7 +344,7 @@ const AddKeywords = ({ closeModal, domain, keywords, scraperName = '', allowsCit
                      opacity: isAdding ? 0.7 : 1,
                      transition: 'background 0.15s',
                   }}
-                  onMouseEnter={(e) => { if (!isAdding) (e.target as HTMLElement).style.background = '#783AFB'; }}
+                  onMouseEnter={(e) => { if (!isAdding) (e.target as HTMLElement).style.background = '#F29964'; }}
                   onMouseLeave={(e) => { if (!isAdding) (e.target as HTMLElement).style.background = '#2F2F34'; }}
                   onClick={() => !isAdding && addKeywords()}
                >

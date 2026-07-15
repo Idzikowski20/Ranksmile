@@ -5,7 +5,7 @@ export type RankDevice = 'desktop' | 'mobile';
 export type ScheduleInterval = 'daily' | 'weekly' | 'monthly' | 'every_n_days' | 'manual';
 export type RankRunStatus = 'pending' | 'running' | 'partial' | 'completed' | 'failed';
 export type RankRunTrigger = 'manual' | 'scheduled';
-export type ComparePeriod = '1d' | '7d' | '30d' | '90d';
+export type ComparePeriod = '1d' | '2d' | '7d' | '30d' | '60d' | '90d';
 export type ExportFormat = 'csv' | 'json';
 
 export interface RankTrackingConfigRow {
@@ -122,7 +122,8 @@ export interface RankHistorySummaryPoint {
 
 export interface RankHistorySummaryItem {
   trackingKeywordId: number;
-  keyword: string;
+  device?: RankDevice;
+  keyword?: string;
   min: number | null;
   max: number | null;
   avg: number | null;

@@ -258,13 +258,13 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
                   const sel = mode === k;
                   return (
                     <button type="button" key={k} disabled={disabled} onClick={() => setMode(k)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#783afb' : '#e4e4e7'}`, borderRadius: 12, background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#f29964' : '#e4e4e7'}`, borderRadius: 12, background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <span style={{ color: '#18181b', display: 'inline-flex' }}>{icon}</span>
                         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{t}{disabled && <span style={{ fontSize: 12, color: '#9f9fa9', fontWeight: 400 }}> (not published yet)</span>}</span>
                       </span>
-                      <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#783afb' : '#d4d4d8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#783afb' }} />}
+                      <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#f29964' : '#d4d4d8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f29964' }} />}
                       </span>
                     </button>
                   );

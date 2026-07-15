@@ -226,14 +226,14 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               onDragOver={(e) => { if (readOnly) return; e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => { e.preventDefault(); setDragOver(false); readImage(e.dataTransfer.files?.[0]); }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '28px 16px', borderRadius: 12, border: `1.5px dashed ${dragOver ? '#AA93FD' : '#d4d4d8'}`, background: dragOver ? 'rgba(120,58,251,0.05)' : '#fff', cursor: readOnly ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'border-color 0.15s, background 0.15s', opacity: readOnly ? 0.6 : 1 }}>
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '28px 16px', borderRadius: 12, border: `1.5px dashed ${dragOver ? '#F5C4A0' : '#d4d4d8'}`, background: dragOver ? 'rgba(242,153,100,0.05)' : '#fff', cursor: readOnly ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'border-color 0.15s, background 0.15s', opacity: readOnly ? 0.6 : 1 }}>
               <svg width={42} height={42} viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="6" y="3" width="15" height="13" rx="2.5" fill="#C7BCFB" />
-                <rect x="3" y="7" width="15" height="13" rx="2.5" fill="#783AFB" />
+                <rect x="3" y="7" width="15" height="13" rx="2.5" fill="#F29964" />
                 <circle cx="7.5" cy="11.5" r="1.6" fill="#fff" />
                 <path d="M4 18l4.2-4 3 2.6 3-2.8L18 18" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
-              <span style={{ fontSize: 14, color: '#52525c', fontFamily: F }}>Drop your image here, or <span style={{ color: '#783AFB', fontWeight: 600 }}>browse</span></span>
+              <span style={{ fontSize: 14, color: '#52525c', fontFamily: F }}>Drop your image here, or <span style={{ color: '#F29964', fontWeight: 600 }}>browse</span></span>
               <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F }}>Supports: PNG, JPG, JPEG, WEBP</span>
             </div>
           )}
@@ -256,7 +256,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               <>
                 <button type="button" disabled={wpBtnDisabled} onClick={wpBtnDisabled ? undefined : (wp.connected ? () => setWpModalOpen(true) : () => router.push('/settings/wordpress'))}
                   style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: wpBtnDisabled ? 'not-allowed' : 'pointer', opacity: wpBtnDisabled ? 0.5 : 1, transition: 'background 0.15s' }}
-                  onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                  onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = '#f29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
                   {WpLogo}
                   WordPress
                 </button>

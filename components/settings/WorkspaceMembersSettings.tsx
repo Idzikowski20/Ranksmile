@@ -20,7 +20,7 @@ const font = 'var(--font-family-primary)';
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
 const Avatar = ({ initial }: { initial: string }) => (
-  <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
+  <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(242,153,100,0.12)', color: '#F29964', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
     {initial}
   </div>
 );

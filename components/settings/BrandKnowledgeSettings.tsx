@@ -66,7 +66,7 @@ const BrandKnowledgeSettings = () => {
     } catch (e) { toast.error(getErrorMessage(e) || 'Analysis failed'); } finally { setAnalyzing(false); }
   };
 
-  const fieldBorder = (key: string) => (focused === key ? '#AA93FD' : '#D4D4D8');
+  const fieldBorder = (key: string) => (focused === key ? '#F5C4A0' : '#D4D4D8');
 
   return (
     <form onSubmit={save} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>

@@ -31,9 +31,21 @@ describe('citationPrompts', () => {
 
   it('citation intent items are real questions', () => {
     const items = citationIntentItems(keyword);
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(8);
     expect(items.every((i) => i.type === 'intent')).toBe(true);
     expect(items.every((i) => i.label.includes('?') || /^(czy|jak|ile|polecany)/i.test(i.label))).toBe(true);
+  });
+
+  it('uses informational prompts for legal topics like nękanie', () => {
+    const serp = [
+      'Kiedy można oskarżyć o nękanie?',
+      'Jakie zachowania są uważane za nękanie?',
+    ];
+    const items = citationIntentItems('nękanie', undefined, { serpQuestions: serp });
+    const labels = items.map((i) => i.label).join(' ');
+    expect(labels).toMatch(/Kiedy można oskarżyć/i);
+    expect(labels).not.toMatch(/ile kosztuje nękanie/i);
+    expect(labels).not.toMatch(/polecany nękanie/i);
   });
 });
 
@@ -61,23 +73,42 @@ describe('curateCoverageItems', () => {
     expect(scorePaaQuestion('Ile bierze detektyw za wykrycie zdrady?', keyword)).toBeGreaterThan(30);
   });
 
-  it('curates citation prompts instead of corpus junk', () => {
+  it('curates LLM-sourced questions instead of corpus junk', () => {
     const pool = [
-      'Ile bierze detektyw za wykrycie zdrady?',
-      'Czy detektyw odkryje zdradę?',
-      'Lubimyczytac.pl nie prowadzi sprzedaży i nie uczestniczy w procesie zakupowym',
-      'Answer the main question early',
-      'Praca Detektyw, Warszawa',
-      'Wszelkie prawa zastrzeżone.',
-    ].map((question) => ({ question }));
+      { question: 'Ile bierze detektyw za wykrycie zdrady?', sources: ['chat_gpt' as const] },
+      { question: 'Czy detektyw odkryje zdradę?', sources: ['perplexity' as const] },
+      { question: 'Lubimyczytac.pl nie prowadzi sprzedaży i nie uczestniczy w procesie zakupowym', sources: ['ai_overview' as const] },
+      { question: 'Answer the main question early', sources: ['gemini' as const] },
+      { question: 'Praca Detektyw, Warszawa', sources: ['reddit' as const] },
+      { question: 'Wszelkie prawa zastrzeżone.', sources: ['ai_overview' as const] },
+    ];
 
-    const { knowledge, entity } = curateAiCoverageItems({ keyword, paaQuestions: pool });
-    expect(knowledge.length).toBeGreaterThanOrEqual(3);
-    expect(knowledge.length).toBeLessThanOrEqual(AI_COVERAGE_MAX - 5);
+    const { knowledge, entity } = curateAiCoverageItems({ keyword, llmQuestions: pool });
+    expect(knowledge.length).toBeGreaterThanOrEqual(2);
+    expect(knowledge.length).toBeLessThanOrEqual(AI_COVERAGE_MAX - 8);
     expect(entity).toHaveLength(0);
     expect(knowledge.some((i) => /lubimyczytac/i.test(i.label))).toBe(false);
     expect(knowledge.some((i) => /Answer the main/i.test(i.label))).toBe(false);
-    expect(knowledge.some((i) => /warto|wybrać|kosztuje|zdrad/i.test(i.label))).toBe(true);
+    expect(knowledge.some((i) => /kosztuje|zdrad/i.test(i.label))).toBe(true);
+    expect(knowledge.some((i) => i.llmSources?.includes('chat_gpt'))).toBe(true);
+  });
+
+  it('merges PAA questions into knowledge pool', () => {
+    const { knowledge } = curateAiCoverageItems({
+      keyword: 'nękanie',
+      paaQuestions: [
+        { question: 'Kiedy można zgłosić nękanie?' },
+        { question: 'Jakie zachowania są uważane za nękanie?' },
+        { question: 'Co to jest nękanie emocjonalne?' },
+      ],
+      llmQuestions: [
+        { question: 'Czym jest uporczywe nękanie?', sources: ['chat_gpt'] },
+      ],
+    });
+    expect(knowledge.length).toBeGreaterThanOrEqual(3);
+    const labels = knowledge.map((i) => i.label).join(' ');
+    expect(labels).toMatch(/zgłosić nękanie/i);
+    expect(labels).toMatch(/emocjonalne/i);
   });
 
   it('compacts legacy bloated snapshots', () => {
@@ -96,14 +127,17 @@ describe('curateCoverageItems', () => {
     ];
     const compact = compactCoverageSnapshotItems(bloated, keyword);
     expect(compact.length).toBeLessThanOrEqual(AI_COVERAGE_MAX);
-    expect(compact.filter((i) => i.type === 'intent')).toHaveLength(5);
+    expect(compact.filter((i) => i.type === 'intent')).toHaveLength(8);
   });
 
   it('separate paa vs intent IDs when ENABLE_NEW_COVERAGE_IDS', () => {
     const prev = process.env.ENABLE_NEW_COVERAGE_IDS;
     process.env.ENABLE_NEW_COVERAGE_IDS = 'true';
     try {
-      const { knowledge } = curateAiCoverageItems({ keyword, paaQuestions: [] });
+      const { knowledge } = curateAiCoverageItems({
+        keyword,
+        llmQuestions: [{ question: 'Ile kosztuje detektyw w Warszawie?', sources: ['chat_gpt'] }],
+      });
       const intents = citationIntentItems(keyword);
       expect(knowledge.length).toBeGreaterThan(0);
       expect(intents.length).toBeGreaterThan(0);

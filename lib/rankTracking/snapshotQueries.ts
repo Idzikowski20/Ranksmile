@@ -3,8 +3,10 @@ import type { ComparePeriod, RankDevice, RankSnapshotRow } from '../types/rankTr
 
 function comparePeriodDays(period: ComparePeriod): number {
   if (period === '1d') return 1;
+  if (period === '2d') return 2;
   if (period === '7d') return 7;
   if (period === '30d') return 30;
+  if (period === '60d') return 60;
   return 90;
 }
 

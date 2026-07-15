@@ -13,6 +13,7 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, queryRows } from '../../../lib/db/query';
 import type { GenerateSidecarResponse } from '../../../lib/types/sidecar';
+import { getDomainLocale } from '../../../lib/domainLanguage';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -27,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { domainId, keyword, language = 'pl', tone = 'professional' } = req.body;
+   const { domainId, keyword, language, tone = 'professional' } = req.body;
 
    if (!domainId || !keyword) {
       return res.status(400).json({ error: 'domainId and keyword are required' });
@@ -45,6 +46,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (over) return res.status(429).json(over);
 
    try {
+      const locale = await getDomainLocale(Number(domainId));
+      const resolvedLanguage = typeof language === 'string' && language.trim() ? language.trim() : locale.languageCode;
+
       const articleIdSql = await getArticleIdSql();
       // Pobierz URL domeny
       const domain = await queryOne<{ domain: string }>(
@@ -76,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          console.log(`[generate] Calling sidecar: ${sidecarUrl}/generate with ${domainArticles.length} domain articles`);
          const sidecarRes = await axios.post(
             `${sidecarUrl}/generate`,
-            { url: `https://${domain.domain}`, keyword, language, tone, existing_articles: domainArticles },
+            { url: `https://${domain.domain}`, keyword, language: resolvedLanguage, tone, existing_articles: domainArticles },
             { timeout: 300000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } }, // 5 minut — generowanie artykułu jest długie
          );
          sidecarData = sidecarRes.data;

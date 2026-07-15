@@ -38,7 +38,7 @@ const KebabIcon = () => (
       <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6.75 12a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0m6 0a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0m6 0a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0" />
    </svg>
 );
-export const HexIcon = ({ size = 20, color = '#783AFB' }: { size?: number; color?: string }) => (
+export const HexIcon = ({ size = 20, color = '#F29964' }: { size?: number; color?: string }) => (
    <svg viewBox="0 0 256 256" width={size} height={size} aria-hidden="true" style={{ color, flexShrink: 0 }}>
       <g fill="currentColor">
          <path d="M224 80.18v95.64a8 8 0 0 1-4.16 7l-88 48.18a8 8 0 0 1-7.68 0l-88-48.18a8 8 0 0 1-4.16-7V80.18a8 8 0 0 1 4.16-7l88-48.18a8 8 0 0 1 7.68 0l88 48.18a8 8 0 0 1 4.16 7" opacity="0.2" />
@@ -258,7 +258,7 @@ const TopicalMapPage: NextPage = () => {
                               <CellNum v={c.vol} width={100} />
                               <CellNum v={c.position ?? ''} width={100} />
                               <div style={{ width: 90, flexShrink: 0, padding: '12px 16px', borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch' }}>
-                                 <span style={{ fontSize: 12, fontWeight: 600, fontFamily: FONT, borderRadius: 9999, padding: '2px 8px', background: c.opportunity.score >= 60 ? 'rgba(120,58,251,0.08)' : '#F4F4F5', color: c.opportunity.score >= 60 ? '#783AFB' : '#52525C' }}>{c.opportunity.score}</span>
+                                 <span style={{ fontSize: 12, fontWeight: 600, fontFamily: FONT, borderRadius: 9999, padding: '2px 8px', background: c.opportunity.score >= 60 ? 'rgba(242,153,100,0.08)' : '#F4F4F5', color: c.opportunity.score >= 60 ? '#F29964' : '#52525C' }}>{c.opportunity.score}</span>
                               </div>
                               <div style={{ width: 50, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', borderLeft: '1px solid #F4F4F5', alignSelf: 'stretch' }}>
                                  <KebabMenu items={[{ label: 'View details', onClick: () => openPanel(c) }]} />

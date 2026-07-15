@@ -164,7 +164,7 @@ export default function PerformanceLineChart({ data, visibleMetrics }: Performan
             {visibleMetrics.impressions ? (
               <>
                 <path d={impressionArea} fill="url(#perf-impressions-gradient)" opacity="0.9" />
-                <path d={impressionPath} fill="none" stroke="#8B73F6" strokeWidth="2.2" />
+                <path d={impressionPath} fill="none" stroke="#F29964" strokeWidth="2.2" />
               </>
             ) : null}
             {visibleMetrics.ctr ? (
@@ -184,7 +184,7 @@ export default function PerformanceLineChart({ data, visibleMetrics }: Performan
               <>
                 <line x1={hoverState.lineX} x2={hoverState.lineX} y1={0} y2={innerHeight} stroke="#D4D4D8" strokeWidth="1" strokeDasharray="6 6" />
                 {visibleMetrics.clicks ? <circle cx={hoveredPointX} cy={getClicksY(hoveredPoint.clicks)} r="5.5" fill="#74A9FF" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
-                {visibleMetrics.impressions ? <circle cx={hoveredPointX} cy={getImpressionsY(hoveredPoint.impressions)} r="5.5" fill="#8B73F6" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
+                {visibleMetrics.impressions ? <circle cx={hoveredPointX} cy={getImpressionsY(hoveredPoint.impressions)} r="5.5" fill="#F29964" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
                 {visibleMetrics.ctr ? <circle cx={hoveredPointX} cy={getCtrY(hoveredPoint.ctr)} r="5.5" fill="#22C55E" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
                 {visibleMetrics.position ? <circle cx={hoveredPointX} cy={getPositionY(hoveredPoint.position)} r="5.5" fill="#F97316" style={{ transition: 'cx 90ms linear, cy 90ms linear' }} /> : null}
               </>
@@ -242,7 +242,7 @@ export default function PerformanceLineChart({ data, visibleMetrics }: Performan
               {visibleMetrics.impressions ? (
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#8B73F6', flexShrink: 0 }} />
+                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#F29964', flexShrink: 0 }} />
                     <span>Impressions</span>
                   </span>
                   <span style={{ fontWeight: 600 }}>{hoveredPoint.impressions}</span>

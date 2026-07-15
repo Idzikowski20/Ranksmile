@@ -44,7 +44,7 @@ function highlightTerms(text: string, regex: RegExp | null): React.ReactNode {
   while (m !== null) {
     if (m.index > last) out.push(text.slice(last, m.index));
     out.push(
-      <span key={`t${n}`} style={{ textDecoration: 'underline', textDecorationColor: '#783AFB', textDecorationThickness: 2, textUnderlineOffset: 2 }}>{m[0]}</span>,
+      <span key={`t${n}`} style={{ textDecoration: 'underline', textDecorationColor: '#F29964', textDecorationThickness: 2, textUnderlineOffset: 2 }}>{m[0]}</span>,
     );
     last = m.index + m[0].length;
     if (regex.lastIndex === m.index) regex.lastIndex += 1; // guard against zero-width matches
@@ -114,7 +114,7 @@ const CompareVersionsModal = ({ original, updated, terms, onClose }: Props) => {
                 role="switch"
                 aria-checked={highlight}
                 onClick={() => setHighlight((v) => !v)}
-                style={{ position: 'relative', width: 34, height: 20, borderRadius: 999, background: highlight ? '#783afb' : '#d4d4d8', transition: 'background 0.15s', flexShrink: 0 }}
+                style={{ position: 'relative', width: 34, height: 20, borderRadius: 999, background: highlight ? '#f29964' : '#d4d4d8', transition: 'background 0.15s', flexShrink: 0 }}
               >
                 <span style={{ position: 'absolute', top: 2, left: highlight ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.25)' }} />
               </span>
@@ -132,7 +132,7 @@ const CompareVersionsModal = ({ original, updated, terms, onClose }: Props) => {
         {/* Footer */}
         <div style={{ borderTop: '1px solid #f4f4f5', padding: 16, display: 'flex', justifyContent: 'flex-end' }}>
           <button type="button" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
             <svg viewBox="0 0 20 20" width={18} height={18}><path fill="currentColor" fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" /></svg>
             Back
           </button>

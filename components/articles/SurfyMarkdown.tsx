@@ -24,7 +24,7 @@ const MD_CSS = `
 .surfy-md h4, .surfy-md h5, .surfy-md h6 { font-size: 1em; font-weight: 600; color: #18181b; margin: 12px 0 6px; }
 .surfy-md strong, .surfy-md b { font-weight: 600; color: #18181b; }
 .surfy-md em { font-style: italic; }
-.surfy-md a { color: #783afb; text-decoration: none; }
+.surfy-md a { color: #f29964; text-decoration: none; }
 .surfy-md a:hover { text-decoration: underline; }
 .surfy-md ul, .surfy-md ol { margin: 8px 0; padding-left: 22px; }
 .surfy-md ul { list-style: disc; }

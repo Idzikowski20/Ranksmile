@@ -15,8 +15,8 @@ type AvatarProps = React.ImgHTMLAttributes<HTMLImageElement> & {
 };
 
 const VARIANT_COLORS: Record<AvatarVariant, { bg: string; text: string }> = {
-  primary:   { bg: '#653DE9', text: '#fff' },
-  secondary: { bg: '#E1DBFE', text: '#09090B' },
+  primary:   { bg: '#F29964', text: '#fff' },
+  secondary: { bg: '#FDE8D8', text: '#09090B' },
   success:   { bg: '#34D399', text: '#065F46' },
   warning:   { bg: '#FBBF24', text: '#92400E' },
   error:     { bg: '#F87171', text: '#991B1B' },

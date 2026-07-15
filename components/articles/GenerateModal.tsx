@@ -234,7 +234,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                   transition: 'border-color 0.2s',
                   textAlign: 'left',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; }}
                 onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
               >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
@@ -286,11 +286,11 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                         display: 'flex',
                         alignItems: 'center',
                         fontSize: 14,
-                        color: d.ID === domainId ? '#783AFB' : '#2F2F34',
+                        color: d.ID === domainId ? '#F29964' : '#2F2F34',
                         fontWeight: d.ID === domainId ? 600 : 400,
                         fontFamily: 'var(--font-family-primary)',
                         cursor: 'pointer',
-                        background: d.ID === domainId ? '#F8F5FF' : 'transparent',
+                        background: d.ID === domainId ? '#FFF5EE' : 'transparent',
                         transition: 'background 0.1s',
                       }}
                       onMouseEnter={(e) => {
@@ -478,9 +478,9 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                       transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = '#F8F5FF';
-                      (e.currentTarget as HTMLButtonElement).style.borderColor = '#AA93FD';
-                      (e.currentTarget as HTMLButtonElement).style.color = '#783AFB';
+                      (e.currentTarget as HTMLButtonElement).style.background = '#FFF5EE';
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C4A0';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#F29964';
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLButtonElement).style.background = '#fff';
@@ -538,7 +538,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                   transition: 'border-color 0.2s',
                   textAlign: 'left',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; }}
                 onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
               >
                 <span>{LANGUAGES.find((l) => l.value === language)?.label || 'Polski'}</span>
@@ -587,11 +587,11 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                         display: 'flex',
                         alignItems: 'center',
                         fontSize: 14,
-                        color: l.value === language ? '#783AFB' : '#2F2F34',
+                        color: l.value === language ? '#F29964' : '#2F2F34',
                         fontWeight: l.value === language ? 600 : 400,
                         fontFamily: 'var(--font-family-primary)',
                         cursor: 'pointer',
-                        background: l.value === language ? '#F8F5FF' : 'transparent',
+                        background: l.value === language ? '#FFF5EE' : 'transparent',
                         transition: 'background 0.1s',
                       }}
                       onMouseEnter={(e) => {
@@ -673,7 +673,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
               }}
               onMouseEnter={(e) => {
                 if (keywords.length > 0) {
-                  (e.currentTarget as HTMLButtonElement).style.background = '#783AFB';
+                  (e.currentTarget as HTMLButtonElement).style.background = '#F29964';
                 }
               }}
               onMouseLeave={(e) => {

@@ -31,7 +31,7 @@ const FiltersIcon = () => (
    </svg>
 );
 const CheckIcon = () => (
-   <svg viewBox="0 0 20 20" width="16" height="16" fill="#783AFB" aria-hidden="true" style={{ flexShrink: 0 }}>
+   <svg viewBox="0 0 20 20" width="16" height="16" fill="#F29964" aria-hidden="true" style={{ flexShrink: 0 }}>
       <path fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
    </svg>
 );
@@ -46,7 +46,7 @@ const NumInput = ({ value, onChange }: { value: number; onChange: (n: number) =>
       value={value}
       onChange={(e) => onChange(Number(e.target.value) || 0)}
       style={{ width: '100%', height: 38, border: '1px solid #D4D4D8', borderRadius: 10, padding: '0 10px', fontSize: 14, fontFamily: FONT, color: '#18181B', background: '#fff', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)', outline: 'none', boxSizing: 'border-box' }}
-      onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(120,58,251,0.1)'; }}
+      onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(242,153,100,0.1)'; }}
       onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = '0px 1px 2px 0px rgba(26,29,40,0.06)'; }}
    />
 );
@@ -84,7 +84,7 @@ const TopicalFilters = ({ value, onChange }: { value: TopicalFilterState; onChan
                         role="switch"
                         aria-checked={value.recommendedOnly}
                         onClick={() => set({ recommendedOnly: !value.recommendedOnly })}
-                        style={{ width: 28, height: 16, borderRadius: 9999, background: value.recommendedOnly ? '#783AFB' : '#9F9FA9', position: 'relative', cursor: 'pointer', transition: 'background 250ms', flexShrink: 0, display: 'inline-block' }}
+                        style={{ width: 28, height: 16, borderRadius: 9999, background: value.recommendedOnly ? '#F29964' : '#9F9FA9', position: 'relative', cursor: 'pointer', transition: 'background 250ms', flexShrink: 0, display: 'inline-block' }}
                      >
                         <span style={{ position: 'absolute', top: 2, left: value.recommendedOnly ? 14 : 2, width: 12, height: 12, borderRadius: 9999, background: '#fff', transition: 'left 250ms' }} />
                      </span>

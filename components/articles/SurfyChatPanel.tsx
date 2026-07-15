@@ -96,7 +96,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
 
     {s.conversations.length === 0 ? (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '24px 28px 40px', textAlign: 'center' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: 16, background: 'rgba(120,58,251,0.08)', color: '#783afb' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: 16, background: 'rgba(242,153,100,0.08)', color: '#f29964' }}>
           <svg viewBox="0 0 24 24" width={26} height={26} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></svg>
         </span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -105,9 +105,9 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
         </div>
         <button
           type="button" className="surfy-cta" onClick={onNew}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 2, padding: '9px 16px', borderRadius: 10, background: '#783afb', border: 'none', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 150ms ease, transform 80ms ease', boxShadow: '0 1px 2px rgba(120,58,251,0.35)' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 2, padding: '9px 16px', borderRadius: 10, background: '#f29964', border: 'none', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 150ms ease, transform 80ms ease', boxShadow: '0 1px 2px rgba(242,153,100,0.35)' }}
           onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#f29964'; }}
         >
           <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           Start a new conversation
@@ -134,7 +134,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
                 onChange={(e) => setEditTitle(e.target.value)}
                 onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setEditingId(null); }}
                 onBlur={commitRename}
-                style={{ flex: 1, minWidth: 0, border: '1px solid #AA93FD', borderRadius: 7, padding: '5px 8px', fontSize: 13.5, color: '#18181b', outline: 'none', boxShadow: '0 0 0 3px rgba(120,58,251,0.1)', fontFamily: 'var(--font-family-primary)' }}
+                style={{ flex: 1, minWidth: 0, border: '1px solid #F5C4A0', borderRadius: 7, padding: '5px 8px', fontSize: 13.5, color: '#18181b', outline: 'none', boxShadow: '0 0 0 3px rgba(242,153,100,0.1)', fontFamily: 'var(--font-family-primary)' }}
               />
             ) : (
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -210,7 +210,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#fff', fontFamily: 'var(--font-family-primary)' }}>
       <style>{`
         @keyframes surfyspin { to { transform: rotate(360deg); } }
-        .surfy-box:focus-within { border-color: #AA93FD !important; box-shadow: 0 0 0 3px rgba(120,58,251,0.1) !important; }
+        .surfy-box:focus-within { border-color: #F5C4A0 !important; box-shadow: 0 0 0 3px rgba(242,153,100,0.1) !important; }
       `}</style>
 
       {/* Header — 48px, Twenty-style */}
@@ -270,7 +270,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
             {loading && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 15, height: 15, border: '2px solid #e4e4e7', borderTopColor: '#783afb', borderRadius: '50%', display: 'inline-block', animation: 'surfyspin 0.6s linear infinite' }} />
+                  <span style={{ width: 15, height: 15, border: '2px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', display: 'inline-block', animation: 'surfyspin 0.6s linear infinite' }} />
                   <span style={{ fontSize: 13, color: '#52525c' }}>Surfy is working…</span>
                 </div>
                 {s.activity.length > 0 && (
@@ -278,7 +278,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                     {s.activity.map((a, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: '18px', color: a.error ? '#d97706' : a.done ? '#52525c' : '#9f9fa9' }}>
                         <span style={{ flexShrink: 0, width: 13, textAlign: 'center' }}>
-                          {a.error ? '⚠' : a.done ? '✓' : <span style={{ display: 'inline-block', width: 9, height: 9, border: '1.5px solid #d4d4d8', borderTopColor: '#783afb', borderRadius: '50%', animation: 'surfyspin 0.6s linear infinite' }} />}
+                          {a.error ? '⚠' : a.done ? '✓' : <span style={{ display: 'inline-block', width: 9, height: 9, border: '1.5px solid #d4d4d8', borderTopColor: '#f29964', borderRadius: '50%', animation: 'surfyspin 0.6s linear infinite' }} />}
                         </span>
                         <span>{s.toolLabel(a.tool)}</span>
                       </div>
@@ -317,7 +317,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   );
                 })}
                 {s.metaPending && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '2px 8px', borderRadius: 9999, background: 'rgba(120,58,251,0.1)', color: '#783afb', fontSize: 11, fontWeight: 500 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '2px 8px', borderRadius: 9999, background: 'rgba(242,153,100,0.1)', color: '#f29964', fontSize: 11, fontWeight: 500 }}>
                     ✎ Will update meta {s.metaPending}
                   </div>
                 )}
@@ -327,7 +327,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
             {response && !loading && response.pendingAction?.type === 'publish_to_wordpress' && (
               <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f8f9ff', border: '1px solid #e4e4e7' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#783afb" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
+                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#f29964" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
                   <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#52525c' }}>
                     Surfy chce opublikować {response.pendingAction.title ? `„${response.pendingAction.title}” ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#18181b' }}>zapisany</strong> artykuł.
                   </div>
@@ -343,7 +343,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                     Anuluj
                   </button>
                   <button type="button" onClick={s.confirmPublish} disabled={s.publishing}
-                    style={{ padding: '6px 14px', borderRadius: 6, background: '#783afb', border: 'none', cursor: s.publishing ? 'default' : 'pointer', opacity: s.publishing ? 0.65 : 1, color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}>
+                    style={{ padding: '6px 14px', borderRadius: 6, background: '#f29964', border: 'none', cursor: s.publishing ? 'default' : 'pointer', opacity: s.publishing ? 0.65 : 1, color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}>
                     {s.publishing ? 'Publikuję…' : 'Publikuj'}
                   </button>
                 </div>
@@ -367,9 +367,9 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   )}
                   {s.canApply && (
                     <button type="button" onClick={s.apply}
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, background: '#783afb', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}
+                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, background: '#f29964', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#783afb'; }}>
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f29964'; }}>
                       <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                       Apply changes
                     </button>
@@ -459,7 +459,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   onClick={loading ? s.stop : s.submit}
                   disabled={loading ? false : (blocked || !s.prompt.trim())}
                   aria-label={loading ? 'Stop' : 'Send'}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#783afb' : '#f4f4f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#f29964' : '#f4f4f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
                 >
                   {loading
                     ? <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true"><rect x={7.5} y={7.5} width={9} height={9} rx={2} fill="currentColor" /></svg>

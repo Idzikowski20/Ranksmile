@@ -94,7 +94,7 @@ const SharePreviewPage: NextPage = () => {
     try { const n = localStorage.getItem(NAME_KEY); if (n) setAuthorName(n); } catch { /* ignore */ }
     setNameChecked(true);
   }, []);
-  const author = useMemo(() => ({ name: authorName || 'Guest', color: '#783AFB' }), [authorName]);
+  const author = useMemo(() => ({ name: authorName || 'Guest', color: '#F29964' }), [authorName]);
 
   // Live content + caret sync via Ably.
   // EventSource for comments-stream removed: comments now sync via Ably inside CommentsLayer (Task 6).
@@ -166,8 +166,8 @@ const SharePreviewPage: NextPage = () => {
   const shareControl = (
     <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
       <button type="button" onClick={() => setShareOpen((v) => !v)}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 14px', borderRadius: 6, border: 'none', background: shareOpen ? '#783afb' : '#18181b', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: F, cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = shareOpen ? '#783afb' : '#18181b'; }}>
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 14px', borderRadius: 6, border: 'none', background: shareOpen ? '#f29964' : '#18181b', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: F, cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = shareOpen ? '#f29964' : '#18181b'; }}>
         Share
       </button>
       {shareOpen && (
@@ -205,7 +205,7 @@ const SharePreviewPage: NextPage = () => {
         {ownerLive ? '🟢 editor live' : '⚫ editor away'}
       </div>
       {isEditing && (
-        <div style={{ position: 'fixed', bottom: 12, left: 12, zIndex: 60, padding: '4px 10px', borderRadius: 999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', fontSize: 12 }}>✏️ editing…</div>
+        <div style={{ position: 'fixed', bottom: 12, left: 12, zIndex: 60, padding: '4px 10px', borderRadius: 999, background: 'rgba(242,153,100,0.12)', color: '#F29964', fontSize: 12 }}>✏️ editing…</div>
       )}
       {nameChecked && !authorName && (
         <PreviewNameGate onSubmit={(n) => { try { localStorage.setItem(NAME_KEY, n); } catch { /* ignore */ } setAuthorName(n); }} />
@@ -218,11 +218,11 @@ const SharePreviewPage: NextPage = () => {
         .preview-prose ul, .preview-prose ol { margin: 0 0 16px; padding-left: 22px; }
         .preview-prose li { font-size: 16px; line-height: 1.7; color: #27272a; margin-bottom: 4px; }
         .preview-prose img { max-width: 100%; height: auto; border-radius: 12px; margin: 8px 0; }
-        .preview-prose a { color: #783afb; text-decoration: underline; }
+        .preview-prose a { color: #f29964; text-decoration: underline; }
         /* Read-only editing host: stops the native browser selection toolbar
            while keeping text selectable for comments. No caret, no edit outline. */
         .preview-prose[contenteditable] { outline: none; caret-color: transparent; -webkit-user-modify: read-only; }
-        .preview-prose[contenteditable] *::selection { background: rgba(120,58,251,0.18); }
+        .preview-prose[contenteditable] *::selection { background: rgba(242,153,100,0.18); }
         @keyframes art-caret-blink { 50% { opacity: 0; } }
       `}</style>
 
@@ -240,7 +240,7 @@ const SharePreviewPage: NextPage = () => {
               <div ref={contentRef} style={{ position: 'relative' }}>
                 <ViewerEditor ref={viewerRef} initialHtml={article.content || ''} />
                 {caretBox && (
-                  <span aria-hidden style={{ position: 'fixed', left: caretBox.left, top: caretBox.top, height: caretBox.height, width: 2, background: '#783AFB', pointerEvents: 'none', animation: 'art-caret-blink 1s step-end infinite', zIndex: 50 }} />
+                  <span aria-hidden style={{ position: 'fixed', left: caretBox.left, top: caretBox.top, height: caretBox.height, width: 2, background: '#F29964', pointerEvents: 'none', animation: 'art-caret-blink 1s step-end infinite', zIndex: 50 }} />
                 )}
               </div>
               <CommentsLayer

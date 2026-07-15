@@ -170,9 +170,9 @@ const PlagiarismPanel = ({ result, onClose, onRescan, rescanning, readOnly, onHi
   const list = tab === 'toFix' ? activeIdx : tab === 'ignored' ? ignoredIdx : [];
   const Tab = ({ id, label, count }: { id: 'toFix' | 'fixed' | 'ignored'; label: string; count: number }) => (
     <button type="button" onClick={() => setTab(id)}
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: F, color: tab === id ? '#783afb' : '#3f3f47', boxShadow: tab === id ? 'inset 0 -2px 0 0 #783afb' : 'none' }}>
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 500, fontFamily: F, color: tab === id ? '#f29964' : '#3f3f47', boxShadow: tab === id ? 'inset 0 -2px 0 0 #f29964' : 'none' }}>
       {label}
-      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#fff', background: id === 'toFix' ? '#783afb' : '#9f9fa9' }}>{count}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#fff', background: id === 'toFix' ? '#f29964' : '#9f9fa9' }}>{count}</span>
     </button>
   );
 

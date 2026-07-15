@@ -206,7 +206,7 @@ const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, sh
       {/* Discussion */}
       <div ref={scrollRef} className="styled-scrollbar-dark" style={{ maxHeight: 320, overflowY: 'auto', padding: '12px' }}>
         {thread.quote && (
-          <div style={{ borderLeft: '2px solid #783AFB', padding: '1px 0 1px 8px', margin: '0 0 12px', fontSize: 12, color: '#a1a1aa', fontStyle: 'italic', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{thread.quote}</div>
+          <div style={{ borderLeft: '2px solid #F29964', padding: '1px 0 1px 8px', margin: '0 0 12px', fontSize: 12, color: '#a1a1aa', fontStyle: 'italic', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{thread.quote}</div>
         )}
         <AnimatePresence initial={false}>
         {comments.map((c) => (
@@ -235,7 +235,7 @@ const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, sh
                 const mine = who.includes(author.name);
                 return (
                   <button key={emoji} type="button" onClick={(ev) => toggleReaction(c.id, emoji, ev)} title={who.join(', ')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 24, padding: '0 7px 0 6px', borderRadius: 12, cursor: 'pointer', fontSize: 12.5, color: '#fff', background: mine ? 'rgba(120,58,251,0.28)' : '#3a3a40', border: mine ? '1px solid #783AFB' : '1px solid transparent' }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 24, padding: '0 7px 0 6px', borderRadius: 12, cursor: 'pointer', fontSize: 12.5, color: '#fff', background: mine ? 'rgba(242,153,100,0.28)' : '#3a3a40', border: mine ? '1px solid #F29964' : '1px solid transparent' }}>
                     <span style={{ fontSize: 13 }}>{emoji}</span>
                     <span style={{ display: 'inline-flex' }}>
                       {who.slice(0, 3).map((name, i) => (

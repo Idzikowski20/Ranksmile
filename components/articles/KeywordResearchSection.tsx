@@ -101,7 +101,7 @@ const KeywordResearchSection: React.FC<Props> = ({
                     </span>
                     {covered && <span style={{ fontSize: 10, color: '#16a34a', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>in text</span>}
                     {kw.source === 'ads_suggestion' && (
-                      <span style={{ fontSize: 10, color: '#fff', background: '#783afb', borderRadius: 4, padding: '0 4px', lineHeight: '16px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>new</span>
+                      <span style={{ fontSize: 10, color: '#fff', background: '#f29964', borderRadius: 4, padding: '0 4px', lineHeight: '16px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>new</span>
                     )}
                     {isGap && (
                       <span style={{ fontSize: 10, color: '#dc2626', background: '#fff1f2', borderRadius: 4, padding: '0 4px', lineHeight: '16px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>competitor</span>
@@ -157,7 +157,7 @@ const KeywordResearchSection: React.FC<Props> = ({
                 {(() => { const vol = kw.ads_monthly_volume ?? kw.avgMonthlySearches; return vol != null && vol > 0 ? <span style={{ fontSize: 11, color: '#6d28d9', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>{vol.toLocaleString()}/mo</span> : null; })()}
                 <button
                   onClick={(e) => { e.stopPropagation(); onAcceptSuggestion?.(kw); }}
-                  style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, border: 'none', background: '#783afb', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+                  style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, border: 'none', background: '#f29964', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
                 >+ Add</button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDismissSuggestion?.(kw); }}
@@ -177,7 +177,7 @@ const KeywordResearchSection: React.FC<Props> = ({
           style={{
             width: '100%', marginTop: 8, padding: '7px 0', borderRadius: 6,
             fontSize: 12, fontWeight: 600,
-            background: 'transparent', color: '#783afb', border: '1px dashed #c4b5fd',
+            background: 'transparent', color: '#f29964', border: '1px dashed #c4b5fd',
             cursor: isSuggesting ? 'not-allowed' : 'pointer',
             fontFamily: 'var(--font-family-primary)',
             opacity: isSuggesting ? 0.6 : 1,

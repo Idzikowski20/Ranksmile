@@ -177,7 +177,7 @@ const RecommendationsSection = ({
             </Text>
             {settingsHref && (
               <Container as="a" href={settingsHref} className="no-underline">
-                <Text as="span" size="sm" bold className="text-[#783AFB]">Go to domain settings</Text>
+                <Text as="span" size="sm" bold className="text-[#F29964]">Go to domain settings</Text>
               </Container>
             )}
           </Flex>

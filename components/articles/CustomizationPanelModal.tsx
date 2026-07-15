@@ -5,8 +5,8 @@ import CompetitorsSection from '../competitors/CompetitorsSection';
 const C = {
   text: '#18181B', g160: '#09090B', g140: '#18181B', g120: '#2F2F34', g100: '#3F3F47', g80: '#52525C',
   g60: '#9F9FA9', g40: '#D4D4D8', g20: '#E4E4E7', g10: '#F4F4F5', g5: '#F8F8F9',
-  purple: '#783AFB', purple80: '#630DE3', purple100: '#4D08B5', purple40: '#AA93FD',
-  purple10: '#E1DBFE', purple5: '#F1EBFE',
+  purple: '#F29964', purple80: '#630DE3', purple100: '#B86A42', purple40: '#F5C4A0',
+  purple10: '#FDE8D8', purple5: '#F1EBFE',
   yellow: '#EFA00D', green: '#1AB25E', red: '#FB5D5D', blue: '#155DFC',
 };
 const F = 'var(--font-family-primary)';
@@ -284,7 +284,7 @@ const AdjustCard = ({ label, value, range, onMinus, onPlus, dropdown, dropdownVa
             <button type="button" onClick={() => setOpen((o) => !o)} style={{
               display: 'flex', alignItems: 'center', height: 40, padding: '2px 8px 2px 12px', gap: 4,
               border: `1px solid ${open ? C.purple40 : C.g40}`, borderRadius: 8, background: '#fff', cursor: 'pointer',
-              boxShadow: open ? '0 0 0 4px rgba(120,58,251,0.1)' : '0px 1px 2px 0px rgba(26,29,40,0.06)', fontFamily: F,
+              boxShadow: open ? '0 0 0 4px rgba(242,153,100,0.1)' : '0px 1px 2px 0px rgba(26,29,40,0.06)', fontFamily: F,
               transition: 'border-color 0.15s, box-shadow 0.15s',
             }}>
               <span style={{ fontSize: 14, color: C.text }}>{dropdownValue}</span>
@@ -626,7 +626,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                         style={{
                           width: 240, height: 40, padding: '0 12px 0 36px', boxSizing: 'border-box', borderRadius: 8,
                           border: `1px solid ${termFocus ? C.purple40 : C.g40}`, outline: 'none', fontSize: 14, fontFamily: F, color: C.text,
-                          boxShadow: termFocus ? '0 0 0 4px rgba(120,58,251,0.1)' : '0px 1px 2px rgba(26,29,40,0.06)',
+                          boxShadow: termFocus ? '0 0 0 4px rgba(242,153,100,0.1)' : '0px 1px 2px rgba(26,29,40,0.06)',
                           transition: 'border-color 0.15s, box-shadow 0.15s',
                         }}
                       />

@@ -62,9 +62,9 @@ function Dropdown({ label, value, options, onSelect, open, setOpen, placeholder 
                 onClick={() => { onSelect(o.value); setOpen(false); }}
                 style={{
                   height: 36, padding: '0 12px', display: 'flex', alignItems: 'center', fontSize: 14,
-                  color: o.value === value ? '#783AFB' : '#2F2F34', fontWeight: o.value === value ? 600 : 400,
+                  color: o.value === value ? '#F29964' : '#2F2F34', fontWeight: o.value === value ? 600 : 400,
                   fontFamily: 'var(--font-family-primary)', cursor: 'pointer',
-                  background: o.value === value ? '#F8F5FF' : 'transparent',
+                  background: o.value === value ? '#FFF5EE' : 'transparent',
                 }}
                 onMouseEnter={(e) => { if (o.value !== value) (e.currentTarget as HTMLDivElement).style.background = '#F4F4F5'; }}
                 onMouseLeave={(e) => { if (o.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
@@ -229,7 +229,7 @@ const NewContentPage: NextPage = () => {
                           type="button"
                           onClick={() => addKeyword(tk.keyword)}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', fontSize: 13, lineHeight: '18px', color: '#2F2F34', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s, border-color 0.15s, color 0.15s' }}
-                          onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#F8F5FF'; b.style.borderColor = '#AA93FD'; b.style.color = '#783AFB'; }}
+                          onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#FFF5EE'; b.style.borderColor = '#F5C4A0'; b.style.color = '#F29964'; }}
                           onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#fff'; b.style.borderColor = '#E4E4E7'; b.style.color = '#2F2F34'; }}
                         >
                           {tk.keyword}

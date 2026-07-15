@@ -37,6 +37,7 @@ type BaseProps<T extends SelectKey> = {
   search?: boolean | { placeholder?: string };
   menuBody?: React.ReactNode | ((actions: { close: () => void }) => React.ReactNode);
   hideOptions?: boolean;
+  menuClassName?: string;
   trigger?: (props: React.ButtonHTMLAttributes<HTMLButtonElement> & { ref: React.Ref<HTMLButtonElement> }, isOpen: boolean) => React.ReactNode;
   triggerLabel?: React.ReactNode;
   align?: 'left' | 'right';
@@ -71,7 +72,7 @@ function optionText<T extends SelectKey>(opt: SelectOption<T>): string {
 }
 
 const CheckIcon = () => (
-  <svg viewBox="0 0 16 16" width="14" height="14" fill="#7553FF" aria-hidden="true">
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="#F5A978" aria-hidden="true">
     <path fillRule="evenodd" d="M13.36 4.5a.75.75 0 0 1 .14 1.05l-7 9a.75.75 0 0 1-1.11.07l-3.5-3.5a.75.75 0 0 1 0-1.06l.08-.08a.75.75 0 0 1 .98 0L5.5 12.5l6.3-8.1a.75.75 0 0 1 1.05-.14l.01.01z" clipRule="evenodd" />
   </svg>
 );
@@ -90,6 +91,7 @@ export function CompactSelect<T extends SelectKey = string>(props: CompactSelect
     search,
     menuBody,
     hideOptions,
+    menuClassName = '',
     trigger,
     triggerLabel,
     align = 'left',
@@ -204,7 +206,7 @@ export function CompactSelect<T extends SelectKey = string>(props: CompactSelect
 
       {open && (
         <div
-          className="sentry-compact-select-menu"
+          className={`sentry-compact-select-menu${menuClassName ? ` ${menuClassName}` : ''}`}
           style={{
             width: menuWidth,
             minWidth: menuMinWidth ?? 200,

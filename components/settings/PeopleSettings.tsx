@@ -32,7 +32,7 @@ const parseIds = (json: string | null): number[] => {
 };
 
 const Avatar = ({ initial }: { initial: string }) => (
-  <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
+  <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(242,153,100,0.12)', color: '#F29964', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
     {initial}
   </div>
 );
@@ -134,7 +134,7 @@ const WorkspacePicker = ({ workspaces, selected, onChange, disabled }: {
                 onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: checked ? '1px solid #783AFB' : '1px solid #D4D4D8', background: checked ? '#783AFB' : '#FFFFFF', transition: 'background 120ms ease, border-color 120ms ease' }}>
+                <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: checked ? '1px solid #F29964' : '1px solid #D4D4D8', background: checked ? '#F29964' : '#FFFFFF', transition: 'background 120ms ease, border-color 120ms ease' }}>
                   {checked && (
                     <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                       <path d="M5 10.5l3 3 7-7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />

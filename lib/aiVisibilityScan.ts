@@ -13,6 +13,7 @@
 import db from '../database/database';
 import { queryOne, queryRows } from './db/query';
 import { runModelPrompt, AiModel } from './dataforseoLlm';
+import { getDomainLocale } from './domainLanguage';
 import { ownDomainPosition } from './aiVisibilityMetrics';
 import { sanitizeModels, AI_VIS_CONCURRENCY, AI_VIS_HARD_CAP_PAIRS, AI_VIS_SCAN_STALE_MS, AI_VIS_SETTINGS } from './aiVisibility';
 
@@ -194,6 +195,9 @@ export async function runScanChunk(scanId: number, ownDomain: string, limit = AI
    const scan = await queryOne<{ status: string, config_id: number }>('SELECT status, config_id FROM ai_vis_scans WHERE id = ? LIMIT 1', [scanId]);
    if (!scan) throw new Error('Scan not found');
 
+   const cfgRow = await queryOne<{ domain_id: number }>('SELECT domain_id FROM ai_vis_configs WHERE id = ? LIMIT 1', [scan.config_id]);
+   const locale = cfgRow?.domain_id ? await getDomainLocale(cfgRow.domain_id) : { languageCode: 'pl', countryCode: 'PL' };
+
    const allPairs = await loadPairs(scan.config_id);
    const total = allPairs.length;
 
@@ -227,7 +231,7 @@ export async function runScanChunk(scanId: number, ownDomain: string, limit = AI
          if (!pair) return;
          let micros = 0;
          try {
-            const out = await runModelPrompt(pair.model, pair.prompt.text, 'PL');
+            const out = await runModelPrompt(pair.model, pair.prompt.text, locale.countryCode, locale.languageCode);
             const pos = ownDomainPosition(out.citations, ownDomain);
             micros = Math.round(out.costUsd * 1e6);
             await db.query(

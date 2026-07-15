@@ -158,7 +158,7 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
                      transition: 'border-color 200ms',
                   }}
                   onFocus={(e) => {
-                     if (!newDomainError) e.currentTarget.style.borderColor = 'rgba(120,58,251,0.6)';
+                     if (!newDomainError) e.currentTarget.style.borderColor = 'rgba(242,153,100,0.6)';
                   }}
                   onBlur={(e) => {
                      if (!newDomainError) e.currentTarget.style.borderColor = 'var(--color-border-strong, #221e28)';
@@ -222,7 +222,7 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
                      padding: '7px 20px',
                      borderRadius: 'var(--radius-xs, 7px)',
                      border: 'none',
-                     background: 'var(--color-surface-raised, #783afb)',
+                     background: 'var(--color-surface-raised, #f29964)',
                      color: '#fff',
                      fontSize: 13,
                      fontWeight: 600,
@@ -236,7 +236,7 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
                      if (!isAdding) (e.currentTarget as HTMLButtonElement).style.background = '#6b2fe0';
                   }}
                   onMouseLeave={(e) => {
-                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-raised, #783afb)';
+                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-raised, #f29964)';
                   }}
                >
                   {isAdding ? 'Adding...' : 'Add Domain'}

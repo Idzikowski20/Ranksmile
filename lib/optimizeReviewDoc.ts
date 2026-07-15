@@ -7,6 +7,8 @@ const escAttr = (v: string | number): string =>
 
 export type OptimizerStatus = 'queued' | 'scanning' | 'pending' | 'active' | 'improved';
 
+export const WHOLE_ARTICLE_ID = 'article-whole';
+
 export function optimizerAtom(sectionId: string, index: number, status: OptimizerStatus): string {
    return `<div data-content-optimizer data-section-id="${escAttr(sectionId)}" data-index="${escAttr(index)}" data-status="${escAttr(status)}"></div>`;
 }
@@ -29,6 +31,11 @@ export function buildReviewDoc(events: SectionEvent[]): string {
  *  - processed + changed → improved (inline diff)
  *  - scanningSectionId → scanning (text shimmer)
  *  - rest → queued (dimmed) */
+/** Review doc for whole-article AO — single contentOptimizer node. */
+export function buildWholeArticleReviewDoc(status: OptimizerStatus): string {
+   return optimizerAtom(WHOLE_ARTICLE_ID, 0, status);
+}
+
 export function buildStreamingDoc(preHtml: string, events: SectionEvent[], scanningSectionId: string | null): string {
    const sections = splitSections(preHtml);
    const eventMap = new Map(events.map((e) => [e.sectionId, e]));

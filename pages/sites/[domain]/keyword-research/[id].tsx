@@ -167,7 +167,7 @@ const TabItem = ({ label, count, active, disabled, onClick }: { label: string; c
    <button type="button" disabled={disabled} onClick={onClick} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 4px 14px', border: 'none', background: 'transparent', cursor: disabled ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', color: disabled ? MUTED2 : active ? '#18181B' : MUTED, opacity: disabled ? 0.6 : 1, fontFamily: FONT }}>
       {label}
       <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 18, padding: '0 5px', borderRadius: 6, background: active ? '#18181B' : '#E4E4E7', color: active ? '#fff' : '#52525C', fontSize: 12, fontWeight: 600 }}>{count}</span>
-      {active && <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, background: '#783AFB', borderRadius: 2 }} />}
+      {active && <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, background: '#F29964', borderRadius: 2 }} />}
    </button>
 );
 
@@ -230,7 +230,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
             </div>
          )}
          {state === 'idle' && (
-            <button type="button" aria-label="Open details" onClick={onOpenDetails} style={{ position: 'absolute', bottom: 24, right: 24, width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', zIndex: 5, transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
+            <button type="button" aria-label="Open details" onClick={onOpenDetails} style={{ position: 'absolute', bottom: 24, right: 24, width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', zIndex: 5, transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
                <PencilIcon />
             </button>
          )}
@@ -238,7 +238,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
             <div style={{ position: 'absolute', bottom: 24, right: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 6 }}>
                <ScoreGauge score={0} pending size={52} />
                <div style={{ position: 'relative' }} ref={menuRef}>
-                  <button type="button" aria-label="Article actions" onClick={() => setMenuOpen((o) => !o)} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
+                  <button type="button" aria-label="Article actions" onClick={() => setMenuOpen((o) => !o)} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
                      <KebabIcon />
                   </button>
                   {menuOpen && (

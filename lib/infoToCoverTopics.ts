@@ -3,14 +3,31 @@
  * coverage items, and competitor outline headings.
  */
 import type { AiVisibilitySummary } from './aiSearchScore';
-import type { CoverageItem } from './aiCoverage';
+import type { CoverageItem, LlmCoverageSource } from './aiCoverage';
 
 export type InfoSource = {
   key: string;
   url?: string;
   domain?: string;
-  kind: 'web' | 'ai_overview' | 'ai_mode' | 'openai' | 'google';
+  kind: 'web' | 'ai_overview' | 'ai_mode' | 'openai' | 'google' | 'gemini' | 'perplexity' | 'reddit';
 };
+
+function llmSourceToInfo(src: LlmCoverageSource): InfoSource {
+  const key = src;
+  switch (src) {
+    case 'ai_overview': return { key, kind: 'ai_overview' };
+    case 'chat_gpt': return { key, kind: 'openai' };
+    case 'gemini': return { key, kind: 'gemini' };
+    case 'perplexity': return { key, kind: 'perplexity' };
+    case 'reddit': return { key, kind: 'reddit' };
+    default: return { key, kind: 'web' };
+  }
+}
+
+function sourcesFromItem(item: CoverageItem): InfoSource[] {
+  if (!item.llmSources?.length) return [];
+  return item.llmSources.map(llmSourceToInfo);
+}
 
 export type InfoFact = {
   id: string;
@@ -62,28 +79,6 @@ function parseOutlineTopics(cache: string | null | undefined): string[] {
   }
 }
 
-function sourceFromUrl(url: string, domain?: string): InfoSource {
-  const d = (domain || '').replace(/^www\./, '');
-  const host = d || (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
-  return { key: url || host, url: url || undefined, domain: host || undefined, kind: 'web' };
-}
-
-function sourcesFromCitations(citations: AiVisibilitySummary['citations'], prompt: string): InfoSource[] {
-  const out: InfoSource[] = [];
-  const seen = new Set<string>();
-  for (const c of citations || []) {
-    if (c.prompt !== prompt) continue;
-    const url = c.cited_url || '';
-    const domain = (c.cited_domain || '').replace(/^www\./, '');
-    const key = url || domain;
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    if (url) out.push(sourceFromUrl(url, domain));
-    else if (domain) out.push({ key: domain, domain, kind: 'web' });
-  }
-  return out;
-}
-
 function assignTopic(text: string, topics: string[]): string {
   if (!topics.length) return 'Information to cover';
   let best = topics[0];
@@ -103,7 +98,6 @@ export function buildInfoToCoverTopics(opts: {
   intentItems?: CoverageItem[];
 }): { intent: InfoFact[]; topics: InfoTopicGroup[] } {
   const outlineTopics = parseOutlineTopics(opts.competitorOutlinesCache);
-  const citations = opts.aiSummary?.citations || [];
 
   const intentSource = (opts.intentItems && opts.intentItems.length)
     ? opts.intentItems
@@ -113,7 +107,7 @@ export function buildInfoToCoverTopics(opts: {
     id: item.id,
     text: item.label,
     covered: item.covered,
-    sources: [],
+    sources: sourcesFromItem(item),
   }));
 
   const factMap = new Map<string, InfoFact>();
@@ -135,25 +129,8 @@ export function buildInfoToCoverTopics(opts: {
 
   for (const item of opts.coverageItems || []) {
     if (item.category === 'intent') continue;
-    const sources: InfoSource[] = [];
-    for (const c of citations) {
-      if (!c.prompt) continue;
-      if (c.prompt === item.label || (c.answer && c.answer === item.label)) {
-        sources.push(...sourcesFromCitations(citations, c.prompt));
-      }
-    }
+    const sources = sourcesFromItem(item);
     addFact(item.id, item.label, item.covered, sources);
-  }
-
-  for (const c of citations) {
-    if (!c.prompt) continue;
-    const covered = (c.answer_readiness_score ?? 0) >= 60;
-    const sources = sourcesFromCitations(citations, c.prompt);
-    if (c.answer && c.answer.length > 20) {
-      addFact(`ans-${c.prompt}`, c.answer, covered, sources);
-    } else {
-      addFact(`paa-${c.prompt}`, c.prompt, covered, sources);
-    }
   }
 
   const byTopic = new Map<string, InfoFact[]>();

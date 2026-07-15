@@ -23,3 +23,23 @@ const BY_CODE = new Map(AUDIT_COUNTRIES.map((c) => [c.code.toUpperCase(), c]));
 export function langForCountry(code: string | null | undefined): string {
    return BY_CODE.get((code || '').toUpperCase())?.lang || 'en';
 }
+
+const BY_LANG = new Map(AUDIT_COUNTRIES.map((c) => [c.lang, c]));
+
+/** Default country for a language code (prefers US for English). */
+export function countryForLang(lang: string | null | undefined): string {
+   const code = (lang || '').toLowerCase();
+   if (code === 'en') return 'US';
+   return BY_LANG.get(code)?.code || 'US';
+}
+
+export const LANG_OPTIONS = [
+   { value: 'pl', label: 'Polski' },
+   { value: 'en', label: 'English' },
+   { value: 'de', label: 'Deutsch' },
+   { value: 'fr', label: 'Français' },
+   { value: 'es', label: 'Español' },
+   { value: 'it', label: 'Italiano' },
+   { value: 'nl', label: 'Nederlands' },
+   { value: 'pt', label: 'Português' },
+] as const;

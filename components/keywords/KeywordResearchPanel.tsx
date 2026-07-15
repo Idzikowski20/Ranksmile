@@ -226,7 +226,7 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
             </div>
             <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '20px', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
                Google Ads has not been integrated yet. Please follow{' '}
-               <a href="https://docs.serpbear.com/miscellaneous/integrate-google-ads" target="_blank" rel="noreferrer" style={{ color: '#783AFB', fontWeight: 600 }}>
+               <a href="https://docs.serpbear.com/miscellaneous/integrate-google-ads" target="_blank" rel="noreferrer" style={{ color: '#F29964', fontWeight: 600 }}>
                   These Steps
                </a>{' '}
                to integrate Google Ads and unlock keyword research.
@@ -260,8 +260,8 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
                      transition: 'border-color 200ms, box-shadow 200ms',
                   }}
                   onFocus={(e) => {
-                     e.currentTarget.style.borderColor = '#AA93FD';
-                     e.currentTarget.style.boxShadow = '0px 1px 2px rgba(26,29,40,0.06), 0px 0px 0px 3px rgba(120,58,251,0.1)';
+                     e.currentTarget.style.borderColor = '#F5C4A0';
+                     e.currentTarget.style.boxShadow = '0px 1px 2px rgba(26,29,40,0.06), 0px 0px 0px 3px rgba(242,153,100,0.1)';
                   }}
                   onBlur={(e) => {
                      e.currentTarget.style.borderColor = '#D4D4D8';

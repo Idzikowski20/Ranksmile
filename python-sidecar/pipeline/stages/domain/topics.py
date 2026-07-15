@@ -4,6 +4,7 @@ import os
 import anthropic
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.language_hints import language_instruction
 from pipeline.llm_json import parse_json_array
 
 _client: anthropic.AsyncAnthropic | None = None
@@ -24,12 +25,13 @@ def _get_client() -> anthropic.AsyncAnthropic:
 MODEL = "deepseek-chat"
 
 
-async def _llm_cluster(domain: str, keywords: list[str]) -> list[dict] | None:
+async def _llm_cluster(domain: str, keywords: list[str], language: str = "en") -> list[dict] | None:
     """Single LLM call; returns parsed list or None on failure."""
     kw_list = ", ".join(keywords[:50])
+    lang_hint = language_instruction(language)
     prompt = (
         f"Group these keywords into 4-8 SEO topic clusters for the domain {domain}. "
-        f"Keywords: {kw_list}. "
+        f"Keywords: {kw_list}.{lang_hint} "
         "Return ONLY valid JSON (no markdown, no explanation). Keep summaries short and "
         "do NOT use double-quote characters inside any string value. "
         '[{"title": "...", "summary": "...", "keyword_indexes": [0, 1, 2]}]'
@@ -59,6 +61,7 @@ class TopicsStage(AnalysisStage):
     async def run(self, ctx: StageContext) -> dict:
         keywords: list[dict[str, str]] = ctx.get_state("keywords") or []
         domain: str = ctx.payload.get("domain", "")
+        language: str = ctx.payload.get("language", "en")
         kw_strings = [k["keyword"] for k in keywords]
 
         # Evidence at the keywords → topics boundary: 0 keywords ⇒ the keywords stage
@@ -69,14 +72,14 @@ class TopicsStage(AnalysisStage):
 
         topics: list[dict] | None = None
         try:
-            topics = await _llm_cluster(domain, kw_strings)
+            topics = await _llm_cluster(domain, kw_strings, language)
         except Exception as exc:
             print(f"[topics] LLM call failed: {exc}")
 
         if topics is None:
             # Retry once on parse failure or exception
             try:
-                topics = await _llm_cluster(domain, kw_strings)
+                topics = await _llm_cluster(domain, kw_strings, language)
             except Exception as exc:
                 print(f"[topics] LLM retry failed: {exc}")
                 topics = []

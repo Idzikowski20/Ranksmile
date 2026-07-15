@@ -7,7 +7,7 @@ import { fetchSitemapUrls } from './fetchSitemapUrls';
 /**
  * Candidate page URLs for a domain to audit. With blog_paths set, narrowed to those
  * sections; with none set, the WHOLE sitemap is returned so a freshly-added domain
- * gets every page scanned + scored out of the box (capped downstream by MAX_POSTS).
+ * gets every page scanned + scored out of the box (capped downstream by MAX_CRAWL_URLS).
  */
 export async function gatherBlogUrls(domainId: number, domainName: string): Promise<string[]> {
    const rows = await db.query<{ blog_paths: string | null }>(

@@ -38,15 +38,15 @@ const Trigger = styled.button<{ $sz: 'sm' | 'md'; $open: boolean }>(({ $sz, $ope
     fontWeight: 400,
     lineHeight: '1rem',
     borderRadius: cfg.r,
-    border: $open ? '1px solid #7553FF' : '1px solid #DAD9DE',
+    border: $open ? '1px solid #F29964' : '1px solid #DAD9DE',
     backgroundColor: '#FFFFFF',
     color: '#302E36',
-    boxShadow: $open ? '0 0 0 2px #FFFFFF, 0 0 0 4px #7553FF' : 'none',
+    boxShadow: $open ? '0 0 0 2px #FFFFFF, 0 0 0 4px #F29964' : 'none',
     cursor: 'pointer',
     outline: 'none',
     textAlign: 'left' as const,
     transition: 'border 0.12s cubic-bezier(0.72, 0, 0.16, 1), box-shadow 0.12s cubic-bezier(0.72, 0, 0.16, 1)',
-    '&:hover': { borderColor: $open ? '#7553FF' : '#A29FAA' },
+    '&:hover': { borderColor: $open ? '#F29964' : '#A29FAA' },
   };
 });
 
@@ -79,7 +79,7 @@ const SearchInp = styled.input`
   font-size: 14px; font-family: inherit; color: #302E36; background: #FFFFFF;
   outline: none;
   &::placeholder { color: #6A6772; }
-  &:focus { border-color: #7553FF; box-shadow: 0 0 0 1px #7553FF; }
+  &:focus { border-color: #F29964; box-shadow: 0 0 0 1px #F29964; }
 `;
 
 const List = styled.div`
@@ -100,7 +100,7 @@ const Emp = styled.div`
 `;
 
 const CK = () => (
-  <svg viewBox="0 0 16 16" width="14" height="14" fill="#7553FF" style={{ flexShrink: 0, marginLeft: 'auto' }}>
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="#F5A978" style={{ flexShrink: 0, marginLeft: 'auto' }}>
     <path fillRule="evenodd" d="M13.36 4.5a.75.75 0 0 1 .14 1.05l-7 9a.75.75 0 0 1-1.11.07l-3.5-3.5a.75.75 0 0 1 0-1.06l.08-.08a.75.75 0 0 1 .98 0L5.5 12.5l6.3-8.1a.75.75 0 0 1 1.05-.14l.01.01z" clipRule="evenodd" />
   </svg>
 );

@@ -1,8 +1,8 @@
 // components/ui/tokens.ts
 // Źródło prawdy: DESIGN.md. Nie wymyślaj nowych wartości — dodaj je najpierw do DESIGN.md.
 export const color = {
-  purple: '#783AFB',
-  purpleFocus: '#AA93FD',
+  purple: '#F29964',
+  purpleFocus: '#F5C4A0',
   darkBtn: '#2F2F34',
   cardBorder: '#F4F4F5',
   panelBorder: '#E4E4E7',

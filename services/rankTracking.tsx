@@ -4,7 +4,9 @@ import type {
   ComparePeriod,
   RankAnalyticsSummary,
   RankCheckRunRow,
+  RankHistorySummaryItem,
   RankResultsPage,
+  RankSnapshotRow,
   RankTrackingConfigRow,
   RankTrackingKeywordRow,
 } from '../lib/types/rankTracking';
@@ -200,5 +202,32 @@ export function useRankCost(slug: string | undefined, configId: number | undefin
       `/api/rank-tracking/${slug}/cost?configId=${configId}`,
     ),
     { enabled: !!slug && !!configId },
+  );
+}
+
+export function useRankHistorySummary(
+  slug: string | undefined,
+  configId: number | undefined,
+): UseQueryResult<{ summaries: RankHistorySummaryItem[] }> {
+  return useQuery(
+    ['rank-history-summary', slug, configId],
+    () => fetchJson<{ summaries: RankHistorySummaryItem[] }>(
+      `/api/rank-tracking/${slug}/history/summary?configId=${configId}`,
+    ),
+    { enabled: !!slug && !!configId, staleTime: 60_000 },
+  );
+}
+
+export function useRankKeywordHistory(
+  slug: string | undefined,
+  configId: number | undefined,
+  keywordId: number | undefined,
+): UseQueryResult<{ snapshots: RankSnapshotRow[] }> {
+  return useQuery(
+    ['rank-keyword-history', slug, configId, keywordId],
+    () => fetchJson<{ snapshots: RankSnapshotRow[] }>(
+      `/api/rank-tracking/${slug}/history/${keywordId}?configId=${configId}&device=desktop&limit=365`,
+    ),
+    { enabled: !!slug && !!configId && !!keywordId },
   );
 }

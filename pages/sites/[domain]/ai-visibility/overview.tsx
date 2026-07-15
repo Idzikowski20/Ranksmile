@@ -340,7 +340,7 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'You', data: youVals((o) => o.mentionRate), color: '#783AFB' },
+                                    { label: 'You', data: youVals((o) => o.mentionRate), color: '#F29964' },
                                     ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.mentionRate), color: '#9F9FA9' }] : []),
                                  ]}
                                  yMin={0}
@@ -364,7 +364,7 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'You', data: youVals((o) => o.avgPosition), color: '#783AFB' },
+                                    { label: 'You', data: youVals((o) => o.avgPosition), color: '#F29964' },
                                     ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.avgPosition), color: '#9F9FA9' }] : []),
                                  ]}
                                  yMin={1}

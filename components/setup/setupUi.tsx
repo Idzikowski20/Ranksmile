@@ -19,7 +19,7 @@ export const SetupLogo = () => (
   <a href="/" aria-label="Home" style={{ display: 'inline-flex', alignItems: 'center' }}>
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 28, height: 28, borderRadius: 7, background: '#653DE9', flexShrink: 0,
+      width: 28, height: 28, borderRadius: 7, background: '#F29964', flexShrink: 0,
     }}
     >
       <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
@@ -236,7 +236,7 @@ export const Spinner = ({ size = 14 }: { size?: number }) => (
     aria-hidden="true"
     style={{
       display: 'inline-block', width: size, height: size, flexShrink: 0,
-      border: '2px solid #dad9de', borderTopColor: '#653DE9', borderRadius: '50%',
+      border: '2px solid #dad9de', borderTopColor: '#F29964', borderRadius: '50%',
           animation: 'sentry-setup-spin 0.7s linear infinite',
     }}
   />

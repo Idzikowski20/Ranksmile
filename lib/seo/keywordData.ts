@@ -22,6 +22,7 @@ import { CoverageItem, hashId } from '../aiCoverage';
 import { normalizePl, tokenize } from '../termMatch';
 import { isUsefulTerm, isDictionaryQueryNoise } from '../termUtils';
 import { filterOnTopicTerms, isKeywordOnTopic } from '../topicRelevance';
+import { throwIfAborted } from '../abortSignal';
 
 export type KeywordSource = 'dataforseo' | 'gsc' | 'none';
 
@@ -116,7 +117,9 @@ export async function enrichTerms(opts: {
    ownDomain?: string,
    competitorDomains?: string[],
    limit?: number,
+   signal?: AbortSignal,
 }): Promise<{ source: KeywordSource, terms: Array<{ term: string, target_count: number }> }> {
+   throwIfAborted(opts.signal);
    if (!isDataForSeoConfigured() || !opts.keyword.trim()) { return { source: 'none', terms: [] }; }
 
    const targetFor = (kw: string) => {
@@ -157,6 +160,8 @@ export async function enrichTerms(opts: {
          .then((r) => r.keywords).catch(() => [] as KeywordMetric[]),
       ...rankedPromises,
    ]);
+
+   throwIfAborted(opts.signal);
 
    const pool: KeywordMetric[] = [...suggestions, ...rankedLists.flat()];
    const seen = new Set<string>();

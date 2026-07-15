@@ -7,7 +7,7 @@ const FONT = 'var(--font-family-primary)';
 type Bar = { domain: string; overview: { visibilityScore: number }; rank?: number; outsider?: boolean };
 
 const REGULAR_BAR = 'linear-gradient(to top, rgba(228,228,231,0.35), rgba(212,212,216,0.95))';
-const COMPARED_BAR = 'linear-gradient(to top, rgba(120,58,251,0.35), rgba(120,58,251,0.85))';
+const COMPARED_BAR = 'linear-gradient(to top, rgba(242,153,100,0.35), rgba(242,153,100,0.85))';
 
 const CompetitorBarChart = ({ competitors, selected, onSelect }: { competitors: Bar[]; selected: string | null; onSelect: (d: string) => void }) => {
    const shown = competitors.slice(0, 5);
@@ -34,7 +34,7 @@ const CompetitorBarChart = ({ competitors, selected, onSelect }: { competitors: 
                   ) : null}
                   <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 8, minHeight: 0 }}>
                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: FONT, lineHeight: '18px' }}>{score}</span>
-                     <div style={{ width: 72, height: `${(score / max) * 82}%`, minHeight: 4, borderRadius: '10px 10px 0 0', background: isSel ? COMPARED_BAR : REGULAR_BAR, boxShadow: isSel ? '0 0 0 1px rgba(120,58,251,0.35)' : 'inset 0 0 0 1px rgba(212,212,216,0.6)', transition: 'height 200ms ease' }} />
+                     <div style={{ width: 72, height: `${(score / max) * 82}%`, minHeight: 4, borderRadius: '10px 10px 0 0', background: isSel ? COMPARED_BAR : REGULAR_BAR, boxShadow: isSel ? '0 0 0 1px rgba(242,153,100,0.35)' : 'inset 0 0 0 1px rgba(212,212,216,0.6)', transition: 'height 200ms ease' }} />
                   </div>
                   <div style={{ height: 1, width: '100%', background: '#F4F4F5' }} />
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, margin: '10px 0 0', maxWidth: '100%', padding: '0 8px' }}>

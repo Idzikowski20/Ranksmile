@@ -8,7 +8,7 @@ import { useArticle } from '../../services/article';
 const Toggle = ({ on, onChange }: { on: boolean; onChange: () => void }) => (
   <span
     onClick={(e) => { e.stopPropagation(); onChange(); }}
-    style={{ width: 36, height: 20, borderRadius: 9999, background: on ? '#783AFB' : '#D4D4D8', position: 'relative', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s', display: 'inline-block' }}
+    style={{ width: 36, height: 20, borderRadius: 9999, background: on ? '#F29964' : '#D4D4D8', position: 'relative', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s', display: 'inline-block' }}
   >
     <span style={{ position: 'absolute', top: 2, left: on ? 18 : 2, width: 16, height: 16, borderRadius: 9999, background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
   </span>

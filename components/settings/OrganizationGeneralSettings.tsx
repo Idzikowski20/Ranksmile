@@ -75,7 +75,7 @@ const OrganizationGeneralSettings = () => {
                 width: 64,
                 height: 64,
                 borderRadius: 8,
-                background: displayLogo ? 'transparent' : 'rgba(120,58,251,0.10)',
+                background: displayLogo ? 'transparent' : 'rgba(242,153,100,0.10)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -93,7 +93,7 @@ const OrganizationGeneralSettings = () => {
                   style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }}
                 />
               ) : (
-                <span style={{ fontSize: 20, fontWeight: 600, color: '#783AFB', textTransform: 'uppercase', fontFamily: 'var(--font-family-primary)', userSelect: 'none' }}>
+                <span style={{ fontSize: 20, fontWeight: 600, color: '#F29964', textTransform: 'uppercase', fontFamily: 'var(--font-family-primary)', userSelect: 'none' }}>
                   {initial}
                 </span>
               )}

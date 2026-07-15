@@ -15,6 +15,7 @@ import { assertArticleAccess } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { safeJsonParse } from '../../../lib/safeJson';
 import type { CoverageSnapshot } from '../../../lib/aiCoverage';
+import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLanguage';
 
 export const config = { maxDuration: 60 };
 
@@ -42,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const {
     keyword,
     competitors = [],
-    language = 'pl',
+    language,
     currentHeadings = [],
     articleId,
     paaQuestions = [],
@@ -57,6 +58,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     missingFacts?: string[];
   };
   if (!keyword) return res.status(400).json({ error: 'keyword is required' });
+
+  const locale = await resolveContentLocale({ articleId: articleId ? Number(articleId) : undefined, bodyLanguage: language });
+  const lang = languageDisplayName(locale.languageCode);
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
@@ -108,7 +112,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ? Math.round(compList.reduce((s, c) => s + (c.heading_count || c.headings.length), 0) / compList.length)
     : 12;
 
-  const lang = language === 'pl' ? 'Polish' : 'English';
   const currentHeadingsSummary = currentHeadings.length > 0
     ? `\nCURRENT ARTICLE HEADINGS (already written — do NOT repeat these):\n${currentHeadings.map((h) => `H${h.level}: ${h.text}`).join('\n')}\n\nFOCUS: Emphasise MISSING topics not yet covered.\n`
     : '';

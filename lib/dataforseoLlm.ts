@@ -9,7 +9,9 @@
  */
 import axios from 'axios';
 import { z } from 'zod';
-import { isDataForSeoConfigured } from './dataforseo';
+import { locationCodeFor, isDataForSeoConfigured } from './dataforseo';
+import { toDfsLanguageCode } from './domainLanguagePrompts';
+import { filterCitations } from './aiVisibilityBlockedDomains';
 import { DFS_SERP_AI_ELEMENT } from './dataforseoBudget';
 
 const BASE = 'https://api.dataforseo.com/v3';
@@ -28,8 +30,9 @@ const MODEL_NAME: Record<'chat_gpt' | 'perplexity' | 'gemini', string> = {
    perplexity: 'sonar',
 };
 
-// Google geo/lang defaults — reuse the PL market the rest of the app targets.
-const LOCATION_CODE_PL = 2616;
+// Google geo/lang defaults — caller should pass domain locale from site_context.
+const DEFAULT_COUNTRY = 'PL';
+const DEFAULT_LANGUAGE = 'pl';
 
 const authHeader = (): string => {
    const login = process.env.DATAFORSEO_LOGIN || '';
@@ -206,15 +209,37 @@ async function postWithRetry(path: string, task: Record<string, unknown>): Promi
    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
+function answerFromParsed(
+  parsed: { text: string; citations: LlmCitation[] },
+  fanOutQueries: string[],
+  costUsd: number,
+): LlmAnswer {
+  return {
+    text: parsed.text,
+    citations: filterCitations(parsed.citations),
+    fanOutQueries,
+    costUsd,
+  };
+}
+
 /**
  * Run one prompt against one AI engine, routing to the right DFS product, and
  * return normalised { text, citations, costUsd }. Retries 3× (1s/2s) on
  * 429/5xx/timeout; never retries 4xx. `countryIso` scopes the LLM web search.
  */
-export async function runModelPrompt(model: AiModel, prompt: string, countryIso = 'PL'): Promise<LlmAnswer> {
+export async function runModelPrompt(
+  model: AiModel,
+  prompt: string,
+  countryIso = DEFAULT_COUNTRY,
+  languageCode = DEFAULT_LANGUAGE,
+): Promise<LlmAnswer> {
    if (!isDataForSeoConfigured()) {
       throw new Error('DataForSEO not configured — set DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD.');
    }
+
+   const dfsLang = toDfsLanguageCode(languageCode, DEFAULT_LANGUAGE);
+   // Google AI Mode currently only supports English queries (DataForSEO docs).
+   const serpLang = model === 'ai_mode' ? 'en' : dfsLang;
 
    if (LLM_ENGINES.includes(model)) {
       const task: Record<string, unknown> = {
@@ -229,30 +254,30 @@ export async function runModelPrompt(model: AiModel, prompt: string, countryIso 
       const { taskData, costUsd } = await postWithRetry(`/ai_optimization/${model}/llm_responses/live`, task);
       const result = taskData?.result?.[0];
       const parsed = parseLlmItems(result?.items ?? []);
-      return { ...parsed, fanOutQueries: extractFanOut(result), costUsd };
+      return answerFromParsed(parsed, extractFanOut(result), costUsd);
    }
 
    if (model === 'ai_mode') {
       const task: Record<string, unknown> = {
          keyword: prompt.slice(0, 700),
-         location_code: LOCATION_CODE_PL,
-         language_code: 'pl',
+         location_code: locationCodeFor(countryIso),
+         language_code: serpLang,
          ...DFS_SERP_AI_ELEMENT,
       };
       const { taskData, costUsd } = await postWithRetry('/serp/google/ai_mode/live/advanced', task);
       const result = taskData?.result?.[0];
       const parsed = parseAiModeItems(result?.items ?? []);
-      return { ...parsed, fanOutQueries: extractFanOut(result), costUsd };
+      return answerFromParsed(parsed, extractFanOut(result), costUsd);
    }
 
    // ai_overview: pull it from a normal Google organic SERP (page 1 only).
    const task: Record<string, unknown> = {
       keyword: prompt.slice(0, 700),
-      location_code: LOCATION_CODE_PL,
-      language_code: 'pl',
+      location_code: locationCodeFor(countryIso),
+      language_code: serpLang,
       ...DFS_SERP_AI_ELEMENT,
    };
    const { taskData, costUsd } = await postWithRetry('/serp/google/organic/live/advanced', task);
    const parsed = parseAiOverview(taskData?.result?.[0]?.items ?? []);
-   return { ...parsed, fanOutQueries: [], costUsd }; // ai_overview exposes no fan-out
+   return answerFromParsed(parsed, [], costUsd);
 }

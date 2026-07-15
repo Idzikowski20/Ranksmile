@@ -24,7 +24,7 @@ const StyledWrapper = styled.div`
 
   .rdrSelected, .rdrInRange, .rdrStartEdge, .rdrEndEdge {
     left: 0; right: 0; top: 3px; bottom: 3px;
-    background-color: #7553FF;
+    background-color: #F5A978;
   }
 
   .rdrDayNumber { top: 3px; bottom: 3px; font-weight: 400; }
@@ -37,13 +37,13 @@ const StyledWrapper = styled.div`
   .rdrDayDisabled { background: none; }
   .rdrDayDisabled .rdrDayNumber span, .rdrDayPassive .rdrDayNumber span { color: #6A6772; opacity: 0.5; }
 
-  .rdrDayToday .rdrDayNumber span { color: #653DE9; &:after { display: none; } }
-  .rdrDayToday .rdrDayNumber { border-radius: 2rem; box-shadow: inset 0 0 0 2px #7553FF; }
+  .rdrDayToday .rdrDayNumber span { color: #F29964; &:after { display: none; } }
+  .rdrDayToday .rdrDayNumber { border-radius: 2rem; box-shadow: inset 0 0 0 2px #F5A978; }
 
-  .rdrDayNumber span:after { background-color: #7553FF; font-variant-numeric: tabular-nums; }
+  .rdrDayNumber span:after { background-color: #F5A978; font-variant-numeric: tabular-nums; }
 
   .rdrDefinedRangesWrapper, .rdrDateDisplayWrapper, .rdrWeekDays { display: none; }
-  .rdrInRange { background: #7553FF; }
+  .rdrInRange { background: #F5A978; }
   .rdrDayInPreview { background: #0000200F; }
 
   .rdrMonth { width: 300px; font-size: 1.2em; padding: 0; }
@@ -126,7 +126,7 @@ export function DateRangePicker({ onChange: onCh, startDate, endDate, maxDate, m
         showPreview
         moveRangeOnFirstSelection={false}
         retainEndDateOnFirstSelection
-        rangeColors={['#7553FF']}
+        rangeColors={['#F5A978']}
         locale={enUS}
       />
     </StyledWrapper>

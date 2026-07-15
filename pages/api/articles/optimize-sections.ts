@@ -3,10 +3,11 @@ import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/aiTokenUsage';
-import { splitSections, normalizeHtmlForDiff, joinSections } from '../../../lib/articleSections';
+import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
 import type { Section } from '../../../lib/articleSections';
 import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
-import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
+import { buildWholeArticlePrompt, WHOLE_ARTICLE_ID } from '../../../lib/optimizeWholeArticle';
+import { stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
 import { computeContentScore } from '../../../lib/contentScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
@@ -17,17 +18,16 @@ import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
 import { termsForOptimize } from '../../../lib/mergeArticleTerms';
 import { liveCoverageItems } from '../../../lib/liveCoverage';
 import { computeCoverageScores } from '../../../lib/aiCoverage';
+import { collectUncoveredAiQuestions, buildFaqSectionPrompt, mergeFaqHtml } from '../../../lib/aoFaqSection';
+import { structureIssues } from '../../../lib/validateArticleStructure';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
-import { buildOptimizationPlan } from '../../../lib/optimizationPlanner';
-import type { Plan, PlanStep } from '../../../lib/optimizationPlanner';
 import {
   DEFAULT_MAX_ROUNDS,
   selectOptimizeMode,
   TARGET_AI,
   TARGET_SEO,
-  type OptimizeMode,
 } from '../../../lib/optimizeMode';
 import {
   maxRoundsForPhase,
@@ -36,12 +36,13 @@ import {
   type AoMeta,
 } from '../../../lib/optimizeRunPhase';
 import { getErrorMessage } from '../../../lib/errors';
+import { throwIfAborted } from '../../../lib/abortSignal';
 import { queryOne } from '../../../lib/db/query';
 import { flushSse, flushHeaders } from '../../../lib/types/api';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
-const PROMPT_VERSION = 'ao-sections-v3';
+const PROMPT_VERSION = 'ao-whole-article-v2';
 
 function scoreSeo(html: string, scoreData: ScoreData | undefined, keyword: string): number {
    const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -81,53 +82,9 @@ async function persistScoreDataTerms(
    sse(res, 'terms', { terms: nextScoreData.terms });
 }
 
-function globalOptimizeBrief(ctx: ArticleContext, html: string, mode: OptimizeMode): string {
-   const lines: string[] = [];
-   if (mode !== 'ai-only') {
-      const missing = computeMissingTerms(ctx.scoreData ?? undefined, html).slice(0, 30);
-      if (missing.length) {
-         lines.push(`Missing SEO entities (use verbatim where natural): ${missing.map((t) => `"${t}"`).join(', ')}`);
-      }
-   }
-
-   const uncoveredAi = (ctx.coverage?.items || []).filter((i) =>
-     (i.category === 'intent' || i.category === 'knowledge')
-     && (i.type === 'paa' || i.type === 'fact' || i.type === 'intent' || i.type === 'definition' || i.type === 'comparison')
-     && (!i.covered || i.quality < 4),
-   );
-
-   if (uncoveredAi.length) {
-      lines.push(
-        `AI Search — the article MUST answer ALL ${uncoveredAi.length} checkpoints below (every one is required for a high AI score):\n`
-        + uncoveredAi.map((i) => `- ${i.label}`).join('\n'),
-      );
-   }
-
-   return lines.length ? `\n\nGLOBAL OBJECTIVES (this section must contribute):\n${lines.join('\n\n')}` : '';
-}
-
 function sse(res: NextApiResponse, event: string, data: object) {
    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
    flushSse(res);
-}
-
-/** Per-section restrained editing checklist. `missingTerms` are woven in verbatim where natural. */
-function buildSystemPrompt(missingTerms: string[]): string {
-   const termList = missingTerms.map((t) => `"${t}"`).join(', ');
-   const termsBlock = missingTerms.length
-      ? `\n- Weave in these MISSING NLP terms VERBATIM where natural (exact form, no inflection/synonyms): ${termList}`
-      : '';
-   return `You are an expert SEO content editor making MINIMAL, surgical edits to ONE section of an HTML article.
-
-RULES:
-- Apply MINIMAL surgical edits — refine, do not rewrite${termsBlock}
-- Tighten weak sentences and remove AI-sounding filler ("It's worth noting that", "In today's world", "Furthermore", "In conclusion", "Delve into")
-- Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
-- Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written
-- Do NOT remove or shorten existing sentences — only refine or expand
-- Keep each paragraph between ~40 and ~80 words
-
-OUTPUT: ONLY the section's raw HTML. No markdown code fences, no commentary.`;
 }
 
 /** Latest AI-visibility score for an article — same query as pages/api/articles/[id]/index.ts:46-52.
@@ -148,40 +105,17 @@ async function readLatestAiScore(articleId: number): Promise<number> {
    }
 }
 
-/** No-articleId (unsaved draft) fallback — byte-for-byte reproduction of today's optimizer:
- *  ONE global system prompt for every section, from article-wide missing terms, no routing/ROI/skip. */
-function legacyPlan(sections: Section[], scoreData: ScoreData | undefined, content: string): Plan {
-   const terms = computeMissingTerms(scoreData, content);
-   const sys = buildSystemPrompt(terms);
-   const steps: PlanStep[] = sections.map((s) => ({
-      sectionId: s.id,
-      index: s.index,
-      headingText: s.headingText,
-      html: s.html,
-      focus: 'seo-terms',
-      systemPrompt: sys,
-      guidelines: [],
-      missingTerms: terms,
-      estimatedTokens: 0,
-      expectedLift: 0,
-      reason: 'Legacy: no articleId',
-      mode: 'normal',
-   }));
-   return { steps, estimatedTokens: 0, trimmed: false, ignoredLift: 0, rationale: 'legacy' };
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { content, articleId, scoreData, targetScore, maxRounds, writeNewSections } = req.body as {
+   const { content, articleId, scoreData, targetScore, maxRounds } = req.body as {
       content: string;
       articleId?: number;
       scoreData?: ScoreData;
       targetScore?: number;
       maxRounds?: number;
-      writeNewSections?: boolean;
    };
    if (!content) return res.status(400).json({ error: 'content is required' });
 
@@ -226,11 +160,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    let aborted = false;
    const onClose = () => { aborted = true; controller.abort(); };
    req.on('close', onClose);
+   req.on('aborted', onClose);
 
    try {
-      const allowNewSections = writeNewSections === true;
+      throwIfAborted(controller.signal);
       let workingHtml = content;
       let ctx = articleId != null ? await buildArticleContext(Number(articleId)) : null;
+
+      throwIfAborted(controller.signal);
 
       const aoMeta = (scoreData as (ScoreData & { _ao_meta?: AoMeta }) | undefined)?._ao_meta
          ?? (ctx?.scoreData as (ScoreData & { _ao_meta?: AoMeta }) | null)?._ao_meta;
@@ -261,6 +198,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tableTerms: ctx.terms,
          });
          if (needsTermEnrichment(baseTerms, ctx.keyword)) {
+            if (aborted) throw new DOMException('Aborted', 'AbortError');
             let ownDomain: string | undefined;
             try {
                const articleIdSql = await getArticleIdSql();
@@ -279,6 +217,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                competitorDomains,
                ownDomain,
                plainText: workingHtml.replace(/<[^>]+>/g, ' '),
+               signal: controller.signal,
             });
             const useful = filterUsefulNlpTerms(merged);
             if (useful.length > baseTerms.length) {
@@ -317,21 +256,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let trimmedMeta: { trimmed: boolean; ignoredLift: number } = { trimmed: false, ignoredLift: 0 };
 
       sse(res, 'meta', {
-         total: splitSections(workingHtml).length,
+         total: MAX_ROUNDS,
          targetSeo: TARGET_SEO_SCORE,
          targetAi: TARGET_AI_SCORE,
          targetContent: TARGET_CONTENT_SCORE,
          maxRounds: MAX_ROUNDS,
          phase,
+         wholeArticle: true,
       });
+
+      const originalHtml = content;
 
       try {
          for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
             roundsRun = round;
-            const sections = splitSections(workingHtml);
             const snapshot = ctx?.coverage ?? null;
             const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
-            const usage = orgId != null ? await getOrgUsage5h(orgId) : { used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: 0, over: false };
             const seoScore = scoreData?.seo_score
                ?? (ctx?.scoreData as (ScoreData & { seo_score?: number }) | null)?.seo_score
                ?? scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
@@ -340,97 +280,90 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                : 0;
             const mode = selectOptimizeMode(seoScore, aiScore, phase);
 
-            let plan: Plan = ctx
-               ? buildOptimizationPlan({
-                  sections, guidelines, context: ctx, budgetRemaining: usage.limit - usage.used,
-                  seoScore, aiScore, phase, mode,
-               })
-               : legacyPlan(sections, scoreData, workingHtml);
+            const promptPack = buildWholeArticlePrompt({
+               ctx,
+               html: workingHtml,
+               guidelines,
+               seoScore,
+               aiScore,
+               phase,
+               mode,
+            });
 
-            if (!allowNewSections) {
-               plan = {
-                  ...plan,
-                  steps: plan.steps.map((step) => (
-                     step.focus === 'expand'
-                        ? { ...step, focus: 'ai-coverage' as const, mode: 'less' as const }
-                        : { ...step, mode: step.mode === 'expand' ? 'less' as const : step.mode }
-                  )),
-               };
-            }
+            let newHtml = workingHtml;
+            const MAX_ATTEMPTS = 3;
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+               try {
+                  const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                     body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        max_tokens: 8000,
+                        temperature: 0.3,
+                        messages: [
+                           { role: 'system', content: promptPack.systemPrompt },
+                           { role: 'user', content: `${promptPack.userInstruction}\n\n${workingHtml}` },
+                        ],
+                     }),
+                     signal: controller.signal,
+                  });
+                  if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
+                  const data = await aiRes.json();
+                  aiTokens += data.usage?.total_tokens || 0;
+                  const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
+                  if (isUsableEdit(cleaned)) newHtml = cleaned;
 
-            if (plan.trimmed && round === 1) {
-               trimmedMeta = { trimmed: true, ignoredLift: plan.ignoredLift };
-               sse(res, 'meta', { trimmed: true, ignoredLift: plan.ignoredLift });
-            }
-
-            let roundChanged = 0;
-            const brief = ctx ? globalOptimizeBrief(ctx, workingHtml, mode) : '';
-
-            for (const step of plan.steps) {
-               if (aborted) break;
-
-               const liveSection = sections[step.index];
-               const section: Section = liveSection ?? {
-                  id: step.sectionId,
-                  index: step.index,
-                  headingText: step.headingText,
-                  html: step.html,
-               };
-
-               if (step.focus === 'skip') {
-                  sse(res, 'section', buildSectionEvent(section, undefined, step));
-                  continue;
-               }
-
-               let newHtml = section.html;
-               const systemPrompt = `${step.systemPrompt}${brief}`;
-               const MAX_ATTEMPTS = 3;
-               for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-                  try {
-                     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                        body: JSON.stringify({
-                           model: 'deepseek-chat',
-                           max_tokens: 4000,
-                           temperature: 0.3,
-                           messages: [
-                              { role: 'system', content: systemPrompt },
-                              { role: 'user', content: step.userInstruction ?? `Improve this section:\n\n${section.html}` },
-                           ],
-                        }),
-                        signal: controller.signal,
+                  const issues = structureIssues(newHtml);
+                  if (issues.length > 0 && attempt === 1) {
+                     const retryPack = buildWholeArticlePrompt({
+                        ctx,
+                        html: newHtml,
+                        guidelines,
+                        seoScore,
+                        aiScore,
+                        phase,
+                        mode,
                      });
-                     if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-                     const data = await aiRes.json();
-                     aiTokens += data.usage?.total_tokens || 0;
-                     const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
-                     if (isUsableEdit(cleaned)) newHtml = cleaned;
-                     break;
-                  } catch (error) {
-                     if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
-                     if (attempt === MAX_ATTEMPTS) newHtml = section.html;
+                     const structurePrompt = `${retryPack.systemPrompt}\n\nSTRUCTURE FIX REQUIRED:\n${issues.join('\n')}`;
+                     try {
+                        const retryRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                           body: JSON.stringify({
+                              model: 'deepseek-chat',
+                              max_tokens: 8000,
+                              temperature: 0.3,
+                              messages: [
+                                 { role: 'system', content: structurePrompt },
+                                 { role: 'user', content: `Fix structure issues and return complete HTML.\n\n${newHtml}` },
+                              ],
+                           }),
+                           signal: controller.signal,
+                        });
+                        if (retryRes.ok) {
+                           const retryData = await retryRes.json();
+                           aiTokens += retryData.usage?.total_tokens || 0;
+                           const retryCleaned = stripFences(retryData.choices?.[0]?.message?.content || '');
+                           if (isUsableEdit(retryCleaned)) newHtml = retryCleaned;
+                        }
+                     } catch { /* non-fatal */ }
                   }
+                  break;
+               } catch (error) {
+                  if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
+                  if (attempt === MAX_ATTEMPTS) newHtml = workingHtml;
                }
-
-               if (aborted) break;
-
-               const changed = normalizeHtmlForDiff(section.html) !== normalizeHtmlForDiff(newHtml);
-               if (changed) {
-                  roundChanged += 1;
-                  changedCount += 1;
-                  if (liveSection) {
-                     sections[step.index] = { ...liveSection, html: newHtml };
-                  }
-               }
-               sse(res, 'section', buildSectionEvent(
-                  section,
-                  { oldHtml: section.html, newHtml, changed },
-                  step,
-               ));
             }
 
-            workingHtml = joinSections(sections);
+            if (aborted) break;
+
+            const roundChanged = normalizeHtmlForDiff(workingHtml) !== normalizeHtmlForDiff(newHtml);
+            if (roundChanged) {
+               workingHtml = newHtml;
+               changedCount += 1;
+            }
+
             finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
             finalAi = ctx && articleId != null
                ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
@@ -438,6 +371,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             finalContent = computeOverallContentScore(finalSeo, finalAi);
             sse(res, 'progress', {
                round,
+               processed: round,
                seo: finalSeo,
                ai: finalAi,
                content: finalContent,
@@ -446,12 +380,100 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                targetSeo: TARGET_SEO_SCORE,
                targetAi: TARGET_AI_SCORE,
                targetContent: TARGET_CONTENT_SCORE,
-               changed: roundChanged,
+               changed: roundChanged ? 1 : 0,
             });
 
             const hitContentTarget = finalContent >= TARGET_CONTENT_SCORE;
             const hitSeoAi = finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE;
-            if ((hitContentTarget || hitSeoAi) || roundChanged === 0) break;
+            const plainForCov = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const liveItems = ctx?.coverage?.items?.length
+               ? liveCoverageItems(ctx.coverage.items, plainForCov, workingHtml)
+               : [];
+            const stillUncovered = collectUncoveredAiQuestions(liveItems).length;
+            if ((hitContentTarget || hitSeoAi) && stillUncovered === 0) break;
+            if ((hitContentTarget || hitSeoAi) && !roundChanged) break;
+            if (!roundChanged) break;
+         }
+
+         // FAQ round — answer all remaining AI Search questions at the end of the article
+         if (!aborted && ctx?.coverage?.items?.length) {
+            const plainForFaq = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const liveForFaq = liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml);
+            const uncovered = collectUncoveredAiQuestions(liveForFaq);
+            if (uncovered.length > 0) {
+               const faqPrompt = buildFaqSectionPrompt({
+                  keyword: ctx.keyword || '',
+                  questions: uncovered.map((q) => q.label),
+                  articleExcerpt: plainForFaq,
+                  language: ctx.language || 'pl',
+               });
+               try {
+                  const faqRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                     body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        max_tokens: 4000,
+                        temperature: 0.3,
+                        messages: [
+                           { role: 'system', content: faqPrompt.systemPrompt },
+                           { role: 'user', content: faqPrompt.userInstruction },
+                        ],
+                     }),
+                     signal: controller.signal,
+                  });
+                  if (faqRes.ok) {
+                     const faqData = await faqRes.json();
+                     aiTokens += faqData.usage?.total_tokens || 0;
+                     const faqHtml = stripFences(faqData.choices?.[0]?.message?.content || '');
+                     if (isUsableEdit(faqHtml)) {
+                        workingHtml = mergeFaqHtml(workingHtml, faqHtml);
+                        changedCount += 1;
+                        finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+                        finalAi = articleId != null
+                           ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+                           : 0;
+                        finalContent = computeOverallContentScore(finalSeo, finalAi);
+                        sse(res, 'progress', {
+                           round: roundsRun + 1,
+                           processed: roundsRun + 1,
+                           seo: finalSeo,
+                           ai: finalAi,
+                           content: finalContent,
+                           phase: 'faq',
+                           changed: 1,
+                        });
+                     }
+                  }
+               } catch { /* non-fatal */ }
+            }
+         }
+
+         if (!aborted && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
+            const pseudoSection = splitSections(workingHtml)[0] ?? {
+               id: WHOLE_ARTICLE_ID,
+               index: 0,
+               headingText: 'Article',
+               html: workingHtml,
+            };
+            sse(res, 'section', buildSectionEvent(
+               { ...pseudoSection, id: WHOLE_ARTICLE_ID, headingText: 'Article' },
+               { oldHtml: originalHtml, newHtml: workingHtml, changed: true },
+               {
+                  sectionId: WHOLE_ARTICLE_ID,
+                  index: 0,
+                  headingText: 'Article',
+                  html: workingHtml,
+                  focus: 'ai-coverage',
+                  systemPrompt: '',
+                  guidelines: [],
+                  missingTerms: [],
+                  estimatedTokens: 0,
+                  expectedLift: 0,
+                  reason: 'Whole-article optimization',
+                  mode: 'less',
+               },
+            ));
          }
 
       } finally {
@@ -465,16 +487,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
 
       sse(res, 'done', {
-         changedCount, total: splitSections(content).length, promptVersion: PROMPT_VERSION,
+         changedCount, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,
          creditDeducted, rounds: roundsRun, phase,
          seo: finalSeo, ai: finalAi, content: finalContent,
          targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
          trimmed: trimmedMeta.trimmed, ignoredLift: trimmedMeta.ignoredLift,
+         wholeArticle: true,
       });
    } catch (error) {
+      if (aborted || (error instanceof DOMException && error.name === 'AbortError')) return;
       if (!aborted) sse(res, 'error', { message: getErrorMessage(error) || 'Request failed' });
    } finally {
       req.off('close', onClose);
+      req.off('aborted', onClose);
       res.end();
    }
 }

@@ -220,7 +220,7 @@ const CommentsLayer = ({ containerRef, wrapperRef, articleId, author, active, re
 
   return (
     <>
-      <style>{'.comment-mark{ text-decoration: underline; text-decoration-color: #783AFB; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(120,58,251,0.08); cursor: pointer; } .comment-mark.is-draft{ background: rgba(120,58,251,0.22); cursor: default; }'}</style>
+      <style>{'.comment-mark{ text-decoration: underline; text-decoration-color: #F29964; text-decoration-thickness: 2px; text-underline-offset: 2px; background: rgba(242,153,100,0.08); cursor: pointer; } .comment-mark.is-draft{ background: rgba(242,153,100,0.22); cursor: default; }'}</style>
 
       {/* "Add comment" floating pill */}
       <AnimatePresence>

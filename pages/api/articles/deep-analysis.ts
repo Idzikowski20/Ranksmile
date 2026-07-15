@@ -11,6 +11,7 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
 import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
 import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
+import { fetchLlmCoverageQuestions } from '../../../lib/llmCoverageQuestions';
 import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '../../../lib/types/sidecar';
 import { flushHeaders, flushSse } from '../../../lib/types/api';
 import type { NlpTerm, ScoreData } from '../../../lib/contentScore';
@@ -50,15 +51,7 @@ import { filterNlpTermsForAnalysis } from '../../../lib/topicRelevance';
 import { buildAuditResult, computeSeoScoreFromAudit } from '../../../lib/auditCompute';
 import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
-
-/** Map an ISO country code to the SERP analysis language the sidecar supports. */
-function langForCountry(country: string): string {
-  const map: Record<string, string> = {
-    PL: 'pl', DE: 'de', FR: 'fr', ES: 'es', IT: 'it', NL: 'nl', PT: 'pt',
-    US: 'en', GB: 'en',
-  };
-  return map[(country || '').toUpperCase()] || 'en';
-}
+import { resolveContentLocale } from '../../../lib/domainLanguage';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -228,7 +221,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { url: rawUrl, keywords = [], country = 'US', articleId: existingArticleId, domainId: reqDomainId } = req.body;
+  const { url: rawUrl, keywords = [], country: bodyCountry, language: bodyLanguage, articleId: existingArticleId, domainId: reqDomainId } = req.body;
   const url: string = (rawUrl as string) || '';
   const primaryKeyword = (keywords as string[])[0] || '';
   const isKeywordMode = !url && !!primaryKeyword && (!!reqDomainId || !!existingArticleId);
@@ -241,6 +234,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: getErrorMessage(err) || 'Blocked URL' });
     }
   }
+
+  const bodyLanguageOverride = typeof bodyLanguage === 'string' && bodyLanguage.trim()
+    ? bodyLanguage.trim().toLowerCase()
+    : undefined;
 
   // Resolve the home domain for new-content creation up front, before the SSE stream
   // starts, so any access denial is a plain JSON status (not an SSE error frame) and
@@ -267,6 +264,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       resolvedDomainId = fallback;
     }
   }
+
+  const locale = await resolveContentLocale({
+    domainId: resolvedDomainId,
+    articleId: existingArticleId ? Number(existingArticleId) : undefined,
+    bodyLanguage: bodyLanguageOverride,
+    bodyCountry: typeof bodyCountry === 'string' ? bodyCountry : undefined,
+  });
+  const finalArticleLanguage = locale.languageCode;
+  const country = locale.countryCode;
 
   // Org-wide AI budget — block before the SSE stream starts (plain JSON 429, not an SSE frame).
   const orgId = await resolveOrgId(req, res);
@@ -304,7 +310,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       // Already verified to belong to the caller's workspace in the guard above.
       const domainId = resolvedDomainId!;
-      const language = langForCountry(country);
+      const language = finalArticleLanguage;
       // Keyword mode has no page: title = keyword, no slug/meta_url. URL mode
       // seeds title/slug/meta_url from the page URL (enriched later by fetch_page).
       const skeletonTitle = isKeywordMode ? keyword : url;
@@ -375,7 +381,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         workspaceDomain,
         userKeywords: (keywords as string[]) || [],
         country,
-        languageCode: langForCountry(country),
+        languageCode: finalArticleLanguage,
       });
       if (pre.primaryKeyword) pipelineKeyword = pre.primaryKeyword;
     } catch {
@@ -390,7 +396,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     url,
     keyword: pipelineKeyword,
     keywords: pipelineKeywords,
-    language: langForCountry(country),
+    language: finalArticleLanguage,
     tone: 'professional',
   };
 
@@ -540,7 +546,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           body: JSON.stringify({
             keyword: pipelineKeyword,
-            language: langForCountry(country),
+            language: finalArticleLanguage,
             num: 5,
           }),
         });
@@ -588,7 +594,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         workspaceDomain,
         userKeywords: pipelineKeywords,
         country,
-        languageCode: langForCountry(country),
+        languageCode: finalArticleLanguage,
         competitorDomains,
       });
       if (discovered.keywords.length) {
@@ -615,7 +621,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       terms: filterUsefulNlpTerms(allTerms),
       primaryKeyword: resolvedKeyword,
       country,
-      languageCode: langForCountry(country),
+      languageCode: finalArticleLanguage,
       competitorDomains,
       ownDomain: hostFromUrl(url),
       plainText: plainTextEarly,
@@ -809,7 +815,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
           body: JSON.stringify({
             keyword: outlineKeyword,
-            language: langForCountry(country),
+            language: finalArticleLanguage,
             num: 5,
           }),
         });
@@ -885,7 +891,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         title: classify.title || fetchPage.title || '',
         pageUrl: url,
         country,
-        languageCode: langForCountry(country),
+        languageCode: finalArticleLanguage,
         ownDomain,
         sidecarSummary,
       });
@@ -912,17 +918,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (coverageUsage?.over) {
         console.warn('[coverage] org over 5h token budget — skipping coverage compute');
       } else {
-        const paaFromSerp = (serp.paa_questions || []).map((q: string) => ({ question: q }));
-        const paaFromDfs = (aiVisibilitySummary?.citations || [])
-          .filter((c) => c.prompt && c.prompt !== c.answer)
-          .map((c) => ({ question: c.prompt, answer: c.answer || '' }));
-        const paaMerged = dedupePaaQuestions([...paaFromSerp, ...paaFromDfs]);
+        const paaQuestions = dedupePaaQuestions(
+          (scoreData.paa_questions ?? []).map((q) => ({ question: q })),
+        );
+
+        const llmQuestions = await fetchLlmCoverageQuestions({
+          keyword: factKeyword,
+          country,
+          languageCode: finalArticleLanguage,
+        });
 
         const graded = await buildGradedCoverageSnapshot({
           keyword: factKeyword,
           plainText,
           html: pageContent,
-          paaQuestions: paaMerged,
+          paaQuestions,
+          llmQuestions,
+          languageCode: finalArticleLanguage,
         });
         coverageSnapshot = graded.snapshot;
         coverageTokens += graded.introTokens + graded.judgeTokens;

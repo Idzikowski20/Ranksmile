@@ -21,6 +21,13 @@ describe('mergeCoverageItems', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0].quality).toBe(4);
   });
+  it('dedupes duplicate labels, keeping knowledge over intent', () => {
+    const knowledge = { ...item('paa-citation-abc', 'paa', 'knowledge'), label: 'Kiedy można zgłosić nękanie?' };
+    const intent = { ...item('intent-citation-xyz', 'intent', 'intent'), label: 'Kiedy można zgłosić nękanie?' };
+    const merged = mergeCoverageItems({ paa: [knowledge], intent: [intent], readability: [], entity: [] });
+    expect(merged).toHaveLength(1);
+    expect(merged[0].type).toBe('paa');
+  });
 });
 
 const META = { judgeVersion: 'v1|deepseek-chat|0', promptVersion: 'v1', model: 'deepseek-chat', createdAt: '2026-06-30T00:00:00Z' };

@@ -116,7 +116,7 @@ const SecLabel = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Toggle = ({ on }: { on: boolean }) => (
-  <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? '#783afb' : '#d4d4d8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}>
+  <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? '#f29964' : '#d4d4d8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}>
     <span style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
   </span>
 );
@@ -177,7 +177,7 @@ const StatusDot = ({ covered }: { covered: boolean }) => (
 
 /* Grouped accordion card inside AI Search (e.g. "Upfront Intent Alignment"). */
 const InfoCard = ({ title, badge, items, defaultOpen = true }: {
-  title: string; badge?: string; items: Array<{ text: string; covered: boolean; domains?: string[]; missing?: readonly string[] }>; defaultOpen?: boolean;
+  title: string; badge?: string; items: Array<{ text: string; covered: boolean; domains?: string[]; missing?: readonly string[]; sources?: InfoSource[] }>; defaultOpen?: boolean;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -185,7 +185,7 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
       <button type="button" onClick={() => setOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b', textAlign: 'left' }}>{title}</span>
         {badge && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #AA93FD', color: '#783AFB', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{badge}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #F5C4A0', color: '#F29964', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{badge}</span>
         )}
         <span style={{ marginLeft: 'auto' }}><Chevron open={open} color="#18181b" /></span>
       </button>
@@ -198,13 +198,15 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
                   <StatusDot covered={it.covered} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
                 </span>
-                {it.domains && it.domains.length > 0 && (
+                {it.sources && it.sources.length > 0 ? (
+                  <SourceRow sources={it.sources} muted={it.covered} />
+                ) : it.domains && it.domains.length > 0 ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
                     {it.domains.slice(0, 2).map((d) => (
                       <DomainFavicon key={d} domain={d} size={14} style={{ borderRadius: 3 }} />
                     ))}
                   </span>
-                )}
+                ) : null}
                 <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
               </div>
               {!it.covered && it.missing && it.missing.length > 0 && (
@@ -250,6 +252,27 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
     return (
       <Tip text="ChatGPT / OpenAI">
         <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5, fontSize: 9, fontWeight: 700, color: '#18181b' }}>AI</span>
+      </Tip>
+    );
+  }
+  if (source.kind === 'gemini') {
+    return (
+      <Tip text="Google Gemini">
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5, fontSize: 9, fontWeight: 700, color: '#3086FF' }}>G</span>
+      </Tip>
+    );
+  }
+  if (source.kind === 'perplexity') {
+    return (
+      <Tip text="Perplexity">
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#1a1a2e', marginRight: -5, fontSize: 8, fontWeight: 700, color: '#20B8CD' }}>P</span>
+      </Tip>
+    );
+  }
+  if (source.kind === 'reddit') {
+    return (
+      <Tip text="Reddit">
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#FF4500', marginRight: -5, fontSize: 8, fontWeight: 700, color: '#fff' }}>R</span>
       </Tip>
     );
   }
@@ -521,10 +544,10 @@ const WriteOptimizePanel = ({
               <button key={key} type="button" onClick={() => setTab(key)} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 0 10px', background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: 14, fontWeight: 600, color: on ? '#18181b' : '#52525c', fontFamily: F,
-                borderBottom: on ? '2px solid #783afb' : '2px solid transparent', marginBottom: -1,
+                borderBottom: on ? '2px solid #f29964' : '2px solid transparent', marginBottom: -1,
               }}>
                 {label}
-                <span style={{ background: on ? '#783afb' : '#52525c', color: '#fff', fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '1px 6px' }}>{count}</span>
+                <span style={{ background: on ? '#f29964' : '#52525c', color: '#fff', fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '1px 6px' }}>{count}</span>
               </button>
             );
           })}
@@ -595,7 +618,7 @@ const WriteOptimizePanel = ({
                   <InfoCard
                     title="Upfront Intent Alignment"
                     badge="NEW"
-                    items={infoTopics.intent.map((f) => ({ text: f.text, covered: f.covered }))}
+                    items={infoTopics.intent.map((f) => ({ text: f.text, covered: f.covered, sources: f.sources }))}
                   />
                 )}
                 {infoTopics.topics.map((group) => (

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Checkbox, SearchBar, SortableHeader } from '../core';
 import { XIcon } from '../core';
 import { useSortState } from '../../lib/useSortState';
+import EmptyEyes from '../common/EmptyEyes';
 
 const font = 'var(--font-family-primary)';
 
@@ -21,25 +22,6 @@ const PAGE_LIMIT = 200;
 const InfoIcon = () => (
    <svg viewBox="0 0 20 20" width="16" height="16" style={{ flexShrink: 0, color: '#3F3F47' }}>
       <path fill="currentColor" fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0a8 8 0 0 1 16 0m-7-4a1 1 0 1 1-2 0a1 1 0 0 1 2 0M9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9z" clipRule="evenodd" />
-   </svg>
-);
-
-// Blinking-eyes empty state illustration (from Surfer).
-const EmptyEyes = () => (
-   <svg width="40" height="40" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, color: '#D4D4D8' }}>
-      <style>{`
-         #ap-left-eye { animation: ap-blink-left 3.25s infinite; }
-         #ap-right-eye { animation: ap-blink-right 3.25s infinite; }
-         @keyframes ap-blink-left {
-            53%, 54% { d: path("M10 16.2786C10 16.0952 10 16.0034 10.2537 15.9465C10.5073 15.8895 10.9156 15.8895 11.7321 15.8895H12.2679C13.0844 15.8895 13.4927 15.8895 13.7463 15.9465C14 16.0034 14 16.0952 14 16.2786V17.5003C14 17.6838 14 17.7755 13.7463 17.8325C13.4927 17.8895 13.0844 17.8895 12.2679 17.8895H11.7321C10.9156 17.8895 10.5073 17.8895 10.2537 17.8325C10 17.7755 10 17.6838 10 17.5003V16.2786Z"); }
-         }
-         @keyframes ap-blink-right {
-            53%, 54% { d: path("M18 16.2786C18 16.0952 18 16.0034 18.2537 15.9465C18.5073 15.8895 18.9156 15.8895 19.7321 15.8895H20.2679C21.0844 15.8895 21.4927 15.8895 21.7463 15.9465C22 16.0034 22 16.0952 22 16.2786V17.5003C22 17.6838 22 17.7755 21.7463 17.8325C21.4927 17.8895 21.0844 17.8895 20.2679 17.8895H19.7321C18.9156 17.8895 18.5073 17.8895 18.2537 17.8325C18 17.7755 18 17.6838 18 17.5003V16.2786Z"); }
-         }
-      `}</style>
-      <path fillRule="evenodd" clipRule="evenodd" d="M8.49224 2C4.92508 2 2.07498 4.94359 2.07498 8.46154L2 23.5385C2 27.1282 4.92508 30 8.4209 30H23.4743C27.0415 30 30 27.0564 30 23.5385L29.9722 8.05139C29.7595 4.65552 26.9073 2 23.5457 2H8.49224ZM27.1802 8.29085C27.0905 6.36259 25.4884 4.8718 23.617 4.8718H8.4209C6.49463 4.8 4.85373 6.45128 4.85373 8.46154L4.84956 23.5385H4.85373C4.85373 25.5487 6.49463 27.1282 8.4209 27.1282H23.4743C25.472 27.1282 27.1463 25.4769 27.1463 23.5385L27.1802 8.29085Z" fill="currentColor" />
-      <path id="ap-left-eye" d="M9.84155 11.1844C9.84155 10.3709 9.84155 9.96409 10.0943 9.71135C10.347 9.45862 10.7538 9.45862 11.5673 9.45862H12.1013C12.9148 9.45862 13.3216 9.45862 13.5743 9.71135C13.8271 9.96409 13.8271 10.3709 13.8271 11.1844V16.602C13.8271 17.4155 13.8271 17.8223 13.5743 18.075C13.3216 18.3278 12.9148 18.3278 12.1013 18.3278H11.5673C10.7538 18.3278 10.347 18.3278 10.0943 18.075C9.84155 17.8223 9.84155 17.4155 9.84155 16.602V11.1844Z" fill="currentColor" />
-      <path id="ap-right-eye" d="M18.1047 11.1844C18.1047 10.3709 18.1047 9.96409 18.3575 9.71135C18.6102 9.45862 19.017 9.45862 19.8305 9.45862H20.3645C21.178 9.45862 21.5848 9.45862 21.8375 9.71135C22.0902 9.96409 22.0902 10.3709 22.0902 11.1844V16.602C22.0902 17.4155 22.0902 17.8223 21.8375 18.075C21.5848 18.3278 21.178 18.3278 20.3645 18.3278H19.8305C19.017 18.3278 18.6102 18.3278 18.3575 18.075C18.1047 17.8223 18.1047 17.4155 18.1047 16.602V11.1844Z" fill="currentColor" />
    </svg>
 );
 
@@ -192,7 +174,7 @@ const AddPagesModal = ({ pages, onClose, onAdd }: {
                            type="button"
                            onClick={selectAll}
                            style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: font, cursor: 'pointer', transition: 'background 150ms ease' }}
-                           onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+                           onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
                            onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
                         >
                            Select all {filtered.length}

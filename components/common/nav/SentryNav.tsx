@@ -14,7 +14,7 @@ import { formatMetricUsage } from '../../../lib/planLimits';
 import { countActionableRecommendations } from '../../../lib/recommendations';
 import { Avatar } from '../../core/avatar';
 import {
-  IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings, IconTools,
+  IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings, IconTools, IconLocal,
   IconCreditCard, IconFire, IconBroadcast, IconEllipsis, IconChevron,
   IconQuestion, IconGroup, IconSentryLogo, IconDocs, IconSupport,
   IconBuilding, IconMegaphone, IconGlobe, IconOpen,
@@ -44,7 +44,7 @@ const NavProgressRing = ({ pct }: { pct: number }) => {
       <circle r={r} cx="10" cy="10" fill="none" strokeWidth="2" stroke="rgba(255,255,255,0.15)" />
       <circle
         r={r} cx="10" cy="10" fill="none" strokeWidth="2" strokeLinecap="round"
-        stroke="#653DE9" strokeDasharray={c} strokeDashoffset={offset}
+        stroke="#F29964" strokeDasharray={c} strokeDashoffset={offset}
         transform="rotate(-90 10 10)"
       />
       <text x="10" y="10" textAnchor="middle" dominantBaseline="central">{Math.round(pct)}</text>
@@ -465,14 +465,14 @@ const SentryNav = ({ domains = [] }: Props) => {
         key: 'seo',
         label: 'SEO',
         icon: <IconCompass />,
-        href: workspaceHref(activeId, `/sites/${activeSlug}/seo-overview`),
+        href: workspaceHref(activeId, `/sites/${activeSlug}/performance`),
         match: `/sites/${activeSlug}`,
         secondary: {
           title: 'SEO',
           sections: [{
             links: [
-              { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/seo-overview`), match: '/seo-overview' },
               { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}/performance`), match: '/performance' },
+              { label: 'Site Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/site-audit`), match: `/sites/${activeSlug}/site-audit` },
               { label: 'Recommendations', href: workspaceHref(activeId, `/sites/${activeSlug}/recommendations`), match: `/sites/${activeSlug}/recommendations` },
               { label: 'Content Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/content-audit`), match: `/sites/${activeSlug}/content-audit` },
               { label: 'Topical Map', href: workspaceHref(activeId, `/sites/${activeSlug}/topical-map`), match: `/sites/${activeSlug}/topical-map` },
@@ -502,6 +502,38 @@ const SentryNav = ({ domains = [] }: Props) => {
         },
       });
       items.push({
+        key: 'local',
+        label: 'Local',
+        icon: <IconLocal />,
+        href: workspaceHref(activeId, `/sites/${activeSlug}/local/overview`),
+        match: `/sites/${activeSlug}/local`,
+        secondary: {
+          title: 'Local',
+          sections: [
+            {
+              links: [
+                { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/local/overview`), match: '/local/overview' },
+                { label: 'Listing Management', href: workspaceHref(activeId, `/sites/${activeSlug}/local/listing-management`), match: '/local/listing-management' },
+                { label: 'Review Management', href: workspaceHref(activeId, `/sites/${activeSlug}/local/review-management`), match: '/local/review-management' },
+                { label: 'GBP Optimization', href: workspaceHref(activeId, `/sites/${activeSlug}/local/gbp-optimization`), match: '/local/gbp-optimization' },
+              ],
+            },
+            {
+              label: 'Automations',
+              links: [
+                { label: 'GBP AI Agent', href: workspaceHref(activeId, `/sites/${activeSlug}/local/gbp-ai-agent`), match: '/local/gbp-ai-agent' },
+              ],
+            },
+            {
+              label: 'Competitive Analysis',
+              links: [
+                { label: 'Map Rank Tracker', href: workspaceHref(activeId, `/sites/${activeSlug}/local/map-rank-tracker`), match: '/local/map-rank-tracker' },
+              ],
+            },
+          ],
+        },
+      });
+      items.push({
         key: 'tools',
         label: 'Tools',
         icon: <IconTools />,
@@ -514,7 +546,6 @@ const SentryNav = ({ domains = [] }: Props) => {
               { label: 'Audit Tool', href: workspaceHref(activeId, `/sites/${activeSlug}/audit-tool`), match: '/audit-tool' },
               { label: 'Keyword Research', href: workspaceHref(activeId, `/sites/${activeSlug}/keyword-research`), match: '/keyword-research' },
               { label: 'Topic Research', href: workspaceHref(activeId, `/sites/${activeSlug}/topic-research`), match: '/topic-research' },
-              { label: 'AI Humanizer', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-humanizer`), match: '/ai-humanizer' },
             ],
           }],
         },
@@ -685,14 +716,16 @@ const SentryNav = ({ domains = [] }: Props) => {
   const isSecondaryActive = (matchSuffix: string) => {
     if (matchSuffix === '/dashboard') return isMatch('/dashboard', true);
     if (matchSuffix.includes('/ai-visibility/')) return isMatch(matchSuffix);
+    if (matchSuffix.includes('/local/')) return isMatch(matchSuffix);
     if (activeSlug && matchSuffix.endsWith(activeSlug)) return path.endsWith(matchSuffix);
     return isMatch(matchSuffix);
   };
 
   const isActivePrimary = (it: PrimaryItem) => {
     if (it.key === 'dashboard') return isMatch('/dashboard', true);
-    if (it.key === 'seo') return isMatch(it.match) && !isMatch('/ai-visibility');
-    if (it.key === 'tools') return isMatch('/audit-tool') || isMatch('/keyword-research') || isMatch('/topic-research') || isMatch('/ai-humanizer');
+    if (it.key === 'seo') return isMatch(it.match) && !isMatch('/ai-visibility') && !isMatch('/local');
+    if (it.key === 'local') return isMatch('/local');
+    if (it.key === 'tools') return isMatch('/audit-tool') || isMatch('/keyword-research') || isMatch('/topic-research');
     return isMatch(it.match);
   };
 

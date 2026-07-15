@@ -15,6 +15,12 @@ export function needsCoverageRegrade(snap: CoverageSnapshot, plainText: string):
   if (!plainText.trim() || plainText.length < 200) return false;
   if (!snap.items.length) return false;
   if (snap.items.length > AI_COVERAGE_MAX) return true;
+  const hasMisalignedCommercialIntent = snap.items.some((i) =>
+    i.type === 'intent' && /\b(ile kosztuje|polecany|kogo wybrać|kogo wybrac|czy warto)\b/i.test(i.label),
+  ) && snap.items.some((i) =>
+    (i.type === 'paa' || i.type === 'intent') && /\b(kiedy|oskarżyć|oskarzyc|zachowania|zgłosić|zglosic)\b/i.test(i.label),
+  );
+  if (hasMisalignedCommercialIntent) return true;
   if (snap.overall > 0) return false;
   const gradedCoverage = snap.items.some((i) => i.covered && i.quality > 0);
   return !gradedCoverage;
@@ -38,7 +44,10 @@ export async function regradeCoverageSnapshot(opts: {
 
   const introPlain = introPlainTextFromHtml(opts.html, opts.plainText);
   const intentResult = await analyzeIntroduction(introPlain, opts.keyword, deepseekIntroJudge);
-  const intentGraded = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion);
+  const serpQuestions = workingSnap.items
+    .filter((i) => i.type === 'paa' || i.category === 'knowledge')
+    .map((i) => i.label);
+  const intentGraded = citationIntentItems(opts.keyword, intentResult.detectedMainQuestion, { serpQuestions });
   const knowledgeItems = workingSnap.items
     .filter((i) => i.category !== 'intent' && i.type !== 'intent')
     .map(remapLegacyCitationItem);

@@ -149,22 +149,22 @@ function _kwPlacement(html: string, keyword: string): number {
 }
 
 /**
- * Paragraph readability — average words per <p> tag (max 10).
- * Optimal range 40–100 words. Long walls of text are penalised.
+ * Paragraph readability — average characters per <p> tag (max 10).
+ * Optimal range 100–200 characters. Long walls of text are penalised.
  */
 function _readability(html: string): number {
    const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
    if (paras.length < 2) return 0;
 
    const avg = paras.reduce((sum, m) => {
-      const words = m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
-      return sum + words;
+      const chars = m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().length;
+      return sum + chars;
    }, 0) / paras.length;
 
-   if (avg >= 40 && avg <= 100) return 10;
-   if (avg < 40) return Math.max(3, (avg / 40) * 10);
-   // Drops from 10 at 100 words to 2 at ≥200 words
-   return Math.max(2, 10 - ((avg - 100) / 10) * 0.8);
+   if (avg >= 100 && avg <= 200) return 10;
+   if (avg < 100) return Math.max(3, (avg / 100) * 10);
+   // Drops from 10 at 200 chars to 2 at ≥250 chars
+   return Math.max(2, 10 - ((avg - 200) / 5) * 0.8);
 }
 
 /**
@@ -296,7 +296,7 @@ export function collectScoreSlots(
    html?: string,
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
-   coverageItems?: CoverageItem[],
+   coverageItems?: readonly CoverageItem[],
 ): ScoreSlot[] {
    const slots: ScoreSlot[] = [];
    if (!scoreData) return slots;
@@ -344,7 +344,7 @@ export function collectScoreSlots(
    if (html && keyword) {
       push('kwPlacement', 'Keyword placement', _kwPlacement(html, keyword), 15,
          `Put "${keyword}" in the H1, at least one H2, and the first 100 words`);
-      push('readability', 'Readability', _readability(html), 10, 'Keep paragraphs ~40–100 words');
+      push('readability', 'Readability', _readability(html), 10, 'Keep paragraphs 100–200 characters under each heading');
       push('externalLinks', 'External links', _externalLinks(html), 5, 'Cite 3–7 authoritative external sources');
       const titleScore = _titleQuality(html, keyword);
       if (titleScore !== null) push('title', 'Title tag', titleScore, 7, `Include "${keyword}" in a 50–60 char title`);
@@ -383,9 +383,8 @@ export function computeContentScore(
    html?: string,
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
-   coverageItems?: CoverageItem[],
+   coverageItems?: readonly CoverageItem[],
 ): number {
-   // Surfer-style: competitor benchmarks from deep analysis / SERP pipeline.
    if (
       scoreData.scoring_model === 'competitor'
       && scoreData.content_targets
@@ -438,7 +437,7 @@ export function computeContentScoreBreakdown(
    html?: string,
    keyword?: string,
    keywordCoverage?: Array<{ keyword: string; is_covered: boolean }>,
-   coverageItems?: CoverageItem[],
+   coverageItems?: readonly CoverageItem[],
 ): { slots: Array<ScoreSlot & { missingPoints: number }>; totalPossible: number } {
    const slots = collectScoreSlots(plainText, wordCount, headingCount, scoreData, paragraphCount, html, keyword, keywordCoverage, coverageItems);
    const totalPossible = slots.reduce((s, x) => s + x.max, 0);
