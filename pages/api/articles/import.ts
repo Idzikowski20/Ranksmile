@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const {
       url,
       keywords = [],
-      country = 'US',
+      country = 'PL',
       device = 'Desktop',
       domainId: bodyDomainId,
       startAnalysis = false,

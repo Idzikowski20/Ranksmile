@@ -6,7 +6,7 @@ import DomainFavicon from '../common/DomainFavicon';
 const FONT = 'var(--font-family-primary)';
 
 const HexIcon = () => (
-   <svg viewBox="0 0 256 256" width="20" height="20" aria-hidden="true" style={{ color: '#783AFB', flexShrink: 0 }}>
+   <svg viewBox="0 0 256 256" width="20" height="20" aria-hidden="true" style={{ color: '#F29964', flexShrink: 0 }}>
       <g fill="currentColor">
          <path d="M224 80.18v95.64a8 8 0 0 1-4.16 7l-88 48.18a8 8 0 0 1-7.68 0l-88-48.18a8 8 0 0 1-4.16-7V80.18a8 8 0 0 1 4.16-7l88-48.18a8 8 0 0 1 7.68 0l88 48.18a8 8 0 0 1 4.16 7" opacity="0.2" />
          <path d="m223.68 66.15l-88-48.15a15.88 15.88 0 0 0-15.36 0l-88 48.17a16 16 0 0 0-8.32 14v95.64a16 16 0 0 0 8.32 14l88 48.17a15.88 15.88 0 0 0 15.36 0l88-48.17a16 16 0 0 0 8.32-14V80.18a16 16 0 0 0-8.32-14.03M216 175.82L128 224l-88-48.18V80.18L128 32l88 48.17Z" />
@@ -46,7 +46,7 @@ const OverviewSection = ({ title, children }: { title: string; children: React.R
 
 const TIER_COLORS: Record<string, { bg: string; color: string }> = {
    'Very High': { bg: '#F0FDF4', color: '#15803D' },
-   High: { bg: 'rgba(120,58,251,0.08)', color: '#783AFB' },
+   High: { bg: 'rgba(242,153,100,0.08)', color: '#F29964' },
    Medium: { bg: '#FEF3C7', color: '#B45309' },
    Low: { bg: '#F4F4F5', color: '#52525C' },
 };

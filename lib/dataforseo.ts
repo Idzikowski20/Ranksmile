@@ -21,6 +21,7 @@ import {
    DFS_SERP_PAA,
    serpCrawlBudget,
 } from './dataforseoBudget';
+import { toDfsLanguageCode } from './domainLanguagePrompts';
 
 const BASE = 'https://api.dataforseo.com/v3';
 
@@ -151,7 +152,7 @@ export async function getKeywordIdeas(opts: {
    const items = await dfsPost('/dataforseo_labs/google/keyword_ideas/live', {
       keywords: opts.keywords.slice(0, 200).map((k) => k.toLowerCase()),
       location_code: locationCodeFor(opts.country),
-      language_code: opts.languageCode || 'en',
+      language_code: toDfsLanguageCode(opts.languageCode, 'en'),
       limit: Math.min(opts.limit || DFS_DEFAULT_KEYWORD_LIMIT, 1000),
    });
    return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
@@ -167,7 +168,7 @@ export async function getKeywordSuggestions(opts: {
    const items = await dfsPost('/dataforseo_labs/google/keyword_suggestions/live', {
       keyword: opts.keyword.toLowerCase(),
       location_code: locationCodeFor(opts.country),
-      language_code: opts.languageCode || 'en',
+      language_code: toDfsLanguageCode(opts.languageCode, 'en'),
       limit: Math.min(opts.limit || DFS_DEFAULT_KEYWORD_LIMIT, 1000),
    });
    return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
@@ -212,7 +213,7 @@ export async function getPeopleAlsoAsk(opts: {
    const items = await dfsPost('/serp/google/organic/live/advanced', {
       keyword: opts.keyword,
       location_code: locationCodeFor(opts.country),
-      language_code: opts.languageCode || 'en',
+      language_code: toDfsLanguageCode(opts.languageCode, 'en'),
       ...DFS_SERP_PAA,
       ...serpCrawlBudget({ ownDomain: opts.ownDomain, withSubdomains: true }),
    });
@@ -252,7 +253,7 @@ export async function getRankedKeywords(opts: {
    const task: Task = {
       target: opts.target.replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
       location_code: locationCodeFor(opts.country),
-      language_code: opts.languageCode || 'en',
+      language_code: toDfsLanguageCode(opts.languageCode, 'en'),
       limit: Math.min(opts.limit || DFS_DEFAULT_RANKED_LIMIT, 1000),
       order_by: ['keyword_data.keyword_info.search_volume,desc'],
    };
@@ -280,7 +281,7 @@ export async function getKeywordOverview(opts: {
    const items = await dfsPost('/dataforseo_labs/google/keyword_overview/live', {
       keywords: list,
       location_code: opts.locationCode,
-      language_code: opts.languageCode || 'en',
+      language_code: toDfsLanguageCode(opts.languageCode, 'en'),
    });
    return (items as DfsKeywordItem[]).map(mapItem).filter((k) => k.keyword);
 }

@@ -46,7 +46,7 @@ export default function GoalProjectionChart({ baseClicks, percentage, period }: 
                   y={chartHeight - barH}
                   width={barWidth}
                   height={barH}
-                  fill={isFirst ? '#E4E4E7' : '#8B73F6'}
+                  fill={isFirst ? '#E4E4E7' : '#F29964'}
                   rx={3}
                 />
                 {i % 3 === 0 ? (

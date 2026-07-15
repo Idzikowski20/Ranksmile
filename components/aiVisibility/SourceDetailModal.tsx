@@ -208,7 +208,7 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                   ) : (detail && detail.history.length > 1) ? (
                      <MetricTrendChart
                         labels={detail.history.map((h) => fmtDay(h.finishedAt))}
-                        lines={[{ label: 'Times shown', data: detail.history.map((h) => h.timesShown), color: '#783AFB' }]}
+                        lines={[{ label: 'Times shown', data: detail.history.map((h) => h.timesShown), color: '#F29964' }]}
                         yMin={0}
                         height={200}
                      />

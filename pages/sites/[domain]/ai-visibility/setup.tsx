@@ -46,8 +46,14 @@ const AiVisibilitySetup: NextPage = () => {
       (async () => {
          let titles: string[] = [];
          try {
-            const r = await fetch(`/api/domains/${slug}/topics`);
-            const j = await r.json();
+            let r = await fetch(`/api/domains/${slug}/topics`);
+            let j = await r.json();
+            if (j.needsLocalization) {
+               const reg = await fetch(`/api/domains/${slug}/topics/regenerate`, { method: 'POST' });
+               if (reg.ok) {
+                  j = await reg.json();
+               }
+            }
             titles = (j.topics || []).map((t: { title: string }) => t.title).slice(0, 5);
          } catch { /* no topics — start with one empty topic */ }
          if (titles.length === 0) {

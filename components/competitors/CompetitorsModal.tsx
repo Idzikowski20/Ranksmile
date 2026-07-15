@@ -64,7 +64,7 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => {
                onClick={onConfirm}
                disabled={saving}
                style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, transition: 'background 150ms ease' }}
-               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#783AFB'; }}
+               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#F29964'; }}
                onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
             >
                Let&apos;s go

@@ -300,7 +300,15 @@ const RecommendationsPage: NextPage = () => {
          // Try URL match first (more reliable) — then fall back to keyword match
          if (a.publish_url || a.meta_url) {
             const urlKey = normalizeUrlForMatch(String(a.publish_url || a.meta_url || ''));
-            sc = urlKeywordMap.get(urlKey);
+            const fromUrl = urlKeywordMap.get(urlKey);
+            if (fromUrl) {
+               sc = {
+                  keyword: fromUrl.keyword,
+                  position: fromUrl.position ?? 0,
+                  clicks: fromUrl.clicks ?? 0,
+                  impressions: fromUrl.impressions ?? 0,
+               };
+            }
          }
          if (!sc && a.target_keyword) {
             sc = scMap.get(a.target_keyword.toLowerCase());
@@ -706,7 +714,7 @@ const RecommendationsPage: NextPage = () => {
                                  overflow: 'hidden',
                                  borderBottom: i < filtered.length - 1 ? '1px solid #F4F4F5' : 'none',
                                  minHeight: 72,
-                                 background: isSelected ? 'rgba(120,58,251,0.04)' : '#fff',
+                                 background: isSelected ? 'rgba(242,153,100,0.04)' : '#fff',
                                  transition: 'background 120ms ease',
                                  position: 'relative',
                               }}
@@ -835,7 +843,7 @@ const RecommendationsPage: NextPage = () => {
             .rec-row:hover .kw-btn-text { text-decoration-color: #D4D4D8 !important; }
             .rec-row:hover .kw-btn-icon { opacity: 1 !important; }
             .rec-row:hover .analyze-btn { opacity: 1 !important; }
-            .kw-row:hover { background: rgba(120,58,251,0.03) !important; }
+            .kw-row:hover { background: rgba(242,153,100,0.03) !important; }
             @keyframes growOut { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
             @keyframes barSlideUp { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
             @keyframes spin { to { transform: rotate(360deg); } }

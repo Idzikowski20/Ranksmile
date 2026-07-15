@@ -9,7 +9,7 @@ const variantStyles: Record<BadgeVariant, { bg: string; color: string }> = {
   experimental: { bg: '#787581', color: '#FFFFFF' },
   muted: { bg: '#0000200F', color: '#302E36' },
   internal: { bg: '#0000200F', color: '#302E36' },
-  info: { bg: '#0008F012', color: '#653DE9' },
+  info: { bg: '#F299641C', color: '#E07D42' },
   success: { bg: '#00B8001C', color: '#008900' },
   warning: { bg: '#E0B01030', color: '#A45200' },
   danger: { bg: '#F828081C', color: '#D50000' },

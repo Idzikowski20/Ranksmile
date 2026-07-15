@@ -61,7 +61,7 @@ const TopicResearchCard = ({ item, onOpen, onDelete }: { item: TopicResearchCard
       return (
          <div style={{ height: 96, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #E4E4E7', borderRadius: 12, padding: '0 24px', gap: 12, userSelect: 'none', opacity: 0.7, fontFamily: FONT }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
-               <div style={{ width: 24, height: 24, border: '2.5px solid #E4E4E7', borderTopColor: '#783AFB', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+               <div style={{ width: 24, height: 24, border: '2.5px solid #E4E4E7', borderTopColor: '#F29964', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                   <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 600, color: '#3F3F47', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.seed}</span>
                   <span style={{ fontSize: 13, lineHeight: '16px', color: '#9F9FA9' }}>{item.status === 'running' ? 'Researching topics…' : 'Queued…'}</span>

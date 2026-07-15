@@ -100,7 +100,7 @@ const ConfirmEmail: NextPage = () => {
                            cursor: 'pointer',
                            transition: 'background 150ms ease',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                      >
                         Send a new link

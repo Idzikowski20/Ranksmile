@@ -5,113 +5,110 @@ import toast from 'react-hot-toast';
 import WizardShell from '../../components/articles/WizardShell';
 import { clearWizardState } from '../../lib/wizardState';
 
-const STEPS = [
-  'Reviewing ranking content & terms',
-  'Building the outline',
-  'Writing sections',
-  'Inserting internal & external links',
-  'Optimizing for AI Search & SEO',
-];
-
-// While the real generation finishes, cycle the last step's label so it never
-// looks frozen on a single spinner.
-const OPTIMIZING_MSGS = [
-  'Optimizing for AI Search & SEO',
-  'Tuning headings & structure',
-  'Improving readability & flow',
-  'Strengthening keyword coverage',
-  'Polishing the final draft',
-];
-
 const GeneratingPage: NextPage = () => {
   const router = useRouter();
   const articleId = typeof router.query.articleId === 'string' ? router.query.articleId : '';
-  const [step, setStep] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('Generating article…');
+  const [progressPct, setProgressPct] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
-  const [holdIdx, setHoldIdx] = useState(0);
   const startedRef = useRef(false);
 
-  // Kick off the real generation once.
   useEffect(() => {
-    if (!router.isReady || startedRef.current) return;
+    if (!router.isReady || startedRef.current) return undefined;
     startedRef.current = true;
 
-    if (!articleId) { router.replace('/articles'); return; }
+    if (!articleId) { router.replace('/articles'); return undefined; }
 
     const q = router.query;
-    let instructions = '';
-    let voiceId = 'serp';
-    try {
-      instructions = sessionStorage.getItem(`nc_instructions_${articleId}`) || '';
-      voiceId = sessionStorage.getItem(`nc_voice_${articleId}`) || 'serp';
-    } catch { /* ignore */ }
-    // Generation runs async on the sidecar: kick it off (returns a jobId), then poll the
-    // job until the result is written back to the article. Avoids the multi-minute
-    // synchronous wait that would exceed the serverless function limit.
+
     const pollJob = (jobId: string) => new Promise<void>((resolve, reject) => {
       const started = Date.now();
       const tick = async () => {
         try {
           const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId)}`);
           const d = await r.json().catch(() => ({}));
+          if (typeof d.progressMessage === 'string' && d.progressMessage.trim()) {
+            setProgressMessage(d.progressMessage.trim());
+          }
+          if (typeof d.totalProgress === 'number') {
+            setProgressPct(Math.max(0, Math.min(100, d.totalProgress)));
+          }
           if (d.status === 'done') { resolve(); return; }
           if (d.status === 'failed') { reject(new Error(d.progressMessage || 'Generation failed')); return; }
         } catch { /* transient network error — keep polling */ }
         if (Date.now() - started > 8 * 60 * 1000) { reject(new Error('Generation timed out')); return; }
         setTimeout(tick, 3000);
       };
-      setTimeout(tick, 3000);
+      setTimeout(tick, 1500);
     });
 
-    fetch(`/api/articles/${articleId}/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contentType: typeof q.type === 'string' ? q.type : 'blog',
-        instructions,
-        voiceId,
-        internalLinks: q.internal !== '0',
-        externalLinks: q.external !== '0',
-        reviewOutline: q.outline === '1',
-      }),
-    })
-      .then(async (r) => {
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(d?.error || 'Generation failed');
-        return d.jobId as string;
-      })
-      .then((jobId) => pollJob(jobId))
-      .then(() => { clearWizardState(articleId); setFinished(true); })
-      .catch((e) => { toast.error(e?.message || 'Generation failed'); setFinished(true); });
+    (async () => {
+      let instructions = '';
+      let voiceId = 'serp';
+      try {
+        const artRes = await fetch(`/api/articles/${articleId}`);
+        const artData = await artRes.json().catch(() => ({}));
+        const article = artData.article as { wizard_state?: string | null } | undefined;
+        if (article?.wizard_state) {
+          const ws = JSON.parse(article.wizard_state) as { instructions?: string; voiceId?: string };
+          instructions = ws.instructions || '';
+          voiceId = ws.voiceId || 'serp';
+        }
+      } catch { /* ignore */ }
+
+      // Resume an in-flight job if one exists
+      try {
+        const progRes = await fetch(`/api/articles/job-progress?articleId=${encodeURIComponent(articleId)}`);
+        const prog = await progRes.json().catch(() => ({}));
+        if (prog.status === 'running' && prog.jobId) {
+          await pollJob(prog.jobId);
+          clearWizardState(articleId);
+          setFinished(true);
+          return;
+        }
+        if (prog.status === 'done') {
+          clearWizardState(articleId);
+          setFinished(true);
+          return;
+        }
+      } catch { /* start fresh */ }
+
+      const genRes = await fetch(`/api/articles/${articleId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentType: typeof q.type === 'string' ? q.type : 'blog',
+          instructions,
+          voiceId,
+          internalLinks: q.internal !== '0',
+          externalLinks: q.external !== '0',
+          reviewOutline: q.outline === '1',
+        }),
+      });
+      const genData = await genRes.json().catch(() => ({}));
+      if (!genRes.ok) throw new Error(genData?.error || 'Generation failed');
+      await pollJob(genData.jobId as string);
+      clearWizardState(articleId);
+      setFinished(true);
+    })().catch((e) => {
+      toast.error(e?.message || 'Generation failed');
+      setFinished(true);
+    });
+
+    return undefined;
   }, [router.isReady, articleId, router]);
 
-  // Step animation: advance until the last-but-one step, hold until the real
-  // generation finishes, then complete and open the editor.
   useEffect(() => {
-    if (finished) {
-      setStep(STEPS.length);
-      const t = setTimeout(() => router.replace(articleId ? `/articles/${articleId}` : '/articles'), 700);
-      return () => clearTimeout(t);
-    }
-    if (step < STEPS.length - 1) {
-      const t = setTimeout(() => setStep((s) => s + 1), 1400);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [step, finished, articleId, router]);
-
-  // Hold on the last step → rotate its label so the wait never looks frozen.
-  useEffect(() => {
-    if (finished || step !== STEPS.length - 1) { setHoldIdx(0); return undefined; }
-    const t = setInterval(() => setHoldIdx((i) => (i + 1) % OPTIMIZING_MSGS.length), 2200);
-    return () => clearInterval(t);
-  }, [step, finished]);
+    if (!finished) return undefined;
+    const t = setTimeout(() => router.replace(articleId ? `/articles/${articleId}` : '/articles'), 700);
+    return () => clearTimeout(t);
+  }, [finished, articleId, router]);
 
   return (
     <WizardShell title="Creating your article">
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, paddingTop: 24 }}>
         <div style={{ position: 'relative', width: 56, height: 56 }}>
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.9s linear infinite', color: '#783AFB' }}>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.9s linear infinite', color: '#F29964' }}>
             <path d="M12 2a10 10 0 1 0 10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#F97316" style={{ position: 'absolute', inset: 0, margin: 'auto' }}>
@@ -124,31 +121,15 @@ const GeneratingPage: NextPage = () => {
             Creating your article
           </h2>
           <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-            This usually takes a minute. You can keep this tab open.
+            {progressMessage}
           </p>
         </div>
 
-        <div style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {STEPS.map((s, i) => {
-            const done = i < step;
-            const active = i === step;
-            const label = active && i === STEPS.length - 1 && !finished ? OPTIMIZING_MSGS[holdIdx] : s;
-            return (
-              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: done || active ? 1 : 0.45, transition: 'opacity 0.3s' }}>
-                <span style={{ width: 20, height: 20, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {done ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: '#1AB25E' }}><path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  ) : active ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.9s linear infinite', color: '#783AFB' }}><path d="M12 2a10 10 0 1 0 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
-                  ) : (
-                    <span style={{ width: 8, height: 8, borderRadius: 9999, background: '#D4D4D8' }} />
-                  )}
-                </span>
-                <span style={{ fontSize: 14, fontWeight: active ? 600 : 400, color: active ? '#09090B' : '#52525C', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
-              </div>
-            );
-          })}
-        </div>
+        {progressPct != null && (
+          <div style={{ width: '100%', maxWidth: 380, height: 6, borderRadius: 9999, background: '#E4E4E7', overflow: 'hidden' }}>
+            <div style={{ width: `${progressPct}%`, height: '100%', background: '#F29964', borderRadius: 9999, transition: 'width 0.3s ease' }} />
+          </div>
+        )}
       </div>
     </WizardShell>
   );

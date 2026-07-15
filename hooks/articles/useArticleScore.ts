@@ -88,7 +88,7 @@ export function useArticleScore({
       }
     }
     setAnalysisReloadKey((k) => k + 1);
-    toast.success('Analiza zakończona');
+    toast.success('Analysis complete');
   }, [id, setArticle, setScoreData]);
 
   const onAnalysisError = useCallback((message: string) => {

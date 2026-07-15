@@ -46,7 +46,7 @@ const WordPressIntegration: NextPage = () => {
                            target="_blank"
                            rel="noreferrer noopener"
                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 14, fontWeight: 500, color: '#155DFC', textDecoration: 'none', transition: 'color 150ms ease' }}
-                           onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#783AFB'; }}
+                           onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#F29964'; }}
                            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#155DFC'; }}
                         >
                            How to connect?

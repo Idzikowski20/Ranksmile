@@ -127,7 +127,7 @@ const CustomVoicesSettings = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{v.name}</span>
                     {v.isDefault && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#630DE3', background: 'rgba(120,58,251,0.1)', padding: '2px 8px', borderRadius: 9999 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#630DE3', background: 'rgba(242,153,100,0.1)', padding: '2px 8px', borderRadius: 9999 }}>
                         Default
                       </span>
                     )}

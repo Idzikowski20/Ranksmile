@@ -150,14 +150,13 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
 
   const showWelcomeToast = (title: string, body: string, emoji = '🙌') => {
     toast.custom((t) => (
-      <div style={{
+      <div
+        className="app-toast"
+        style={{
         width: 356,
         maxWidth: 'calc(100vw - 32px)',
-        background: '#18181B',
         color: '#fff',
-        borderRadius: 12,
         padding: 14,
-        boxShadow: '0 14px 40px rgba(0,0,0,0.18)',
         fontFamily: F,
       }}
       >
@@ -409,7 +408,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                           fontSize: 14,
                           fontFamily: F,
                           color: country ? '#18181B' : '#52525C',
-                          boxShadow: countryOpen ? '0 0 0 2px rgba(120,58,251,0.1)' : '0px 2px 0px 0px #DAD9DE',
+                          boxShadow: countryOpen ? '0 0 0 2px rgba(242,153,100,0.1)' : '0px 2px 0px 0px #DAD9DE',
                           cursor: 'pointer',
                         }}
                       >

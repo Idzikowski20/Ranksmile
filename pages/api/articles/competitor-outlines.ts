@@ -11,6 +11,7 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
+import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { assertArticleAccess } from '../../../lib/tenancy';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
@@ -22,8 +23,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   await ensureArticlesTables();
-  const { keyword, language = 'pl', num = 5, articleId } = req.body;
+  const { keyword, language, num = 5, articleId } = req.body;
   if (!keyword) return res.status(400).json({ error: 'keyword is required' });
+
+  const locale = await resolveContentLocale({
+    articleId: articleId ? Number(articleId) : undefined,
+    bodyLanguage: language,
+  });
+  const resolvedLanguage = locale.languageCode;
 
   if (articleId) {
     const userId = await getCurrentUserId(req, res);
@@ -55,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
     const sidecarRes = await axios.post(
       `${sidecarUrl}/competitor-outlines`,
-      { keyword, language, num },
+      { keyword, language: resolvedLanguage, num },
       { timeout: 60000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } },
     );
     const result = sidecarRes.data;

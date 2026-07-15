@@ -145,7 +145,7 @@ function ToolButton({ editor, command, isActive, onClick, children }: {
         borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
         background: isActive ? '#3F3F47' : 'transparent',
         border: 'none', cursor: 'pointer',
-        color: isActive ? '#783AFB' : '#FFFFFF',
+        color: isActive ? '#F29964' : '#FFFFFF',
         padding: 0,
         transition: 'background-color 200ms ease-in-out',
       }}
@@ -360,7 +360,7 @@ export function SurfyLinkModal({
                   outlineOffset: 2,
                   boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
                   color: '#18181B',
-                  border: '1px solid #AA93FD',
+                  border: '1px solid #F5C4A0',
                   borderRadius: 8,
                 }}
               />
@@ -702,7 +702,7 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
             borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
             background: highlightMenuOpen ? '#3F3F47' : 'transparent',
             border: 'none', cursor: 'pointer',
-            color: editor.isActive('highlight') ? '#783AFB' : '#FFFFFF',
+            color: editor.isActive('highlight') ? '#F29964' : '#FFFFFF',
             padding: 0,
             transition: 'background-color 200ms ease-in-out',
           }}
@@ -1025,7 +1025,7 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
                       outlineOffset: 2,
                       boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
                       color: '#18181B',
-                      border: '1px solid #AA93FD',
+                      border: '1px solid #F5C4A0',
                       borderRadius: 8,
                     }}
                   />

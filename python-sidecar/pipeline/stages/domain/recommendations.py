@@ -5,6 +5,7 @@ import os
 import anthropic
 
 from pipeline.contracts import AnalysisStage, StageContext
+from pipeline.language_hints import language_instruction
 from pipeline.llm_json import parse_json_array
 
 _client: anthropic.AsyncAnthropic | None = None
@@ -29,6 +30,7 @@ async def _llm_recommendations(
     topics: list[dict],
     competitors: list[dict],
     brand_knowledge: str,
+    language: str = "en",
 ) -> list[dict] | None:
     """Single LLM call; returns parsed list or None on failure."""
     topics_str = json.dumps(topics[:8], ensure_ascii=False)
@@ -40,7 +42,7 @@ async def _llm_recommendations(
 
     prompt = (
         f"Given these SEO topics {topics_str}, competitor domains {competitors_str}, "
-        f"and {brand_block} produce 5-10 prioritized content recommendations. "
+        f"and {brand_block} produce 5-10 prioritized content recommendations.{language_instruction(language)} "
         "Return ONLY valid JSON (no markdown, no explanation). Keep rationales short and "
         "do NOT use double-quote characters inside any string value. "
         '[{"title": "...", "rationale": "...", "priority": "high|medium|low", '
@@ -67,6 +69,7 @@ class RecommendationsStage(AnalysisStage):
         topics: list[dict] = ctx.get_state("topics") or []
         competitors: list[dict] = ctx.get_state("competitors") or []
         brand_knowledge: str = ctx.payload.get("brandKnowledge", "")
+        language: str = ctx.payload.get("language", "en")
         audits: list[dict] = ctx.get_state("page_audits") or []
 
         from pipeline.stages.domain.triage_scorer import OPTIMIZE_THRESHOLD
@@ -97,7 +100,7 @@ class RecommendationsStage(AnalysisStage):
         await ctx.emit_progress(self, 60, "Generating content ideas")
         ideas = None
         try:
-            ideas = await _llm_recommendations(topics, competitors, brand_knowledge)
+            ideas = await _llm_recommendations(topics, competitors, brand_knowledge, language)
         except Exception as exc:  # noqa: BLE001
             print(f"[recommendations] LLM call failed: {exc}")
         print(f"[recommendations] optimize={len(recs)} create(LLM ideas)={len(ideas or [])}")

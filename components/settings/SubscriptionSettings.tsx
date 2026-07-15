@@ -69,16 +69,14 @@ const ChatBubbleIcon = () => (
 export const showCancellationApprovedToast = () => {
   toast.custom((t: { id: string }) => (
     <div
+      className="app-toast"
       style={{
         display: 'flex',
         alignItems: 'flex-start',
         gap: 14,
         width: 360,
         padding: '16px 18px',
-        borderRadius: 8,
-        background: '#18181B',
         color: '#FFFFFF',
-        boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.04), 0px 2px 8px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.06)',
         fontFamily: 'var(--font-family-primary)',
       }}
     >
@@ -427,9 +425,9 @@ const RadioOption = ({
       alignItems: 'center',
       padding: '14px 16px',
       borderRadius: 8,
-      border: selected ? '1px solid #AA93FD' : '1px solid #E4E4E7',
-      background: selected ? 'rgba(120,58,251,0.04)' : '#fff',
-      boxShadow: selected ? '0 0 0 3px rgba(120,58,251,0.1)' : 'none',
+      border: selected ? '1px solid #F5C4A0' : '1px solid #E4E4E7',
+      background: selected ? 'rgba(242,153,100,0.04)' : '#fff',
+      boxShadow: selected ? '0 0 0 3px rgba(242,153,100,0.1)' : 'none',
       cursor: 'pointer',
       fontSize: 14,
       color: '#18181B',

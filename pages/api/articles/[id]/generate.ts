@@ -14,6 +14,7 @@ import { getDomainVoices } from '../../../../lib/domainVoices';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
+import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
@@ -39,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const articleId = req.query.id;
   const {
-    language = 'pl', tone = 'professional',
+    language, tone = 'professional',
     contentType, instructions = '', voiceId = 'serp',
     internalLinks = true, externalLinks = true, reviewOutline = false,
   } = req.body || {};
@@ -56,7 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!article) return res.status(404).json({ error: 'Article not found' });
     const keyword = article.target_keyword;
     if (!keyword) return res.status(400).json({ error: 'Article has no target keyword' });
-    const lang = article.language || language;
+    const locale = await resolveContentLocale({ domainId: article.domain_id, articleId: articleIdNum, bodyLanguage: language });
+    const lang = article.language || locale.languageCode;
 
     // 2. Domain
     const domainRows = await db.query<{ domain: string }>(

@@ -1,0 +1,39 @@
+const WIZARD_STEPS = ['content-type', 'context', 'writing-mode'] as const;
+
+export type ArticleEntryResolution =
+  | { kind: 'editor' }
+  | { kind: 'wizard'; step: string }
+  | { kind: 'generating' };
+
+export function resolveArticleEntry(article: {
+  wizard_state?: string | null;
+  content?: string | null;
+  status?: string | null;
+}): ArticleEntryResolution {
+  if (article.status === 'generating') {
+    return { kind: 'generating' };
+  }
+  const hasContent = !!(article.content || '').trim();
+  if (!hasContent && article.wizard_state) {
+    try {
+      const ws = JSON.parse(article.wizard_state) as { step?: string };
+      const step = typeof ws.step === 'string' && WIZARD_STEPS.includes(ws.step as typeof WIZARD_STEPS[number])
+        ? ws.step
+        : 'content-type';
+      return { kind: 'wizard', step };
+    } catch {
+      return { kind: 'wizard', step: 'content-type' };
+    }
+  }
+  return { kind: 'editor' };
+}
+
+export function articleEntryHref(
+  articleId: number | string,
+  resolution: ArticleEntryResolution,
+): string | null {
+  const id = String(articleId);
+  if (resolution.kind === 'generating') return `/articles/generating?articleId=${id}`;
+  if (resolution.kind === 'wizard') return `/articles/${resolution.step}?articleId=${id}`;
+  return null;
+}

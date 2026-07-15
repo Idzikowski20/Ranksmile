@@ -103,11 +103,11 @@ const EditorOnboarding = () => {
         style={{ position: 'fixed', inset: 0, zIndex: 99997, background: 'transparent', cursor: 'default' }}
       />
       {ring && (
-        <div style={{ position: 'fixed', top: ring.top, left: ring.left, width: ring.width, height: ring.height, borderRadius: 8, boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)', outline: '2px solid #783AFB', outlineOffset: 2, zIndex: 99998, pointerEvents: 'none', transition: 'top 0.2s, left 0.2s, width 0.2s, height 0.2s' }} />
+        <div style={{ position: 'fixed', top: ring.top, left: ring.left, width: ring.width, height: ring.height, borderRadius: 8, boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)', outline: '2px solid #F29964', outlineOffset: 2, zIndex: 99998, pointerEvents: 'none', transition: 'top 0.2s, left 0.2s, width 0.2s, height 0.2s' }} />
       )}
-      <div role="dialog" style={{ position: 'fixed', top: box.top, left: box.left, width: W, background: '#783AFB', color: '#fff', borderRadius: 8, padding: 20, boxShadow: '0 8px 28px rgba(0,0,0,0.25)', zIndex: 99999, fontFamily: 'var(--font-family-primary)', fontSize: 14, lineHeight: '20px' }}>
-        {box.arrow === 'top' && <span style={{ position: 'absolute', top: -6, left: Math.min(Math.max(box.arrowOffset - 6, 14), W - 26), width: 14, height: 14, background: '#783AFB', transform: 'rotate(45deg)', borderRadius: 2 }} />}
-        {box.arrow === 'left' && <span style={{ position: 'absolute', left: -6, top: Math.min(Math.max(box.arrowOffset - 6, 14), 200), width: 14, height: 14, background: '#783AFB', transform: 'rotate(45deg)', borderRadius: 2 }} />}
+      <div role="dialog" style={{ position: 'fixed', top: box.top, left: box.left, width: W, background: '#F29964', color: '#fff', borderRadius: 8, padding: 20, boxShadow: '0 8px 28px rgba(0,0,0,0.25)', zIndex: 99999, fontFamily: 'var(--font-family-primary)', fontSize: 14, lineHeight: '20px' }}>
+        {box.arrow === 'top' && <span style={{ position: 'absolute', top: -6, left: Math.min(Math.max(box.arrowOffset - 6, 14), W - 26), width: 14, height: 14, background: '#F29964', transform: 'rotate(45deg)', borderRadius: 2 }} />}
+        {box.arrow === 'left' && <span style={{ position: 'absolute', left: -6, top: Math.min(Math.max(box.arrowOffset - 6, 14), 200), width: 14, height: 14, background: '#F29964', transform: 'rotate(45deg)', borderRadius: 2 }} />}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>Step {idx + 1} of {STEPS.length}</span>

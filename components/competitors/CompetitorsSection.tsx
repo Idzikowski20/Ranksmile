@@ -10,7 +10,7 @@ const FONT = 'var(--font-family-primary)';
 const Spinner = () => (
    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.7s linear infinite' }}>
       <circle cx="12" cy="12" r="9" stroke="#E4E4E7" strokeWidth="3" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="#783AFB" strokeWidth="3" strokeLinecap="round" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="#F29964" strokeWidth="3" strokeLinecap="round" />
    </svg>
 );
 
@@ -80,7 +80,7 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }
                   type="button"
                   onClick={() => scanM.mutate({ keyword })}
                   style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: 'pointer', transition: 'background 150ms ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                >
                   Scan competitors
@@ -134,7 +134,7 @@ const CompetitorsSection = ({ slug, keyword, onSelectionChange, onSavingChange }
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           title={c.url}
-                                          style={{ display: 'block', fontSize: 12, color: '#783AFB', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                          style={{ display: 'block', fontSize: 12, color: '#F29964', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                                           onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
                                           onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
                                        >

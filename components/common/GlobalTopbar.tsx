@@ -1,5 +1,5 @@
 import React from 'react';
-import WorkspaceSwitcher from './WorkspaceSwitcher';
+import OrganizationSwitcher from './OrganizationSwitcher';
 import TopbarSearch from './TopbarSearch';
 import TopbarInbox from './TopbarInbox';
 
@@ -25,7 +25,7 @@ const HelpButton = () => (
 const GlobalTopbar = ({ breadcrumb }: Props) => (
    <header className="global-topbar">
       <div className="global-topbar-left">
-         {breadcrumb ?? <WorkspaceSwitcher />}
+         {breadcrumb ?? <OrganizationSwitcher />}
       </div>
 
       <div className="global-topbar-actions">

@@ -54,7 +54,7 @@ const Btn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 
 );
 
 const Spinner = () => (
-  <div style={{ width: 20, height: 20, border: '2.5px solid #e4e4e7', borderTopColor: '#783afb', borderRadius: '50%', animation: 'spin 0.65s linear infinite' }} />
+  <div style={{ width: 20, height: 20, border: '2.5px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.65s linear infinite' }} />
 );
 
 const InternalLinksPanel: React.FC<Props> = ({
@@ -452,8 +452,8 @@ const InternalLinksPanel: React.FC<Props> = ({
                       onClick={() => toggleCheck(i)}
                       style={{
                         width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                        background: checked.has(i) ? '#783afb' : '#fff',
-                        border: `1.5px solid ${checked.has(i) ? '#783afb' : '#d4d4d8'}`,
+                        background: checked.has(i) ? '#f29964' : '#fff',
+                        border: `1.5px solid ${checked.has(i) ? '#f29964' : '#d4d4d8'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.12s',
                       }}
@@ -528,12 +528,12 @@ const InternalLinksPanel: React.FC<Props> = ({
                   {(() => { try { return new URL(r.url).pathname; } catch { return r.url; } })()}
                 </span>
                 {r.success && r.anchorText && (
-                  <span style={{ fontSize: 11, color: '#783afb', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.anchorText}>
+                  <span style={{ fontSize: 11, color: '#f29964', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.anchorText}>
                     &ldquo;{r.anchorText}&rdquo;
                   </span>
                 )}
                 {r.success && sharedKeywordCounts[r.url] > 0 && (
-                  <span style={{ fontSize: 11, color: '#783afb', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>
+                  <span style={{ fontSize: 11, color: '#f29964', background: '#f3eeff', borderRadius: 4, padding: '1px 6px', flexShrink: 0, fontFamily: 'var(--font-family-primary)' }}>
                     {sharedKeywordCounts[r.url]} shared KW
                   </span>
                 )}
@@ -544,7 +544,7 @@ const InternalLinksPanel: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => { setPhase('selecting'); setResults([]); setError(null); }}
-                style={{ fontSize: 12, color: '#783afb', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-family-primary)' }}
+                style={{ fontSize: 12, color: '#f29964', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-family-primary)' }}
               >
                 ← Back to selection
               </button>

@@ -2,6 +2,7 @@ import { getArticleIdSql } from '../articleSql';
 import { queryOne, queryRows, type ArticleRow } from '../db/query';
 import type { AiVisibilitySummary } from '../aiSearchScore';
 import { parseJsonish } from '../types/json';
+import { getDomainLocale } from '../domainLanguage';
 
 export interface ArticleSeoMeta {
   domain: string;
@@ -43,8 +44,8 @@ function competitorDomainsFromCache(cache: string | null): string[] {
 export async function resolveArticleSeoMeta(articleId: number): Promise<ArticleSeoMeta> {
    try {
       const articleIdSql = await getArticleIdSql();
-      const article = await queryOne<ArticleRow & { domain: string | null; ai_visibility_summary: string | null }>(
-         `SELECT a.*, a.language, d.domain
+      const article = await queryOne<ArticleRow & { domain: string | null; ai_visibility_summary: string | null; domain_id: number | null }>(
+         `SELECT a.*, a.language, a.domain_id, d.domain
           FROM articles a
           LEFT JOIN domain d ON d."ID" = a.domain_id
           WHERE a.${articleIdSql} = ?
@@ -63,9 +64,11 @@ export async function resolveArticleSeoMeta(articleId: number): Promise<ArticleS
       const cachedCompetitorDomains = competitorDomainsFromCache(article.competitor_outlines_cache);
       const competitorDomains = Array.from(new Set([...storedCompetitorDomains, ...cachedCompetitorDomains]));
 
+      const domainLocale = article.domain_id ? await getDomainLocale(article.domain_id) : null;
+
       return {
          domain: article.domain || '',
-         language: article.language || 'pl',
+         language: article.language || domainLocale?.languageCode || 'pl',
          targetKeyword: article.target_keyword || article.title || '',
          competitorDomains,
          rankingScore: article.ranking_score != null ? Number(article.ranking_score) : null,

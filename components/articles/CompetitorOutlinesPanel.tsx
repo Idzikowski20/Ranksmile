@@ -62,7 +62,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
             </div>
             {/* Domain + stats */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, color: '#783afb', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>
+              <span style={{ fontSize: 11, color: '#f29964', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>
                 {domain}
               </span>
               <span style={{ fontSize: 11, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>·</span>
@@ -111,7 +111,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               style={{
-                fontSize: 11, color: '#783afb', fontFamily: 'var(--font-family-primary)',
+                fontSize: 11, color: '#f29964', fontFamily: 'var(--font-family-primary)',
                 textDecoration: 'none', wordBreak: 'break-all',
                 display: 'block', lineHeight: 1.4,
               }}
@@ -184,7 +184,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
       const res = await fetch('/api/articles/generate-outline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, competitors: mapped, language: 'pl', articleId }),
+        body: JSON.stringify({ keyword, competitors: mapped, articleId }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
@@ -216,7 +216,7 @@ const CompetitorOutlinesPanel: React.FC<Props> = ({ articleId, keyword, cachedOu
     fetch('/api/articles/competitor-outlines', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keyword, language: 'pl', num: 5, articleId }),
+      body: JSON.stringify({ keyword, num: 5, articleId }),
     })
       .then((r) => r.json())
       .then((d) => {

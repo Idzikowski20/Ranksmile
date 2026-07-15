@@ -1,9 +1,15 @@
 import { NextRouter } from 'next/router';
 import { useQuery } from 'react-query';
 
+function domainSlugFromRouter(router: NextRouter): string | undefined {
+   const raw = router.query.domain ?? router.query.slug;
+   return typeof raw === 'string' ? raw : undefined;
+}
+
 export async function fetchSCKeywords(router: NextRouter) {
-   // if (!router.query.slug) { throw new Error('Invalid Domain Name'); }
-   const res = await fetch(`${window.location.origin}/api/searchconsole?domain=${router.query.slug}`, { method: 'GET' });
+   const domain = domainSlugFromRouter(router);
+   if (!domain) throw new Error('Invalid Domain Name');
+   const res = await fetch(`${window.location.origin}/api/searchconsole?domain=${domain}`, { method: 'GET' });
    if (res.status >= 400 && res.status < 600) {
       if (res.status === 401) {
          console.log('Unauthorized!!');
@@ -15,13 +21,14 @@ export async function fetchSCKeywords(router: NextRouter) {
 }
 
 export function useFetchSCKeywords(router: NextRouter, domainLoaded: boolean = false) {
-   // console.log('ROUTER: ', router);
-   return useQuery('sckeywords', () => router.query.slug && fetchSCKeywords(router), { enabled: domainLoaded });
+   const domain = domainSlugFromRouter(router);
+   return useQuery(['sckeywords', domain], () => fetchSCKeywords(router), { enabled: domainLoaded && !!domain });
 }
 
 export async function fetchSCInsight(router: NextRouter) {
-   // if (!router.query.slug) { throw new Error('Invalid Domain Name'); }
-   const res = await fetch(`${window.location.origin}/api/insight?domain=${router.query.slug}`, { method: 'GET' });
+   const domain = domainSlugFromRouter(router);
+   if (!domain) throw new Error('Invalid Domain Name');
+   const res = await fetch(`${window.location.origin}/api/insight?domain=${domain}`, { method: 'GET' });
    if (res.status >= 400 && res.status < 600) {
       if (res.status === 401) {
          console.log('Unauthorized!!');
@@ -33,6 +40,6 @@ export async function fetchSCInsight(router: NextRouter) {
 }
 
 export function useFetchSCInsight(router: NextRouter, domainLoaded: boolean = false) {
-   // console.log('ROUTER: ', router);
-   return useQuery('scinsight', () => router.query.slug && fetchSCInsight(router), { enabled: domainLoaded });
+   const domain = domainSlugFromRouter(router);
+   return useQuery(['scinsight', domain], () => fetchSCInsight(router), { enabled: domainLoaded && !!domain });
 }

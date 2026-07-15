@@ -49,7 +49,7 @@ const shape = (r: Row) => ({
    text: r.body || '',
    images: (() => { try { return JSON.parse(r.images_json || '[]'); } catch { return []; } })(),
    author: r.author || 'You',
-   color: r.color || '#783AFB',
+   color: r.color || '#F29964',
    avatar: r.avatar_url || '',
    resolved: !!r.resolved,
    reactions: parseReactions(r.reactions_json),
@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (req.method === 'POST') {
-         const { quote = '', text = '', images = [], author = 'You', color = '#783AFB', avatar = '', parentId = null } = req.body || {};
+         const { quote = '', text = '', images = [], author = 'You', color = '#F29964', avatar = '', parentId = null } = req.body || {};
          const commentId = `c_${randomBytes(6).toString('hex')}`;
          // Replies don't carry their own anchor quote.
          const q = parentId ? '' : quote;

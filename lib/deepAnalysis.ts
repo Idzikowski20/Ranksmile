@@ -42,9 +42,13 @@ function toSignals(raw: unknown): DeepSignal[] {
  * Run the hybrid deep-analysis (sidecar `score_ranking`) for a single page URL and
  * return its final score + 6-signal breakdown. Throws on a non-2xx sidecar response.
  */
-export async function runDeepAnalysisForUrl(url: string, keyword = ''): Promise<DeepResult> {
+export async function runDeepAnalysisForUrl(
+  url: string,
+  keyword = '',
+  language = 'pl',
+): Promise<DeepResult> {
    const jobId = `pad_${Date.now()}`;
-   const payload = { url, keyword, keywords: keyword ? [keyword] : [], language: 'en', tone: 'professional' };
+   const payload = { url, keyword, keywords: keyword ? [keyword] : [], language, tone: 'professional' };
 
    const controller = new AbortController();
    const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min, mirrors deep-analysis.ts

@@ -24,7 +24,7 @@ const HiddenCheckbox = styled.input<{ $sz: NonNullable<SwitchProps['size']> }>`
   margin: 0;
 
   &:focus-visible + div {
-    outline: 2px solid #7553FF;
+    outline: 2px solid #F29964;
     outline-offset: 2px;
   }
 
@@ -62,18 +62,18 @@ const HiddenCheckbox = styled.input<{ $sz: NonNullable<SwitchProps['size']> }>`
 
   /* ON state */
   &:checked + div {
-    background: #7553FF;
-    border-top: 2px solid #5827D6;
-    border-right: 1px solid #5827D6;
-    border-bottom: 1px solid #5827D6;
-    border-left: 1px solid #5827D6;
+    background: #F29964;
+    border-top: 2px solid #C97D52;
+    border-right: 1px solid #C97D52;
+    border-bottom: 1px solid #C97D52;
+    border-left: 1px solid #C97D52;
 
     [data-icon='close'] { opacity: 0; transform: scale(0.94) translate(-50%, -50%); }
     [data-icon='checkmark'] { opacity: 1; transform: scale(1) translate(-50%, -50%); }
 
     > div {
       background: #FFFFFF;
-      border: 1px solid #5827D6;
+      border: 1px solid #C97D52;
       transform: translateY(-2px) translateX(-1px) translateX(${({ $sz }) => WRAPPER_SIZE[$sz].width - KNOB_SIZE[$sz].width + 1}px);
     }
   }
@@ -126,7 +126,7 @@ export function Switch({ size = 'sm', onChange, checked, disabled, ...rest }: Sw
             <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="#A29FAA" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
           <svg data-icon="checkmark" viewBox="0 0 16 16" width={size === 'sm' ? 10 : 12} height={size === 'sm' ? 10 : 12} fill="none">
-            <path d="M4 8l2.5 3L12 5" stroke="#7553FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M4 8l2.5 3L12 5" stroke="#F29964" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Knob>
       </Track>

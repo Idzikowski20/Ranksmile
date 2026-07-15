@@ -7,6 +7,7 @@ import {
   type CoverageSnapshot,
 } from './aiCoverage';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
+import { normalizeTerm } from './termUtils';
 import { citationIntentItems } from './citationPrompts';
 import { curateAiCoverageItems, dedupePaaQuestions } from './curateCoverageItems';
 import { mergeCoverageItems, buildSnapshot } from './coverageStore';
@@ -27,17 +28,34 @@ export function introPlainTextFromHtml(html: string, plainTextFallback = ''): st
   return plainTextFallback.slice(0, 2500);
 }
 
-/** Build merged coverage items from PAA + citation intents (no judge). */
+/** Build merged coverage items from LLM questions + intro intent (no judge). */
 export async function assembleCoverageItems(opts: {
   keyword: string;
-  paaQuestions: PaaQuestion[];
+  paaQuestions?: PaaQuestion[];
+  llmQuestions?: Array<{ question: string; sources: import('./aiCoverage').LlmCoverageSource[] }>;
   introPlain: string;
+  languageCode?: string;
 }): Promise<{ items: CoverageItem[]; answersMainQuestionEarly: boolean }> {
   const keyword = opts.keyword.trim();
-  const paaMerged = dedupePaaQuestions(opts.paaQuestions);
-  const curated = curateAiCoverageItems({ keyword, paaQuestions: paaMerged });
+  const curated = curateAiCoverageItems({
+    keyword,
+    llmQuestions: opts.llmQuestions,
+    paaQuestions: opts.paaQuestions,
+  });
   const intentResult = await analyzeIntroduction(opts.introPlain, keyword, deepseekIntroJudge);
-  const baseIntent = citationIntentItems(keyword, intentResult.detectedMainQuestion);
+  const serpQuestions = [
+    ...(opts.llmQuestions?.map((q) => q.question) ?? []),
+    ...(opts.paaQuestions?.map((q) => q.question) ?? []),
+  ];
+  const baseIntent = citationIntentItems(keyword, intentResult.detectedMainQuestion, {
+    serpQuestions,
+    languageCode: opts.languageCode,
+  })
+    .filter((item) => !curated.knowledge.some((k) => normalizeTerm(k.label) === normalizeTerm(item.label)))
+    .map((item) => {
+    const match = opts.llmQuestions?.find((q) => q.question === item.label);
+    return match?.sources?.length ? { ...item, llmSources: match.sources, source: 'llm' as const } : item;
+  });
 
   const items = mergeCoverageItems({
     paa: curated.knowledge,
@@ -95,13 +113,17 @@ export async function buildGradedCoverageSnapshot(opts: {
   keyword: string;
   plainText: string;
   html: string;
-  paaQuestions: PaaQuestion[];
+  paaQuestions?: PaaQuestion[];
+  llmQuestions?: Array<{ question: string; sources: import('./aiCoverage').LlmCoverageSource[] }>;
+  languageCode?: string;
 }): Promise<{ snapshot: CoverageSnapshot; introTokens: number; judgeTokens: number }> {
   const introPlain = introPlainTextFromHtml(opts.html, opts.plainText);
   const { items, answersMainQuestionEarly } = await assembleCoverageItems({
     keyword: opts.keyword,
     paaQuestions: opts.paaQuestions,
+    llmQuestions: opts.llmQuestions,
     introPlain,
+    languageCode: opts.languageCode,
   });
   const { result, judgeTokens } = await judgeCoverageItems(opts.plainText, items);
   result.answersMainQuestionEarly = answersMainQuestionEarly;

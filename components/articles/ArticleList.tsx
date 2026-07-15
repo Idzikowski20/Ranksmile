@@ -30,8 +30,8 @@ interface Props {
     created_at: string;
     updated_at: string;
   }>;
-  onDelete: (id: number | string) => void;
-  onDeleteMultiple: (ids: Array<number | string>) => Promise<void>;
+  onDelete: (id: number | string) => void | Promise<void>;
+  onDeleteMultiple: (ids: Array<number | string>) => void | Promise<void>;
   isLoading?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -97,9 +97,9 @@ const ContentAuditIcon = () => (
 
 const TopicalMapIcon = () => (
   <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <path d="M21 5.5 34.4 13v15L21 35.5 7.6 28V13L21 5.5Z" fill="#E1DBFE" stroke="#783AFB" strokeWidth="1.5" />
-    <path d="M21 20.5 34 13M21 20.5 8 13M21 20.5v14" stroke="#783AFB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="21" cy="20.5" r="3.5" fill="#783AFB" />
+    <path d="M21 5.5 34.4 13v15L21 35.5 7.6 28V13L21 5.5Z" fill="#FDE8D8" stroke="#F29964" strokeWidth="1.5" />
+    <path d="M21 20.5 34 13M21 20.5 8 13M21 20.5v14" stroke="#F29964" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="21" cy="20.5" r="3.5" fill="#F29964" />
   </svg>
 );
 
@@ -276,8 +276,8 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   e.currentTarget.style.background = '#FFFFFF';
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#AA93FD';
-                  e.currentTarget.style.boxShadow = '0 0 0 2px rgba(120,58,251,0.1)';
+                  e.currentTarget.style.borderColor = '#F5C4A0';
+                  e.currentTarget.style.boxShadow = '0 0 0 2px rgba(242,153,100,0.1)';
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = '#E4E4E7';
@@ -358,7 +358,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     width: 24,
                     height: 24,
                     border: '2.5px solid #E4E4E7',
-                    borderTopColor: '#783AFB',
+                    borderTopColor: '#F29964',
                     borderRadius: '50%',
                     animation: 'spin 0.7s linear infinite',
                   }}
@@ -503,7 +503,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                           height: 20,
                           borderRadius: 4,
                           border: '1px solid #D4D4D8',
-                          background: selectedIds.has(article.id) ? '#783AFB' : '#fff',
+                          background: selectedIds.has(article.id) ? '#F29964' : '#fff',
                           boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
                           cursor: 'pointer',
                           appearance: 'none',

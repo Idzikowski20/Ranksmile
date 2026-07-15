@@ -8,7 +8,7 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
-import { langForCountry } from '../../../lib/countryLang';
+import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
 import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
@@ -48,8 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const article = await queryOne<ArticleRow & { domain: string | null; country?: string | null; url?: string | null }>(
-         `SELECT a.*, d.domain
+      const article = await queryOne<ArticleRow & { domain: string | null; domain_id: number | null }>(
+         `SELECT a.*, a.domain_id, d.domain
           FROM articles a
           LEFT JOIN domain d ON d."ID" = a.domain_id
           WHERE a.${articleIdSql} = ?
@@ -66,8 +66,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const keyword = article.target_keyword || article.title || '';
       const plainText = plainArticleText(article);
       const ownDomain = (article.domain || '').replace(/^www\./, '');
-      const country = (article as { country?: string }).country || 'US';
-      const pageUrl = article.url || '';
+      const locale = await resolveContentLocale({ domainId: article.domain_id, articleId: Number(articleId) });
+      const country = locale.countryCode;
+      const pageUrl = article.meta_url || article.publish_url || '';
 
       let corpusTexts: string[] = [];
       if (competitorRows.length && pageUrl) {
@@ -89,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          articleText: plainText,
          corpusTexts,
          country,
-         languageCode: langForCountry(country),
+         languageCode: locale.languageCode,
          ownDomain,
       });
 

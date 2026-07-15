@@ -56,12 +56,19 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const userId: string | undefined = session?.user?.id;
    const [completedOverride, setCompleted] = React.useState<boolean | null>(null);
    const [confirmedOverride, setConfirmed] = React.useState<boolean | null>(null);
+   // Latch so a mid-session refetch (Neon Auth / react-query) never re-shows the
+   // full-screen loader after the app has already rendered once.
+   const everHadUser = React.useRef(false);
+   const everHadBootstrap = React.useRef(false);
 
    const { data: bootstrap, isLoading: bootstrapLoading } = useQuery(
       ['bootstrap'],
       fetchBootstrap,
       { enabled: !!userId, staleTime: BOOTSTRAP_STALE_MS, retry: false },
    );
+
+   if (userId) everHadUser.current = true;
+   if (bootstrap) everHadBootstrap.current = true;
 
    const completed = completedOverride ?? (bootstrap ? bootstrap.onboarding.completed : null);
    const confirmed = confirmedOverride ?? (bootstrap ? bootstrap.email.confirmed : null);
@@ -109,10 +116,13 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       return () => { active = false; };
    }, [userId, completed, bootstrap, isOnboarding, isPublic, isPlans, isSetup, isIndex, router]);
 
-   if (!isPending && !userId && !isPublic) {
+   if (!isPublic && !everHadUser.current && isPending) {
       return <AppLoading />;
    }
-   if (userId && bootstrapLoading && !bootstrap) {
+   if (!isPending && !userId && !isPublic && !everHadUser.current) {
+      return <AppLoading />;
+   }
+   if (userId && bootstrapLoading && !bootstrap && !everHadBootstrap.current) {
       return <AppLoading />;
    }
    if (userId && !isPublic && confirmed === false) {

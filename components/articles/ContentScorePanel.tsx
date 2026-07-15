@@ -110,7 +110,8 @@ interface Props {
    *  Task 11 adds `ai` (from the live coverage re-score) alongside the existing seo/overall. */
   scoreDeltas?: { seo?: number; overall?: number; ai?: number };
   /** Live scores from optimize re-score — overrides gauge values during a run. */
-  optimizeLiveScores?: { seo?: number; ai?: number };
+  /** AO-8b: live post-optimize scores — seo, ai, and overall from one synchronous pass. */
+  optimizeLiveScores?: { seo?: number; ai?: number; overall?: number };
   /** Background deep analysis (import flow) — replaces panel with progress UI. */
   isDeepAnalyzing?: boolean;
   deepAnalysisUi?: DeepAnalysisUiState | null;
@@ -218,7 +219,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
               {competitor.serp_title || competitor.title}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <span style={{ fontSize: 11, color: '#783afb', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
+              <span style={{ fontSize: 11, color: '#f29964', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
               <span style={{ fontSize: 11, color: '#9f9fa9' }}>·</span>
               <span style={{ fontSize: 11, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>
                 {competitor.word_count.toLocaleString()}w
@@ -242,7 +243,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           <a
             href={competitor.url} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            style={{ fontSize: 10, color: '#783afb', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
+            style={{ fontSize: 10, color: '#f29964', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
             onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
             onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
           >
@@ -377,6 +378,7 @@ const ContentScorePanel = ({
   }, [plainText, scoreData]);
 
   useEffect(() => {
+    if (optimizeLiveScores != null) return undefined;
     // No analysis data at all → show the stored score. Otherwise compute live — structural signals
     // are scored even when competitor terms are absent, so the gauge updates as you edit.
     if (!scoreData) {
@@ -386,14 +388,15 @@ const ContentScorePanel = ({
     if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     scoreTimerRef.current = setTimeout(() => {
       scoreTimerRef.current = null;
-      const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
+      const paraCount = (html || '').match(/<p[\s>]/gi)?.length
+        ?? plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
       const kwCov = keywords.map((k) => ({ keyword: k.keyword, is_covered: !!k.is_covered }));
       setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov, coverageItems));
     }, 400);
     return () => {
       if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     };
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore, coverageItems]);
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore, coverageItems, optimizeLiveScores]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
@@ -410,12 +413,10 @@ const ContentScorePanel = ({
     } catch { /* ignore */ }
   }, [cachedOutlines]);
 
-  // Load competitors when section opens
+  // Load competitors on mount (editor setup), not only when accordion opens
   useEffect(() => {
-    if (!competitorOpen) return;
-    if (competitors.length > 0) return; // already loaded
+    if (competitors.length > 0) return;
 
-    // Try cache first
     if (cachedOutlines) {
       try {
         const parsed = JSON.parse(cachedOutlines);
@@ -428,13 +429,12 @@ const ContentScorePanel = ({
       } catch { /* fall through */ }
     }
 
-    // Fetch from API
     if (!keyword || !articleId) return;
     setIsLoadingCompetitors(true);
     fetch('/api/articles/competitor-outlines', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keyword, language: 'pl', num: 5, articleId }),
+      body: JSON.stringify({ keyword, num: 5, articleId }),
     })
       .then((r) => r.json())
       .then((d) => {
@@ -443,7 +443,7 @@ const ContentScorePanel = ({
       })
       .catch(() => {})
       .finally(() => setIsLoadingCompetitors(false));
-  }, [competitorOpen, keyword, articleId, cachedOutlines, competitors.length]);
+  }, [keyword, articleId, cachedOutlines, competitors.length]);
 
   // Article keywords — shared/deduped fetch, loaded when the NLP section opens
   // (or already warm from the editor's breadcrumb fetch). Seeded into local
@@ -589,10 +589,10 @@ const ContentScorePanel = ({
     answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
     coverageOverall: aiCoverageScore,
   });
-  const displaySeo = optimizeLiveScores?.seo ?? (scoreData?.seo_score != null ? scoreData.seo_score : score);
-  const displayAi = optimizeLiveScores?.ai ?? baseAiScore;
-  // Always blend SEO + AI the same way (Surfer parity) — never swap to stale _content_score on AO start.
-  const displayContent = hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo;
+  const displaySeo = optimizeLiveScores?.seo ?? score;
+  const displayAi = optimizeLiveScores?.ai ?? (aiCoverageScore ?? baseAiScore);
+  const displayContent = optimizeLiveScores?.overall
+    ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
 
   if (isDeepAnalyzing && deepAnalysisUi) {
     return (

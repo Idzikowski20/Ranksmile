@@ -39,7 +39,7 @@ const TokenCircle = ({ tokens, inputTokens = 0, outputTokens = 0 }: { tokens: nu
       >
         <svg width={32} height={32} viewBox="0 0 32 32" aria-hidden="true">
           <circle cx={16} cy={16} r={r} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={3} />
-          <circle cx={16} cy={16} r={r} fill="none" stroke="#AA93FD" strokeWidth={3} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 16 16)" style={{ transition: 'stroke-dashoffset 300ms ease' }} />
+          <circle cx={16} cy={16} r={r} fill="none" stroke="#F5C4A0" strokeWidth={3} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} transform="rotate(-90 16 16)" style={{ transition: 'stroke-dashoffset 300ms ease' }} />
         </svg>
       </button>
 
@@ -67,7 +67,7 @@ const TokenCircle = ({ tokens, inputTokens = 0, outputTokens = 0 }: { tokens: nu
             </span>
           </div>
           <div style={{ height: 5, borderRadius: 9999, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: 11 }}>
-            <div style={{ height: '100%', width: `${Math.round(pct * 100)}%`, background: '#AA93FD', borderRadius: 9999, transition: 'width 300ms ease' }} />
+            <div style={{ height: '100%', width: `${Math.round(pct * 100)}%`, background: '#F5C4A0', borderRadius: 9999, transition: 'width 300ms ease' }} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

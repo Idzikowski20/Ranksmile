@@ -10,7 +10,7 @@ const isManager = (role: string) => role === 'owner' || role === 'admin';
 const thStyle: React.CSSProperties = { padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 500, color: '#71717A', fontFamily: font };
 
 const Avatar = ({ initial }: { initial: string }) => (
-   <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
+   <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(242,153,100,0.12)', color: '#F29964', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
       {initial}
    </div>
 );
@@ -22,7 +22,7 @@ const Checkbox = ({ checked, disabled, onChange }: { checked: boolean; disabled?
       aria-checked={checked}
       disabled={disabled}
       onClick={disabled ? undefined : onChange}
-      style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: checked ? '1px solid #783AFB' : '1px solid #D4D4D8', background: checked ? '#783AFB' : '#FFFFFF', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 120ms ease, border-color 120ms ease' }}
+      style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: checked ? '1px solid #F29964' : '1px solid #D4D4D8', background: checked ? '#F29964' : '#FFFFFF', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'background 120ms ease, border-color 120ms ease' }}
    >
       {checked && (
          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -106,7 +106,7 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                onChange={(e) => setQuery(e.target.value)}
                placeholder="Search by email…"
                style={{ width: '100%', height: 40, border: '1px solid #D4D4D8', borderRadius: 8, padding: '0 12px', fontSize: 14, color: '#18181B', background: '#FFFFFF', fontFamily: font, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
-               onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
+               onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(242,153,100,0.1)'; }}
                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
             />
 
@@ -167,7 +167,7 @@ const ManageMembersModal = ({ wsId, open, onClose }: { wsId: number; open: boole
                   onClick={onSave}
                   disabled={setMembers.isLoading}
                   style={{ height: 40, padding: '0 16px', borderRadius: 8, border: 'none', background: '#2F2F34', color: '#FFFFFF', fontSize: 14, fontWeight: 600, fontFamily: font, cursor: 'pointer', opacity: setMembers.isLoading ? 0.7 : 1, transition: 'background 150ms ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                >
                   {setMembers.isLoading ? 'Saving…' : 'Save'}

@@ -132,6 +132,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
         try {
           await materializeDomainSetup(Number(domainId), result || {});
+          void import('../../../lib/siteAudit/crawlSnapshot')
+            .then((m) => m.saveCrawlSnapshot(Number(domainId)))
+            .catch((err) => { console.warn('[job-progress] crawl snapshot failed (non-fatal):', err); });
           // Fire-and-forget: pre-scan the shared Organic Competitors store for the
           // domain's top keywords so they're ready in the audit/editor modal.
           void import('../../../lib/competitorPrescan')

@@ -131,7 +131,7 @@ const GapBubble = ({ gap, shared, you }: { gap: number; shared: number; you: num
       <svg width={w} height={74} style={{ overflow: 'visible', flexShrink: 0 }} aria-hidden>
          <defs><clipPath id="cdm-gapclip"><circle cx={compR} cy={37} r={compR} /></clipPath></defs>
          <circle cx={compR} cy={37} r={compR} fill="#F97316" fillOpacity={0.7} />
-         <circle cx={cx2} cy={37} r={yourR} fill="#783AFB" fillOpacity={0.75} />
+         <circle cx={cx2} cy={37} r={yourR} fill="#F29964" fillOpacity={0.75} />
          {shared > 0 ? <circle cx={cx2} cy={37} r={yourR} fill="#FF6F77" clipPath="url(#cdm-gapclip)" /> : null}
       </svg>
    );
@@ -155,7 +155,8 @@ const MentionTable = ({ rows, brand, ownLabel }: { rows: MentionSource[]; brand:
    const flag = (on: boolean) => (on ? <YesBadge /> : <span style={{ color: '#71717B' }}>No</span>);
    return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-         <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden' }}>
+         <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden', overflowX: 'auto' }}>
+            <div style={{ minWidth: 480 }}>
             <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
                <div style={{ ...cell, flex: 1, minWidth: 0 }}>Source</div>
                <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'center', borderLeft: '1px solid #F4F4F5' }}><HeadHint label={`${ownLabel} mentioned`} /></div>
@@ -191,6 +192,7 @@ const MentionTable = ({ rows, brand, ownLabel }: { rows: MentionSource[]; brand:
                   </div>
                );
             })}
+            </div>
          </div>
          {rows.length > visible ? (
             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -212,7 +214,7 @@ const MentionsSection = ({ brand, ownLabel, mentions, sources, gap }: { brand: s
          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px' }}>
             <Legend n={gap.gap} label="Gap" color="#F97316" />
             <Legend n={gap.shared} label="Shared" color="#FF6F77" />
-            <Legend n={gap.you} label={ownLabel} color="#783AFB" />
+            <Legend n={gap.you} label={ownLabel} color="#F29964" />
          </div>
       </div>
       <MentionTable rows={sources} brand={brand} ownLabel={ownLabel} />
@@ -276,7 +278,7 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
    return (
       <>
          <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
-         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 800, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 650, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
             {/* Header */}
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -296,7 +298,7 @@ const CompetitorDetailModal = ({ slug, list, index, onNavigate, onClose }: {
             {/* Body */}
             <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
                <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                      <StatCard label="Visibility score" hint="Average visibility across all tracked prompts and models" value={detailQ.isLoading ? <SkeletonBox w={40} h={26} /> : (ov?.visibilityScore ?? 0)} />
                      <StatCard label="Mention rate" hint="Share of prompt/model answers that cite this competitor" value={detailQ.isLoading ? <SkeletonBox w={40} h={26} /> : `${ov?.mentionRate ?? 0}%`} />
                      <StatCard label="Average position" hint="Average citation rank when this competitor is cited" value={detailQ.isLoading ? <SkeletonBox w={40} h={26} /> : (ov?.avgPosition != null ? ov.avgPosition.toFixed(1) : '—')} />

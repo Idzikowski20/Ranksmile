@@ -41,7 +41,7 @@ const TabBtn = styled.button<{ $on: boolean }>(({ $on }) => ({
   transition: 'color 160ms cubic-bezier(0.72, 0, 0.16, 1)',
   whiteSpace: 'nowrap',
   outline: 'none',
-  '&:focus-visible': { outline: '2px solid #7553FF', outlineOffset: -2 },
+  '&:focus-visible': { outline: '2px solid #F29964', outlineOffset: -2 },
 }));
 
 const Cnt = styled.span<{ $on: boolean }>(({ $on }) => ({

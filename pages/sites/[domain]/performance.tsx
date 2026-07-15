@@ -583,7 +583,7 @@ const PerformancePage: NextPage = () => {
         change: getChangePercent(statsTotals.impressions, previousTotals.impressions),
         accentBg: '#F4F4F5',
         accentColor: '#2F2F34',
-        gradientColor: '#8B73F6',
+        gradientColor: '#F29964',
         muted: false,
       },
       {

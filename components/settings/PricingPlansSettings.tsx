@@ -82,6 +82,7 @@ const PLAN_CARDS: PlanCard[] = [
       'Track 50 AI Prompts, refreshed daily',
       'AI Visibility across 4 engines',
       '5 Brand Spaces',
+      'Site Audit — 100 pages per crawl',
       'Keyword Research — 200 / month',
       'Competitor Keyword Gap — 25 / month',
       'Content Ideas & Coverage Gap',
@@ -103,6 +104,7 @@ const PLAN_CARDS: PlanCard[] = [
       'Create and Optimize 100 Documents',
       'Track 100 AI Prompts (all 5 engines)',
       '15 Brand Spaces',
+      'Site Audit — 100 pages per crawl',
       'Keyword Research — 500 / month',
       'Competitor Keyword Gap — 60 / month',
       'Advanced SERP Analysis',
@@ -124,6 +126,7 @@ const PLAN_CARDS: PlanCard[] = [
       'Unlimited* Documents',
       'Track 250 AI Prompts, refreshed daily',
       'Unlimited* Brand Spaces',
+      'Site Audit — 1,000 pages per crawl',
       'Keyword Research — 2,000 / month',
       'Competitor Keyword Gap — 250 / month',
       'White-label & full API Access',
@@ -137,6 +140,7 @@ const STARTER_FEATURES = [
   'Create and Optimize 10 Documents',
   'Track 15 AI Prompts (ChatGPT, Gemini), weekly',
   'Keyword Research — 50 / month',
+  'Site Audit — 100 pages per crawl',
   'Visible Keywords & Rank-Drop Alerts (Search Console)',
   '1 Brand Space',
   'Content Score & AI Writing Assistant',
@@ -211,6 +215,7 @@ const SECTIONS: TableSection[] = [
       { label: 'Cannibalization Report', cells: [true, true, true, true] },
       { label: 'Rank Drop Alerts', cells: [true, true, true, true] },
       { label: 'Content Audit', cells: [true, true, true, true] },
+      { label: 'Site Audit pages / crawl', cells: ['100', '100', '100', '1,000'] },
       { label: 'Topical Map', cells: [false, true, true, true] },
       { label: 'SERP Analyzer', cells: [false, false, true, true] },
     ],
@@ -439,7 +444,7 @@ const FeatureCell = ({ value, isAiVisibilityRow }: FeatureCellProps) => {
     );
   }
 
-  if (value === true) return <Check color="#783AFB" />;
+  if (value === true) return <Check color="#F29964" />;
   if (value === false) return <MutedCross />;
 
   if (typeof value === 'string') {
@@ -494,7 +499,7 @@ const TogglePill = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
       width: 32,
       height: 16,
       borderRadius: 9999,
-      background: on ? '#783AFB' : '#E4E4E7',
+      background: on ? '#F29964' : '#E4E4E7',
       position: 'relative',
       flexShrink: 0,
       cursor: 'pointer',
@@ -573,7 +578,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
             key={plan.name}
             style={{
               position: 'relative',
-              border: plan.recommended ? '2px solid #783AFB' : '1px solid #DAD9DE',
+              border: plan.recommended ? '2px solid #F29964' : '1px solid #DAD9DE',
               boxShadow: '0 4px 0 0 #e4e4e7',
               borderRadius: plan.recommended ? '0 0 12px 12px' : 12,
               padding: '24px',
@@ -593,7 +598,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
                   top: -28,
                   left: -2,
                   right: -2,
-                  background: '#783AFB',
+                  background: '#F29964',
                   color: '#fff',
                   fontSize: 12,
                   fontWeight: 600,
@@ -657,7 +662,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
               {plan.features.map((f) => (
                 <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <span style={{ marginTop: 1, flexShrink: 0 }}>
-                    <Check color={plan.recommended ? '#783AFB' : '#18181B'} />
+                    <Check color={plan.recommended ? '#F29964' : '#18181B'} />
                   </span>
                   <span style={{ fontSize: 13, color: '#3F3F47', lineHeight: '1.45' }}>{f}</span>
                 </li>
@@ -670,11 +675,11 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
                 style={{
                   marginTop: 4,
                   padding: '5px 12px',
-                  background: 'rgba(120,58,251,0.08)',
+                  background: 'rgba(242,153,100,0.08)',
                   borderRadius: 9999,
                   fontSize: 12,
                   fontWeight: 600,
-                  color: '#783AFB',
+                  color: '#F29964',
                   textAlign: 'center',
                 }}
               >
@@ -800,7 +805,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
                     {p.recommended && (
                       <div
                         style={{
-                          background: '#783AFB',
+                          background: '#F29964',
                           color: '#fff',
                           fontSize: 11,
                           fontWeight: 600,

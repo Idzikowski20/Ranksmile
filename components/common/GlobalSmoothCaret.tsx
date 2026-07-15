@@ -31,7 +31,7 @@ type CaretField = HTMLInputElement | HTMLTextAreaElement;
 // text/search/url/tel/password DO support it (per the HTML spec); <textarea> is handled via
 // the mirror-div path. A runtime `selectionStart === null` guard backs this up defensively.
 const ELIGIBLE_TYPES = new Set(['text', 'search', 'url', 'tel', 'password', '']);
-const CARET_COLOR = '#783AFB'; // brand purple (design.md "primary accent")
+const CARET_COLOR = '#F29964'; // brand purple (design.md "primary accent")
 const CARET_WIDTH = 2;
 const CARET_Z = 2147483000; // above app modals/dropdowns; pointer-events:none so it never blocks
 

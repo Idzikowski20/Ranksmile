@@ -9,6 +9,7 @@
  *   directCitations = count of own-domain citation entries; pages = distinct own URLs
  */
 import { computeOverview, ownDomainPosition, mean, pairScore } from './aiVisibilityMetricsOverview';
+import { BLOCKED_CITATION_DOMAINS, isBlockedCitationDomain } from './aiVisibilityBlockedDomains';
 import type {
   GapCard,
   ResultRow,
@@ -19,6 +20,9 @@ import type {
 export type { BrandMention, GapCard, ResultRow, SourceBrand, SourceDetailBrand } from './aiVisibilityMetricsTypes';
 export { ownDomainPosition, computeOverview } from './aiVisibilityMetricsOverview';
 
+// AI grounding / redirect proxies, not real competitors — excluded from the ranking.
+export const COMPETITOR_NOISE: string[] = [...BLOCKED_CITATION_DOMAINS];
+
 const norm = (d: string): string => d.toLowerCase().replace(/^www\./, '');
 const brandEq = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
 const answerHasBrand = (r: ResultRow, b: string): boolean => r.brands.some((x) => brandEq(x.brand, b));
@@ -27,6 +31,10 @@ export function aggregateSources(rows: ResultRow[], ownBrand = '') {
    const byUrl = new Map<string, { url: string, domain: string, timesShown: number, models: Set<string>, mentioned: boolean, brands: Map<string, { brand: string, domain: string, n: number }> }>();
    for (const r of rows) {
       for (const c of r.citations) {
+         if (isBlockedCitationDomain(c.domain)) continue;
+         try {
+            if (c.url && isBlockedCitationDomain(new URL(c.url).hostname)) continue;
+         } catch { /* ignore malformed URLs */ }
          const entry = byUrl.get(c.url) ?? { url: c.url, domain: norm(c.domain), timesShown: 0, models: new Set<string>(), mentioned: false, brands: new Map() };
          entry.timesShown += 1;
          entry.models.add(r.model);
@@ -168,13 +176,6 @@ export function buildSnapshot(rows: ResultRow[], ownDomain: string): DomainSnaps
    return snapshotForDomain(rows, ownDomain);
 }
 
-// AI grounding / redirect proxies, not real competitors — excluded from the ranking.
-export const COMPETITOR_NOISE: string[] = [
-   'vertexaisearch.cloud.google.com', 'googleusercontent.com', 'google.com',
-   'gstatic.com', 'bing.com', 'duckduckgo.com',
-];
-const NOISE = new Set(COMPETITOR_NOISE);
-
 export type RankedCompetitor = { domain: string, snapshot: DomainSnapshot };
 
 /** Snapshot for the tracked domain + every distinct cited domain (minus noise),
@@ -185,7 +186,7 @@ export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map
    for (const r of rows) for (const c of r.citations) {
       const d = norm(c.domain);
       // Own domain and its subdomains (e.g. blog.example.com) are not competitors.
-      if (d && d !== own && !d.endsWith(`.${own}`) && !NOISE.has(d)) domains.add(d);
+      if (d && d !== own && !d.endsWith(`.${own}`) && !isBlockedCitationDomain(d)) domains.add(d);
    }
    const map = new Map<string, DomainSnapshot>();
    for (const d of domains) map.set(d, snapshotForDomain(rows, d));
@@ -233,7 +234,7 @@ export function domainGapCandidates(rows: ResultRow[], ownDomain: string): strin
    const domains = new Set<string>();
    for (const r of rows) for (const c of r.citations) {
       const d = norm(c.domain);
-      if (d && d !== ownN && !d.endsWith(`.${ownN}`) && !NOISE.has(d)) domains.add(d);
+      if (d && d !== ownN && !d.endsWith(`.${ownN}`) && !isBlockedCitationDomain(d)) domains.add(d);
    }
    return Array.from(domains)
       .map((d) => ({ d, gap: domainMentionGap(rows, d, ownDomain).gap }))

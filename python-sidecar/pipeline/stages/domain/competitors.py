@@ -13,12 +13,12 @@ def _domain_from_url(url: str) -> str:
         return ""
 
 
-async def _serp_with_retry(keyword: str, max_attempts: int = 3) -> dict:
+async def _serp_with_retry(keyword: str, language: str = "pl", max_attempts: int = 3) -> dict:
     """Call analyze_serp with up to max_attempts retries on failure."""
     last_exc: Exception | None = None
     for attempt in range(max_attempts):
         try:
-            return await analyze_serp(keyword)
+            return await analyze_serp(keyword, language=language)
         except Exception as exc:
             last_exc = exc
             if attempt < max_attempts - 1:
@@ -33,6 +33,7 @@ class CompetitorsStage(AnalysisStage):
 
     async def run(self, ctx: StageContext) -> dict:
         keywords: list[dict] = ctx.get_state("keywords") or []
+        language: str = ctx.payload.get("language", "pl")
         limits: dict = ctx.payload.get("limits", {})
         # Cap to ~8 keywords to stay within the lean SERP budget
         max_kw = int(limits.get("competitorsPerKeyword", 10))
@@ -46,7 +47,7 @@ class CompetitorsStage(AnalysisStage):
             pct = int(i / total * 100) if total else 100
             await ctx.emit_progress(self, pct, f"Analyzing SERP for keyword {i + 1}/{total}: {keyword}")
 
-            serp_data = await _serp_with_retry(keyword)
+            serp_data = await _serp_with_retry(keyword, language)
             for competitor in serp_data.get("competitors", []):
                 url: str = competitor.get("url", "")
                 domain = competitor.get("domain", "") or _domain_from_url(url)

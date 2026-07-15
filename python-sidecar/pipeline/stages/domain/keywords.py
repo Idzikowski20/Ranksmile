@@ -24,9 +24,10 @@ def _parse_suggest_bytes(raw: bytes) -> list:
     return json.loads(raw.decode("utf-8", errors="replace"))
 
 
-async def _fetch_suggest(client: httpx.AsyncClient, seed: str) -> list[str]:
+async def _fetch_suggest(client: httpx.AsyncClient, seed: str, language: str = "en") -> list[str]:
     """Call Google Suggest with 3× retry/backoff. Returns suggestion strings."""
-    url = f"https://suggestqueries.google.com/complete/search?client=firefox&q={quote(seed)}"
+    hl = (language or "en").lower()[:2]
+    url = f"https://suggestqueries.google.com/complete/search?client=firefox&hl={hl}&q={quote(seed)}"
     for attempt in range(3):
         try:
             resp = await client.get(url, timeout=10)
@@ -48,6 +49,7 @@ class KeywordsStage(AnalysisStage):
 
     async def run(self, ctx: StageContext) -> dict:
         seed_keywords: list[str] = ctx.payload.get("seedKeywords", [])
+        language: str = ctx.payload.get("language", "en")
         limits: dict = ctx.payload.get("limits", {})
         max_keywords: int = int(limits.get("keywords", 20))
 
@@ -66,7 +68,7 @@ class KeywordsStage(AnalysisStage):
         await ctx.emit_progress(self, 40, f"Expanding {len(seed_keywords)} seeds via Suggest")
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            tasks = [_fetch_suggest(client, seed) for seed in seed_keywords[:10]]
+            tasks = [_fetch_suggest(client, seed, language) for seed in seed_keywords[:10]]
             all_suggestions = await asyncio.gather(*tasks)
 
         await ctx.emit_progress(self, 70, "Deduplicating keyword list")

@@ -44,21 +44,61 @@ function hasStructure(html: string): boolean {
   return lists.some((l) => (l.match(/<li/gi) || []).length >= 3);
 }
 
-/** Readability signal: average words-per-<p> falls in the optimal 40-100 range. Local mirror of
- *  contentScore.ts `_readability` (score>0 range), reduced to a boolean presence check. */
+/** Normalize a coverage question label for fuzzy matching (Semrush/Surfer H3-as-question pattern). */
+export function normalizeCoverageQuestion(q: string): string {
+  return q.toLowerCase()
+    .replace(/[?!.,;:]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function questionTokenOverlap(a: string, b: string): number {
+  const wa = normalizeCoverageQuestion(a).split(/\s+/).filter((w) => w.length > 2);
+  const wb = new Set(normalizeCoverageQuestion(b).split(/\s+/).filter((w) => w.length > 2));
+  if (wa.length === 0) return 0;
+  return wa.filter((w) => wb.has(w)).length / wa.length;
+}
+
+/** Extract heading + following paragraph pairs (FAQ / PAA structure). */
+function extractHeadingAnswerPairs(html: string): Array<{ question: string; answer: string }> {
+  const pairs: Array<{ question: string; answer: string }> = [];
+  const re = /<h([2-4])[^>]*>([\s\S]*?)<\/h\1>\s*(?:<p[^>]*>([\s\S]*?)<\/p>)?/gi;
+  let m = re.exec(html);
+  while (m) {
+    const question = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    const answer = (m[3] || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (question) pairs.push({ question, answer });
+    m = re.exec(html);
+  }
+  return pairs;
+}
+
+/** Readability signal: average chars-per-<p> in the 100–200 optimal range. */
 function readableParagraphs(html: string): boolean {
   const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
   if (paras.length < 2) return false;
   const avg = paras.reduce((sum, m) => {
-    const words = m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
-    return sum + words;
+    const chars = m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().length;
+    return sum + chars;
   }, 0) / paras.length;
-  return avg >= 40 && avg <= 100;
+  return avg >= 80 && avg <= 250;
 }
 
-/** FAQ-answered signal: >=70% of the question's content words appear in the body, OR >=60% appear
- *  in a single heading. Local mirror of contentScore.ts `_faqCoverage` per-question logic. */
+/** FAQ-answered signal — Surfer/Semrush pattern: question as H2/H3 + direct short answer in <p>. */
 function faqAnswered(label: string, html: string): boolean {
+  const normalizedLabel = normalizeCoverageQuestion(label);
+  const pairs = extractHeadingAnswerPairs(html);
+
+  for (const { question, answer } of pairs) {
+    const nq = normalizeCoverageQuestion(question);
+    const overlap = questionTokenOverlap(label, question);
+    const exactish = nq === normalizedLabel
+      || nq.includes(normalizedLabel)
+      || normalizedLabel.includes(nq)
+      || overlap >= 0.75;
+    if (exactish && answer.length >= 30) return true;
+  }
+
   const bodyText = html.replace(/<[^>]+>/g, ' ').toLowerCase();
   const headings = [...html.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)]
     .map((m) => m[1].replace(/<[^>]+>/g, '').toLowerCase());
@@ -67,7 +107,7 @@ function faqAnswered(label: string, html: string): boolean {
     'the', 'what', 'how', 'why', 'when', 'where', 'is', 'are', 'do', 'does', 'can']);
 
   const words = label.toLowerCase().replace(/[?!.,]/g, '').split(/\s+/)
-    .filter((w) => w.length > 3 && !STOP.has(w));
+    .filter((w) => w.length > 2 && !STOP.has(w));
   if (words.length === 0) return true;
 
   const bodyHit = words.filter((w) => bodyText.includes(w)).length / words.length >= 0.7;

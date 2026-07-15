@@ -51,14 +51,14 @@ const PreviewNameGate = ({ onSubmit }: { onSubmit: (name: string) => void }) => 
               onChange={(e) => setName(e.target.value)}
               placeholder="First and last name"
               style={{ boxSizing: 'border-box', width: '100%', height: 46, padding: '0 14px', fontSize: 15, fontFamily: F, color: '#18181B', borderRadius: 10, border: '1px solid #D4D4D8', outline: 'none', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(120,58,251,0.1)'; }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(242,153,100,0.1)'; }}
               onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = '0px 1px 2px 0px rgba(26,29,40,0.06)'; }}
             />
           </div>
 
           <button type="submit" disabled={!valid}
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46, border: 'none', borderRadius: 10, background: valid ? '#2F2F34' : '#E4E4E7', color: valid ? '#fff' : '#A1A1AA', fontSize: 15, fontWeight: 600, fontFamily: F, cursor: valid ? 'pointer' : 'not-allowed', transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { if (valid) e.currentTarget.style.background = '#783AFB'; }}
+            onMouseEnter={(e) => { if (valid) e.currentTarget.style.background = '#F29964'; }}
             onMouseLeave={(e) => { if (valid) e.currentTarget.style.background = '#2F2F34'; }}>
             Continue
             <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>

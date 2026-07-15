@@ -10,7 +10,7 @@ interface Suggestion {
 
 const INTENT: Record<string, { label: string; bg: string; color: string }> = {
    informational: { label: 'Info', bg: '#EAF2FE', color: '#2563EB' },
-   commercial: { label: 'Comm', bg: '#F3EEFF', color: '#783AFB' },
+   commercial: { label: 'Comm', bg: '#F3EEFF', color: '#F29964' },
    transactional: { label: 'Trans', bg: '#E4F5EA', color: '#1AB25E' },
    navigational: { label: 'Nav', bg: '#F4F4F5', color: '#52525C' },
 };

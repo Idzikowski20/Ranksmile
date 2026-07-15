@@ -1,28 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Toaster } from 'react-hot-toast';
 
-const AppToaster = () => (
-  <Toaster
-    position="bottom-right"
-    containerClassName="react_toaster"
-    toastOptions={{
-      style: {
-        background: '#18181B',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 8,
-        padding: 12,
-        maxWidth: 360,
-        fontSize: 14,
-        fontWeight: 400,
-        lineHeight: '20px',
-        fontFamily: 'var(--font-family-primary)',
-        boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.04), 0px 2px 8px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.06)',
-      },
-      success: { iconTheme: { primary: '#37E278', secondary: '#18181B' } },
-      error: { iconTheme: { primary: '#FF6F77', secondary: '#18181B' } },
-    }}
-  />
-);
+/**
+ * Portaled to document.body so toasts escape the app height chain
+ * (#__next height:100%, body overflow:hidden, .app-shell-body overflow:hidden).
+ */
+const AppToaster = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <Toaster
+      position="bottom-right"
+      containerClassName="react_toaster"
+      containerStyle={{
+        bottom: 'var(--toast-inset-bottom, 16px)',
+        right: 'var(--toast-inset-right, 16px)',
+      }}
+      toastOptions={{
+        className: 'app-toast',
+        success: {
+          className: 'app-toast',
+          iconTheme: { primary: '#37E278', secondary: '#252525' },
+        },
+        error: {
+          className: 'app-toast',
+          iconTheme: { primary: '#FF6F77', secondary: '#252525' },
+        },
+      }}
+    />,
+    document.body,
+  );
+};
 
 export default AppToaster;

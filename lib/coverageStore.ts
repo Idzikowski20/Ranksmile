@@ -1,5 +1,6 @@
 import { CoverageItem, CoverageResult, CoverageSnapshot, computeCoverageScores } from './aiCoverage';
 import { safeJsonParse } from './safeJson';
+import { normalizeTerm } from './termUtils';
 
 export interface CoverageSources {
   paa: CoverageItem[];
@@ -8,12 +9,34 @@ export interface CoverageSources {
   entity: CoverageItem[];
 }
 
-/** Merge per-source CoverageItem arrays into a single ordered list, deduped by id (last source wins). */
+/** Merge per-source CoverageItem arrays; dedupe by id (last wins), then by label (knowledge wins over intent). */
 export function mergeCoverageItems(src: CoverageSources): CoverageItem[] {
   const all = [...src.paa, ...src.intent, ...src.readability, ...src.entity];
   const byId = new Map<string, CoverageItem>();
   for (const it of all) byId.set(it.id, it);
-  return Array.from(byId.values());
+
+  const byLabel = new Map<string, CoverageItem>();
+  for (const it of byId.values()) {
+    const labelKey = normalizeTerm(it.label) || it.id;
+    const prev = byLabel.get(labelKey);
+    if (!prev) {
+      byLabel.set(labelKey, it);
+      continue;
+    }
+    const prevIsIntent = prev.type === 'intent' || prev.category === 'intent';
+    const curIsIntent = it.type === 'intent' || it.category === 'intent';
+    if (prevIsIntent && !curIsIntent) {
+      byLabel.set(labelKey, it);
+    } else if (!prevIsIntent && curIsIntent) {
+      /* keep knowledge */
+    } else if ((it.llmSources?.length ?? 0) > (prev.llmSources?.length ?? 0)) {
+      byLabel.set(labelKey, it);
+    } else if (it.quality > prev.quality) {
+      byLabel.set(labelKey, it);
+    }
+  }
+
+  return Array.from(byLabel.values());
 }
 
 /** THE ONLY place CoverageResult (the judge artifact) is consumed (4th-review layer boundary).

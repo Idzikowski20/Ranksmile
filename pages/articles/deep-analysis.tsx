@@ -13,7 +13,6 @@ import {
 } from '../../components/sentry-pages';
 import { WizardStepper } from '../../components/articles/NewContentWizard';
 import { useFetchDomains } from '../../services/domains';
-import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
 
 // ── Must match the API handler ────────────────────────────────────────
 const STEPS = [
@@ -113,7 +112,7 @@ const SearchEngineIcons = () => (
     </div>
     <div className="deep-analysis-engine-icon">
       <svg width="14" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M14.1461 8.6792C13.1338 8.24322 12.2484 7.64599 11.4884 6.88676C10.7292 6.12753 10.1312 5.24138 9.696 4.22907C9.52952 3.84162 9.3944 3.44222 9.29138 3.03311C9.25778 2.89948 9.13834 2.80542 9.00023 2.80542C8.86211 2.80542 8.74267 2.89948 8.70907 3.03311C8.60605 3.44222 8.47167 3.84013 8.30445 4.22907C7.86847 5.24138 7.27124 6.12753 6.512 6.88676C5.75277 7.64525 4.86663 8.24322 3.85432 8.6792C3.46686 8.84568 3.06746 8.98081 2.65836 9.08383C2.52473 9.11742 2.43066 9.23687 2.43066 9.37498C2.43066 9.51309 2.52473 9.63254 2.65836 9.66613C3.06746 9.76915 3.46537 9.90353 3.85432 10.0708C4.86663 10.5067 5.75202 11.104 6.512 11.8632C7.27124 12.6224 7.86922 13.5086 8.30445 14.5209C8.47167 14.9091 8.60605 15.3077 8.70907 15.7168C8.72535 15.7818 8.76283 15.8394 8.81556 15.8807C8.8683 15.9219 8.93328 15.9444 9.00023 15.9445C9.13834 15.9445 9.25778 15.8505 9.29138 15.7168C9.3944 15.3077 9.52878 14.9098 9.696 14.5209C10.132 13.5086 10.7292 12.6232 11.4884 11.8632C12.2477 11.104 13.1338 10.506 14.1461 10.0708C14.5343 9.90353 14.933 9.76915 15.3421 9.66613C15.407 9.64985 15.4647 9.61238 15.5059 9.55964C15.5472 9.50691 15.5696 9.44193 15.5698 9.37498C15.5698 9.23687 15.4757 9.11742 15.3421 9.08383C14.933 8.98081 14.5351 8.84643 14.1461 8.6792Z" fill="#783afb" />
+        <path d="M14.1461 8.6792C13.1338 8.24322 12.2484 7.64599 11.4884 6.88676C10.7292 6.12753 10.1312 5.24138 9.696 4.22907C9.52952 3.84162 9.3944 3.44222 9.29138 3.03311C9.25778 2.89948 9.13834 2.80542 9.00023 2.80542C8.86211 2.80542 8.74267 2.89948 8.70907 3.03311C8.60605 3.44222 8.47167 3.84013 8.30445 4.22907C7.86847 5.24138 7.27124 6.12753 6.512 6.88676C5.75277 7.64525 4.86663 8.24322 3.85432 8.6792C3.46686 8.84568 3.06746 8.98081 2.65836 9.08383C2.52473 9.11742 2.43066 9.23687 2.43066 9.37498C2.43066 9.51309 2.52473 9.63254 2.65836 9.66613C3.06746 9.76915 3.46537 9.90353 3.85432 10.0708C4.86663 10.5067 5.75202 11.104 6.512 11.8632C7.27124 12.6224 7.86922 13.5086 8.30445 14.5209C8.47167 14.9091 8.60605 15.3077 8.70907 15.7168C8.72535 15.7818 8.76283 15.8394 8.81556 15.8807C8.8683 15.9219 8.93328 15.9444 9.00023 15.9445C9.13834 15.9445 9.25778 15.8505 9.29138 15.7168C9.3944 15.3077 9.52878 14.9098 9.696 14.5209C10.132 13.5086 10.7292 12.6232 11.4884 11.8632C12.2477 11.104 13.1338 10.506 14.1461 10.0708C14.5343 9.90353 14.933 9.76915 15.3421 9.66613C15.407 9.64985 15.4647 9.61238 15.5059 9.55964C15.5472 9.50691 15.5696 9.44193 15.5698 9.37498C15.5698 9.23687 15.4757 9.11742 15.3421 9.08383C14.933 8.98081 14.5351 8.84643 14.1461 8.6792Z" fill="#f29964" />
       </svg>
     </div>
     <div className="deep-analysis-engine-icon">
@@ -146,7 +145,7 @@ const StepIcon = ({ status }: { status: StepStatus }) => {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }} aria-hidden="true">
         <circle cx="12" cy="12" r="9" fill="none" stroke="#e4e4e7" strokeWidth="2" />
-        <path d="M12 3a9 9 0 0 1 8.5 5.5" fill="none" stroke="#783afb" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 3a9 9 0 0 1 8.5 5.5" fill="none" stroke="#f29964" strokeWidth="2" strokeLinecap="round" />
       </svg>
     );
   }
@@ -171,7 +170,7 @@ const StepRow = ({ step }: { step: StepState }) => (
 
 const DeepAnalysisPage: NextPage = () => {
   const router = useRouter();
-  const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam } = router.query;
+  const { url, keywords: kwParam, country, domainId: domainIdParam, flow: flowParam, language: languageParam } = router.query;
   const { data: domainsData } = useFetchDomains(router);
   const domains: DomainType[] = domainsData?.domains || [];
 
@@ -183,7 +182,6 @@ const DeepAnalysisPage: NextPage = () => {
   const [overallError, setOverallError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [legacyImporting, setLegacyImporting] = useState(false);
   const [apiProgressPct, setApiProgressPct] = useState<number | null>(null);
   const startedRef = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -191,54 +189,18 @@ const DeepAnalysisPage: NextPage = () => {
   const urlStr = (url as string || '').trim();
   const kwStr = (kwParam as string || '');
   const keywords = kwStr ? kwStr.split(',').filter(Boolean) : [];
-  const flow = (flowParam as string) || (urlStr ? 'import' : 'new');
+  const flow = (flowParam as string) || 'new';
+  const languageStr = (languageParam as string) || '';
   const domainIdStr = (domainIdParam as string || '').trim();
   const runSessionKey = useMemo(
     () => pageRunKey(flow, urlStr, kwStr, domainIdStr),
     [flow, urlStr, kwStr, domainIdStr],
   );
-  const backHref = flow === 'import' ? '/articles/import' : '/articles/new';
-  const backLabel = flow === 'import' ? 'Back to import' : 'Back to new content';
-
-  // Legacy import URLs — quick scrape + open editor with background analysis.
-  useEffect(() => {
-    if (!router.isReady || flow !== 'import' || !urlStr) return undefined;
-    let cancelled = false;
-    setLegacyImporting(true);
-    (async () => {
-      try {
-        const res = await fetch('/api/articles/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: urlStr,
-            keywords,
-            country: country || 'PL',
-            startAnalysis: true,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Import failed');
-        const id = Number(data.articleId);
-        if (!Number.isFinite(id)) throw new Error('Import succeeded but article id is missing');
-        writeAnalyzeSession(id, {
-          url: urlStr,
-          keywords,
-          country: (country as string) || 'PL',
-        });
-        if (!cancelled) router.replace(`/articles/${id}`);
-      } catch (err) {
-        if (!cancelled) {
-          setOverallError(err instanceof Error ? err.message : 'Import failed');
-          setLegacyImporting(false);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [router.isReady, flow, urlStr, keywords, country, router]);
+  const backHref = '/articles/new';
+  const backLabel = 'Back to new content';
 
   useEffect(() => {
-    if (!router.isReady || startedRef.current || flow === 'import') return undefined;
+    if (!router.isReady || startedRef.current) return undefined;
     const isKeywordMode = !urlStr && keywords.length > 0 && !!domainIdStr;
     if (!urlStr && !isKeywordMode) {
       setOverallError('No URL or keyword provided.');
@@ -262,8 +224,8 @@ const DeepAnalysisPage: NextPage = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
             isKeywordMode
-              ? { keywords, country: country || 'PL', domainId: Number(domainIdStr) }
-              : { url: urlStr, keywords, country: country || 'PL' },
+              ? { keywords, country: country || 'PL', language: languageStr || undefined, domainId: Number(domainIdStr) }
+              : { url: urlStr, keywords, country: country || 'PL', language: languageStr || undefined },
           ),
         });
 
@@ -338,7 +300,7 @@ const DeepAnalysisPage: NextPage = () => {
     })();
 
     return undefined;
-  }, [router.isReady, url, kwParam, country, domainIdParam, retryCount, urlStr, keywords, flow, domainIdStr, runSessionKey]);
+  }, [router.isReady, url, kwParam, country, domainIdParam, languageParam, retryCount, urlStr, keywords, domainIdStr, runSessionKey]);
 
   useEffect(() => {
     if ((!jobId && !articleId) || allDone || overallError) {
@@ -392,14 +354,10 @@ const DeepAnalysisPage: NextPage = () => {
   useEffect(() => {
     if (!allDone || !articleId) return undefined;
     const t = setTimeout(() => {
-      if (flow === 'import') {
-        router.replace(`/articles/${articleId}`);
-      } else {
-        router.replace(`/articles/content-type?articleId=${articleId}`);
-      }
+      router.replace(`/articles/content-type?articleId=${articleId}`);
     }, 600);
     return () => clearTimeout(t);
-  }, [allDone, articleId, flow, router]);
+  }, [allDone, articleId, router]);
 
   const completedCount = steps.filter((s) => s.status === 'done').length;
   const progressPct = apiProgressPct ?? Math.round((completedCount / STEPS.length) * 100);
@@ -438,16 +396,11 @@ const DeepAnalysisPage: NextPage = () => {
     <span className="deep-analysis-meta-badge">{completedCount}/{STEPS.length} steps</span>
   );
 
-  if (flow === 'import' && legacyImporting && !overallError) {
-    return (
-      <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-        <Head><title>Opening editor — SerpBear</title></Head>
-        <div style={{ padding: 48, textAlign: 'center', fontFamily: 'var(--font-family-primary)', color: '#52525C' }}>
-          Importing content and opening editor…
-        </div>
-      </DashboardLayout>
-    );
-  }
+  useEffect(() => {
+    if (!router.isReady || flow !== 'import') return undefined;
+    router.replace('/articles/import');
+    return undefined;
+  }, [router.isReady, flow, router]);
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
@@ -455,14 +408,14 @@ const DeepAnalysisPage: NextPage = () => {
         <title>Deep Analysis — SerpBear</title>
       </Head>
 
-      <SentryPage maxWidth={560} className={flow === 'new' ? 'nc-wizard-page' : undefined}>
+      <SentryPage maxWidth={560} className="nc-wizard-page">
         <SentryPageHeader
           borderless
           title="Deep analysis"
           subtitle={subtitle}
           meta={statusBadge}
         />
-        {flow === 'new' && <WizardStepper current="research" />}
+        <WizardStepper current="research" />
 
         <div className="sentry-page-content">
           {sourceLabel && !overallError && (
@@ -541,7 +494,7 @@ const DeepAnalysisPage: NextPage = () => {
 
           {allDone && (
             <Alert variant="success" title="All steps completed">
-              Redirecting to {flow === 'import' ? 'the editor' : 'content setup'}…
+              Redirecting to content setup…
             </Alert>
           )}
         </div>

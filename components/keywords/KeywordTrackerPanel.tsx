@@ -310,7 +310,7 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
                   width: 220, height: 34, padding: '0 12px', border: '1px solid #D4D4D8', borderRadius: 8, fontSize: 13,
                   color: '#09090B', background: '#fff', outline: 'none', fontFamily: 'var(--font-family-primary)',
                }}
-               onFocus={e => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0px 0px 0px 3px rgba(120,58,251,0.1)'; }}
+               onFocus={e => { e.currentTarget.style.borderColor = '#F5C4A0'; e.currentTarget.style.boxShadow = '0px 0px 0px 3px rgba(242,153,100,0.1)'; }}
                onBlur={e => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
             />
             <select
@@ -390,7 +390,7 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
                            <tr key={kw.id} style={{ background: selectedTracked.has(kw.id) ? '#FAFAFF' : 'transparent' }} className="kt-row">
                               <td style={{ ...TD, width: 32 }}><input type="checkbox" checked={selectedTracked.has(kw.id)} onChange={() => toggleTrackedSelect(kw.id)} style={{ cursor: 'pointer' }} /></td>
                               <td style={{ ...TD, fontWeight: 600 }}>
-                                 {kw.sticky && <span style={{ color: '#783AFB', marginRight: 4 }} title="Favorite">&#9733;</span>}
+                                 {kw.sticky && <span style={{ color: '#F29964', marginRight: 4 }} title="Favorite">&#9733;</span>}
                                  {kw.keyword}
                               </td>
                               <td style={{ ...TD, fontWeight: 500 }}>
@@ -409,7 +409,7 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
                               </td>
                               <td style={{ ...TD, width: 80 }}>
                                  <div className="kt-actions" style={{ display: 'flex', gap: 6, opacity: 0, transition: 'opacity 150ms' }}>
-                                    <button type="button" onClick={() => favMutation.mutate({ keywordID: kw.id, sticky: !kw.sticky })} title={kw.sticky ? 'Unfavorite' : 'Favorite'} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, color: kw.sticky ? '#783AFB' : '#9F9FA9' }}>
+                                    <button type="button" onClick={() => favMutation.mutate({ keywordID: kw.id, sticky: !kw.sticky })} title={kw.sticky ? 'Unfavorite' : 'Favorite'} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, color: kw.sticky ? '#F29964' : '#9F9FA9' }}>
                                        <svg width="14" height="14" viewBox="0 0 24 24" fill={kw.sticky ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
                                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                        </svg>
@@ -437,7 +437,7 @@ const KeywordTrackerPanel = ({ domain, isConsoleConnected, router, scraperName, 
                   <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Search Console Not Connected</h3>
                   <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
                      Integrate Google Search Console to discover keywords your domain ranks for.{' '}
-                     <a href="/settings" style={{ color: '#783AFB', fontWeight: 600 }}>Go to Settings</a>
+                     <a href="/settings" style={{ color: '#F29964', fontWeight: 600 }}>Go to Settings</a>
                   </p>
                </div>
             ) : (

@@ -5,7 +5,7 @@ const F = 'var(--font-family-primary)';
 /** Brand mark — purple square + wordmark. */
 const Brand = () => (
   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-    <span style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #8b5cff, #783AFB)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, boxShadow: '0 4px 14px rgba(120,58,251,0.45)' }}>S</span>
+    <span style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #8b5cff, #F29964)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, boxShadow: '0 4px 14px rgba(242,153,100,0.45)' }}>S</span>
     <span style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.01em', color: '#fafafa' }}>Surfer</span>
   </div>
 );
@@ -53,7 +53,7 @@ const AuthSplitLayout = ({ children, title, subtitle }: { children: React.ReactN
       </div>
 
       {/* product mockup */}
-      <div style={{ position: 'relative', marginTop: 36, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(120,58,251,0.18), 0 0 60px rgba(120,58,251,0.22)', transform: 'rotate(-1.4deg)' }}>
+      <div style={{ position: 'relative', marginTop: 36, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(242,153,100,0.18), 0 0 60px rgba(242,153,100,0.22)', transform: 'rotate(-1.4deg)' }}>
         <img src="/article-viewer.png" alt="" style={{ display: 'block', width: '100%', height: 'auto' }} />
       </div>
     </aside>

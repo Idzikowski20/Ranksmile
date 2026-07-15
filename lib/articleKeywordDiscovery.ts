@@ -98,14 +98,20 @@ async function rankedKeywordsForDomain(
     namespace: cacheNs,
     key: [domain.toLowerCase(), country || 'US', languageCode || 'en'],
     ttlMs: TTL.RANKED_KEYWORDS,
-    producer: () => getRankedKeywords({
-      target: domain,
-      country,
-      languageCode,
-      limit: DFS_DEFAULT_RANKED_LIMIT,
-      topOnly: true,
-      maxRankGroup: 15,
-    }),
+    producer: async () => {
+      const rows = await getRankedKeywords({
+        target: domain,
+        country,
+        languageCode,
+        limit: DFS_DEFAULT_RANKED_LIMIT,
+        topOnly: true,
+        maxRankGroup: 15,
+      });
+      return rows.map((row) => ({
+        keyword: row.keyword,
+        position: row.position ?? undefined,
+      }));
+    },
   });
 }
 
@@ -247,6 +253,7 @@ export async function enrichNlpTermsIfNeeded(opts: {
   competitorDomains?: string[];
   ownDomain?: string;
   plainText?: string;
+  signal?: AbortSignal;
 }): Promise<NlpTerm[]> {
   if (!needsTermEnrichment(opts.terms, opts.primaryKeyword)) return opts.terms;
 
@@ -257,6 +264,7 @@ export async function enrichNlpTermsIfNeeded(opts: {
     ownDomain: opts.ownDomain,
     competitorDomains: opts.competitorDomains,
     limit: 80,
+    signal: opts.signal,
   });
 
   if (!enriched.length) return opts.terms;

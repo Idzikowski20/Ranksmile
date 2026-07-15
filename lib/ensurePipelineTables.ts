@@ -68,6 +68,14 @@ export async function ensurePipelineTables(): Promise<void> {
       try { await db.query(`ALTER TABLE domain_recommendations ADD COLUMN ${col} ${type}`); } catch (e) { ignoreExisting(`add domain_recommendations.${col}`, e); }
    }
 
+   await db.query(`CREATE TABLE IF NOT EXISTS site_audit_crawl_snapshots (
+      id ${isPostgres ? 'TEXT' : 'TEXT'} PRIMARY KEY,
+      domain_id INTEGER NOT NULL,
+      crawled_at TIMESTAMP DEFAULT ${NOW},
+      metrics_json ${JSON_T} NOT NULL
+   )`);
+   try { await db.query('CREATE INDEX IF NOT EXISTS idx_sa_snapshots_domain ON site_audit_crawl_snapshots(domain_id, crawled_at DESC)'); } catch (e) { ignoreExisting('idx_sa_snapshots_domain', e); }
+
    for (const t of ['domain_gsc_pages','domain_keywords','domain_topics','domain_competitors','domain_recommendations','page_audits']) {
       try { await db.query(`CREATE INDEX IF NOT EXISTS idx_${t}_domain ON ${t}(domain_id)`); } catch (e) { ignoreExisting(`idx_${t}_domain`, e); }
    }

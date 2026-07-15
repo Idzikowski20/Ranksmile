@@ -12,7 +12,7 @@ interface Props {
 }
 
 /* ── Shared style objects using design tokens ───────────────────────── */
-const ACCENT = 'var(--color-surface-raised)';  // #783afb
+const ACCENT = 'var(--color-surface-raised)';  // #f29964
 const STRONG = 'var(--color-surface-strong)';    // #09090b
 const FF = 'var(--font-family-primary)';
 const RADIUS_XS = 'var(--radius-xs)';  // 7px

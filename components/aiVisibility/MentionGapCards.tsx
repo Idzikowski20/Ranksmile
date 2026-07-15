@@ -21,7 +21,7 @@ const Bubble = ({ card }: { card: Card }) => {
       <svg width={w} height={74} style={{ overflow: 'visible', flexShrink: 0 }} aria-hidden>
          <defs><clipPath id={clipId}><circle cx={cx1} cy={37} r={compR} /></clipPath></defs>
          <circle cx={cx1} cy={37} r={compR} fill="#F97316" fillOpacity={0.7} />
-         <circle cx={cx2} cy={37} r={yourR} fill="#783AFB" fillOpacity={0.75} />
+         <circle cx={cx2} cy={37} r={yourR} fill="#F29964" fillOpacity={0.75} />
          {card.shared > 0 ? <circle cx={cx2} cy={37} r={yourR} fill="#FF6F77" clipPath={`url(#${clipId})`} /> : null}
       </svg>
    );
@@ -60,7 +60,7 @@ const Picker = ({ rect, candidates, exclude, onPick, onClose }: { rect: DOMRect 
                onClick={(e) => e.stopPropagation()}
                placeholder="Search"
                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #D4D4D8', borderRadius: 8, padding: '8px 10px', fontSize: 14, fontFamily: FONT, color: '#18181B', marginBottom: 8, outline: 'none', transition: 'border-color 150ms ease, box-shadow 150ms ease' }}
-               onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(120,58,251,0.1)'; }}
+               onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(242,153,100,0.1)'; }}
                onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; e.currentTarget.style.boxShadow = 'none'; }}
             />
             <div className="aiv-gap-scroll" style={{ maxHeight: 260, overflow: 'auto', background: 'transparent' }}>
@@ -95,7 +95,7 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                   role={onCompare ? 'button' : undefined}
                   tabIndex={onCompare ? 0 : undefined}
                   onKeyDown={(e) => { if (!onCompare || e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCompare(card.domain); } }}
-                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#783AFB' : '#DAD9DE'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(120,58,251,0.1)' : '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
+                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#F29964' : '#DAD9DE'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(242,153,100,0.1)' : '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                      <div style={{ position: 'relative', minWidth: 0 }}>
@@ -110,7 +110,7 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px' }}>
                         <LegendRow n={card.gap} label="Gap" color="#F97316" />
                         <LegendRow n={card.shared} label="Shared" color="#FF6F77" />
-                        <LegendRow n={card.you} label={ownLabel} color="#783AFB" />
+                        <LegendRow n={card.you} label={ownLabel} color="#F29964" />
                      </div>
                      <Bubble card={card} />
                   </div>

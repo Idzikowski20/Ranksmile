@@ -21,13 +21,34 @@ const Container = styled(motion.div)`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: '#18181B'; /* overridden by variant */
-  border-radius: 8px;
-  box-shadow: 0px 8px 24px rgba(0,0,0,0.15);
+  position: relative;
+  overflow: hidden;
+  padding: 12px 14px;
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   max-width: 360px;
   font-size: 14px;
   line-height: 1.4;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background-image: var(--shell-noise-image);
+    background-repeat: repeat;
+    background-size: var(--shell-noise-size);
+    mix-blend-mode: overlay;
+  }
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 const Outer = styled.div`
@@ -61,14 +82,6 @@ export function Toast({ indicator, onDismiss }: ToastProps) {
     }
   }, [type, onDismiss]);
 
-  const bgMap: Record<string, string> = {
-    success: '#1A332A',
-    error: '#331B1D',
-    '': '#18181B',
-    loading: '#18181B',
-    undo: '#18181B',
-  };
-
   return (
     <AnimatePresence>
       {visible && (
@@ -78,7 +91,7 @@ export function Toast({ indicator, onDismiss }: ToastProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={springTransition}
-            style={{ background: bgMap[type] || bgMap[''], color: '#FFFFFF', fontFamily: 'var(--font-family-primary)' }}
+            style={{ color: '#FFFFFF', fontFamily: 'var(--font-family-primary)' }}
           >
             {iconByType[type]}
             <span style={{ flex: 1 }}>{indicator.message}</span>
@@ -88,7 +101,7 @@ export function Toast({ indicator, onDismiss }: ToastProps) {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#783AFB',
+                  color: '#F29964',
                   cursor: 'pointer',
                   fontWeight: 600,
                   fontSize: 14,

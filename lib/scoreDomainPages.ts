@@ -137,7 +137,7 @@ export async function scoreDomainPages(domainId: number): Promise<{ scored: numb
    if (!pages.length) return { scored: 0 };
 
    const scData = await readLocalSCData(domainName);
-   const gscByUrl = buildGscUrlKeywordStrings(scData && scData !== false ? scData.thirtyDays : []);
+   const gscByUrl = buildGscUrlKeywordStrings(scData ? scData.thirtyDays : []);
    const defaultLang = meta[0]?.language?.toLowerCase().startsWith('pol') ? 'pl' : 'pl';
 
    // Unique keywords to benchmark (cap SERP/NLP API cost).

@@ -116,11 +116,6 @@ const ContextPage: NextPage = () => {
   };
 
   const goNext = () => {
-    // Instructions + selected voice can't go in the URL cleanly — use sessionStorage.
-    try {
-      sessionStorage.setItem(`nc_instructions_${articleId}`, instructions);
-      sessionStorage.setItem(`nc_voice_${articleId}`, voiceId);
-    } catch { /* ignore */ }
     const q = new URLSearchParams();
     if (articleId) q.set('articleId', articleId);
     q.set('type', type);
@@ -192,7 +187,7 @@ const ContextPage: NextPage = () => {
             left: (
               <span
                 onClick={(e) => { e.stopPropagation(); setBrandOn((v) => !v); }}
-                style={{ width: 28, height: 16, borderRadius: 9999, background: brandOn ? '#783AFB' : '#D4D4D8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}
+                style={{ width: 28, height: 16, borderRadius: 9999, background: brandOn ? '#F29964' : '#D4D4D8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}
               >
                 <span style={{ position: 'absolute', top: 2, left: brandOn ? 14 : 2, width: 12, height: 12, borderRadius: 9999, background: '#fff', transition: 'left 0.15s' }} />
               </span>
@@ -257,7 +252,7 @@ const ContextPage: NextPage = () => {
           placeholder={'Write specific instructions for this content (e.g., "Mention product X," "Write from the perspective of Y," "Conclude by saying Z")'}
           rows={5}
           style={{ width: '100%', padding: '10px 12px', border: '1px solid #D4D4D8', borderRadius: 8, fontSize: 14, lineHeight: '20px', color: '#2F2F34', fontFamily: 'var(--font-family-primary)', resize: 'vertical', outline: 'none', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)' }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = '#AA93FD'; }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; }}
           onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
         />
       </div>
@@ -324,7 +319,7 @@ const ContextPage: NextPage = () => {
                     <DomainFavicon domain={s.domain} size={16} />
                     <span>{s.domain}</span>
                     <span style={{ color: '#D4D4D8' }}>·</span>
-                    <span style={{ color: '#783AFB', fontWeight: 600 }}>cited in AI Overview</span>
+                    <span style={{ color: '#F29964', fontWeight: 600 }}>cited in AI Overview</span>
                   </div>
                   {s.title && (
                     <a href={s.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 14, fontWeight: 600, color: '#18181B', textDecoration: 'none', lineHeight: '20px', fontFamily: 'var(--font-family-primary)' }}>{s.title}</a>

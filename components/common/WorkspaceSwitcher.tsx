@@ -22,7 +22,7 @@ const HeartAvatar = ({ size = 24 }: { size?: number }) => (
       width: size,
       height: size,
       borderRadius: 6,
-      background: '#783AFB',
+      background: '#F29964',
       flexShrink: 0,
     }}
   >

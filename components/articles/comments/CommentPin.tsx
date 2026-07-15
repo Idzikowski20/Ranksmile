@@ -85,7 +85,7 @@ const CommentPin = ({ thread, author, articleId, open, onToggle, onChanged, onCl
           <svg width={36} height={36} viewBox="0 0 36 36" aria-hidden="true"
             style={{ position: 'absolute', top: -3, left: -3, pointerEvents: 'none', overflow: 'visible', zIndex: 2 }}>
             <path d="M18 2 H18 A16 16 0 0 1 34 18 V18 A16 16 0 0 1 18 34 H5 A3 3 0 0 1 2 31 V18 A16 16 0 0 1 18 2 Z"
-              fill="none" stroke="#783AFB" strokeWidth={2.5} strokeLinecap="round"
+              fill="none" stroke="#F29964" strokeWidth={2.5} strokeLinecap="round"
               pathLength={100} strokeDasharray="28 72"
               style={{ animation: 'pinTeardropSpin 0.9s linear infinite' }} />
           </svg>
@@ -94,7 +94,7 @@ const CommentPin = ({ thread, author, articleId, open, onToggle, onChanged, onCl
         {/* New-message marker. */}
         {unread && (
           <motion.span aria-hidden initial={{ scale: 0 }} animate={{ scale: 1 }}
-            style={{ position: 'absolute', top: -4, right: -4, zIndex: 3, width: 12, height: 12, borderRadius: '50%', background: '#783AFB', border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+            style={{ position: 'absolute', top: -4, right: -4, zIndex: 3, width: 12, height: 12, borderRadius: '50%', background: '#F29964', border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
         )}
       </div>
 

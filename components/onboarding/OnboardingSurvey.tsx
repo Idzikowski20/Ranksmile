@@ -9,7 +9,7 @@ const stepVariants = {
 };
 
 const F = 'var(--font-family-primary)';
-const PURPLE = '#783AFB';
+const PURPLE = '#F29964';
 
 type QType = 'radio' | 'checkbox';
 type Question = { id: string; type: QType; title: string; subtitle?: string; options: string[] };
@@ -184,7 +184,7 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
                                  padding: '13px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: F, fontSize: 14.5, color: '#18181B',
                                  background: '#fff',
                                  border: `1px solid ${on ? PURPLE : '#E4E4E7'}`,
-                                 boxShadow: on ? '0 0 0 3px rgba(120,58,251,0.08)' : 'none',
+                                 boxShadow: on ? '0 0 0 3px rgba(242,153,100,0.08)' : 'none',
                                  transition: 'border-color 150ms ease, box-shadow 150ms ease',
                               }}
                               onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { if (!on) e.currentTarget.style.borderColor = '#D4D4D8'; }}

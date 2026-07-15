@@ -180,7 +180,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                      type="button"
                      onClick={() => router.push(`/articles/${row.id}`)}
                      style={{ display: 'block', width: '100%', padding: '12px 24px', background: '#18181B', color: '#fff', borderRadius: 8, fontSize: 16, fontWeight: 600, fontFamily: font, border: 'none', cursor: 'pointer', transition: 'background 180ms ease' }}
-                     onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+                     onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
                      onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
                   >
                      Optimize

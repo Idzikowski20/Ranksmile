@@ -4,7 +4,7 @@ import type { TopicCluster, TopicIdea } from '../../lib/topicResearchTypes';
 
 const FONT = 'var(--font-family-primary)';
 
-const CLUSTER_COLORS = ['#783AFB', '#6366F1', '#0EA5E9', '#14B8A6', '#22C55E', '#EAB308', '#F97316', '#EF4444'];
+const CLUSTER_COLORS = ['#F29964', '#6366F1', '#0EA5E9', '#14B8A6', '#22C55E', '#EAB308', '#F97316', '#EF4444'];
 
 function hexPath(cx: number, cy: number, size: number): string {
    const pts: string[] = [];
@@ -65,7 +65,7 @@ const TopicResearchHexMap = ({ items, selectedMain, onSelect, width = 720, heigh
                const hx = pad + coords.x * (width - pad * 2);
                const hy = pad + coords.y * (height - pad * 2);
                const fill = ideaFill(item.idea);
-               const stroke = selectedMain === item.idea.main ? '#783AFB' : CLUSTER_COLORS[item.clusterIdx % CLUSTER_COLORS.length];
+               const stroke = selectedMain === item.idea.main ? '#F29964' : CLUSTER_COLORS[item.clusterIdx % CLUSTER_COLORS.length];
                const selected = selectedMain === item.idea.main;
                return (
                   <g key={`${item.clusterIdx}-${item.idea.main}`} style={{ cursor: 'pointer' }} onClick={() => onSelect(item)}>

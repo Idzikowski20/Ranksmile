@@ -86,7 +86,7 @@ const OutlinePanel = ({ headings, keyword, activeHeadingPos, onHeadingClick }: P
                     ? 'var(--color-text-primary)'
                     : `rgba(255,255,255,${opacity})`,
                   fontWeight: h.level === 1 ? 500 : 400,
-                  background: isActive ? 'rgba(120,58,251,0.15)' : 'transparent',
+                  background: isActive ? 'rgba(242,153,100,0.15)' : 'transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {

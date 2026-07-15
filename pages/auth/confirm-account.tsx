@@ -179,7 +179,7 @@ const ConfirmAccount: NextPage = () => {
                            opacity: resendDisabled ? 0.6 : 1,
                            transition: 'background 150ms ease',
                         }}
-                        onMouseEnter={(e) => { if (!resendDisabled) e.currentTarget.style.background = '#783AFB'; }}
+                        onMouseEnter={(e) => { if (!resendDisabled) e.currentTarget.style.background = '#F29964'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                      >
                         {resendLabel}
@@ -211,7 +211,7 @@ const ConfirmAccount: NextPage = () => {
                   className="confirm-right-panel"
                   style={{
                      flex: '0 0 40%',
-                     background: '#783AFB',
+                     background: '#F29964',
                      borderRadius: 12,
                      flexDirection: 'column',
                      alignItems: 'center',

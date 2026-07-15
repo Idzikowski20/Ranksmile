@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 
-const COLORS = ['#783AFB', '#1AB25E', '#F97316', '#74A9FF', '#FF6F77', '#FACC15'];
+const COLORS = ['#F29964', '#1AB25E', '#F97316', '#74A9FF', '#FF6F77', '#FACC15'];
 
 type Piece = { id: number; left: number; dx: number; delay: number; dur: number; rot: number; color: string; w: number; h: number; round: boolean };
 

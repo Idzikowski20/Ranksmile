@@ -160,7 +160,7 @@ export default function Page() {
             font-size: 20px;
             font-weight: bold;
             line-height: 1;
-            background-color: #7553FF;
+            background-color: #F5A978;
             border: 1px solid #553DB8;
             transform: translateY(-4px);
           }

@@ -1,7 +1,7 @@
 import React from 'react';
 import ContentScorePanel from '../ContentScorePanel';
 import InternalLinksPanel from '../InternalLinksPanel';
-import { computeOverallContentScore } from '../../../lib/aiSearchScore';
+import type { OptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import type { ScoreData } from '../../../lib/contentScore';
 import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
@@ -38,6 +38,8 @@ export interface ArticleEditorSidebarProps {
   internalArticles: Array<{ id: number; title: string; url: string }>;
   onRestoreVersion: (version: { id: number; content: string; score_data: string | null }) => void;
   optimizeState: 'idle' | 'optimizing' | 'reviewing';
+  aoLiveSnapshot: OptimizeLiveSnapshot | null;
+  preScoreRef: React.MutableRefObject<number>;
   optimizeReview: { postScore: number; seoDelta: number; postHtml: string; postText: string } | null;
   liveRescore: LiveRescoreState | null;
   aiVisibilityBaselineRef: React.MutableRefObject<number>;
@@ -96,6 +98,8 @@ export function ArticleEditorSidebar({
   internalArticles,
   onRestoreVersion,
   optimizeState,
+  aoLiveSnapshot,
+  preScoreRef,
   optimizeReview,
   liveRescore,
   aiVisibilityBaselineRef,
@@ -182,23 +186,22 @@ export function ArticleEditorSidebar({
             scoreData={scoreData}
             internalLinksCount={internalLinksCount}
             html={editorHtml}
-            scoreDeltas={optimizeState !== 'idle' && optimizeReview ? (() => {
-              const aiNow = liveRescore?.aiNew ?? aiCoverageScore ?? scoreData?.ai_score ?? 0;
+            scoreDeltas={aoLiveSnapshot ? (() => {
               const aiBase = aiVisibilityBaselineRef.current || (scoreData?.ai_score ?? 0);
               const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
-              const preOverall = preContentScoreRef.current;
-              const postOverall = hasAi
-                ? computeOverallContentScore(optimizeReview.postScore, aiNow)
-                : optimizeReview.postScore;
+              const seoDelta = Math.max(0, aoLiveSnapshot.seo - preScoreRef.current);
+              const aiDelta = Math.round(aoLiveSnapshot.ai) - Math.round(aiBase);
+              const overallDelta = aoLiveSnapshot.overall - preContentScoreRef.current;
               return {
-                seo: optimizeReview.seoDelta > 0 ? optimizeReview.seoDelta : undefined,
-                overall: postOverall - preOverall > 0 ? postOverall - preOverall : undefined,
-                ai: Math.round(aiNow) - Math.round(aiBase) > 0 ? Math.round(aiNow) - Math.round(aiBase) : undefined,
+                seo: seoDelta > 0 ? seoDelta : undefined,
+                overall: overallDelta > 0 ? overallDelta : undefined,
+                ai: hasAi && aiDelta > 0 ? aiDelta : undefined,
               };
             })() : undefined}
-            optimizeLiveScores={optimizeState !== 'idle' && optimizeReview ? {
-              seo: optimizeReview.postScore,
-              ai: liveRescore?.aiNew ?? aiCoverageScore ?? scoreData?.ai_score ?? undefined,
+            optimizeLiveScores={aoLiveSnapshot ? {
+              seo: aoLiveSnapshot.seo,
+              ai: aoLiveSnapshot.ai,
+              overall: aoLiveSnapshot.overall,
             } : undefined}
             keyword={article.target_keyword || ''}
             onInternalLinks={onInternalLinks}
@@ -227,8 +230,8 @@ export function ArticleEditorSidebar({
             isDone={article.status === 'accepted'}
             onMarkDone={onMarkDone}
             aiVisibilitySummary={aiVisibilitySummary}
-            coverageItems={optimizeState !== 'idle' && liveRescore ? [...liveRescore.liveItems] : coverageItems}
-            coverageBuckets={optimizeState !== 'idle' && liveRescore ? liveRescore.buckets : coverageBuckets}
+            coverageItems={aoLiveSnapshot ? aoLiveSnapshot.liveItems : coverageItems}
+            coverageBuckets={aoLiveSnapshot ? aoLiveSnapshot.buckets : coverageBuckets}
             coverageSnapshot={coverageSnapshot}
             aiCoverageScore={aiCoverageScore}
             isRunningAiVisibility={isRunningAiVisibility}

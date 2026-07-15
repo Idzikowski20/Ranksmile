@@ -53,14 +53,21 @@ describe('liveCoverageItems', () => {
     expect(out[0].covered).toBe(false);
   });
 
-  it('a frozen type (intent, fact, definition, ...) is NEVER changed even if its label appears in the text', () => {
-    const frozenTypes: CoverageItem['type'][] = ['intent', 'fact', 'definition', 'comparison', 'example', 'process', 'statistic', 'expectation', 'warning'];
+  it('judge-only types (fact, definition, ...) are NEVER changed by presence check', () => {
+    const frozenTypes: CoverageItem['type'][] = ['fact', 'definition', 'comparison', 'example', 'process', 'statistic', 'expectation', 'warning'];
     for (const type of frozenTypes) {
       const snap = [item({ id: `${type}-1`, type, label: 'gizmo', covered: false })];
       const out = liveCoverageItems(snap, 'this text clearly mentions gizmo many times', '<p>gizmo</p>');
-      expect(out[0].covered).toBe(false); // unchanged despite label present
-      expect(out[0]).toBe(snap[0]);       // verbatim
+      expect(out[0].covered).toBe(false);
+      expect(out[0]).toBe(snap[0]);
     }
+  });
+
+  it('intent flips covered when FAQ H3 + answer matches the question', () => {
+    const snap = [item({ id: 'i1', type: 'intent', label: 'Co to jest gizmo', covered: false })];
+    const html = '<h3>Co to jest gizmo?</h3><p>Gizmo to urządzenie używane w testach pokrycia treści.</p>';
+    const out = liveCoverageItems(snap, 'text', html);
+    expect(out[0].covered).toBe(true);
   });
 
   describe('structure toggling', () => {
@@ -80,10 +87,10 @@ describe('liveCoverageItems', () => {
   });
 
   describe('readability toggling', () => {
-    it('covered true when paragraphs average 40-100 words', () => {
+    it('covered true when paragraphs average 100-200 chars', () => {
       const snap = [item({ id: 'r1', type: 'readability', label: 'Readable', covered: false })];
-      const words = new Array(60).fill('word').join(' ');
-      const html = `<p>${words}</p><p>${words}</p>`;
+      const para = 'x'.repeat(150);
+      const html = `<p>${para}</p><p>${para}</p>`;
       const out = liveCoverageItems(snap, 'text', html);
       expect(out[0].covered).toBe(true);
     });
@@ -97,6 +104,13 @@ describe('liveCoverageItems', () => {
   });
 
   describe('paa toggling', () => {
+    it('covered true when FAQ has H3 question + answer paragraph', () => {
+      const snap = [item({ id: 'p1', type: 'paa', label: 'Kiedy można oskarżyć o nękanie', covered: false })];
+      const html = '<h2>FAQ</h2><h3>Kiedy można oskarżyć o nękanie?</h3><p>Można zgłosić, gdy zachowania są uporczywe i budzą uzasadnioną obawę o zdrowie lub życie.</p>';
+      const out = liveCoverageItems(snap, 'text', html);
+      expect(out[0].covered).toBe(true);
+    });
+
     it('covered true when body text answers the question (>=70% content words present)', () => {
       const snap = [item({ id: 'p1', type: 'paa', label: 'What is the best gizmo cleaning method?', covered: false })];
       const html = '<p>The best gizmo cleaning method involves warm water and a soft cloth.</p>';

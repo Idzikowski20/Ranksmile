@@ -17,12 +17,12 @@ const BTN_SIZES = {
 type ThemeColors = { surface: string; chonk: string; content: string };
 function getColors(variant: ButtonVariant): ThemeColors {
   switch (variant) {
-    case 'primary': return { surface: '#7553FF', chonk: '#5827D6', content: '#FFFFFF' };
+    case 'primary': return { surface: '#F29964', chonk: '#C97D52', content: '#FFFFFF' };
     case 'danger': return { surface: '#FF002B', chonk: '#C10000', content: '#FFFFFF' };
     case 'warning': return { surface: '#FFCE00', chonk: '#D59600', content: '#000000' };
     case 'secondary': return { surface: '#FFFFFF', chonk: '#DAD9DE', content: '#181225' };
     case 'transparent': return { surface: 'transparent', chonk: 'transparent', content: '#6A6772' };
-    case 'link': return { surface: 'transparent', chonk: 'transparent', content: '#653DE9' };
+    case 'link': return { surface: 'transparent', chonk: 'transparent', content: '#E07D42' };
   }
 }
 
@@ -55,7 +55,7 @@ const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $ic
       padding: $iconOnly ? '0' : sz.padding,
       borderRadius: sz.borderRadius,
       border: 'none',
-      color: $variant === 'link' ? ($hover ? '#5827D6' : '#653DE9') : c.content,
+      color: $variant === 'link' ? ($hover ? '#C97D52' : '#E07D42') : c.content,
       background: 'none',
       height: sz.height,
       minWidth: $iconOnly ? sz.height : undefined,
@@ -94,11 +94,11 @@ const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $ic
       }),
       '&:focus-visible': isChonk ? {
         '&::after': {
-          border: '1px solid #7553FF',
-          boxShadow: '0 0 0 1px #7553FF',
+          border: '1px solid #F29964',
+          boxShadow: '0 0 0 1px #F29964',
         },
       } : {
-        outline: '2px solid #7553FF',
+        outline: '2px solid #F29964',
         outlineOffset: 2,
       },
       '&[disabled]': {

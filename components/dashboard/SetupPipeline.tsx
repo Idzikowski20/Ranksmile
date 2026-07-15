@@ -28,7 +28,7 @@ function SpinnerIcon() {
          aria-hidden="true"
          style={{
             display: 'inline-block', width: 16, height: 16, flexShrink: 0,
-            border: '2px solid #E4E4E7', borderTopColor: '#783AFB', borderRadius: '9999px',
+            border: '2px solid #E4E4E7', borderTopColor: '#F29964', borderRadius: '9999px',
             animation: 'spin 0.7s linear infinite',
          }}
       />
@@ -84,7 +84,7 @@ const SetupPipeline: React.FC<Props> = ({ stages, status, error, onRetry }) => {
                   background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600,
                   fontFamily: 'var(--font-family-primary)', cursor: 'pointer', transition: 'background 150ms ease',
                }}
-               onMouseEnter={(e) => { e.currentTarget.style.background = '#783AFB'; }}
+               onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
                onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
             >
                Retry

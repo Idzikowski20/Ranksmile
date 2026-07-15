@@ -140,7 +140,7 @@ const WorkspaceGeneralSettings = () => {
                 width: 64,
                 height: 64,
                 borderRadius: 8,
-                background: displayLogo || (workspaceFaviconSrc && !faviconError) ? 'transparent' : 'rgba(120,58,251,0.10)',
+                background: displayLogo || (workspaceFaviconSrc && !faviconError) ? 'transparent' : 'rgba(242,153,100,0.10)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -160,7 +160,7 @@ const WorkspaceGeneralSettings = () => {
               ) : workspaceFaviconSrc && !faviconError ? (
                 <img src={workspaceFaviconSrc} alt="Workspace favicon" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} onError={() => setFaviconError(true)} />
               ) : (
-                <span style={{ fontSize: 20, fontWeight: 600, color: '#783AFB', textTransform: 'uppercase', fontFamily: font, userSelect: 'none' }}>
+                <span style={{ fontSize: 20, fontWeight: 600, color: '#F29964', textTransform: 'uppercase', fontFamily: font, userSelect: 'none' }}>
                   {initial}
                 </span>
               )}
@@ -214,7 +214,7 @@ const WorkspaceGeneralSettings = () => {
                       style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0 }}
                     />
                   ) : (
-                    <span style={{ width: 28, height: 28, borderRadius: 9999, background: 'rgba(120,58,251,0.12)', color: '#783AFB', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0, fontFamily: font, textTransform: 'uppercase' }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 9999, background: 'rgba(242,153,100,0.12)', color: '#F29964', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0, fontFamily: font, textTransform: 'uppercase' }}>
                       {(gscAccount.email || '?').charAt(0)}
                     </span>
                   )}

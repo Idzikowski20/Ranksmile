@@ -43,7 +43,7 @@ const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 
     ? { left: 'calc(100% + 4px)', top: '50%', transform: 'translateY(-50%)' }
     : placement === 'left'
       ? { right: 'calc(100% + 4px)', top: '50%', transform: 'translateY(-50%)' }
-      : { left: '50%', top: '60%', transform: 'translateX(-50%)' };
+      : { left: '30%', top: '60%', transform: 'translateX(-50%)' };
   const reduced = useReducedMotion();
   return (
     <motion.span initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : 0.25 }} style={{ ...base, ...pos }}>

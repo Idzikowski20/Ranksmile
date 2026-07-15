@@ -67,7 +67,7 @@ const ArticlesPage: NextPage = () => {
     { refetchOnWindowFocus: false },
   );
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number | string) => {
     try {
       const res = await fetch(`/api/articles/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
@@ -78,7 +78,7 @@ const ArticlesPage: NextPage = () => {
     }
   };
 
-  const handleDeleteMultiple = async (ids: number[]) => {
+  const handleDeleteMultiple = async (ids: Array<number | string>) => {
     try {
       await Promise.all(ids.map((id) => fetch(`/api/articles/${id}`, { method: 'DELETE' })));
       toast.success(`${ids.length} article${ids.length !== 1 ? 's' : ''} deleted`);

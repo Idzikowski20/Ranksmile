@@ -4,7 +4,7 @@ import { isNewCoverageIdsEnabled } from './featureFlags';
 import { normalizeTerm } from './termUtils';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';
 
-export const CITATION_INTENT_COUNT = 5;
+export const CITATION_INTENT_COUNT = 8;
 
 /** Stable coverage item id for a citation prompt — bucket-aware when ENABLE_NEW_COVERAGE_IDS. */
 export function citationItemId(label: string, bucket: 'paa' | 'intent'): string {
@@ -25,7 +25,7 @@ export function remapLegacyCitationItem(item: CoverageItem): CoverageItem {
   return { ...item, id: citationItemId(item.label, bucket) };
 }
 
-const TEMPLATE_BUILDERS: Array<(kw: string) => string> = [
+const TEMPLATE_BUILDERS_COMMERCIAL: Array<(kw: string) => string> = [
   (kw) => `${kw} czy warto?`,
   (kw) => `polecany ${kw.toLowerCase()}`,
   (kw) => `${kw} kogo wybrać?`,
@@ -40,10 +40,93 @@ const TEMPLATE_BUILDERS: Array<(kw: string) => string> = [
   (kw) => `kiedy warto skorzystać z ${kw.toLowerCase()}?`,
 ];
 
+/** Informational / legal / educational topics (Surfer fan-out + Semrush PAA style). */
+const TEMPLATE_BUILDERS_INFORMATIONAL: Array<(kw: string) => string> = [
+  (kw) => `Co to jest ${kw.toLowerCase()}?`,
+  (kw) => `Kiedy można zgłosić ${kw.toLowerCase()}?`,
+  (kw) => `Kiedy można oskarżyć o ${kw.toLowerCase()}?`,
+  (kw) => `Kiedy można kogoś oskarżyć o ${kw.toLowerCase()}?`,
+  (kw) => `Jakie zachowania są uważane za ${kw.toLowerCase()}?`,
+  (kw) => `Co to jest ${kw.toLowerCase()} emocjonalne?`,
+  (kw) => `Jakie są rodzaje ${kw.toLowerCase()}?`,
+  (kw) => `Jakie są konsekwencje ${kw.toLowerCase()}?`,
+  (kw) => `Czy ${kw.toLowerCase()} jest przestępstwem?`,
+  (kw) => `Jak udowodnić ${kw.toLowerCase()}?`,
+  (kw) => `Czym jest uporczywe ${kw.toLowerCase()}?`,
+  (kw) => `Jak zgłosić ${kw.toLowerCase()} na policję?`,
+  (kw) => `Czy ${kw.toLowerCase()} to wykroczenie czy przestępstwo?`,
+  (kw) => `Jakie dowody są potrzebne w sprawie ${kw.toLowerCase()}?`,
+  (kw) => `Ile grozi za ${kw.toLowerCase()}?`,
+  (kw) => `Gdzie zgłosić ${kw.toLowerCase()}?`,
+  (kw) => `Jak długo trwa postępowanie w sprawie ${kw.toLowerCase()}?`,
+  (kw) => `Czy ${kw.toLowerCase()} w pracy jest legalne?`,
+  (kw) => `Jakie są przykłady ${kw.toLowerCase()}?`,
+];
+
+const COMMERCIAL_SIGNAL = /\b(warto|polecany|wybrać|wybrac|kosztuje|cennik|opinie|ranking|najlepszy|agencj|detektyw|usług)\b/i;
+const INFORMATIONAL_SIGNAL = /\b(kiedy|zgłosić|zglosic|oskarżyć|oskarzyc|zachowania|prawo|art\.|kk|wykrocze|co to jest|czym jest|emocjonaln|przestępstw)\b/i;
+
+/** Infer whether citation prompts should be commercial (product/service) or informational. */
+export function detectCitationContext(keyword: string, serpQuestions: string[] = []): 'commercial' | 'informational' {
+  if (/\b(detektyw|agencj|saas|software|klinik|prawnik|usług detektyw)\b/i.test(keyword)) return 'commercial';
+  let info = 0;
+  let comm = 0;
+  for (const q of serpQuestions) {
+    if (INFORMATIONAL_SIGNAL.test(q)) info += 1;
+    if (COMMERCIAL_SIGNAL.test(q)) comm += 1;
+  }
+  if (info > comm) return 'informational';
+  if (comm > info) return 'commercial';
+  return 'informational';
+}
+
+const TEMPLATE_BUILDERS_COMMERCIAL_EN: Array<(kw: string) => string> = [
+  (kw) => `Is ${kw.toLowerCase()} worth it?`,
+  (kw) => `best ${kw.toLowerCase()}`,
+  (kw) => `who should I choose for ${kw.toLowerCase()}?`,
+  (kw) => `how to choose ${kw.toLowerCase()}?`,
+  (kw) => `how much does ${kw.toLowerCase()} cost?`,
+  (kw) => `top ${kw.toLowerCase()}`,
+  (kw) => `${kw.toLowerCase()} reviews`,
+  (kw) => `is ${kw.toLowerCase()} legal?`,
+];
+
+const TEMPLATE_BUILDERS_INFORMATIONAL_EN: Array<(kw: string) => string> = [
+  (kw) => `What is ${kw.toLowerCase()}?`,
+  (kw) => `When can you report ${kw.toLowerCase()}?`,
+  (kw) => `What behaviors count as ${kw.toLowerCase()}?`,
+  (kw) => `What are the types of ${kw.toLowerCase()}?`,
+  (kw) => `What are the consequences of ${kw.toLowerCase()}?`,
+  (kw) => `Is ${kw.toLowerCase()} a crime?`,
+  (kw) => `How to prove ${kw.toLowerCase()}?`,
+  (kw) => `How to report ${kw.toLowerCase()}?`,
+];
+
+function templateBuildersForContext(
+  context: 'commercial' | 'informational',
+  languageCode: string,
+): Array<(kw: string) => string> {
+  const en = languageCode.toLowerCase().slice(0, 2) === 'en';
+  if (en) return context === 'commercial' ? TEMPLATE_BUILDERS_COMMERCIAL_EN : TEMPLATE_BUILDERS_INFORMATIONAL_EN;
+  return context === 'commercial' ? TEMPLATE_BUILDERS_COMMERCIAL : TEMPLATE_BUILDERS_INFORMATIONAL;
+}
+
+/** @deprecated use templateBuildersForContext — kept as alias for commercial tests */
+const TEMPLATE_BUILDERS = TEMPLATE_BUILDERS_COMMERCIAL;
+
 /** Natural-language prompts users ask AI search / Google — targets AI Overview citations. */
-export function buildCitationPrompts(keyword: string, extra: string[] = [], max = 15): string[] {
+export function buildCitationPrompts(
+  keyword: string,
+  extra: string[] = [],
+  max = 15,
+  context?: 'commercial' | 'informational',
+  languageCode = 'pl',
+): string[] {
   const kw = keyword.trim();
   if (!kw) return [];
+
+  const ctx = context ?? detectCitationContext(kw, extra);
+  const builders = templateBuildersForContext(ctx, languageCode);
 
   const seen = new Set<string>();
   const out: string[] = [];
@@ -57,8 +140,8 @@ export function buildCitationPrompts(keyword: string, extra: string[] = [], max 
     out.push(q);
   };
 
-  for (const build of TEMPLATE_BUILDERS) push(build(kw));
   for (const q of extra) push(q);
+  for (const build of builders) push(build(kw));
 
   return out.slice(0, max);
 }
@@ -97,10 +180,19 @@ export function scoreCitationPrompt(question: string, keyword: string): number {
   return score;
 }
 
-/** Top citation prompts shown as intent bucket — real queries, not writing-coach labels. */
-export function citationIntentItems(keyword: string, headlineQuestion?: string): CoverageItem[] {
-  const extras = headlineQuestion?.trim() ? [headlineQuestion.trim()] : [];
-  const prompts = buildCitationPrompts(keyword, extras, CITATION_INTENT_COUNT + 2)
+/** Top citation prompts shown as intent bucket — prefers real SERP/LLM questions (Surfer fan-out style). */
+export function citationIntentItems(
+  keyword: string,
+  headlineQuestion?: string,
+  opts?: { serpQuestions?: string[]; languageCode?: string },
+): CoverageItem[] {
+  const serp = opts?.serpQuestions ?? [];
+  const context = detectCitationContext(keyword, serp);
+  const extras = [
+    ...(headlineQuestion?.trim() ? [headlineQuestion.trim()] : []),
+    ...serp,
+  ];
+  const prompts = buildCitationPrompts(keyword, extras, CITATION_INTENT_COUNT + 2, context, opts?.languageCode || 'pl')
     .slice(0, CITATION_INTENT_COUNT);
 
   return prompts.map((label, index) => ({

@@ -36,7 +36,7 @@ const OPTIONS: ChartOptions<'line'> = {
 const TrendLineChart = ({ scans, competitorDomain }: { scans: Point[]; competitorDomain: string | null }) => {
    const labels = scans.map((s) => (s.finishedAt ? new Date(s.finishedAt).toLocaleDateString() : ''));
    const datasets = [
-      { label: 'You', data: scans.map((s) => s.series.you?.visibilityScore ?? 0), borderColor: '#783AFB', backgroundColor: '#783AFB', pointBackgroundColor: '#783AFB', tension: 0.3 },
+      { label: 'You', data: scans.map((s) => s.series.you?.visibilityScore ?? 0), borderColor: '#F29964', backgroundColor: '#F29964', pointBackgroundColor: '#F29964', tension: 0.3 },
    ];
    if (competitorDomain) datasets.push({ label: competitorDomain, data: scans.map((s) => s.series.competitor?.visibilityScore ?? 0), borderColor: '#9F9FA9', backgroundColor: '#9F9FA9', pointBackgroundColor: '#9F9FA9', tension: 0.3 });
    return (

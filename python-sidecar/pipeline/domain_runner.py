@@ -16,7 +16,7 @@ TIMEOUTS: dict[str, int] = {
     "keywords": 120,
     "topics": 300,
     "competitors": 600,
-    "blog_audit": 240,
+    "blog_audit": 900,
     "recommendations": 300,
 }
 

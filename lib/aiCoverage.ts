@@ -12,6 +12,9 @@ export type CoverageCategory = 'knowledge' | 'authority' | 'quality' | 'style' |
 export type Importance = 'critical' | 'recommended' | 'optional';
 export type CoverageSource = 'serp' | 'competitors' | 'paa' | 'llm' | 'manual';
 
+/** Engine that surfaced this checkpoint (AI Search panel source icons). */
+export type LlmCoverageSource = 'ai_overview' | 'chat_gpt' | 'gemini' | 'perplexity' | 'reddit';
+
 export interface CoverageProvenance {
   judgedBy?: string;
   judgedAt?: string;
@@ -37,6 +40,8 @@ export interface CoverageItem {
   readonly relatedIds?: readonly string[];  // graph-ready (empty in A)
   readonly depth?: number;             // graph-ready (0 in A)
   readonly provenance?: CoverageProvenance;
+  /** LLM engines that generated/surfaced this question (AI Search checklist). */
+  readonly llmSources?: readonly LlmCoverageSource[];
 }
 
 export interface CoverageVerdict {

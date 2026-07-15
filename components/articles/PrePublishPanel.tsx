@@ -137,7 +137,7 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
       </div>
       <div style={{ borderTop: '1px solid #f4f4f5', padding: 20, display: 'flex', justifyContent: 'flex-end' }}>
         <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'background 0.15s' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#783afb'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#f29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
           Close
         </button>
       </div>
@@ -353,7 +353,7 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
                 {onApplyReadability && cards.length > 0 && !applied && (
                   <button type="button" disabled={readOnly} onClick={() => onApplyReadability(aiRead)}
                     style={{ width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
-                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#783afb'; }}
+                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#f29964'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
                     Apply All
                   </button>
