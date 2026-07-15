@@ -13,14 +13,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { url, timeout } = req.body as { url: string; timeout?: number };
   if (!url) return res.status(400).json({ error: 'url is required' });
 
-  // Internal endpoint (sidecar SPA fallback). The previous `Host`-header check was client-spoofable
-  // (Host: localhost ⇒ unauthenticated). Trust only the shared internal token or a genuine loopback
-  // TCP peer (neither is forgeable via headers); everything else goes through normal user auth.
+  // Internal endpoint (sidecar SPA fallback). In production the shared token is the only
+  // trusted signal; reverse proxies commonly make external requests look like loopback peers.
   const internalToken = process.env.INTERNAL_PIPELINE_TOKEN;
   const headerToken = req.headers['x-internal-token'];
   const remote = req.socket?.remoteAddress || '';
   const isLoopbackPeer = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
-  const isInternal = (!!internalToken && headerToken === internalToken) || isLoopbackPeer;
+  const hasInternalToken = typeof headerToken === 'string' && !!internalToken && headerToken === internalToken;
+  const allowLocalDevLoopback = process.env.NODE_ENV !== 'production' && !internalToken && isLoopbackPeer;
+  const isInternal = hasInternalToken || allowLocalDevLoopback;
   if (!isInternal) {
     const authorized = await verifyUser(req, res);
     if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
