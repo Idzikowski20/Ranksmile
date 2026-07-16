@@ -25,6 +25,7 @@ import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanne
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
 import { computeCoverageScores } from '../../../lib/aiCoverage';
+import { filterMisalignedLegalCitations } from '../../../lib/citationPrompts';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
 import { substituteOptimizerPlaceholders } from '../../../lib/optimizePostHtml';
 import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
@@ -981,14 +982,31 @@ const ArticleEditorPage: NextPage = () => {
     );
   }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, editorHtml, article?.target_keyword, coverageItems]);
 
+  // Live AI Search checklist + score — re-derive covered/overall from editor text.
+  // Without this, emptied articles kept frozen snap.overall (e.g. 34) and "Covered" flags.
+  const liveAiCoverage = useMemo(() => {
+    const keyword = article?.target_keyword || '';
+    const baseItems = filterMisalignedLegalCitations(coverageItems, keyword);
+    if (!baseItems.length) {
+      return { items: baseItems, buckets: coverageBuckets, overall: null as number | null };
+    }
+    const liveItems = [...liveCoverageItems(baseItems, plainText, editorHtml)];
+    const { overall, buckets } = computeCoverageScores(
+      liveItems,
+      !!coverageSnapshot?.answersMainQuestionEarly,
+    );
+    return { items: liveItems, buckets, overall };
+  }, [coverageItems, plainText, editorHtml, coverageBuckets, coverageSnapshot, article?.target_keyword]);
+
   // AO-8b: unified live scores during Auto-Optimize — one synchronous pass keeps SEO, AI, and overall aligned.
   const aoLiveSnapshot = useMemo(() => {
     if (optimizeState === 'idle' || !scoreData) return null;
+    const keyword = article?.target_keyword || '';
     return computeOptimizeLiveSnapshot({
       editorHtml,
       scoreData,
-      keyword: article?.target_keyword || '',
-      coverageItems,
+      keyword,
+      coverageItems: filterMisalignedLegalCitations(coverageItems, keyword),
       coverageSnapshot,
       substitutePlaceholders: substituteOptimizerPlaceholders,
     });
@@ -2356,10 +2374,10 @@ const ArticleEditorPage: NextPage = () => {
                       isDone={article.status === 'accepted'}
                       onMarkDone={() => handleAcceptReject('accept')}
                       aiVisibilitySummary={aiVisibilitySummary}
-                      coverageItems={aoLiveSnapshot ? aoLiveSnapshot.liveItems : coverageItems}
-                      coverageBuckets={aoLiveSnapshot ? aoLiveSnapshot.buckets : coverageBuckets}
+                      coverageItems={aoLiveSnapshot ? aoLiveSnapshot.liveItems : liveAiCoverage.items}
+                      coverageBuckets={aoLiveSnapshot ? aoLiveSnapshot.buckets : liveAiCoverage.buckets}
                       coverageSnapshot={coverageSnapshot}
-                      aiCoverageScore={aiCoverageScore}
+                      aiCoverageScore={aoLiveSnapshot ? aoLiveSnapshot.ai : (liveAiCoverage.overall ?? aiCoverageScore)}
                       isRunningAiVisibility={isRunningAiVisibility}
                       onRunAiVisibility={handleRunAiVisibility}
                       onApplyReadability={handleApplyReadability}

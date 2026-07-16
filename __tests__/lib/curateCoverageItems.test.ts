@@ -47,6 +47,16 @@ describe('citationPrompts', () => {
     expect(labels).not.toMatch(/ile kosztuje nękanie/i);
     expect(labels).not.toMatch(/polecany nękanie/i);
   });
+
+  it('does not invent crime templates for unrelated topics like wojna hybrydowa', () => {
+    const prompts = buildCitationPrompts('wojna hybrydowa');
+    const joined = prompts.join(' | ');
+    expect(joined).not.toMatch(/oskarżyć/i);
+    expect(joined).not.toMatch(/zgłosić wojna/i);
+    expect(joined).not.toMatch(/emocjonalne/i);
+    expect(joined).not.toMatch(/na policję/i);
+    expect(prompts.some((p) => /co to jest|czym jest|rodzaje|przygotować/i.test(p))).toBe(true);
+  });
 });
 
 describe('corpusNoiseFilter', () => {
