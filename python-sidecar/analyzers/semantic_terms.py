@@ -29,42 +29,72 @@ def _chunk_hash(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()[:12]
 
 
+def _append_chunk(
+    chunks: list[tuple[str, str]],
+    seen_hashes: set[str],
+    chunk_text: str,
+    min_len: int,
+) -> None:
+    if len(chunk_text) <= min_len:
+        return
+    ch = _chunk_hash(chunk_text)
+    if ch in seen_hashes:
+        return
+    chunks.append((chunk_text[:3000], ch))
+    seen_hashes.add(ch)
+
+
+def _build_chunks(texts: list[str]) -> list[tuple[str, str]]:
+    """Split competitor HTML into heading chunks; plain SERP snippets become whole-text chunks.
+
+    BeautifulSoup only finds h1–h4/p/li on real HTML. Title+snippet fallbacks are plain
+    strings — without this path DeepSeek never runs and we only get keyword seeds.
+    """
+    chunks: list[tuple[str, str]] = []
+    seen_hashes: set[str] = set()
+
+    for text in texts:
+        if not text or not text.strip():
+            continue
+        soup = BeautifulSoup(f"<div>{text}</div>", "lxml")
+        structural = soup.find_all(["h1", "h2", "h3", "h4", "p", "li"])
+        if not structural:
+            plain = soup.get_text(" ", strip=True) or text.strip()
+            _append_chunk(chunks, seen_hashes, plain, min_len=40)
+            continue
+
+        current_chunk: list[str] = []
+        for tag in structural:
+            t = tag.get_text(strip=True)
+            if not t:
+                continue
+            if tag.name.startswith("h"):
+                if current_chunk:
+                    _append_chunk(chunks, seen_hashes, " ".join(current_chunk), min_len=100)
+                    current_chunk = []
+            current_chunk.append(t)
+        if current_chunk:
+            _append_chunk(chunks, seen_hashes, " ".join(current_chunk), min_len=100)
+
+    return chunks
+
+
 async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: str) -> list[dict]:
     """
     Extract semantic terms from competitor page texts using DeepSeek.
     Chunks each text by headings, caches per chunk, aggregates results.
     Returns top 50 terms as [{term, target_count, type}].
     """
-    if not texts or not deepseek_key:
+    if not texts:
         return _fallback_terms(texts, keyword)
 
-    # 1. Chunk texts by headings
-    chunks: list[tuple[str, str]] = []  # (chunk_text, chunk_hash)
-    seen_hashes: set[str] = set()
+    if not deepseek_key:
+        return _fallback_terms(texts, keyword)
 
-    for text in texts:
-        soup = BeautifulSoup(f"<div>{text}</div>", "lxml")
-        current_chunk: list[str] = []
-        for tag in soup.find_all(["h1", "h2", "h3", "h4", "p", "li"]):
-            t = tag.get_text(strip=True)
-            if not t:
-                continue
-            if tag.name.startswith("h"):
-                if current_chunk:
-                    chunk_text = " ".join(current_chunk)
-                    if len(chunk_text) > 100:
-                        ch = _chunk_hash(chunk_text)
-                        if ch not in seen_hashes:
-                            chunks.append((chunk_text[:3000], ch))
-                            seen_hashes.add(ch)
-                    current_chunk = []
-            current_chunk.append(t)
-        if current_chunk:
-            chunk_text = " ".join(current_chunk)
-            if len(chunk_text) > 100:
-                ch = _chunk_hash(chunk_text)
-                if ch not in seen_hashes:
-                    chunks.append((chunk_text[:3000], ch))
+    # 1. Chunk texts by headings (or whole plain snippets)
+    chunks = _build_chunks(texts)
+    if not chunks:
+        return _fallback_terms(texts, keyword)
 
     # 2. Cache hits vs misses
     uncached: list[tuple[str, str]] = []
@@ -86,6 +116,9 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         results = await asyncio.gather(*(_extract_one(ct, ch) for ct, ch in uncached))
         for terms in results:
             all_terms.extend(terms)
+
+    if not all_terms:
+        return _fallback_terms(texts, keyword)
 
     # 4. Aggregate: doc_freq, avg relevance, dominant type
     term_groups: dict[str, dict] = {}
@@ -140,6 +173,9 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
     # 5. Filter: >=30% of docs (min 2)
     min_docs = max(1, round(0.3 * n_docs)) if n_docs <= 3 else max(2, round(0.3 * n_docs))
     aggregated = [t for t in aggregated if t["doc_freq"] >= min_docs]
+
+    if not aggregated:
+        return _fallback_terms(texts, keyword)
 
     aggregated.sort(key=lambda t: (t["doc_freq"] * t["relevance"]), reverse=True)
 

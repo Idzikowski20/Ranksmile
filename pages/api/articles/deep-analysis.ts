@@ -902,15 +902,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (coverageUsage?.over) {
         console.warn('[coverage] org over 5h token budget — skipping coverage compute');
       } else {
-        const paaQuestions = dedupePaaQuestions(
+        const paaFromSerp = dedupePaaQuestions(
           (scoreData.paa_questions ?? []).map((q) => ({ question: q })),
         );
 
-        const llmQuestions = await fetchLlmCoverageQuestions({
+        let llmQuestions = await fetchLlmCoverageQuestions({
           keyword: factKeyword,
           country,
           languageCode: finalArticleLanguage,
         });
+
+        // When Serper has 0 PAA and DataForSEO is unset/empty, seed coverage from
+        // sidecar AI-visibility citation prompts so Info to cover is not blank.
+        let paaQuestions = paaFromSerp;
+        if (!paaQuestions.length && !llmQuestions.length && aiVisibilitySummary?.citations?.length) {
+          const seen = new Set<string>();
+          paaQuestions = [];
+          for (const c of aiVisibilitySummary.citations) {
+            const q = (c.prompt || '').replace(/\s+/g, ' ').trim();
+            if (!q || q.length < 10) continue;
+            const key = q.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            paaQuestions.push({ question: q });
+          }
+          console.log(`[coverage] seeded ${paaQuestions.length} questions from sidecar AI visibility`);
+        }
+        if (!paaQuestions.length && !llmQuestions.length && factKeyword) {
+          // Last resort — same prompt shapes as sidecar analyzers.ai_visibility.build_prompts
+          // so Info to cover is never blank after a successful deep analysis.
+          paaQuestions = [
+            `Co to jest ${factKeyword}?`,
+            `Jak sprawdzić ${factKeyword}?`,
+            `Jakie są najważniejsze sygnały dla: ${factKeyword}?`,
+            `Co zrobić krok po kroku w temacie: ${factKeyword}?`,
+            `Jakie źródła najlepiej wyjaśniają temat: ${factKeyword}?`,
+          ].map((question) => ({ question }));
+          console.log(`[coverage] seeded ${paaQuestions.length} fallback prompts for ${JSON.stringify(factKeyword)}`);
+        }
 
         const graded = await buildGradedCoverageSnapshot({
           keyword: factKeyword,

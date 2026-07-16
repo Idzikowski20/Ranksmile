@@ -273,7 +273,17 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         item.get("question", "").strip()
         for item in data.get("peopleAlsoAsk", [])
         if item.get("question")
-    ][:8]
+    ]
+
+    # Serper often returns relatedSearches when peopleAlsoAsk is empty — still useful
+    # for AI Search "Info to cover" curation on the Node side.
+    related_raw = data.get("relatedSearches") or []
+    for row in related_raw:
+        q = (row.get("query") if isinstance(row, dict) else str(row or "")).strip()
+        if q and q not in paa_questions:
+            paa_questions.append(q)
+
+    paa_questions = paa_questions[:12]
 
     if not results:
         print(
