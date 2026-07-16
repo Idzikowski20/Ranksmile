@@ -1,25 +1,18 @@
-/* eslint-disable import/no-unresolved */
 import type { NextPage } from 'next';
 import Head from 'next/head';
-// @ts-ignore
-import { AuthView } from '@neondatabase/auth/react';
+import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';
+import ForgotPasswordForm from '../../components/auth/ForgotPasswordForm';
 
 const ForgotPassword: NextPage = () => (
-   <AuthShell>
-      <Head>
-         <title>Forgot password — SerpBear</title>
-      </Head>
-      <div style={{
-         minHeight: '100vh',
-         display: 'flex',
-         alignItems: 'center',
-         justifyContent: 'center',
-         background: '#09090b',
-      }}>
-         <AuthView path="forgot-password" redirectTo="/auth/sign-in" />
-      </div>
-   </AuthShell>
+  <AuthShell>
+    <Head>
+      <title>Forgot password — SerpBear</title>
+    </Head>
+    <AuthPageLayout>
+      <ForgotPasswordForm />
+    </AuthPageLayout>
+  </AuthShell>
 );
 
 export default ForgotPassword;

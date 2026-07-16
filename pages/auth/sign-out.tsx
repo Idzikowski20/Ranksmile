@@ -1,25 +1,40 @@
-/* eslint-disable import/no-unresolved */
 import type { NextPage } from 'next';
 import Head from 'next/head';
-// @ts-ignore
-import { AuthView } from '@neondatabase/auth/react';
+import React, { useEffect } from 'react';
+import { signOut } from '../../lib/auth/fetchAuth';
+import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
+import AuthPageLayout from '../../components/auth/AuthPageLayout';
 import AuthShell from '../../components/auth/AuthShell';
 
-const PAGE_PATH = 'sign-out';
+const SignOut: NextPage = () => {
+  useEffect(() => {
+    let cancelled = false;
 
-const AuthPage: NextPage = () => (
-   <AuthShell>
-      <Head><title>SerpBear</title></Head>
-      <div style={{
-         minHeight: '100vh',
-         display: 'flex',
-         alignItems: 'center',
-         justifyContent: 'center',
-         background: '#09090b',
-      }}>
-         <AuthView path={PAGE_PATH} redirectTo="/" />
-      </div>
-   </AuthShell>
-);
+    const run = async () => {
+      await signOut();
+      if (!cancelled) {
+        window.location.href = '/auth/sign-in';
+      }
+    };
 
-export default AuthPage;
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <AuthShell>
+      <Head>
+        <title>Signing out — SerpBear</title>
+      </Head>
+      <AuthPageLayout>
+        <h1 style={authTitleStyle}>Signing out</h1>
+        <p style={authSubtitleStyle}>Please wait…</p>
+      </AuthPageLayout>
+    </AuthShell>
+  );
+};
+
+export default SignOut;

@@ -2,7 +2,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
-import { authClient } from '../../lib/auth/client';
+import { signOut } from '../../lib/auth/fetchAuth';
 import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
 
 const F = 'var(--font-family-primary)';
@@ -118,7 +118,7 @@ const ConfirmAccount: NextPage = () => {
    };
 
    const handleSignOut = async () => {
-      await authClient.signOut();
+      await signOut();
       router.replace('/auth/sign-in');
    };
 
