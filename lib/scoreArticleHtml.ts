@@ -31,7 +31,7 @@ export function scoreArticleHtml(opts: {
   html: string;
   scoreData: ScoreData;
   keyword: string;
-  coverageItems?: CoverageItem[];
+  coverageItems?: readonly CoverageItem[];
   answersMainQuestionEarly?: boolean;
   internalLinksCount?: number;
 }): UnifiedArticleScores {
