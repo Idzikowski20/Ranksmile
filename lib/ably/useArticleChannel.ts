@@ -28,6 +28,9 @@ function safeCloseClient(client: Ably.Realtime) {
 
 const OFFLINE_STATES = new Set<Ably.ConnectionState>(['closed', 'failed', 'suspended', 'disconnected']);
 
+/** Cached after first 503 — avoids hammering /api/ably-token when ABLY_API_KEY is unset. */
+let ablyDisabled = false;
+
 export type UseArticleChannel = {
   channel: Ably.RealtimeChannel | null;
   connectionState: Ably.ConnectionState | 'idle';
@@ -40,6 +43,8 @@ export type UseArticleChannel = {
  *
  * The channel is only exposed once the connection is `connected` so presence/subscribe
  * never attach against a closing socket (avoids Next.js "Connection closed" overlay).
+ *
+ * When ABLY_API_KEY is not configured the hook stays idle (no Realtime client, no retries).
  */
 export function useArticleChannel({ articleId, shareToken, clientId, onReconnect }: Params): UseArticleChannel {
   const [channel, setChannel] = useState<Ably.RealtimeChannel | null>(null);
@@ -49,7 +54,7 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
   useEffect(() => { onReconnectRef.current = onReconnect; }, [onReconnect]);
 
   useEffect(() => {
-    if (articleId == null) return undefined;
+    if (articleId == null || ablyDisabled) return undefined;
 
     let active = true;
 
@@ -57,44 +62,76 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
     if (shareToken) authParams.token = shareToken;
     if (clientId) authParams.clientId = clientId;
 
-    const client = new Ably.Realtime({
-      authUrl: '/api/ably-token',
-      authMethod: 'GET',
-      authParams,
-      // Lifecycle is managed by this effect's cleanup — avoid double-close on unload.
-      closeOnUnload: false,
-    });
+    const query = new URLSearchParams(authParams).toString();
+    let client: Ably.Realtime | null = null;
+    let onState: ((change: Ably.ConnectionStateChange) => void) | null = null;
 
-    const ch = client.channels.get(articleChannelName(articleId));
-
-    let hasConnectedOnce = false;
-
-    const onState = (change: Ably.ConnectionStateChange) => {
+    (async () => {
+      const probe = await fetch(`/api/ably-token?${query}`, { credentials: 'include' });
       if (!active) return;
-      setConnectionState(change.current);
-      if (change.current === 'connected') {
-        setChannel(ch);
-        if (hasConnectedOnce) onReconnectRef.current?.();
-        hasConnectedOnce = true;
-      } else if (OFFLINE_STATES.has(change.current)) {
-        setChannel(null);
+      if (probe.status === 503) {
+        ablyDisabled = true;
+        return;
       }
-    };
-    client.connection.on(onState);
+      if (!probe.ok) return;
+      if (!active) return;
 
-    if (client.connection.state === 'connected') {
-      setChannel(ch);
-      hasConnectedOnce = true;
-      setConnectionState('connected');
-    }
+      client = new Ably.Realtime({
+        authCallback: (_params, callback) => {
+          fetch(`/api/ably-token?${query}`, { credentials: 'include' })
+            .then(async (res) => {
+              if (res.status === 503) {
+                ablyDisabled = true;
+                callback('Ably disabled', null);
+                return;
+              }
+              if (!res.ok) {
+                callback(`Auth failed (${res.status})`, null);
+                return;
+              }
+              const tokenRequest = await res.json() as Ably.TokenRequest;
+              callback(null, tokenRequest);
+            })
+            .catch((err: Error) => { callback(err.message, null); });
+        },
+        closeOnUnload: false,
+      });
+
+      const ch = client.channels.get(articleChannelName(articleId));
+      let hasConnectedOnce = false;
+
+      const onStateHandler = (change: Ably.ConnectionStateChange) => {
+        if (!active) return;
+        setConnectionState(change.current);
+        if (change.current === 'connected') {
+          setChannel(ch);
+          if (hasConnectedOnce) onReconnectRef.current?.();
+          hasConnectedOnce = true;
+        } else if (OFFLINE_STATES.has(change.current)) {
+          setChannel(null);
+        }
+      };
+      onState = onStateHandler;
+      client.connection.on(onStateHandler);
+
+      if (client.connection.state === 'connected') {
+        setChannel(ch);
+        hasConnectedOnce = true;
+        setConnectionState('connected');
+      }
+    })().catch(() => {});
 
     return () => {
       active = false;
-      try { client.connection.off(onState); } catch { /* ignore */ }
       setChannel(null);
       setConnectionState('idle');
-      const clientToClose = client;
-      queueMicrotask(() => safeCloseClient(clientToClose));
+      if (client) {
+        try {
+          if (onState) client.connection.off(onState);
+        } catch { /* ignore */ }
+        const clientToClose = client;
+        queueMicrotask(() => safeCloseClient(clientToClose));
+      }
     };
   }, [articleId, shareToken, clientId]);
 

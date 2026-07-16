@@ -6,6 +6,16 @@ export function sidecarBase(): string {
    return (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
 }
 
+/** True when a remote sidecar URL is configured (not the localhost default on Vercel). */
+export function isSidecarConfigured(): boolean {
+   const raw = (process.env.PYTHON_SIDECAR_URL || '').trim();
+   if (!raw) return !process.env.VERCEL;
+   if (process.env.VERCEL && /\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/i.test(raw.replace('localhost', '127.0.0.1'))) {
+      return false;
+   }
+   return true;
+}
+
 /** Headers every sidecar call must carry — the shared secret that authorises us to
  *  the (publicly deployed) sidecar. Empty locally where the sidecar doesn't enforce it. */
 export function sidecarHeaders(extra?: Record<string, string>): Record<string, string> {

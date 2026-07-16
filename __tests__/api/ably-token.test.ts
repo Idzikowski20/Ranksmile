@@ -1,5 +1,8 @@
 jest.mock('../../lib/commentAccess', () => ({ getCommentAccessKind: jest.fn() }));
-jest.mock('../../lib/ably/server', () => ({ mintArticleToken: jest.fn() }));
+jest.mock('../../lib/ably/server', () => ({
+  mintArticleToken: jest.fn(),
+  isAblyConfigured: jest.fn(() => true),
+}));
 
 import handler from '../../pages/api/ably-token';
 import { getCommentAccessKind } from '../../lib/commentAccess';
