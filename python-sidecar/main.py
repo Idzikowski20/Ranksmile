@@ -387,6 +387,15 @@ async def ai_readability_endpoint(body: dict):
     return await run_ai_readability(article_content, keyword)
 
 
+@app.post("/content-effort")
+async def content_effort_endpoint(body: dict):
+    """LLM content-effort estimate (replicability) — not a Google NSR clone."""
+    from analyzers.content_effort import run_content_effort
+    article_content = body.get("article_content", "")
+    keyword = body.get("keyword", "")
+    return await run_content_effort(article_content, keyword)
+
+
 @app.post("/apply-ai-readability")
 async def apply_ai_readability_endpoint(body: dict):
     """Apply AI-readability suggestions to the article HTML (structure-only rewrite)."""

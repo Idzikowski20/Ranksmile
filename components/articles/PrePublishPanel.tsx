@@ -1,14 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import MiniGauge from './MiniGauge';
 import PlagiarismScanningModal from './PlagiarismScanningModal';
 import PlagiarismPanel from './PlagiarismPanel';
+import EffortChecklist from './EffortChecklist';
+import { buildEffortChecklist, heuristicContentEffort, type ContentEffortInsight } from '../../lib/contentEffort';
 
 const F = 'var(--font-family-primary)';
 
 type PlagiarismMatch = { text: string; url: string; title: string; domain: string; sources: number };
 type PlagiarismResult = { available: boolean; checked: number; matched: number; uniqueness: number; matches: PlagiarismMatch[]; error?: string };
+
+type AiReadabilityCriterion = { key: string; met: boolean; note?: string; suggestions?: string[] };
+export type AiReadabilityResult = { score: number; criteria: AiReadabilityCriterion[] };
 
 interface Props {
   /** SEO / content score. */
@@ -18,6 +23,12 @@ interface Props {
   /** Whether an AI visibility analysis exists, so the main score blends SEO + AI. */
   hasAi?: boolean;
   plainText: string;
+  html?: string;
+  keyword?: string;
+  paaQuestions?: string[];
+  /** Unique vs SERP coverage proxy (PAA/entity gaps). */
+  uniqueVsSerp?: { covered: number; total: number };
+  initialEffort?: ContentEffortInsight | null;
   articleId?: number;
   readOnly?: boolean;
   onBack: () => void;
@@ -85,9 +96,6 @@ const Busy = ({ label }: { label: string }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Spinner />{label}</span>
 );
 
-type AiReadabilityCriterion = { key: string; met: boolean; note?: string; suggestions?: string[] };
-export type AiReadabilityResult = { score: number; criteria: AiReadabilityCriterion[] };
-
 // A saved result is only usable by the new suggestions UI if it carries the `suggestions` shape.
 // Old saved results (met/note only) are treated as "not analyzed" so the Analyze button shows.
 const hasSuggestionShape = (r?: AiReadabilityResult | null): boolean => !!r?.criteria?.some((c) => Array.isArray(c.suggestions));
@@ -146,7 +154,11 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
   document.body,
 );
 
-const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly, onBack, initialPlagiarism, initialAiReadability, onApplyReadability, onPlagiarismHighlight, readabilityAccepted }: Props) => {
+const PrePublishPanel = ({
+  score, aiScore, hasAi, plainText, html, keyword, paaQuestions, uniqueVsSerp,
+  initialEffort, articleId, readOnly, onBack, initialPlagiarism, initialAiReadability,
+  onApplyReadability, onPlagiarismHighlight, readabilityAccepted,
+}: Props) => {
   const r = readability(plainText);
   const mainScore = (hasAi && typeof aiScore === 'number') ? Math.round((score + aiScore) / 2) : score;
   const [scoreTip, setScoreTip] = useState(false);
@@ -156,6 +168,8 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
   const [plag, setPlag] = useState<PlagiarismResult | null>(initialPlagiarism ?? null);
   const [aiRead, setAiRead] = useState<AiReadabilityResult | null>(hasSuggestionShape(initialAiReadability) ? initialAiReadability! : null);
   const [analyzingRead, setAnalyzingRead] = useState(false);
+  const [effort, setEffort] = useState<ContentEffortInsight | null>(initialEffort ?? null);
+  const [analyzingEffort, setAnalyzingEffort] = useState(false);
   const [applied, setApplied] = useState(false); // suggestions accepted (Optimize AI Readability → Accept)
   const prevAcceptRef = useRef(readabilityAccepted ?? 0);
   useEffect(() => {
@@ -167,6 +181,48 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
   // if not run yet this session).
   useEffect(() => { if (initialPlagiarism && plag === null) setPlag(initialPlagiarism); }, [initialPlagiarism, plag]);
   useEffect(() => { if (hasSuggestionShape(initialAiReadability) && aiRead === null) setAiRead(initialAiReadability!); }, [initialAiReadability, aiRead]);
+  useEffect(() => { if (initialEffort && effort === null) setEffort(initialEffort); }, [initialEffort, effort]);
+
+  const effortItems = useMemo(
+    () => buildEffortChecklist({
+      html,
+      plainText,
+      keyword,
+      paaQuestions,
+      uniqueVsSerp,
+    }),
+    [html, plainText, keyword, paaQuestions, uniqueVsSerp],
+  );
+
+  const liveHeuristic = useMemo(
+    () => heuristicContentEffort({ html, plainText, keyword, paaQuestions }),
+    [html, plainText, keyword, paaQuestions],
+  );
+
+  const analyzeEffort = () => {
+    if (!articleId || analyzingEffort) return;
+    setAnalyzingEffort(true);
+    fetch('/api/articles/content-effort', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ articleId }),
+    })
+      .then((res) => res.json())
+      .then((d) => {
+        if (d && typeof d.score === 'number' && Array.isArray(d.reasons)) {
+          setEffort({
+            score: d.score,
+            reasons: d.reasons.filter((x: unknown): x is string => typeof x === 'string'),
+            source: d.source === 'llm' || d.source === 'heuristic' ? d.source : 'llm',
+            at: typeof d.at === 'string' ? d.at : new Date().toISOString(),
+          });
+        } else {
+          setEffort(liveHeuristic);
+        }
+      })
+      .catch(() => { setEffort(liveHeuristic); })
+      .finally(() => setAnalyzingEffort(false));
+  };
 
   // "Analyze Content" runs ONLY the AI Readability rubric — it must never touch the AI Search
   // score (that's driven by the separate ai-visibility analysis). Decoupled on purpose, which
@@ -293,6 +349,21 @@ const PrePublishPanel = ({ score, aiScore, hasAi, plainText, articleId, readOnly
           {!plag && !scanning && (
             <span style={{ fontSize: 13, color: '#52525c' }}>Checks representative passages against the web for verbatim matches.</span>
           )}
+        </div>
+
+        <Divider />
+
+        {/* Content effort checklist */}
+        <div style={{ padding: '0 16px' }}>
+          <EffortChecklist
+            items={effortItems}
+            effortScore={effort?.score ?? liveHeuristic.score}
+            effortReasons={effort?.reasons ?? liveHeuristic.reasons}
+            effortSource={effort?.source ?? 'heuristic'}
+            onAnalyzeEffort={articleId ? analyzeEffort : undefined}
+            analyzingEffort={analyzingEffort}
+            readOnly={readOnly}
+          />
         </div>
 
         <Divider />

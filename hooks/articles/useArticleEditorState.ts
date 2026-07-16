@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
 import { authClient } from '../../lib/auth/client';
 import { useArticleKeywords } from '../../services/articleKeywords';
-import { countOccurrences, computeContentScore, type ScoreData } from '../../lib/contentScore';
+import { countOccurrences, type ScoreData } from '../../lib/contentScore';
+import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
 import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 import type { CoverageItem } from '../../lib/aiCoverage';
 import { throttle } from '../../lib/throttle';
@@ -384,13 +385,18 @@ export function useArticleEditorState({
     if (!id) return false;
     const html = contentOverride?.html ?? editorHtml;
     const text = contentOverride?.text ?? plainText;
-    const words = contentOverride?.words ?? wordCount;
-    const headings = contentOverride?.headings ?? headingCount;
-    const paragraphs = contentOverride?.paragraphs ?? paragraphCount;
     const updatedTerms = scoreData.terms.map((t) => ({
       ...t,
       current_count: countOccurrences(text, t.term),
     }));
+    const keyword = article?.target_keyword || '';
+    const coverageItems = getCoverageItems();
+    const scored = scoreArticleHtml({
+      html,
+      scoreData: { ...scoreData, terms: updatedTerms },
+      keyword,
+      coverageItems,
+    });
     const updatedScoreData: ScoreData & {
       _heading_count?: number;
       _paragraph_count?: number;
@@ -400,21 +406,15 @@ export function useArticleEditorState({
     } = {
       ...scoreData,
       terms: updatedTerms,
-      _heading_count: headings,
-      _paragraph_count: paragraphs,
+      _heading_count: scored.headings,
+      _paragraph_count: scored.paragraphs,
     };
-    const contentScore = computeContentScore(
-      text, words, headings,
-      { ...updatedScoreData },
-      paragraphs,
-      (html.match(/<a\s[^>]*href=/gi) || []).length,
-      html,
-      article?.target_keyword || '',
-      undefined,
-      getCoverageItems(),
-    );
+    const contentScore = scored.seo;
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
+    if (scored.liveItems.length > 0 || scoreData.ai_score != null) {
+      updatedScoreData.ai_score = scored.ai;
+    }
     if (versionMeta) {
       const priorRuns = (scoreData as ScoreData & { _ao_meta?: { runs?: number } })._ao_meta?.runs ?? 0;
       updatedScoreData._ao_meta = {
@@ -436,7 +436,7 @@ export function useArticleEditorState({
       ...(opts?.keepalive ? { keepalive: true } : {}),
       body: JSON.stringify({
         content: html,
-        word_count: words,
+        word_count: scored.words,
         score_data: updatedScoreData,
         featured_image: featuredImage?.url ?? null,
         target_keyword: article?.target_keyword,

@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Confetti from './Confetti';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../core';
 import { SentryPanelHeader } from '../sentry-pages';
-import { ScoreData, NlpTerm, countOccurrences, computeContentScore, computeContentScoreBreakdown } from '../../lib/contentScore';
+import { ScoreData, NlpTerm, countOccurrences } from '../../lib/contentScore';
+import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
 import { computeOpportunityScore } from '../../lib/keywordEnrichment';
 import { useArticleKeywords } from '../../services/articleKeywords';
 import type { KeywordItem } from './KeywordResearchSection';
@@ -316,13 +316,6 @@ const ContentScorePanel = ({
   deepAnalysisUi,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
-  const [celebrateKey, setCelebrateKey] = useState(0);
-  const wasOptimizingRef = useRef(false);
-  // Fire confetti when an auto-optimize run finishes (true → false).
-  useEffect(() => {
-    if (wasOptimizingRef.current && !isAutoOptimizing) setCelebrateKey((k) => k + 1);
-    wasOptimizingRef.current = !!isAutoOptimizing;
-  }, [isAutoOptimizing]);
   const [view, setView] = useState<'main' | 'write' | 'publish' | 'prepublish'>('main');
   // Which Write & Optimize section to expand when opened via a score gauge.
   const [writeSection, setWriteSection] = useState<'seo' | 'ai' | null>(null);
@@ -333,7 +326,6 @@ const ContentScorePanel = ({
     if (isAutoOptimizing) { setWriteSection(null); setView('write'); }
   }, [isAutoOptimizing]);
   const [nlpOpen, setNlpOpen] = useState(false);
-  const [missingOpen, setMissingOpen] = useState(false);
   const [competitorOpen, setCompetitorOpen] = useState(false);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [isLoadingCompetitors, setIsLoadingCompetitors] = useState(false);
@@ -374,17 +366,18 @@ const ContentScorePanel = ({
     setTerms(updated);
   }, [plainText, scoreData]);
 
-  // Synchronous live SEO score — debounced useState lagged / stayed stale in production
-  // (gauges only "fixed" after remounting via Write & Optimize). Same inputs as parent liveContentScore.
+  // Synchronous live SEO score — same formula as parent liveContentScore / AO / Save.
   const score = useMemo(() => {
     if (!scoreData) return fallbackScore ?? 0;
-    const paraCount = (html || '').match(/<p[\s>]/gi)?.length
-      ?? plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-    const kwCov = keywords.map((k) => ({ keyword: k.keyword, is_covered: !!k.is_covered }));
-    return computeContentScore(
-      plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov, coverageItems,
-    );
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore, coverageItems]);
+    return scoreArticleHtml({
+      html: html || '',
+      scoreData,
+      keyword: keyword || '',
+      coverageItems,
+      answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+      internalLinksCount,
+    }).seo;
+  }, [html, scoreData, internalLinksCount, keyword, coverageItems, coverageSnapshot, fallbackScore]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
@@ -557,17 +550,6 @@ const ContentScorePanel = ({
   const headingsRange = scoreData ? `${scoreData.headings_min}-${scoreData.headings_max}` : '–';
   const parasRange = scoreData ? `${parasMin}+` : '–';
 
-  // Per-slot gaps — what's still costing points, biggest opportunities first.
-  const scoreGaps = useMemo(() => {
-    if (!scoreData) return [];
-    const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-    const kwCov = keywords.map((k) => ({ keyword: k.keyword, is_covered: !!k.is_covered }));
-    const { slots } = computeContentScoreBreakdown(plainText, wordCount, headingCount, scoreData, paraCount, html, keyword, kwCov, coverageItems);
-    return slots
-      .filter((s) => s.missingPoints > 0)
-      .sort((a, b) => b.missingPoints - a.missingPoints);
-  }, [plainText, wordCount, headingCount, scoreData, html, keyword, keywords, coverageItems]);
-
   const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
   const intentScore = coverageBuckets?.find((b) => b.key === 'intent')?.score;
   const baseAiScore = scoreData?.ai_score ?? resolveAiScore({
@@ -617,6 +599,9 @@ const ContentScorePanel = ({
         coverageBuckets={coverageBuckets}
         coverageSnapshot={coverageSnapshot}
         competitorOutlinesCache={cachedOutlines}
+        html={html}
+        keyword={keyword}
+        paaQuestions={scoreData?.paa_questions}
         onBack={() => { setView('main'); setWriteSection(null); }}
         highlightTerms={highlightTerms}
         onHighlightTermsChange={onHighlightTermsChange}
@@ -650,12 +635,24 @@ const ContentScorePanel = ({
   }
 
   if (view === 'prepublish') {
+    const entityItems = (coverageItems ?? []).filter((i) => i.type === 'entity' || i.type === 'paa' || i.type === 'intent');
+    const uniqueVsSerp = entityItems.length > 0
+      ? {
+         covered: entityItems.filter((i) => i.covered || countOccurrences(plainText, i.label) >= 1).length,
+         total: entityItems.length,
+      }
+      : undefined;
     return (
       <PrePublishPanel
         score={score}
         aiScore={displayAi}
         hasAi={aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         plainText={plainText}
+        html={html}
+        keyword={keyword}
+        paaQuestions={scoreData?.paa_questions}
+        uniqueVsSerp={uniqueVsSerp}
+        initialEffort={scoreData?.content_effort ?? null}
         articleId={articleId}
         readOnly={readOnly}
         onBack={() => setView('main')}
@@ -692,8 +689,6 @@ const ContentScorePanel = ({
         />
       </div>
 
-      <Confetti runKey={celebrateKey} />
-
       {optimizeState === 'idle' && (
         <div data-tour="auto-optimize" className="editor-side-panel-cta">
           <Button
@@ -710,38 +705,9 @@ const ContentScorePanel = ({
 
       <div className="editor-side-panel-scroll styled-scrollbar">
         <div className="editor-workflow-list">
-          {scoreGaps.length > 0 && (
-            <div data-tour="whats-missing">
-              <WorkflowRow
-                num={1}
-                label="What's missing"
-                open={missingOpen}
-                onClick={() => setMissingOpen((v) => !v)}
-                trailing={(
-                  <span className="editor-workflow-meta">
-                    +{Math.min(100 - score, scoreGaps.reduce((s, g) => s + g.missingPoints, 0))} pts available
-                  </span>
-                )}
-              />
-              {missingOpen && (
-                <div className="editor-workflow-expand">
-                  {scoreGaps.map((g) => (
-                    <div key={g.key} className="editor-workflow-gap-item">
-                      <span className="editor-workflow-gap-points">+{g.missingPoints}</span>
-                      <div style={{ minWidth: 0 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#3f3f47' }}>{g.label}</span>
-                        <span style={{ fontSize: 12, color: '#71717b' }}> — {g.hint}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           <div data-tour="competitors">
             <WorkflowRow
-              num={2}
+              num={1}
               label="Competitors"
               open={competitorOpen}
               onClick={() => setCompetitorOpen((v) => !v)}
@@ -776,7 +742,7 @@ const ContentScorePanel = ({
 
           <div data-tour="keywords">
             <WorkflowRow
-              num={3}
+              num={2}
               label="Write & Optimize"
               onClick={() => { setWriteSection(null); setView('write'); }}
             />
@@ -804,13 +770,13 @@ const ContentScorePanel = ({
           </div>
 
           <div data-tour="internal-links">
-            <WorkflowRow num={4} label="Internal Links" onClick={onInternalLinks} disabled={readOnly} />
+            <WorkflowRow num={3} label="Internal Links" onClick={onInternalLinks} disabled={readOnly} />
           </div>
           <div data-tour="pre-publish">
-            <WorkflowRow num={5} label="Pre-Publish Review" onClick={() => setView('prepublish')} />
+            <WorkflowRow num={4} label="Pre-Publish Review" onClick={() => setView('prepublish')} />
           </div>
           <div data-tour="publish-export">
-            <WorkflowRow num={6} label="Publish or Export" onClick={() => setView('publish')} />
+            <WorkflowRow num={5} label="Publish or Export" onClick={() => setView('publish')} />
           </div>
         </div>
       </div>

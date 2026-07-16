@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import SurfyMessage from './SurfyMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
+import { Button } from '../core';
+import { SentryEmptyState } from '../sentry-pages';
 import type { PendingAction } from '../../lib/ai/types';
 
 export type SurfyHistoryEntry = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
@@ -86,7 +88,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
 
   return (
   <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-    <style>{'.surfy-convo-row:hover { background: #f4f4f5 !important; } .surfy-convo-row:hover .surfy-kebab { opacity: 1 !important; } .surfy-cta:active { transform: scale(0.98); }'}</style>
+    <style>{'.surfy-convo-row:hover { background: #f4f4f5 !important; } .surfy-convo-row:hover .surfy-kebab { opacity: 1 !important; }'}</style>
     <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 8px 0 6px', borderBottom: '1px solid #f4f4f5' }}>
       <HeaderBtn onClick={onBack} label="Back to chat">
         <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
@@ -95,23 +97,26 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
     </div>
 
     {s.conversations.length === 0 ? (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '24px 28px 40px', textAlign: 'center' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: 16, background: 'rgba(242,153,100,0.08)', color: '#f29964' }}>
-          <svg viewBox="0 0 24 24" width={26} height={26} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></svg>
-        </span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>No conversations yet</div>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: '#52525c', maxWidth: 240 }}>Your chats with Surfy are saved here. Start one to optimise this article.</div>
-        </div>
-        <button
-          type="button" className="surfy-cta" onClick={onNew}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 2, padding: '9px 16px', borderRadius: 10, background: '#f29964', border: 'none', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 150ms ease, transform 80ms ease', boxShadow: '0 1px 2px rgba(242,153,100,0.35)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#f29964'; }}
-        >
-          <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          Start a new conversation
-        </button>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 12px 32px' }}>
+        <SentryEmptyState
+          title="No conversations yet"
+          description="Your chats with Surfy are saved here. Start one to optimise this article."
+          actions={(
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={onNew}
+              icon={(
+                <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              )}
+            >
+              Start a new conversation
+            </Button>
+          )}
+        />
       </div>
     ) : (
       <div className="styled-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 8 }}>

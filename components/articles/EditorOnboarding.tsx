@@ -30,7 +30,6 @@ const STEPS: Step[] = [
   // ── Right panel (top → bottom) ──
   { target: 'content-score', placement: 'left', title: 'Content Score', body: <>Your live score — cover the suggested terms and hit the targets to push it toward 100. The side gauges break it down into SEO (on-page) and AI Search (LLM citations).</> },
   { target: 'auto-optimize', placement: 'left', title: 'Auto-Optimize', body: <>One click rewrites the draft to close gaps and lift the score.</> },
-  { target: 'whats-missing', placement: 'left', title: "What's missing", body: <>The exact actions that will raise your score — each with the points it adds.</> },
   { target: 'competitors', placement: 'left', title: 'Competitors', body: <>Inspect the top-ranking competitor articles for this keyword.</> },
   { target: 'keywords', placement: 'left', title: 'Write & Optimize', body: <>See which terms to add and how often the top competitors use them.</> },
   { target: 'internal-links', placement: 'left', title: 'Internal Links', body: <>Add internal links to your other pages to strengthen topical authority.</> },

@@ -73,7 +73,7 @@ function extractHeadingAnswerPairs(html: string): Array<{ question: string; answ
   return pairs;
 }
 
-/** Readability signal: average chars-per-<p> in the 100–200 optimal range. */
+/** Readability signal: average chars-per-<p> in the human-prose range (~120–450). */
 function readableParagraphs(html: string): boolean {
   const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
   if (paras.length < 2) return false;
@@ -81,7 +81,7 @@ function readableParagraphs(html: string): boolean {
     const chars = m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().length;
     return sum + chars;
   }, 0) / paras.length;
-  return avg >= 80 && avg <= 250;
+  return avg >= 100 && avg <= 500;
 }
 
 /** FAQ-answered signal — Surfer/Semrush pattern: question as H2/H3 + direct short answer in <p>. */

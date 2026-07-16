@@ -275,7 +275,7 @@ const TopicResearchDetailPage: NextPage = () => {
                   return (
                   <>
                      {/* Stats — 6 cards */}
-                     <div style={{ flexShrink: 0, display: 'flex', gap: 12, padding: '4px 0 16px' }}>
+                     <div style={{ flexShrink: 0, display: 'flex', gap: 12, padding: '4px 0 8px' }}>
                         <StatCard label="Topical Authority" value={result.stats.topicalAuthority} info />
                         <StatCard label="Covered Ideas" value={<span>{result.stats.coveredIdeas} <span style={{ color: MUTED, fontWeight: 400 }}>of {result.stats.totalIdeas}</span></span>} />
                         <StatCard label="KW in top 3" value={result.stats.kwTop3} />
@@ -283,6 +283,18 @@ const TopicResearchDetailPage: NextPage = () => {
                         <StatCard label="KW in top 50" value={result.stats.kwTop50} />
                         <StatCard label="Search volume" value={fmtVol(result.stats.searchVolume).toUpperCase()} />
                      </div>
+                     {(typeof result.stats.siteFocusScore === 'number' || typeof result.stats.siteRadius === 'number') && (
+                        <div style={{ flexShrink: 0, fontSize: 12, color: MUTED, paddingBottom: 12, fontFamily: FONT }}>
+                           Topical cohesion
+                           {typeof result.stats.siteFocusScore === 'number' && (
+                              <> · site focus {Math.round(result.stats.siteFocusScore * 100)}%</>
+                           )}
+                           {typeof result.stats.siteRadius === 'number' && (
+                              <> · site radius {Math.round(result.stats.siteRadius * 100)}% (spread)</>
+                           )}
+                           {' '}— higher focus / lower radius = tighter topical map
+                        </div>
+                     )}
 
                      {/* Controls: tabs + toggle + filters + search */}
                      <div style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingBottom: 12 }}>

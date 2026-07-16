@@ -32,7 +32,7 @@ describe('aoFaqSection', () => {
       articleExcerpt: 'context',
       language: 'pl',
     });
-    expect(systemPrompt).toContain('100–200 characters');
+    expect(systemPrompt).toContain('120–350 characters');
     expect(userInstruction).toContain('Q1');
     expect(userInstruction).toContain('Q2');
   });

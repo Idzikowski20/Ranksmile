@@ -2,6 +2,7 @@ import { computeContentScore, countOccurrences, type ScoreData } from './content
 import { liveCoverageItems, remainingOpportunities } from './liveCoverage';
 import { computeCoverageScores, type BucketScore, type CoverageItem, type CoverageSnapshot } from './aiCoverage';
 import { computeOverallContentScore, resolveAiScore, type AiVisibilitySummary } from './aiSearchScore';
+import { paragraphCountFromHtml, scoreArticleHtml } from './scoreArticleHtml';
 
 export interface LiveArticleScoresInput {
   plainText: string;
@@ -26,9 +27,7 @@ export interface LiveArticleScores {
   hasAi: boolean;
 }
 
-export function paragraphCountFromHtml(html: string): number {
-  return (html.match(/<p[\s>]/gi) || []).length;
-}
+export { paragraphCountFromHtml } from './scoreArticleHtml';
 
 export interface OptimizeLiveSnapshot {
   postHtml: string;
@@ -51,43 +50,27 @@ export function computeOptimizeLiveSnapshot(opts: {
   substitutePlaceholders: (html: string) => string;
 }): OptimizeLiveSnapshot {
   const postHtml = opts.substitutePlaceholders(opts.editorHtml);
-  const postText = postHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-  const postWords = postText ? postText.split(/\s+/).length : 0;
-  const postHeadings = (postHtml.match(/<h[1-6][\s>]/gi) || []).length;
-  const postParas = paragraphCountFromHtml(postHtml);
-  const internalLinks = (postHtml.match(/<a\s[^>]*href=/gi) || []).length;
-
-  const liveItems = [...liveCoverageItems(opts.coverageItems, postText, postHtml)];
-  const answersEarly = opts.coverageSnapshot?.answersMainQuestionEarly ?? false;
-  const { overall: ai, buckets } = computeCoverageScores(liveItems, answersEarly);
-
-  const updatedTerms = opts.scoreData.terms?.map((t) => ({
-    ...t,
-    current_count: countOccurrences(postText, t.term),
-  }));
-
-  const seo = computeContentScore(
-    postText,
-    postWords,
-    postHeadings,
-    { ...opts.scoreData, terms: updatedTerms ?? opts.scoreData.terms },
-    postParas,
-    internalLinks,
-    postHtml,
-    opts.keyword,
-    undefined,
-    liveItems,
+  const scored = scoreArticleHtml({
+    html: postHtml,
+    scoreData: opts.scoreData,
+    keyword: opts.keyword,
+    coverageItems: opts.coverageItems,
+    answersMainQuestionEarly: opts.coverageSnapshot?.answersMainQuestionEarly,
+  });
+  const { buckets } = computeCoverageScores(
+    scored.liveItems,
+    !!opts.coverageSnapshot?.answersMainQuestionEarly,
   );
 
   return {
     postHtml,
-    postText,
-    seo,
-    ai,
-    overall: computeOverallContentScore(seo, ai),
-    liveItems,
+    postText: scored.plainText,
+    seo: scored.seo,
+    ai: scored.ai,
+    overall: scored.overall,
+    liveItems: scored.liveItems,
     buckets,
-    remainingRows: remainingOpportunities(liveItems),
+    remainingRows: remainingOpportunities(scored.liveItems),
   };
 }
 

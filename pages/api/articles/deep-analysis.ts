@@ -725,6 +725,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       scoreData._content_score = seoScore;
     }
 
+    // Baseline content-effort estimate (heuristic). LLM refine is available in Pre-Publish.
+    {
+      const { heuristicContentEffort } = await import('../../../lib/contentEffort');
+      const effort = heuristicContentEffort({
+        html: pageContent || '',
+        plainText,
+        keyword: resolvedKeyword || '',
+        paaQuestions: scoreData.paa_questions,
+      });
+      const prev = scoreData.content_effort;
+      scoreData.content_effort = {
+        score: effort.score,
+        reasons: effort.reasons,
+        source: 'heuristic',
+        at: effort.at,
+        history: [
+          ...(Array.isArray(prev?.history) ? prev.history : []),
+          ...(prev?.score != null && prev.at
+            ? [{ score: prev.score, at: prev.at, source: prev.source }]
+            : []),
+        ].slice(-11),
+      };
+    }
+
     const setClauses: string[] = [
       `title = COALESCE(NULLIF(?, ''), title)`,
       `meta_title = COALESCE(NULLIF(?, ''), meta_title)`,

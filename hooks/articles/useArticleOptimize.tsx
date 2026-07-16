@@ -2,12 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast';
 import type { Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { liveCoverageItems } from '../../lib/liveCoverage';
 import { computeCoverageScores } from '../../lib/aiCoverage';
-import { computeOverallContentScore } from '../../lib/aiSearchScore';
+import { countOccurrences, type ScoreData, type NlpTerm } from '../../lib/contentScore';
+import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
+import { computeOverallContentScore, type AiVisibilitySummary } from '../../lib/aiSearchScore';
 import { computeOptimizeLiveSnapshot } from '../../lib/computeLiveArticleScores';
-import { countOccurrences, computeContentScore, type ScoreData, type NlpTerm } from '../../lib/contentScore';
-import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { getErrorMessage } from '../../lib/errors';
 import { isAbortError } from '../../lib/abortSignal';
@@ -131,17 +130,20 @@ export function useArticleOptimize({
     });
   }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, coverageSnapshot, optimizeDocTick]);
 
-  const liveRescore: LiveRescoreState | null = aoLiveSnapshot ? {
+  const aoScoresReady = optimizeState === 'reviewing'
+    || (optimizeState === 'optimizing' && editorHtml !== preReviewHtmlRef.current && optimizeProgress.processed > 0);
+
+  const liveRescore: LiveRescoreState | null = aoScoresReady && aoLiveSnapshot ? {
     liveItems: aoLiveSnapshot.liveItems,
     aiNew: aoLiveSnapshot.ai,
     buckets: aoLiveSnapshot.buckets,
     remainingRows: aoLiveSnapshot.remainingRows,
   } : null;
 
-  const remainingRows = aoLiveSnapshot?.remainingRows ?? [];
+  const remainingRows = aoScoresReady && aoLiveSnapshot ? aoLiveSnapshot.remainingRows : [];
 
   useEffect(() => {
-    if (optimizeState === 'idle' || !aoLiveSnapshot) return undefined;
+    if (!aoScoresReady || optimizeState === 'idle' || !aoLiveSnapshot) return undefined;
     const tickDelta = Math.round(aoLiveSnapshot.ai) - Math.round(prevAiRef.current);
     prevAiRef.current = aoLiveSnapshot.ai;
     if ((optimizeState === 'optimizing' || optimizeState === 'reviewing') && tickDelta > 0) {
@@ -149,9 +151,9 @@ export function useArticleOptimize({
       setAoFloat({ key: floatSeqRef.current, label: `Optimization Impact +${tickDelta}` });
     }
     return undefined;
-  }, [aoLiveSnapshot, optimizeState]);
+  }, [aoLiveSnapshot, optimizeState, aoScoresReady]);
 
-  const optimizeReview = aoLiveSnapshot ? {
+  const optimizeReview = aoScoresReady && aoLiveSnapshot ? {
     postScore: aoLiveSnapshot.seo,
     seoDelta: Math.max(0, aoLiveSnapshot.seo - preScoreRef.current),
     postHtml: aoLiveSnapshot.postHtml,
@@ -325,22 +327,33 @@ export function useArticleOptimize({
     if (!editor) return;
     const preHtml: string = editor.getHTML();
     preReviewHtmlRef.current = preHtml;
-    const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-    const preParaCount = (preHtml.match(/<p[\s>]/gi) || []).length;
-    preScoreRef.current = scoreData
-      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '', undefined, coverageItems)
+    const keyword = article?.target_keyword || '';
+    const preScored = scoreData
+      ? scoreArticleHtml({
+        html: preHtml,
+        scoreData,
+        keyword,
+        coverageItems,
+        answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+      })
+      : null;
+    preScoreRef.current = preScored?.seo ?? 0;
+    const preAiBase = preScored?.ai ?? aiCoverageScore ?? scoreData?.ai_score ?? 0;
+    const hasAiBaseline = (preScored?.liveItems.length ?? 0) > 0
+      || aiCoverageScore != null
+      || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)
+      || (scoreData?.ai_score != null);
+    preContentScoreRef.current = preScored
+      ? (hasAiBaseline ? computeOverallContentScore(preScored.seo, preAiBase) : preScored.seo)
       : 0;
-    const preAiBase = aiCoverageScore ?? scoreData?.ai_score ?? 0;
-    const hasAiBaseline = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || (scoreData?.ai_score != null);
-    preContentScoreRef.current = hasAiBaseline
-      ? computeOverallContentScore(preScoreRef.current, preAiBase)
-      : preScoreRef.current;
-    aiVisibilityBaselineRef.current = coverageSnapshot?.overall ?? 0;
+    aiVisibilityBaselineRef.current = preScored?.ai ?? coverageSnapshot?.overall ?? 0;
     prevAiRef.current = aiVisibilityBaselineRef.current;
-    attributionBeforeRef.current = computeCoverageScores(
-      liveCoverageItems(coverageItems, preText, preHtml),
-      coverageSnapshot?.answersMainQuestionEarly ?? false,
-    ).buckets;
+    attributionBeforeRef.current = preScored
+      ? computeCoverageScores(
+        preScored.liveItems,
+        coverageSnapshot?.answersMainQuestionEarly ?? false,
+      ).buckets
+      : [];
     setAoFloat(null);
     setActiveSectionId(null);
     changedSectionsRef.current = [];
@@ -475,11 +488,16 @@ export function useArticleOptimize({
           } else if (eventType === 'progress') {
             const p = payload as {
               round: number; seo: number; ai: number; content: number;
-              phase?: string; targetContent?: number; targetSeo?: number;
+              phase?: string; targetContent?: number; targetSeo?: number; changed?: number;
             };
-            setAutoOptimizeStatus(
-              `Runda ${p.round} — SEO ${p.seo} · AI ${p.ai} · Content ${p.content}${p.targetContent != null ? ` / ${p.targetContent}` : ''}…`,
-            );
+            // Don't flash scores before any HTML change — wait for a real edit.
+            if (p.changed) {
+              setAutoOptimizeStatus(
+                `Round ${p.round} — SEO ${p.seo} · AI ${p.ai}`,
+              );
+            } else {
+              setAutoOptimizeStatus(`Round ${p.round} — refining…`);
+            }
           } else if (eventType === 'done') {
             const meta = payload as {
               changedCount: number; total: number; promptVersion: string; creditDeducted: boolean;

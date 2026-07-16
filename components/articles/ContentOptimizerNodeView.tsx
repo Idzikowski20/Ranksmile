@@ -33,13 +33,17 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
     position: 'relative',
     margin: '8px 0',
     padding: bordered ? '12px 16px' : 0,
-    border: bordered ? '1px solid #E4E4E7' : 'none',
+    border: bordered
+      ? (isImproved ? '1px solid rgba(26, 178, 94, 0.35)' : '1px solid #E4E4E7')
+      : 'none',
     borderRadius: bordered ? 12 : 0,
-    background: '#fff',
+    background: isImproved ? 'rgba(26, 178, 94, 0.06)' : '#fff',
+    boxShadow: isImproved ? 'inset 3px 0 0 #1AB25E' : undefined,
     fontFamily: 'var(--font-family-primary)',
     fontSize: 15,
     lineHeight: 1.6,
     color: '#18181B',
+    transition: 'background 0.2s ease, border-color 0.2s ease',
   };
 
   const resultChipStyle: React.CSSProperties = {

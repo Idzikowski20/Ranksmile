@@ -5,6 +5,7 @@
 import { generateText } from 'ai';
 import { deepseek } from './ai/deepseek';
 import { languageInstructionForLlm } from './domainLanguagePrompts';
+import { computeTopicalCohesion } from './contentEffort';
 import type {
    TopicCluster,
    TopicIdea,
@@ -257,6 +258,7 @@ export function computeStats(clusters: TopicCluster[]): TopicResearchStats {
    const totalVol = allKws.reduce((s, k) => s + (k.volume ?? 0), 0);
    const coveredRatio = allIdeas.length > 0 ? coveredIdeas / allIdeas.length : 0;
    const topicalAuthority = Math.round(coveredRatio * 100);
+   const cohesion = computeTopicalCohesion(clusters);
 
    return {
       topicalAuthority,
@@ -268,6 +270,8 @@ export function computeStats(clusters: TopicCluster[]): TopicResearchStats {
       searchVolume: totalVol,
       clusterCount: clusters.length,
       recommendationCount: recommendations,
+      siteFocusScore: Math.round(cohesion.siteFocusScore * 1000) / 1000,
+      siteRadius: Math.round(cohesion.siteRadius * 1000) / 1000,
    };
 }
 

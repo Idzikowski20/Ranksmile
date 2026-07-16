@@ -87,9 +87,9 @@ describe('liveCoverageItems', () => {
   });
 
   describe('readability toggling', () => {
-    it('covered true when paragraphs average 100-200 chars', () => {
+    it('covered true when paragraphs average ~120-450 chars', () => {
       const snap = [item({ id: 'r1', type: 'readability', label: 'Readable', covered: false })];
-      const para = 'x'.repeat(150);
+      const para = 'x'.repeat(200);
       const html = `<p>${para}</p><p>${para}</p>`;
       const out = liveCoverageItems(snap, 'text', html);
       expect(out[0].covered).toBe(true);
