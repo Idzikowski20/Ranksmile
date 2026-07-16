@@ -635,24 +635,12 @@ const ContentScorePanel = ({
   }
 
   if (view === 'prepublish') {
-    const entityItems = (coverageItems ?? []).filter((i) => i.type === 'entity' || i.type === 'paa' || i.type === 'intent');
-    const uniqueVsSerp = entityItems.length > 0
-      ? {
-         covered: entityItems.filter((i) => i.covered || countOccurrences(plainText, i.label) >= 1).length,
-         total: entityItems.length,
-      }
-      : undefined;
     return (
       <PrePublishPanel
         score={score}
         aiScore={displayAi}
         hasAi={aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)}
         plainText={plainText}
-        html={html}
-        keyword={keyword}
-        paaQuestions={scoreData?.paa_questions}
-        uniqueVsSerp={uniqueVsSerp}
-        initialEffort={scoreData?.content_effort ?? null}
         articleId={articleId}
         readOnly={readOnly}
         onBack={() => setView('main')}
