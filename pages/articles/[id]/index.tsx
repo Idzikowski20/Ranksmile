@@ -40,6 +40,7 @@ import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
+import { isStaleDeepAnalysisJob } from '../../../lib/deepAnalysisProgress';
 import { getErrorMessage } from '../../../lib/errors';
 import { isAbortError } from '../../../lib/abortSignal';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
@@ -58,7 +59,10 @@ import type { AiReadabilityResult } from '../../../components/articles/PrePublis
 import { parseJsonish } from '../../../lib/types/json';
 import dynamic from 'next/dynamic';
 
-const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), { ssr: false });
+const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), {
+  ssr: false,
+  loading: () => <EditorLoading message="Loading editor…" />,
+});
 import type { HeadingItem } from '../../../components/articles/ArticleEditor';
 
 interface Article {
@@ -85,6 +89,40 @@ interface Article {
   updated_at?: string;
   plagiarism_json?: string | null;
   ai_readability_json?: string | null;
+}
+
+/** DB rows can stay `analyzing` after a failed/cancelled run — unlock the editor on load. */
+async function reconcileAnalyzingArticle(art: Article): Promise<Article> {
+  if (art.status !== 'analyzing') return art;
+  try {
+    const res = await fetch(`/api/articles/job-progress?articleId=${art.id}`);
+    if (res.status === 404) return { ...art, status: 'draft' };
+    if (!res.ok) return art;
+    const data = await res.json() as {
+      status?: string;
+      currentStage?: string | null;
+      stageProgress?: number | null;
+      progressMessage?: string | null;
+      updatedAt?: string | null;
+    };
+    if (data.status === 'done' || data.status === 'failed') return { ...art, status: 'draft' };
+    if (
+      data.status === 'running' || data.status === 'queued'
+    ) {
+      const stale = isStaleDeepAnalysisJob({
+        status: data.status,
+        currentStage: data.currentStage,
+        stageProgress: data.stageProgress,
+        progressMessage: data.progressMessage,
+        updatedAt: data.updatedAt ?? null,
+      });
+      if (stale) return { ...art, status: 'draft' };
+      return art;
+    }
+    return { ...art, status: 'draft' };
+  } catch {
+    return art;
+  }
 }
 
 /** Task 9 placeholder nav for the results-panel adjustments cards — smooth-scrolls the
@@ -746,7 +784,18 @@ const ArticleEditorPage: NextPage = () => {
           } catch { /* fall through to the normal editor */ }
         }
         if (data.article) {
-          const art = data.article;
+          let art = data.article as Article;
+          if (art.status === 'analyzing') {
+            const reconciled = await reconcileAnalyzingArticle(art);
+            if (reconciled.status !== art.status) {
+              art = reconciled;
+              fetch(`/api/articles/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'draft' }),
+              }).catch(() => {});
+            }
+          }
           setArticle(art);
           // Rewrite image URLs so broken hotlinked images load via our server-side proxy.
           // Root-relative paths like /banner.png can't be fixed (domain unknown) — strip them.
