@@ -17,12 +17,16 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 // Zod 4 ships separate ESM + CJS builds. Next 12 webpack can pull both into the
 // client bundle; mixing ZodString/$ZodType across copies crashes with
 // "Cannot set properties of undefined (setting 'def')" during Neon Auth init.
+//
+// IMPORTANT: use `$` exact-match aliases. A plain `zod → index.cjs` alias makes
+// webpack rewrite `zod/v4/core` to `index.cjs/v4/core` (missing), which breaks
+// @hookform/resolvers (pulled in by @neondatabase/auth-ui).
 const zodRoot = path.dirname(require.resolve('zod/package.json'));
 const zodAliases = {
-  zod: path.join(zodRoot, 'index.cjs'),
-  'zod/v4': path.join(zodRoot, 'v4', 'index.cjs'),
-  'zod/v4/core': path.join(zodRoot, 'v4', 'core', 'index.cjs'),
-  'zod/v3': path.join(zodRoot, 'v3', 'index.cjs'),
+  zod$: path.join(zodRoot, 'index.cjs'),
+  'zod/v4$': path.join(zodRoot, 'v4', 'index.cjs'),
+  'zod/v4/core$': path.join(zodRoot, 'v4', 'core', 'index.cjs'),
+  'zod/v3$': path.join(zodRoot, 'v3', 'index.cjs'),
 };
 
 const nextConfig = {
