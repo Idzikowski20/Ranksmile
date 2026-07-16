@@ -594,6 +594,8 @@ const ArticleEditorPage: NextPage = () => {
   }, [id]);
   const onAnalysisError = useCallback((message: string) => {
     toast.error(message);
+    // Unlock the editor — failed runs may leave status='analyzing' in local state until refetch.
+    setArticle((prev) => (prev ? { ...prev, status: 'draft' } : prev));
   }, []);
 
   const { ui: deepAnalysisUi, isAnalyzing: isDeepAnalyzing } = useBackgroundDeepAnalysis({
@@ -2056,10 +2058,13 @@ const ArticleEditorPage: NextPage = () => {
               <div
                 aria-hidden
                 style={{
-                  position: 'absolute', inset: 0, zIndex: 30, cursor: 'wait',
-                  background: 'rgba(255,255,255,0.4)', borderRadius: 12,
+                  position: 'absolute', inset: 0, zIndex: 30,
+                  display: 'flex', flexDirection: 'column',
+                  background: '#fff', borderRadius: 12,
                 }}
-              />
+              >
+                <EditorLoading message="Analyzing imported content…" />
+              </div>
             )}
           </div>
 

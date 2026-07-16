@@ -349,5 +349,11 @@ export function useBackgroundDeepAnalysis({
     };
   }, [articleId, articleStatus, enabled, failAuth, finishOnce, metaUrl, stopPolling, targetKeyword]);
 
-  return { ui, isActive, isAnalyzing: isActive || articleStatus === 'analyzing' };
+  const analysisFailed = Boolean(ui?.error);
+  return {
+    ui,
+    isActive,
+    // Don't keep the editor locked after a failed run — article.status may still be 'analyzing' until refetch.
+    isAnalyzing: isActive || (articleStatus === 'analyzing' && !analysisFailed),
+  };
 }

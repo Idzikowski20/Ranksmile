@@ -15,6 +15,7 @@ import { renderPage } from '../../../utils/spaScraper';
 import { getErrorMessage } from '../../../lib/errors';
 import { countOccurrences } from '../../../lib/contentScore';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
+import { isSidecarConfigured } from '../../../lib/sidecar';
 
 class BlockedUrlError extends Error {}
 
@@ -351,7 +352,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          US: 'en', GB: 'en',
       };
       const language = langMap[(country as string || 'US').toUpperCase()] || 'en';
-      const articleStatus = startAnalysis ? 'analyzing' : 'draft';
+      const runAnalysis = Boolean(startAnalysis) && isSidecarConfigured();
+      const articleStatus = runAnalysis ? 'analyzing' : 'draft';
 
       // Save draft article (or analyzing placeholder when editor will run deep analysis in background)
       const insertReplacements = [

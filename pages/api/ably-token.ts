@@ -3,7 +3,7 @@
 // Owner (session) → publish+subscribe+presence. Share-token viewer → subscribe+presence.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCommentAccessKind } from '../../lib/commentAccess';
-import { mintArticleToken } from '../../lib/ably/server';
+import { isAblyConfigured, mintArticleToken } from '../../lib/ably/server';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getErrorMessage } from '../../lib/errors';
 
@@ -22,6 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const articleId = parseInt(String(req.query.articleId ?? ''), 10);
   if (!Number.isInteger(articleId)) return res.status(400).json({ error: 'articleId is required' });
+
+  if (!isAblyConfigured()) {
+    return res.status(503).json({ disabled: true, error: 'Realtime comments unavailable (ABLY_API_KEY not configured)' });
+  }
 
   try {
     const kind = await getCommentAccessKind(req, res, articleId);

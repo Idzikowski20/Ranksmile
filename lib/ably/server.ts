@@ -8,10 +8,13 @@ import { logger } from '../logger';
 // Next.js/serverless this module is only loaded once per process anyway.
 let _rest: Ably.Rest | null | undefined;
 
+export function isAblyConfigured(): boolean {
+  return Boolean(process.env.ABLY_API_KEY?.trim());
+}
+
 function getAblyRest(): Ably.Rest | null {
   if (_rest !== undefined) return _rest;
-  const key = process.env.ABLY_API_KEY;
-  _rest = key ? new Ably.Rest({ key }) : null;
+  _rest = isAblyConfigured() ? new Ably.Rest({ key: process.env.ABLY_API_KEY! }) : null;
   return _rest;
 }
 

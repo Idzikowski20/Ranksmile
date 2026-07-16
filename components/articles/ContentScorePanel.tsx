@@ -594,10 +594,17 @@ const ContentScorePanel = ({
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
 
-  if (isDeepAnalyzing && deepAnalysisUi) {
+  if (isDeepAnalyzing) {
     return (
       <div className="editor-side-panel editor-side-panel--analyzing" style={{ height: '100%', boxSizing: 'border-box', padding: '16px' }}>
-        <DeepAnalysisProgressPanel state={deepAnalysisUi} />
+        <DeepAnalysisProgressPanel
+          state={deepAnalysisUi ?? {
+            aiSearch: [],
+            googleSearch: [{ key: 'fetch_page', label: 'Starting analysis…', status: 'running' }],
+            error: null,
+            isComplete: false,
+          }}
+        />
       </div>
     );
   }
