@@ -7,8 +7,8 @@ import { useRouter } from 'next/router';
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
 import { Hydrate } from 'react-query/hydration';
 import { ThemeProvider } from '@emotion/react';
-import { authClient } from '../lib/auth/client';
-import type { BootstrapData } from '../lib/getBootstrap';
+import { fetchBootstrapOrNull } from '../lib/fetchBootstrap';
+import { isPublicPath } from '../lib/isPublicPath';
 import AppToaster from '../components/common/AppToaster';
 import AppLoading from '../components/common/AppLoading';
 import TopProgressBar from '../components/common/TopProgressBar';
@@ -24,12 +24,6 @@ const GlobalSmoothCaret = dynamic(
 );
 
 const BOOTSTRAP_STALE_MS = 5 * 60_000;
-
-async function fetchBootstrap(): Promise<BootstrapData> {
-  const r = await fetch('/api/session/bootstrap');
-  if (!r.ok) throw new Error('bootstrap failed');
-  return r.json() as Promise<BootstrapData>;
-}
 
 /** Keeps the `active_workspace` cookie in sync with the /workspace/<id>/... URL so server-side scoping matches. */
 function WorkspaceCookieSync() {
@@ -52,8 +46,8 @@ function WorkspaceCookieSync() {
  */
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const router = useRouter();
-   const { data: session, isPending } = authClient.useSession();
-   const userId: string | undefined = session?.user?.id;
+   const path = router.pathname;
+   const isPublic = isPublicPath(path);
    const [completedOverride, setCompleted] = React.useState<boolean | null>(null);
    const [confirmedOverride, setConfirmed] = React.useState<boolean | null>(null);
    // Latch so a mid-session refetch (Neon Auth / react-query) never re-shows the
@@ -61,45 +55,46 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const everHadUser = React.useRef(false);
    const everHadBootstrap = React.useRef(false);
 
-   const { data: bootstrap, isLoading: bootstrapLoading } = useQuery(
+   const { data: bootstrap, isLoading: bootstrapLoading, isFetched } = useQuery(
       ['bootstrap'],
-      fetchBootstrap,
-      { enabled: !!userId, staleTime: BOOTSTRAP_STALE_MS, retry: false },
+      fetchBootstrapOrNull,
+      { enabled: !isPublic, staleTime: BOOTSTRAP_STALE_MS, retry: false },
    );
 
-   if (userId) everHadUser.current = true;
+   const hasSession = !!bootstrap;
+   const isPending = !isPublic && bootstrapLoading;
+
+   if (hasSession) everHadUser.current = true;
    if (bootstrap) everHadBootstrap.current = true;
 
    const completed = completedOverride ?? (bootstrap ? bootstrap.onboarding.completed : null);
    const confirmed = confirmedOverride ?? (bootstrap ? bootstrap.email.confirmed : null);
 
-   const path = router.pathname;
    const isOnboarding = path === '/onboarding';
    const isConfirmPage = path === '/auth/confirm-account' || path === '/auth/confirm-email';
-   const isPublic = path.startsWith('/auth') || path.startsWith('/login') || path.startsWith('/drafts') || path.startsWith('/invite') || path === '/' || path === '/homepage';
 
    React.useEffect(() => {
-      if (isPending) return;
-      if (!userId && !isPublic) router.replace('/auth/sign-in');
-   }, [isPending, userId, isPublic, router]);
+      if (isPublic || isPending) return;
+      if (!hasSession && isFetched) router.replace('/auth/sign-in');
+   }, [isPublic, isPending, hasSession, isFetched, router]);
 
    React.useEffect(() => {
-      if (!userId || confirmed === null) return;
+      if (!hasSession || confirmed === null) return;
       if (!confirmed && !isPublic) router.replace('/auth/confirm-account');
       if (confirmed && isConfirmPage) router.replace('/');
-   }, [userId, confirmed, isPublic, isConfirmPage, router]);
+   }, [hasSession, confirmed, isPublic, isConfirmPage, router]);
 
    React.useEffect(() => {
-      if (!userId || completed === null) return;
+      if (!hasSession || completed === null) return;
       if (!completed && !isOnboarding && !isPublic) router.replace('/onboarding');
-   }, [userId, completed, isOnboarding, isPublic, router]);
+   }, [hasSession, completed, isOnboarding, isPublic, router]);
 
    const isPlans = path === '/plans';
    const isSetup = path === '/setup';
    const isIndex = path === '/';
    const wsRedirecting = React.useRef(false);
    React.useEffect(() => {
-      if (!userId || completed !== true || !bootstrap) return undefined;
+      if (!hasSession || completed !== true || !bootstrap) return undefined;
       if (isOnboarding || isPublic || isPlans || isSetup || isIndex || wsRedirecting.current) return undefined;
       if (bootstrap.workspaces.length > 0) return undefined;
       if (!bootstrap.canCreateSetup) return undefined;
@@ -114,21 +109,21 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
          }
       })();
       return () => { active = false; };
-   }, [userId, completed, bootstrap, isOnboarding, isPublic, isPlans, isSetup, isIndex, router]);
+   }, [hasSession, completed, bootstrap, isOnboarding, isPublic, isPlans, isSetup, isIndex, router]);
 
    if (!isPublic && !everHadUser.current && isPending) {
       return <AppLoading />;
    }
-   if (!isPending && !userId && !isPublic && !everHadUser.current) {
+   if (!isPublic && !isPending && !hasSession && !everHadUser.current && isFetched) {
       return <AppLoading />;
    }
-   if (userId && bootstrapLoading && !bootstrap && !everHadBootstrap.current) {
+   if (hasSession && bootstrapLoading && !bootstrap && !everHadBootstrap.current) {
       return <AppLoading />;
    }
-   if (userId && !isPublic && confirmed === false) {
+   if (hasSession && !isPublic && confirmed === false) {
       return <AppLoading />;
    }
-   if (userId && !isPublic && completed === false && !isOnboarding) {
+   if (hasSession && !isPublic && completed === false && !isOnboarding) {
       return <AppLoading />;
    }
 
