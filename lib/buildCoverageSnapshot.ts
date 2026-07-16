@@ -5,6 +5,7 @@ import {
   type CoverageItem,
   type CoverageResult,
   type CoverageSnapshot,
+  type CoverageTopicGroup,
 } from './aiCoverage';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
 import { normalizeTerm } from './termUtils';
@@ -117,7 +118,7 @@ export function mapHarvestTopicsToItemIds(
   for (const it of items) {
     byLabel.set(normalizeTerm(it.label), it.id);
   }
-  const out: NonNullable<CoverageSnapshot['topics']> = [];
+  const out: CoverageTopicGroup[] = [];
   for (const topic of harvestTopics) {
     const itemIds: string[] = [];
     for (const q of topic.questions) {
