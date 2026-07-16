@@ -308,6 +308,7 @@ export function useBackgroundDeepAnalysis({
 
         if (!url && !keywords.length) {
           setIsActive(false);
+          onErrorRef.current?.('Missing URL or keywords for analysis');
           return;
         }
 
@@ -349,11 +350,10 @@ export function useBackgroundDeepAnalysis({
     };
   }, [articleId, articleStatus, enabled, failAuth, finishOnce, metaUrl, stopPolling, targetKeyword]);
 
-  const analysisFailed = Boolean(ui?.error);
   return {
     ui,
     isActive,
-    // Don't keep the editor locked after a failed run — article.status may still be 'analyzing' until refetch.
-    isAnalyzing: isActive || (articleStatus === 'analyzing' && !analysisFailed),
+    // Lock only while a run is actually in flight — never infer from DB status alone (stale 'analyzing' rows freeze the editor).
+    isAnalyzing: isActive,
   };
 }
