@@ -68,7 +68,7 @@ export function validateCompanyFields(
 
   if (billingEmail) {
     const parsed = emailSchema.safeParse(billingEmail);
-    if (!parsed.success) errors.billingEmail = parsed.error.errors[0]?.message ?? 'Invalid email';
+    if (!parsed.success) errors.billingEmail = parsed.error.issues[0]?.message ?? 'Invalid email';
   }
 
   const wantsInvoiceDetails = Boolean(billingEmail || taxId);

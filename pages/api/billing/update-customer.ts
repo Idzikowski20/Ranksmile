@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const parsed = bodySchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0]?.message ?? 'Invalid request' });
+    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' });
   }
 
   const { billingEmail, taxId, address } = parsed.data;
