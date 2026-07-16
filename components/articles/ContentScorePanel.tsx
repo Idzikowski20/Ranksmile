@@ -316,7 +316,6 @@ const ContentScorePanel = ({
   deepAnalysisUi,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
-  const [score, setScore] = useState(0);
   const [celebrateKey, setCelebrateKey] = useState(0);
   const wasOptimizingRef = useRef(false);
   // Fire confetti when an auto-optimize run finishes (true → false).
@@ -366,8 +365,6 @@ const ContentScorePanel = ({
     return plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
   }, [plainText]);
 
-  const scoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     if (!scoreData?.terms) return;
     const updated = scoreData.terms.map((t) => ({
@@ -377,26 +374,17 @@ const ContentScorePanel = ({
     setTerms(updated);
   }, [plainText, scoreData]);
 
-  useEffect(() => {
-    if (optimizeLiveScores != null) return undefined;
-    // No analysis data at all → show the stored score. Otherwise compute live — structural signals
-    // are scored even when competitor terms are absent, so the gauge updates as you edit.
-    if (!scoreData) {
-      setScore(fallbackScore ?? 0);
-      return undefined;
-    }
-    if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
-    scoreTimerRef.current = setTimeout(() => {
-      scoreTimerRef.current = null;
-      const paraCount = (html || '').match(/<p[\s>]/gi)?.length
-        ?? plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-      const kwCov = keywords.map((k) => ({ keyword: k.keyword, is_covered: !!k.is_covered }));
-      setScore(computeContentScore(plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov, coverageItems));
-    }, 400);
-    return () => {
-      if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
-    };
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore, coverageItems, optimizeLiveScores]);
+  // Synchronous live SEO score — debounced useState lagged / stayed stale in production
+  // (gauges only "fixed" after remounting via Write & Optimize). Same inputs as parent liveContentScore.
+  const score = useMemo(() => {
+    if (!scoreData) return fallbackScore ?? 0;
+    const paraCount = (html || '').match(/<p[\s>]/gi)?.length
+      ?? plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
+    const kwCov = keywords.map((k) => ({ keyword: k.keyword, is_covered: !!k.is_covered }));
+    return computeContentScore(
+      plainText, wordCount, headingCount, scoreData, paraCount, internalLinksCount, html, keyword, kwCov, coverageItems,
+    );
+  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, html, keyword, keywords, fallbackScore, coverageItems]);
 
   const coveredCount = terms.filter((t) => (t.current_count ?? 0) >= t.target_count).length;
 
