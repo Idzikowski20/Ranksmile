@@ -5,6 +5,8 @@ import {
   citationItemId,
   isUsefulCitationPrompt,
   scoreCitationPrompt,
+  filterSyntheticCitationTemplates,
+  isMisalignedSyntheticCitation,
 } from './citationPrompts';
 import { isCorpusNoiseSentence } from './corpusNoiseFilter';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';
@@ -139,18 +141,19 @@ export function compactCoverageSnapshotItems(
     i.type === 'paa' || i.type === 'fact' || i.type === 'definition' || i.type === 'comparison',
   );
   const hasLegacyIntent = intent.some((i) => /answer the main question|set expectations/i.test(i.label));
-  const intentKept = hasLegacyIntent
+  const intentKeptRaw = hasLegacyIntent
     ? citationIntentItems(keyword, undefined, {
       serpQuestions: knowledge.map((i) => i.label),
     })
     : intent;
-
+  const intentKept = filterSyntheticCitationTemplates(intentKeptRaw, keyword);
   const rankedKnowledge = knowledge
     .map((i) => ({
       item: i,
       score: scorePaaQuestion(i.label, keyword) || scoreCitationPrompt(i.label, keyword),
     }))
     .filter((row) => row.score > 0 && !isCorpusNoiseSentence(row.item.label))
+    .filter((row) => !isMisalignedSyntheticCitation(row.item.label, keyword))
     .sort((a, b) => b.score - a.score || b.item.quality - a.item.quality);
 
   const knowledgeBudget = Math.max(0, AI_COVERAGE_MAX - intentKept.length);

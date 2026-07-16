@@ -1,6 +1,7 @@
 import {
   buildCitationPrompts,
   citationIntentItems,
+  isLikelySyntheticCitationTemplate,
   isUsefulCitationPrompt,
   scoreCitationPrompt,
 } from '../../lib/citationPrompts';
@@ -17,11 +18,21 @@ import type { CoverageItem } from '../../lib/aiCoverage';
 describe('citationPrompts', () => {
   const keyword = 'prywatny detektyw Warszawa';
 
-  it('builds commercial citation-style prompts', () => {
-    const prompts = buildCitationPrompts(keyword);
-    expect(prompts.some((p) => /czy warto/i.test(p))).toBe(true);
-    expect(prompts.some((p) => /kogo wybrać/i.test(p))).toBe(true);
-    expect(prompts.some((p) => /polecany/i.test(p))).toBe(true);
+  it('does not invent prompts — empty SERP means empty list', () => {
+    expect(buildCitationPrompts(keyword)).toEqual([]);
+    expect(citationIntentItems(keyword)).toEqual([]);
+  });
+
+  it('keeps real SERP questions only', () => {
+    const serp = [
+      'Ile kosztuje detektyw w Warszawie?',
+      'Czy detektyw odkryje zdradę?',
+      'Lubimyczytac.pl nie prowadzi sprzedaży',
+    ];
+    const prompts = buildCitationPrompts(keyword, serp);
+    expect(prompts).toContain('Ile kosztuje detektyw w Warszawie?');
+    expect(prompts).toContain('Czy detektyw odkryje zdradę?');
+    expect(prompts.some((p) => /lubimyczytac/i.test(p))).toBe(false);
   });
 
   it('rejects scraped boilerplate', () => {
@@ -29,33 +40,39 @@ describe('citationPrompts', () => {
     expect(isUsefulCitationPrompt('Answer the main question early', keyword)).toBe(false);
   });
 
-  it('citation intent items are real questions', () => {
-    const items = citationIntentItems(keyword);
-    expect(items).toHaveLength(8);
+  it('citation intent items come from SERP, not templates', () => {
+    const serp = [
+      'Ile kosztuje detektyw w Warszawie?',
+      'Jak wybrać prywatnego detektywa?',
+      'Czy warto wynająć detektywa?',
+    ];
+    const items = citationIntentItems(keyword, undefined, { serpQuestions: serp });
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.length).toBeLessThanOrEqual(8);
     expect(items.every((i) => i.type === 'intent')).toBe(true);
-    expect(items.every((i) => i.label.includes('?') || /^(czy|jak|ile|polecany)/i.test(i.label))).toBe(true);
+    expect(items.every((i) => i.source === 'paa')).toBe(true);
+    expect(items.every((i) => serp.some((s) => s === i.label))).toBe(true);
   });
 
-  it('uses informational prompts for legal topics like nękanie', () => {
+  it('uses real legal SERP questions for nękanie without inventing extras', () => {
     const serp = [
       'Kiedy można oskarżyć o nękanie?',
       'Jakie zachowania są uważane za nękanie?',
     ];
     const items = citationIntentItems('nękanie', undefined, { serpQuestions: serp });
-    const labels = items.map((i) => i.label).join(' ');
-    expect(labels).toMatch(/Kiedy można oskarżyć/i);
-    expect(labels).not.toMatch(/ile kosztuje nękanie/i);
-    expect(labels).not.toMatch(/polecany nękanie/i);
+    expect(items.map((i) => i.label)).toEqual(serp);
+    expect(items.every((i) => !isLikelySyntheticCitationTemplate(i.label, 'nękanie') || serp.includes(i.label))).toBe(true);
   });
 
-  it('does not invent crime templates for unrelated topics like wojna hybrydowa', () => {
-    const prompts = buildCitationPrompts('wojna hybrydowa');
-    const joined = prompts.join(' | ');
-    expect(joined).not.toMatch(/oskarżyć/i);
-    expect(joined).not.toMatch(/zgłosić wojna/i);
-    expect(joined).not.toMatch(/emocjonalne/i);
-    expect(joined).not.toMatch(/na policję/i);
-    expect(prompts.some((p) => /co to jest|czym jest|rodzaje|przygotować/i.test(p))).toBe(true);
+  it('strips legacy synthetic templates for wojna hybrydowa', () => {
+    expect(isLikelySyntheticCitationTemplate('Kiedy można oskarżyć o wojna hybrydowa?', 'wojna hybrydowa')).toBe(true);
+    expect(isLikelySyntheticCitationTemplate('Co to jest wojna hybrydowa emocjonalne?', 'wojna hybrydowa')).toBe(true);
+    const kept = buildCitationPrompts('wojna hybrydowa', [
+      'Kiedy można oskarżyć o wojna hybrydowa?',
+      'Czym różni się wojna hybrydowa od konfliktu zbrojnego?',
+    ]);
+    // buildCitationPrompts keeps real SERP; UI filter strips synthetic fills separately
+    expect(kept).toContain('Czym różni się wojna hybrydowa od konfliktu zbrojnego?');
   });
 });
 
@@ -122,8 +139,18 @@ describe('curateCoverageItems', () => {
   });
 
   it('compacts legacy bloated snapshots', () => {
+    const serp = [
+      'Ile kosztuje detektyw w Warszawie?',
+      'Czy warto wynająć detektywa?',
+      'Jak wybrać prywatnego detektywa?',
+      'Detektyw Warszawa opinie',
+      'Ile bierze detektyw za zdradę?',
+      'Czy detektyw jest legalny?',
+      'Jak znaleźć dobrego detektywa?',
+      'Prywatny detektyw ranking',
+    ];
     const bloated: CoverageItem[] = [
-      ...citationIntentItems(keyword),
+      ...citationIntentItems(keyword, undefined, { serpQuestions: serp }),
       ...Array.from({ length: 140 }, (_, i) => ({
         id: `paa-${i}`,
         label: i % 3 === 0 ? 'Ile kosztuje detektyw w Warszawie?' : `Lubimyczytac noise ${i}`,
@@ -137,7 +164,7 @@ describe('curateCoverageItems', () => {
     ];
     const compact = compactCoverageSnapshotItems(bloated, keyword);
     expect(compact.length).toBeLessThanOrEqual(AI_COVERAGE_MAX);
-    expect(compact.filter((i) => i.type === 'intent')).toHaveLength(8);
+    expect(compact.filter((i) => i.type === 'intent').length).toBeGreaterThan(0);
   });
 
   it('separate paa vs intent IDs when ENABLE_NEW_COVERAGE_IDS', () => {
@@ -148,7 +175,9 @@ describe('curateCoverageItems', () => {
         keyword,
         llmQuestions: [{ question: 'Ile kosztuje detektyw w Warszawie?', sources: ['chat_gpt'] }],
       });
-      const intents = citationIntentItems(keyword);
+      const intents = citationIntentItems(keyword, undefined, {
+        serpQuestions: ['Ile kosztuje detektyw w Warszawie?', 'Czy warto wynająć detektywa?'],
+      });
       expect(knowledge.length).toBeGreaterThan(0);
       expect(intents.length).toBeGreaterThan(0);
       expect(knowledge[0]?.id.startsWith('paa-citation-')).toBe(true);
