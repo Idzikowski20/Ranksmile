@@ -9,10 +9,9 @@ import { queryOne } from '../../../../lib/db/query';
 import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
 import { manualRefreshCooldownDays, refreshIntervalDays } from '../../../../lib/aiVisibility';
+import { nextjsUrl } from '../../../../lib/serviceUrls';
 
 export const config = { maxDuration: 60 };
-
-const selfUrl = () => process.env.NEXTJS_URL || 'http://127.0.0.1:3000';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -65,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // run for local dev where the sidecar isn't up (a long-lived `next dev` process
    // keeps the async work alive; on Vercel an inline run would not survive).
    try {
-      await callSidecar('/ai-visibility/run-scan', { scanId, nextjsUrl: selfUrl() }, 15000);
+      await callSidecar('/ai-visibility/run-scan', { scanId, nextjsUrl: nextjsUrl() }, 15000);
    } catch (e) {
       console.warn('[ai-vis scan] sidecar trigger failed, running inline:', getErrorMessage(e));
       void kickAiVisScan(scanId, domain.domain);

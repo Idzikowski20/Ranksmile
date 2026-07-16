@@ -16,6 +16,7 @@ import { assertArticleAccess } from '../../../../lib/tenancy';
 import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
+import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -107,11 +108,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { replacements: [articleId] },
     );
 
-    const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
-    const nextjsUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTJS_URL || '';
+    const base = sidecarUrl();
+    const appUrl = nextjsUrl();
     try {
-      await axios.post(`${sidecarUrl}/pipeline/generate`,
-        { jobId, payload: sidecarPayload, nextjsUrl },
+      await axios.post(`${base}/pipeline/generate`,
+        { jobId, payload: sidecarPayload, nextjsUrl: appUrl },
         { timeout: 15000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } });
     } catch (kickoffErr) {
       const e = kickoffErr as { response?: { data?: unknown }; message?: string };

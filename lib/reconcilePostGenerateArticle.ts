@@ -13,6 +13,7 @@ import { parseSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
 import { filterNlpTermsForAnalysis } from './topicRelevance';
 import { needsCoverageRegrade, regradeCoverageSnapshot } from './regradeCoverageSnapshot';
+import { sidecarUrl } from './serviceUrls';
 import { parseJsonish } from './types/json';
 import { countryForLanguage } from './langCountry';
 import axios from 'axios';
@@ -216,10 +217,10 @@ export async function reconcilePostGenerateArticle(opts: {
 
 async function fetchCompetitorCorpusTerms(keyword: string, urls: string[]): Promise<NlpTerm[]> {
   if (!urls.length) return [];
-  const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+  const base = sidecarUrl();
   try {
     const res = await axios.post(
-      `${sidecarUrl}/extract-terms-from-urls`,
+      `${base}/extract-terms-from-urls`,
       { keyword, urls },
       {
         timeout: 180000,
@@ -241,10 +242,10 @@ async function fetchCompetitorCorpusTerms(keyword: string, urls: string[]): Prom
 }
 
 async function fetchSerpNlpTerms(keyword: string, language: string): Promise<NlpTerm[]> {
-  const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+  const base = sidecarUrl();
   try {
     const res = await axios.post(
-      `${sidecarUrl}/analyze-serp`,
+      `${base}/analyze-serp`,
       { keyword, language },
       {
         timeout: 120000,

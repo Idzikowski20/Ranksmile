@@ -1,4 +1,5 @@
 import type { ScoreData } from '../contentScore';
+import { sidecarUrl } from '../serviceUrls';
 
 export type RankingSignal = { name: string; score: number; recommendation?: string };
 export type RankingSignalsPayload = { signals?: RankingSignal[] };
@@ -11,11 +12,11 @@ export async function scoreContent(
   articleTitle: string,
   articleMetaDescription: string
 ): Promise<ScoreContentResult | null> {
-  const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+  const base = sidecarUrl();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
-    const res = await fetch(`${sidecarUrl}/score-content`, {
+    const res = await fetch(`${base}/score-content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

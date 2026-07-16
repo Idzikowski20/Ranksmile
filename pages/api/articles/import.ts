@@ -16,6 +16,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { countOccurrences } from '../../../lib/contentScore';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { isSidecarConfigured } from '../../../lib/sidecar';
+import { publicAppUrl } from '../../../lib/serviceUrls';
 
 class BlockedUrlError extends Error {}
 
@@ -399,7 +400,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Auto-enrich keywords in background (fire-and-forget)
       if (keywords.length > 0) {
-         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+         const baseUrl = publicAppUrl();
          fetch(`${baseUrl}/api/articles/${articleId}/keywords/enrich`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

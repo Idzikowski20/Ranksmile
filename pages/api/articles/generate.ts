@@ -14,6 +14,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, queryRows } from '../../../lib/db/query';
 import type { GenerateSidecarResponse } from '../../../lib/types/sidecar';
 import { getDomainLocale } from '../../../lib/domainLanguage';
+import { publicAppUrl, sidecarUrl } from '../../../lib/serviceUrls';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
@@ -73,13 +74,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }));
 
       // Wywołaj Python sidecar
-      const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+      const base = sidecarUrl();
 
       let sidecarData: GenerateSidecarResponse;
       try {
-         console.log(`[generate] Calling sidecar: ${sidecarUrl}/generate with ${domainArticles.length} domain articles`);
+         console.log(`[generate] Calling sidecar: ${base}/generate with ${domainArticles.length} domain articles`);
          const sidecarRes = await axios.post(
-            `${sidecarUrl}/generate`,
+            `${base}/generate`,
             { url: `https://${domain.domain}`, keyword, language: resolvedLanguage, tone, existing_articles: domainArticles },
             { timeout: 300000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } }, // 5 minut — generowanie artykułu jest długie
          );
@@ -154,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Auto-enrich keywords in background (fire-and-forget)
       if (articleId) {
-         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
+         const baseUrl = publicAppUrl();
          fetch(`${baseUrl}/api/articles/${articleId}/keywords/enrich`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
