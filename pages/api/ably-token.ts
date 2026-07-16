@@ -24,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!Number.isInteger(articleId)) return res.status(400).json({ error: 'articleId is required' });
 
   if (!isAblyConfigured()) {
-    return res.status(503).json({ disabled: true, error: 'Realtime comments unavailable (ABLY_API_KEY not configured)' });
+    // 200 (not 503) — realtime is optional; client treats { disabled: true } as no-op.
+    return res.status(200).json({ disabled: true });
   }
 
   try {
