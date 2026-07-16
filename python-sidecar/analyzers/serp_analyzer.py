@@ -252,6 +252,9 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com", "etsy.com",
         "alibaba.com", "aliexpress.com", "ceneo.pl", "walmart.com", "shopee.pl",
         "erli.pl",
+        # Social / video — almost never yield usable article body text for NLP terms
+        "youtube.com", "youtu.be", "facebook.com", "fb.com", "instagram.com",
+        "tiktok.com", "twitter.com", "x.com", "linkedin.com", "reddit.com",
     }
 
     results = []

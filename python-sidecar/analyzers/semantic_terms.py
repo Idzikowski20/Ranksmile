@@ -170,8 +170,9 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
             "suggested_max": s_max,
         })
 
-    # 5. Filter: >=30% of docs (min 2)
-    min_docs = max(1, round(0.3 * n_docs)) if n_docs <= 3 else max(2, round(0.3 * n_docs))
+    # 5. Filter by chunk-hit frequency. Short SERP-snippet corpora produce few chunks —
+    # require only 1 hit so DeepSeek phrases aren't discarded before TF-IDF fallback.
+    min_docs = 1 if n_docs <= 6 else max(2, round(0.3 * n_docs))
     aggregated = [t for t in aggregated if t["doc_freq"] >= min_docs]
 
     if not aggregated:

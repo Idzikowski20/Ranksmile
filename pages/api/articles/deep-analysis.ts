@@ -598,6 +598,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filterUsefulNlpTerms(allTerms),
       filterUsefulNlpTerms(enrichedTerms),
     ));
+    console.log(
+      `[deep-analysis] terms before filter: ${mergedTerms.length} `
+      + `(serp raw=${allTerms.length}, enriched=${enrichedTerms.length})`,
+    );
 
     let competitorBenchmarks: Awaited<ReturnType<typeof buildCompetitorBenchmarks>> = null;
     try {
@@ -618,7 +622,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filterUsefulNlpTerms(mergedTerms),
       resolvedKeyword || keyword || '',
     ));
-    console.log(`[deep-analysis] terms after filter: ${mergedTerms.length} (keyword: ${resolvedKeyword || keyword || ''})`);
+    console.log(
+      `[deep-analysis] terms after filter: ${mergedTerms.length} `
+      + `(keyword: ${resolvedKeyword || keyword || ''}; sample: ${
+        mergedTerms.slice(0, 8).map((t) => t.term).join(', ')
+      })`,
+    );
 
     if (!hasMinCompetitorDomains(competitorDomains)) {
       console.warn('[deep-analysis] fewer than 3 distinct competitor domains — term ranges may be less reliable');
