@@ -7,9 +7,12 @@ const CustomErrorComponent = (props: { statusCode: number }) => {
 };
 
 CustomErrorComponent.getInitialProps = async (contextData: NextPageContext) => {
-  // In case this is running in a serverless function, await this in order to give Sentry
-  // time to send the error before the lambda exits
-  await Sentry.captureUnderscoreErrorException(contextData);
+  // Sentry temporarily off — re-enable with SENTRY_ENABLED=true
+  if (process.env.SENTRY_ENABLED === 'true') {
+    // In case this is running in a serverless function, await this in order to give Sentry
+    // time to send the error before the lambda exits
+    await Sentry.captureUnderscoreErrorException(contextData);
+  }
 
   // This will contain the status code of the response
   return Error.getInitialProps(contextData);
