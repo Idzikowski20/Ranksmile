@@ -25,7 +25,7 @@ import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanne
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
 import { computeCoverageScores } from '../../../lib/aiCoverage';
-import { filterMisalignedLegalCitations } from '../../../lib/citationPrompts';
+import { filterSyntheticCitationTemplates } from '../../../lib/citationPrompts';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
 import { substituteOptimizerPlaceholders } from '../../../lib/optimizePostHtml';
 import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
@@ -986,7 +986,7 @@ const ArticleEditorPage: NextPage = () => {
   // Without this, emptied articles kept frozen snap.overall (e.g. 34) and "Covered" flags.
   const liveAiCoverage = useMemo(() => {
     const keyword = article?.target_keyword || '';
-    const baseItems = filterMisalignedLegalCitations(coverageItems, keyword);
+    const baseItems = filterSyntheticCitationTemplates(coverageItems, keyword);
     if (!baseItems.length) {
       return { items: baseItems, buckets: coverageBuckets, overall: null as number | null };
     }
@@ -1006,7 +1006,7 @@ const ArticleEditorPage: NextPage = () => {
       editorHtml,
       scoreData,
       keyword,
-      coverageItems: filterMisalignedLegalCitations(coverageItems, keyword),
+      coverageItems: filterSyntheticCitationTemplates(coverageItems, keyword),
       coverageSnapshot,
       substitutePlaceholders: substituteOptimizerPlaceholders,
     });
