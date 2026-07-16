@@ -15,7 +15,7 @@ MAX_CRAWL_URLS_DEFAULT = 100
 CONCURRENCY = 8
 FETCH_TIMEOUT = 15.0
 UA = "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
-NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+from service_urls import nextjs_url
 PERMANENT_REDIRECT_CODES = {301, 308}
 
 
@@ -60,7 +60,7 @@ async def _spa_render(url: str) -> str | None:
     try:
         async with httpx.AsyncClient(timeout=25) as client:
             resp = await client.post(
-                f"{NEXTJS_URL}/api/render-page",
+                f"{nextjs_url()}/api/render-page",
                 json={"url": url, "timeout": 15000},
                 headers={"x-internal-token": os.getenv("INTERNAL_PIPELINE_TOKEN", "")},
             )

@@ -1,19 +1,20 @@
 // Shared helper for talking to the Python sidecar — removes the duplicated
 // base-URL + POST + error-handling + timeout boilerplate across API routes.
 
+import { isLocalServiceUrl, sidecarUrl } from './serviceUrls';
+
+export { nextjsUrl, publicAppUrl, sidecarUrl } from './serviceUrls';
+
 /** Sidecar base URL (localhost normalised to 127.0.0.1 to dodge IPv6 resolution). */
 export function sidecarBase(): string {
-   return (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+   return sidecarUrl();
 }
 
-/** True when a remote sidecar URL is configured (not the localhost default on Vercel). */
+/** True when a reachable remote sidecar is configured (Render URL on Vercel, local sidecar in dev). */
 export function isSidecarConfigured(): boolean {
-   const raw = (process.env.PYTHON_SIDECAR_URL || '').trim();
-   if (!raw) return !process.env.VERCEL;
-   if (process.env.VERCEL && /\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/i.test(raw.replace('localhost', '127.0.0.1'))) {
-      return false;
-   }
-   return true;
+   const url = sidecarBase();
+   if (process.env.VERCEL) return !isLocalServiceUrl(url);
+   return !isLocalServiceUrl(url) || Boolean(process.env.PYTHON_SIDECAR_URL?.trim());
 }
 
 /** Headers every sidecar call must carry — the shared secret that authorises us to

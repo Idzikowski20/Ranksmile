@@ -5,6 +5,7 @@ import axios from 'axios';
 import verifyUser from '../../../utils/verifyUser';
 import { resolveOrgId, orgBudgetBlocked } from '../../../lib/aiBudget';
 import { uploadImageFromUrl } from '../../../lib/uploadToBlob';
+import { sidecarUrl } from '../../../lib/serviceUrls';
 
 // Obraz jako base64 może mieć 500KB+ — zwiększ limit odpowiedzi
 export const config = {
@@ -30,9 +31,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const prompt = title || keyword;
 
    try {
-      const sidecarUrl = (process.env.PYTHON_SIDECAR_URL || 'http://127.0.0.1:8001').replace('localhost', '127.0.0.1');
+      const base = sidecarUrl();
       const sidecarRes = await axios.post(
-         `${sidecarUrl}/generate-image`,
+         `${base}/generate-image`,
          { keyword, title: prompt },
          { timeout: 120000, headers: { 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' } },
       );

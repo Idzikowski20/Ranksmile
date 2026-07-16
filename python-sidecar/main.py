@@ -37,6 +37,7 @@ from analyzers.content_classifier import classify
 from analyzers.ranking_scorer import predict_ranking
 from analyzers.plagiarism import run_plagiarism
 from pipeline.article_pipeline import run_pipeline, suggest_internal_links, generate_brand_knowledge
+from service_urls import nextjs_url as resolved_nextjs_url
 
 app = FastAPI(
     title="SEO Autopilot Sidecar",
@@ -63,8 +64,7 @@ async def _start_ai_vis_scheduler() -> None:
     script contexts that don't start the app."""
     import asyncio
     from pipeline.ai_vis_scheduler import scheduler_loop
-    nextjs_url = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
-    asyncio.create_task(scheduler_loop(nextjs_url))
+    asyncio.create_task(scheduler_loop(resolved_nextjs_url()))
     print("[ai_vis_scheduler] started")
 
 
@@ -427,7 +427,7 @@ async def ai_visibility_run_scan(req: AiVisScanRequest):
     Node serverless time limit (chunks are idempotent, so re-driving is safe)."""
     import asyncio
     from pipeline.ai_vis_scan import run_scan_loop
-    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    nextjs_url = req.nextjsUrl or resolved_nextjs_url()
     asyncio.create_task(run_scan_loop(req.scanId, nextjs_url))
     return {"status": "accepted"}
 
@@ -439,7 +439,7 @@ async def pipeline_domain_setup(req: DomainSetupRequest):
     depend on the response body (it materializes from the terminal callback)."""
     import asyncio
     from pipeline.domain_runner import run_domain_setup
-    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    nextjs_url = req.nextjsUrl or resolved_nextjs_url()
     asyncio.create_task(run_domain_setup(req.jobId, req.payload, nextjs_url))
     return {"status": "accepted"}
 
@@ -450,7 +450,7 @@ async def pipeline_generate(req: DomainSetupRequest):
     terminal done/failed callback to /api/articles/job-progress with the article result.
     Returns immediately so the caller (a Vercel function) isn't bound by the LLM duration."""
     import asyncio
-    nextjs_url = req.nextjsUrl or os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    nextjs_url = req.nextjsUrl or resolved_nextjs_url()
     asyncio.create_task(run_generate(req.jobId, req.payload, nextjs_url))
     return {"status": "accepted"}
 
@@ -478,7 +478,7 @@ async def pipeline_deep_analysis(req: PipelineRequest):
     """
     from pipeline.runner import PipelineRunner
 
-    nextjs_url = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+    nextjs_url = resolved_nextjs_url()
     print(f"[pipeline] Starting deep analysis for job {req.jobId}")
 
     ctx = PipelineRunner.build_deep_analysis_ctx(

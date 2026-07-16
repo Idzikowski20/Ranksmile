@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from pipeline.contracts import AnalysisStage, StageContext
 from pipeline.ssrf_guard import assert_public_url
 
-NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+from service_urls import nextjs_url
 
 
 class FetchPageStage(AnalysisStage):
@@ -158,7 +158,7 @@ class FetchPageStage(AnalysisStage):
         try:
             async with httpx.AsyncClient(timeout=25) as client:
                 resp = await client.post(
-                    f"{NEXTJS_URL}/api/render-page",
+                    f"{nextjs_url()}/api/render-page",
                     json={"url": url, "timeout": 15000},
                     headers={"x-internal-token": os.getenv("INTERNAL_PIPELINE_TOKEN", "")},
                 )

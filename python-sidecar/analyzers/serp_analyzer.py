@@ -14,7 +14,7 @@ from analyzers.semantic_terms import extract_semantic_terms
 
 
 # ── SPA fallback: use Next.js headless browser endpoint for JS-rendered pages ──
-NEXTJS_URL = os.getenv("NEXTJS_URL", "http://127.0.0.1:3000")
+from service_urls import nextjs_url
 
 
 async def _fetch_via_spa_fallback(url: str, plain_text: str) -> str | None:
@@ -25,7 +25,7 @@ async def _fetch_via_spa_fallback(url: str, plain_text: str) -> str | None:
     try:
         async with httpx.AsyncClient(timeout=25) as client:
             resp = await client.post(
-                f"{NEXTJS_URL}/api/render-page",
+                f"{nextjs_url()}/api/render-page",
                 json={"url": url, "timeout": 15000},
                 headers={"x-internal-token": os.getenv("INTERNAL_PIPELINE_TOKEN", "")},
             )

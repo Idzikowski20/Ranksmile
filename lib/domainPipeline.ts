@@ -6,6 +6,7 @@ import { gatherBlogUrls } from './gatherBlogUrls';
 import { getSiteAuditPageLimit, resolvePlanSlug } from './planLimits';
 import { getOrgBillingState } from './orgBilling';
 import { ensureUserTenancy } from './tenancy';
+import { nextjsUrl, sidecarUrl } from './serviceUrls';
 
 export type StageKey = 'gsc' | 'keywords' | 'topics' | 'competitors' | 'recommendations';
 export const STAGE_ORDER: StageKey[] = ['gsc', 'keywords', 'topics', 'competitors', 'recommendations'];
@@ -159,12 +160,11 @@ import GscAccount from '../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from './gscAccounts';
 import { searchconsole_v1 } from '@googleapis/searchconsole';
 
-const sidecarBase = () => process.env.PYTHON_SIDECAR_URL || process.env.SIDECAR_URL || 'http://127.0.0.1:8000';
-const selfUrl = () => process.env.NEXTJS_URL || 'http://127.0.0.1:3000';
+import { nextjsUrl, sidecarUrl } from './serviceUrls';
 
 async function emit(jobId: string, stage: StageKey, percent: number, message: string) {
    try {
-      await fetch(`${selfUrl()}/api/articles/job-progress`, {
+      await fetch(`${nextjsUrl()}/api/articles/job-progress`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
          body: JSON.stringify({ jobId, currentStage: stage, stageProgress: percent, totalProgress: Math.round((STAGE_ORDER.indexOf(stage) * 100 + percent) / STAGE_ORDER.length), message }),
@@ -251,8 +251,8 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
             siteAuditPages = getSiteAuditPageLimit(resolvePlanSlug(billing?.planSlug));
          }
       } catch { /* default 100 */ }
-      const body = { jobId, nextjsUrl: selfUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };
-      const resp = await fetch(`${sidecarBase()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
+      const body = { jobId, nextjsUrl: nextjsUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };
+      const resp = await fetch(`${sidecarUrl()}/pipeline/domain-setup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' }, body: JSON.stringify(body) });
       if (!resp.ok) await failJob(jobId, 'keywords', `sidecar ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
       // On success the sidecar will POST status='done' + result to job-progress, which materializes.
    } catch (e) {
