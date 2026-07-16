@@ -133,8 +133,22 @@ export function buildInfoToCoverTopics(opts: {
     addFact(item.id, item.label, item.covered, sources);
   }
 
+  // When deep analysis saved empty coverage (0 PAA + no DataForSEO) but the sidecar
+  // AI-visibility stage still returned citation prompts, surface those in the panel.
+  if (!factMap.size && !intent.length && opts.aiSummary?.citations?.length) {
+    const seen = new Set<string>();
+    for (const c of opts.aiSummary.citations) {
+      const text = (c.prompt || '').replace(/\s+/g, ' ').trim();
+      if (!text || text.length < 10) continue;
+      const key = text.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const covered = (c.answer_readiness_score ?? 0) >= 60;
+      addFact(`ai-cite-${seen.size}`, text, covered, []);
+    }
+  }
+
   const byTopic = new Map<string, InfoFact[]>();
-  const upfront = 'Upfront Intent Alignment';
   const infoBucket = 'Information to cover';
 
   for (const fact of factMap.values()) {
