@@ -7,11 +7,23 @@ if (typeof globalThis.crypto === 'undefined') {
   globalThis.crypto = webcrypto;
 }
 
+const path = require('path');
 const { version } = require('./package.json');
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
+
+// Zod 4 ships separate ESM + CJS builds. Next 12 webpack can pull both into the
+// client bundle; mixing ZodString/$ZodType across copies crashes with
+// "Cannot set properties of undefined (setting 'def')" during Neon Auth init.
+const zodRoot = path.dirname(require.resolve('zod/package.json'));
+const zodAliases = {
+  zod: path.join(zodRoot, 'index.cjs'),
+  'zod/v4': path.join(zodRoot, 'v4', 'index.cjs'),
+  'zod/v4/core': path.join(zodRoot, 'v4', 'core', 'index.cjs'),
+  'zod/v3': path.join(zodRoot, 'v3', 'index.cjs'),
+};
 
 const nextConfig = {
   reactStrictMode: true,
@@ -31,6 +43,13 @@ const nextConfig = {
       'cdn.jsdelivr.net',
       'avatars.githubusercontent.com',
     ],
+  },
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...zodAliases,
+    };
+    return config;
   },
   async rewrites() {
     return [
