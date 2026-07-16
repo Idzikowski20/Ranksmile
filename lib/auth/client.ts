@@ -1,9 +1,14 @@
-/* eslint-disable import/no-unresolved, import/prefer-default-export */
 /**
- * Singleton Neon Auth client for browser-side usage.
- * Points to /api/auth by default (our Pages Router proxy).
+ * Browser auth facade — fetch-based only.
+ * Do NOT import @neondatabase/auth here: its Zod schemas crash Next 12 client bundles
+ * ("Cannot set properties of undefined (setting 'def')").
  */
-// @ts-ignore — subpath exports require moduleResolution bundler; declared in types.d.ts
-import { createAuthClient } from '@neondatabase/auth/next';
+import { useAuthSession } from '../../hooks/useAuthSession';
+import { signOut as fetchSignOut } from './fetchAuth';
 
-export const authClient = createAuthClient();
+export const authClient = {
+  useSession: useAuthSession,
+  signOut: async () => {
+    await fetchSignOut();
+  },
+};

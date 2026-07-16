@@ -1,3 +1,4 @@
+import { fetchAuthSession } from '../../hooks/useAuthSession';
 import { signInEmail, signOut } from '../../lib/auth/fetchAuth';
 
 describe('fetchAuth', () => {
@@ -40,6 +41,28 @@ describe('fetchAuth', () => {
       expect(result.error.message).toBe('Invalid credentials');
       expect(result.error.status).toBe(401);
     }
+  });
+
+  it('fetchAuthSession reads user from get-session', async () => {
+    fetchMock.mockResponseOnce(
+      JSON.stringify({ user: { id: 'u1', email: 'a@b.com', name: 'Ada' } }),
+      { status: 200 },
+    );
+
+    const session = await fetchAuthSession();
+
+    expect(session).toEqual({
+      user: { id: 'u1', email: 'a@b.com', name: 'Ada', image: null },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/get-session',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('fetchAuthSession returns null when unauthenticated', async () => {
+    fetchMock.mockResponseOnce('{}', { status: 401 });
+    expect(await fetchAuthSession()).toBeNull();
   });
 
   it('signOut posts to /api/auth/sign-out', async () => {

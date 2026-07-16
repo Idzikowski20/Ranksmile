@@ -57,9 +57,9 @@ export default function InvitePage() {
    const router = useRouter();
    const token = router.query.token as string | undefined;
 
-   // Session — useSession() is reactive; data is null while loading
-   const sessionResult = authClient.useSession?.() ?? { data: null };
+   const sessionResult = authClient.useSession?.() ?? { data: null, isPending: true };
    const session = sessionResult.data;
+   const sessionPending = sessionResult.isPending;
    const sessionEmail: string = session?.user?.email ?? '';
    const isLoggedIn = !!session?.user;
 
@@ -73,13 +73,9 @@ export default function InvitePage() {
 
    // ── Redirect to sign-in if not authenticated ──────────────────────────
    React.useEffect(() => {
-      // session is still loading (null) — wait
-      if (session === null && session !== undefined) return;
-      // session resolved to no user → redirect
-      if (session !== null && !isLoggedIn) {
-         goToSignIn();
-      }
-   }, [session, isLoggedIn]);
+      if (sessionPending) return;
+      if (!isLoggedIn) goToSignIn();
+   }, [sessionPending, isLoggedIn]);
 
    // More robust: only redirect once we're certain there's no user.
    // useSession returns { data: null } initially (loading) and then resolves.
