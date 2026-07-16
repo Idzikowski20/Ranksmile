@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                promptVersion: prev?.promptVersion ?? 'v1',
                model: prev?.model ?? 'deepseek-chat',
                createdAt: new Date().toISOString(),
-            });
+            }, prev?.topics);
 
             await db.query(
                `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
