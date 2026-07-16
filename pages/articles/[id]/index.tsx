@@ -2178,16 +2178,13 @@ const ArticleEditorPage: NextPage = () => {
           )}
           </AnimatePresence>
 
-          {/* ── Right panel (absolute, two cards stacked) ─────────── */}
-          <AnimatePresence>
+          {/* ── Right panel (absolute, two cards stacked) ───────────
+              Plain div (not motion enter-from-offscreen): parent has overflow:hidden,
+              so initial x: PANEL_W+24 parks the panel outside the clip and it can stay
+              invisible if the spring never commits — empty gray gutter, no Share/score. */}
           {!panelCollapsed && (
-          <motion.div
-            key="rightpanel"
+          <div
             className="ce-right-panel"
-            initial={{ x: PANEL_W + 24, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: PANEL_W + 24, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 40, mass: 0.9 }}
             style={{
               position: 'absolute',
               top: 0, right: 0, bottom: 0,
@@ -2375,9 +2372,8 @@ const ArticleEditorPage: NextPage = () => {
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
           )}
-          </AnimatePresence>
         </div>
 
         {/* ── Auto-optimize loading indicator (legacy flow only; AO-8a uses OptimizeReviewBar) ── */}
