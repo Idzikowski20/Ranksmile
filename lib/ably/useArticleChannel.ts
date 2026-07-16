@@ -28,7 +28,18 @@ function safeCloseClient(client: Ably.Realtime) {
 
 const OFFLINE_STATES = new Set<Ably.ConnectionState>(['closed', 'failed', 'suspended', 'disconnected']);
 
-/** Cached after first 503 — avoids hammering /api/ably-token when ABLY_API_KEY is unset. */
+type AblyTokenProbe = { disabled?: boolean };
+
+async function fetchAblyToken(query: string): Promise<Ably.TokenRequest | 'disabled' | null> {
+  const res = await fetch(`/api/ably-token?${query}`, { credentials: 'include' });
+  if (res.status === 503) return 'disabled';
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => ({})) as AblyTokenProbe & Ably.TokenRequest;
+  if (data.disabled) return 'disabled';
+  return data;
+}
+
+/** Cached after first disabled probe — avoids hammering /api/ably-token when ABLY_API_KEY is unset. */
 let ablyDisabled = false;
 
 export type UseArticleChannel = {
@@ -67,30 +78,29 @@ export function useArticleChannel({ articleId, shareToken, clientId, onReconnect
     let onState: ((change: Ably.ConnectionStateChange) => void) | null = null;
 
     (async () => {
-      const probe = await fetch(`/api/ably-token?${query}`, { credentials: 'include' });
+      const token = await fetchAblyToken(query);
       if (!active) return;
-      if (probe.status === 503) {
+      if (token === 'disabled') {
         ablyDisabled = true;
         return;
       }
-      if (!probe.ok) return;
+      if (!token) return;
       if (!active) return;
 
       client = new Ably.Realtime({
         authCallback: (_params, callback) => {
-          fetch(`/api/ably-token?${query}`, { credentials: 'include' })
-            .then(async (res) => {
-              if (res.status === 503) {
+          fetchAblyToken(query)
+            .then((next) => {
+              if (next === 'disabled') {
                 ablyDisabled = true;
                 callback('Ably disabled', null);
                 return;
               }
-              if (!res.ok) {
-                callback(`Auth failed (${res.status})`, null);
+              if (!next) {
+                callback('Auth failed', null);
                 return;
               }
-              const tokenRequest = await res.json() as Ably.TokenRequest;
-              callback(null, tokenRequest);
+              callback(null, next);
             })
             .catch((err: Error) => { callback(err.message, null); });
         },
