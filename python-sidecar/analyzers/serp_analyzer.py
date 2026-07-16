@@ -61,6 +61,33 @@ def _competitors_from_results(serp_results: list[dict], limit: int = 10) -> list
     ]
 
 
+BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+)
+
+_NON_HTML_EXT = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".zip", ".rar")
+
+
+def _is_html_url(url: str) -> bool:
+    path = urlparse(url).path.lower()
+    return not any(path.endswith(ext) for ext in _NON_HTML_EXT)
+
+
+def _serp_snippet_texts(serp_results: list[dict]) -> list[str]:
+    """Fallback corpus when page scrapes fail — title + snippet still yield usable terms."""
+    texts: list[str] = []
+    for row in serp_results:
+        blob = " ".join(
+            part.strip()
+            for part in (row.get("title") or "", row.get("snippet") or "")
+            if part and part.strip()
+        ).strip()
+        if len(blob.split()) >= 5:
+            texts.append(blob)
+    return texts
+
+
 async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10, include_texts: bool = False) -> dict:
     serper_key = os.getenv("SERPER_API_KEY", "")
 
@@ -74,25 +101,36 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
         print(f"[serp_analyzer] No SERP results for {keyword!r}")
         return {**_placeholder_score_data(keyword), "competitors": [], "paa_questions": paa_questions}
 
-    serp_urls = [r["link"] for r in serp_results]
-    serp_texts, soups = await _scrape_pages(serp_urls)
+    scrapeable = [r["link"] for r in serp_results if r.get("link") and _is_html_url(r["link"])]
+    skipped = len(serp_results) - len(scrapeable)
+    if skipped:
+        print(f"[serp_analyzer] skipping {skipped} non-HTML SERP URLs (pdf/docs)")
+
+    serp_texts, soups = await _scrape_pages(scrapeable) if scrapeable else ([], [])
+    snippet_texts = _serp_snippet_texts(serp_results)
+
+    # Prefer scraped bodies; if thin/empty, fall back to SERP snippets so term extraction
+    # and AI corpus still have signal (datacenter IPs often get soft-blocked by Wikipedia etc.).
     if not serp_texts:
-        print(f"[serp_analyzer] SERP scrape failed for all {len(serp_urls)} URLs — keeping {len(competitors)} competitor URLs")
-        return {
-            **_placeholder_score_data(keyword),
-            "competitors": competitors,
-            "paa_questions": paa_questions,
-        }
+        print(
+            f"[serp_analyzer] SERP scrape failed for all {len(scrapeable)} HTML URLs — "
+            f"using {len(snippet_texts)} title+snippet texts"
+        )
+        serp_texts = snippet_texts
+        soups = []
+    elif len(serp_texts) < 3 and snippet_texts:
+        print(
+            f"[serp_analyzer] only {len(serp_texts)} scraped pages — "
+            f"merging {len(snippet_texts)} SERP snippets"
+        )
+        serp_texts = serp_texts + snippet_texts
 
     deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key)
-    # If extraction came back thin, seed from the keyword (language-correct) so we
-    # never ship an empty/irrelevant entity list. DataForSEO enrichment (Node side)
-    # layers real keyword data on top when the list is weak.
+    nlp_terms = await extract_semantic_terms(keyword, serp_texts, deepseek_key) if serp_texts else []
     if len(nlp_terms) < 3:
         existing = {t["term"] for t in nlp_terms}
         nlp_terms = nlp_terms + [t for t in _keyword_seed_terms(keyword) if t["term"] not in existing]
-    targets = _compute_targets(serp_texts, soups)
+    targets = _compute_targets(serp_texts, soups if soups else None)
 
     result = {
         "terms": nlp_terms,
@@ -102,7 +140,64 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     }
     if include_texts:
         result["_competitor_texts"] = serp_texts
+    print(
+        f"[serp_analyzer] done keyword={keyword!r}: "
+        f"{len(competitors)} competitors, {len(serp_texts)} texts, {len(nlp_terms)} terms, "
+        f"{len(paa_questions)} PAA"
+    )
     return result
+
+
+async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
+    async def _fetch_one(client: httpx.AsyncClient, url: str, *, verify: bool = True):
+        try:
+            response = await client.get(
+                url,
+                headers={
+                    "User-Agent": BROWSER_UA,
+                    "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
+                },
+                # verify is set on the client; this branch uses a dedicated client when False
+            )
+            if response.status_code >= 400:
+                print(f"[serp_analyzer] HTTP {response.status_code} for {url}")
+                return ("", None)
+            html = response.text
+            text_check = parse_html(html).get_text(separator=" ", strip=True)
+            if len(text_check.split()) < 200:
+                rendered = await _fetch_via_spa_fallback(url, text_check)
+                if rendered:
+                    html = rendered
+
+            soup = parse_html(html)
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                tag.decompose()
+            text = soup.get_text(separator=" ", strip=True)
+            words = len(text.split())
+            if words < 50:
+                print(f"[serp_analyzer] skipping thin page ({words} words): {url}")
+                return ("", None)
+            return (text[:15000], soup)
+        except Exception as exc:
+            msg = str(exc)
+            if verify and ("CERTIFICATE_VERIFY_FAILED" in msg or "SSL" in msg):
+                print(f"[serp_analyzer] SSL error for {url} — retrying without verify")
+                try:
+                    async with httpx.AsyncClient(timeout=15, follow_redirects=True, verify=False) as insecure:
+                        return await _fetch_one(insecure, url, verify=False)
+                except Exception as retry_exc:
+                    print(f"[serp_analyzer] Failed to scrape {url}: {retry_exc}")
+                    return ("", None)
+            print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
+            return ("", None)
+
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+        results = await asyncio.gather(*(_fetch_one(client, url) for url in urls), return_exceptions=False)
+
+    texts = [r[0] for r in results if r[1] is not None]
+    soups = [r[1] for r in results if r[1] is not None]
+    return texts, soups
 
 
 async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: str) -> tuple[list[dict], list[str]]:
@@ -192,37 +287,6 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
 async def _fetch_serp_urls(keyword: str, language: str, num: int, api_key: str) -> list[str]:
     results, _ = await _fetch_serp_results(keyword, language, num, api_key)
     return [r["link"] for r in results]
-
-
-async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
-    async def _fetch_one(client: httpx.AsyncClient, url: str):
-        try:
-            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-            html = response.text
-            # SPA fallback: if content is thin, retry with headless browser
-            text_check = parse_html(html).get_text(separator=" ", strip=True)
-            if len(text_check.split()) < 200:
-                rendered = await _fetch_via_spa_fallback(url, text_check)
-                if rendered:
-                    html = rendered
-
-            soup = parse_html(html)
-            for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-                tag.decompose()
-            text = soup.get_text(separator=" ", strip=True)
-            if len(text.split()) < 50:
-                return ("", None)
-            return (text[:15000], soup)
-        except Exception as exc:
-            print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
-            return ("", None)
-
-    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        results = await asyncio.gather(*(_fetch_one(client, url) for url in urls), return_exceptions=False)
-
-    texts = [r[0] for r in results if r[1] is not None]
-    soups = [r[1] for r in results if r[1] is not None]
-    return texts, soups
 
 
 def _extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
