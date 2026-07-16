@@ -3,7 +3,8 @@
  * coverage items, and competitor outline headings.
  */
 import type { AiVisibilitySummary } from './aiSearchScore';
-import type { CoverageItem, LlmCoverageSource } from './aiCoverage';
+import type { CoverageItem, CoverageTopicGroup, LlmCoverageSource } from './aiCoverage';
+import { normalizeTerm } from './termUtils';
 
 export type InfoSource = {
   key: string;
@@ -90,12 +91,61 @@ function assignTopic(text: string, topics: string[]): string {
   return bestScore >= 1 ? best : 'Information to cover';
 }
 
+function topicsFromSnapshot(
+  snapshotTopics: readonly CoverageTopicGroup[],
+  items: CoverageItem[],
+): InfoTopicGroup[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const used = new Set<string>();
+  const groups: InfoTopicGroup[] = [];
+
+  for (const topic of snapshotTopics) {
+    const facts: InfoFact[] = [];
+    for (const id of topic.itemIds) {
+      const item = byId.get(id);
+      if (!item || item.category === 'intent') continue;
+      used.add(id);
+      facts.push({
+        id: item.id,
+        text: item.label,
+        covered: item.covered,
+        sources: sourcesFromItem(item),
+      });
+    }
+    if (facts.length) {
+      groups.push({
+        id: `topic-${normalizeTerm(topic.title).slice(0, 48) || 'x'}`,
+        title: topic.title,
+        facts,
+      });
+    }
+  }
+
+  const rest = items.filter((i) => i.category !== 'intent' && !used.has(i.id));
+  if (rest.length) {
+    groups.push({
+      id: 'topic-remaining',
+      title: 'Information to cover',
+      facts: rest.map((item) => ({
+        id: item.id,
+        text: item.label,
+        covered: item.covered,
+        sources: sourcesFromItem(item),
+      })),
+    });
+  }
+
+  return groups;
+}
+
 /** Build accordion groups for the Write & Optimize AI panel. */
 export function buildInfoToCoverTopics(opts: {
   aiSummary?: AiVisibilitySummary | null;
   coverageItems?: CoverageItem[];
   competitorOutlinesCache?: string | null;
   intentItems?: CoverageItem[];
+  /** Prefer harvested snapshot.topics when present. */
+  snapshotTopics?: readonly CoverageTopicGroup[] | null;
 }): { intent: InfoFact[]; topics: InfoTopicGroup[] } {
   const outlineTopics = parseOutlineTopics(opts.competitorOutlinesCache);
 
@@ -109,6 +159,14 @@ export function buildInfoToCoverTopics(opts: {
     covered: item.covered,
     sources: sourcesFromItem(item),
   }));
+
+  // Prefer harvested topic grouping from the coverage snapshot.
+  if (opts.snapshotTopics?.length && opts.coverageItems?.length) {
+    return {
+      intent,
+      topics: topicsFromSnapshot(opts.snapshotTopics, opts.coverageItems),
+    };
+  }
 
   const factMap = new Map<string, InfoFact>();
 

@@ -71,6 +71,12 @@ export interface BucketScore {
   score: number;              // 0..100
 }
 
+/** Harvested semantic topic → coverage item ids (AI Search accordion). */
+export type CoverageTopicGroup = {
+  readonly title: string;
+  readonly itemIds: readonly string[];
+};
+
 export interface CoverageSnapshot {
   readonly schemaVersion: 1;               // envelope shape; parseSnapshot gates on this. A prompt tweak does NOT bump it.
   readonly judgeVersion: string;           // 'promptVersion|model|temperature' — cache key + staleness detector
@@ -81,6 +87,8 @@ export interface CoverageSnapshot {
   readonly buckets: readonly BucketScore[];
   readonly answersMainQuestionEarly: boolean;  // promoted onto the domain model (scorer needs no CoverageResult)
   readonly overall: number;                // 0..100
+  /** Optional harvested topic grouping for Info to cover UI. */
+  readonly topics?: readonly CoverageTopicGroup[];
 }
 
 const CATEGORIES: CoverageCategory[] = ['intent', 'knowledge', 'authority', 'quality', 'style'];

@@ -46,6 +46,7 @@ export function buildSnapshot(
   items: CoverageItem[],
   result: CoverageResult,
   meta: { judgeVersion: string; promptVersion: string; model: string; createdAt: string },
+  topics?: CoverageSnapshot['topics'],
 ): CoverageSnapshot {
   const byId = new Map(result.items.map((vd) => [vd.id, vd]));
   const graded: readonly CoverageItem[] = items.map((it) => {
@@ -75,6 +76,7 @@ export function buildSnapshot(
     buckets,
     answersMainQuestionEarly: early,
     overall,
+    ...(topics?.length ? { topics } : {}),
   };
 }
 
