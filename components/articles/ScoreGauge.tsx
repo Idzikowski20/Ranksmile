@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, animate, motion, useReducedMotion } from 'motion/react';
+import { animate, motion, useReducedMotion } from 'motion/react';
 import { scoreColor } from '../../lib/scoreColor';
 
 interface Props {
@@ -52,21 +52,38 @@ const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 
   );
 };
 
-/** Count-up number (Surfer number-flow style) — animates from the previous value
- *  to the new one, rounding on each frame. Used for the large central gauge. */
+/**
+ * Count-up for the large central gauge.
+ * Must snap to `value` on interrupt/complete — in production (no Strict Mode remounts)
+ * stopping mid-animation left a stale number (e.g. 15) while Write & Optimize remount
+ * showed the real score.
+ */
 const CountUpNumber = ({ value, font }: { value: number; font: number }) => {
   const reduced = useReducedMotion();
   const [display, setDisplay] = useState(value);
   const prev = useRef(value);
   useEffect(() => {
-    if (reduced) { setDisplay(value); prev.current = value; return undefined; }
-    const controls = animate(prev.current, value, {
-      duration: 0.6,
-      ease: [0.34, 2, 0.64, 1],
+    if (reduced) {
+      setDisplay(value);
+      prev.current = value;
+      return undefined;
+    }
+    const from = prev.current;
+    const controls = animate(from, value, {
+      duration: 0.45,
+      ease: [0.33, 1, 0.68, 1],
       onUpdate: (v) => setDisplay(Math.round(v)),
+      onComplete: () => {
+        setDisplay(value);
+        prev.current = value;
+      },
     });
-    prev.current = value;
-    return () => controls.stop();
+    return () => {
+      controls.stop();
+      // Interrupt (rapid score changes / effect re-run): never leave a stale digit.
+      setDisplay(value);
+      prev.current = value;
+    };
   }, [value, reduced]);
   return (
     <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: font, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
@@ -83,8 +100,9 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
   const offset = pending ? ARC : ARC * (1 - s / 100);
   const size = sizeProp ?? (compact ? 56 : 96);
   const numberFont = size <= 64 ? 16 : 24;
+  // No overshooting cubic-bezier — overshoot on SVG stroke-dashoffset glitches in prod builds.
   const fillStyle: React.CSSProperties = {
-    transition: reduced ? 'none' : 'stroke 400ms ease-in-out, stroke-dashoffset 600ms cubic-bezier(0.34,2,0.64,1)',
+    transition: reduced ? 'none' : 'stroke 400ms ease, stroke-dashoffset 450ms ease',
   };
 
   return (
@@ -101,26 +119,15 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
         ))}
       </svg>
 
-      {/* Odometer number — the new value rolls in from below when the score changes. */}
+      {/* Numbers: no AnimatePresence odometer — exit/enter + overflow:hidden left blank SEO digits in prod. */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {pending ? (
           <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#9f9fa9', fontVariantNumeric: 'tabular-nums' }}>—</span>
         ) : size >= 90 ? (
           <CountUpNumber value={s} font={numberFont} />
         ) : (
-          <span style={{ position: 'relative', display: 'inline-flex', height: numberFont * 1.1, overflow: 'hidden', lineHeight: 1 }}>
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.span
-                key={s}
-                initial={reduced ? false : { y: '70%', opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={reduced ? { opacity: 0 } : { y: '-70%', opacity: 0 }}
-                transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 30 }}
-                style={{ display: 'inline-block', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}
-              >
-                {s}
-              </motion.span>
-            </AnimatePresence>
+          <span style={{ display: 'inline-block', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+            {s}
           </span>
         )}
       </div>
