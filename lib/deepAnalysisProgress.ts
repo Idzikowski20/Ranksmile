@@ -44,6 +44,22 @@ export function isStaleDeepAnalysisJob(snap: JobProgressSnapshot): boolean {
   return false;
 }
 
+/**
+ * Editor load reconcile for articles with status=`analyzing`.
+ *
+ * Import creates the row as `analyzing` *before* any job exists — the editor hook
+ * starts `/api/articles/deep-analysis`. A missing job (404) must NOT flip to `draft`,
+ * or the hook never runs and the sidebar skips deep analysis entirely.
+ */
+export function resolveAnalyzingStatusOnLoad(job: JobProgressSnapshot | null): 'analyzing' | 'draft' {
+  if (!job) return 'analyzing';
+  if (job.status === 'done' || job.status === 'failed') return 'draft';
+  if (job.status === 'running' || job.status === 'queued') {
+    return isStaleDeepAnalysisJob(job) ? 'draft' : 'analyzing';
+  }
+  return 'draft';
+}
+
 const AI_STEPS = [
   { key: 'ai_prompts', label: 'Generated prompts', running: 'Generating prompts...' },
   { key: 'ai_scrape', label: 'Scraped answers from ChatGPT, AI Overviews, Gemini, AI Mode, Perplexity', running: 'Scraping answers from ChatGPT, AI Overviews, Gemini, AI Mode, Perplexity...' },

@@ -42,7 +42,7 @@ import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
-import { isStaleDeepAnalysisJob } from '../../../lib/deepAnalysisProgress';
+import { resolveAnalyzingStatusOnLoad } from '../../../lib/deepAnalysisProgress';
 import { getErrorMessage } from '../../../lib/errors';
 import { isAbortError } from '../../../lib/abortSignal';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
@@ -90,12 +90,13 @@ interface Article {
   ai_readability_json?: string | null;
 }
 
-/** DB rows can stay `analyzing` after a failed/cancelled run — unlock the editor on load. */
+/** DB rows can stay `analyzing` after a failed/cancelled run — unlock the editor on load.
+ *  Fresh import has status=analyzing with no job yet — keep analyzing so the hook can start. */
 async function reconcileAnalyzingArticle(art: Article): Promise<Article> {
   if (art.status !== 'analyzing') return art;
   try {
     const res = await fetch(`/api/articles/job-progress?articleId=${art.id}`);
-    if (res.status === 404) return { ...art, status: 'draft' };
+    if (res.status === 404) return art; // no job yet — useBackgroundDeepAnalysis starts it
     if (!res.ok) return art;
     const data = await res.json() as {
       status?: string;
@@ -104,21 +105,14 @@ async function reconcileAnalyzingArticle(art: Article): Promise<Article> {
       progressMessage?: string | null;
       updatedAt?: string | null;
     };
-    if (data.status === 'done' || data.status === 'failed') return { ...art, status: 'draft' };
-    if (
-      data.status === 'running' || data.status === 'queued'
-    ) {
-      const stale = isStaleDeepAnalysisJob({
-        status: data.status,
-        currentStage: data.currentStage,
-        stageProgress: data.stageProgress,
-        progressMessage: data.progressMessage,
-        updatedAt: data.updatedAt ?? null,
-      });
-      if (stale) return { ...art, status: 'draft' };
-      return art;
-    }
-    return { ...art, status: 'draft' };
+    const next = resolveAnalyzingStatusOnLoad({
+      status: data.status || '',
+      currentStage: data.currentStage,
+      stageProgress: data.stageProgress,
+      progressMessage: data.progressMessage,
+      updatedAt: data.updatedAt ?? null,
+    });
+    return next === art.status ? art : { ...art, status: next };
   } catch {
     return art;
   }
