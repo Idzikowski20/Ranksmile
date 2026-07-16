@@ -8,6 +8,8 @@ import { buildInfoToCoverTopics, type InfoFact, type InfoSource, type InfoTopicG
 import { faviconUrl } from '../../lib/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
+import EffortChecklist from './EffortChecklist';
+import { buildEffortChecklist } from '../../lib/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 
 const F = 'var(--font-family-primary)';
@@ -43,6 +45,9 @@ interface Props {
   coverageSnapshot?: CoverageSnapshot | null;
   /** Competitor outline cache JSON — groups AI facts into topical accordions. */
   competitorOutlinesCache?: string | null;
+  html?: string;
+  keyword?: string;
+  paaQuestions?: string[];
   onBack: () => void;
   /** Toggles term highlighting in the editor (drives the TipTap decoration). */
   highlightTerms?: boolean;
@@ -373,12 +378,14 @@ type AiSort = 'missing' | 'alpha';
 const WriteOptimizePanel = ({
   terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange, aiSummary,
   seo, ai, content, hasAi, coverageItems, competitorOutlinesCache,
+  html, keyword, paaQuestions,
   onBack, highlightTerms, onHighlightTermsChange,
   initialSection, scoreDeltas,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
   const [seoOpen, setSeoOpen] = useState(true);
   const [aiOpen, setAiOpen] = useState(false);
+  const [effortOpen, setEffortOpen] = useState(false);
   const [query, setQuery] = useState('');
 
   // Score-gauge shortcuts: expand a section and scroll it into view. The SEO block
@@ -388,9 +395,10 @@ const WriteOptimizePanel = ({
   // Height + fade reveal when a section opens (close is instant — the block unmounts).
   const seoRevealRef = useOpenReveal<HTMLDivElement>(seoOpen);
   const aiRevealRef = useOpenReveal<HTMLDivElement>(aiOpen);
+  const effortRevealRef = useOpenReveal<HTMLDivElement>(effortOpen);
   // Opening one section collapses the other (mutually exclusive focus).
-  const expandSeo = () => { setSeoOpen(true); setAiOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
-  const expandAi = () => { setAiOpen(true); setSeoOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
+  const expandSeo = () => { setSeoOpen(true); setAiOpen(false); setEffortOpen(false); requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })); };
+  const expandAi = () => { setAiOpen(true); setSeoOpen(false); setEffortOpen(false); requestAnimationFrame(() => aiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
   // Honour the section requested when the panel was opened from a score gauge.
   useEffect(() => {
     if (initialSection === 'ai') expandAi();
@@ -410,6 +418,12 @@ const WriteOptimizePanel = ({
   // AI Search settings — persisted.
   const [aiGrouping, setAiGrouping] = usePersist('wo:aiGrouping', true);
   const [aiSort, setAiSort] = usePersist<AiSort>('wo:aiSort', 'missing');
+
+  // Content effort display — persisted.
+  const [showEffortOk, setShowEffortOk] = usePersist('wo:effortOk', true);
+  const [showEffortWeak, setShowEffortWeak] = usePersist('wo:effortWeak', true);
+  const [showEffortMissing, setShowEffortMissing] = usePersist('wo:effortMissing', true);
+  const [showEffortUnknown, setShowEffortUnknown] = usePersist('wo:effortUnknown', true);
 
   // Highlighting is active only while this panel is open (Write & Optimize view),
   // following the toggle; cleared when the panel unmounts.
@@ -457,6 +471,44 @@ const WriteOptimizePanel = ({
     copy(sel.map((i) => i.text).join('\n'));
   };
 
+  const plainFromTerms = useMemo(() => {
+    // Write panel doesn't always have full plainText — reconstruct a weak proxy from covered terms only for checklist uniqueness.
+    // Prefer real HTML strip when html is provided.
+    if (html) return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return terms.map((t) => `${t.term} `.repeat(Math.max(t.current_count ?? 0, 0))).join(' ');
+  }, [html, terms]);
+
+  const effortItems = useMemo(() => {
+    const uvTotal = allInfoFacts.length;
+    const uvCovered = allInfoFacts.filter((f) => f.covered).length;
+    return buildEffortChecklist({
+      html,
+      plainText: plainFromTerms,
+      keyword,
+      paaQuestions,
+      uniqueVsSerp: uvTotal > 0 ? { covered: uvCovered, total: uvTotal } : undefined,
+    });
+  }, [html, plainFromTerms, keyword, paaQuestions, allInfoFacts]);
+
+  const visibleEffortItems = useMemo(
+    () => effortItems.filter((item) => {
+      if (item.status === 'pass') return showEffortOk;
+      if (item.status === 'warn') return showEffortWeak;
+      if (item.status === 'fail') return showEffortMissing;
+      return showEffortUnknown;
+    }),
+    [effortItems, showEffortOk, showEffortWeak, showEffortMissing, showEffortUnknown],
+  );
+
+  const copyEffort = (which: 'all' | 'missing' | 'ok') => {
+    const sel = effortItems.filter((i) => {
+      if (which === 'all') return true;
+      if (which === 'missing') return i.status === 'fail' || i.status === 'warn';
+      return i.status === 'pass';
+    });
+    copy(sel.map((i) => `${i.label}: ${i.detail}`).join('\n'));
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', fontFamily: F }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes growOut { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }`}</style>
@@ -477,9 +529,82 @@ const WriteOptimizePanel = ({
         <ScoreTrio seo={seo} ai={ai} content={content} hasAi={hasAi} onSeoClick={expandSeo} onAiClick={expandAi} deltas={scoreDeltas} />
       </div>
 
+      {/* Effort — collapsible (same pattern as SEO / AI) */}
+      <div style={{ padding: '0 16px 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 0' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setEffortOpen((v) => {
+                const next = !v;
+                if (next) { setSeoOpen(false); setAiOpen(false); }
+                return next;
+              });
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              minWidth: 0,
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              fontFamily: F,
+            }}
+          >
+            <Chevron open={effortOpen} color="#18181b" />
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>Effort</span>
+            <span style={{ fontSize: 15, color: '#9f9fa9', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              Hard to replicate
+              <InfoDot tip="Signals that are hard to cheaply replicate with one prompt — not an AI detector" />
+            </span>
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            <Popover iconD={ICON_SLIDERS} title="Display settings">
+              {() => (
+                <>
+                  <SecLabel>Signal visibility</SecLabel>
+                  <ToggleRow label="OK signals" on={showEffortOk} onChange={() => setShowEffortOk((v) => !v)} />
+                  <ToggleRow label="Weak signals" on={showEffortWeak} onChange={() => setShowEffortWeak((v) => !v)} />
+                  <ToggleRow label="Missing signals" on={showEffortMissing} onChange={() => setShowEffortMissing((v) => !v)} />
+                  <ToggleRow label="Unknown signals" on={showEffortUnknown} onChange={() => setShowEffortUnknown((v) => !v)} />
+                </>
+              )}
+            </Popover>
+            <Popover iconD={ICON_COPY} title="Copy signals">
+              {(close) => (
+                <>
+                  <SecLabel>Effort</SecLabel>
+                  <MenuItem label="Copy all" onClick={() => { copyEffort('all'); close(); }} />
+                  <MenuItem label="Copy missing" onClick={() => { copyEffort('missing'); close(); }} />
+                  <MenuItem label="Copy OK" onClick={() => { copyEffort('ok'); close(); }} />
+                </>
+              )}
+            </Popover>
+          </div>
+        </div>
+        {effortOpen && (
+          <div ref={effortRevealRef} style={{ paddingBottom: 8 }}>
+            {visibleEffortItems.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 12, color: '#9f9fa9', fontStyle: 'italic', padding: '4px 0 8px' }}>
+                No signals match the current display filters.
+              </p>
+            ) : (
+              <EffortChecklist
+                compact
+                hideHeader
+                items={visibleEffortItems}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
       {/* SEO Entities subheader */}
       <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <button type="button" onClick={() => setSeoOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
+        <button type="button" onClick={() => { setSeoOpen((v) => !v); if (!seoOpen) { setEffortOpen(false); setAiOpen(false); } }} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
           <Chevron open={seoOpen} color="#18181b" />
           <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>SEO</span>
           <span style={{ fontSize: 15, color: '#9f9fa9', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -572,7 +697,7 @@ const WriteOptimizePanel = ({
 
         {/* AI Search collapsible */}
         <div ref={aiRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 0 4px', marginTop: 8, borderTop: '1px solid #f4f4f5' }}>
-          <button type="button" onClick={() => setAiOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
+          <button type="button" onClick={() => { setAiOpen((v) => !v); if (!aiOpen) { setEffortOpen(false); setSeoOpen(false); } }} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
             <svg viewBox="0 0 20 20" width={16} height={16} style={{ flexShrink: 0, color: '#9f9fa9', transform: aiOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}><path fill="currentColor" fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>
             <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b', whiteSpace: 'nowrap' }}>AI Search</span>
             <span style={{ fontSize: 15, color: '#9f9fa9', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

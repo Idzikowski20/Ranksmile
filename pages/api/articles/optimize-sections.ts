@@ -9,7 +9,6 @@ import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
 import { buildWholeArticlePrompt, WHOLE_ARTICLE_ID } from '../../../lib/optimizeWholeArticle';
 import { stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
-import { computeContentScore } from '../../../lib/contentScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import { buildArticleContext } from '../../../lib/articleContext';
 import type { ArticleContext } from '../../../lib/articleContext';
@@ -17,9 +16,9 @@ import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articl
 import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
 import { termsForOptimize } from '../../../lib/mergeArticleTerms';
 import { liveCoverageItems } from '../../../lib/liveCoverage';
-import { computeCoverageScores } from '../../../lib/aiCoverage';
 import { collectUncoveredAiQuestions, buildFaqSectionPrompt, mergeFaqHtml } from '../../../lib/aoFaqSection';
 import { structureIssues } from '../../../lib/validateArticleStructure';
+import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
@@ -42,22 +41,33 @@ import { flushSse, flushHeaders } from '../../../lib/types/api';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
-const PROMPT_VERSION = 'ao-whole-article-v2';
+const PROMPT_VERSION = 'ao-whole-article-v3-human';
 
-function scoreSeo(html: string, scoreData: ScoreData | undefined, keyword: string): number {
-   const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-   const wc = plain ? plain.split(/\s+/).length : 0;
-   const hc = (html.match(/<h[1-6]/gi) || []).length;
-   const pc = (html.match(/<p[\s>]/gi) || []).length;
+function scoreSeo(
+   html: string,
+   scoreData: ScoreData | undefined,
+   keyword: string,
+   ctx?: ArticleContext | null,
+): number {
    if (!scoreData) return 0;
-   return computeContentScore(plain, wc, hc, scoreData, pc, undefined, html, keyword);
+   return scoreArticleHtml({
+      html,
+      scoreData,
+      keyword,
+      coverageItems: ctx?.coverage?.items,
+      answersMainQuestionEarly: !!ctx?.coverage?.answersMainQuestionEarly,
+   }).seo;
 }
 
 function scoreAiFromContext(ctx: ArticleContext | null, html: string, latestAiScore: number): number {
-   if (ctx?.coverage?.items?.length) {
-      const plain = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-      const live = liveCoverageItems(ctx.coverage.items, plain, html);
-      return computeCoverageScores(live, !!ctx.coverage.answersMainQuestionEarly).overall;
+   if (ctx?.coverage?.items?.length && ctx.scoreData) {
+      return scoreArticleHtml({
+         html,
+         scoreData: ctx.scoreData,
+         keyword: ctx.keyword || '',
+         coverageItems: ctx.coverage.items,
+         answersMainQuestionEarly: !!ctx.coverage.answersMainQuestionEarly,
+      }).ai;
    }
    if (ctx?.scoreData?.ai_score != null) return ctx.scoreData.ai_score;
    return latestAiScore;
@@ -228,9 +238,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          }
       }
 
-      const initialSeo = scoreData?.seo_score
-         ?? (ctx?.scoreData as (ScoreData & { seo_score?: number }) | null)?.seo_score
-         ?? scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+      const initialSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
       const initialAi = ctx && articleId != null
          ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
          : 0;
@@ -272,9 +280,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             roundsRun = round;
             const snapshot = ctx?.coverage ?? null;
             const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
-            const seoScore = scoreData?.seo_score
-               ?? (ctx?.scoreData as (ScoreData & { seo_score?: number }) | null)?.seo_score
-               ?? scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+            const seoScore = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
             const aiScore = ctx && articleId != null
                ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
                : 0;
@@ -364,7 +370,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                changedCount += 1;
             }
 
-            finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+            finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
             finalAi = ctx && articleId != null
                ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
                : 0;
@@ -429,7 +435,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                      if (isUsableEdit(faqHtml)) {
                         workingHtml = mergeFaqHtml(workingHtml, faqHtml);
                         changedCount += 1;
-                        finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '');
+                        finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
                         finalAi = articleId != null
                            ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
                            : 0;

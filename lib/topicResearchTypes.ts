@@ -52,6 +52,10 @@ export interface TopicResearchStats {
    searchVolume: number;
    clusterCount: number;
    recommendationCount: number;
+   /** 0–1 topical focus (dominant cluster share, radius-adjusted). */
+   siteFocusScore?: number;
+   /** 0–1 topical spread across clusters (higher = more diffuse). */
+   siteRadius?: number;
 }
 
 export interface TopicResearchResult {

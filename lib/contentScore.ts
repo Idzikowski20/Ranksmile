@@ -1,5 +1,13 @@
 import type { CoverageItem } from './aiCoverage';
 import { computeCompetitorContentScore } from './competitorContentScore';
+import {
+   aiExtractabilityScore,
+   datesAuthorScore,
+   earlyAnswerScore,
+   keywordStuffingScore,
+   thinOriginalityScore,
+   titleQueryScore,
+} from './contentEffort';
 import { termSalienceWeight } from './termSalienceCore';
 import { countOccurrences, normalizePl, tokenize, wordMatch } from './termMatch';
 
@@ -58,6 +66,14 @@ export interface ScoreData {
    _paragraph_count?: number;
    _computed_score?: number;
    _content_score?: number;
+   /** Content effort insight (heuristic or LLM) — not Google NSR. */
+   content_effort?: {
+      score: number;
+      reasons: string[];
+      source: 'heuristic' | 'llm';
+      at?: string;
+      history?: Array<{ score: number; at: string; source: 'heuristic' | 'llm' }>;
+   };
 }
 
 /**
@@ -150,7 +166,8 @@ function _kwPlacement(html: string, keyword: string): number {
 
 /**
  * Paragraph readability — average characters per <p> tag (max 10).
- * Optimal range 100–200 characters. Long walls of text are penalised.
+ * Optimal range ≈120–450 characters (human editorial prose). Thin stubs and
+ * walls of text are penalised — matches Auto-Optimize STRUCTURE_RULES.
  */
 function _readability(html: string): number {
    const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
@@ -161,10 +178,11 @@ function _readability(html: string): number {
       return sum + chars;
    }, 0) / paras.length;
 
-   if (avg >= 100 && avg <= 200) return 10;
-   if (avg < 100) return Math.max(3, (avg / 100) * 10);
-   // Drops from 10 at 200 chars to 2 at ≥250 chars
-   return Math.max(2, 10 - ((avg - 200) / 5) * 0.8);
+   if (avg >= 120 && avg <= 450) return 10;
+   if (avg < 120) return Math.max(2, (avg / 120) * 10);
+   // Soft drop past 450 → still readable until ~700 (structure validator max)
+   if (avg <= 700) return Math.max(4, 10 - ((avg - 450) / 50));
+   return 2;
 }
 
 /**
@@ -210,24 +228,12 @@ function _externalLinks(html: string): number {
 }
 
 /**
- * Title tag quality (max 7).
- * Checks <title> tag: keyword presence (+4) and optimal length 50-60 chars (+3, partial +1).
- * _kwPlacement already checks H1/H2 — this targets the <title> element specifically.
- * Returns null when no <title> tag is present (e.g. article body HTML) so the slot
- * is excluded from the denominator rather than permanently wasting 7 points.
+ * Title–query quality (max 7).
+ * Keyword presence + early position; soft length band (no hard 50–60 char ranking).
+ * Returns null when no <title> so the slot is excluded from the denominator.
  */
 function _titleQuality(html: string, keyword: string): number | null {
-   const kw = keyword.toLowerCase().trim();
-   if (!kw) return null;
-   const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-   if (!match) return null; // no <title> → skip slot entirely
-   const title = match[1].replace(/<[^>]+>/g, '').trim();
-   let score = 0;
-   if (title.toLowerCase().includes(kw)) score += 4;
-   const len = title.length;
-   if (len >= 50 && len <= 60) score += 3;
-   else if (len >= 40 && len <= 70) score += 1;
-   return score; // max 7
+   return titleQueryScore(html, keyword);
 }
 
 /**
@@ -344,12 +350,23 @@ export function collectScoreSlots(
    if (html && keyword) {
       push('kwPlacement', 'Keyword placement', _kwPlacement(html, keyword), 15,
          `Put "${keyword}" in the H1, at least one H2, and the first 100 words`);
-      push('readability', 'Readability', _readability(html), 10, 'Keep paragraphs 100–200 characters under each heading');
+      push('readability', 'Readability', _readability(html), 10, 'Keep paragraphs ~120–450 characters of readable prose under each heading');
       push('externalLinks', 'External links', _externalLinks(html), 5, 'Cite 3–7 authoritative external sources');
       const titleScore = _titleQuality(html, keyword);
-      if (titleScore !== null) push('title', 'Title tag', titleScore, 7, `Include "${keyword}" in a 50–60 char title`);
+      if (titleScore !== null) {
+         push('title', 'Title tag', titleScore, 7,
+            `Put "${keyword}" near the start of the title (readable length ~30–70 chars)`);
+      }
       const metaScore = _metaDescQuality(html, keyword);
       if (metaScore !== null) push('meta', 'Meta description', metaScore, 5, `Include "${keyword}" in a 140–165 char meta description`);
+
+      const stuffing = keywordStuffingScore(plainText, keyword);
+      push('stuffing', 'Keyword stuffing', stuffing.earned, stuffing.max,
+         'Ease off exact-match keyword repeats — density looks spammy');
+
+      const early = earlyAnswerScore(html, plainText, keyword);
+      push('earlyAnswer', 'Early answer', early.earned, early.max,
+         'Answer the query in the first ~100 words / first ~5–6k HTML chars');
    }
 
    // ── HTML-only signals ──
@@ -357,6 +374,21 @@ export function collectScoreSlots(
       const imgScore = _imageAltCoverage(html);
       if (imgScore !== null) push('imageAlt', 'Image alt text', imgScore, 4, 'Add descriptive alt text to every image');
       push('lists', 'Lists', _listUsage(html), 3, 'Add a bullet or numbered list with 3+ items');
+
+      const datesAuthor = datesAuthorScore(html, plainText);
+      push('datesAuthor', 'Author & dates', datesAuthor.earned, datesAuthor.max,
+         'Show an author (and bio) plus clear publish/update dates');
+
+      const extract = aiExtractabilityScore(html, plainText, scoreData.paa_questions);
+      push('aiExtract', 'AI extractability', extract.earned, extract.max,
+         'Use dense structure, descriptive alts, and findable PAA answers in plain text');
+   }
+
+   // ── Originality / replicability (plain text) ──
+   if (plainText.trim().length > 0) {
+      const thin = thinOriginalityScore(plainText);
+      push('originality', 'Originality', thin.earned, thin.max,
+         'Add unique specifics — thin or template-like text is cheap to replicate');
    }
 
    // ── FAQ coverage ──
@@ -425,7 +457,7 @@ export function computeContentScore(
 }
 
 /**
- * Per-slot breakdown for the editor's "What's missing" view. `missingPoints` is each slot's
+ * Per-slot breakdown for scoring / Auto-Optimize. `missingPoints` is each slot's
  * share of the final 0–100 score still available (max − earned, normalised by total possible).
  */
 export function computeContentScoreBreakdown(
@@ -446,6 +478,39 @@ export function computeContentScoreBreakdown(
       totalPossible,
       slots: slots.map((s) => ({ ...s, missingPoints: Math.round((s.max - s.earned) * scale) })),
    };
+}
+
+/** Actionable SEO score gaps for Auto-Optimize prompts (panel UI no longer lists these). */
+export function buildWhatsMissingOptimizeGuidance(opts: {
+   html: string;
+   scoreData: ScoreData;
+   keyword?: string;
+   coverageItems?: readonly CoverageItem[];
+}): string {
+   const plainText = opts.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+   const words = plainText ? plainText.split(/\s+/).length : 0;
+   const headings = (opts.html.match(/<h[1-6][\s>]/gi) || []).length;
+   const paragraphs = (opts.html.match(/<p[\s>]/gi) || []).length;
+   const { slots } = computeContentScoreBreakdown(
+      plainText,
+      words,
+      headings,
+      opts.scoreData,
+      paragraphs,
+      opts.html,
+      opts.keyword,
+      undefined,
+      opts.coverageItems,
+   );
+   const gaps = slots
+      .filter((s) => s.missingPoints > 0)
+      .sort((a, b) => b.missingPoints - a.missingPoints)
+      .slice(0, 10);
+   if (!gaps.length) return '';
+   return (
+      "WHAT'S MISSING (close these SEO score gaps — highest points first):\n"
+      + gaps.map((g) => `- +${g.missingPoints} pts — ${g.label}: ${g.hint}`).join('\n')
+   );
 }
 
 export function scoreToColor(score: number): string {

@@ -48,7 +48,7 @@ export function buildFaqSectionPrompt(opts: {
 RULES:
 - Start with <h2>${heading}</h2>
 - For EACH question below: one <h3> with the exact question text, then one <p> answer
-- Each <p> answer: 100–200 characters of plain text (NOT words). Be factual and concise.
+- Each <p> answer: 120–350 characters of plain text. Be factual and concise; do not invent fake Q&A stubs.
 - Do NOT wrap in markdown fences. No commentary outside HTML.
 - Match the article language (${opts.language}).
 - Answer ALL ${opts.questions.length} questions — none may be skipped.`;

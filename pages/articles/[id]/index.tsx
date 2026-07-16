@@ -23,6 +23,7 @@ import OptimizeCancelModal from '../../../components/articles/OptimizeCancelModa
 import OptimizeSaveModal from '../../../components/articles/OptimizeSaveModal';
 import OptimizeSavedBanner from '../../../components/articles/OptimizeSavedBanner';
 import { computeOptimizeLiveSnapshot } from '../../../lib/computeLiveArticleScores';
+import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { liveCoverageItems, scoreDeltaGate } from '../../../lib/liveCoverage';
 import { computeCoverageScores } from '../../../lib/aiCoverage';
 import { filterSyntheticCitationTemplates } from '../../../lib/citationPrompts';
@@ -960,27 +961,19 @@ const ArticleEditorPage: NextPage = () => {
   // recomputes when its actual input changes (was running on every keystroke).
   const internalLinksCount = useMemo(() => (editorHtml.match(/<a\s[^>]*href=/gi) || []).length, [editorHtml]);
 
-  /** Main centre gauge — same formula as ContentScorePanel (not seo_score). */
+  /** Main centre gauge — same formula as AO live snapshot / Save. */
   const liveContentScore = useMemo(() => {
     if (!scoreData) return 0;
-    const paraCount = plainText.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
-    const updatedTerms = scoreData.terms?.map((t) => ({
-      ...t,
-      current_count: countOccurrences(plainText, t.term),
-    }));
-    return computeContentScore(
-      plainText,
-      wordCount,
-      headingCount,
-      { ...scoreData, terms: updatedTerms ?? scoreData.terms },
-      paraCount,
+    const keyword = article?.target_keyword || '';
+    return scoreArticleHtml({
+      html: editorHtml,
+      scoreData,
+      keyword,
+      coverageItems: filterSyntheticCitationTemplates(coverageItems, keyword),
+      answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
       internalLinksCount,
-      editorHtml,
-      article?.target_keyword || '',
-      undefined,
-      coverageItems,
-    );
-  }, [plainText, wordCount, headingCount, scoreData, internalLinksCount, editorHtml, article?.target_keyword, coverageItems]);
+    }).seo;
+  }, [editorHtml, scoreData, article?.target_keyword, coverageItems, coverageSnapshot, internalLinksCount]);
 
   // Live AI Search checklist + score — re-derive covered/overall from editor text.
   // Without this, emptied articles kept frozen snap.overall (e.g. 34) and "Covered" flags.
@@ -990,15 +983,25 @@ const ArticleEditorPage: NextPage = () => {
     if (!baseItems.length) {
       return { items: baseItems, buckets: coverageBuckets, overall: null as number | null };
     }
-    const liveItems = [...liveCoverageItems(baseItems, plainText, editorHtml)];
+    const scored = scoreArticleHtml({
+      html: editorHtml,
+      scoreData: scoreData || {
+        terms: [], words_target: 1, words_min: 1, words_max: 1,
+        headings_target: 1, headings_min: 1, headings_max: 1,
+      },
+      keyword,
+      coverageItems: baseItems,
+      answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+    });
     const { overall, buckets } = computeCoverageScores(
-      liveItems,
+      scored.liveItems,
       !!coverageSnapshot?.answersMainQuestionEarly,
     );
-    return { items: liveItems, buckets, overall };
-  }, [coverageItems, plainText, editorHtml, coverageBuckets, coverageSnapshot, article?.target_keyword]);
+    return { items: scored.liveItems, buckets, overall };
+  }, [coverageItems, editorHtml, coverageBuckets, coverageSnapshot, article?.target_keyword, scoreData]);
 
   // AO-8b: unified live scores during Auto-Optimize — one synchronous pass keeps SEO, AI, and overall aligned.
+  // Gate overlays until the editor actually differs from the pre-run HTML (no fake ↑ before edits).
   const aoLiveSnapshot = useMemo(() => {
     if (optimizeState === 'idle' || !scoreData) return null;
     const keyword = article?.target_keyword || '';
@@ -1011,6 +1014,9 @@ const ArticleEditorPage: NextPage = () => {
       substitutePlaceholders: substituteOptimizerPlaceholders,
     });
   }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, coverageSnapshot, optimizeDocTick]);
+
+  const aoScoresReady = optimizeState === 'reviewing'
+    || (optimizeState === 'optimizing' && editorHtml !== preReviewHtmlRef.current && optimizeProgress.processed > 0);
 
   // Floating "Optimization Impact +N" chip — side effect only; scores come from aoLiveSnapshot.
   const [aoFloat, setAoFloat] = useState<{ key: number; label: string } | null>(null);
@@ -1029,7 +1035,7 @@ const ArticleEditorPage: NextPage = () => {
   const attributionBeforeRef = useRef<BucketScore[]>([]);
 
   useEffect(() => {
-    if (optimizeState === 'idle' || !aoLiveSnapshot) return undefined;
+    if (!aoScoresReady || optimizeState === 'idle' || !aoLiveSnapshot) return undefined;
     const tickDelta = Math.round(aoLiveSnapshot.ai) - Math.round(prevAiRef.current);
     prevAiRef.current = aoLiveSnapshot.ai;
     if ((optimizeState === 'optimizing' || optimizeState === 'reviewing') && tickDelta > 0) {
@@ -1037,7 +1043,7 @@ const ArticleEditorPage: NextPage = () => {
       setAoFloat({ key: floatSeqRef.current, label: `Optimization Impact +${tickDelta}` });
     }
     return undefined;
-  }, [aoLiveSnapshot, optimizeState]);
+  }, [aoLiveSnapshot, optimizeState, aoScoresReady]);
 
   const initialPlagiarism = useMemo(() => parseJsonish<PlagiarismResult>(article?.plagiarism_json), [article?.plagiarism_json]);
   const initialAiReadability = useMemo(() => parseJsonish<AiReadabilityResult>(article?.ai_readability_json), [article?.ai_readability_json]);
@@ -1073,32 +1079,31 @@ const ArticleEditorPage: NextPage = () => {
     if (!id) return false;
     const html = contentOverride?.html ?? editorHtml;
     const text = contentOverride?.text ?? plainText;
-    const words = contentOverride?.words ?? wordCount;
-    const headings = contentOverride?.headings ?? headingCount;
-    const paragraphs = contentOverride?.paragraphs ?? paragraphCount;
     // Update current_count for each term + store computed score so list view stays in sync
     const updatedTerms = scoreData.terms.map((t) => ({
       ...t,
       current_count: countOccurrences(text, t.term),
     }));
+    const keyword = article?.target_keyword || '';
+    const scored = scoreArticleHtml({
+      html,
+      scoreData: { ...scoreData, terms: updatedTerms },
+      keyword,
+      coverageItems: filterSyntheticCitationTemplates(coverageItems, keyword),
+      answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+    });
     const updatedScoreData: ScoreData & { _heading_count?: number; _paragraph_count?: number; _computed_score?: number; _content_score?: number; _ao_meta?: { changes: number; promptVersion: string; creditDeducted: boolean } } = {
       ...scoreData,
       terms: updatedTerms,
-      _heading_count: headings,
-      _paragraph_count: paragraphs,
+      _heading_count: scored.headings,
+      _paragraph_count: scored.paragraphs,
     };
-    const contentScore = computeContentScore(
-      text, words, headings,
-      { ...updatedScoreData },
-      paragraphs,
-      (html.match(/<a\s[^>]*href=/gi) || []).length,
-      html,
-      article?.target_keyword || '',
-      undefined,
-      coverageItems,
-    );
+    const contentScore = scored.seo;
     updatedScoreData._computed_score = contentScore;
     updatedScoreData._content_score = contentScore;
+    if (scored.liveItems.length > 0 || scoreData.ai_score != null) {
+      updatedScoreData.ai_score = scored.ai;
+    }
     if (versionMeta) updatedScoreData._ao_meta = versionMeta;
 
     // Persist internal links panel state from localStorage
@@ -1114,7 +1119,7 @@ const ArticleEditorPage: NextPage = () => {
       ...(opts?.keepalive ? { keepalive: true } : {}), // only on unload (best-effort, <64KB body cap)
       body: JSON.stringify({
         content: html,
-        word_count: words,
+        word_count: scored.words,
         score_data: updatedScoreData,
         featured_image: featuredImage?.url ?? null,
         target_keyword: article?.target_keyword,
@@ -1126,6 +1131,13 @@ const ArticleEditorPage: NextPage = () => {
       }),
     });
     if (!res.ok) throw new Error('Save failed');
+    setScoreData(updatedScoreData);
+    setArticle((prev) => (prev ? {
+      ...prev,
+      content_score: contentScore,
+      score_data: JSON.stringify(updatedScoreData),
+      word_count: scored.words,
+    } : prev));
     return true;
   };
 
@@ -1441,26 +1453,36 @@ const ArticleEditorPage: NextPage = () => {
     if (!editor) return;
     const preHtml: string = editor.getHTML();
     preReviewHtmlRef.current = preHtml;
-    // AO-8b: snapshot the pre-optimize content score — baseline for the results gauge + ScoreTrio deltas.
-    const preText = preHtml.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim();
-    const preParaCount = (preHtml.match(/<p[\s>]/gi) || []).length;
-    preScoreRef.current = scoreData
-      ? computeContentScore(preText, wordCount, headingCount, scoreData, preParaCount, (preHtml.match(/<a\s[^>]*href=/gi) || []).length, preHtml, article?.target_keyword || '', undefined, coverageItems)
+    // AO-8b: snapshot the pre-optimize scores with the SAME formula as live gauges / Save.
+    const keyword = article?.target_keyword || '';
+    const preScored = scoreData
+      ? scoreArticleHtml({
+        html: preHtml,
+        scoreData,
+        keyword,
+        coverageItems: filterSyntheticCitationTemplates(coverageItems, keyword),
+        answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
+      })
+      : null;
+    preScoreRef.current = preScored?.seo ?? 0;
+    const hasAiBaseline = (preScored?.liveItems.length ?? 0) > 0
+      || aiCoverageScore != null
+      || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0)
+      || (scoreData?.ai_score != null);
+    preContentScoreRef.current = preScored
+      ? (hasAiBaseline ? preScored.overall : preScored.seo)
       : 0;
-    const preAiBase = aiCoverageScore ?? scoreData?.ai_score ?? 0;
-    const hasAiBaseline = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || (scoreData?.ai_score != null);
-    preContentScoreRef.current = hasAiBaseline
-      ? computeOverallContentScore(preScoreRef.current, preAiBase)
-      : preScoreRef.current;
     // Task 11: capture the run-start AI baseline (gates the "Optimization Impact" float) and the
     // run-start attribution "before" buckets (re-scored from the pre-optimize content so the first
     // Accept's attribution measures against a like-for-like baseline). Reset per-run float state.
-    aiVisibilityBaselineRef.current = coverageSnapshot?.overall ?? 0;
+    aiVisibilityBaselineRef.current = preScored?.ai ?? coverageSnapshot?.overall ?? 0;
     prevAiRef.current = aiVisibilityBaselineRef.current;
-    attributionBeforeRef.current = computeCoverageScores(
-      liveCoverageItems(coverageItems, preText, preHtml),
-      coverageSnapshot?.answersMainQuestionEarly ?? false,
-    ).buckets;
+    attributionBeforeRef.current = preScored
+      ? computeCoverageScores(
+        preScored.liveItems,
+        coverageSnapshot?.answersMainQuestionEarly ?? false,
+      ).buckets
+      : [];
     setAoFloat(null);
     setActiveSectionId(null);
     setScanningSectionId(null);
@@ -1569,15 +1591,20 @@ const ArticleEditorPage: NextPage = () => {
           } else if (eventType === 'progress') {
             const p = payload as {
               round: number; processed?: number; seo: number; ai: number; content: number;
-              targetContent?: number; targetSeo?: number;
+              targetContent?: number; targetSeo?: number; changed?: number;
             };
             setOptimizeProgress((prev) => ({
               processed: p.processed ?? p.round,
               total: prev.total || p.round,
             }));
-            setAutoOptimizeStatus(
-              `Runda ${p.round} — SEO ${p.seo} · AI ${p.ai} · Content ${p.content}${p.targetContent != null ? ` / ${p.targetContent}` : ''}…`,
-            );
+            // Don't flash baseline scores before any HTML change — wait for a real edit.
+            if (p.changed) {
+              setAutoOptimizeStatus(
+                `Round ${p.round} — SEO ${p.seo} · AI ${p.ai}`,
+              );
+            } else {
+              setAutoOptimizeStatus(`Round ${p.round} — refining…`);
+            }
           } else if (eventType === 'done') {
             const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean; wholeArticle?: boolean };
             optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted, promptVersion: meta.promptVersion };
@@ -2330,7 +2357,7 @@ const ArticleEditorPage: NextPage = () => {
                       scoreData={scoreData}
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
-                      scoreDeltas={aoLiveSnapshot ? (() => {
+                      scoreDeltas={aoScoresReady && aoLiveSnapshot ? (() => {
                         const aiBase = aiVisibilityBaselineRef.current || (scoreData?.ai_score ?? 0);
                         const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
                         const seoDelta = Math.max(0, aoLiveSnapshot.seo - preScoreRef.current);
@@ -2342,7 +2369,7 @@ const ArticleEditorPage: NextPage = () => {
                           ai: hasAi && aiDelta > 0 ? aiDelta : undefined,
                         };
                       })() : undefined}
-                      optimizeLiveScores={aoLiveSnapshot ? {
+                      optimizeLiveScores={aoScoresReady && aoLiveSnapshot ? {
                         seo: aoLiveSnapshot.seo,
                         ai: aoLiveSnapshot.ai,
                         overall: aoLiveSnapshot.overall,

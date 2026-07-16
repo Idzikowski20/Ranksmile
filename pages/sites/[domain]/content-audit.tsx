@@ -19,6 +19,7 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 import { kwScore } from '../../../utils/gsc';
 import AddPagesModal, { AvailablePage } from '../../../components/domains/AddPagesModal';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
+import { computePortfolioPruning } from '../../../lib/contentEffort';
 
 // Normalize a full URL or path down to its pathname (e.g. "https://x.pl/blog/" -> "/blog").
 function toPath(url: string): string {
@@ -311,6 +312,19 @@ const ContentAuditPage: NextPage = () => {
       return out;
    }, [rows, search, sortKey, sortDir]);
 
+   const portfolioInsight = useMemo(
+      () => computePortfolioPruning(rows.map((r) => ({
+         id: r.id,
+         title: r.title,
+         url: r.url,
+         content_score: r.content_score,
+         clicks: r.clicks,
+         impressions: r.impressions,
+         created_at: r.created_at,
+      }))),
+      [rows],
+   );
+
    const toggleSelect = (id: string | number) => {
       setSelected((prev) => {
          const n = new Set(prev);
@@ -375,6 +389,61 @@ const ContentAuditPage: NextPage = () => {
                </ToolRibbon>
             )}
          >
+            {(portfolioInsight.warning || portfolioInsight.pruneCandidates.length > 0) && (
+               <div style={{
+                  marginBottom: 16,
+                  padding: 16,
+                  borderRadius: 8,
+                  border: '1px solid #dad9de',
+                  background: '#fff',
+                  fontFamily: FONT,
+               }}
+               >
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                     <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>Portfolio quality</span>
+                     <span style={{ fontSize: 12, color: '#71717B' }}>
+                        avg score {portfolioInsight.avgScore}
+                        {portfolioInsight.scoreStdDev > 0 ? ` · spread ±${portfolioInsight.scoreStdDev}` : ''}
+                     </span>
+                  </div>
+                  {portfolioInsight.warning && (
+                     <p style={{ margin: '0 0 10px', fontSize: 13, color: '#B45309', lineHeight: 1.45 }}>
+                        {portfolioInsight.warning}
+                     </p>
+                  )}
+                  {portfolioInsight.pruneCandidates.length > 0 && (
+                     <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#52525C', marginBottom: 6 }}>
+                           Prune / rewrite candidates ({portfolioInsight.pruneCandidates.length})
+                        </div>
+                        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                           {portfolioInsight.pruneCandidates.slice(0, 8).map((c) => (
+                              <li key={String(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                                 <span style={{
+                                    flexShrink: 0,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    padding: '2px 7px',
+                                    borderRadius: 9999,
+                                    background: c.severity === 'high' ? '#FEF2F2' : '#FFFBEB',
+                                    color: c.severity === 'high' ? '#B91C1C' : '#B45309',
+                                 }}
+                                 >
+                                    {c.severity === 'high' ? 'Prune' : 'Rewrite'}
+                                 </span>
+                                 <Link href={`/articles/${c.id}`} style={{ color: '#18181B', fontWeight: 500, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {c.title || c.url}
+                                 </Link>
+                                 <span style={{ marginLeft: 'auto', flexShrink: 0, color: '#9F9FA9', fontVariantNumeric: 'tabular-nums' }}>
+                                    score {c.content_score} · {c.clicks} clicks
+                                 </span>
+                              </li>
+                           ))}
+                        </ul>
+                     </div>
+                  )}
+               </div>
+            )}
             <SentryPanel noPadding>
             <div ref={rowsRef} style={{ overflow: 'hidden' }}>
                {/* Header */}

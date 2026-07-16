@@ -186,7 +186,7 @@ export function ArticleEditorSidebar({
             scoreData={scoreData}
             internalLinksCount={internalLinksCount}
             html={editorHtml}
-            scoreDeltas={aoLiveSnapshot ? (() => {
+            scoreDeltas={optimizeState === 'reviewing' && aoLiveSnapshot ? (() => {
               const aiBase = aiVisibilityBaselineRef.current || (scoreData?.ai_score ?? 0);
               const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
               const seoDelta = Math.max(0, aoLiveSnapshot.seo - preScoreRef.current);
@@ -198,7 +198,7 @@ export function ArticleEditorSidebar({
                 ai: hasAi && aiDelta > 0 ? aiDelta : undefined,
               };
             })() : undefined}
-            optimizeLiveScores={aoLiveSnapshot ? {
+            optimizeLiveScores={optimizeState === 'reviewing' && aoLiveSnapshot ? {
               seo: aoLiveSnapshot.seo,
               ai: aoLiveSnapshot.ai,
               overall: aoLiveSnapshot.overall,
