@@ -83,6 +83,8 @@ interface Article {
   publish_target: string | null;
   publish_url: string | null;
   competitor_outlines_cache: string | null;
+  internal_links_cache?: string | null;
+  ai_info_to_cover?: string | null;
   ai_visibility_summary?: AiVisibilitySummary | null;
   language?: string;
   created_at?: string;
