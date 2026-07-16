@@ -416,6 +416,7 @@ async def social_posts_endpoint(body: dict):
 class PipelineRequest(BaseModel):
     jobId: str
     payload: dict  # { url, keyword, language, tone, existing_articles }
+    nextjsUrl: str = ""
 
 
 class DomainSetupRequest(BaseModel):
@@ -487,8 +488,8 @@ async def pipeline_deep_analysis(req: PipelineRequest):
     """
     from pipeline.runner import PipelineRunner
 
-    nextjs_url = resolved_nextjs_url()
-    print(f"[pipeline] Starting deep analysis for job {req.jobId}")
+    nextjs_url = (req.nextjsUrl or "").strip() or resolved_nextjs_url()
+    print(f"[pipeline] Starting deep analysis for job {req.jobId} (nextjs={nextjs_url})")
 
     ctx = PipelineRunner.build_deep_analysis_ctx(
         req.jobId, req.payload, nextjs_url
