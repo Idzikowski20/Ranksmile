@@ -16,7 +16,6 @@
     "test:ci": "jest --ci",
     "analyze": "cross-env ANALYZE=true next build",
     "budget": "node scripts/check-bundle-budget.mjs",
-    "digitx:assets": "node scripts/download-digitx-assets.mjs",
     "test:cv": "jest --coverage --coverageDirectory='coverage'",
     "db:migrate": "sequelize-cli db:migrate --env production",
     "db:revert": "sequelize-cli db:migrate:undo --env production",
