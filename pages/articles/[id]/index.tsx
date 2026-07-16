@@ -57,12 +57,7 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import type { PlagiarismResult } from '../../../components/articles/PlagiarismPanel';
 import type { AiReadabilityResult } from '../../../components/articles/PrePublishPanel';
 import { parseJsonish } from '../../../lib/types/json';
-import dynamic from 'next/dynamic';
-
-const ArticleEditor = dynamic(() => import('../../../components/articles/ArticleEditor'), {
-  ssr: false,
-  loading: () => <EditorLoading message="Loading editor…" />,
-});
+import ArticleEditor from '../../../components/articles/ArticleEditorClient';
 import type { HeadingItem } from '../../../components/articles/ArticleEditor';
 
 interface Article {
@@ -771,11 +766,13 @@ const ArticleEditorPage: NextPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || Array.isArray(id)) return undefined;
+    let cancelled = false;
     setIsLoading(true);
     fetch(`/api/articles/${id}`)
       .then((r) => r.json())
       .then(async (data) => {
+        if (cancelled) return;
         // Unfinished New-Content wizard (draft has saved state, no body yet) → resume.
         if (data.article?.wizard_state && !(data.article.content || '').trim()) {
           try {
@@ -789,6 +786,7 @@ const ArticleEditorPage: NextPage = () => {
           let art = data.article as Article;
           if (art.status === 'analyzing') {
             const reconciled = await reconcileAnalyzingArticle(art);
+            if (cancelled) return;
             if (reconciled.status !== art.status) {
               art = reconciled;
               fetch(`/api/articles/${id}`, {
@@ -866,33 +864,41 @@ const ArticleEditorPage: NextPage = () => {
               } catch { /* fetch below */ }
             }
             if (!hasCache) {
-              try {
-                const compRes = await fetch('/api/articles/competitor-outlines', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    keyword: art.target_keyword,
-                    language: art.language || 'pl',
-                    num: 5,
-                    articleId: art.id,
-                  }),
-                });
-                const compData = await compRes.json();
-                if (compData.competitors?.length) {
-                  setArticle((prev) => prev ? {
-                    ...prev,
-                    competitor_outlines_cache: JSON.stringify(compData.competitors),
-                  } : prev);
-                }
-              } catch { /* non-fatal */ }
+              void fetch('/api/articles/competitor-outlines', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  keyword: art.target_keyword,
+                  language: art.language || 'pl',
+                  num: 5,
+                  articleId: art.id,
+                }),
+              })
+                .then((compRes) => compRes.json())
+                .then((compData: { competitors?: unknown[] }) => {
+                  if (compData.competitors?.length) {
+                    setArticle((prev) => (prev ? {
+                      ...prev,
+                      competitor_outlines_cache: JSON.stringify(compData.competitors),
+                    } : prev));
+                  }
+                })
+                .catch(() => {});
             }
           }
         }
       }
       )
-      .catch(() => toast.error('Failed to load article'))
-      .finally(() => setIsLoading(false));
-  }, [id, analysisReloadKey, router]);
+      .catch(() => {
+        if (!cancelled) toast.error('Failed to load article');
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => { cancelled = true; };
+    // router.replace is stable enough to omit — including `router` re-runs this effect
+    // and remounts the TipTap loader on every route object identity change.
+  }, [id, analysisReloadKey]);
 
   useEffect(() => {
     if (!actionsMenu && !voiceOpen && !shareOpen) return undefined;
