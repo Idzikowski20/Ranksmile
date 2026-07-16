@@ -105,7 +105,7 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
     return result
 
 
-async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: str) -> list[dict]:
+async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: str) -> tuple[list[dict], list[str]]:
     lang_to_gl = {
         "pl": "pl", "en": "us", "de": "de", "fr": "fr",
         "es": "es", "it": "it", "nl": "nl", "pt": "pt",
@@ -116,20 +116,42 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         "en": "-price -buy -shop -amazon -ebay -etsy -walmart -order -shipping -tracking",
         "de": "-preis -kaufen -shop -amazon -ebay -bestellung -versand",
     }
-    query = f"{keyword} {negatives_by_lang.get(language, negatives_by_lang['en'])}"
+    negatives = negatives_by_lang.get(language, negatives_by_lang["en"])
 
-    try:
+    async def _serper_search(query: str) -> dict:
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 "https://google.serper.dev/search",
                 headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
                 json={"q": query, "hl": language, "gl": gl, "num": num + 5},
             )
-            response.raise_for_status()
-            data = response.json()
+            if response.status_code >= 400:
+                print(
+                    f"[serp_analyzer] serper.dev HTTP {response.status_code}: "
+                    f"{response.text[:300]}"
+                )
+                response.raise_for_status()
+            return response.json()
+
+    try:
+        data = await _serper_search(f"{keyword} {negatives}")
     except Exception as exc:
         print(f"[serp_analyzer] serper.dev error: {exc}")
-        return []
+        return [], []
+
+    organic = data.get("organic") or []
+    if not organic:
+        # Negatives sometimes over-filter; retry the bare keyword once.
+        print(
+            f"[serp_analyzer] empty organic for {keyword!r} (gl={gl} hl={language}) — "
+            f"retrying without negatives; keys={list(data.keys())}"
+        )
+        try:
+            data = await _serper_search(keyword)
+            organic = data.get("organic") or []
+        except Exception as exc:
+            print(f"[serp_analyzer] serper.dev retry error: {exc}")
+            return [], []
 
     blocked_domains = {
         "allegro.pl", "olx.pl", "amazon.com", "amazon.de", "ebay.com", "etsy.com",
@@ -138,7 +160,7 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
     }
 
     results = []
-    for item in data.get("organic", []):
+    for item in organic:
         link = item.get("link", "")
         if not link:
             continue
@@ -157,6 +179,12 @@ async def _fetch_serp_results(keyword: str, language: str, num: int, api_key: st
         for item in data.get("peopleAlsoAsk", [])
         if item.get("question")
     ][:8]
+
+    if not results:
+        print(
+            f"[serp_analyzer] No usable organic after filters for {keyword!r} "
+            f"(raw organic={len(organic)}, gl={gl})"
+        )
 
     return results[:num], paa_questions
 

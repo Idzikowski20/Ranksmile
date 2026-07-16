@@ -37,7 +37,7 @@ import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPa
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
-import { sidecarBase } from '../../../lib/sidecar';
+import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById, firstAccessibleDomainId } from '../../../utils/verifyDomainOwnership';
@@ -429,7 +429,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sidecarResp = await fetch(`${sidecarUrl}/pipeline/deep-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_PIPELINE_TOKEN || '' },
-        body: JSON.stringify({ jobId, payload }),
+        body: JSON.stringify({ jobId, payload, nextjsUrl: nextjsUrl() }),
         signal: controller.signal,
       });
     } finally {
