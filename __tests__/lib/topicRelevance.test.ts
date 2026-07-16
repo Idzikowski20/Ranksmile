@@ -61,4 +61,38 @@ describe('filterNlpTermsForAnalysis', () => {
     expect(out.map((t) => t.term)).not.toContain('test z lektury pan tadeusz');
     expect(out.map((t) => t.term)).toContain('oznaki zdrady partnera');
   });
+
+  it('keeps Polish inflections and related SERP competitor terms for hybrid-war keyword', () => {
+    const seed = 'wojna hybrydowa w polsce';
+    const terms = [
+      { term: 'wojna hybrydowa' },
+      { term: 'konflikt hybrydowy' },
+      { term: 'wojny hybrydowej' },
+      { term: 'dzialania hybrydowe' },
+      { term: 'dezinformacja' },
+      { term: 'cyberataki' },
+      { term: 'bezpieczenstwo panstwa' },
+      { term: 'granica polsko bialoruska' },
+      { term: 'test z lektury pan tadeusz' },
+    ];
+    const out = filterNlpTermsForAnalysis(terms, seed);
+    const labels = out.map((t) => t.term);
+    expect(labels).toContain('wojna hybrydowa');
+    expect(labels).toContain('konflikt hybrydowy');
+    expect(labels).toContain('wojny hybrydowej');
+    expect(labels).toContain('dzialania hybrydowe');
+    expect(labels).toContain('dezinformacja');
+    expect(labels).toContain('bezpieczenstwo panstwa');
+    expect(labels).not.toContain('test z lektury pan tadeusz');
+    expect(out.length).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('isKeywordOnTopic Polish stems', () => {
+  it('matches hybrydowa / hybrydowy / hybrydowej inflection family', () => {
+    const seed = 'wojna hybrydowa w polsce';
+    expect(isKeywordOnTopic('konflikt hybrydowy', seed)).toBe(true);
+    expect(isKeywordOnTopic('wojny hybrydowej', seed)).toBe(true);
+    expect(isKeywordOnTopic('dzialania hybrydowe', seed)).toBe(true);
+  });
 });

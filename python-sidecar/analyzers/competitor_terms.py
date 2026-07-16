@@ -46,11 +46,12 @@ def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
     n_docs = len(texts)
     normalized_texts = [normalize_text(text) for text in texts]
 
-    min_df = max(2, int(n_docs * 0.3))
+    # Short SERP-snippet corpora need min_df=1 or TF-IDF returns almost nothing.
+    min_df = 1 if n_docs <= 5 else max(2, int(n_docs * 0.25))
     try:
         vectorizer = TfidfVectorizer(
             ngram_range=(1, 3),
-            max_features=300,
+            max_features=400,
             stop_words=list(POLISH_STOPWORDS),
             min_df=min_df,
             token_pattern=r"(?u)\b[a-z0-9][a-z0-9-]{2,}\b",
