@@ -1,4 +1,4 @@
-// Client Sentry bootstrap — loaded off the critical path (see scheduleSentryInit below).
+// Client Sentry bootstrap — disabled for now (set SENTRY_ENABLED=true to re-enable).
 
 type RouterTransitionHandler = typeof import('@sentry/nextjs').captureRouterTransitionStart;
 
@@ -6,6 +6,7 @@ let routerTransitionStart: RouterTransitionHandler | undefined;
 
 function scheduleSentryInit() {
   if (typeof window === 'undefined') return;
+  if (process.env.NEXT_PUBLIC_SENTRY_ENABLED !== 'true') return;
   const run = () => {
     void import('./sentry-client-init').then((mod) => {
       routerTransitionStart = mod.onRouterTransitionStart;

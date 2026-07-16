@@ -78,54 +78,60 @@ const nextConfig = {
 
 module.exports = nextConfig;
 
+// Sentry temporarily disabled — re-enable by setting SENTRY_ENABLED=true and
+// restoring withSentryConfig wrapping below.
+const SENTRY_ENABLED = process.env.SENTRY_ENABLED === 'true';
 
-// Injected content via Sentry wizard below
+if (SENTRY_ENABLED) {
+  // Injected content via Sentry wizard below
+  const { withSentryConfig } = require('@sentry/nextjs');
 
-const { withSentryConfig } = require("@sentry/nextjs");
+  const sentryWrapped = withSentryConfig(module.exports, {
+    // For all available options, see:
+    // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-const sentryWrapped = withSentryConfig(module.exports, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+    org: 'selmi',
+    project: 'serpbear',
 
-  org: "selmi",
-  project: "serpbear",
+    // Only print logs for uploading source maps in CI
+    silent: !process.env.CI,
 
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+    // For all available options, see:
+    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+    // Upload a larger set of source maps for prettier stack traces (increases build time)
+    widenClientFileUpload: true,
 
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
+    // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+    // This can increase your server load as well as your hosting bill.
+    // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+    // side errors will fail.
+    tunnelRoute: '/monitoring',
 
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
+    webpack: {
+      // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+      // See the following for more information:
+      // https://docs.sentry.io/product/crons/
+      // https://vercel.com/docs/cron-jobs
+      automaticVercelMonitors: true,
 
-  webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
+      // Tree-shaking options for reducing bundle size
+      treeshake: {
+        // Automatically tree-shake Sentry logger statements to reduce bundle size
+        removeDebugLogging: true,
+      },
     },
-  },
-});
+  });
 
-// @sentry/nextjs targets Next 13+ and injects `experimental.instrumentationHook` +
-// `experimental.serverComponentsExternalPackages`, which Next 12.3.4 doesn't recognise
-// (harmless "Invalid next.config.js options" warning on every boot). Strip them.
-if (sentryWrapped.experimental) {
-  delete sentryWrapped.experimental.instrumentationHook;
-  delete sentryWrapped.experimental.serverComponentsExternalPackages;
+  // @sentry/nextjs targets Next 13+ and injects `experimental.instrumentationHook` +
+  // `experimental.serverComponentsExternalPackages`, which Next 12.3.4 doesn't recognise
+  // (harmless "Invalid next.config.js options" warning on every boot). Strip them.
+  if (sentryWrapped.experimental) {
+    delete sentryWrapped.experimental.instrumentationHook;
+    delete sentryWrapped.experimental.serverComponentsExternalPackages;
+  }
+
+  module.exports = withBundleAnalyzer(sentryWrapped);
+} else {
+  module.exports = withBundleAnalyzer(nextConfig);
 }
-
-module.exports = withBundleAnalyzer(sentryWrapped);
