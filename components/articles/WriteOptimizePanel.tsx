@@ -377,7 +377,7 @@ type AiSort = 'missing' | 'alpha';
 
 const WriteOptimizePanel = ({
   terms, wordCount, headingCount, paragraphCount, wordsRange, headingsRange, parasRange, aiSummary,
-  seo, ai, content, hasAi, coverageItems, competitorOutlinesCache,
+  seo, ai, content, hasAi, coverageItems, coverageSnapshot, competitorOutlinesCache,
   html, keyword, paaQuestions,
   onBack, highlightTerms, onHighlightTermsChange,
   initialSection, scoreDeltas,
@@ -451,8 +451,9 @@ const WriteOptimizePanel = ({
       aiSummary,
       coverageItems,
       competitorOutlinesCache,
+      snapshotTopics: coverageSnapshot?.topics,
     }),
-    [aiSummary, coverageItems, competitorOutlinesCache],
+    [aiSummary, coverageItems, competitorOutlinesCache, coverageSnapshot?.topics],
   );
   const hasTopicAccordions = infoTopics.intent.length > 0 || infoTopics.topics.some((t) => t.facts.length > 0);
 

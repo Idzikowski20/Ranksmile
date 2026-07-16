@@ -29,11 +29,11 @@ export function calibrateTermRangesFromCorpus(terms: NlpTerm[], corpusTexts: str
   });
 }
 
-/** Drop stopwords / trivial unigrams; dedupe by normalized form; prefer multi-word phrases. */
+/** Drop stopwords / trivial unigrams; dedupe by match key; keep display orthography. */
 export function filterUsefulNlpTerms(terms: NlpTerm[]): NlpTerm[] {
-  const seen = new Set<string>();
+  const best = new Map<string, NlpTerm>();
   const scored = terms
-    .map((t) => ({ ...t, term: normalizeTerm(t.term) }))
+    .map((t) => ({ ...t, term: (t.term || '').trim() }))
     .filter((t) => t.term && isUsefulTerm(t.term))
     .sort((a, b) => {
       const salDiff = (b.salience ?? Math.round((b.relevance ?? 0) * 100)) - (a.salience ?? Math.round((a.relevance ?? 0) * 100));
@@ -44,13 +44,21 @@ export function filterUsefulNlpTerms(terms: NlpTerm[]): NlpTerm[] {
       return (b.doc_freq ?? 0) - (a.doc_freq ?? 0);
     });
 
-  const out: NlpTerm[] = [];
   for (const t of scored) {
-    if (seen.has(t.term)) continue;
-    seen.add(t.term);
-    out.push(t);
+    const key = normalizeTerm(t.term);
+    const prev = best.get(key);
+    if (!prev) {
+      best.set(key, t);
+      continue;
+    }
+    const prevDiacritics = /[ąćęłńóśźż]/i.test(prev.term);
+    const nextDiacritics = /[ąćęłńóśźż]/i.test(t.term);
+    if (nextDiacritics && !prevDiacritics) best.set(key, { ...prev, ...t, term: t.term });
+    else if (!prevDiacritics && !nextDiacritics && t.term.length > prev.term.length) {
+      best.set(key, { ...prev, ...t, term: t.term });
+    }
   }
-  return out;
+  return [...best.values()];
 }
 
 /** True when the list is mostly stopwords, unigrams, or too thin for Surfer-style scoring. */

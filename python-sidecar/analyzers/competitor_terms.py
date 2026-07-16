@@ -22,8 +22,17 @@ GENERIC_TERMS = {
 
 
 def normalize_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFD", text.lower())
+    """ASCII-fold for TF-IDF matching. Map Polish diacritics (incl. ł→l) before stripping."""
+    pl_map = str.maketrans({
+        "ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n",
+        "ó": "o", "ś": "s", "ź": "z", "ż": "z",
+        "Ą": "a", "Ć": "c", "Ę": "e", "Ł": "l", "Ń": "n",
+        "Ó": "o", "Ś": "s", "Ź": "z", "Ż": "z",
+    })
+    normalized = (text or "").lower().translate(pl_map)
+    normalized = unicodedata.normalize("NFD", normalized)
     normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+    normalized = re.sub(r"[^a-z0-9\s-]", " ", normalized)
     return re.sub(r"\s+", " ", normalized).strip()
 
 

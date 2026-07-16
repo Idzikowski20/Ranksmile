@@ -108,6 +108,27 @@ function judgeMeta(): { judgeVersion: string; promptVersion: string; model: stri
   };
 }
 
+/** Map harvested topic titles → coverage item ids after curation. */
+export function mapHarvestTopicsToItemIds(
+  harvestTopics: Array<{ title: string; questions: Array<{ question: string }> }>,
+  items: readonly CoverageItem[],
+): CoverageSnapshot['topics'] {
+  const byLabel = new Map<string, string>();
+  for (const it of items) {
+    byLabel.set(normalizeTerm(it.label), it.id);
+  }
+  const out: NonNullable<CoverageSnapshot['topics']> = [];
+  for (const topic of harvestTopics) {
+    const itemIds: string[] = [];
+    for (const q of topic.questions) {
+      const id = byLabel.get(normalizeTerm(q.question));
+      if (id && !itemIds.includes(id)) itemIds.push(id);
+    }
+    if (itemIds.length) out.push({ title: topic.title, itemIds });
+  }
+  return out.length ? out : undefined;
+}
+
 /** Deep-analysis path: curate → judge → buildSnapshot. */
 export async function buildGradedCoverageSnapshot(opts: {
   keyword: string;
@@ -116,6 +137,8 @@ export async function buildGradedCoverageSnapshot(opts: {
   paaQuestions?: PaaQuestion[];
   llmQuestions?: Array<{ question: string; sources: import('./aiCoverage').LlmCoverageSource[] }>;
   languageCode?: string;
+  /** Optional harvested topic buckets (titles + questions) for snapshot.topics */
+  harvestTopics?: Array<{ title: string; questions: Array<{ question: string }> }>;
 }): Promise<{ snapshot: CoverageSnapshot; introTokens: number; judgeTokens: number }> {
   const introPlain = introPlainTextFromHtml(opts.html, opts.plainText);
   const { items, answersMainQuestionEarly } = await assembleCoverageItems({
@@ -127,7 +150,10 @@ export async function buildGradedCoverageSnapshot(opts: {
   });
   const { result, judgeTokens } = await judgeCoverageItems(opts.plainText, items);
   result.answersMainQuestionEarly = answersMainQuestionEarly;
-  const snapshot = buildSnapshot(items, result, judgeMeta());
+  const topics = opts.harvestTopics?.length
+    ? mapHarvestTopicsToItemIds(opts.harvestTopics, items)
+    : undefined;
+  const snapshot = buildSnapshot(items, result, judgeMeta(), topics);
   return { snapshot, introTokens: 3000, judgeTokens };
 }
 

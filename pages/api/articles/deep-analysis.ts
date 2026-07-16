@@ -11,7 +11,7 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { computeContentScore, countOccurrences } from '../../../lib/contentScore';
 import { buildGradedCoverageSnapshot } from '../../../lib/buildCoverageSnapshot';
 import { dedupePaaQuestions } from '../../../lib/curateCoverageItems';
-import { fetchLlmCoverageQuestions } from '../../../lib/llmCoverageQuestions';
+import { harvestAiCoverage } from '../../../lib/harvestAiCoverage';
 import type { SerpAnalysis, SerpCompetitor, DeepAnalysisPipelineResult } from '../../../lib/types/sidecar';
 import { flushHeaders, flushSse } from '../../../lib/types/api';
 import type { NlpTerm, ScoreData } from '../../../lib/contentScore';
@@ -563,6 +563,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (await abortIfSuperseded(res, articleId, jobId)) return;
         await saveArticleKeywords(articleId, discovered.keywords, discovered.primaryKeyword, plainTextEarly);
       }
+      const userSeed = (pipelineKeywords[0] || keyword || '').trim();
       if (discovered.primaryKeyword) {
         if (await abortIfSuperseded(res, articleId, jobId)) return;
         resolvedKeyword = resolveAnalysisSeedKeyword({
@@ -570,10 +571,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           pageUrl: url,
           userKeywords: pipelineKeywords,
         });
-        await db.query(
-          `UPDATE articles SET target_keyword = ? WHERE ${articleIdSql} = ?`,
-          { replacements: [resolvedKeyword, articleId] },
-        );
+        // Sacred import keyword: never overwrite the user's main seed with discovery.
+        if (userSeed) {
+          resolvedKeyword = userSeed;
+          if (discovered.primaryKeyword.trim().toLowerCase() !== userSeed.toLowerCase()) {
+            console.log(
+              `[deep-analysis] keeping user target_keyword=${JSON.stringify(userSeed)} `
+              + `(discovery wanted ${JSON.stringify(discovered.primaryKeyword)})`,
+            );
+          }
+          // Heal DB if a previous run stored a truncated/discovery keyword.
+          await db.query(
+            `UPDATE articles SET target_keyword = ? WHERE ${articleIdSql} = ?`,
+            { replacements: [userSeed, articleId] },
+          );
+        } else {
+          await db.query(
+            `UPDATE articles SET target_keyword = ? WHERE ${articleIdSql} = ?`,
+            { replacements: [resolvedKeyword, articleId] },
+          );
+        }
       }
     } catch (err) {
       console.log('[deep-analysis] keyword discovery failed (non-fatal):', getErrorMessage(err));
@@ -915,18 +932,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           (scoreData.paa_questions ?? []).map((q) => ({ question: q })),
         );
 
-        let llmQuestions = await fetchLlmCoverageQuestions({
+        let outlinesCache: string | null = null;
+        if (cachedOutlinePayload) {
+          outlinesCache = JSON.stringify(cachedOutlinePayload);
+        } else {
+          try {
+            const outlineRows = await db.query<{ competitor_outlines_cache: string | null }>(
+              `SELECT competitor_outlines_cache FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+              { replacements: [articleId], type: QueryTypes.SELECT },
+            );
+            outlinesCache = outlineRows[0]?.competitor_outlines_cache ?? null;
+          } catch {
+            outlinesCache = null;
+          }
+        }
+
+        const harvest = await harvestAiCoverage({
           keyword: factKeyword,
           country,
           languageCode: finalArticleLanguage,
+          paaQuestions: paaFromSerp,
+          competitorOutlinesCache: outlinesCache,
         });
+        console.log(
+          `[coverage] harvest: unique=${harvest.stats.uniqueQuestions} topics=${harvest.stats.topicsAfterBudget}`
+          + ` median=${harvest.stats.medianQuestionsPerTopic} latency=${JSON.stringify(harvest.stats.providerLatency)}`,
+        );
 
-        // When Serper has 0 PAA and DataForSEO is unset/empty, seed coverage from
-        // sidecar AI-visibility citation prompts so Info to cover is not blank.
-        let paaQuestions = paaFromSerp;
-        if (!paaQuestions.length && !llmQuestions.length && aiVisibilitySummary?.citations?.length) {
-          const seen = new Set<string>();
-          paaQuestions = [];
+        let llmQuestions = harvest.llmQuestions;
+        let paaQuestions: Array<{ question: string }> = [];
+
+        // When harvest is thin, seed from sidecar AI-visibility citations.
+        if (harvest.stats.uniqueQuestions < 6 && aiVisibilitySummary?.citations?.length) {
+          const seen = new Set(llmQuestions.map((q) => q.question.toLowerCase()));
           for (const c of aiVisibilitySummary.citations) {
             const q = (c.prompt || '').replace(/\s+/g, ' ').trim();
             if (!q || q.length < 10) continue;
@@ -937,9 +975,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
           console.log(`[coverage] seeded ${paaQuestions.length} questions from sidecar AI visibility`);
         }
-        if (!paaQuestions.length && !llmQuestions.length && factKeyword) {
-          // Last resort — same prompt shapes as sidecar analyzers.ai_visibility.build_prompts
-          // so Info to cover is never blank after a successful deep analysis.
+        // Templates only when unique harvested questions < 6 (after sidecar seed still empty).
+        if (harvest.stats.uniqueQuestions < 6 && !llmQuestions.length && !paaQuestions.length && factKeyword) {
           paaQuestions = [
             `Co to jest ${factKeyword}?`,
             `Jak sprawdzić ${factKeyword}?`,
@@ -957,6 +994,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           paaQuestions,
           llmQuestions,
           languageCode: finalArticleLanguage,
+          harvestTopics: harvest.topics,
         });
         coverageSnapshot = graded.snapshot;
         coverageTokens += graded.introTokens + graded.judgeTokens;

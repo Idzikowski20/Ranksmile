@@ -48,6 +48,7 @@ export function isDictionaryQueryNoise(term: string): boolean {
 export function normalizeTerm(term: string): string {
   return term
     .toLowerCase()
+    .replace(/[ąćęłńóśźż]/g, (c) => PL_DIACRITICS[c] || c)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s-]/g, ' ')
@@ -79,17 +80,30 @@ export function isUsefulTerm(term: string): boolean {
 
 export type MinimalTerm = { term: string };
 
-/** Dedupe by normalized form; drop stopwords and trivial unigrams. */
+function prefersDisplayForm(a: string, b: string): string {
+  const aDiacritics = /[ąćęłńóśźż]/i.test(a);
+  const bDiacritics = /[ąćęłńóśźż]/i.test(b);
+  if (aDiacritics && !bDiacritics) return a;
+  if (bDiacritics && !aDiacritics) return b;
+  return a.length >= b.length ? a : b;
+}
+
+/** Dedupe by normalized match key; keep original display orthography. */
 export function dedupeUsefulTerms<T extends MinimalTerm>(terms: T[]): T[] {
-  const seen = new Set<string>();
-  const result: T[] = [];
+  const best = new Map<string, T>();
 
   for (const term of terms) {
-    const key = normalizeTerm(term.term);
-    if (!isUsefulTerm(key) || seen.has(key)) continue;
-    seen.add(key);
-    result.push({ ...term, term: key } as T);
+    const display = (term.term || '').trim();
+    const key = normalizeTerm(display);
+    if (!isUsefulTerm(key)) continue;
+    const prev = best.get(key);
+    if (!prev) {
+      best.set(key, { ...term, term: display } as T);
+      continue;
+    }
+    const chosen = prefersDisplayForm(prev.term, display);
+    best.set(key, { ...prev, ...term, term: chosen } as T);
   }
 
-  return result;
+  return [...best.values()];
 }
