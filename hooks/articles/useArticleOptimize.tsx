@@ -143,15 +143,15 @@ export function useArticleOptimize({
   const remainingRows = aoScoresReady && aoLiveSnapshot ? aoLiveSnapshot.remainingRows : [];
 
   useEffect(() => {
-    if (!aoScoresReady || optimizeState === 'idle' || !aoLiveSnapshot) return undefined;
+    if (!aoScoresReady || !aoLiveSnapshot) return undefined;
     const tickDelta = Math.round(aoLiveSnapshot.ai) - Math.round(prevAiRef.current);
     prevAiRef.current = aoLiveSnapshot.ai;
-    if ((optimizeState === 'optimizing' || optimizeState === 'reviewing') && tickDelta > 0) {
+    if (tickDelta > 0) {
       floatSeqRef.current += 1;
       setAoFloat({ key: floatSeqRef.current, label: `Optimization Impact +${tickDelta}` });
     }
     return undefined;
-  }, [aoLiveSnapshot, optimizeState, aoScoresReady]);
+  }, [aoLiveSnapshot, aoScoresReady]);
 
   const optimizeReview = aoScoresReady && aoLiveSnapshot ? {
     postScore: aoLiveSnapshot.seo,
