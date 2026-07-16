@@ -160,8 +160,6 @@ import GscAccount from '../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from './gscAccounts';
 import { searchconsole_v1 } from '@googleapis/searchconsole';
 
-import { nextjsUrl, sidecarUrl } from './serviceUrls';
-
 async function emit(jobId: string, stage: StageKey, percent: number, message: string) {
    try {
       await fetch(`${nextjsUrl()}/api/articles/job-progress`, {
