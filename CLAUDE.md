@@ -92,63 +92,43 @@ Rules:
 **OBOWIĄZUJE NA TYM PROJEKCIE — BEZ WYJĄTKU:**
 
 1. Przed każdą zmianą UI uruchom skill `/frontend-design`
-2. **Przeczytaj `design.md` przed napisaniem jakiegokolwiek kodu UI** — zawiera kompletny design system
-3. Ściśle stosuj `design.md` — nie wymyślaj nowych kolorów, rozmiarów, shadowów, border-radiusów
+2. **Przeczytaj `DESIGN.md` przed napisaniem jakiegokolwiek kodu UI** — Sentry-first design system
+3. Ściśle stosuj `DESIGN.md` — nie wymyślaj nowych kolorów, rozmiarów, shadowów, border-radiusów
 
-### Architektura UI tego projektu
+### Architektura UI
 
-- **Shell (sidebar + topbar):** ciemny motyw — bg `#09090b`, sidebar bg `#09090b`, border `#221e28`
-- **Content areas:** jasny motyw — bg `#f8f9ff`, karty białe z border `#F4F4F5`
-- **Styling:** inline styles (nowy kod) + Tailwind (legacy) — **nowy kod = inline styles**
-- **Font:** zawsze `var(--font-family-primary)` — nigdy hardcode Inter/Arial
-- **Ikony:** wyłącznie inline SVG — brak external icon library
+- **Shell:** ciemny Sentry — bg `#252525` / `#09090b`, border `#221e28`
+- **App content:** jasny — page `#F8F8F9`, karty białe, border `#DAD9DE`, radius `8px`
+- **Styling poza edytorem:** `components/core` + Emotion / CSS vars — bez nowych Tailwind klas
+- **Editor zone:** KEEP TipTap/scoring; primitives z `core`
+- **Font:** `var(--font-family-primary)` / Rubik w shell — nigdy hardcode Inter jako brand
+- **Ikony:** wyłącznie inline SVG
 
-### Kluczowe tokeny do zapamiętania
+### Kluczowe tokeny (Sentry / Surfy)
 
-| Token                  | Wartość     | Kiedy                            |
-|------------------------|-------------|----------------------------------|
-| Brand purple           | `#783AFB`   | hover na primary button, accents |
-| Dark button            | `#2F2F34`   | primary CTA bg                   |
-| Card border            | `#F4F4F5`   | wszystkie karty                  |
-| Panel border           | `#E4E4E7`   | sekcje, dividers                 |
-| Input border           | `#D4D4D8`   | inputs, filter pills             |
-| Input focus            | `#AA93FD`   | border + ring rgba(120,58,251,0.1) |
-| Success                | `#1AB25E`   | delta up                         |
-| Error                  | `#FF6F77`   | delta down                       |
-| Content text           | `#18181B`   | primary text w content           |
-| Muted text             | `#52525C`   | secondary info                   |
+| Token | Wartość | Kiedy |
+|-------|---------|--------|
+| Accent | `#F29964` | primary CTA, focus, active |
+| Accent chonk | `#C97D52` | Button primary underside |
+| Card border | `#DAD9DE` | karty / panele Sentry |
+| Page bg | `#F8F8F9` | content areas |
+| Headings | `#181225` | titles |
+| Body | `#302E36` | primary text |
+| Muted | `#6A6772` | secondary |
 
-### Struktura plików komponentów
+**Nie używaj** Surfer purple `#783AFB` jako brand accent w nowym UI (legacy tylko w `scoreColor.ts`). Anti-slop: `DESIGN.md` §12.
+
+### Struktura
 
 ```
-pages/
-  dashboard/index.tsx          — Dashboard (max-width 880px)
-  articles/index.tsx           — Content Editor (max-width 880px)
-  domain/[slug]/performance.tsx — Performance (full width)
-  domain/[slug]/activity-log.tsx
-  domain/[slug]/content-audit.tsx
-  domain/[slug]/recommendations.tsx
-  domain/[slug]/topical-map.tsx
-
-components/
-  common/AppShell.tsx          — GlobalTopbar + Sidebar + main + MobileBottomNav
-  common/GlobalTopbar.tsx      — 58px sticky dark topbar
-  common/Sidebar.tsx           — 224px dark sidebar z nav items
-  common/DashboardLayout.tsx   — layout dla dashboard/articles
-  common/Modal.tsx             — legacy modal (Tailwind)
-  common/InputField.tsx        — legacy input (Tailwind)
-
-styles/globals.css             — CSS variables + shell styles
+components/core/           — Button, Modal, Input, theme.tsx
+components/sentry-pages/   — SentryPage, Panel, Table
+components/surfer/         — Gauge, SelectionBar (KEEP)
+components/common/AppShell.tsx
+styles/globals.css         — CSS vars + shell
 ```
 
-### Reguły stylu
-
-- Nowy komponent = inline `style={{ }}` — bez nowych Tailwind klas
-- Karty: `border: '1px solid #F4F4F5', borderRadius: 12, background: '#FFFFFF'`
-- Pills/chips: `borderRadius: 9999`
-- Dropdowny: `animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)'`, z-index 150
-- Wszystkie hover/transitions: min `150ms ease`
-- Nie dodawaj `outline: none` bez własnego focus style
+Szczegóły → `DESIGN.md`.
 
 ## 7. TypeScript — no `any`
 
