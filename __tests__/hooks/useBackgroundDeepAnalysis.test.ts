@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 import { renderHook, waitFor } from '@testing-library/react';
 import { jobArticleId, useBackgroundDeepAnalysis } from '../../hooks/useBackgroundDeepAnalysis';
+import { writeAnalyzeSession } from '../../lib/deepAnalysisProgress';
 
 const fetchMock = jest.fn();
 
@@ -73,6 +74,59 @@ describe('useBackgroundDeepAnalysis strict-mode remount', () => {
       expect(body.articleId).toBe(67);
       expect(body.existingArticleId).toBeUndefined();
     });
+  });
+
+  it('starts a new analysis session instead of completing from an old terminal job', async () => {
+    writeAnalyzeSession(67, {
+      url: 'https://example.com/refreshed',
+      keywords: ['fresh kw'],
+      country: 'PL',
+    });
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('articleId=67')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            jobId: 'job_67_100',
+            status: 'done',
+            currentStage: 'finalizing',
+            progressMessage: 'Previous run complete',
+            updatedAt: new Date().toISOString(),
+          }),
+        });
+      }
+      if (url.includes('/api/articles/deep-analysis')) {
+        return Promise.resolve({
+          ok: true,
+          body: {
+            getReader: () => ({
+              read: async () => ({ done: true, value: undefined }),
+            }),
+          },
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404 });
+    });
+
+    const onComplete = jest.fn();
+    renderHook(() => useBackgroundDeepAnalysis({
+      articleId: 67,
+      articleStatus: 'analyzing',
+      metaUrl: 'https://example.com/page',
+      targetKeyword: 'old kw',
+      enabled: true,
+      onComplete,
+    }));
+
+    await waitFor(() => {
+      const deepCall = fetchMock.mock.calls.find(([url]) => String(url).includes('/api/articles/deep-analysis'));
+      expect(deepCall).toBeDefined();
+      const body = JSON.parse((deepCall![1] as RequestInit).body as string);
+      expect(body.url).toBe('https://example.com/refreshed');
+      expect(body.keywords).toEqual(['fresh kw']);
+    });
+    expect(onComplete).not.toHaveBeenCalled();
   });
 
   it('stops polling on 401 without restarting', async () => {
