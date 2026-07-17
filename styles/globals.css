@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Surfer Design System Tokens ─────────────────────────────────────── */
+/* ─── Design tokens (Sentry-first shell + Surfy accent) ───────────────── */
 :root {
    /* Colors */
    --color-text-primary: #ffffff;
