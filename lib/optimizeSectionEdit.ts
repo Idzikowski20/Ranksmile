@@ -38,6 +38,14 @@ export function isUsableEdit(cleaned: string): boolean {
    return cleaned.length >= MIN_USABLE_LENGTH;
 }
 
+/** Whole-article rewrites must be complete. A token-limited or half-length response would
+ * replace the user's article during review/save, so keep the original instead. */
+export function isUsableWholeArticleEdit(cleaned: string, originalHtml: string, finishReason?: unknown): boolean {
+   if (!isUsableEdit(cleaned)) return false;
+   if (finishReason === 'length') return false;
+   return cleaned.length >= Math.max(MIN_USABLE_LENGTH, originalHtml.length * 0.5);
+}
+
 /** Charge the org token pool only when the run actually produced changes (and spent tokens).
  *  No changes ⇒ "We didn't find anything to improve — no credit deducted." */
 export function shouldChargeCredit(changedCount: number, aiTokens: number): boolean {
