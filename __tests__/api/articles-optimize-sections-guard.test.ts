@@ -177,6 +177,23 @@ it('records tokens in finally even if a mid-run step throws', async () => {
   expect(recordAiTokens).toHaveBeenCalled();      // finally recorded the 200 from section A
 });
 
+it('does not replace a whole article with a token-limited completion', async () => {
+  const original = '<h1>Guide</h1>' + '<p>Original paragraph with important details.</p>'.repeat(30);
+  const truncated = '<h1>Guide</h1>' + '<p>Only the beginning survived.</p>'.repeat(3);
+  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      usage: { total_tokens: 8000 },
+      choices: [{ finish_reason: 'length', message: { content: truncated } }],
+    }),
+  });
+
+  const events = await runHandler({ content: original, articleId: 1, maxRounds: 1 });
+
+  expect(events.find((e) => e.event === 'section')).toBeUndefined();
+  expect(events.find((e) => e.event === 'done')?.data.changedCount).toBe(0);
+});
+
 it('done event carries trimmed + ignoredLift', async () => {
   const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const done = events.find((e) => e.event === 'done');
