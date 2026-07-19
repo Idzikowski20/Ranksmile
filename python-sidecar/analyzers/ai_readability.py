@@ -22,6 +22,8 @@ CRITERIA = [
     ("info_density", "Information Density Optimization", "Complex information condensed into essential points without redundancy, using the most effective format (steps, lists, tables)."),
 ]
 
+MAX_APPLY_READABILITY_HTML_CHARS = 24000
+
 
 def _empty(note: str) -> dict:
     return {
@@ -128,6 +130,8 @@ async def apply_ai_readability(content_html: str, suggestions: list[str], keywor
     sugs = [str(s).strip() for s in (suggestions or []) if str(s).strip()]
     if not html or not sugs:
         return {"content": content_html}
+    if len(html) > MAX_APPLY_READABILITY_HTML_CHARS:
+        return {"content": content_html, "warning": "Article is too long to rewrite in one pass — content left unchanged."}
 
     sug_list = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sugs))
     prompt = f"""You are an expert editor improving an HTML article's STRUCTURE for AI/LLM
@@ -148,7 +152,7 @@ SUGGESTIONS:
 {sug_list}
 
 ARTICLE HTML:
-{html[:24000]}"""
+{html[:MAX_APPLY_READABILITY_HTML_CHARS]}"""
 
     try:
         raw = await _chat(prompt, max_tokens=8000)
