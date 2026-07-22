@@ -113,6 +113,7 @@ const realBuildOptimizationPlan = jest.requireActual('../../lib/optimizationPlan
 beforeEach(() => {
   jest.clearAllMocks();
   recordAiTokens.mockClear();
+  process.env.DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'test';
   mockVerifyUser.mockResolvedValue('authorized');
   mockGetCurrentUserId.mockResolvedValue('user-1' as any);
   mockAssertArticleAccess.mockResolvedValue(true);
@@ -175,6 +176,23 @@ it('records tokens in finally even if a mid-run step throws', async () => {
     .mockRejectedValue(new Error('boom'));       // second section throws all retries
   await runHandler({ content: '<h2>A</h2><p>aaa</p><h2>B</h2><p>bbb</p>', articleId: 1 });
   expect(recordAiTokens).toHaveBeenCalled();      // finally recorded the 200 from section A
+});
+
+it('does not replace a whole article with a token-limited completion', async () => {
+  const original = '<h1>Guide</h1>' + '<p>Original paragraph with important details.</p>'.repeat(30);
+  const truncated = '<h1>Guide</h1>' + '<p>Only the beginning survived.</p>'.repeat(3);
+  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      usage: { total_tokens: 8000 },
+      choices: [{ finish_reason: 'length', message: { content: truncated } }],
+    }),
+  });
+
+  const events = await runHandler({ content: original, articleId: 1, maxRounds: 1 });
+
+  expect(events.find((e) => e.event === 'section')).toBeUndefined();
+  expect(events.find((e) => e.event === 'done')?.data.changedCount).toBe(0);
 });
 
 it('done event carries trimmed + ignoredLift', async () => {
