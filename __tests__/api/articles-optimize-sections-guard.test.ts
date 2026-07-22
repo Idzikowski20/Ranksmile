@@ -113,6 +113,7 @@ const realBuildOptimizationPlan = jest.requireActual('../../lib/optimizationPlan
 beforeEach(() => {
   jest.clearAllMocks();
   recordAiTokens.mockClear();
+  process.env.DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'test';
   mockVerifyUser.mockResolvedValue('authorized');
   mockGetCurrentUserId.mockResolvedValue('user-1' as any);
   mockAssertArticleAccess.mockResolvedValue(true);
