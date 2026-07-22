@@ -17,6 +17,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 
+from pipeline.ssrf_guard import assert_public_url
 from service_urls import nextjs_url
 
 
@@ -47,6 +48,27 @@ async def _fetch_via_spa_fallback(url: str, html: str) -> str | None:
     return None
 
 
+async def _fetch_public_html(url: str) -> tuple[str, str]:
+    current_url = url
+    async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+        for _ in range(5):
+            assert_public_url(current_url)
+            response = await client.get(current_url, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
+            })
+            if 300 <= response.status_code < 400:
+                location = response.headers.get("location")
+                if not location:
+                    response.raise_for_status()
+                    return response.text, str(response.url)
+                current_url = urljoin(current_url, location)
+                continue
+            response.raise_for_status()
+            return response.text, str(response.url)
+
+    raise ValueError("Too many redirects")
+
+
 async def analyze_site(url: str) -> dict:
     """
     Pobierz URL i wykonaj pełny audyt SEO.
@@ -56,18 +78,12 @@ async def analyze_site(url: str) -> dict:
         url = f"https://{url}"
 
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-            response = await client.get(url, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
-            })
-            response.raise_for_status()
-            html = response.text
-            final_url = str(response.url)
+        html, final_url = await _fetch_public_html(url)
 
-            # SPA fallback: if content looks thin, retry with headless browser
-            rendered = await _fetch_via_spa_fallback(url, html)
-            if rendered:
-                html = rendered
+        # SPA fallback: if content looks thin, retry with headless browser
+        rendered = await _fetch_via_spa_fallback(url, html)
+        if rendered:
+            html = rendered
     except Exception as e:
         print(f"[site_analyzer] Failed to fetch {url}: {e}")
         return _empty_context(url)
