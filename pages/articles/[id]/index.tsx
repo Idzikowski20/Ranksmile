@@ -42,7 +42,7 @@ import type { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../../lib/aiCoverage';
 import { parseSnapshot } from '../../../lib/coverageStore';
-import { resolveAnalyzingStatusOnLoad } from '../../../lib/deepAnalysisProgress';
+import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '../../../lib/deepAnalysisProgress';
 import { getErrorMessage } from '../../../lib/errors';
 import { isAbortError } from '../../../lib/abortSignal';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
@@ -94,6 +94,7 @@ interface Article {
  *  Fresh import has status=analyzing with no job yet — keep analyzing so the hook can start. */
 async function reconcileAnalyzingArticle(art: Article): Promise<Article> {
   if (art.status !== 'analyzing') return art;
+  if (readAnalyzeSession(art.id)) return art;
   try {
     const res = await fetch(`/api/articles/job-progress?articleId=${art.id}`);
     if (res.status === 404) return art; // no job yet — useBackgroundDeepAnalysis starts it

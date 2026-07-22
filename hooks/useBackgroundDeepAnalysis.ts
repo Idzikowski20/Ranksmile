@@ -326,7 +326,7 @@ export function useBackgroundDeepAnalysis({
           }
         }
 
-        if (existing?.snapshot.status === 'done' && jobArticleId(existing.jobId) === articleId) {
+        if (!session && existing?.snapshot.status === 'done' && jobArticleId(existing.jobId) === articleId) {
           setUi(deriveDeepAnalysisUi({ status: 'done' }));
           finishOnce(articleId);
           return;
