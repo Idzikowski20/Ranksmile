@@ -3,8 +3,13 @@
 # Uses `cmd /C` instead of `shell:` so it doesn't depend on $SHELL
 # (which points at Git Bash here and breaks mprocs on Windows).
 procs:
+  redis:
+    cmd: ["cmd", "/C", "npx tsx scripts/dev-redis.ts"]
   app:
-    cmd: ["cmd", "/C", "npm run dev:next"]
+    cmd: ["cmd", "/C", "set PIPELINE_STAGE=5&& set PIPELINE_INLINE_WORKERS=0&& set REDIS_URL=redis://127.0.0.1:6379&& npm run dev:next"]
   python-sidecar:
     cwd: "python-sidecar"
     cmd: ["cmd", "/C", "dev.cmd"]
+  # BullMQ consumers — waits for redis pane; reclaim queued DB rows on start
+  pipeline-workers:
+    cmd: ["cmd", "/C", "set PIPELINE_STAGE=5&& set PIPELINE_INLINE_WORKERS=0&& set REDIS_URL=redis://127.0.0.1:6379&& npx tsx scripts/pipeline-workers.ts"]

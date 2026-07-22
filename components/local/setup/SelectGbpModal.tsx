@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Modal, ModalBody, ModalFooter, Radio, SearchBar } from '../../core';
 import type { BusinessPlace, GbpProfile } from '../../../lib/local/types';
-import { MOCK_GBP_PROFILES } from '../../../lib/local/mockPlaces';
 import { IconArrowRight, IconClose, IconGoogleColor, IconPlus } from '../icons';
 
 const FONT = 'var(--font-family-primary)';
@@ -11,7 +10,7 @@ type SelectGbpModalProps = {
   place: BusinessPlace;
   googleEmail: string;
   onClose: () => void;
-  onContinue: (profileId: string) => void;
+  onContinue: (profile: GbpProfile) => void;
   onChangeAccount: () => void;
 };
 
@@ -24,15 +23,52 @@ export default function SelectGbpModal({
   onChangeAccount,
 }: SelectGbpModalProps) {
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<string>(MOCK_GBP_PROFILES[0]?.id ?? '');
+  const [profiles, setProfiles] = useState<GbpProfile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string>('');
+
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    void (async () => {
+      try {
+        const res = await fetch('/api/local/gbp-locations');
+        const data = (await res.json()) as { locations?: GbpProfile[]; error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setLoadError(data.error || 'Failed to load profiles');
+          setProfiles([]);
+          return;
+        }
+        const list = data.locations || [];
+        setProfiles(list);
+        setSelectedId((prev) => prev || list[0]?.id || '');
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load profiles');
+          setProfiles([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return MOCK_GBP_PROFILES;
-    return MOCK_GBP_PROFILES.filter(
+    if (!q) return profiles;
+    return profiles.filter(
       (p) => p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q),
     );
-  }, [search]);
+  }, [profiles, search]);
+
+  const selected = profiles.find((p) => p.id === selectedId) || null;
 
   if (!open) return null;
 
@@ -91,16 +127,22 @@ export default function SelectGbpModal({
             <IconPlus size={16} />
             Create Google Business Profile
           </button>
-          <div className="local-setup-gbp-list" role="radiogroup" aria-label="Google Business Profiles">
-            {filtered.map((profile) => (
-              <GbpRadioCard
-                key={profile.id}
-                profile={profile}
-                checked={selectedId === profile.id}
-                onSelect={() => setSelectedId(profile.id)}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <p style={{ margin: 0, fontSize: 14, color: '#6A6772' }}>Loading profiles from Google…</p>
+          ) : loadError ? (
+            <p style={{ margin: 0, fontSize: 14, color: '#6A6772' }}>{loadError}</p>
+          ) : (
+            <div className="local-setup-gbp-list" role="radiogroup" aria-label="Google Business Profiles">
+              {filtered.map((profile) => (
+                <GbpRadioCard
+                  key={profile.id}
+                  profile={profile}
+                  checked={selectedId === profile.id}
+                  onSelect={() => setSelectedId(profile.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </ModalBody>
       <ModalFooter>
@@ -108,8 +150,10 @@ export default function SelectGbpModal({
           type="button"
           size="md"
           variant="primary"
-          disabled={!selectedId}
-          onClick={() => onContinue(selectedId)}
+          disabled={!selected}
+          onClick={() => {
+            if (selected) onContinue(selected);
+          }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             Continue

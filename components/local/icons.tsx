@@ -15,6 +15,43 @@ export function IconChevronRight({ size = 16, color = 'currentColor' }: IconProp
   );
 }
 
+export function IconChevronDown({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        d="M3.293 6.293a1 1 0 0 1 1.414 0L8 9.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconStarFilled({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M15.666 5.435a.4.4 0 0 1 .218.675l-3.503 3.539.716 4.893a.4.4 0 0 1-.57.417L8 12.774l-4.527 2.185a.4.4 0 0 1-.57-.417l.716-4.893L.116 6.11a.4.4 0 0 1 .218-.675l4.959-.842L7.647.21a.4.4 0 0 1 .706 0l2.354 4.382 4.96.842Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconStarOutline({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M9.406 6.399 8 3.782 6.594 6.399l-2.892.49 2.042 2.064-.424 2.895L8 10.554l2.68 1.294-.424-2.895 2.041-2.063-2.89-.491Zm6.26-.964a.4.4 0 0 1 .218.675l-3.503 3.539.716 4.893a.4.4 0 0 1-.57.417L8 12.774l-4.527 2.185a.4.4 0 0 1-.57-.417l.716-4.893L.116 6.11a.4.4 0 0 1 .218-.675l4.959-.842L7.647.21a.4.4 0 0 1 .706 0l2.354 4.382 4.96.842Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
 export function IconBook({ size = 16, color = 'currentColor' }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
@@ -122,6 +159,19 @@ export function IconEdit({ size = 16, color = 'currentColor' }: IconProps) {
         fill={color}
       />
       <path d="M10 13a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-4Z" fill={color} />
+    </svg>
+  );
+}
+
+export function IconTrash({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M7 1a1 1 0 0 0-1 1H3a1 1 0 0 0 0 2v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4a1 1 0 1 0 0-2h-3a1 1 0 0 0-1-1H7ZM5 4h6v9H5V4Z"
+        fill={color}
+      />
     </svg>
   );
 }
@@ -356,31 +406,105 @@ export function IconThumbDown() {
   );
 }
 
-export function IconMagicWand() {
+export function IconMagicWand({ size = 16, color = 'currentColor' }: IconProps) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
         d="M11.559 1.289a1 1 0 0 0-1.415 0L1.29 10.144a1 1 0 0 0 0 1.415l2.153 2.153a1 1 0 0 0 1.415 0l8.855-8.856a1 1 0 0 0 0-1.414L11.559 1.29Zm-.707 2.121L8.697 5.565l.74.739 2.154-2.155-.74-.739ZM3.41 10.851 7.272 6.99l.739.739-3.862 3.861-.739-.739Z"
-        fill="currentColor"
+        fill={color}
       />
       <path
         d="M13.622 7.259a.4.4 0 0 1 .75 0l.305.823a.4.4 0 0 0 .237.236l.823.305a.4.4 0 0 1 0 .75l-.823.305a.4.4 0 0 0-.237.237l-.304.823a.4.4 0 0 1-.75 0l-.305-.823a.4.4 0 0 0-.236-.237l-.824-.305a.4.4 0 0 1 0-.75l.824-.305a.4.4 0 0 0 .236-.236l.304-.823Zm-2.999 4.003a.4.4 0 0 1 .75 0l.575 1.553a.4.4 0 0 0 .236.236l1.552.574a.4.4 0 0 1 0 .75l-1.552.575a.4.4 0 0 0-.236.237l-.574 1.552a.4.4 0 0 1-.75 0l-.575-1.553a.4.4 0 0 0-.236-.236l-1.552-.574a.4.4 0 0 1 0-.75l1.552-.575a.4.4 0 0 0 .236-.236l.574-1.553Z"
-        fill="currentColor"
+        fill={color}
       />
     </svg>
   );
 }
 
-export function IconRobot() {
+export function IconCalendar({ size = 16, color = 'currentColor' }: IconProps) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M10 1a1 1 0 1 1 2 0v2h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2V1a1 1 0 0 1 2 0v2h4V1ZM4 5a1 1 0 0 0 2 0h4a1 1 0 1 0 2 0h1v2H3V5h1ZM3 9v4h10V9H3Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconLink({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M8.707 11.707a1 1 0 0 1 0-1.414L10.586 8.414a2 2 0 0 0 0-2.828L9.172 4.172a2 2 0 0 0-2.828 0L4.929 5.586a1 1 0 0 1-1.414-1.414l1.415-1.414a4 4 0 0 1 5.656 0l1.414 1.414a4 4 0 0 1 0 5.657l-1.879 1.878a1 1 0 0 1-1.414 0ZM7.293 4.293a1 1 0 0 1 0 1.414L5.414 7.586a2 2 0 0 0 0 2.828l1.414 1.414a2 2 0 0 0 2.828 0l1.415-1.414a1 1 0 1 1 1.414 1.414l-1.415 1.414a4 4 0 0 1-5.656 0L4 10.414a4 4 0 0 1 0-5.657l1.879-1.878a1 1 0 0 1 1.414 0Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconExternalLink({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        d="M14.388 1.079a.998.998 0 0 0-.39-.079H9.75a1.001 1.001 0 1 0 0 2.003h1.83L5.298 9.29a1.001 1.001 0 0 0 1.416 1.416l6.284-6.288v1.83a1.001 1.001 0 1 0 2.003 0V2.002a.997.997 0 0 0-.612-.922Z"
+        fill={color}
+      />
+      <path
+        d="M1 5a1 1 0 0 1 1-1h4v2H3v7h7v-3h2v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V5Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconReload({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        d="M13.95 1a1 1 0 0 0-1 1v1.11-.06a7 7 0 1 0 0 9.9 1 1 0 0 0-1.41-1.41 5 5 0 1 1 0-7.08c.16.172.31.352.45.54h-2a1 1 0 0 0 0 2h4a1 1 0 0 0 1-1V2a.999.999 0 0 0-1.04-1Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconFacebook({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        d="M8 .007c-4.418 0-8 3.604-8 8.048 0 4.017 2.925 7.346 6.75 7.952v-5.625H4.718V8.055H6.75V6.282c0-2.019 1.195-3.132 3.021-3.132.876 0 1.793.157 1.793.157v1.98h-1.012c-.992 0-1.302.62-1.302 1.258v1.509h2.217l-.355 2.327H9.25v5.625c3.825-.603 6.75-3.933 6.75-7.95C16 3.61 12.418.006 8 .006Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconInfo({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      <path
+        d="M7.82 6a1 1 0 0 1 .99 1.16L8 12h2a1 1 0 1 1 0 2H7.18a1 1 0 0 1-.99-1.16L7 8H6a1 1 0 0 1 0-2h1.82ZM8.5 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
+
+export function IconRobot({ size = 16, color = 'currentColor' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
         d="M14 7a2 2 0 0 0-2-2H9V3.72A2 2 0 0 0 10 2a2 2 0 1 0-4 0 2 2 0 0 0 1 1.72V5H4a2 2 0 0 0-2 2 2 2 0 1 0 0 4v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a2 2 0 0 0 0-4ZM4 14V7h8v7H4Zm2-6a1 1 0 0 0-1 1v1a1 1 0 1 0 2 0V9a1 1 0 0 0-1-1Zm3.293.293A1 1 0 0 1 11 9v1a1 1 0 0 1-2 0V9a1 1 0 0 1 .293-.707Z"
-        fill="currentColor"
+        fill={color}
       />
     </svg>
   );

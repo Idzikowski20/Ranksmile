@@ -289,7 +289,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // (already-created) article, so we just return the parsed HTML and metadata
       // without creating a new article row.
       if (extractOnly) {
-         return res.status(200).json({ contentHtml, title, metaTitle, metaDescription });
+         return res.status(200).json({
+            contentHtml,
+            title,
+            metaTitle,
+            metaDescription,
+            featuredImage: featuredImage || null,
+         });
       }
 
       // Count meaningful paragraphs from scraped page

@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { resetPassword } from '../../lib/auth/fetchAuth';
+import { Button } from '../core';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
   authFooterStyle,
+  authFullWidthBtnStyle,
   authLinkStyle,
-  authPrimaryButtonStyle,
   authSubtitleStyle,
   authSuccessStyle,
   authTitleStyle,
@@ -97,25 +98,21 @@ export default function ResetPasswordForm() {
         disabled={loading || success}
       />
 
-      <button
-        type="submit"
-        disabled={loading || success}
-        style={{
-          ...authPrimaryButtonStyle,
-          marginTop: 8,
-          opacity: loading || success ? 0.7 : 1,
-          cursor: loading || success ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => {
-          if (!loading && !success) e.currentTarget.style.background = '#783AFB';
-        }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-      >
-        {loading ? 'Saving…' : 'Reset password'}
-      </button>
+      <div style={authFullWidthBtnStyle}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          busy={loading}
+          disabled={loading || success}
+          style={{ width: '100%' }}
+        >
+          {loading ? 'Saving…' : 'Reset password'}
+        </Button>
+      </div>
 
       <p style={authFooterStyle}>
-        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#18181B', fontWeight: 600 }}>
+        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
           Back to Sign In
         </Link>
       </p>

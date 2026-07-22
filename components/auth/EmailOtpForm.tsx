@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { verifyEmailOtp } from '../../lib/auth/fetchAuth';
+import { Button } from '../core';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
-  authPrimaryButtonStyle,
+  authFullWidthBtnStyle,
   authSubtitleStyle,
   authTitleStyle,
 } from './authStyles';
@@ -61,20 +62,11 @@ export default function EmailOtpForm() {
         disabled={loading}
       />
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          ...authPrimaryButtonStyle,
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#783AFB'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-      >
-        {loading ? 'Verifying…' : 'Verify'}
-      </button>
+      <div style={authFullWidthBtnStyle}>
+        <Button type="submit" variant="primary" size="md" busy={loading} disabled={loading} style={{ width: '100%' }}>
+          {loading ? 'Verifying…' : 'Verify'}
+        </Button>
+      </div>
     </form>
   );
 }

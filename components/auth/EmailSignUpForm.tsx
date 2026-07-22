@@ -1,12 +1,17 @@
 import Link from 'next/link';
 import React, { useState } from 'react';
-import { signUpEmail } from '../../lib/auth/fetchAuth';
+import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
+import { Button } from '../core';
+import { IconGoogleColor } from '../local/icons';
 import AuthField from './AuthField';
 import {
+  authDividerLineStyle,
+  authDividerTextStyle,
+  authDividerWrapStyle,
   authErrorStyle,
   authFooterStyle,
+  authFullWidthBtnStyle,
   authLinkStyle,
-  authPrimaryButtonStyle,
   authSubtitleStyle,
   authTitleStyle,
 } from './authStyles';
@@ -17,6 +22,11 @@ export default function EmailSignUpForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const absoluteCallback = typeof window !== 'undefined'
+    ? new URL('/', window.location.origin).toString()
+    : '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +50,38 @@ export default function EmailSignUpForm() {
     window.location.href = '/';
   };
 
+  const handleGoogle = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    const result = await signInSocial({
+      provider: 'google',
+      callbackURL: absoluteCallback,
+      errorCallbackURL: typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/sign-up`
+        : '/auth/sign-up',
+    });
+
+    if (!result.ok) {
+      setGoogleLoading(false);
+      setError(result.error.message);
+      return;
+    }
+
+    if (result.data.url) {
+      window.location.href = result.data.url;
+      return;
+    }
+
+    setGoogleLoading(false);
+    setError('Google sign-up is not available. Check Neon Auth OAuth settings.');
+  };
+
+  const busy = loading || googleLoading;
+
   return (
     <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Sign Up</h1>
-      <p style={authSubtitleStyle}>Create your SerpBear account</p>
+      <h1 style={authTitleStyle}>Create your Surfy account</h1>
+      <p style={authSubtitleStyle}>Start shipping SEO content faster.</p>
 
       {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
 
@@ -54,7 +92,8 @@ export default function EmailSignUpForm() {
         value={name}
         onChange={setName}
         autoComplete="name"
-        disabled={loading}
+        disabled={busy}
+        placeholder="Your name"
       />
 
       <AuthField
@@ -64,7 +103,8 @@ export default function EmailSignUpForm() {
         value={email}
         onChange={setEmail}
         autoComplete="email"
-        disabled={loading}
+        disabled={busy}
+        placeholder="you@work.com"
       />
 
       <AuthField
@@ -74,29 +114,41 @@ export default function EmailSignUpForm() {
         value={password}
         onChange={setPassword}
         autoComplete="new-password"
-        disabled={loading}
+        disabled={busy}
+        placeholder="Create a password"
+        revealable
       />
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          ...authPrimaryButtonStyle,
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#783AFB'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+      <div style={authFullWidthBtnStyle}>
+        <Button type="submit" variant="primary" size="md" busy={loading} disabled={busy} style={{ width: '100%' }}>
+          {loading ? 'Creating account…' : 'Create account'}
+        </Button>
+      </div>
+
+      <div style={authDividerWrapStyle} aria-hidden="true">
+        <span style={authDividerLineStyle} />
+        <span style={authDividerTextStyle}>Or continue with</span>
+        <span style={authDividerLineStyle} />
+      </div>
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="md"
+        busy={googleLoading}
+        disabled={busy}
+        onClick={() => { void handleGoogle(); }}
+        icon={<IconGoogleColor size={18} />}
+        style={{ width: '100%' }}
       >
-        {loading ? 'Creating account…' : 'Sign Up'}
-      </button>
+        {googleLoading ? 'Redirecting…' : 'Continue with Google'}
+      </Button>
 
       <p style={authFooterStyle}>
         Already have an account?
         {' '}
-        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#18181B', fontWeight: 600 }}>
-          Sign In
+        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
+          Sign in
         </Link>
       </p>
     </form>

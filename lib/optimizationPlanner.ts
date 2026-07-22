@@ -7,6 +7,7 @@ import { assignGuidelinesToSections } from './optimizeGuidelineRouting';
 import { countOccurrences } from './contentScore';
 import { selectOptimizeMode, type OptimizeMode, SEO_READY, AI_GAP } from './optimizeMode';
 import type { OptimizePhase } from './optimizeRunPhase';
+import { STOP_SLOP_RULES } from './stopSlopPrompt';
 
 export type { RoutedGuideline } from './optimizeGuidelineRouting';
 
@@ -245,11 +246,13 @@ const SHARED_RULES = `You are an expert SEO content editor making MINIMAL, surgi
 RULES:
 - Apply MINIMAL surgical edits — refine, do not rewrite
 - When AI Search checkpoints are listed, this section must help answer EVERY uncovered checkpoint — not just some
-- Tighten weak sentences and remove AI-sounding filler ("It's worth noting that", "In today's world", "Furthermore", "In conclusion", "Delve into")
+- Tighten weak sentences and remove AI-sounding filler
 - Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
 - Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written
 - Do NOT remove or shorten existing sentences — only refine or expand
-- Keep each paragraph between ~40 and ~80 words`;
+- Keep each paragraph between ~40 and ~80 words
+
+${STOP_SLOP_RULES}`;
 
 const NEGATIVE_CONSTRAINTS = `NEGATIVE CONSTRAINTS — Do NOT: rewrite unrelated paragraphs, remove or alter existing links, remove tables/images/lists, duplicate or rename headings, touch other sections, translate the text, or add markdown code fences.`;
 
@@ -295,7 +298,9 @@ RULES:
 - Do NOT add paragraphs. Do NOT rewrite. Do NOT expand or lengthen the section.
 - Only patch the specific uncovered AI-search signals listed below — change nothing else.
 - Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
-- Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written`;
+- Preserve EVERY heading, <a> link, <img>, and list EXACTLY as written
+
+${STOP_SLOP_RULES}`;
 
 function buildLessPrompt(step: PlanStep, context: ArticleContext): string {
   const brand = brandBlock(context);

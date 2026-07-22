@@ -46,6 +46,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const jobId = req.query.jobId as string | undefined;
     const articleId = req.query.articleId as string | undefined;
+    // Default deep_analysis: import/editor hooks and deep-analysis page poll by articleId.
+    // article_generate must be requested explicitly — otherwise a finished deep_analysis
+    // job makes /articles/generating skip /generate and open an empty draft.
+    const jobTypeRaw = typeof req.query.jobType === 'string' ? req.query.jobType.trim() : '';
+    const jobType = jobTypeRaw || 'deep_analysis';
     if (!jobId && !articleId) {
       return res.status(400).json({ error: 'jobId or articleId query param is required' });
     }
@@ -71,10 +76,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
              FROM analysis_jobs WHERE id = ?`
           : `SELECT id, job_type, domain_id, article_id, status, current_stage, stage_progress, total_progress, progress_message, updated_at
              FROM analysis_jobs
-             WHERE article_id = ? AND job_type = 'deep_analysis'
+             WHERE article_id = ? AND job_type = ?
              ORDER BY created_at DESC, id DESC
              LIMIT 1`,
-        { replacements: [jobId || Number(articleId)], type: QueryTypes.SELECT },
+        { replacements: jobId ? [jobId] : [Number(articleId), jobType], type: QueryTypes.SELECT },
       );
 
       if (!rows.length) return res.status(404).json({ error: 'job not found' });
@@ -89,6 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({
         jobId: j.id,
+        jobType: j.job_type,
         status: j.status,
         currentStage: j.current_stage,
         stageProgress: j.stage_progress,

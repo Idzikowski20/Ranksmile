@@ -13,10 +13,12 @@ import { parseSnapshot } from './coverageStore';
 import { liveCoverageItems } from './liveCoverage';
 import { filterNlpTermsForAnalysis } from './topicRelevance';
 import { needsCoverageRegrade, regradeCoverageSnapshot } from './regradeCoverageSnapshot';
+import { persistCoverageFeatureRun } from './persistCoverageFeatureRun';
 import { sidecarUrl } from './serviceUrls';
 import { parseJsonish } from './types/json';
 import { countryForLanguage } from './langCountry';
 import axios from 'axios';
+import { getErrorMessage } from './errors';
 
 type ArticleRow = {
   score_data: string | null;
@@ -206,6 +208,18 @@ export async function reconcilePostGenerateArticle(opts: {
 
   if (terms.length) {
     await syncArticleTerms(opts.articleId, terms, plainText);
+  }
+
+  const finalSnap = parseSnapshot(aiInfoToCover);
+  if (finalSnap && aiInfoToCover !== (row?.ai_info_to_cover ?? null)) {
+    await persistCoverageFeatureRun({
+      snapshot: finalSnap,
+      articleId: opts.articleId,
+      domainId: row?.domain_id != null ? Number(row.domain_id) : undefined,
+      keyword: keyword || undefined,
+    }).catch((err: unknown) => {
+      console.warn('[reconcile] feature store persist failed (non-fatal):', getErrorMessage(err));
+    });
   }
 
   return {

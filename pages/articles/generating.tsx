@@ -3,6 +3,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WizardShell from '../../components/articles/WizardShell';
+import GeneratingStage from '../../components/articles/GeneratingStage';
 import { clearWizardState } from '../../lib/wizardState';
 
 const GeneratingPage: NextPage = () => {
@@ -56,20 +57,32 @@ const GeneratingPage: NextPage = () => {
         }
       } catch { /* ignore */ }
 
-      // Resume an in-flight job if one exists
+      // Resume only an in-flight *generate* job. Looking up by articleId alone used to
+      // return the finished deep_analysis job (status=done) and skip /generate entirely.
       try {
-        const progRes = await fetch(`/api/articles/job-progress?articleId=${encodeURIComponent(articleId)}`);
-        const prog = await progRes.json().catch(() => ({}));
-        if (prog.status === 'running' && prog.jobId) {
-          await pollJob(prog.jobId);
-          clearWizardState(articleId);
-          setFinished(true);
-          return;
-        }
-        if (prog.status === 'done') {
-          clearWizardState(articleId);
-          setFinished(true);
-          return;
+        const progRes = await fetch(
+          `/api/articles/job-progress?articleId=${encodeURIComponent(articleId)}&jobType=article_generate`,
+        );
+        if (progRes.ok) {
+          const prog = await progRes.json().catch(() => ({}));
+          if (prog.status === 'running' && prog.jobId) {
+            await pollJob(prog.jobId);
+            clearWizardState(articleId);
+            setFinished(true);
+            return;
+          }
+          if (prog.status === 'queued' && prog.jobId) {
+            await pollJob(prog.jobId);
+            clearWizardState(articleId);
+            setFinished(true);
+            return;
+          }
+          if (prog.status === 'done') {
+            clearWizardState(articleId);
+            setFinished(true);
+            return;
+          }
+          // failed / unknown → fall through and start a fresh generate
         }
       } catch { /* start fresh */ }
 
@@ -90,8 +103,9 @@ const GeneratingPage: NextPage = () => {
       await pollJob(genData.jobId as string);
       clearWizardState(articleId);
       setFinished(true);
-    })().catch((e) => {
-      toast.error(e?.message || 'Generation failed');
+    })().catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : 'Generation failed';
+      toast.error(msg);
       setFinished(true);
     });
 
@@ -106,31 +120,12 @@ const GeneratingPage: NextPage = () => {
 
   return (
     <WizardShell title="Creating your article">
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, paddingTop: 24 }}>
-        <div style={{ position: 'relative', width: 56, height: 56 }}>
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.9s linear infinite', color: '#F29964' }}>
-            <path d="M12 2a10 10 0 1 0 10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-          </svg>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#F97316" style={{ position: 'absolute', inset: 0, margin: 'auto' }}>
-            <path d="M12.93 1.64a1 1 0 0 0-1.86 0L9.05 6.87c-.3.78-.4 1.01-.52 1.19-.13.18-.29.34-.47.47-.18.13-.41.22-1.19.52L1.64 11.07a1 1 0 0 0 0 1.86l5.23 2.01c.78.3 1.01.4 1.19.52.18.13.34.29.47.47.13.18.22.41.52 1.19l2.01 5.23a1 1 0 0 0 1.86 0l2.01-5.23c.3-.78.4-1.01.52-1.19.13-.18.29-.34.47-.47.18-.13.41-.22 1.19-.52l5.23-2.01a1 1 0 0 0 0-1.86l-5.23-2.01c-.78-.3-1.01-.4-1.19-.52a1.5 1.5 0 0 1-.47-.47c-.13-.18-.22-.41-.52-1.19L12.93 1.64Z" />
-          </svg>
-        </div>
-
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <h2 style={{ margin: 0, fontSize: 22, lineHeight: '28px', fontWeight: 600, color: '#000', fontFamily: 'var(--font-family-primary)' }}>
-            Creating your article
-          </h2>
-          <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-            {progressMessage}
-          </p>
-        </div>
-
-        {progressPct != null && (
-          <div style={{ width: '100%', maxWidth: 380, height: 6, borderRadius: 9999, background: '#E4E4E7', overflow: 'hidden' }}>
-            <div style={{ width: `${progressPct}%`, height: '100%', background: '#F29964', borderRadius: 9999, transition: 'width 0.3s ease' }} />
-          </div>
-        )}
-      </div>
+      <GeneratingStage
+        size="lg"
+        title="Creating your article"
+        status={progressMessage}
+        progressPct={progressPct}
+      />
     </WizardShell>
   );
 };

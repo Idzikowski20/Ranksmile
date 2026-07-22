@@ -145,7 +145,7 @@ const ContentAuditPage: NextPage = () => {
    const { data: scData } = useQuery(
       ['sc-data', slug],
       async () => {
-         const res = await fetch(`/api/searchconsole?domain=${slug}`);
+         const res = await fetch(`/api/gsc/search-data?domain=${slug}`);
          return res.json();
       },
       { enabled: !!slug, staleTime: 5 * 60 * 1000 },

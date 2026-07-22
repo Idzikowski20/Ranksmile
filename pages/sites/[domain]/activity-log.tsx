@@ -3,8 +3,20 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useQuery } from 'react-query';
+import {
+  HeatmapCells,
+  HeatmapChart,
+  type HeatmapColumn,
+  HeatmapInteractionBoundary,
+  HeatmapInteractionProvider,
+  HeatmapLegend,
+  HeatmapTooltip,
+  HeatmapXAxis,
+  HeatmapYAxis,
+  HEATMAP_DEFAULT_LEVEL_STYLES,
+  useHeatmapInteraction,
+} from '../../../components/charts/heatmap';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import { HoverTooltip, Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/core';
@@ -30,10 +42,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKDAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-// Heatmap palette (mirrors Surfer's var(--gray-20) / --purple-40 / --brand-orange).
-const DOT_IDLE = '#D4D4D8';
-const DOT_ACTIVE = '#F5C4A0';
-const DOT_PEAK = '#FB6A3C';
 
 type ApiArticle = {
    id: number | string;
@@ -350,7 +358,7 @@ const ActivityLogPage: NextPage = () => {
    }, [allEvents, mode, customRange, peopleSel, actSel, person, sortAsc]);
 
    // Heatmap counts + stats over the filtered set.
-   const { counts, peakKey, activeDays, peakLabel, peakCount } = useMemo(() => {
+   const { counts, activeDays, peakLabel, peakCount } = useMemo(() => {
       const map = new Map<string, number>();
       const repr = new Map<string, Date>();
       events.forEach((e) => {
@@ -362,7 +370,7 @@ const ActivityLogPage: NextPage = () => {
       let pc = 0;
       map.forEach((c, k) => { if (c > pc) { pc = c; pk = k; } });
       const pd = pk ? repr.get(pk) : undefined;
-      return { counts: map, peakKey: pk, activeDays: map.size, peakLabel: pd ? fmtMostActive(pd) : '—', peakCount: pc };
+      return { counts: map, activeDays: map.size, peakLabel: pd ? fmtMostActive(pd) : '—', peakCount: pc };
    }, [events]);
 
    const exportCsv = () => {
@@ -443,7 +451,7 @@ const ActivityLogPage: NextPage = () => {
                         <span>Active days: <strong style={{ color: '#18181B', fontWeight: 600 }}>{activeDays}</strong></span>
                         <span>Most active day: <strong style={{ color: '#18181B', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
                      </div>
-                     <Heatmap counts={counts} peakKey={peakKey} onPickDay={filterToDay} />
+                     <ActivityHeatmap counts={counts} onPickDay={filterToDay} />
                   </SentryPanelBody>
                </SentryPanel>
 
@@ -535,103 +543,81 @@ const ActivityLogPage: NextPage = () => {
    );
 };
 
-// ─── Contribution heatmap ────────────────────────────────────────────────────
+// ─── Contribution heatmap (Bklit) ────────────────────────────────────────────
 
-const Heatmap = ({ counts, peakKey, onPickDay }: { counts: Map<string, number>; peakKey: string | null; onPickDay: (d: Date) => void }) => {
-   const year = new Date().getFullYear();
-   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null);
-   const { weeks, monthLabels } = useMemo(() => {
-      const first = new Date(year, 0, 1);
-      const start = new Date(first);
-      start.setDate(first.getDate() - first.getDay()); // back to Sunday
-      const last = new Date(year, 11, 31);
-      const cols: Date[][] = [];
-      const cur = new Date(start);
-      while (cur <= last) {
-         const week: Date[] = [];
-         for (let i = 0; i < 7; i += 1) { week.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
-         cols.push(week);
+function buildYearHeatmapData(counts: Map<string, number>, year: number): HeatmapColumn[] {
+   const first = new Date(year, 0, 1);
+   const start = new Date(first);
+   start.setDate(first.getDate() - first.getDay()); // Sunday-first columns
+   const last = new Date(year, 11, 31);
+   const columns: HeatmapColumn[] = [];
+   const cur = new Date(start);
+   let col = 0;
+   while (cur <= last || columns.length === 0) {
+      const bins: HeatmapColumn['bins'] = [];
+      for (let row = 0; row < 7; row += 1) {
+         const date = new Date(cur);
+         bins.push({
+            bin: row,
+            count: date.getFullYear() === year ? (counts.get(dayKey(date)) || 0) : 0,
+            date,
+         });
+         cur.setDate(cur.getDate() + 1);
       }
-      let prev = -1;
-      const labels = cols.map((week) => {
-         const rep = week.find((d) => d.getFullYear() === year) || week[0];
-         const mo = rep.getMonth();
-         if (mo !== prev) { prev = mo; return MONTHS[mo]; }
-         return '';
-      });
-      return { weeks: cols, monthLabels: labels };
-   }, [year]);
+      columns.push({ bin: col, bins });
+      col += 1;
+      if (cur > last) break;
+      if (col > 60) break;
+   }
+   return columns;
+}
 
-   // Scale the grid to fill the card width (Surfer-sized cells), recomputed on resize.
-   const scrollRef = useRef<HTMLDivElement>(null);
-   const [cell, setCell] = useState(16);
-   useEffect(() => {
-      const el = scrollRef.current;
-      if (!el) return undefined;
-      const measure = () => setCell(Math.max(14, Math.floor((el.clientWidth - 28) / weeks.length)));
-      measure();
-      const ro = new ResizeObserver(measure);
-      ro.observe(el);
-      return () => ro.disconnect();
-   }, [weeks.length]);
-   const CELL = cell;
-   const DOT = Math.max(9, CELL - 5);
-   const ROW_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+const HeatmapClickBridge = ({
+   onPickDay,
+   children,
+}: {
+   onPickDay: (d: Date) => void;
+   children: React.ReactNode;
+}) => {
+   const { tooltipData } = useHeatmapInteraction();
+   return (
+      <div
+         onClick={() => {
+            if (tooltipData) onPickDay(startOfDay(tooltipData.date));
+         }}
+      >
+         {children}
+      </div>
+   );
+};
+
+const ActivityHeatmap = ({ counts, onPickDay }: { counts: Map<string, number>; onPickDay: (d: Date) => void }) => {
+   const year = new Date().getFullYear();
+   const data = useMemo(() => buildYearHeatmapData(counts, year), [counts, year]);
 
    return (
-      <>
-         <div ref={scrollRef} style={{ overflowX: 'auto' }} className="styled-scrollbar">
-            <div style={{ minWidth: 28 + weeks.length * CELL }}>
-               <div style={{ display: 'flex', paddingLeft: 28 }}>
-                  {monthLabels.map((label, wi) => (
-                     // eslint-disable-next-line react/no-array-index-key
-                     <div key={wi} style={{ width: CELL, flexShrink: 0, height: 16, fontSize: 10, color: '#71717B', fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'visible' }}>{label}</div>
-                  ))}
+      <HeatmapInteractionProvider>
+         <HeatmapInteractionBoundary className="h-auto w-full min-w-0">
+            <HeatmapClickBridge onPickDay={onPickDay}>
+               <div style={{ display: 'flex', width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+                  <HeatmapChart className="w-full" data={data} layout="fluid" levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}>
+                     <HeatmapCells hideGhostCells={false} inactiveOpacity={1} inactiveScale={1} />
+                     <HeatmapXAxis />
+                     <HeatmapYAxis />
+                     <HeatmapTooltip
+                        instant
+                        formatLabel={(count) => `${count} ${count === 1 ? 'activity' : 'activities'}`}
+                     />
+                  </HeatmapChart>
+                  <HeatmapLegend
+                     inactiveOpacity={1}
+                     inactiveScale={1}
+                     levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}
+                  />
                </div>
-               <div style={{ display: 'flex' }}>
-                  <div style={{ width: 28, flexShrink: 0 }}>
-                     {ROW_LABELS.map((d, ri) => (
-                        // eslint-disable-next-line react/no-array-index-key
-                        <div key={ri} style={{ height: CELL, display: 'flex', alignItems: 'center', fontSize: 10, color: '#71717B', fontFamily: FONT }}>{d}</div>
-                     ))}
-                  </div>
-                  <div style={{ display: 'flex' }}>
-                     {weeks.map((week, wi) => (
-                        // eslint-disable-next-line react/no-array-index-key
-                        <div key={wi} style={{ display: 'flex', flexDirection: 'column' }}>
-                           {week.map((day) => {
-                              const inYear = day.getFullYear() === year;
-                              const key = dayKey(day);
-                              const count = counts.get(key) || 0;
-                              let bg = DOT_IDLE;
-                              let opacity = inYear ? 0.3 : 0;
-                              if (count > 0) { bg = key === peakKey ? DOT_PEAK : DOT_ACTIVE; opacity = 1; }
-                              const text = `${fmtDate(day)}: ${count} ${count === 1 ? 'activity' : 'activities'}`;
-                              return (
-                                 <div
-                                    key={key}
-                                    style={{ width: CELL, height: CELL, display: 'grid', placeItems: 'center', cursor: inYear ? 'pointer' : 'default' }}
-                                    onMouseEnter={inYear ? (ev) => { const r = (ev.currentTarget as HTMLDivElement).getBoundingClientRect(); setTip({ text, x: r.left + r.width / 2, y: r.top }); } : undefined}
-                                    onMouseLeave={inYear ? () => setTip(null) : undefined}
-                                    onClick={inYear ? () => { setTip(null); onPickDay(day); } : undefined}
-                                 >
-                                    <div style={{ width: DOT, height: DOT, borderRadius: 9999, background: bg, opacity, transition: 'opacity 300ms' }} />
-                                 </div>
-                              );
-                           })}
-                        </div>
-                     ))}
-                  </div>
-               </div>
-            </div>
-         </div>
-         {tip && typeof document !== 'undefined' && createPortal(
-            <div style={{ position: 'fixed', left: tip.x, top: tip.y, transform: 'translate(-50%, calc(-100% - 10px))', zIndex: 300, pointerEvents: 'none', background: '#18181B', color: '#fff', fontFamily: FONT, fontSize: 13, fontWeight: 500, padding: '6px 10px', borderRadius: 8, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
-               {tip.text}
-            </div>,
-            document.body,
-         )}
-      </>
+            </HeatmapClickBridge>
+         </HeatmapInteractionBoundary>
+      </HeatmapInteractionProvider>
    );
 };
 

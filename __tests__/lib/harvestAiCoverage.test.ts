@@ -52,7 +52,11 @@ describe('canonicalizeQuestion', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.sources.sort()).toEqual(['ai_overview', 'chat_gpt', 'gemini'].sort());
     expect(rows[0]!.maxSourceWeight).toBe(SOURCE_WEIGHT.ai_overview);
-    expect(rows[0]!.questionScore).toBe(computeQuestionScore(SOURCE_WEIGHT.ai_overview, 70));
+    expect(rows[0]!.engineCoverage).toBe(3);
+    expect(rows[0]!.frequency).toBe(2);
+    expect(rows[0]!.questionScore).toBe(
+      computeQuestionScore(SOURCE_WEIGHT.ai_overview, 70, { frequency: 2, engineCoverage: 3 }),
+    );
   });
 
   it('keeps PAA weight when only overview source', () => {
@@ -65,7 +69,9 @@ describe('canonicalizeQuestion', () => {
       },
     ]);
     expect(rows[0]!.maxSourceWeight).toBe(PAA_SOURCE_WEIGHT);
-    expect(rows[0]!.questionScore).toBe(360);
+    expect(rows[0]!.questionScore).toBe(
+      computeQuestionScore(PAA_SOURCE_WEIGHT, 60, { frequency: 1, engineCoverage: 1 }),
+    );
   });
 });
 

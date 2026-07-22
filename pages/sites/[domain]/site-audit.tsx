@@ -2,7 +2,7 @@
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
@@ -56,6 +56,16 @@ const SiteAuditPage: NextPage = () => {
   const issueDetailQ = useSiteAuditIssueDetail(slug, selectedIssueId ?? undefined);
   const crawledPagesQ = useSiteAuditCrawledPages(slug);
   const compareQ = useSiteAuditCompareCrawls(slug, compareOlderId, compareNewerId);
+
+  // Deep-link from Priority Apply: /site-audit?issue=<issueId>
+  useEffect(() => {
+    if (!router.isReady) return;
+    const raw = router.query.issue;
+    const issueId = typeof raw === 'string' ? raw.trim() : Array.isArray(raw) ? raw[0]?.trim() : '';
+    if (!issueId) return;
+    setTab('issues');
+    setSelectedIssueId(issueId);
+  }, [router.isReady, router.query.issue]);
 
   const tabItems = useMemo(
     () => TAB_ITEMS.map((t) => ({ value: t.value, label: t.label })),

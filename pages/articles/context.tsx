@@ -3,6 +3,8 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
+import { Button, CompactSelect, SegmentedControl, Switch, Textarea } from '../../components/core';
+import type { SelectOption } from '../../components/core';
 import { saveWizardState } from '../../lib/wizardState';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 import { useArticle } from '../../services/article';
@@ -31,9 +33,9 @@ const SidePanel = ({ open, title, onClose, children }: { open: boolean; title: s
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px 16px' }}>
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{title}</h2>
-        <button type="button" onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525C', display: 'inline-flex' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
+        <Button type="button" variant="transparent" size="xs" onClick={onClose} aria-label="Close" style={{ color: '#52525C', minWidth: 28, padding: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </Button>
       </div>
       <div style={{ padding: '0 28px 28px', overflowY: 'auto' }} className="styled-scrollbar">{children}</div>
     </div>
@@ -46,7 +48,6 @@ const ContextPage: NextPage = () => {
   const type = typeof router.query.type === 'string' ? router.query.type : 'blog';
 
   const [brandOn, setBrandOn] = useState(true);
-  const [voiceOpen, setVoiceOpen] = useState(false);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [voiceId, setVoiceId] = useState('serp');
   const [instructions, setInstructions] = useState('');
@@ -105,7 +106,19 @@ const ContextPage: NextPage = () => {
     return () => clearTimeout(t);
   }, [hydrated, articleId, voiceId, instructions, brandOn]);
 
-  const voiceName = voiceId === 'serp' ? 'SERP based' : (voices.find((v) => v.id === voiceId)?.name || 'SERP based');
+  const voiceOptions: SelectOption[] = [
+    { value: 'serp', label: 'SERP based' },
+    ...voices.map((v) => ({ value: v.id, label: v.name })),
+    { value: '__add__', label: '+ Add Custom Voice' },
+  ];
+
+  const onVoiceChange = (opt: SelectOption) => {
+    if (opt.value === '__add__') {
+      void router.push('/settings/custom_voices');
+      return;
+    }
+    setVoiceId(String(opt.value));
+  };
 
   const saveBrand = async () => {
     setSavingBrand(true);
@@ -186,10 +199,14 @@ const ContextPage: NextPage = () => {
             onClick: () => setPanel('brand'),
             left: (
               <span
-                onClick={(e) => { e.stopPropagation(); setBrandOn((v) => !v); }}
-                style={{ width: 28, height: 16, borderRadius: 9999, background: brandOn ? '#F29964' : '#D4D4D8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}
+                onClick={(e) => { e.stopPropagation(); }}
+                style={{ display: 'inline-flex', flexShrink: 0 }}
               >
-                <span style={{ position: 'absolute', top: 2, left: brandOn ? 14 : 2, width: 12, height: 12, borderRadius: 9999, background: '#fff', transition: 'left 0.15s' }} />
+                <Switch
+                  checked={brandOn}
+                  onChange={setBrandOn}
+                  aria-label="Toggle Brand Knowledge"
+                />
               </span>
             ),
             title: 'Brand Knowledge',
@@ -199,37 +216,22 @@ const ContextPage: NextPage = () => {
       </div>
 
       {/* Voice */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label style={label}>Voice</label>
-        <button
-          type="button"
-          onClick={() => setVoiceOpen((v) => !v)}
-          style={{ height: 40, padding: '0 12px', border: '1px solid #D4D4D8', borderRadius: 8, background: '#fff', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)' }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: '#52525C', flexShrink: 0 }}><path d="M3 10v4M7.5 11v2M12 6v12M16.5 3v18M21 10v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          <span style={{ flex: 1, textAlign: 'left', fontSize: 14, color: '#2F2F34' }}>{voiceName}</span>
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ color: '#9F9FA9', transform: voiceOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-        {voiceOpen && (
-          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0px 4px 16px rgba(0,0,0,0.08)', zIndex: 20, padding: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#9F9FA9', padding: '8px 10px 4px', letterSpacing: '0.04em' }}>Built-in voices</div>
-            <div onClick={() => { setVoiceId('serp'); setVoiceOpen(false); }} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 14, color: '#2F2F34' }}>
-              SERP based
-              {voiceId === 'serp' && <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ marginLeft: 'auto', color: '#18181B' }}><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-            </div>
-            {voices.map((v) => (
-              <div key={v.id} onClick={() => { setVoiceId(v.id); setVoiceOpen(false); }} style={{ display: 'flex', alignItems: 'center', padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 14, color: '#2F2F34' }}>
-                {v.name}
-                {voiceId === v.id && <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ marginLeft: 'auto', color: '#18181B' }}><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              </div>
-            ))}
-            <div style={{ height: 1, background: '#E4E4E7', margin: '4px 0' }} />
-            <div onClick={() => router.push('/settings/custom_voices')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 14, color: '#2F2F34' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 4.5v15m7.5-7.5h-15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-              Add Custom Voice
-            </div>
-          </div>
-        )}
+        <div style={{ width: '100%', display: 'grid' }}>
+          <CompactSelect
+            size="md"
+            value={voiceId}
+            options={voiceOptions}
+            onChange={onVoiceChange}
+            menuWidth="100%"
+            menuMinWidth="100%"
+            triggerLabel={
+              voiceOptions.find((o) => o.value === voiceId && o.value !== '__add__')?.label
+              || 'SERP based'
+            }
+          />
+        </div>
       </div>
 
       {/* Instructions */}
@@ -241,41 +243,33 @@ const ContextPage: NextPage = () => {
               <span style={{ background: '#18181B', color: '#fff', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>New</span>
               <span style={{ fontSize: 13, color: '#18181B' }}>Add up to 5 urls with some context on how to use them</span>
             </div>
-            <button type="button" onClick={() => setShowNew(false)} aria-label="Dismiss" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#52525C', display: 'inline-flex' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
+            <Button type="button" variant="transparent" size="xs" onClick={() => setShowNew(false)} aria-label="Dismiss" style={{ color: '#52525C', minWidth: 24, padding: 2 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </Button>
           </div>
         )}
-        <textarea
+        <Textarea
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
           placeholder={'Write specific instructions for this content (e.g., "Mention product X," "Write from the perspective of Y," "Conclude by saying Z")'}
           rows={5}
-          style={{ width: '100%', padding: '10px 12px', border: '1px solid #D4D4D8', borderRadius: 8, fontSize: 14, lineHeight: '20px', color: '#2F2F34', fontFamily: 'var(--font-family-primary)', resize: 'vertical', outline: 'none', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)' }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = '#F5C4A0'; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = '#D4D4D8'; }}
+          resize="vertical"
         />
       </div>
 
       <SidePanel open={panel === 'ranking'} title="Ranking content" onClose={() => setPanel(null)}>
         <style>{'@keyframes rkPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }'}</style>
-        {/* Tabs */}
-        <div style={{ display: 'inline-flex', gap: 4, padding: 4, background: '#F4F4F5', borderRadius: 10, marginBottom: 18 }}>
-          {(['google', 'ai'] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setRankTab(t)}
-              style={{
-                padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                fontFamily: 'var(--font-family-primary)',
-                background: rankTab === t ? '#fff' : 'transparent', color: rankTab === t ? '#18181B' : '#52525C',
-                boxShadow: rankTab === t ? '0 1px 2px rgba(0,0,0,0.08)' : 'none', transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              {t === 'google' ? 'Google Search' : 'Cited by AI models'}
-            </button>
-          ))}
+        <div style={{ marginBottom: 18 }}>
+          <SegmentedControl
+            name="ranking-tab"
+            size="sm"
+            value={rankTab}
+            onChange={setRankTab}
+            options={[
+              { value: 'google', label: 'Google Search' },
+              { value: 'ai', label: 'Cited by AI models' },
+            ]}
+          />
         </div>
 
         {rankTab === 'google' && (
@@ -332,20 +326,20 @@ const ContextPage: NextPage = () => {
       </SidePanel>
 
       <SidePanel open={panel === 'brand'} title="Brand Knowledge" onClose={() => setPanel(null)}>
-        <label style={{ ...label, display: 'block', paddingBottom: 6 }}>Knowledge</label>
-        <textarea
+        <Textarea
+          label="Knowledge"
           value={brandText}
           onChange={(e) => setBrandText(e.target.value)}
           placeholder={'Business type, industry, products/services, customer profile, competitors, topics to cover…'}
           rows={12}
-          style={{ width: '100%', padding: '10px 12px', border: '1px solid #E4E4E7', borderRadius: 8, fontSize: 14, lineHeight: '24px', color: '#18181B', fontFamily: 'var(--font-family-primary)', resize: 'vertical', outline: 'none' }}
+          resize="vertical"
         />
         <p style={{ margin: '12px 0 16px', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
           Changes will be saved to Brand Knowledge and reflected across everything we create and recommend for you.
         </p>
-        <button type="button" disabled={savingBrand} onClick={saveBrand} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#18181B', color: '#fff', fontSize: 14, fontWeight: 600, cursor: savingBrand ? 'default' : 'pointer', opacity: savingBrand ? 0.6 : 1, fontFamily: 'var(--font-family-primary)' }}>
+        <Button type="button" variant="primary" size="md" disabled={savingBrand} busy={savingBrand} onClick={saveBrand}>
           {savingBrand ? 'Saving…' : 'Save'}
-        </button>
+        </Button>
       </SidePanel>
     </WizardShell>
   );
