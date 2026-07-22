@@ -1,4 +1,10 @@
-import { computeMissingTerms, stripFences, isUsableEdit, shouldChargeCredit } from '../../lib/optimizeSectionEdit';
+import {
+  computeMissingTerms,
+  stripFences,
+  isUsableEdit,
+  isUsableWholeArticleEdit,
+  shouldChargeCredit,
+} from '../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../lib/contentScore';
 
 const baseScore = (terms: ScoreData['terms']): ScoreData => ({
@@ -73,6 +79,22 @@ describe('isUsableEdit', () => {
 
   it('accepts a real section of HTML', () => {
     expect(isUsableEdit('<h2>Heading</h2><p>A real paragraph of content here.</p>')).toBe(true);
+  });
+});
+
+describe('isUsableWholeArticleEdit', () => {
+  const original = '<h1>Title</h1><p>Long article body that must not be replaced by a truncated completion.</p>';
+
+  it('rejects token-limited completions even when the HTML is otherwise long enough', () => {
+    expect(isUsableWholeArticleEdit(`${original}<p>Extra paragraph.</p>`, original, 'length')).toBe(false);
+  });
+
+  it('rejects suspiciously short whole-article edits', () => {
+    expect(isUsableWholeArticleEdit('<h1>Title</h1><p>Only the beginning.</p>', original, 'stop')).toBe(false);
+  });
+
+  it('accepts a complete whole-article edit', () => {
+    expect(isUsableWholeArticleEdit(`${original}<p>Useful addition.</p>`, original, 'stop')).toBe(true);
   });
 });
 

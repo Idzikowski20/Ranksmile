@@ -7,7 +7,12 @@ import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSection
 import type { Section } from '../../../lib/articleSections';
 import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
 import { buildWholeArticlePrompt, WHOLE_ARTICLE_ID } from '../../../lib/optimizeWholeArticle';
-import { stripFences, isUsableEdit, shouldChargeCredit } from '../../../lib/optimizeSectionEdit';
+import {
+   stripFences,
+   isUsableEdit,
+   isUsableWholeArticleEdit,
+   shouldChargeCredit,
+} from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
 import { buildArticleContext } from '../../../lib/articleContext';
@@ -42,6 +47,33 @@ import { flushSse, flushHeaders } from '../../../lib/types/api';
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
 const PROMPT_VERSION = 'ao-whole-article-v3-human';
+
+type ChatCompletion = {
+   content: string;
+   finishReason: unknown;
+   totalTokens: number;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+   return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+}
+
+function parseChatCompletion(raw: unknown): ChatCompletion {
+   const data = asRecord(raw);
+   const usage = asRecord(data?.usage);
+   const choices = data?.choices;
+   const firstChoice = Array.isArray(choices) ? asRecord(choices[0]) : null;
+   const message = asRecord(firstChoice?.message);
+   const tokenCount = Number(usage?.total_tokens);
+
+   return {
+      content: typeof message?.content === 'string' ? message.content : '',
+      finishReason: firstChoice?.finish_reason ?? firstChoice?.finishReason,
+      totalTokens: Number.isFinite(tokenCount) ? tokenCount : 0,
+   };
+}
 
 function scoreSeo(
    html: string,
@@ -315,10 +347,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                      signal: controller.signal,
                   });
                   if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
-                  const data = await aiRes.json();
-                  aiTokens += data.usage?.total_tokens || 0;
-                  const cleaned = stripFences(data.choices?.[0]?.message?.content || '');
-                  if (isUsableEdit(cleaned)) newHtml = cleaned;
+                  const data = parseChatCompletion(await aiRes.json());
+                  aiTokens += data.totalTokens;
+                  const cleaned = stripFences(data.content);
+                  if (isUsableWholeArticleEdit(cleaned, workingHtml, data.finishReason)) newHtml = cleaned;
 
                   const issues = structureIssues(newHtml);
                   if (issues.length > 0 && attempt === 1) {
@@ -348,10 +380,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                            signal: controller.signal,
                         });
                         if (retryRes.ok) {
-                           const retryData = await retryRes.json();
-                           aiTokens += retryData.usage?.total_tokens || 0;
-                           const retryCleaned = stripFences(retryData.choices?.[0]?.message?.content || '');
-                           if (isUsableEdit(retryCleaned)) newHtml = retryCleaned;
+                           const retryData = parseChatCompletion(await retryRes.json());
+                           aiTokens += retryData.totalTokens;
+                           const retryCleaned = stripFences(retryData.content);
+                           if (isUsableWholeArticleEdit(retryCleaned, workingHtml, retryData.finishReason)) newHtml = retryCleaned;
                         }
                      } catch { /* non-fatal */ }
                   }
