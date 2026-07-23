@@ -1,8 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/core';
-import type { Transaction } from '@tiptap/pm/state';
-import { BubbleMenu } from '@tiptap/react/menus';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
+import {
+  shouldOpenCustomContextMenu,
+  menuAnchorPoint,
+  clampMenuPosition,
+  SURFY_PRESET_IMPROVE,
+  SURFY_PRESET_EXPAND,
+  SURFY_VOICE_OPTIONS,
+  surfyPresetVoice,
+} from '../../lib/surfyContextMenu';
 
 const IconBold = () => (
   <svg viewBox="0 0 256 256" width="20" height="20" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
@@ -72,7 +80,7 @@ const IconSurfy = () => (
 );
 
 const Separator = () => (
-  <div style={{ width: 1, height: 20, background: '#52525C', margin: '0 4px', flexShrink: 0 }} />
+  <div style={{ width: 1, height: 20, background: '#DAD9DE', margin: '0 4px', flexShrink: 0 }} />
 );
 
 const ChevronDown = ({ open }: { open: boolean }) => (
@@ -110,9 +118,17 @@ const BlockFormatIcon = ({ icon }: { icon: keyof typeof BLOCK_ICON_PATHS }) => (
   </svg>
 );
 
+export type SurfyAskSelection = {
+  text: string;
+  from: number;
+  to: number;
+  presetPrompt?: string;
+  autoSubmit?: boolean;
+};
+
 interface SurfyBubbleMenuProps {
   editor: Editor;
-  onAskSurfy: (selection: { text: string; from: number; to: number }) => void;
+  onAskSurfy: (selection: SurfyAskSelection) => void;
   onAddComment?: (selection: { text: string; from: number; to: number }) => void;
 }
 
@@ -143,13 +159,13 @@ function ToolButton({ editor, command, isActive, onClick, children }: {
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
-        background: isActive ? '#3F3F47' : 'transparent',
+        background: isActive ? '#F4F4F5' : 'transparent',
         border: 'none', cursor: 'pointer',
-        color: isActive ? '#F29964' : '#FFFFFF',
+        color: isActive ? '#F29964' : '#302E36',
         padding: 0,
         transition: 'background-color 200ms ease-in-out',
       }}
-      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#3F3F47'; }}
+      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = '#F4F4F5'; }}
       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
     >
       {children}
@@ -423,65 +439,124 @@ export function SurfyLinkModal({
 }
 
 export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: SurfyBubbleMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ left: 0, top: 0 });
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
   const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
+  const [voiceMenuOpen, setVoiceMenuOpen] = useState(false);
+  const [voiceLabel, setVoiceLabel] = useState<string>(SURFY_VOICE_OPTIONS[0]);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkHref, setLinkHref] = useState('');
   const [linkRange, setLinkRange] = useState<{ from: number; to: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const linkModalOpenRef = useRef(false);
-
-  // Tiptap's <BubbleMenu> owns show/hide + Floating-UI positioning. We only need
-  // the (always-mounted) content to re-render when the selection or marks change
-  // so the button active-states stay accurate. Re-render ONLY on real doc/selection
-  // changes — the BubbleMenu plugin repositions itself via meta-only transactions
-  // (docChanged=false, selectionSet=false); re-rendering on those feeds back into
-  // another reposition tx and spins into an infinite update loop.
   const [, bumpTick] = useState(0);
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    setBlockMenuOpen(false);
+    setHighlightMenuOpen(false);
+    setVoiceMenuOpen(false);
+  }, []);
+
   useEffect(() => {
     if (!editor) return undefined;
-    const refresh = ({ transaction }: { transaction: Transaction }) => {
-      if (transaction.docChanged || transaction.selectionSet) bumpTick((t) => t + 1);
+    const refresh = () => bumpTick((t) => t + 1);
+    editor.on('selectionUpdate', refresh);
+    return () => {
+      editor.off('selectionUpdate', refresh);
     };
-    editor.on('transaction', refresh);
-    return () => { editor.off('transaction', refresh); };
   }, [editor]);
 
-  // The editor body scrolls inside `.art-editor-scroll`, so point Floating UI at
-  // that container (not just the window) to reposition on inner scroll.
-  const scrollTarget = useMemo(
-    () => (editor ? (editor.view.dom.closest('.art-editor-scroll') as HTMLElement | null) : null),
-    [editor],
-  );
-  const bubbleOptions = useMemo(
-    () => ({
-      placement: 'top' as const,
-      strategy: 'fixed' as const,
-      offset: 8,
-      flip: true,
-      shift: { padding: 8 },
-      ...(scrollTarget ? { scrollTarget } : {}),
-    }),
-    [scrollTarget],
-  );
+  useEffect(() => {
+    if (!editor) return undefined;
+    const onContextMenu = (event: MouseEvent) => {
+      if (linkModalOpenRef.current) return;
+      const { empty, from, to } = editor.state.selection;
+      if (!shouldOpenCustomContextMenu(event, empty || from === to)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const anchor = menuAnchorPoint(
+        event,
+        (p) => editor.view.coordsAtPos(p),
+        to,
+      );
+      setPos({ left: anchor.x, top: anchor.y });
+      setBlockMenuOpen(false);
+      setHighlightMenuOpen(false);
+      setVoiceMenuOpen(false);
+      setOpen(true);
+    };
+    const dom = editor.view.dom;
+    dom.addEventListener('contextmenu', onContextMenu);
+    return () => dom.removeEventListener('contextmenu', onContextMenu);
+  }, [editor]);
 
-  const handleAskSurfy = useCallback(() => {
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const next = clampMenuPosition(pos.left, pos.top, rect.width, rect.height);
+    if (next.left !== pos.left || next.top !== pos.top) setPos(next);
+  }, [open, pos.left, pos.top, blockMenuOpen, highlightMenuOpen, voiceMenuOpen]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+    const onPointerDown = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (menuRef.current?.contains(t)) return;
+      if ((t as Element).closest?.('[data-surfy-link-modal]')) return;
+      closeMenu();
+    };
+    const scrollEl = editor.view.dom.closest('.art-editor-scroll');
+    const onScroll = () => closeMenu();
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', onScroll);
+    scrollEl?.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', onScroll);
+      scrollEl?.removeEventListener('scroll', onScroll);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [open, closeMenu, editor]);
+
+  const selectionPayload = useCallback(() => {
     const { from, to } = editor.state.selection;
     const text = editor.state.doc.textBetween(from, to, '\n');
-    onAskSurfy({ text, from, to });
-  }, [editor, onAskSurfy]);
+    return { text, from, to };
+  }, [editor]);
+
+  const askWithPreset = useCallback((presetPrompt: string, autoSubmit: boolean) => {
+    const sel = selectionPayload();
+    closeMenu();
+    onAskSurfy({ ...sel, presetPrompt, autoSubmit });
+  }, [closeMenu, onAskSurfy, selectionPayload]);
+
+  const handleAskAgent = useCallback(() => {
+    const sel = selectionPayload();
+    closeMenu();
+    onAskSurfy(sel);
+  }, [closeMenu, onAskSurfy, selectionPayload]);
 
   const handleAddComment = useCallback(() => {
-    const { from, to } = editor.state.selection;
-    const text = editor.state.doc.textBetween(from, to, '\n');
-    onAddComment?.({ text, from, to });
-  }, [editor, onAddComment]);
+    const sel = selectionPayload();
+    closeMenu();
+    onAddComment?.(sel);
+  }, [closeMenu, onAddComment, selectionPayload]);
 
   const openLinkModal = useCallback(() => {
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, '\n');
-
     setBlockMenuOpen(false);
+    setHighlightMenuOpen(false);
     setLinkRange({ from, to });
     setLinkText(selectedText);
     setLinkHref(editor.getAttributes('link').href || '');
@@ -496,24 +571,6 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
     setLinkText('');
     setLinkHref('');
   }, []);
-
-  const saveLink = useCallback((event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!linkRange || !linkText.trim() || !linkHref.trim()) return;
-
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(linkRange, {
-        type: 'text',
-        text: linkText,
-        marks: [{ type: 'link', attrs: { href: linkHref.trim() } }],
-      })
-      .run();
-
-    closeLinkModal();
-  }, [closeLinkModal, editor, linkHref, linkRange, linkText]);
 
   if (!editor) return null;
 
@@ -534,556 +591,318 @@ export default function SurfyBubbleMenu({ editor, onAskSurfy, onAddComment }: Su
     setBlockMenuOpen(false);
   };
 
-  return (
-    <>
-    <BubbleMenu
-      editor={editor}
-      options={bubbleOptions}
-      appendTo={() => document.body}
-      shouldShow={({ state, from, to }) => !linkModalOpenRef.current && !state.selection.empty && from !== to}
-      style={{ zIndex: 100 }}
+  const rowBtn = (active: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderRadius: 4,
+    minWidth: 28,
+    height: 28,
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0 6px',
+    background: active ? '#F4F4F5' : 'transparent',
+    color: active ? '#F29964' : '#302E36',
+    fontFamily: 'var(--font-family-primary)',
+    fontSize: 14,
+    fontWeight: 500,
+  });
+
+  const actionRow = (label: string, onClick: () => void, trailing?: React.ReactNode): React.ReactNode => (
+    <button
+      key={label}
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        width: '100%',
+        padding: '10px 12px',
+        border: 'none',
+        borderRadius: 6,
+        background: 'transparent',
+        color: '#181225',
+        cursor: 'pointer',
+        fontFamily: 'var(--font-family-primary)',
+        fontSize: 14,
+        fontWeight: 500,
+        textAlign: 'left',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F8F9'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
+      <span>{label}</span>
+      {trailing}
+    </button>
+  );
+
+  const menu = open ? createPortal(
     <div
+      ref={menuRef}
+      role="menu"
+      data-surfy-context-menu
       onMouseDown={(e) => e.preventDefault()}
       style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-        background: '#2F2F34', padding: '0 12px', height: 40, maxWidth: 'calc(100vw - 16px)',
-        overflow: 'visible', borderRadius: 4,
-        boxShadow: '0px 16px 32px 0px rgba(24,26,34,0.32), 0px 2px 4px 0px rgba(24,26,34,0.16), 0px 4px 4px 0px rgba(0,0,0,0.08), 0px 1px 1px 0px rgba(0,0,0,0.04)',
+        position: 'fixed',
+        left: pos.left,
+        top: pos.top,
+        zIndex: 1000,
+        minWidth: 260,
+        maxWidth: 'min(320px, calc(100vw - 16px))',
+        background: '#FFFFFF',
+        border: '1px solid #DAD9DE',
+        borderRadius: 8,
+        boxShadow: '0 16px 32px rgba(24,26,34,0.16), 0 2px 8px rgba(24,26,34,0.08)',
         fontFamily: 'var(--font-family-primary)',
+        overflow: 'visible',
       }}
     >
-      <style>{`
-        @keyframes surfyGrowOut {
-          0% { opacity: 0; transform: scale(0.8); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={() => setBlockMenuOpen((open) => !open)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            gap: 5, borderRadius: 4, minWidth: 70, height: 28,
-            background: blockMenuOpen ? '#3F3F47' : 'transparent', border: 'none', cursor: 'pointer',
-            color: '#FFFFFF', padding: '0 6px',
-            transition: 'background-color 200ms ease-in-out',
-            fontFamily: 'var(--font-family-primary)', fontSize: 17, fontWeight: 400,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#3F3F47'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = blockMenuOpen ? '#3F3F47' : 'transparent'; }}
-        >
-          <span style={{ minWidth: 28, textAlign: 'left' }}>{blockLabel}</span>
-          <ChevronDown open={blockMenuOpen} />
-        </button>
-
-        {blockMenuOpen && (
-          <div
-            data-side="top"
-            data-align="start"
-            role="menu"
-            aria-orientation="vertical"
-            data-state="open"
-            tabIndex={-1}
-            style={{
-              position: 'absolute',
-              bottom: 36,
-              left: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              minWidth: 220,
-              padding: '0.375rem',
-              background: '#18181B',
-              color: '#9F9FA9',
-              borderRadius: 8,
-              boxShadow: '0px 8px 16px 0px #181a220a, 0px 2px 8px 0px #181a2205, 0px 1px 2px 0px #181a220f',
-              zIndex: 150,
-              outline: 'none',
-              animation: 'surfyGrowOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              transformOrigin: '0 100%',
-              pointerEvents: 'auto',
-            }}
-          >
-            {BLOCK_FORMAT_OPTIONS.map((option) => {
-              const active = option.type === 'paragraph'
-                ? !activeHeadingLevel
-                : activeHeadingLevel === option.level;
-
-              return (
-                <button
-                  key={`${option.type}-${option.level || 'p'}`}
-                  type="button"
-                  role="menuitem"
-                  aria-selected={active}
-                  tabIndex={-1}
-                  onClick={() => applyBlockFormat(option)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    width: '100%',
-                    minWidth: 220,
-                    padding: '0.5rem 0.75rem',
-                    border: 'none',
-                    borderRadius: 6,
-                    background: active ? '#2F2F34' : 'transparent',
-                    color: '#FFFFFF',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    fontFamily: 'var(--font-family-primary)',
-                    fontSize: 14,
-                    lineHeight: '20px',
-                    fontWeight: 500,
-                    textAlign: 'left',
-                    textDecoration: 'none',
-                    outline: '2px solid transparent',
-                    outlineOffset: 2,
-                    transition: 'color 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#2F2F34' : 'transparent'; }}
-                >
-                  <BlockFormatIcon icon={option.icon} />
-                  <span style={{ display: 'block' }}>{option.label}</span>
-                  <div style={{ flexGrow: 2 }} />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <Separator />
-
-      <ToolButton editor={editor} command="toggleBold" isActive={editor.isActive('bold')}>
-        <IconBold />
-      </ToolButton>
-
-      <ToolButton editor={editor} command="toggleItalic" isActive={editor.isActive('italic')}>
-        <IconItalic />
-      </ToolButton>
-
-      <ToolButton editor={editor} command="toggleUnderline" isActive={editor.isActive('underline')}>
-        <IconUnderline />
-      </ToolButton>
-
-      <ToolButton editor={editor} command="toggleStrike" isActive={editor.isActive('strike')}>
-        <IconStrike />
-      </ToolButton>
-
-      <Separator />
-
-      <ToolButton
-        editor={editor}
-        command="toggleLink"
-        isActive={editor.isActive('link')}
-        onClick={openLinkModal}
-      >
-        <IconLink />
-      </ToolButton>
-
-      <Separator />
-
-      <ToolButton editor={editor} command="unsetAllMarks" isActive={false}>
-        <IconClearFormatting />
-      </ToolButton>
-
-      <Separator />
-
-      {/* Highlight color picker */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <button
-          type="button"
-          onClick={() => setHighlightMenuOpen((open) => !open)}
-          title="Highlight color"
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
-            background: highlightMenuOpen ? '#3F3F47' : 'transparent',
-            border: 'none', cursor: 'pointer',
-            color: editor.isActive('highlight') ? '#F29964' : '#FFFFFF',
-            padding: 0,
-            transition: 'background-color 200ms ease-in-out',
-          }}
-          onMouseEnter={(e) => { if (!highlightMenuOpen) e.currentTarget.style.background = '#3F3F47'; }}
-          onMouseLeave={(e) => { if (!highlightMenuOpen) e.currentTarget.style.background = 'transparent'; }}
-        >
-          <svg viewBox="0 0 256 256" width={20} height={20} style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-            <path fill="currentColor" d="M201.8 46.2A55.2 55.2 0 0 0 149 41.5a55.2 55.2 0 0 0-37.9 20.1L43.4 141.2a4 4 0 0 0-.5.6L35 160.5a16.3 16.3 0 0 0 20.3 20.3l18.9-7.9a4 4 0 0 0 .6-.4l80-79.9a56 56 0 0 0 .8-78.3ZM55.6 160.8l-9.6 22.1a.6.6 0 0 1-.2.2a.3.3 0 0 1-.1 0a.4.4 0 0 1-.3-.1a.3.3 0 0 1 0-.1a.6.6 0 0 0 .2-.1l22.1-9.6Zm100.1-77.9l-79.9 80l-9.7-9.7l79.9-79.9a40 40 0 0 1 56.6 56.5l-80.1 80.2l9.7 9.7l80.2-80.2a56 56 0 0 0-56.8-56.6Z" />
-          </svg>
-        </button>
-
-        {highlightMenuOpen && (
-          <div
-            role="menu"
-            aria-orientation="vertical"
-            data-state="open"
-            tabIndex={-1}
-            style={{
-              position: 'absolute',
-              bottom: 36,
-              left: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              minWidth: 220,
-              padding: '0.375rem',
-              background: '#18181B',
-              color: '#9F9FA9',
-              borderRadius: 8,
-              boxShadow: '0px 8px 16px 0px #181a220a, 0px 2px 8px 0px #181a2205, 0px 1px 2px 0px #181a220f',
-              zIndex: 150,
-              outline: 'none',
-              animation: 'surfyGrowOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              transformOrigin: '0 100%',
-              pointerEvents: 'auto',
-            }}
-          >
-            {HIGHLIGHT_COLORS.map((item) => {
-              const active = isHighlightActive(editor, item.color);
-
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  role="menuitem"
-                  aria-selected={active}
-                  tabIndex={-1}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (item.color === null) {
-                      editor.chain().focus().unsetHighlight().run();
-                    } else {
-                      editor.chain().focus().toggleHighlight({ color: item.color }).run();
-                    }
-                    setHighlightMenuOpen(false);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    width: '100%',
-                    minWidth: 220,
-                    padding: '0.5rem 0.75rem',
-                    border: 'none',
-                    borderRadius: 6,
-                    background: active ? '#2F2F34' : 'transparent',
-                    color: '#FFFFFF',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    fontFamily: 'var(--font-family-primary)',
-                    fontSize: 14,
-                    lineHeight: '20px',
-                    fontWeight: 500,
-                    textAlign: 'left',
-                    textDecoration: 'none',
-                    outline: '2px solid transparent',
-                    outlineOffset: 2,
-                    transition: 'color 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#2F2F34' : 'transparent'; }}
-                >
-                  <HighlightSwatchIcon color={item.swatch} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-
-            <div
-              style={{
-                margin: '0.375rem -0.375rem',
-                minHeight: 1,
-                minWidth: 1,
-                alignSelf: 'stretch',
-                background: '#2F2F34',
-              }}
-            />
-
-            <button
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                editor.chain().focus().unsetHighlight().run();
-                setHighlightMenuOpen(false);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                width: '100%',
-                minWidth: 220,
-                padding: '0.5rem 0.75rem',
-                border: 'none',
-                borderRadius: 6,
-                background: 'transparent',
-                color: '#D70028',
-                cursor: 'pointer',
-                userSelect: 'none',
-                fontFamily: 'var(--font-family-primary)',
-                fontSize: 14,
-                lineHeight: '20px',
-                fontWeight: 500,
-                textAlign: 'left',
-                textDecoration: 'none',
-                outline: '2px solid transparent',
-                outlineOffset: 2,
-                transition: 'color 150ms cubic-bezier(0.4, 0, 0.2, 1), background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              <svg viewBox="0 0 24 24" width={20} height={20} style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-                <path fill="currentColor" fillRule="evenodd" d="M16.5 4.478v.227a49 49 0 0 1 3.878.512a.75.75 0 1 1-.256 1.478l-.209-.035l-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A49 49 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a53 53 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951m-6.136-1.452a51 51 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a50 50 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452m-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058z" clipRule="evenodd" />
-              </svg>
-              <span>Clear all highlights</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      <Separator />
-
-      {onAddComment && (
-        <>
-          <ToolButton editor={editor} isActive={false} onClick={handleAddComment}>
-            <IconComment />
-          </ToolButton>
-          <Separator />
-        </>
-      )}
-
-      <button
-        type="button"
-        onClick={handleAskSurfy}
+      {/* Format row */}
+      <div
         style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          gap: 6, borderRadius: 4, minWidth: 28, height: 28,
-          background: 'transparent', border: 'none', cursor: 'pointer',
-          color: '#FFFFFF', padding: '0 6px 0 4px',
-          transition: 'background-color 200ms ease-in-out',
-          fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          padding: '8px 10px',
+          borderBottom: '1px solid #DAD9DE',
+          flexWrap: 'wrap',
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = '#3F3F47')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
       >
-        <IconSurfy />
-        Ask Surfy
-      </button>
-    </div>
-    </BubbleMenu>
-
-      {linkModalOpen && (
-        <div
-          data-surfy-link-modal
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 250,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(9,9,11,0.62)',
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <form
-            onSubmit={saveLink}
-            style={{
-              width: 'min(740px, calc(100vw - 48px))',
-              background: '#FFFFFF',
-              borderRadius: 8,
-              boxShadow: '0 24px 64px rgba(24,26,34,0.34), 0 4px 12px rgba(24,26,34,0.14)',
-              overflow: 'hidden',
-              fontFamily: 'var(--font-family-primary)',
-            }}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            type="button"
+            style={rowBtn(blockMenuOpen)}
+            onClick={() => { setHighlightMenuOpen(false); setBlockMenuOpen((o) => !o); }}
           >
+            <span style={{ minWidth: 22 }}>{blockLabel}</span>
+            <ChevronDown open={blockMenuOpen} />
+          </button>
+          {blockMenuOpen && (
             <div
+              role="menu"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '28px 24px 22px',
+                position: 'absolute',
+                top: 34,
+                left: 0,
+                minWidth: 200,
+                padding: 6,
+                background: '#FFFFFF',
+                border: '1px solid #DAD9DE',
+                borderRadius: 8,
+                boxShadow: '0 8px 16px rgba(24,26,34,0.12)',
+                zIndex: 2,
               }}
             >
-              <h2 style={{ margin: 0, color: '#18181B', fontSize: 24, lineHeight: '32px', fontWeight: 700 }}>
-                Create link
-              </h2>
-              <button
-                type="button"
-                onClick={closeLinkModal}
-                aria-label="Close create link modal"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 32,
-                  height: 32,
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#18181B',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                <IconClose />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', maxWidth: '100%', flexDirection: 'column', gap: '1.5rem', padding: '0 1.5rem 1.5rem' }}>
-              <div style={{ display: 'flex', width: '100%', flexDirection: 'column' }}>
-                <label
-                  htmlFor="surfy-link-anchor"
-                  style={{ color: '#3F3F47', paddingBottom: '0.375rem', fontSize: 14, lineHeight: '20px', fontWeight: 500 }}
-                >
-                  Text
-                </label>
-                <div style={{ position: 'relative', display: 'flex', flexGrow: 1, alignItems: 'center' }}>
-                  <input
-                    id="surfy-link-anchor"
-                    aria-invalid="false"
-                    placeholder="Add text"
-                    type="text"
-                    name="anchor"
-                    value={linkText}
-                    onChange={(e) => setLinkText(e.target.value)}
-                    autoFocus
+              {BLOCK_FORMAT_OPTIONS.map((option) => {
+                const active = option.type === 'paragraph'
+                  ? editor.isActive('paragraph') && !editor.isActive('heading')
+                  : editor.isActive('heading', { level: option.level });
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    role="menuitem"
+                    onMouseDown={(e) => { e.preventDefault(); applyBlockFormat(option); }}
                     style={{
-                      transition: 'border-color 0.25s, box-shadow 0.25s, outline-color 0.2s ease-in-out',
-                      background: 'transparent',
-                      boxSizing: 'border-box',
-                      width: '100%',
-                      cursor: 'text',
-                      paddingLeft: '0.75rem',
-                      paddingRight: '0.75rem',
-                      fontSize: 14,
-                      lineHeight: '20px',
-                      letterSpacing: 'normal',
-                      fontFamily: 'var(--font-family-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      minHeight: '2.5rem',
-                      outlineOffset: 2,
-                      boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                      color: '#18181B',
-                      border: '1px solid #D4D4D8',
-                      borderRadius: 8,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', width: '100%', flexDirection: 'column' }}>
-                <label
-                  htmlFor="surfy-link-href"
-                  style={{ color: '#3F3F47', paddingBottom: '0.375rem', fontSize: 14, lineHeight: '20px', fontWeight: 500 }}
-                >
-                  URL
-                </label>
-                <div style={{ position: 'relative', display: 'flex', flexGrow: 1, alignItems: 'center' }}>
-                  <div
-                    style={{
-                      position: 'absolute',
                       display: 'flex',
                       alignItems: 'center',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#18181B',
-                      left: '0.75rem',
-                      pointerEvents: 'none',
+                      gap: 8,
+                      width: '100%',
+                      padding: '8px 10px',
+                      border: 'none',
+                      borderRadius: 6,
+                      background: active ? '#F4F4F5' : 'transparent',
+                      color: active ? '#F29964' : '#302E36',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-family-primary)',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      textAlign: 'left',
                     }}
                   >
-                    <IconBrowser />
-                  </div>
-                  <input
-                    id="surfy-link-href"
-                    aria-invalid="false"
-                    placeholder="https://example.com/article.html"
-                    type="text"
-                    name="href"
-                    value={linkHref}
-                    onChange={(e) => setLinkHref(e.target.value)}
-                    style={{
-                      transition: 'border-color 0.25s, box-shadow 0.25s, outline-color 0.2s ease-in-out',
-                      background: 'transparent',
-                      boxSizing: 'border-box',
-                      width: '100%',
-                      cursor: 'text',
-                      paddingLeft: '2.5rem',
-                      paddingRight: '0.75rem',
-                      fontSize: 14,
-                      lineHeight: '20px',
-                      letterSpacing: 'normal',
-                      fontFamily: 'var(--font-family-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      minHeight: '2.5rem',
-                      outlineOffset: 2,
-                      boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-                      color: '#18181B',
-                      border: '1px solid #F5C4A0',
-                      borderRadius: 8,
-                    }}
-                  />
-                </div>
-              </div>
+                    <BlockFormatIcon icon={option.icon} />
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', padding: '1.5rem' }}>
-              <button
-                type="button"
-                onClick={closeLinkModal}
-                style={{
-                  position: 'relative',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#3F3F47',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontFamily: 'var(--font-family-primary)',
-                  fontSize: 16,
-                  lineHeight: '24px',
-                  fontWeight: 600,
-                }}
-              >
-                <span>Cancel</span>
-              </button>
-              <button
-                type="submit"
-                disabled={!linkText.trim() || !linkHref.trim()}
-                style={{
-                  position: 'relative',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  border: 'none',
-                  borderRadius: 8,
-                  background: '#18181B',
-                  color: '#FFFFFF',
-                  cursor: linkText.trim() && linkHref.trim() ? 'pointer' : 'not-allowed',
-                  opacity: linkText.trim() && linkHref.trim() ? 1 : 0.55,
-                  padding: '0.5rem 1.5rem',
-                  fontFamily: 'var(--font-family-primary)',
-                  fontSize: 16,
-                  lineHeight: '24px',
-                  fontWeight: 600,
-                  transition: 'color 150ms ease-in-out, background-color 150ms ease-in-out, box-shadow 150ms ease-in-out, opacity 150ms ease-in-out',
-                }}
-              >
-                <span>Save</span>
-              </button>
-            </div>
-          </form>
+          )}
         </div>
+
+        <Separator />
+        <ToolButton editor={editor} command="toggleBold" isActive={editor.isActive('bold')}><IconBold /></ToolButton>
+        <ToolButton editor={editor} command="toggleItalic" isActive={editor.isActive('italic')}><IconItalic /></ToolButton>
+        <ToolButton editor={editor} command="toggleUnderline" isActive={editor.isActive('underline')}><IconUnderline /></ToolButton>
+        <ToolButton editor={editor} command="toggleStrike" isActive={editor.isActive('strike')}><IconStrike /></ToolButton>
+        <Separator />
+        <ToolButton editor={editor} isActive={editor.isActive('link')} onClick={openLinkModal}><IconLink /></ToolButton>
+        <ToolButton editor={editor} command="unsetAllMarks" isActive={false}><IconClearFormatting /></ToolButton>
+
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            type="button"
+            aria-label="Highlight"
+            style={rowBtn(highlightMenuOpen || editor.isActive('highlight'))}
+            onClick={() => { setBlockMenuOpen(false); setHighlightMenuOpen((o) => !o); }}
+          >
+            <svg viewBox="0 0 256 256" width={20} height={20}>
+              <path fill="currentColor" d="M201.8 46.2A55.2 55.2 0 0 0 149 41.5a55.2 55.2 0 0 0-37.9 20.1L43.4 141.2a4 4 0 0 0-.5.6L35 160.5a16.3 16.3 0 0 0 20.3 20.3l18.9-7.9a4 4 0 0 0 .6-.4l80-79.9a56 56 0 0 0 .8-78.3ZM55.6 160.8l-9.6 22.1a.6.6 0 0 1-.2.2a.3.3 0 0 1-.1 0a.4.4 0 0 1-.3-.1a.3.3 0 0 1 0-.1a.6.6 0 0 0 .2-.1l22.1-9.6Zm100.1-77.9l-79.9 80l-9.7-9.7l79.9-79.9a40 40 0 0 1 56.6 56.5l-80.1 80.2l9.7 9.7l80.2-80.2a56 56 0 0 0-56.8-56.6Z" />
+            </svg>
+          </button>
+          {highlightMenuOpen && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: 34,
+                right: 0,
+                minWidth: 200,
+                padding: 6,
+                background: '#FFFFFF',
+                border: '1px solid #DAD9DE',
+                borderRadius: 8,
+                boxShadow: '0 8px 16px rgba(24,26,34,0.12)',
+                zIndex: 2,
+              }}
+            >
+              {HIGHLIGHT_COLORS.map((item) => {
+                const active = isHighlightActive(editor, item.color);
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    role="menuitem"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (item.color === null) editor.chain().focus().unsetHighlight().run();
+                      else editor.chain().focus().toggleHighlight({ color: item.color }).run();
+                      setHighlightMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      padding: '8px 10px',
+                      border: 'none',
+                      borderRadius: 6,
+                      background: active ? '#F4F4F5' : 'transparent',
+                      color: '#302E36',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-family-primary)',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      textAlign: 'left',
+                    }}
+                  >
+                    <HighlightSwatchIcon color={item.swatch} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: '6px' }}>
+        {onAddComment && actionRow('Comment', handleAddComment, <IconComment />)}
+        {actionRow('Improve writing', () => askWithPreset(SURFY_PRESET_IMPROVE, true))}
+        {actionRow('Expand', () => askWithPreset(SURFY_PRESET_EXPAND, true))}
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setVoiceMenuOpen((o) => !o)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              width: '100%',
+              padding: '10px 12px',
+              border: 'none',
+              borderRadius: 6,
+              background: voiceMenuOpen ? '#F8F8F9' : 'transparent',
+              color: '#181225',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-family-primary)',
+              fontSize: 14,
+              fontWeight: 500,
+              textAlign: 'left',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F8F9'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = voiceMenuOpen ? '#F8F8F9' : 'transparent'; }}
+          >
+            <span>Change voice</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#6A6772', fontWeight: 400 }}>
+              {voiceLabel}
+              <ChevronDown open={voiceMenuOpen} />
+            </span>
+          </button>
+          {voiceMenuOpen && (
+            <div
+              role="menu"
+              style={{
+                marginTop: 2,
+                marginLeft: 8,
+                marginRight: 8,
+                padding: 4,
+                border: '1px solid #DAD9DE',
+                borderRadius: 6,
+                background: '#F8F8F9',
+              }}
+            >
+              {SURFY_VOICE_OPTIONS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setVoiceLabel(v);
+                    askWithPreset(surfyPresetVoice(v), true);
+                  }}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '8px 10px',
+                    border: 'none',
+                    borderRadius: 4,
+                    background: v === voiceLabel ? '#FFFFFF' : 'transparent',
+                    color: '#302E36',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-family-primary)',
+                    fontSize: 13,
+                    textAlign: 'left',
+                  }}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {actionRow('Ask Agent', handleAskAgent, <IconSurfy />)}
+      </div>
+    </div>,
+    document.body,
+  ) : null;
+
+  return (
+    <>
+      {menu}
+      {linkModalOpen && (
+        <SurfyLinkModal
+          editor={editor}
+          open={linkModalOpen}
+          initialText={linkText}
+          initialHref={linkHref}
+          range={linkRange}
+          onClose={closeLinkModal}
+        />
       )}
     </>
   );

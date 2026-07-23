@@ -39,17 +39,46 @@ const EMPTY_DETAILS: BusinessDetails = {
 
 describe('growthActionsProgress', () => {
   it('counts baseline actions plus completed growth tasks', () => {
-    expect(GROWTH_DAILY_TOTAL).toBe(5);
+    expect(GROWTH_DAILY_TOTAL).toBe(9);
     expect(countGrowthDoneToday([])).toBe(2);
-    expect(countGrowthDoneToday(['setup-agent', 'add-categories', 'improve-description'])).toBe(5);
-    expect(areAllGrowthTasksDoneToday(['setup-agent', 'add-categories', 'improve-description'])).toBe(true);
+    expect(countGrowthDoneToday([
+      'setup-agent',
+      'add-logo',
+      'add-cover-photo',
+      'add-photos',
+      'schedule-gbp-post',
+      'add-categories',
+      'improve-description',
+    ])).toBe(9);
+    expect(areAllGrowthTasksDoneToday([
+      'setup-agent',
+      'add-logo',
+      'add-cover-photo',
+      'add-photos',
+      'schedule-gbp-post',
+      'add-categories',
+      'improve-description',
+    ])).toBe(true);
   });
 
   it('treats exhausted category suggestions as not applicable', () => {
     const applicable = getApplicableGrowthTaskIds(EMPTY_DETAILS, ['setup-agent']);
-    expect(applicable).toEqual(['setup-agent', 'improve-description']);
-    expect(areAllGrowthTasksDoneToday(['setup-agent', 'improve-description'], EMPTY_DETAILS)).toBe(true);
-    expect(countGrowthDoneToday(['setup-agent', 'improve-description'], EMPTY_DETAILS)).toBe(5);
+    expect(applicable).toEqual([
+      'setup-agent',
+      'add-logo',
+      'add-cover-photo',
+      'add-photos',
+      'schedule-gbp-post',
+      'improve-description',
+    ]);
+    expect(areAllGrowthTasksDoneToday(
+      ['setup-agent', 'add-logo', 'add-cover-photo', 'add-photos', 'schedule-gbp-post', 'improve-description'],
+      EMPTY_DETAILS,
+    )).toBe(true);
+    expect(countGrowthDoneToday(
+      ['setup-agent', 'add-logo', 'add-cover-photo', 'add-photos', 'schedule-gbp-post', 'improve-description'],
+      EMPTY_DETAILS,
+    )).toBe(9);
   });
 
   it('builds activity log with baseline and completed tasks', () => {

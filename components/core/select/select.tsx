@@ -38,10 +38,11 @@ const Trigger = styled.button<{ $sz: 'sm' | 'md'; $open: boolean }>(({ $sz, $ope
     fontWeight: 400,
     lineHeight: '1rem',
     borderRadius: cfg.r,
+    // Open: single accent border + soft glow (NOT border+hard ring — that reads as double border).
     border: $open ? '1px solid #F29964' : '1px solid #DAD9DE',
     backgroundColor: '#FFFFFF',
     color: '#302E36',
-    boxShadow: $open ? '0 0 0 2px #FFFFFF, 0 0 0 4px #F29964' : 'none',
+    boxShadow: $open ? '0 0 0 3px rgba(242, 153, 100, 0.18)' : 'none',
     cursor: 'pointer',
     outline: 'none',
     textAlign: 'left' as const,
@@ -79,7 +80,7 @@ const SearchInp = styled.input`
   font-size: 14px; font-family: inherit; color: #302E36; background: #FFFFFF;
   outline: none;
   &::placeholder { color: #6A6772; }
-  &:focus { border-color: #F29964; box-shadow: 0 0 0 1px #F29964; }
+  &:focus { border-color: #F29964; box-shadow: 0 0 0 3px rgba(242, 153, 100, 0.18); }
 `;
 
 const List = styled.div`

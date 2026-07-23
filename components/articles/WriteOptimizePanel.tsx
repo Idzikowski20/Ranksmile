@@ -11,6 +11,9 @@ import ScoreTrio from './ScoreTrio';
 import EffortChecklist from './EffortChecklist';
 import { buildEffortChecklist } from '../../lib/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
+import { scopeFromAction } from '../../lib/observations/optimizeActionScope';
+import type { Action } from '../../lib/primitives/types';
+import { Button } from '../core';
 
 const F = 'var(--font-family-primary)';
 
@@ -54,8 +57,41 @@ interface Props {
   onHighlightTermsChange?: (on: boolean) => void;
   /** Which section to expand + scroll to on open (driven by clicking a score gauge). */
   initialSection?: 'seo' | 'ai';
-  /** Live ↑N deltas during Auto-Optimize. */
+  /** Live ↑N deltas during Auto-Optimize, or vs previous coverage run. */
   scoreDeltas?: { seo?: number; overall?: number; ai?: number };
+  deltaTitles?: { seo?: string; overall?: string; ai?: string };
+  articleId?: number;
+  /** @deprecated Prefer onOptimizeAction for surgical Apply. */
+  onAutoOptimize?: () => void;
+  /** Surgical Apply from Info to cover → optimize-sections with scope. */
+  onOptimizeAction?: (action: Action) => void;
+  domainSlug?: string;
+}
+
+/** Build a cover_question Action from an AI Search info-to-cover row. */
+function actionFromInfoFact(fact: Pick<InfoFact, 'id' | 'text'>): Action {
+  return {
+    id: `info-${fact.id}`,
+    type: 'cover_question',
+    title: fact.text,
+    instruction: `Cover this information in the article (AI search): ${fact.text}`,
+    expectedLift: 5,
+    confidence: 0.85,
+    cost: 'easy',
+    difficulty: 'trivial',
+    impact: 'medium',
+    priority: 50,
+    reason: 'Strengthen AI search coverage',
+    origin: 'coverage',
+    appliesTo: { kind: 'article' },
+    dependsOn: [],
+    generatedBy: 'WriteOptimizePanel.infoToCover',
+    featureId: 'coverage',
+    evidence: [],
+    relatedTopics: [],
+    relatedQuestions: [fact.id],
+    relatedEntities: [],
+  };
 }
 
 /* ── Coverage status ───────────────────────────────────────────────── */
@@ -181,8 +217,13 @@ const StatusDot = ({ covered }: { covered: boolean }) => (
 );
 
 /* Grouped accordion card inside AI Search (e.g. "Upfront Intent Alignment"). */
-const InfoCard = ({ title, badge, items, defaultOpen = true }: {
-  title: string; badge?: string; items: Array<{ text: string; covered: boolean; domains?: string[]; missing?: readonly string[]; sources?: InfoSource[] }>; defaultOpen?: boolean;
+const InfoCard = ({ title, badge, items, defaultOpen = true, applyingId, onApply }: {
+  title: string;
+  badge?: string;
+  items: Array<{ id?: string; text: string; covered: boolean; domains?: string[]; missing?: readonly string[]; sources?: InfoSource[] }>;
+  defaultOpen?: boolean;
+  applyingId?: string | null;
+  onApply?: (fact: { id: string; text: string }) => void;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -196,33 +237,49 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
       </button>
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {items.map((it, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                  <StatusDot covered={it.covered} />
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
-                </span>
-                {it.sources && it.sources.length > 0 ? (
-                  <SourceRow sources={it.sources} muted={it.covered} />
-                ) : it.domains && it.domains.length > 0 ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
-                    {it.domains.slice(0, 2).map((d) => (
-                      <DomainFavicon key={d} domain={d} size={14} style={{ borderRadius: 3 }} />
-                    ))}
+          {items.map((it, i) => {
+            const factId = it.id || `intent-${i}`;
+            return (
+              <div key={factId} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                    <StatusDot covered={it.covered} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
                   </span>
-                ) : null}
-                <span style={{ flexShrink: 0, fontSize: 12, color: it.covered ? '#9f9fa9' : '#52525c' }}>{it.covered ? 'Covered' : 'To cover'}</span>
+                  {it.sources && it.sources.length > 0 ? (
+                    <SourceRow sources={it.sources} muted={it.covered} />
+                  ) : it.domains && it.domains.length > 0 ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0, alignSelf: 'center' }}>
+                      {it.domains.slice(0, 2).map((d) => (
+                        <DomainFavicon key={d} domain={d} size={14} style={{ borderRadius: 3 }} />
+                      ))}
+                    </span>
+                  ) : null}
+                  {it.covered ? (
+                    <span style={{ flexShrink: 0, fontSize: 12, color: '#9f9fa9' }}>Covered</span>
+                  ) : onApply ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={!!applyingId}
+                      onClick={() => onApply({ id: factId, text: it.text })}
+                    >
+                      {applyingId === `info-${factId}` ? '…' : 'Apply'}
+                    </Button>
+                  ) : (
+                    <span style={{ flexShrink: 0, fontSize: 12, color: '#52525c' }}>To cover</span>
+                  )}
+                </div>
+                {!it.covered && it.missing && it.missing.length > 0 && (
+                  <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {it.missing.map((m, k) => (
+                      <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {!it.covered && it.missing && it.missing.length > 0 && (
-                <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {it.missing.map((m, k) => (
-                    <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -313,9 +370,17 @@ const SourceRow = ({ sources, muted }: { sources: InfoSource[]; muted?: boolean 
   );
 };
 
-const FactRow = ({ fact }: { fact: InfoFact }) => (
+const FactRow = ({
+  fact,
+  applyingId,
+  onApply,
+}: {
+  fact: InfoFact;
+  applyingId?: string | null;
+  onApply?: (fact: InfoFact) => void;
+}) => (
   <div
-    style={{ display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}
+    style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
     onMouseEnter={(e) => { const btn = e.currentTarget.querySelector('[data-copy]') as HTMLElement | null; if (btn) btn.style.opacity = '1'; }}
     onMouseLeave={(e) => { const btn = e.currentTarget.querySelector('[data-copy]') as HTMLElement | null; if (btn) btn.style.opacity = '0'; }}
   >
@@ -331,13 +396,34 @@ const FactRow = ({ fact }: { fact: InfoFact }) => (
         >
           Copy
         </button>
-        {fact.covered && <span style={{ fontSize: 12, color: '#9f9fa9', flexShrink: 0 }}>Covered</span>}
+        {fact.covered ? (
+          <span style={{ fontSize: 12, color: '#9f9fa9', flexShrink: 0 }}>Covered</span>
+        ) : onApply ? (
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={!!applyingId}
+            onClick={() => onApply(fact)}
+          >
+            {applyingId === `info-${fact.id}` ? '…' : 'Apply'}
+          </Button>
+        ) : null}
       </div>
     </div>
   </div>
 );
 
-const TopicGroupCard = ({ group, defaultOpen = true }: { group: InfoTopicGroup; defaultOpen?: boolean }) => {
+const TopicGroupCard = ({
+  group,
+  defaultOpen = true,
+  applyingId,
+  onApply,
+}: {
+  group: InfoTopicGroup;
+  defaultOpen?: boolean;
+  applyingId?: string | null;
+  onApply?: (fact: InfoFact) => void;
+}) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div style={{ background: '#f4f4f5', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -350,7 +436,7 @@ const TopicGroupCard = ({ group, defaultOpen = true }: { group: InfoTopicGroup; 
           {group.facts.map((fact, idx) => (
             <React.Fragment key={fact.id}>
               {idx > 0 && <div style={{ borderTop: '1px solid #e4e4e7' }} />}
-              <FactRow fact={fact} />
+              <FactRow fact={fact} applyingId={applyingId} onApply={onApply} />
             </React.Fragment>
           ))}
         </div>
@@ -380,13 +466,38 @@ const WriteOptimizePanel = ({
   seo, ai, content, hasAi, coverageItems, coverageSnapshot, competitorOutlinesCache,
   html, keyword, paaQuestions,
   onBack, highlightTerms, onHighlightTermsChange,
-  initialSection, scoreDeltas,
+  initialSection, scoreDeltas, deltaTitles,
+  articleId, onAutoOptimize, onOptimizeAction,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
   const [seoOpen, setSeoOpen] = useState(true);
   const [aiOpen, setAiOpen] = useState(false);
   const [effortOpen, setEffortOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  const applyInfoFact = async (fact: Pick<InfoFact, 'id' | 'text'>) => {
+    if (!articleId || applyingId) return;
+    const a = actionFromInfoFact(fact);
+    setApplyingId(a.id);
+    try {
+      await fetch(`/api/articles/${articleId}/execute-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: a }),
+      });
+      const scope = scopeFromAction(a);
+      if (scope && onOptimizeAction) {
+        onOptimizeAction(a);
+      } else if (onAutoOptimize) {
+        onAutoOptimize();
+      }
+    } catch {
+      /* non-fatal */
+    } finally {
+      setApplyingId(null);
+    }
+  };
 
   // Score-gauge shortcuts: expand a section and scroll it into view. The SEO block
   // sits at the top of the scroll area; the AI block lives further down.
@@ -527,7 +638,7 @@ const WriteOptimizePanel = ({
 
       {/* Gauge trio */}
       <div style={{ paddingTop: 8, paddingBottom: 14 }}>
-        <ScoreTrio seo={seo} ai={ai} content={content} hasAi={hasAi} onSeoClick={expandSeo} onAiClick={expandAi} deltas={scoreDeltas} />
+        <ScoreTrio seo={seo} ai={ai} content={content} hasAi={hasAi} onSeoClick={expandSeo} onAiClick={expandAi} deltas={scoreDeltas} deltaTitles={deltaTitles} />
       </div>
 
       {/* Effort — collapsible (same pattern as SEO / AI) */}
@@ -744,11 +855,18 @@ const WriteOptimizePanel = ({
                   <InfoCard
                     title="Upfront Intent Alignment"
                     badge="NEW"
-                    items={infoTopics.intent.map((f) => ({ text: f.text, covered: f.covered, sources: f.sources }))}
+                    items={infoTopics.intent.map((f) => ({ id: f.id, text: f.text, covered: f.covered, sources: f.sources }))}
+                    applyingId={applyingId}
+                    onApply={articleId ? (f) => { void applyInfoFact(f); } : undefined}
                   />
                 )}
                 {infoTopics.topics.map((group) => (
-                  <TopicGroupCard key={group.id} group={group} />
+                  <TopicGroupCard
+                    key={group.id}
+                    group={group}
+                    applyingId={applyingId}
+                    onApply={articleId ? (f) => { void applyInfoFact(f); } : undefined}
+                  />
                 ))}
               </div>
             ) : (

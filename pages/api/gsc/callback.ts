@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { auth } from '@googleapis/searchconsole';
 import { getCurrentUserId } from '../../../utils/getUser';
 import db from '../../../database/database';
-import { upsertAccountForUser } from '../../../lib/gscAccounts';
+import { GOOGLE_OAUTH_SCOPES, upsertAccountForUser } from '../../../lib/gscAccounts';
 
 function parseState(state: string): { domain?: string; redirect: string | null; userId?: string | null; nonce?: string } {
   try {
@@ -106,10 +106,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: email || 'Google Account',
       picture,
       refreshToken: tokens.refresh_token,
-      scopes: 'openid email profile https://www.googleapis.com/auth/webmasters.readonly',
+      scopes: GOOGLE_OAUTH_SCOPES.join(' '),
     });
 
-    console.log('[GSC OAuth] Connected Google Search Console for user', ownerUserId);
+    console.log('[GSC OAuth] Connected Google (GSC + GBP) for user', ownerUserId);
 
     return res.redirect(302, `${safeRelative(redirect)}?gsc_connected=1`);
   } catch (err) {

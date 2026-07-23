@@ -295,7 +295,12 @@ export async function kickAiVisScan(scanId: number, ownDomain: string): Promise<
       // Bounded by ceil(total / chunk); the guard only backstops a logic bug.
       for (let i = 0; i < 100000; i += 1) {
          const { finished } = await runScanChunk(scanId, ownDomain);
-         if (finished) { await runBrandsForScan(scanId); return; }
+         if (finished) {
+            await runBrandsForScan(scanId);
+            const { emitAiVisibilityScanObservations } = await import('./emitObservations');
+            await emitAiVisibilityScanObservations(scanId, ownDomain).catch(() => {});
+            return;
+         }
       }
    } catch (error) {
       await db.query(

@@ -36,6 +36,7 @@ from analyzers.social_posts import generate_social_posts
 from analyzers.content_classifier import classify
 from analyzers.ranking_scorer import predict_ranking
 from analyzers.plagiarism import run_plagiarism
+from analyzers.ner import extract_entities
 from pipeline.article_pipeline import run_pipeline, suggest_internal_links, generate_brand_knowledge
 from service_urls import nextjs_url as resolved_nextjs_url
 
@@ -476,6 +477,18 @@ async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
         err = f"{type(exc).__name__}: {exc}"
         print(f"[generate_runner] failed for {job_id}: {err}")
         await post_terminal(nextjs_url, job_id, "failed", error=err)
+
+
+@app.post("/ner")
+async def ner_endpoint(request: Request):
+    """Entity spans for v7 NER worker. spaCy if available, else regex."""
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    language = body.get("language") or "pl"
+    max_spans = int(body.get("max_spans") or 40)
+    return extract_entities(text, language=language, max_spans=max_spans)
 
 
 @app.post("/pipeline/deep-analysis")

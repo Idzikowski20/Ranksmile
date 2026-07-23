@@ -11,7 +11,7 @@ import {
   SentryPanelBody,
   SentryPanelHeader,
 } from '../../components/sentry-pages';
-import { WizardStepper } from '../../components/articles/NewContentWizard';
+import GeneratingStage from '../../components/articles/GeneratingStage';
 import { useFetchDomains } from '../../services/domains';
 
 // ── Must match the API handler ────────────────────────────────────────
@@ -368,16 +368,6 @@ const DeepAnalysisPage: NextPage = () => {
     return 'Fetching and analyzing content. This may take a moment.';
   }, [allDone, overallError]);
 
-  const sourceLabel = useMemo(() => {
-    if (urlStr) {
-      return urlStr.length > 72 ? `${urlStr.slice(0, 72)}…` : urlStr;
-    }
-    if (keywords.length > 0) {
-      return keywords.join(', ');
-    }
-    return null;
-  }, [urlStr, keywords]);
-
   const handleRetry = () => {
     setOverallError(null);
     setJobId(null);
@@ -415,25 +405,8 @@ const DeepAnalysisPage: NextPage = () => {
           subtitle={subtitle}
           meta={statusBadge}
         />
-        <WizardStepper current="research" />
 
         <div className="sentry-page-content">
-          {sourceLabel && !overallError && (
-            <div className="deep-analysis-source">
-              <svg viewBox="0 0 20 20" width={16} height={16} fill="none" stroke="#9f9fa9" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-                {urlStr ? (
-                  <path d="M12.586 12.586a2 2 0 1 1 2.828 2.828l-2.828-2.828zM7.414 7.414a2 2 0 1 1-2.828-2.828l2.828 2.828zM16 2L2 16" />
-                ) : (
-                  <>
-                    <circle cx="10" cy="10" r="6" />
-                    <path d="M10 6v4l2.5 2.5" />
-                  </>
-                )}
-              </svg>
-              <span className="deep-analysis-source-text" title={sourceLabel}>{sourceLabel}</span>
-            </div>
-          )}
-
           <SentryPanel>
             <SentryPanelHeader title="Analysis engines" />
             <SentryPanelBody>
@@ -460,6 +433,16 @@ const DeepAnalysisPage: NextPage = () => {
               ) : undefined}
             />
             <SentryPanelBody>
+              {!overallError && !allDone && (
+                <div style={{ marginBottom: 20 }}>
+                  <GeneratingStage
+                    size="md"
+                    title="Deep analysis"
+                    status={steps.find((s) => s.status === 'running')?.label || 'Analyzing content…'}
+                    progressPct={progressPct}
+                  />
+                </div>
+              )}
               <div className="deep-analysis-steps">
                 {steps.map((step) => (
                   <StepRow key={step.key} step={step} />

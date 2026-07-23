@@ -63,20 +63,15 @@ export const WizardNextButton = ({ label, sublabel, onClick, disabled }: {
 
 /** Light "Back" wizard button. */
 export const WizardBackButton = ({ onClick }: { onClick: () => void }) => (
-  <button
+  <Button
     type="button"
+    variant="secondary"
+    size="md"
     onClick={onClick}
-    style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 24px',
-      borderRadius: 8, fontSize: 16, lineHeight: '24px', fontWeight: 600, border: 'none',
-      background: '#F4F4F5', color: '#18181B', cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
-      transition: 'background 0.15s', flexShrink: 0,
-    }}
-    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#E4E4E7'; }}
-    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
+    style={{ flexShrink: 0, fontWeight: 600, minHeight: 40, height: 40, padding: '10px 24px' }}
   >
     Back
-  </button>
+  </Button>
 );
 
 export default WizardShell;

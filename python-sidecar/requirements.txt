@@ -5,6 +5,8 @@ beautifulsoup4>=4.12.3
 requests>=2.32.3
 scikit-learn>=1.6.0
 spacy>=3.8.0
+# NER models (downloaded by python-sidecar/dev.cmd): pl_core_news_sm, en_core_web_sm
+
 python-dotenv>=1.0.1
 openai>=1.30.0
 anthropic>=0.34.0

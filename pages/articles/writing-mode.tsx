@@ -2,17 +2,9 @@ import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
+import { Switch } from '../../components/core';
 import { saveWizardState, clearWizardState } from '../../lib/wizardState';
 import { useArticle } from '../../services/article';
-
-const Toggle = ({ on, onChange }: { on: boolean; onChange: () => void }) => (
-  <span
-    onClick={(e) => { e.stopPropagation(); onChange(); }}
-    style={{ width: 36, height: 20, borderRadius: 9999, background: on ? '#F29964' : '#D4D4D8', position: 'relative', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s', display: 'inline-block' }}
-  >
-    <span style={{ position: 'absolute', top: 2, left: on ? 18 : 2, width: 16, height: 16, borderRadius: 9999, background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
-  </span>
-);
 
 const WritingModePage: NextPage = () => {
   const router = useRouter();
@@ -146,12 +138,14 @@ const WritingModePage: NextPage = () => {
               {customizeOpen && mode === 'generate' && (
                 <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8, padding: 12, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 10 }}>
                   {[
-                    { l: 'Review outline before generating content', v: reviewOutline, set: () => setReviewOutline((x) => !x) },
-                    { l: 'Insert internal links to your site', v: internalLinks, set: () => setInternalLinks((x) => !x) },
-                    { l: 'Insert external links to third-party sources', v: externalLinks, set: () => setExternalLinks((x) => !x) },
+                    { l: 'Review outline before generating content', v: reviewOutline, set: (c: boolean) => setReviewOutline(c) },
+                    { l: 'Insert internal links to your site', v: internalLinks, set: (c: boolean) => setInternalLinks(c) },
+                    { l: 'Insert external links to third-party sources', v: externalLinks, set: (c: boolean) => setExternalLinks(c) },
                   ].map((row) => (
                     <div key={row.l} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Toggle on={row.v} onChange={row.set} />
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <Switch checked={row.v} onChange={row.set} aria-label={row.l} />
+                      </span>
                       <span style={{ fontSize: 14, color: '#18181B' }}>{row.l}</span>
                     </div>
                   ))}

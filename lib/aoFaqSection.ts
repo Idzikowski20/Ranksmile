@@ -1,4 +1,5 @@
 import type { CoverageItem } from './aiCoverage';
+import { STOP_SLOP_RULES } from './stopSlopPrompt';
 
 const FAQ_HEADING_RE = /<h2[^>]*>\s*(faq|najcz[eę]ściej zadawane pytania|frequently asked questions|pytania i odpowiedzi)\s*<\/h2>/i;
 
@@ -51,7 +52,9 @@ RULES:
 - Each <p> answer: 120–350 characters of plain text. Be factual and concise; do not invent fake Q&A stubs.
 - Do NOT wrap in markdown fences. No commentary outside HTML.
 - Match the article language (${opts.language}).
-- Answer ALL ${opts.questions.length} questions — none may be skipped.`;
+- Answer ALL ${opts.questions.length} questions — none may be skipped.
+
+${STOP_SLOP_RULES}`;
 
   const userInstruction = `Target keyword: "${opts.keyword}"
 

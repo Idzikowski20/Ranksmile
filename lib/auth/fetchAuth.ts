@@ -64,6 +64,11 @@ export type SignInEmailResponse = {
   url?: string;
 };
 
+export type SignInSocialResponse = {
+  url?: string;
+  redirect?: boolean;
+};
+
 export function signInEmail(params: {
   email: string;
   password: string;
@@ -71,6 +76,14 @@ export function signInEmail(params: {
   rememberMe?: boolean;
 }): Promise<AuthFetchResult<SignInEmailResponse>> {
   return authPost<SignInEmailResponse>('sign-in/email', params);
+}
+
+export function signInSocial(params: {
+  provider: 'google' | 'github' | 'apple';
+  callbackURL?: string;
+  errorCallbackURL?: string;
+}): Promise<AuthFetchResult<SignInSocialResponse>> {
+  return authPost<SignInSocialResponse>('sign-in/social', params);
 }
 
 export function signUpEmail(params: {

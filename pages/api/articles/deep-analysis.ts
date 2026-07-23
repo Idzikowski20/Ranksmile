@@ -36,6 +36,7 @@ import {
 import { keywordFromUrl, resolveAnalysisSeedKeyword } from '../../../lib/inferPageKeyword';
 import { resolveFactKeyword } from '../../../lib/resolveFactKeyword';
 import { persistAiVisibilityRun } from '../../../lib/aiVisibilityStore';
+import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
 import { AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { sidecarBase, nextjsUrl } from '../../../lib/sidecar';
 import { getCurrentUserId } from '../../../utils/getUser';
@@ -1005,6 +1006,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           { replacements: [JSON.stringify(coverageSnapshot), articleId] },
         );
 
+        await persistCoverageFeatureRun({
+          snapshot: coverageSnapshot,
+          articleId,
+          domainId: resolvedDomainId,
+          keyword: factKeyword,
+        }).catch((err: unknown) => {
+          console.warn('[coverage] feature store persist failed (non-fatal):', getErrorMessage(err));
+        });
+
         const intentBucket = coverageSnapshot.buckets.find((b) => b.key === 'intent');
         const aiScore = articleFacts.length
           ? computeAiSearchScoreV2({
@@ -1088,6 +1098,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
        WHERE id = ?`,
       { replacements: [jobId] },
     );
+
+    // v7 pipeline bridge (fire-and-forget; after competitors + AI visibility settled)
+    try {
+      const { enqueueFromDeepAnalysis, enqueueVisibilityFromDeepAnalysis } = await import(
+        '../../../lib/pipeline/enqueueFromDeepAnalysis'
+      );
+      const bridgeUserId = await getCurrentUserId(req, res);
+      const workspaceId = String(bridgeUserId || resolvedDomainId || '0');
+      const paaRaw = Array.isArray(serp.paa_questions) ? serp.paa_questions : [];
+      const docsFromCompetitors = (serpCompetitors || []).map((c) => ({
+        url: c.url || '',
+        domain: c.domain,
+        title: c.title,
+        snippet: c.snippet,
+      }));
+      void enqueueFromDeepAnalysis({
+        workspaceId,
+        articleId,
+        domainId: resolvedDomainId,
+        keyword: pipelineKeyword,
+        language: finalArticleLanguage,
+        competitors: docsFromCompetitors,
+        terms: allTerms,
+        paaQuestions: paaRaw as Array<string | { question: string }>,
+        citedCount: aiVisibilitySummary?.prompts_cited,
+        promptCount: aiVisibilitySummary?.prompts_total,
+      }).catch((err) => {
+        console.warn('[deep-analysis] v7 enqueue failed (non-fatal):', getErrorMessage(err));
+      });
+      void enqueueVisibilityFromDeepAnalysis({
+        workspaceId,
+        articleId,
+        keyword: pipelineKeyword,
+        language: finalArticleLanguage,
+        citedCount: aiVisibilitySummary?.prompts_cited,
+        promptCount: aiVisibilitySummary?.prompts_total,
+      }).catch(() => undefined);
+    } catch (err) {
+      console.warn('[deep-analysis] v7 enqueue import failed (non-fatal):', getErrorMessage(err));
+    }
 
     await db.query(
       `UPDATE articles SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE ${articleIdSql} = ?`,

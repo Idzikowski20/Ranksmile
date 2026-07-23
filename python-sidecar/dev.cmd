@@ -18,4 +18,16 @@ if not exist ".venv\Scripts\python.exe" (
   )
 )
 
+REM Optional spaCy models for NER (best-effort; regex fallback if missing)
+".venv\Scripts\python.exe" -c "import spacy; spacy.load('pl_core_news_sm')" 2>nul
+if errorlevel 1 (
+  echo [python-sidecar] Pobieranie modelu spaCy pl_core_news_sm...
+  ".venv\Scripts\python.exe" -m spacy download pl_core_news_sm
+)
+".venv\Scripts\python.exe" -c "import spacy; spacy.load('en_core_web_sm')" 2>nul
+if errorlevel 1 (
+  echo [python-sidecar] Pobieranie modelu spaCy en_core_web_sm...
+  ".venv\Scripts\python.exe" -m spacy download en_core_web_sm
+)
+
 ".venv\Scripts\python.exe" -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload

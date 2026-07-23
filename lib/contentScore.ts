@@ -8,7 +8,7 @@ import {
    thinOriginalityScore,
    titleQueryScore,
 } from './contentEffort';
-import { termSalienceWeight } from './termSalienceCore';
+import { termWeight } from './termWeight';
 import { countOccurrences, normalizePl, tokenize, wordMatch } from './termMatch';
 
 export { countOccurrences } from './termMatch';
@@ -329,13 +329,15 @@ export function collectScoreSlots(
       const earned = Math.round((covered / entityItems.length) * 25);
       push('terms', 'NLP terms', earned, 25, `${covered}/${entityItems.length} terms covered`);
    } else if (scoreData.terms?.length) {
+      // SERP-first termWeight (doc_freq) with salience fallback — Etap 1
+      const corpusSize = Math.max(1, scoreData.competitor_count || 10);
       const totalWeight = scoreData.terms.reduce(
-        (s, t) => s + Math.max(t.target_count, 1) * termSalienceWeight(t),
+        (s, t) => s + Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize }),
         0,
       );
       const termsRatio = scoreData.terms.reduce((s, t) => {
          const actual = countOccurrences(plainText, t.term);
-         const w = Math.max(t.target_count, 1) * termSalienceWeight(t);
+         const w = Math.max(t.target_count, 1) * termWeight({ ...t, corpusSize });
          return s + Math.min(actual / Math.max(t.target_count, 1), 1) * w;
       }, 0) / Math.max(totalWeight, 1);
       push('terms', 'NLP terms', termsRatio * 25, 25, 'Use the suggested terms at their target counts (see Keywords & Terms)');

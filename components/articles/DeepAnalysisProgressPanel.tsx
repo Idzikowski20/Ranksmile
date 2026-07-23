@@ -1,6 +1,7 @@
 import React from 'react';
 import type { DeepAnalysisUiState, DeepAnalysisUiStep } from '../../lib/deepAnalysisProgress';
 import DomainFavicon from '../common/DomainFavicon';
+import GeneratingStage from './GeneratingStage';
 
 const Spinner = () => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.8s linear infinite' }}>
@@ -103,6 +104,22 @@ const EngineIcons = () => (
   </div>
 );
 
+function runningStatus(state: DeepAnalysisUiState): string {
+  const all = [...state.aiSearch, ...state.googleSearch];
+  const running = all.find((s) => s.status === 'running');
+  if (running) return running.label;
+  if (state.error) return state.error;
+  return 'Analyzing content…';
+}
+
+function progressFromState(state: DeepAnalysisUiState): number {
+  const all = [...state.aiSearch, ...state.googleSearch];
+  if (!all.length) return 0;
+  const done = all.filter((s) => s.status === 'done').length;
+  const running = all.some((s) => s.status === 'running') ? 0.5 : 0;
+  return Math.min(100, Math.round(((done + running) / all.length) * 100));
+}
+
 interface Props {
   state: DeepAnalysisUiState;
 }
@@ -118,6 +135,13 @@ const DeepAnalysisProgressPanel = ({ state }: Props) => (
       fontFamily: 'var(--font-family-primary)',
     }}
   >
+    <GeneratingStage
+      size="md"
+      title="Deep analysis"
+      status={runningStatus(state)}
+      progressPct={progressFromState(state)}
+    />
+
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>AI Search</span>

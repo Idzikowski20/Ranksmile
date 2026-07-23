@@ -165,6 +165,22 @@ export async function saveCrawlSnapshot(domainId: number, domainHint?: string): 
     { replacements: [id, domainId, crawledAt, JSON.stringify(metrics)] },
   );
 
+  try {
+    const { emitObservations, observationsFromAuditIssues } = await import('../emitObservations');
+    const issues = Object.entries(metrics.issueCounts)
+      .filter(([, count]) => count > 0)
+      .map(([issueId, count]) => ({
+        id: issueId,
+        label: issueId.replace(/_/g, ' '),
+        severity: count >= 10 ? 'error' : count >= 3 ? 'warn' : 'notice',
+        count,
+        urls: metrics.issueUrls?.[issueId],
+      }));
+    await emitObservations(observationsFromAuditIssues(issues, { domainId }), { domainId });
+  } catch {
+    /* non-fatal */
+  }
+
   return id;
 }
 

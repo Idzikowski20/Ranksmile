@@ -13,6 +13,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, ArticleRow } from '../../../lib/db/query';
 import { CoverageItem } from '../../../lib/aiCoverage';
 import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
+import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
 import { safeJsonParse } from '../../../lib/safeJson';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
@@ -35,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const articleIdSql = await getArticleIdSql();
-      const article = await queryOne<Pick<ArticleRow, 'content' | 'meta_title' | 'meta_description' | 'target_keyword' | 'title'>>(
-         `SELECT content, meta_title, meta_description, target_keyword, title FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+      const article = await queryOne<Pick<ArticleRow, 'content' | 'meta_title' | 'meta_description' | 'target_keyword' | 'title'> & { domain_id?: number | null }>(
+         `SELECT content, meta_title, meta_description, target_keyword, title, domain_id FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
          [articleId],
       );
       if (!article) return res.status(404).json({ error: 'Article not found' });
@@ -98,6 +99,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                `UPDATE articles SET ai_info_to_cover = ? WHERE ${articleIdSql} = ?`,
                { replacements: [JSON.stringify(snapshot), articleId] },
             );
+
+            await persistCoverageFeatureRun({
+               snapshot,
+               articleId: Number(articleId),
+               domainId: article.domain_id != null ? Number(article.domain_id) : undefined,
+               keyword: article.target_keyword || article.title || undefined,
+            }).catch((err: unknown) => {
+               console.warn('[coverage] feature store persist failed (non-fatal):', getErrorMessage(err));
+            });
          }
       } catch (err) {
          console.warn('[coverage] ai-readability snapshot merge failed', err);

@@ -38,7 +38,7 @@ export function SentryPageHeader({ title, subtitle, icon, actions, meta, borderl
         {icon && <span className="sentry-page-header-icon">{icon}</span>}
         <div className="sentry-page-header-titles">
           <h1 className="sentry-page-header-title">{title}</h1>
-          {subtitle && <p className="sentry-page-header-subtitle">{subtitle}</p>}
+          {subtitle && <div className="sentry-page-header-subtitle">{subtitle}</div>}
         </div>
         {meta && <div className="sentry-page-header-meta">{meta}</div>}
       </div>

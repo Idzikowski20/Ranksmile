@@ -7,7 +7,7 @@ import EmailSignUpForm from '../../components/auth/EmailSignUpForm';
 const SignUp: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Sign up — SerpBear</title>
+      <title>Sign up — Surfy</title>
     </Head>
     <AuthPageLayout>
       <EmailSignUpForm />

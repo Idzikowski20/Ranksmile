@@ -678,18 +678,15 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
 /* Featured image block — sits between Title/Description and the editor */
 const FeaturedImageBlock = ({
   imageUrl, imageAlt, keyword,
-  onImageChange, onImageRemove,
+  onImageChange,
 }: {
   imageUrl?: string;
   imageAlt?: string;
   keyword?: string;
   onImageChange?: (img: { url: string; alt: string }) => void;
-  onImageRemove?: () => void;
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
   const [altText, setAltText] = useState(imageAlt || '');
   const featuredFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -697,27 +694,6 @@ const FeaturedImageBlock = ({
   useEffect(() => {
     setAltText(imageAlt || '');
   }, [imageAlt]);
-
-  const handleAiGenerate = async (prompt: string) => {
-    if (!prompt.trim() || isGenerating) return;
-    setIsGenerating(true);
-    try {
-      const res = await fetch('/api/articles/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: prompt, title: prompt }),
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        onImageChange?.({ url: data.url, alt: data.alt || prompt });
-        setAiPrompt('');
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   if (!imageUrl) return null;
 
@@ -736,7 +712,7 @@ const FeaturedImageBlock = ({
             <img
               src={imageUrl}
               alt={altText || 'Featured image'}
-              style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', objectPosition: 'center', display: 'block', background: '#F8F8F9' }}
             />
 
             {/* Dark overlay */}
@@ -750,7 +726,7 @@ const FeaturedImageBlock = ({
               }}
             />
 
-            {/* Bottom toolbar */}
+            {/* Bottom toolbar — Pixabay + Upload + Remove */}
             <div
               style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -759,123 +735,61 @@ const FeaturedImageBlock = ({
                 transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1)',
                 borderRadius: '0 0 8px 8px',
                 padding: '8px 10px',
-                display: 'flex', flexDirection: 'column', gap: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
               }}
             >
-              {/* AI prompt row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <svg width="18" height="18" viewBox="0 0 19 20" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M1.92383 5.67187C1.92383 3.60081 3.60276 1.92188 5.67383 1.92188H14.3279C16.399 1.92188 18.0779 3.60081 18.0779 5.67188V14.326C18.0779 16.397 16.399 18.076 14.3279 18.076H5.67383C3.60276 18.076 1.92383 16.397 1.92383 14.326V5.67187Z" fill="white" />
-                  <path d="M6.15039 7.05909C6.15039 6.55062 6.15039 6.29639 6.30835 6.13843C6.46631 5.98047 6.72054 5.98047 7.22901 5.98047H7.56271C8.07118 5.98047 8.32541 5.98047 8.48337 6.13843C8.64133 6.29639 8.64133 6.55062 8.64133 7.05909V10.4451C8.64133 10.9535 8.64133 11.2078 8.48337 11.3657C8.32541 11.5237 8.07118 11.5237 7.56272 11.5237H7.22901C6.72054 11.5237 6.46631 11.5237 6.30835 11.3657C6.15039 11.2078 6.15039 10.9535 6.15039 10.4451V7.05909Z" fill="black" />
-                  <path d="M11.3164 7.05909C11.3164 6.55062 11.3164 6.29639 11.4744 6.13843C11.6323 5.98047 11.8866 5.98047 12.395 5.98047H12.7287C13.2372 5.98047 13.4914 5.98047 13.6494 6.13843C13.8073 6.29639 13.8073 6.55062 13.8073 7.05909V10.4451C13.8073 10.9535 13.8073 11.2078 13.6494 11.3657C13.4914 11.5237 13.2372 11.5237 12.7287 11.5237H12.395C11.8866 11.5237 11.6323 11.5237 11.4744 11.3657C11.3164 11.2078 11.3164 10.9535 11.3164 10.4451V7.05909Z" fill="black" />
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('surfer:open-pixabay', {
+                    detail: { onSelect: (img: { url: string; alt: string }) => { onImageChange?.(img); } },
+                  }));
+                }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '4px 8px', borderRadius: 5, border: 'none',
+                  background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)',
+                  fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
+                }}
+              >
+                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
                 </svg>
-                <input
-                  type="text"
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAiGenerate(aiPrompt || keyword || ''); }}
-                  placeholder="Describe the image you want to generate…"
-                  style={{
-                    flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', outline: 'none',
-                    borderRadius: 5, padding: '4px 8px', fontSize: 12, color: '#fff',
-                    fontFamily: 'var(--font-family-primary)',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleAiGenerate(aiPrompt || keyword || '')}
-                  disabled={isGenerating}
-                  style={{
-                    width: 26, height: 26, borderRadius: 5, border: 'none',
-                    background: 'rgba(255,255,255,0.15)', color: '#fff',
-                    cursor: isGenerating ? 'not-allowed' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}
-                >
-                  {isGenerating ? (
-                    <div style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                  ) : (
-                    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 12L3.269 3.125A59.8 59.8 0 0 1 21.486 12a59.8 59.8 0 0 1-18.217 8.875zm0 0h7.5" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+                Pixabay
+              </button>
 
-              {/* Action row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {/* Pixabay */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('surfer:open-pixabay', {
-                      detail: { onSelect: (img: { url: string; alt: string }) => { onImageChange?.(img); } },
-                    }));
-                  }}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '4px 8px', borderRadius: 5, border: 'none',
-                    background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)',
-                    fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
-                  }}
-                >
-                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  Pixabay
-                </button>
-
-                {/* Upload */}
-                <input
-                  ref={featuredFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      onImageChange?.({ url: reader.result as string, alt: altText || keyword || '' });
-                    };
-                    reader.readAsDataURL(file);
-                    e.target.value = '';
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => featuredFileInputRef.current?.click()}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '4px 8px', borderRadius: 5, border: 'none',
-                    background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)',
-                    fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
-                  }}
-                >
-                  Upload
-                </button>
-
-                {/* Spacer */}
-                <div style={{ flex: 1 }} />
-
-                {/* Remove */}
-                <button
-                  type="button"
-                  onClick={onImageRemove}
-                  title="Remove featured image"
-                  style={{
-                    width: 26, height: 26, borderRadius: 5, border: 'none',
-                    background: 'rgba(239,68,68,0.2)', color: '#fca5a5',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0" />
-                  </svg>
-                </button>
-              </div>
+              <input
+                ref={featuredFileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    onImageChange?.({ url: reader.result as string, alt: altText || keyword || '' });
+                  };
+                  reader.readAsDataURL(file);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => featuredFileInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '4px 8px', borderRadius: 5, border: 'none',
+                  background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)',
+                  fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
+                }}
+              >
+                Upload
+              </button>
             </div>
           </div>
 
@@ -1076,6 +990,61 @@ const IconOutline = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path
 const IconSpark = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="currentColor" d="M9 3l1.2 3.3L13.5 7.5L10.2 8.7L9 12L7.8 8.7L4.5 7.5L7.8 6.3zm7 6l.9 2.4l2.4.9l-2.4.9l-.9 2.4l-.9-2.4l-2.4-.9l2.4-.9z" /></svg>);
 const IconClose = () => (<svg viewBox="0 0 20 20" width={18} height={18}><path fill="currentColor" d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94z" /></svg>);
 
+const GEN_LINE_WIDTHS = [100, 72, 92, 58, 88, 64, 80, 70, 95, 52] as const;
+
+/** Mini article cards — same language as /articles/generating writing animation. */
+const GenPreviewCard = ({ lines, className, delayMs = 0 }: { lines: number; className?: string; delayMs?: number }) => (
+  <div className={`nc-gen-card ${className || ''}`} style={{ animationDelay: `${delayMs}ms` }} aria-hidden="true">
+    <div className="nc-gen-card-inner">
+      <div className="nc-gen-card-title-bar" />
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="nc-gen-card-line"
+          style={{
+            width: `${GEN_LINE_WIDTHS[i % GEN_LINE_WIDTHS.length]}%`,
+            animationDelay: `${delayMs + 280 + i * 160}ms`,
+          }}
+        />
+      ))}
+    </div>
+  </div>
+);
+
+const GenerateWritingOverlay = ({ message, pct }: { message: string; pct: number | null }) => (
+  <div className="nc-gen-editor-overlay" role="status" aria-live="polite">
+    <div className="nc-gen">
+      <div className="nc-gen-stage" aria-hidden="true">
+        <GenPreviewCard lines={5} className="nc-gen-card--back-left" delayMs={0} />
+        <GenPreviewCard lines={7} className="nc-gen-card--back-right" delayMs={120} />
+        <GenPreviewCard lines={9} className="nc-gen-card--front" delayMs={200} />
+        <span className="nc-gen-spark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12.93 1.64a1 1 0 0 0-1.86 0L9.05 6.87c-.3.78-.4 1.01-.52 1.19-.13.18-.29.34-.47.47-.18.13-.41.22-1.19.52L1.64 11.07a1 1 0 0 0 0 1.86l5.23 2.01c.78.3 1.01.4 1.19.52.18.13.34.29.47.47.13.18.22.41.52 1.19l2.01 5.23a1 1 0 0 0 1.86 0l2.01-5.23c.3-.78.4-1.01.52-1.19.13-.18.29-.34.47-.47.18-.13.41-.22 1.19-.52l5.23-2.01a1 1 0 0 0 0-1.86l-5.23-2.01c-.78-.3-1.01-.4-1.19-.52a1.5 1.5 0 0 1-.47-.47c-.13-.18-.22-.41-.52-1.19L12.93 1.64Z" />
+          </svg>
+        </span>
+      </div>
+      <div className="nc-gen-copy">
+        <h2 className="nc-gen-title">Creating your article</h2>
+        <p className="nc-gen-status">{message}</p>
+      </div>
+      <div
+        className="nc-gen-progress"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct ?? undefined}
+      >
+        <div
+          className={`nc-gen-progress-fill${pct == null ? ' nc-gen-progress-fill--indeterminate' : ''}`}
+          style={pct != null ? { width: `${pct}%` } : undefined}
+        />
+      </div>
+      {pct != null && <p className="nc-gen-progress-label">{Math.round(pct)}%</p>}
+    </div>
+  </div>
+);
+
 const CtaButton = ({ icon, children, onClick, busy }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void; busy?: boolean }) => (
   <button type="button" onClick={onClick} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 16px', borderRadius: 8, border: '1px solid #E4E4E7', background: '#fff', color: '#18181B', fontSize: 14, fontWeight: 500, fontFamily: CTA_FONT, cursor: busy ? 'default' : 'pointer', boxShadow: '0px 1px 2px rgba(24,26,34,0.06)', opacity: busy ? 0.7 : 1, transition: 'background 150ms ease, border-color 150ms ease' }} onMouseEnter={(e) => { if (!busy) { e.currentTarget.style.background = '#F4F4F5'; e.currentTarget.style.borderColor = '#D4D4D8'; } }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E4E4E7'; }}>
     {busy ? <span style={{ width: 16, height: 16, border: '2px solid #D4D4D8', borderTopColor: '#52525C', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> : <span style={{ display: 'inline-flex', color: '#52525C' }}>{icon}</span>}
@@ -1138,11 +1107,16 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [importUrl, setImportUrl] = useState('');
     const [importBusy, setImportBusy] = useState(false);
     const [outlineBusy, setOutlineBusy] = useState(false);
+    const [generateBusy, setGenerateBusy] = useState(false);
+    const [generateMsg, setGenerateMsg] = useState('Generating article…');
+    const [generatePct, setGeneratePct] = useState<number | null>(null);
     const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
     const [publishing, setPublishing] = useState(false);
     // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
     const [surfyActivity, setSurfyActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
     const [surfyStreamText, setSurfyStreamText] = useState('');
+    const [surfyStreamThinkingLen, setSurfyStreamThinkingLen] = useState(0);
+    const surfyStreamLenRef = useRef(0);
     const [surfyUsageDetail, setSurfyUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
     // Running totals across all turns of the current conversation (reset on a new conversation).
     const [surfyTotals, setSurfyTotals] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
@@ -1159,15 +1133,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
     const surfyInputRef = useRef<HTMLTextAreaElement>(null);
     const surfyScrollRef = useRef<HTMLDivElement>(null);
+    const handleSurfySubmitRef = useRef<
+      ((overridePrompt?: string, overrideSelection?: { text: string; from: number; to: number } | null) => Promise<void>) | null
+    >(null);
     // The "/ask" slash item opens Surfy via this ref (the handler is defined further down).
     const slashAskSurfyRef = useRef<() => void>(() => {});
 
-    // Auto-grow the Surfy textarea to fit its content (capped at maxHeight, then it scrolls).
+    // Auto-grow the Surfy textarea to fit its content (capped, then it scrolls).
+    // Keep the cap modest so the context ring footer stays inside the clipped side panel.
+    const SURFY_TEXTAREA_MAX_PX = 160;
     useEffect(() => {
       const el = surfyInputRef.current;
       if (!el) return;
-      el.style.height = 'auto';
-      el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+      el.style.height = '0px';
+      el.style.height = `${Math.min(el.scrollHeight, SURFY_TEXTAREA_MAX_PX)}px`;
     }, [surfyPrompt, surfyOpen]);
 
     useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1189,27 +1168,97 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [surfyHistory, setSurfyHistory] = useState<SurfyMsg[]>([]);
     // Saved conversations (localStorage, per article) for the header's history dropdown.
     type SurfyConvo = { id: string; title: string; ts: number; history: SurfyMsg[] };
+    type SurfyDraft = { id: string; history: SurfyMsg[]; prompt: string; ts: number };
     const [surfyConversations, setSurfyConversations] = useState<SurfyConvo[]>([]);
+    const [surfyActiveConvoId, setSurfyActiveConvoId] = useState<string | null>(null);
     const surfyConvoKey = `surfy-conversations-${commentArticleId || 'x'}`;
+    const surfyDraftKey = `surfy-draft-${commentArticleId || 'x'}`;
+    const surfyDraftHydrated = useRef(false);
+
     useEffect(() => {
-      try { const raw = localStorage.getItem(surfyConvoKey); if (raw) setSurfyConversations(JSON.parse(raw)); else setSurfyConversations([]); } catch { setSurfyConversations([]); }
+      try {
+        const raw = localStorage.getItem(surfyConvoKey);
+        if (raw) setSurfyConversations(JSON.parse(raw) as SurfyConvo[]);
+        else setSurfyConversations([]);
+      } catch {
+        setSurfyConversations([]);
+      }
     }, [surfyConvoKey]);
+
+    // Restore the last in-progress conversation once per article (Ask Surfy reopen / remount).
+    useEffect(() => {
+      surfyDraftHydrated.current = false;
+      if (!commentArticleId) return;
+      try {
+        const raw = localStorage.getItem(surfyDraftKey);
+        if (!raw) {
+          surfyDraftHydrated.current = true;
+          return;
+        }
+        const draft = JSON.parse(raw) as SurfyDraft;
+        if (Array.isArray(draft.history) && draft.history.length > 0) {
+          setSurfyHistory(draft.history);
+          setSurfyActiveConvoId(draft.id || null);
+          if (typeof draft.prompt === 'string' && draft.prompt) setSurfyPrompt(draft.prompt);
+        }
+      } catch {
+        /* ignore corrupt draft */
+      }
+      surfyDraftHydrated.current = true;
+    }, [surfyDraftKey, commentArticleId]);
+
     const persistConvos = (list: SurfyConvo[]) => {
       setSurfyConversations(list);
       try { localStorage.setItem(surfyConvoKey, JSON.stringify(list)); } catch { /* quota/unavailable */ }
     };
+
+    const persistDraft = useCallback((draft: SurfyDraft | null) => {
+      try {
+        if (!draft || draft.history.length === 0) localStorage.removeItem(surfyDraftKey);
+        else localStorage.setItem(surfyDraftKey, JSON.stringify(draft));
+      } catch { /* quota/unavailable */ }
+    }, [surfyDraftKey]);
+
+    // Keep draft in sync so closing Surfy / refreshing still restores the last thread.
+    useEffect(() => {
+      if (!surfyDraftHydrated.current || !commentArticleId) return;
+      if (!surfyHistory.length) {
+        persistDraft(null);
+        return;
+      }
+      const id = surfyActiveConvoId || `${Date.now()}`;
+      if (!surfyActiveConvoId) setSurfyActiveConvoId(id);
+      persistDraft({ id, history: surfyHistory, prompt: surfyPrompt, ts: Date.now() });
+    }, [surfyHistory, surfyPrompt, surfyActiveConvoId, commentArticleId, persistDraft]);
+
     // Archive the current chat (if it has messages) before clearing for a new/loaded one.
     const archiveCurrentConvo = () => {
       if (!surfyHistory.length) return;
       const firstUser = surfyHistory.find((m) => m.role === 'user')?.message || 'Conversation';
-      const convo: SurfyConvo = { id: `${Date.now()}`, title: firstUser.slice(0, 60), ts: Date.now(), history: surfyHistory };
-      persistConvos([convo, ...surfyConversations].slice(0, 20));
+      const id = surfyActiveConvoId || `${Date.now()}`;
+      const without = surfyConversations.filter((c) => c.id !== id);
+      const convo: SurfyConvo = { id, title: firstUser.slice(0, 60), ts: Date.now(), history: surfyHistory };
+      persistConvos([convo, ...without].slice(0, 20));
     };
 
     const handleAskSurfy = () => {
       if (!editor) return;
-      // Just hide/show — keep the conversation + any pending response so reopening continues it.
+      // Toggle dock — draft persistence keeps the last started conversation.
       if (surfyOpen) { setSurfyOpen(false); return; }
+      // If memory was cleared but draft exists, restore before showing the panel.
+      if (!surfyHistory.length) {
+        try {
+          const raw = localStorage.getItem(surfyDraftKey);
+          if (raw) {
+            const draft = JSON.parse(raw) as SurfyDraft;
+            if (Array.isArray(draft.history) && draft.history.length > 0) {
+              setSurfyHistory(draft.history);
+              setSurfyActiveConvoId(draft.id || null);
+              if (typeof draft.prompt === 'string') setSurfyPrompt(draft.prompt);
+            }
+          }
+        } catch { /* ignore */ }
+      }
       const { from, to, empty } = editor.state.selection;
       if (!empty && from !== to) {
         const text = editor.state.doc.textBetween(from, to, '\n');
@@ -1222,13 +1271,19 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     };
     slashAskSurfyRef.current = handleAskSurfy;
 
-  const handleSurfySubmit = async () => {
-      const prompt = surfyPrompt.trim();
+  const handleSurfySubmit = async (
+      overridePrompt?: string,
+      overrideSelection?: { text: string; from: number; to: number } | null,
+    ) => {
+      const prompt = (overridePrompt ?? surfyPrompt).trim();
       if (!prompt || !editor) return;
+      const activeSelection = overrideSelection !== undefined ? overrideSelection : surfySelection;
       setSurfyLoading(true);
       setSurfyResponse(null);
       setSurfyActivity([]);
       setSurfyStreamText('');
+      setSurfyStreamThinkingLen(0);
+      surfyStreamLenRef.current = 0;
       setSurfyUsageDetail({ input: 0, output: 0 });
 
       setSurfyHistory((prev) => {
@@ -1241,7 +1296,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
       try {
         const htmlContent = editor.getHTML();
-        const useAgent = !surfySelection; // article mode → multi-step agent
+        const useAgent = !activeSelection; // article mode → multi-step agent
         const endpoint = useAgent ? '/api/articles/surfy-agent' : '/api/articles/ask-surfy';
         if (useAgent) surfyOriginalRef.current = htmlContent; // remember pre-edit HTML for the diff
 
@@ -1265,8 +1320,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               prompt,
               content: htmlContent,
               mode: 'selection',
-              selectedText: surfySelection?.text || null,
-              selectionRange: surfySelection ? { from: surfySelection.from, to: surfySelection.to } : null,
+              selectedText: activeSelection?.text || null,
+              selectionRange: activeSelection ? { from: activeSelection.from, to: activeSelection.to } : null,
               scoreData: scoreData || null,
               internalArticles: internalArticles || [],
               keyword: articleKeyword || keyword || '',
@@ -1295,17 +1350,28 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
           if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
           data = await readSurfyAgentStream(res, {
-            text: (delta) => setSurfyStreamText((t) => t + delta),
-            usage: () => {}, // live running count not shown; the ring updates from the final usage below
-            step: (d) => setSurfyActivity((a) => {
-              if (d.phase === 'start') return [...a, { tool: d.tool, done: false }];
-              const rev = [...a].reverse().findIndex((x) => x.tool === d.tool && !x.done);
-              if (rev === -1) return a;
-              const idx = a.length - 1 - rev;
-              const copy = a.slice();
-              copy[idx] = { ...copy[idx], done: true, error: d.phase === 'error' };
-              return copy;
+            text: (delta) => setSurfyStreamText((t) => {
+              const next = t + delta;
+              surfyStreamLenRef.current = next.length;
+              return next;
             }),
+            usage: () => {}, // live running count not shown; the ring updates from the final usage below
+            step: (d) => {
+              // Absorb all text so far into Thinking on tool start AND end. Between tools the
+              // model streams narration; without start-boundary it briefly leaks into the answer.
+              if (d.phase === 'start' || d.phase === 'end' || d.phase === 'error') {
+                setSurfyStreamThinkingLen(surfyStreamLenRef.current);
+              }
+              setSurfyActivity((a) => {
+                if (d.phase === 'start') return [...a, { tool: d.tool, done: false }];
+                const rev = [...a].reverse().findIndex((x) => x.tool === d.tool && !x.done);
+                if (rev === -1) return a;
+                const idx = a.length - 1 - rev;
+                const copy = a.slice();
+                copy[idx] = { ...copy[idx], done: true, error: d.phase === 'error' };
+                return copy;
+              });
+            },
           });
           setSurfyUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
           setSurfyTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
@@ -1355,6 +1421,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         surfyAbortRef.current = null;
       }
     };
+    handleSurfySubmitRef.current = handleSurfySubmit;
 
     const handleSurfyApply = () => {
       if (!editor || !surfyResponse) return;
@@ -1436,6 +1503,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       loading: surfyLoading,
       activity: surfyActivity,
       streamText: surfyStreamText,
+      streamThinkingLen: surfyStreamThinkingLen,
       response: surfyResponse,
       metaPending: surfyMetaRef.current
         ? (surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description'
@@ -1462,16 +1530,26 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         archiveCurrentConvo();
         setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
         setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+        setSurfyActiveConvoId(null);
+        persistDraft(null);
       },
       openConversation: (id) => {
         const convo = surfyConversations.find((c) => c.id === id);
         if (!convo) return;
         archiveCurrentConvo();
         setSurfyHistory(convo.history);
+        setSurfyActiveConvoId(convo.id);
         setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
         setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+        persistDraft({ id: convo.id, history: convo.history, prompt: '', ts: Date.now() });
       },
-      deleteConversation: (id) => persistConvos(surfyConversations.filter((c) => c.id !== id)),
+      deleteConversation: (id) => {
+        persistConvos(surfyConversations.filter((c) => c.id !== id));
+        if (surfyActiveConvoId === id) {
+          setSurfyActiveConvoId(null);
+          persistDraft(null);
+        }
+      },
       renameConversation: (id, title) => persistConvos(surfyConversations.map((c) => (c.id === id ? { ...c, title: title.trim() || c.title } : c))),
       confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
       cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
@@ -1619,17 +1697,47 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       editorRef.current = {
         getEditor: () => editorLiveRef.current,
         triggerSurfy: (prompt: string) => {
+          // Resume last draft if present; only seed the composer with the new prompt.
+          try {
+            if (!surfyHistory.length) {
+              const raw = localStorage.getItem(surfyDraftKey);
+              if (raw) {
+                const draft = JSON.parse(raw) as SurfyDraft;
+                if (Array.isArray(draft.history) && draft.history.length > 0) {
+                  setSurfyHistory(draft.history);
+                  setSurfyActiveConvoId(draft.id || null);
+                }
+              }
+            }
+          } catch { /* ignore */ }
           setSurfyOpen(true);
           setSurfyResponse(null);
           setSurfySelection(null);
-          setSurfyHistory([]);
-          setSurfyTotals({ input: 0, output: 0 });
-          setSurfyUsageDetail({ input: 0, output: 0 });
           setSurfyPrompt(prompt);
           setTimeout(() => surfyInputRef.current?.focus(), 100);
         },
         // Right-panel toolbar toggle (docked pane), mirrors the Version-History button.
-        toggleSurfy: () => { setSurfyOpen((o) => !o); setTimeout(() => surfyInputRef.current?.focus(), 80); },
+        toggleSurfy: () => {
+          setSurfyOpen((o) => {
+            if (o) return false;
+            // Reopen → restore draft if the in-memory thread was cleared.
+            if (!surfyHistory.length) {
+              try {
+                const raw = localStorage.getItem(surfyDraftKey);
+                if (raw) {
+                  const draft = JSON.parse(raw) as SurfyDraft;
+                  if (Array.isArray(draft.history) && draft.history.length > 0) {
+                    setSurfyHistory(draft.history);
+                    setSurfyActiveConvoId(draft.id || null);
+                    if (typeof draft.prompt === 'string' && draft.prompt) setSurfyPrompt(draft.prompt);
+                  }
+                }
+              } catch { /* ignore */ }
+            }
+            return true;
+          });
+          setTimeout(() => surfyInputRef.current?.focus(), 80);
+        },
       };
       return () => { editorRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1654,6 +1762,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const data = await res.json();
         if (!res.ok || !data.contentHtml) throw new Error(data.error || 'Import failed');
         editor.commands.setContent(data.contentHtml, { emitUpdate: true });
+        if (typeof data.featuredImage === 'string' && data.featuredImage) {
+          const img = { url: data.featuredImage as string, alt: String(data.title || keyword || articleKeyword || '') };
+          setFeaturedImage(img);
+          onFeaturedImageChange?.(img);
+        }
         setCtaMode('menu'); setImportUrl('');
       } catch (e) {
         toast.error(getErrorMessage(e) || 'Could not import content from that URL.');
@@ -1689,11 +1802,116 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     };
 
-    const handleWriteWithAi = () => {
-      setSurfyOpen(true);
-      setSurfyResponse(null);
-      setSurfySelection(null);
-      setTimeout(() => surfyInputRef.current?.focus(), 100);
+    const handleWriteWithAi = async () => {
+      const articleId = commentArticleId ? Number(commentArticleId) : undefined;
+      if (!articleId || !editor) {
+        toast.error('Article is not ready yet — try again in a moment.');
+        return;
+      }
+      setGenerateBusy(true);
+      setGenerateMsg('Starting generation…');
+      setGeneratePct(null);
+      try {
+        let instructions = '';
+        let voiceId = 'serp';
+        try {
+          const artRes = await fetch(`/api/articles/${articleId}`);
+          const artData = await artRes.json() as {
+            article?: { wizard_state?: string | null; content?: string | null };
+          };
+          if (artData.article?.wizard_state) {
+            const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
+            instructions = ws.instructions || '';
+            voiceId = ws.voiceId || 'serp';
+          }
+        } catch { /* ignore — generate with defaults */ }
+
+        let jobId: string | null = null;
+        const progRes = await fetch(
+          `/api/articles/job-progress?articleId=${encodeURIComponent(String(articleId))}&jobType=article_generate`,
+        );
+        if (progRes.ok) {
+          const prog = await progRes.json() as { status?: string; jobId?: string };
+          if ((prog.status === 'running' || prog.status === 'queued') && prog.jobId) {
+            jobId = prog.jobId;
+          } else if (prog.status === 'done') {
+            const artRes = await fetch(`/api/articles/${articleId}`);
+            const artData = await artRes.json() as { article?: { content?: string | null } };
+            const html = artData.article?.content || '';
+            if (html.replace(/<[^>]+>/g, ' ').trim()) {
+              editor.commands.setContent(html, { emitUpdate: true });
+              toast.success('Article loaded');
+              return;
+            }
+          }
+        }
+
+        if (!jobId) {
+          const genRes = await fetch(`/api/articles/${articleId}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contentType: 'blog',
+              instructions,
+              voiceId,
+              internalLinks: true,
+              externalLinks: true,
+              reviewOutline: false,
+            }),
+          });
+          const genData = await genRes.json().catch(() => ({})) as { jobId?: string; error?: string };
+          if (!genRes.ok || !genData.jobId) {
+            throw new Error(genData.error || 'Generation failed to start');
+          }
+          jobId = genData.jobId;
+          setGenerateMsg('Writing your article…');
+        }
+
+        const started = Date.now();
+        await new Promise<void>((resolve, reject) => {
+          const tick = async () => {
+            try {
+              const r = await fetch(`/api/articles/job-progress?jobId=${encodeURIComponent(jobId!)}`);
+              const d = await r.json().catch(() => ({})) as {
+                status?: string;
+                progressMessage?: string;
+                totalProgress?: number;
+              };
+              if (typeof d.progressMessage === 'string' && d.progressMessage.trim()) {
+                setGenerateMsg(d.progressMessage.trim());
+              }
+              if (typeof d.totalProgress === 'number') {
+                setGeneratePct(Math.max(0, Math.min(100, d.totalProgress)));
+              }
+              if (d.status === 'done') { resolve(); return; }
+              if (d.status === 'failed') {
+                reject(new Error(d.progressMessage || 'Generation failed'));
+                return;
+              }
+            } catch { /* keep polling through transient errors */ }
+            if (Date.now() - started > 8 * 60 * 1000) {
+              reject(new Error('Generation timed out'));
+              return;
+            }
+            setTimeout(tick, 2500);
+          };
+          setTimeout(tick, 1200);
+        });
+
+        const artRes = await fetch(`/api/articles/${articleId}`);
+        const artData = await artRes.json() as { article?: { content?: string | null } };
+        const html = artData.article?.content || '';
+        if (!html.replace(/<[^>]+>/g, ' ').trim()) {
+          throw new Error('Generation finished but no content was returned.');
+        }
+        editor.commands.setContent(html, { emitUpdate: true });
+        toast.success('Article generated');
+      } catch (e) {
+        toast.error(getErrorMessage(e) || 'Could not generate the article.');
+      } finally {
+        setGenerateBusy(false);
+        setGeneratePct(null);
+      }
     };
 
     // Repaint comment decorations when the comment list changes (no-op tx forces
@@ -1838,10 +2056,8 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         {/* Toolbar */}
         {editor && <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} formattingSuspended={toolbarLocked} />}
 
-        {/* Scrollable editor — Title/Description + Featured image now live in the
-            "Publish or Export" panel, so the editor shows the article body only.
-            Wrapped in a relative container so the progressive-blur fades pin to the
-            scroll-area edges (below the toolbar) and don't scroll with the content. */}
+        {/* Scrollable editor — Featured image sits above the body; Title/Description
+            live in Publish or Export. Relative wrapper pins blur fades to scroll edges. */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'}>
           <div
@@ -1869,8 +2085,21 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               if (target && (!to || !target.contains(to))) setLinkTip(null);
             }}
           >
+            {featuredImage?.url ? (
+              <div style={{ maxWidth: 860, margin: '0 auto 8px', padding: '0 64px', boxSizing: 'border-box' }}>
+                <FeaturedImageBlock
+                  imageUrl={featuredImage.url}
+                  imageAlt={featuredImage.alt}
+                  keyword={keyword || articleKeyword}
+                  onImageChange={(img) => {
+                    setFeaturedImage(img);
+                    onFeaturedImageChange?.(img);
+                  }}
+                />
+              </div>
+            ) : null}
             <EditorContent editor={editor} style={{ background: '#fff' }} />
-            {editor && docEmpty && !readOnly && (
+            {editor && docEmpty && !readOnly && !generateBusy && (
               <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
                 {importBusy ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#52525C', fontSize: 14 }}>
@@ -1885,7 +2114,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <CtaButton icon={<IconGlobe />} onClick={() => setCtaMode('import')}>Import content from URL</CtaButton>
                       <CtaButton icon={<IconOutline />} onClick={handleInsertOutline} busy={outlineBusy}>Insert Outline</CtaButton>
-                      <CtaButton icon={<IconSpark />} onClick={handleWriteWithAi}>Write with Surfer AI</CtaButton>
+                      <CtaButton icon={<IconSpark />} onClick={() => { void handleWriteWithAi(); }} busy={generateBusy}>Write with Surfy AI</CtaButton>
                     </div>
                   </>
                 )}
@@ -1900,10 +2129,25 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               <SurfyBubbleMenu
                 editor={editor}
                 onAskSurfy={(selection) => {
-                  setSurfySelection(selection);
+                  setSurfySelection({ text: selection.text, from: selection.from, to: selection.to });
                   setSurfyResponse(null);
-                  setSurfyHistory([]);
                   setSurfyOpen(true);
+                  if (selection.presetPrompt && selection.autoSubmit) {
+                    setSurfyPrompt(selection.presetPrompt);
+                    // Defer submit until selection + prompt state are committed.
+                    window.setTimeout(() => {
+                      void handleSurfySubmitRef.current?.(selection.presetPrompt, {
+                        text: selection.text,
+                        from: selection.from,
+                        to: selection.to,
+                      });
+                    }, 0);
+                  } else if (selection.presetPrompt) {
+                    setSurfyPrompt(selection.presetPrompt);
+                    window.setTimeout(() => surfyInputRef.current?.focus(), 50);
+                  } else {
+                    window.setTimeout(() => surfyInputRef.current?.focus(), 50);
+                  }
                 }}
                 onAddComment={onCreateComment ? (selection) => {
                   if (!selection.text.trim()) return;
@@ -1955,6 +2199,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           <ProgressiveBlur position="top" backgroundColor="#fff" height={72} blurAmount={4} />
           <ProgressiveBlur position="bottom" backgroundColor="#fff" height={80} blurAmount={4} />
         </div>
+        {generateBusy && (
+          <GenerateWritingOverlay message={generateMsg} pct={generatePct} />
+        )}
         </div>
 
         {/* Docked Surfy chat — rendered (via portal) into the page's right-column dock when present. */}

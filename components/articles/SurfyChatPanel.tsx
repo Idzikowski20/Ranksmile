@@ -2,9 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import SurfyMessage from './SurfyMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
+import AILoadingState from './AILoadingState';
+import AITextLoading from './AITextLoading';
+import SurfyStreamingMessage from './SurfyStreamingMessage';
+import { AIVoiceButton, AIVoicePanel, useAIVoice } from './AIVoice';
 import { Button } from '../core';
 import { SentryEmptyState } from '../sentry-pages';
 import type { PendingAction } from '../../lib/ai/types';
+import { shouldShowSurfyAnswerStream } from '../../lib/ai/text';
 
 export type SurfyHistoryEntry = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
 export type SurfyActivity = { tool: string; done: boolean; error?: boolean };
@@ -20,6 +25,8 @@ export interface SurfyPanelApi {
   loading: boolean;
   activity: SurfyActivity[];
   streamText: string;
+  /** Byte/char offset in streamText where between-tool narration ends (0 = all answer so far). */
+  streamThinkingLen: number;
   response: SurfyResponseState | null;
   metaPending: string | null;
   prompt: string;
@@ -195,6 +202,37 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
   const [view, setView] = useState<'chat' | 'history'>('chat');
   const [atBottom, setAtBottom] = useState(true);
   const [liveThinkOpen, setLiveThinkOpen] = useState(false);
+  const voice = useAIVoice({
+    value: s.prompt,
+    onChange: s.setPrompt,
+    disabled: loading || blocked,
+  });
+
+  const hasTools = s.activity.length > 0;
+  const activeTool = [...s.activity].reverse().find((a) => !a.done);
+  const loadingStatus = activeTool
+    ? s.toolLabel(activeTool.tool)
+    : hasTools
+      ? 'Finishing up'
+      : 'Thinking';
+  const activityLines = hasTools
+    ? s.activity.map((a) => ({
+        text: s.toolLabel(a.tool),
+        done: a.done,
+        error: a.error,
+      }))
+    : [];
+  const thinkingLen = s.streamThinkingLen || 0;
+  // No-tools turns: whole stream is the answer. Tool turns: keep everything in Thinking until done.
+  const streamAnswer = hasTools ? '' : s.streamText;
+  const streamThinking = hasTools ? s.streamText : s.streamText.slice(0, thinkingLen);
+  const showAnswerStream = shouldShowSurfyAnswerStream({
+    loading,
+    streamAnswer,
+    hasTools,
+  });
+  const showThinkingStream = Boolean(loading && hasTools && s.streamText.trim());
+  const thinkingPreview = streamThinking.trim();
 
   const onScroll = () => {
     const el = s.scrollRef.current;
@@ -212,7 +250,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
   }, [s.history, s.streamText, s.activity, s.loading, s.response]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#fff', fontFamily: 'var(--font-family-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: '#fff', fontFamily: 'var(--font-family-primary)' }}>
       <style>{`
         @keyframes surfyspin { to { transform: rotate(360deg); } }
         .surfy-box:focus-within { border-color: #F5C4A0 !important; box-shadow: 0 0 0 3px rgba(242,153,100,0.1) !important; }
@@ -269,40 +307,39 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
             )}
 
             {s.history.map((entry, i) => (
-              <SurfyMessage key={i} role={entry.role} message={entry.message} thinking={entry.thinking} />
+              <SurfyMessage
+                key={i}
+                role={entry.role}
+                message={entry.message}
+                thinking={entry.thinking}
+                animateEnter={entry.role === 'assistant' && i === s.history.length - 1 && !loading}
+              />
             ))}
 
             {loading && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 15, height: 15, border: '2px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', display: 'inline-block', animation: 'surfyspin 0.6s linear infinite' }} />
-                  <span style={{ fontSize: 13, color: '#52525c' }}>Surfy is working…</span>
-                </div>
-                {s.activity.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {s.activity.map((a, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, lineHeight: '18px', color: a.error ? '#d97706' : a.done ? '#52525c' : '#9f9fa9' }}>
-                        <span style={{ flexShrink: 0, width: 13, textAlign: 'center' }}>
-                          {a.error ? '⚠' : a.done ? '✓' : <span style={{ display: 'inline-block', width: 9, height: 9, border: '1.5px solid #d4d4d8', borderTopColor: '#f29964', borderRadius: '50%', animation: 'surfyspin 0.6s linear infinite' }} />}
-                        </span>
-                        <span>{s.toolLabel(a.tool)}</span>
-                      </div>
-                    ))}
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {hasTools && (
+                  <AILoadingState status={loadingStatus} lines={activityLines} />
                 )}
-                {s.streamText && (
+                {!hasTools && !showAnswerStream && (
+                  <AILoadingState status="Thinking" />
+                )}
+                {showThinkingStream && (
                   <div>
                     <button type="button" onClick={() => setLiveThinkOpen((o) => !o)}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 4px', margin: '-2px -4px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#9f9fa9', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}>
                       <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: liveThinkOpen ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 18l6-6-6-6" /></svg>
-                      Thinking…
+                      <AITextLoading texts={['Thinking...', 'Processing...', 'Almost...']} />
                     </button>
-                    {liveThinkOpen && (
-                      <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #f0f0f2', color: '#9f9fa9', fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{s.streamText}</div>
+                    {liveThinkOpen && thinkingPreview && (
+                      <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #f0f0f2', color: '#9f9fa9', fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{thinkingPreview}</div>
                     )}
                   </div>
+                )}
+                {showAnswerStream && (
+                  <SurfyStreamingMessage text={streamAnswer} streaming />
                 )}
               </div>
             )}
@@ -438,18 +475,48 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
               </div>
             )}
             <div className="surfy-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #d4d4d8', borderRadius: 12, background: blocked ? '#fafafa' : '#fff', opacity: blocked ? 0.7 : 1, transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
-              <textarea
-                ref={s.inputRef}
-                rows={1}
-                value={s.prompt}
-                onChange={(e) => s.setPrompt(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!blocked) s.submit(); } }}
-                placeholder={blocked ? 'AI limit reached — paused until the pool resets' : 'Ask, search or make anything…'}
-                disabled={loading || blocked}
-                className="styled-scrollbar"
-                style={{ flex: 1, minHeight: 48, maxHeight: 280, border: 'none', background: 'transparent', outline: 'none', padding: 0, fontSize: 14, lineHeight: '20px', color: '#18181b', fontFamily: 'var(--font-family-primary)', resize: 'none', overflowY: 'auto' }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {voice.listening ? (
+                <AIVoicePanel
+                  listening={voice.listening}
+                  time={voice.time}
+                  error={voice.error}
+                  barHeights={voice.barHeights}
+                  supported={voice.supported}
+                  disabled={loading || blocked}
+                  onToggle={voice.toggle}
+                />
+              ) : (
+                <textarea
+                  ref={s.inputRef}
+                  rows={1}
+                  value={s.prompt}
+                  onChange={(e) => s.setPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!blocked) s.submit(); } }}
+                  placeholder={blocked ? 'AI limit reached — paused until the pool resets' : 'Ask, search or make anything…'}
+                  disabled={loading || blocked}
+                  className="styled-scrollbar"
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: 48,
+                    maxHeight: 160,
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    padding: 0,
+                    fontSize: 14,
+                    lineHeight: '20px',
+                    color: '#18181b',
+                    fontFamily: 'var(--font-family-primary)',
+                    resize: 'none',
+                    overflowY: 'auto',
+                    /* Do NOT use flex:1 — growing textarea would steal height from the footer ring. */
+                    flex: '0 0 auto',
+                  }}
+                />
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, minHeight: 30 }}>
                 <ContextUsageRing
                   placement="up"
                   conversationTokens={s.orgUsage ? s.orgUsage.used : s.usage.conversation}
@@ -458,18 +525,26 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                   lastInput={s.usage.lastInput} lastOutput={s.usage.lastOutput}
                   totalInput={s.usage.totalInput} totalOutput={s.usage.totalOutput}
                 />
-                {/* While Surfy works this becomes a Stop button (Claude-style square); otherwise Send. */}
-                <button
-                  type="button"
-                  onClick={loading ? s.stop : s.submit}
-                  disabled={loading ? false : (blocked || !s.prompt.trim())}
-                  aria-label={loading ? 'Stop' : 'Send'}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#f29964' : '#f4f4f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
-                >
-                  {loading
-                    ? <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true"><rect x={7.5} y={7.5} width={9} height={9} rx={2} fill="currentColor" /></svg>
-                    : <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <AIVoiceButton
+                    listening={voice.listening}
+                    supported={voice.supported}
+                    disabled={loading || blocked}
+                    onToggle={voice.toggle}
+                  />
+                  {/* While Surfy works this becomes a Stop button (Claude-style square); otherwise Send. */}
+                  <button
+                    type="button"
+                    onClick={loading ? s.stop : () => { if (voice.listening) voice.stop(); s.submit(); }}
+                    disabled={loading ? false : (blocked || !s.prompt.trim())}
+                    aria-label={loading ? 'Stop' : 'Send'}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#f29964' : '#f4f4f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
+                  >
+                    {loading
+                      ? <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true"><rect x={7.5} y={7.5} width={9} height={9} rx={2} fill="currentColor" /></svg>
+                      : <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

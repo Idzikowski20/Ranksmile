@@ -1,14 +1,19 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
-import { signInEmail } from '../../lib/auth/fetchAuth';
+import { signInEmail, signInSocial } from '../../lib/auth/fetchAuth';
+import { Button } from '../core';
+import { IconGoogleColor } from '../local/icons';
 import AuthField from './AuthField';
 import {
+  authDividerLineStyle,
+  authDividerTextStyle,
+  authDividerWrapStyle,
   authErrorStyle,
   authFooterStyle,
+  authFullWidthBtnStyle,
   authLabelStyle,
   authLinkStyle,
-  authPrimaryButtonStyle,
   authSubtitleStyle,
   authTitleStyle,
 } from './authStyles';
@@ -19,10 +24,15 @@ export default function EmailSignInForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const callbackURL = typeof router.query.callbackUrl === 'string'
     ? router.query.callbackUrl
     : '/';
+
+  const absoluteCallback = typeof window !== 'undefined'
+    ? new URL(callbackURL, window.location.origin).toString()
+    : callbackURL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,27 +61,61 @@ export default function EmailSignInForm() {
     window.location.href = callbackURL;
   };
 
+  const handleGoogle = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    const result = await signInSocial({
+      provider: 'google',
+      callbackURL: absoluteCallback,
+      errorCallbackURL: typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/sign-in`
+        : '/auth/sign-in',
+    });
+
+    if (!result.ok) {
+      setGoogleLoading(false);
+      setError(result.error.message);
+      return;
+    }
+
+    if (result.data.url) {
+      window.location.href = result.data.url;
+      return;
+    }
+
+    setGoogleLoading(false);
+    setError('Google sign-in is not available. Check Neon Auth OAuth settings.');
+  };
+
+  const busy = loading || googleLoading;
+
   return (
     <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Sign In</h1>
-      <p style={authSubtitleStyle}>Enter your email below to login to your account</p>
+      <h1 style={authTitleStyle}>Sign in to Surfy</h1>
+      <p style={authSubtitleStyle}>Pick up where you left off.</p>
 
       {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
 
       <AuthField
         id="sign-in-email"
-        label="Email"
+        label="Email or username"
         type="email"
         value={email}
         onChange={setEmail}
         autoComplete="email"
-        disabled={loading}
+        disabled={busy}
+        placeholder="you@work.com"
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <label htmlFor="sign-in-password" style={authLabelStyle}>Password</label>
-        <Link href="/auth/forgot-password" style={authLinkStyle}>
-          Forgot your password?
+        <label htmlFor="sign-in-password" style={{ ...authLabelStyle, marginBottom: 0 }}>Password</label>
+        <Link
+          href="/auth/forgot-password"
+          style={authLinkStyle}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#E07D42'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#6A6772'; }}
+        >
+          Forgot password?
         </Link>
       </div>
       <AuthField
@@ -81,29 +125,41 @@ export default function EmailSignInForm() {
         value={password}
         onChange={setPassword}
         autoComplete="current-password"
-        disabled={loading}
+        disabled={busy}
+        placeholder="Enter your password"
+        revealable
       />
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          ...authPrimaryButtonStyle,
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#783AFB'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
+      <div style={authFullWidthBtnStyle}>
+        <Button type="submit" variant="primary" size="md" busy={loading} disabled={busy} style={{ width: '100%' }}>
+          {loading ? 'Signing in…' : 'Sign in'}
+        </Button>
+      </div>
+
+      <div style={authDividerWrapStyle} aria-hidden="true">
+        <span style={authDividerLineStyle} />
+        <span style={authDividerTextStyle}>Or continue with</span>
+        <span style={authDividerLineStyle} />
+      </div>
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="md"
+        busy={googleLoading}
+        disabled={busy}
+        onClick={() => { void handleGoogle(); }}
+        icon={<IconGoogleColor size={18} />}
+        style={{ width: '100%' }}
       >
-        {loading ? 'Logging in…' : 'Login'}
-      </button>
+        {googleLoading ? 'Redirecting…' : 'Continue with Google'}
+      </Button>
 
       <p style={authFooterStyle}>
-        Don&apos;t have an account?
+        New to Surfy?
         {' '}
-        <Link href="/auth/sign-up" style={{ ...authLinkStyle, color: '#18181B', fontWeight: 600 }}>
-          Sign Up
+        <Link href="/auth/sign-up" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
+          Create an account
         </Link>
       </p>
     </form>

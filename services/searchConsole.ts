@@ -9,7 +9,7 @@ function domainSlugFromRouter(router: NextRouter): string | undefined {
 export async function fetchSCKeywords(router: NextRouter) {
    const domain = domainSlugFromRouter(router);
    if (!domain) throw new Error('Invalid Domain Name');
-   const res = await fetch(`${window.location.origin}/api/searchconsole?domain=${domain}`, { method: 'GET' });
+   const res = await fetch(`${window.location.origin}/api/gsc/search-data?domain=${domain}`, { method: 'GET' });
    if (res.status >= 400 && res.status < 600) {
       if (res.status === 401) {
          console.log('Unauthorized!!');

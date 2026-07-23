@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../core';
 import { useEntrance } from '../../lib/motion/useEntrance';
+import GeneratingStage from './GeneratingStage';
 
 export interface OptimizeReviewBarProps {
    state: 'optimizing' | 'reviewing';
@@ -29,6 +30,12 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
 }) => {
    const barEntranceRef = useEntrance<HTMLDivElement>({ y: 0 });
    const optimizing = state === 'optimizing';
+   const roundLabel = total > 0
+      ? `Processing round ${currentSection ?? Math.min(processed + 1, total)} of ${total}`
+      : 'Preparing…';
+   const progressPct = total > 0
+      ? Math.min(100, Math.round((processed / total) * 100))
+      : null;
 
    return (
       <div
@@ -44,26 +51,23 @@ const OptimizeReviewBar: React.FC<OptimizeReviewBarProps> = ({
       >
          <span className="text-md text-white-base font-semibold">Auto-Optimize</span>
 
-         <div className="gap-lg flex items-center">
-            <div className="flex flex-col items-center">
-               <div className="gap-sm flex items-center">
-                  {optimizing && (
-                     <span
-                        role="status" aria-label="Loading"
-                        className="inline-block aspect-square animate-spin rounded-full"
-                        style={{ width: 16, height: 16, border: '1.5px solid var(--white-base)', borderBottomColor: 'transparent' }}
-                     />
-                  )}
-                  <span className="text-md text-white-base">
-                     {optimizing
-                        ? (total > 0 ? `Processing round ${currentSection ?? Math.min(processed + 1, total)} of ${total}` : 'Preparing…')
-                        : 'Article optimized'}
-                  </span>
+         <div className="gap-lg flex items-center" style={{ flex: 1, justifyContent: 'center', minWidth: 0, padding: '0 12px' }}>
+            {optimizing ? (
+               <GeneratingStage
+                  size="sm"
+                  layout="inline"
+                  dark
+                  title={roundLabel}
+                  status={activeStatusLabel ?? 'Optimizing article…'}
+                  progressPct={progressPct}
+                  showProgress
+               />
+            ) : (
+               <div className="flex flex-col items-center">
+                  <span className="text-md text-white-base">Article optimized</span>
+                  <span className="text-gray-60 text-sm">Review changes, then Save to apply</span>
                </div>
-               <span className="text-gray-60 text-sm">
-                  {optimizing ? (activeStatusLabel ?? 'Optimizing article…') : 'Review changes, then Save to apply'}
-               </span>
-            </div>
+            )}
          </div>
 
          <div className="gap-sm flex items-center">

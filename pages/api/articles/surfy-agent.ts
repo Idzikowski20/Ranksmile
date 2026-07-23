@@ -11,7 +11,7 @@ import { buildTools } from '../../../lib/ai/tools';
 import { buildSystemPrompt } from '../../../lib/ai/systemPrompt';
 import { sseEvent } from '../../../lib/ai/sse';
 import { extractJsonObject, isSurfyReplyShape } from '../../../lib/ai/extractJson';
-import { stripEmoji } from '../../../lib/ai/text';
+import { splitSurfyThinkingAndMessage, stripEmoji } from '../../../lib/ai/text';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
@@ -82,9 +82,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let runningTokens = 0;
     try {
       const today = new Date().toISOString().slice(0, 10); // server clock — the model never guesses the date
+      const { computeGeoCues, geoPromptBlock } = await import('../../../lib/geo/geoCues');
+      const plain = String(content).replace(/<[^>]+>/g, ' ');
+      const geoHints = geoPromptBlock(computeGeoCues(String(content), plain));
       const result = streamText({
         model: deepseek('deepseek-chat'),
-        system: buildSystemPrompt(ctx, outline, { today, authorName: typeof authorName === 'string' ? authorName : '' }),
+        system: buildSystemPrompt(ctx, outline, {
+          today,
+          authorName: typeof authorName === 'string' ? authorName : '',
+          geoHints: geoHints || undefined,
+        }),
         messages: [...priorTurns, { role: 'user' as const, content: prompt }],
         tools: buildTools(ctx),
         stopWhen: isStepCount(8),
@@ -116,9 +123,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const fullText = (await Promise.resolve(result.text).catch(() => '')) || streamedText;
-      // Answer = text after the last tool result; thinking = the narration before it (collapsed in UI).
-      let thinking = stripEmoji(streamedText.slice(0, thinkingLen).trim());
-      let message = streamedText.slice(thinkingLen).trim() || fullText;
+      // Answer = text after the last tool result; thinking = narration before it (collapsed in UI).
+      // Do NOT fall back to fullText when the answer slice is empty — that leaks thinking into the reply.
+      const split = splitSurfyThinkingAndMessage(streamedText || fullText, thinkingLen);
+      let thinking = stripEmoji(split.thinking);
+      let message = split.message;
       const finalUsage = await Promise.resolve(result.totalUsage).catch(() => undefined);
 
       let finalHtml = ctx.htmlDirty ? restoreDataImages(stripSids($.html()), map) : null;

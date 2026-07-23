@@ -154,10 +154,10 @@ export default function ConfirmBusinessDetails({
           <div className="local-setup-category-panel">
             <strong>For Google</strong>
             <ul>
-              {details.googleCategories.map((cat) => (
+              {details.googleCategories.map((cat, i) => (
                 <li key={cat}>
                   {cat}
-                  <Badge variant="info">Primary</Badge>
+                  {i === 0 && <Badge variant="info">Primary</Badge>}
                 </li>
               ))}
             </ul>
@@ -195,8 +195,8 @@ export default function ConfirmBusinessDetails({
 
       {tab === 'photos' && (
         <div className="local-setup-photos" role="tabpanel">
-          <PhotoSlot label="Logo" wide={false} />
-          <PhotoSlot label="Cover photo" wide />
+          <PhotoSlot label="Logo" wide={false} url={details.logoUrl} />
+          <PhotoSlot label="Cover photo" wide url={details.coverUrl} />
           <div className="local-setup-photos-gallery">
             <span>
               Business photos
@@ -364,17 +364,23 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function PhotoSlot({ label, wide }: { label: string; wide: boolean }) {
+function PhotoSlot({ label, wide, url }: { label: string; wide: boolean; url?: string }) {
   return (
     <div className="local-setup-photo-slot">
       <span>{label}</span>
-      <button
-        type="button"
-        className={`local-setup-photo-add${wide ? ' local-setup-photo-add--wide' : ''}`}
-        aria-label={`Add ${label}`}
-      >
-        <IconPlus size={24} />
-      </button>
+      {url ? (
+        <div className={`local-setup-photo-thumb${wide ? ' local-setup-photo-thumb--wide' : ''}`}>
+          <img src={url} alt={label} />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={`local-setup-photo-add${wide ? ' local-setup-photo-add--wide' : ''}`}
+          aria-label={`Add ${label}`}
+        >
+          <IconPlus size={24} />
+        </button>
+      )}
     </div>
   );
 }

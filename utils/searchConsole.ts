@@ -160,6 +160,17 @@ const fetchSearchConsoleData = async (
          dimensionFilterGroups,
       };
    }
+   if (type === 'dateQuery') {
+      requestBody = {
+         startDate,
+         endDate,
+         type: 'web',
+         rowLimit: 25000,
+         dataState: 'all',
+         dimensions: ['date', 'query'],
+         dimensionFilterGroups,
+      };
+   }
 
       const cleanDomain = domainName.replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/+$/, '');
       const siteUrl = domainSettings.property_type === 'url' && domainSettings.url ? domainSettings.url : `sc-domain:${cleanDomain}`;
@@ -179,6 +190,17 @@ const fetchSearchConsoleData = async (
                position: row.position,
             });
          });
+      }
+
+      if (type === 'dateQuery' && resData.rows && resData.rows.length > 0) {
+         finalRows = resData.rows.map((row: SearchAnalyticsRawItem) => ({
+            date: row.keys[0],
+            keyword: row.keys[1] || '',
+            clicks: row.clicks ?? 0,
+            impressions: row.impressions ?? 0,
+            ctr: (row.ctr ?? 0) * 100,
+            position: row.position ?? 0,
+         }));
       }
 
       return finalRows;
@@ -479,4 +501,5 @@ export const removeLocalSCData = async (domain:string): Promise<boolean> => {
    }
 };
 
+export { fetchSearchConsoleData };
 export default fetchSearchConsoleData;

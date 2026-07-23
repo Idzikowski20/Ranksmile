@@ -83,6 +83,36 @@ export async function loadScanResultRows(scanId: number): Promise<ResultRow[]> {
    return mapDbRowsToResultRows(dbRows);
 }
 
+/** Citations-only rows for overview / competitor ranking / delta — skips brands + fan-out JSON. */
+export async function loadScanCitationRows(scanId: number): Promise<ResultRow[]> {
+   const map = await loadScanCitationRowsForScans([scanId]);
+   return map.get(scanId) ?? [];
+}
+
+/** Batch citations-only load for many scans (history charts) — one SQL round-trip. */
+export async function loadScanCitationRowsForScans(scanIds: number[]): Promise<Map<number, ResultRow[]>> {
+   const out = new Map<number, ResultRow[]>();
+   if (!scanIds.length) return out;
+   for (const id of scanIds) out.set(id, []);
+   const placeholders = scanIds.map(() => '?').join(',');
+   const dbRows = await queryRows<{
+      scan_id: number; prompt_id: number; model: string; own_cited: number; own_position: number | null;
+      citations: unknown; topic: string | null; text: string | null;
+   }>(
+      `SELECT r.scan_id, r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
+       FROM ai_vis_results r LEFT JOIN ai_vis_prompts p ON p.id = r.prompt_id
+       WHERE r.scan_id IN (${placeholders}) AND r.error IS NULL`,
+      scanIds,
+   );
+   for (const r of dbRows) {
+      const list = out.get(r.scan_id) ?? [];
+      const [mapped] = mapDbRowsToResultRows([{ ...r, brands: [], fan_out_queries: [] }]);
+      if (mapped) list.push(mapped);
+      out.set(r.scan_id, list);
+   }
+   return out;
+}
+
 async function queryCompletedScan(
    domainId: number,
    opts: { requireUsableRows?: boolean; beforeFinishedAt?: string } = {},

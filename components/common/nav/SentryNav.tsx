@@ -104,26 +104,38 @@ const MenuLink = ({ icon, label, href, chevron, trailing, onClick, expanded }: M
       {chevron && <span className="sentry-menu-chevron"><IconChevron rotate={90} /></span>}
     </>
   );
-  if (href) return <a className="sentry-menu-item" href={href} target="_blank" rel="noreferrer noopener" onClick={onClick}>{body}</a>;
+  if (href) {
+    const external = /^https?:\/\//i.test(href);
+    if (external) {
+      return (
+        <a className="sentry-menu-item" href={href} target="_blank" rel="noreferrer noopener" onClick={onClick}>
+          {body}
+        </a>
+      );
+    }
+    return (
+      <Link className="sentry-menu-item" href={href} prefetch={false} onClick={onClick}>
+        {body}
+      </Link>
+    );
+  }
   return <button type="button" className="sentry-menu-item" onClick={onClick} aria-expanded={expanded}>{body}</button>;
 };
 
 type SubItem = { icon: React.ReactNode; label: string; href?: string };
 const HELP_SUBMENUS: Record<string, SubItem[]> = {
   Resources: [
-    { icon: <IconSentryLogo />, label: 'Welcome Page', href: 'https://surferseo.com/' },
-    { icon: <IconDocs />, label: 'Documentation', href: 'https://docs.surferseo.com/' },
-    { icon: <IconDocs />, label: 'API Docs', href: 'https://docs.surferseo.com/en/articles/api' },
-    { icon: <IconQuestion />, label: 'Help Center', href: 'https://help.surferseo.com/' },
-    { icon: <IconSupport />, label: 'Contact Support', href: 'https://help.surferseo.com/en/' },
+    { icon: <IconSentryLogo />, label: 'Dashboard', href: '/dashboard' },
+    { icon: <IconDocs />, label: 'Onboarding', href: '/onboarding' },
+    { icon: <IconQuestion />, label: 'Settings', href: '/settings' },
+    { icon: <IconSupport />, label: 'Billing', href: '/plans' },
   ],
   Community: [
-    { icon: <IconGroup />, label: 'Surfer Community', href: 'https://community.surferseo.com/' },
-    { icon: <IconGlobe />, label: 'Facebook Group', href: 'https://www.facebook.com/groups/surferseo/' },
+    { icon: <IconGroup />, label: 'Workspaces', href: '/domains' },
   ],
   Legal: [
-    { icon: <IconBuilding />, label: 'Terms of Service', href: 'https://surferseo.com/terms-of-service/' },
-    { icon: <IconBuilding />, label: 'Privacy Policy', href: 'https://surferseo.com/privacy-policy/' },
+    { icon: <IconBuilding />, label: 'Terms of Service', href: '/legal/terms' },
+    { icon: <IconBuilding />, label: 'Privacy Policy', href: '/legal/privacy' },
   ],
 };
 const HelpMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }) => {
@@ -351,7 +363,7 @@ const PlanMenu = ({
           <PlanMetricRow key={metric.key} metric={metric} />
         ))}
       </ul>
-      <Link href="/settings/billing_subscription" passHref>
+      <Link href="/settings/billing_subscription" passHref prefetch={false}>
         <a className="sentry-plan-settings" onClick={onClose}>
           Manage plan
           <IconChevron rotate={90} size={10} />
@@ -374,7 +386,7 @@ const UserMenu = ({ anchor, onClose, name, email, pic, initial }: { anchor: DOMR
           <span className="sentry-user-email">{email}</span>
         </div>
       </div>
-      <Link href="/settings/profile" passHref>
+      <Link href="/settings/profile" passHref prefetch={false}>
         <a className="sentry-user-item">User Settings</a>
       </Link>
       <button
@@ -408,7 +420,7 @@ const SentryNav = ({ domains = [] }: Props) => {
   const { data: planSummaryData, isLoading: planSummaryLoading } = useQuery(
     'planSummary',
     () => fetchJson<PlanSummaryResponse>('/api/billing/plan-summary', PLAN_SUMMARY_FALLBACK),
-    { staleTime: 60 * 1000, retry: false },
+    { staleTime: 5 * 60 * 1000, retry: false },
   );
   const planSummary = planSummaryData?.summary ?? PLAN_SUMMARY_FALLBACK.summary;
   const planStatusLine = planSummaryData?.statusLine ?? '';
@@ -420,11 +432,20 @@ const SentryNav = ({ domains = [] }: Props) => {
     return resolved?.slug ?? domains[0]?.slug ?? null;
   }, [activeId, activeWorkspace, domains]);
 
-  // Recommendations count (flame badge) — shares the dashboard's query key.
+  // Recommendations count (flame badge) — shares the checklist's query key.
+  // Defer on AI Vis so overview/history aren't starved on Neon.
+  const onAiVis = router.asPath.includes('/ai-visibility');
+  const [deferRecs, setDeferRecs] = useState(false);
+  useEffect(() => {
+    if (!onAiVis) { setDeferRecs(false); return undefined; }
+    setDeferRecs(true);
+    const t = window.setTimeout(() => setDeferRecs(false), 2500);
+    return () => window.clearTimeout(t);
+  }, [onAiVis]);
   const { data: domainRecsData } = useQuery(
     ['domainRecs', activeSlug],
     () => fetchJson(`/api/domains/${activeSlug}/recommendations`, { recommendations: [] as Array<{ type?: string | null; score?: number | null }> }),
-    { enabled: !!activeSlug, staleTime: 30 * 1000, retry: false },
+    { enabled: !!activeSlug && !deferRecs, staleTime: 5 * 60 * 1000, retry: false },
   );
   const recCount = useMemo(
     () => countActionableRecommendations(domainRecsData?.recommendations ?? []),
@@ -476,7 +497,7 @@ const SentryNav = ({ domains = [] }: Props) => {
               { label: 'Recommendations', href: workspaceHref(activeId, `/sites/${activeSlug}/recommendations`), match: `/sites/${activeSlug}/recommendations` },
               { label: 'Content Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/content-audit`), match: `/sites/${activeSlug}/content-audit` },
               { label: 'Topical Map', href: workspaceHref(activeId, `/sites/${activeSlug}/topical-map`), match: `/sites/${activeSlug}/topical-map` },
-              { label: 'Rank Tracking', href: workspaceHref(activeId, `/sites/${activeSlug}/rank-tracking`), match: `/sites/${activeSlug}/rank-tracking` },
+              { label: 'Search Intelligence', href: workspaceHref(activeId, `/sites/${activeSlug}/rank-tracking`), match: `/sites/${activeSlug}/rank-tracking` },
               { label: 'Activity Log', href: workspaceHref(activeId, `/sites/${activeSlug}/activity-log`), match: `/sites/${activeSlug}/activity-log` },
             ],
           }],
@@ -738,7 +759,7 @@ const SentryNav = ({ domains = [] }: Props) => {
             const active = isActivePrimary(it);
             return (
               <li key={it.key} className="sentry-nav-item" onMouseEnter={() => setHoverPreview(it.secondary ? it.key : null)}>
-                <Link href={it.href} passHref>
+                <Link href={it.href} passHref prefetch={false}>
                   <a
                     className="sentry-nav-link"
                     aria-label={it.label}
@@ -814,7 +835,7 @@ const SentryNav = ({ domains = [] }: Props) => {
                     const active = isSecondaryActive(ln.match);
                     return (
                       <li key={ln.href}>
-                        <Link href={ln.href} passHref>
+                        <Link href={ln.href} passHref prefetch={false}>
                           <a className="sentry-secondary-link" aria-current={active ? 'location' : undefined} data-active={active ? 'true' : undefined}>
                             <span className="sentry-secondary-link-label">{ln.label}</span>
                             {ln.match.endsWith('/recommendations') && recCount > 0 && (

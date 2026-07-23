@@ -3,21 +3,20 @@ import { useGscAccount } from '../../services/gscAccount';
 import { createInitialJobs } from '../../lib/local/localSetupJobs';
 import { suggestKeywordsForBusiness } from '../../lib/local/onboardingConfig';
 import {
-  findMatchingGbp,
   gbpToBusinessDetails,
-  MOCK_GBP_PROFILES,
-  placeToBusinessDetails,
 } from '../../lib/local/mockPlaces';
 import {
   INITIAL_SETUP_STATE,
+  isGbpConfigured,
   isLocalSetupComplete,
   loadLocalSetup,
+  loadLocalSetupByGbp,
   saveLocalSetup,
 } from '../../lib/local/localSetupStorage';
 import type {
   AiRepliesSettings,
   BusinessDetails,
-  BusinessPlace,
+  GbpProfile,
   GrowthActionLogEntry,
   LocalSetupJobs,
   LocalSetupState,
@@ -76,63 +75,160 @@ export default function LocalOverviewContent({ slug }: LocalOverviewContentProps
     return { ...prev, mapRankKeywords: [defaultKeyword] };
   }, [defaultKeyword]);
 
-  const handlePlaceSelect = useCallback((place: BusinessPlace) => {
+  const profileConfigured = useCallback(
+    (gbpId: string) => isGbpConfigured(slug, gbpId),
+    [slug, state.completedAt, state.selectedGbpId, state.step],
+  );
+
+  const importGbpDetails = useCallback(async (profile: GbpProfile): Promise<BusinessDetails> => {
+    const params = new URLSearchParams({
+      name: profile.name,
+      address: profile.address,
+      phone: profile.phone,
+    });
+    if (profile.website) params.set('website', profile.website);
+
+    try {
+      const res = await fetch(`/api/local/gbp-import?${params.toString()}`);
+      if (!res.ok) throw new Error(`gbp-import ${res.status}`);
+      const data = (await res.json()) as { details?: BusinessDetails };
+      if (data.details) return data.details;
+    } catch (err) {
+      console.error('[LocalOverview] GBP import failed:', err);
+    }
+    return gbpToBusinessDetails(profile);
+  }, []);
+
+  // Re-import if confirm still has local placeholder images from an older session.
+  useEffect(() => {
+    if (!hydrated || !slug || state.step !== 'confirm' || !state.selectedGbpId || !state.businessDetails) {
+      return undefined;
+    }
+    const details = state.businessDetails;
+    const hasLocalAssets = [details.logoUrl, details.coverUrl, ...details.photoUrls]
+      .some((url) => Boolean(url?.startsWith('/images/')));
+    if (!hasLocalAssets) return undefined;
+
+    const profile: GbpProfile = {
+      id: state.selectedGbpId,
+      accountId: state.gbpAccountId || '',
+      locationId: state.gbpLocationId || state.selectedGbpId,
+      name: details.name,
+      address: details.address,
+      phone: details.phone,
+      website: details.website,
+      description: details.description,
+      hasEditAccess: true,
+    };
+
+    let cancelled = false;
+    void (async () => {
+      const imported = await importGbpDetails(profile);
+      if (cancelled) return;
+      persist((prev) => (
+        prev.step === 'confirm' ? { ...prev, businessDetails: imported } : prev
+      ));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hydrated,
+    importGbpDetails,
+    persist,
+    slug,
+    state.businessDetails,
+    state.gbpAccountId,
+    state.gbpLocationId,
+    state.selectedGbpId,
+    state.step,
+  ]);
+
+  const googleConnectHref = `/api/gsc/connect?redirect=${encodeURIComponent(`/sites/${slug}/local/overview`)}`;
+
+  const handleGbpProfileSelect = useCallback(async (profile: GbpProfile) => {
     const googleEmail = gscAccount?.email ?? null;
-    const matched = googleEmail ? findMatchingGbp(place) : null;
+    const existing = loadLocalSetupByGbp(slug, profile.id);
 
-    if (matched && matched.hasEditAccess) {
+    if (existing && isLocalSetupComplete(existing)) {
       persist({
-        ...INITIAL_SETUP_STATE,
-        step: 'confirm',
-        selectedPlace: place,
-        selectedGbpId: matched.id,
-        businessDetails: gbpToBusinessDetails(matched),
-        googleAccountEmail: googleEmail,
+        ...existing,
+        gbpAccountId: profile.accountId || existing.gbpAccountId,
+        gbpLocationId: profile.locationId || existing.gbpLocationId,
       });
       return;
     }
 
-    if (matched && !matched.hasEditAccess) {
+    // Resume only mid-onboarding after confirm; otherwise re-import GBP details.
+    if (
+      existing
+      && existing.step !== 'search'
+      && existing.step !== 'connect'
+      && existing.step !== 'confirm'
+    ) {
       persist({
-        ...INITIAL_SETUP_STATE,
-        step: 'connect',
-        selectedPlace: place,
-        selectedGbpId: null,
-        businessDetails: placeToBusinessDetails(place),
-        googleAccountEmail: googleEmail,
+        ...existing,
+        googleAccountEmail: existing.googleAccountEmail ?? googleEmail,
+        gbpAccountId: profile.accountId || existing.gbpAccountId,
+        gbpLocationId: profile.locationId || existing.gbpLocationId,
       });
       return;
     }
 
+    const place = {
+      id: `gbp-place-${profile.id}`,
+      name: profile.name,
+      address: profile.address,
+      phone: profile.phone,
+    };
+
+    const businessDetails = await importGbpDetails(profile);
+
+    // Profile already chosen on hero — skip connect + GBP modal and go to confirm.
     persist({
       ...INITIAL_SETUP_STATE,
-      step: 'connect',
+      step: 'confirm',
       selectedPlace: place,
-      selectedGbpId: null,
-      businessDetails: placeToBusinessDetails(place),
-      googleAccountEmail: googleEmail,
+      selectedGbpId: profile.id,
+      gbpAccountId: profile.accountId,
+      gbpLocationId: profile.locationId,
+      businessDetails,
+      googleAccountEmail: googleEmail ?? existing?.googleAccountEmail ?? null,
     });
-  }, [gscAccount?.email, persist]);
+  }, [gscAccount?.email, importGbpDetails, persist, slug]);
 
   const handleChangePlace = useCallback(() => {
     persist({ ...INITIAL_SETUP_STATE, step: 'search' });
   }, [persist]);
 
+  const handleAddLocation = useCallback(() => {
+    persist({ ...INITIAL_SETUP_STATE, step: 'search' });
+  }, [persist]);
+
+  const handleChangeAccount = useCallback(() => {
+    window.location.href = googleConnectHref;
+  }, [googleConnectHref]);
+
   const handleSetupWithGoogle = useCallback(() => {
     if (!state.selectedPlace) return;
-    const email = gscAccount?.email ?? 'demo@google.com';
+    if (!gscAccount?.email) {
+      window.location.href = googleConnectHref;
+      return;
+    }
+    const email = gscAccount.email;
     persist((prev) => ({ ...prev, googleAccountEmail: email }));
     setGbpModalOpen(true);
-  }, [gscAccount?.email, persist, state.selectedPlace]);
+  }, [gscAccount?.email, googleConnectHref, persist, state.selectedPlace]);
 
-  const handleGbpContinue = useCallback((profileId: string) => {
-    const profile = MOCK_GBP_PROFILES.find((p) => p.id === profileId);
-    if (!profile) return;
+  const handleGbpContinue = useCallback((profile: GbpProfile) => {
     setGbpModalOpen(false);
     persist((prev) => ({
       ...prev,
       step: 'confirm',
-      selectedGbpId: profileId,
+      selectedGbpId: profile.id,
+      gbpAccountId: profile.accountId,
+      gbpLocationId: profile.locationId,
       businessDetails: gbpToBusinessDetails(profile),
     }));
   }, [persist]);
@@ -253,7 +349,7 @@ export default function LocalOverviewContent({ slug }: LocalOverviewContentProps
         aiReplies={state.aiReplies}
         mapRankKeywords={state.mapRankKeywords}
         hasUserRole={state.userRole !== null}
-        onAddLocation={() => persist({ ...INITIAL_SETUP_STATE })}
+        onAddLocation={handleAddLocation}
         onJobsChange={handleJobsChange}
         onDetailsChange={handleDetailsChange}
         locationCreatedAt={state.locationCreatedAt ?? state.completedAt}
@@ -266,7 +362,15 @@ export default function LocalOverviewContent({ slug }: LocalOverviewContentProps
   }
 
   if (state.step === 'search') {
-    return <LocalSearchHero onSelect={handlePlaceSelect} />;
+    return (
+      <LocalSearchHero
+        googleEmail={state.googleAccountEmail ?? gscAccount?.email ?? null}
+        connectHref={googleConnectHref}
+        isConfigured={profileConfigured}
+        onSelectProfile={handleGbpProfileSelect}
+        onChangeAccount={handleChangeAccount}
+      />
+    );
   }
 
   if (state.step === 'connect' && state.selectedPlace) {
@@ -283,9 +387,7 @@ export default function LocalOverviewContent({ slug }: LocalOverviewContentProps
           googleEmail={state.googleAccountEmail ?? gscAccount?.email ?? ''}
           onClose={() => setGbpModalOpen(false)}
           onContinue={handleGbpContinue}
-          onChangeAccount={() => {
-            window.location.href = '/api/auth/login?returnTo=' + encodeURIComponent(window.location.pathname);
-          }}
+          onChangeAccount={handleChangeAccount}
         />
       </>
     );
@@ -372,5 +474,13 @@ export default function LocalOverviewContent({ slug }: LocalOverviewContentProps
     );
   }
 
-  return <LocalSearchHero onSelect={handlePlaceSelect} />;
+  return (
+    <LocalSearchHero
+      googleEmail={state.googleAccountEmail ?? gscAccount?.email ?? null}
+      connectHref={googleConnectHref}
+      isConfigured={profileConfigured}
+      onSelectProfile={handleGbpProfileSelect}
+      onChangeAccount={handleChangeAccount}
+    />
+  );
 }

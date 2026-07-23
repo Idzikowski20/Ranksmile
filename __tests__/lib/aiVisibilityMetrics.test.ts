@@ -1,4 +1,4 @@
-import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow } from '../../lib/aiVisibilityMetrics';
+import { ownDomainPosition, computeOverview, aggregateSources, aggregateCompetitors, buildSnapshot, snapshotForDomain, buildSnapshotsForScan, rankCompetitors, COMPETITOR_NOISE, computeDelta, mentionGap, gapBrandCandidates, brandsForSource, domainMentionGap, domainGapCandidates, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, overviewForDomain, ResultRow } from '../../lib/aiVisibilityMetrics';
 
 const cit = (domain: string, url?: string) => ({ domain, url: url || `https://${domain}/x`, title: '' });
 const brand = (b: string, domain = '', sentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral', pos = 1) => ({ brand: b, domain, sentiment, pos, quotes: [] });
@@ -99,6 +99,16 @@ describe('snapshotForDomain', () => {
    });
 });
 
+describe('overviewForDomain', () => {
+   it('matches snapshot overview scores without building sources/prompts', () => {
+      const light = overviewForDomain(rows, 'idztech.pl');
+      const full = snapshotForDomain(rows, 'idztech.pl').overview;
+      expect(light.visibilityScore).toBe(full.visibilityScore);
+      expect(light.mentionRate).toBe(full.mentionRate);
+      expect(light.avgPosition).toBe(full.avgPosition);
+   });
+});
+
 describe('competitor ranking', () => {
    const rowsWithNoise: ResultRow[] = [
       { promptId: 1, model: 'gemini', ownCited: false, ownPosition: null, topic: 'T', text: 'Q', brands: [], citations: [cit('vertexaisearch.cloud.google.com'), cit('oracle.com', 'https://oracle.com/a')] },
@@ -119,6 +129,17 @@ describe('competitor ranking', () => {
       expect(ranked[0].domain).toBe('oracle.com');
       expect(ranked[0].snapshot.overview.visibilityScore).toBeGreaterThan(0);
       expect(ranked[0].snapshot.prompts.length).toBeGreaterThan(0); // full snapshot embedded
+   });
+   it('fullDetailTopCompetitors: long-tail competitors stay overview-only', () => {
+      const many: ResultRow[] = [
+         { promptId: 1, model: 'chat_gpt', ownCited: true, ownPosition: 1, topic: 'T', text: 'Q', brands: [],
+            citations: [cit('a.com'), cit('b.com'), cit('c.com'), cit('idztech.pl')] },
+      ];
+      const map = buildSnapshotsForScan(many, 'idztech.pl', { fullDetailTopCompetitors: 1 });
+      const ranked = rankCompetitors(map, 'idztech.pl');
+      expect(ranked[0].snapshot.prompts.length).toBeGreaterThan(0);
+      expect(ranked.slice(1).every((c) => c.snapshot.prompts.length === 0)).toBe(true);
+      expect(map.get('idztech.pl')!.prompts.length).toBeGreaterThan(0);
    });
 });
 

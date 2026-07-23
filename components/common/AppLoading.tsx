@@ -1,10 +1,15 @@
 import React from 'react';
-import EditorLoading from '../articles/EditorLoading';
+import Loader from './Loader';
 
 /** Full-screen bootstrap loader — no AppShell so we do not pull SentryNav/auth on "/". */
 const AppLoading = ({
-  message = 'Please wait a moment while we are loading the page',
+  title,
+  subtitle = 'Please wait while we prepare everything for you',
+  /** @deprecated Prefer `title` — kept for older call sites. */
+  message,
 }: {
+  title?: string;
+  subtitle?: string;
   message?: string;
 }) => (
   <div
@@ -12,12 +17,14 @@ const AppLoading = ({
       position: 'fixed',
       inset: 0,
       zIndex: 9999,
-      background: '#f8f9ff',
+      background: '#F8F8F9',
       display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       fontFamily: 'var(--font-family-primary)',
     }}
   >
-    <EditorLoading message={message} />
+    <Loader title={message ?? title} subtitle={subtitle} size="md" />
   </div>
 );
 

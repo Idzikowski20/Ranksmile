@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import SurfyMarkdown from './SurfyMarkdown';
+import { shouldShowSurfyThinkingDisclosure } from '../../lib/ai/text';
 
 type Props = {
   role: 'user' | 'assistant';
   message: string;
   /** The agent's interim narration (between tool calls), shown as a collapsed "Thinking" disclosure. */
   thinking?: string;
+  /** Fade/slide entrance — use for newly completed assistant turns. */
+  animateEnter?: boolean;
 };
 
 /** Collapsed-by-default "Thinking" disclosure (the agent's between-step narration). */
@@ -32,8 +36,8 @@ const Thinking = ({ text }: { text: string }) => {
 };
 
 /** One Surfy chat message, Twenty-style in the app's light theme:
- *  user = subtle grey bubble (right, fit-content); assistant = collapsed thinking + markdown body. */
-const SurfyMessage = ({ role, message, thinking }: Props) => {
+ *  user = subtle grey bubble (right, fit-content); assistant = optional thinking + markdown body. */
+const SurfyMessage = ({ role, message, thinking, animateEnter = false }: Props) => {
   if (role === 'user') {
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -50,11 +54,26 @@ const SurfyMessage = ({ role, message, thinking }: Props) => {
       </div>
     );
   }
-  return (
+
+  const showThinking = shouldShowSurfyThinkingDisclosure(thinking, message);
+
+  const body = (
     <div>
-      {thinking ? <Thinking text={thinking} /> : null}
-      <SurfyMarkdown>{message}</SurfyMarkdown>
+      {showThinking && thinking ? <Thinking text={thinking} /> : null}
+      {message ? <SurfyMarkdown>{message}</SurfyMarkdown> : null}
     </div>
+  );
+
+  if (!animateEnter) return body;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+    >
+      {body}
+    </motion.div>
   );
 };
 

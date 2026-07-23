@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Button } from '../core';
 import { dashedLinkStyle } from './InfoPopper';
 import SiteAuditScoreGauge from './SiteAuditScoreGauge';
+import SiteHealthIssueBar, { type HealthIssueSegment } from './SiteHealthIssueBar';
 import IssueTrendArea from './IssueTrendArea';
 import OverviewInfoPopper, { type OverviewPopperKind } from './overviewPoppers';
 import { BotRow, PRIMARY_BOTS } from './aiSearchBots';
@@ -26,11 +27,11 @@ const TEXT = '#18181B';
 const BORDER = '#E4E4E7';
 
 const BUCKET_COLORS: Record<PageBucket, string> = {
-  healthy: '#3BDBB5',
-  broken: '#FF6F77',
-  haveIssues: '#F0C84A',
-  redirects: '#6B5CE7',
-  blocked: '#D4D4D8',
+  healthy: 'rgb(129, 224, 34)',
+  broken: 'rgb(252, 219, 3)',
+  haveIssues: 'rgb(186, 232, 76)',
+  redirects: 'rgb(107, 92, 231)',
+  blocked: 'rgb(212, 212, 216)',
 };
 
 const BUCKET_LABELS: Record<PageBucket, string> = {
@@ -61,20 +62,32 @@ function InfoIcon() {
 function OverviewScoreGauge({
   score,
   deltaLabel = 'no changes',
-  size = 96,
+  size = 140,
+  variant = 'watchtower',
 }: {
   score: number;
   deltaLabel?: string | null;
   size?: number;
+  variant?: 'watchtower' | 'compact';
 }) {
   return (
     <div className="sentry-site-audit-score-gauge">
-      <SiteAuditScoreGauge score={score} size={size} />
+      <SiteAuditScoreGauge score={score} size={size} variant={variant} showLabel={variant === 'watchtower'} />
       {deltaLabel ? (
         <span className="sentry-site-audit-score-gauge-delta">{deltaLabel}</span>
       ) : null}
     </div>
   );
+}
+
+function crawledPagesBarSegments(distribution: Record<PageBucket, number>): HealthIssueSegment[] {
+  return [
+    { id: 'healthy', label: BUCKET_LABELS.healthy, count: distribution.healthy, color: 'rgb(129, 224, 34)' },
+    { id: 'haveIssues', label: BUCKET_LABELS.haveIssues, count: distribution.haveIssues, color: 'rgb(186, 232, 76)' },
+    { id: 'redirects', label: BUCKET_LABELS.redirects, count: distribution.redirects, color: 'rgb(107, 92, 231)' },
+    { id: 'broken', label: BUCKET_LABELS.broken, count: distribution.broken, color: 'rgb(252, 219, 3)' },
+    { id: 'blocked', label: BUCKET_LABELS.blocked, count: distribution.blocked, color: 'rgb(212, 212, 216)' },
+  ];
 }
 
 function WidgetTitle({
@@ -100,38 +113,6 @@ function WidgetTitle({
           <InfoIcon />
         </button>
       )}
-    </div>
-  );
-}
-
-function CigaretteDistributionBar({
-  distribution,
-  total,
-}: {
-  distribution: Record<PageBucket, number>;
-  total: number;
-}) {
-  const order: PageBucket[] = ['healthy', 'haveIssues', 'redirects', 'broken', 'blocked'];
-  const segments = order.filter((key) => distribution[key] > 0);
-
-  if (!total || segments.length === 0) {
-    return <div className="sentry-cp-chart__cigarette-empty" aria-hidden="true" />;
-  }
-
-  return (
-    <div className="sentry-cp-chart__cigarette-container" data-test-id="crawled-pages-chart">
-      {segments.map((key) => (
-        <div
-          key={key}
-          className="sentry-cp-chart__cigarette-item"
-          title={`${BUCKET_LABELS[key]}: ${distribution[key]}`}
-          style={{
-            flexGrow: distribution[key],
-            flexBasis: 0,
-            backgroundColor: BUCKET_COLORS[key],
-          }}
-        />
-      ))}
     </div>
   );
 }
@@ -178,7 +159,7 @@ function ThematicCard({
         <p style={{ margin: '0 0 16px', fontSize: 12, color: MUTED, fontFamily: FONT, lineHeight: 1.5 }}>{report.notice}</p>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          {report.score !== null && <SiteAuditScoreGauge score={report.score} size={48} />}
+          {report.score !== null && <SiteAuditScoreGauge score={report.score} size={48} variant="compact" />}
           {report.deltaLabel && (
             <span style={{ fontSize: 12, color: MUTED, fontFamily: FONT }}>{report.deltaLabel}</span>
           )}
@@ -210,6 +191,7 @@ type Props = {
 export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
   const dist = data.crawledPages.distribution;
   const [popper, setPopper] = useState<{ kind: OverviewPopperKind; rect: DOMRect } | null>(null);
+  const crawledBarSegments = useMemo(() => crawledPagesBarSegments(dist), [dist]);
 
   const openPopper = useCallback((kind: OverviewPopperKind) => (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -232,12 +214,14 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
               >
                 Site Health
               </WidgetTitle>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
                 <OverviewScoreGauge
                   score={data.siteHealth}
                   deltaLabel={data.siteHealthDelta === null ? 'no changes' : `${data.siteHealthDelta > 0 ? '+' : ''}${data.siteHealthDelta}%`}
+                  size={148}
+                  variant="watchtower"
                 />
-                <div style={{ width: '100%', marginTop: 20 }}>
+                <div style={{ width: '100%', marginTop: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <span style={{ fontSize: 10, color: '#D1002F' }}>▼</span>
                     <span style={{ fontSize: 13, color: TEXT, flex: 1, marginLeft: 4 }}>Top-10% websites</span>
@@ -265,7 +249,9 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
                 <span className="sentry-cp-overview-delta" data-test-id="crawled-pages-delta">
                   {data.crawledPages.delta === null ? 'no changes' : `${data.crawledPages.delta > 0 ? '+' : ''}${data.crawledPages.delta}`}
                 </span>
-                <CigaretteDistributionBar distribution={dist} total={data.crawledPages.total} />
+                <div className="sentry-cp-overview-issue-bar" data-test-id="crawled-pages-chart">
+                  <SiteHealthIssueBar segments={crawledBarSegments} />
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '6px 12px', fontSize: 13, marginBottom: 4 }}>
                 {(['healthy', 'broken', 'haveIssues', 'redirects', 'blocked'] as PageBucket[]).map((key) => (
@@ -298,8 +284,8 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
                 </button>
                 <span style={{ fontSize: 10, fontWeight: 600, color: '#fff', background: '#EFA00D', borderRadius: 4, padding: '2px 6px' }}>beta</span>
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }}>
-                <OverviewScoreGauge score={data.aiSearchHealth} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
+                <OverviewScoreGauge score={data.aiSearchHealth} size={148} variant="watchtower" />
                 <div
                   style={{
                     width: '100%',

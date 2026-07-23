@@ -149,7 +149,7 @@ export function useAiVisOverview(slug: string | undefined, competitor?: string, 
    const key = params.toString();
    return useQuery<OverviewPayload>(['ai-vis-overview', slug, key],
       () => fetchJson<OverviewPayload>(`/api/ai-visibility/${slug}/data?${key}`),
-      { enabled: !!slug, staleTime: 30_000, keepPreviousData: true });
+      { enabled: !!slug, staleTime: 60_000, keepPreviousData: true });
 }
 
 export type HistoryPayload = { scans: Array<{ scanId: number; finishedAt: string | null; series: { you: DomainOverview | null; competitor?: DomainOverview | null } }> };
@@ -160,7 +160,7 @@ export function useAiVisHistory(slug: string | undefined, competitor?: string, p
    const qs = params.toString();
    return useQuery<HistoryPayload>(['ai-vis-history', slug, qs],
       () => fetchJson<HistoryPayload>(`/api/ai-visibility/${slug}/history${qs ? `?${qs}` : ''}`),
-      { enabled: !!slug, staleTime: 60_000, keepPreviousData: true });
+      { enabled: !!slug, staleTime: 5 * 60_000, keepPreviousData: true });
 }
 
 export type SourceDetailPayload = { history: Array<{ finishedAt: string | null; timesShown: number }>; brands: Array<{ pos: number; brand: string; sentiment: 'positive' | 'neutral' | 'negative' | 'mixed'; quotes: string[] }>; brandCount: number };

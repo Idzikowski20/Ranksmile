@@ -8,35 +8,59 @@ type AlertProps = React.HTMLAttributes<HTMLDivElement> & {
   children?: React.ReactNode;
 };
 
-const VARIANT_ICON: Record<AlertVariant, string> = {
-  success: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
-  warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
-  error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
-  info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
+/** Inline SVG icons — stroke style, matches Sentry shell iconography. */
+const AlertIcon = ({ variant }: { variant: AlertVariant }) => {
+  if (variant === 'success') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M6.5 10.25l2.25 2.25L13.5 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (variant === 'warning') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 3.5L17.5 16.5H2.5L10 3.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M10 8v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="10" cy="14.25" r="0.75" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (variant === 'error') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10 9v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="10" cy="6.75" r="0.75" fill="currentColor" />
+    </svg>
+  );
 };
 
 const Alert = forwardRef<HTMLDivElement, AlertProps>(
-  ({ variant = 'info', title, children, className = '', ...rest }, ref) => {
-    const iconPath = VARIANT_ICON[variant];
-    return (
-      <div
-        ref={ref}
-        role="alert"
-        className={`sentry-alert sentry-alert--${variant} ${className}`}
-        {...rest}
-      >
-        <span className="sentry-alert-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d={iconPath} />
-          </svg>
-        </span>
-        <div className="sentry-alert-body">
-          {title && <div className="sentry-alert-title">{title}</div>}
-          {children && <div className="sentry-alert-message">{children}</div>}
-        </div>
+  ({ variant = 'info', title, children, className = '', ...rest }, ref) => (
+    <div
+      ref={ref}
+      role="alert"
+      className={`sentry-alert sentry-alert--${variant} ${className}`}
+      {...rest}
+    >
+      <span className="sentry-alert-icon" aria-hidden="true">
+        <AlertIcon variant={variant} />
+      </span>
+      <div className="sentry-alert-body">
+        {title && <div className="sentry-alert-title">{title}</div>}
+        {children && <div className="sentry-alert-message">{children}</div>}
       </div>
-    );
-  }
+    </div>
+  ),
 );
 Alert.displayName = 'Alert';
 export default Alert;

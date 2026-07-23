@@ -1,4 +1,5 @@
 import type { BusinessDetails, BusinessPlace, BusinessCategory, GbpProfile } from './types';
+import { DEFAULT_HOURS } from './types';
 
 export const MOCK_PLACES: BusinessPlace[] = [
   {
@@ -102,24 +103,65 @@ export const MOCK_PLACES: BusinessPlace[] = [
 export const MOCK_GBP_PROFILES: GbpProfile[] = [
   {
     id: '9562330365094939501',
+    accountId: 'mock-account-1',
+    locationId: '9562330365094939501',
     name: 'Urbaniak Home & Gardens',
     address: 'Głębocka 88, Warszawa, 03-287, PL',
     phone: '+48 501 636 014',
     website: 'https://urbaniak.example',
-    description: 'Garden design and home landscaping services in Warsaw.',
-    primaryCategory: 'Siedziba firmy',
-    directoryCategories: ['Business center'],
+    description:
+      'Projektujemy i zakładamy ogrody przydomowe w Warszawie i okolicach. Oferujemy aranżację zieleni, systemy nawadniania, pielęgnację sezonową oraz doradztwo przy wyborze roślin.',
+    primaryCategory: 'Garden center',
+    additionalGoogleCategories: ['Landscaper', 'Landscape designer'],
+    directoryCategories: ['Garden center', 'Landscaper', 'Home improvement store'],
+
+
+
+    hours: [
+      { day: 'Monday', status: 'open', openTime: '09:00', closeTime: '17:00' },
+      { day: 'Tuesday', status: 'open', openTime: '09:00', closeTime: '17:00' },
+      { day: 'Wednesday', status: 'open', openTime: '09:00', closeTime: '17:00' },
+      { day: 'Thursday', status: 'open', openTime: '09:00', closeTime: '17:00' },
+      { day: 'Friday', status: 'open', openTime: '09:00', closeTime: '17:00' },
+      { day: 'Saturday', status: 'open', openTime: '10:00', closeTime: '14:00' },
+      { day: 'Sunday', status: 'closed' },
+    ],
+    serviceAreas: ['Warszawa', 'Marki', 'Ząbki'],
+    deliversLocally: true,
     hasEditAccess: true,
   },
   {
     id: '9830981351443153095',
+    accountId: 'mock-account-1',
+    locationId: '9830981351443153095',
     name: 'Auto Park Ostrowiec',
     address: 'Opatowska 126, Ostrowiec Świętokrzyski, 27-400, PL',
     phone: '+48 512 980 279',
+    website: 'https://autopark-ostrowiec.example',
+    description:
+      'Parking strzeżony i myjnia samochodowa w Ostrowcu Świętokrzyskim. Miejsca dla aut osobowych i dostawczych, monitoring 24/7 oraz szybka myjnia bezdotykowa.',
+    primaryCategory: 'Parking garage',
+    additionalGoogleCategories: ['Car wash'],
+    directoryCategories: ['Parking garage', 'Car wash', 'Automotive'],
+
+
+
+    hours: [
+      { day: 'Monday', status: 'open', openTime: '06:00', closeTime: '22:00' },
+      { day: 'Tuesday', status: 'open', openTime: '06:00', closeTime: '22:00' },
+      { day: 'Wednesday', status: 'open', openTime: '06:00', closeTime: '22:00' },
+      { day: 'Thursday', status: 'open', openTime: '06:00', closeTime: '22:00' },
+      { day: 'Friday', status: 'open', openTime: '06:00', closeTime: '22:00' },
+      { day: 'Saturday', status: 'open', openTime: '07:00', closeTime: '20:00' },
+      { day: 'Sunday', status: 'open', openTime: '08:00', closeTime: '18:00' },
+    ],
+    deliversLocally: false,
     hasEditAccess: true,
   },
   {
     id: '5758132613399699402',
+    accountId: 'mock-account-1',
+    locationId: '5758132613399699402',
     name: 'AODC Sp. z o.o.',
     address: 'Działkowa 37, Warszawa, 02-234, PL',
     phone: '+48 22 846 35 15',
@@ -127,14 +169,51 @@ export const MOCK_GBP_PROFILES: GbpProfile[] = [
     description:
       'AoDC (Art of Data Center) to zespół inżynierów z 20 letnim doświadczeniem w projektowaniu, budowaniu i serwisowaniu obiektów Data Center dla instytucji publicznych i komercyjnych w Polsce.',
     primaryCategory: 'Siedziba firmy',
-    directoryCategories: [],
+    additionalGoogleCategories: ['IT support and services'],
+    directoryCategories: ['Business center', 'IT consulting', 'Data center'],
+
+
+
+    hours: [
+      { day: 'Monday', status: 'open', openTime: '08:00', closeTime: '16:00' },
+      { day: 'Tuesday', status: 'open', openTime: '08:00', closeTime: '16:00' },
+      { day: 'Wednesday', status: 'open', openTime: '08:00', closeTime: '16:00' },
+      { day: 'Thursday', status: 'open', openTime: '08:00', closeTime: '16:00' },
+      { day: 'Friday', status: 'open', openTime: '08:00', closeTime: '16:00' },
+      { day: 'Saturday', status: 'closed' },
+      { day: 'Sunday', status: 'closed' },
+    ],
+    serviceAreas: ['Gdynia, Polska', 'Warszawa'],
+    deliversLocally: true,
     hasEditAccess: true,
   },
   {
     id: 'prodetektyw-gbp',
+    accountId: 'mock-account-1',
+    locationId: 'prodetektyw-gbp',
     name: 'Agencja Detektywistyczna Pro Detektyw | Biuro Detektywistyczne Warszawa',
     address: 'Mazowiecka 11/49, Warszawa, 00-052, PL',
     phone: '+48 500 156 015',
+    website: 'https://prodetektyw.pl',
+    description:
+      'Licencjonowane biuro detektywistyczne w centrum Warszawy. Prowadzimy sprawy cywilne i gospodarcze: ustalanie miejsca pobytu, wywiad gospodarczy, sprawy rozwodowe oraz ochrona wizerunku online. Działamy dyskretnie, zgodnie z prawem i z pełną dokumentacją dowodową.',
+    primaryCategory: 'Private investigator',
+    additionalGoogleCategories: ['Detective agency'],
+    directoryCategories: ['Private investigator', 'Detective agency', 'Legal services'],
+
+
+
+    hours: [
+      { day: 'Monday', status: 'open', openTime: '09:00', closeTime: '18:00' },
+      { day: 'Tuesday', status: 'open', openTime: '09:00', closeTime: '18:00' },
+      { day: 'Wednesday', status: 'open', openTime: '09:00', closeTime: '18:00' },
+      { day: 'Thursday', status: 'open', openTime: '09:00', closeTime: '18:00' },
+      { day: 'Friday', status: 'open', openTime: '09:00', closeTime: '17:00' },
+      { day: 'Saturday', status: 'open', openTime: '10:00', closeTime: '14:00' },
+      { day: 'Sunday', status: 'closed' },
+    ],
+    serviceAreas: ['Warszawa', 'Mazowieckie'],
+    deliversLocally: true,
     hasEditAccess: false,
   },
 ];
@@ -143,28 +222,41 @@ export const MOCK_CATEGORIES: BusinessCategory[] = [
   { id: 'aba', label: 'Applied behavior analysis therapist' },
   { id: 'attractions', label: 'Attractions' },
   { id: 'auto', label: 'Automotive and Transportation', group: 'group' },
+  { id: 'automotive', label: 'Automotive' },
   { id: 'boat', label: 'Boat Detailing Service' },
   { id: 'biz', label: 'Businesses and Services', group: 'group' },
+  { id: 'biz-center', label: 'Business center' },
   { id: 'carpool', label: 'Carpooling location' },
+  { id: 'car-wash', label: 'Car wash' },
   { id: 'community', label: 'Community and Government', group: 'group' },
   { id: 'countertop', label: 'Countertop store' },
+  { id: 'data-center', label: 'Data center' },
+  { id: 'detective', label: 'Detective agency' },
   { id: 'fiat', label: 'Dealer of Fiat Professional' },
   { id: 'education', label: 'Educational Institutions and Services', group: 'group' },
   { id: 'energy', label: 'Energy advisory service' },
   { id: 'estate', label: 'Estate litigation attorney' },
+  { id: 'garden', label: 'Garden center' },
   { id: 'healthcare', label: 'Healthcare', group: 'group' },
+  { id: 'home-improvement', label: 'Home improvement store' },
+  { id: 'it-consulting', label: 'IT consulting' },
+  { id: 'it-support', label: 'IT support and services' },
   { id: 'landmarks', label: 'Landmarks', group: 'group' },
+  { id: 'landscaper', label: 'Landscaper' },
+  { id: 'landscape-designer', label: 'Landscape designer' },
+  { id: 'legal', label: 'Legal services' },
   { id: 'quilting', label: 'Longarm quilting service' },
+  { id: 'parking', label: 'Parking garage' },
   { id: 'pedorthist', label: 'Pedorthist' },
   { id: 'pet-funeral', label: 'Pet funeral service' },
   { id: 'probate', label: 'Probate attorney' },
+  { id: 'private-investigator', label: 'Private investigator' },
   { id: 'retail', label: 'Retail', group: 'group' },
   { id: 'social', label: 'Social and Entertainment', group: 'group' },
   { id: 'sports', label: 'Sports and Recreation', group: 'group' },
   { id: 'training', label: 'Training, Instruction and Classes', group: 'group' },
   { id: 'travel', label: 'Travel', group: 'group' },
   { id: 'hq', label: 'Siedziba firmy' },
-  { id: 'biz-center', label: 'Business center' },
 ];
 
 export function normalizeText(value: string): string {
@@ -301,27 +393,26 @@ export function findMatchingGbp(place: BusinessPlace): GbpProfile | null {
 }
 
 export function gbpToBusinessDetails(profile: GbpProfile): BusinessDetails {
+  const googleCategories = [
+    ...(profile.primaryCategory ? [profile.primaryCategory] : []),
+    ...(profile.additionalGoogleCategories ?? []),
+  ];
+
   return {
     name: profile.name,
     address: profile.address,
     phone: profile.phone,
     website: profile.website ?? '',
     description: profile.description ?? '',
-    hideAddress: false,
-    deliversLocally: true,
-    serviceAreas: profile.name.includes('AODC') ? ['Gdynia, Polska'] : [],
-    googleCategories: profile.primaryCategory ? [profile.primaryCategory] : [],
+    hideAddress: profile.hideAddress ?? false,
+    deliversLocally: profile.deliversLocally ?? Boolean(profile.serviceAreas?.length),
+    serviceAreas: profile.serviceAreas ?? [],
+    googleCategories,
     directoryCategories: profile.directoryCategories ?? [],
-    photoUrls: [],
-    hours: [
-      { day: 'Monday', status: 'open', openTime: '08:00', closeTime: '16:00' },
-      { day: 'Tuesday', status: 'open', openTime: '08:00', closeTime: '16:00' },
-      { day: 'Wednesday', status: 'open', openTime: '08:00', closeTime: '16:00' },
-      { day: 'Thursday', status: 'open', openTime: '08:00', closeTime: '16:00' },
-      { day: 'Friday', status: 'open', openTime: '08:00', closeTime: '16:00' },
-      { day: 'Saturday', status: 'closed' },
-      { day: 'Sunday', status: 'closed' },
-    ],
+    logoUrl: profile.logoUrl,
+    coverUrl: profile.coverUrl,
+    photoUrls: profile.photoUrls ?? [],
+    hours: profile.hours ? profile.hours.map((h) => ({ ...h })) : DEFAULT_HOURS.map((h) => ({ ...h })),
   };
 }
 
@@ -338,6 +429,7 @@ export function placeToBusinessDetails(place: BusinessPlace): BusinessDetails {
     googleCategories: [],
     directoryCategories: [],
     photoUrls: [],
+
     hours: [
       { day: 'Monday', status: 'open', openTime: '08:00', closeTime: '16:00' },
       { day: 'Tuesday', status: 'open', openTime: '08:00', closeTime: '16:00' },
