@@ -21,6 +21,9 @@ scripts/cognee-cloud-mcp/node_modules
 .vscode
 fly.toml
 
+# local scratch / one-off scripts (dlugo, fizjo, etc.)
+.tmp/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
