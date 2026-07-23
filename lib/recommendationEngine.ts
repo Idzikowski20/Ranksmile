@@ -62,21 +62,22 @@ const INTENT_INSTRUCTIONS: Record<string, (subject: string) => string> = {
 const intentTemplate: TemplateFn = (item, context) => {
   const keyword = context?.keyword;
   const reasonSuffix = item.reason ? ` — currently: ${item.reason}` : '';
-  const citationStyle = isNewRecommendationsEnabled()
-    || item.id.startsWith('intent-citation-')
-    || (item.id.startsWith('citation-') && item.type === 'intent');
-  if (citationStyle) {
-    return {
-      title: item.label,
-      instruction: `Answer the user question "${item.label}" clearly in the article.${reasonSuffix}`,
-    };
-  }
+  // Classic INTENT_ITEMS always win — flag must not collapse them into citation copy.
   const build = INTENT_INSTRUCTIONS[item.id];
   if (build) {
     const subject = keyword ? `**${keyword}**` : 'the main question';
     return {
       title: item.label,
       instruction: `${build(subject)}${reasonSuffix}`,
+    };
+  }
+  const citationStyle = item.id.startsWith('intent-citation-')
+    || (item.id.startsWith('citation-') && item.type === 'intent')
+    || isNewRecommendationsEnabled();
+  if (citationStyle) {
+    return {
+      title: item.label,
+      instruction: `Answer the user question "${item.label}" clearly in the article.${reasonSuffix}`,
     };
   }
   const checklist = bullets(item.missing);

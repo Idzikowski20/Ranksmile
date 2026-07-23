@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import React, { useState } from 'react';
 import { requestPasswordReset } from '../../lib/auth/fetchAuth';
+import { Button } from '../core';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
   authFooterStyle,
+  authFullWidthBtnStyle,
   authLinkStyle,
-  authPrimaryButtonStyle,
   authSubtitleStyle,
   authSuccessStyle,
   authTitleStyle,
@@ -68,23 +69,14 @@ export default function ForgotPasswordForm() {
         disabled={loading}
       />
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          ...authPrimaryButtonStyle,
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#783AFB'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-      >
-        {loading ? 'Sending…' : 'Send reset link'}
-      </button>
+      <div style={authFullWidthBtnStyle}>
+        <Button type="submit" variant="primary" size="md" busy={loading} disabled={loading} style={{ width: '100%' }}>
+          {loading ? 'Sending…' : 'Send reset link'}
+        </Button>
+      </div>
 
       <p style={authFooterStyle}>
-        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#18181B', fontWeight: 600 }}>
+        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
           Back to Sign In
         </Link>
       </p>

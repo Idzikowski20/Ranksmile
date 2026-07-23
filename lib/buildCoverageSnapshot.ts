@@ -1,12 +1,12 @@
 import {
   checkCoverage,
   computeCoverageScores,
-  deepseekJudge,
   type CoverageItem,
   type CoverageResult,
   type CoverageSnapshot,
   type CoverageTopicGroup,
 } from './aiCoverage';
+import { deepseekJudge } from './aiCoverageJudge';
 import { analyzeIntroduction, deepseekIntroJudge } from './introductionAnalyzer';
 import { normalizeTerm } from './termUtils';
 import { citationIntentItems } from './citationPrompts';

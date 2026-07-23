@@ -3,6 +3,7 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton } from '../../components/articles/WizardShell';
+import { Button } from '../../components/core';
 import { saveWizardState } from '../../lib/wizardState';
 import { useArticle } from '../../services/article';
 
@@ -103,15 +104,15 @@ const ContentTypePage: NextPage = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={sectionLabel}>Your templates</span>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="xs"
             onClick={() => toast('Custom templates — coming soon')}
-            style={{ padding: '4px 12px', borderRadius: 30, border: 'none', background: '#F4F4F5', color: '#18181B', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#E4E4E7'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F4F4F5'; }}
+            style={{ fontWeight: 600 }}
           >
             Create template
-          </button>
+          </Button>
         </div>
         {CUSTOM.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>

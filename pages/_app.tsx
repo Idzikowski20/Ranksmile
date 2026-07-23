@@ -43,6 +43,10 @@ function WorkspaceCookieSync() {
 /**
  * Blocks every protected route until the logged-in user has finished onboarding.
  * Onboarding state lives in the DB (GET /api/session/bootstrap) — not in the session.
+ *
+ * Important: only `bootstrap === null` (HTTP 401) means signed out.
+ * A thrown/network/5xx failure must NOT be treated as signed-out — that left the app
+ * stuck on AppLoading after a single failed fetch (common during next.js compile/HMR).
  */
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const router = useRouter();
@@ -55,14 +59,29 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    const everHadUser = React.useRef(false);
    const everHadBootstrap = React.useRef(false);
 
-   const { data: bootstrap, isLoading: bootstrapLoading, isFetched } = useQuery(
+   const {
+      data: bootstrap,
+      isLoading: bootstrapLoading,
+      isFetched,
+      isError,
+      isFetching,
+      refetch,
+   } = useQuery(
       ['bootstrap'],
       fetchBootstrapOrNull,
-      { enabled: !isPublic, staleTime: BOOTSTRAP_STALE_MS, retry: false },
+      {
+         enabled: !isPublic,
+         staleTime: BOOTSTRAP_STALE_MS,
+         // Transient 5xx/HTML-during-compile is common in `next dev`; don't give up after 1 try.
+         retry: 3,
+         retryDelay: (n) => Math.min(1000 * (n + 1), 3000),
+      },
    );
 
-   const hasSession = !!bootstrap;
-   const isPending = !isPublic && bootstrapLoading;
+   // null = explicit 401 (signed out). undefined = still loading or error (not signed out).
+   const hasSession = bootstrap != null;
+   const signedOut = isFetched && !isError && bootstrap === null;
+   const isPending = !isPublic && (bootstrapLoading || (isFetching && bootstrap === undefined));
 
    if (hasSession) everHadUser.current = true;
    if (bootstrap) everHadBootstrap.current = true;
@@ -75,8 +94,15 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
    React.useEffect(() => {
       if (isPublic || isPending) return;
-      if (!hasSession && isFetched) router.replace('/auth/sign-in');
-   }, [isPublic, isPending, hasSession, isFetched, router]);
+      if (signedOut) router.replace('/auth/sign-in');
+   }, [isPublic, isPending, signedOut, router]);
+
+   // Recover from bootstrap fetch failures instead of trapping the UI on AppLoading.
+   React.useEffect(() => {
+      if (isPublic || !isError || hasSession) return undefined;
+      const t = window.setTimeout(() => { void refetch(); }, 1500);
+      return () => window.clearTimeout(t);
+   }, [isPublic, isError, hasSession, refetch]);
 
    React.useEffect(() => {
       if (!hasSession || confirmed === null) return;
@@ -111,10 +137,10 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       return () => { active = false; };
    }, [hasSession, completed, bootstrap, isOnboarding, isPublic, isPlans, isSetup, isIndex, router]);
 
-   if (!isPublic && !everHadUser.current && isPending) {
+   if (!isPublic && !everHadUser.current && (isPending || isError)) {
       return <AppLoading />;
    }
-   if (!isPublic && !isPending && !hasSession && !everHadUser.current && isFetched) {
+   if (!isPublic && signedOut && !everHadUser.current) {
       return <AppLoading />;
    }
    if (hasSession && bootstrapLoading && !bootstrap && !everHadBootstrap.current) {

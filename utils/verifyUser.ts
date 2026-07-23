@@ -15,6 +15,8 @@ const verifyUser = async (req: NextApiRequest, res: NextApiResponse): Promise<st
       'POST:/api/notify',
       'POST:/api/searchconsole',
       'GET:/api/searchconsole',
+      'POST:/api/gsc/search-data',
+      'GET:/api/gsc/search-data',
       'GET:/api/insight',
    ];
 

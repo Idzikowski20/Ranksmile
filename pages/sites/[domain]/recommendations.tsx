@@ -233,7 +233,7 @@ const RecommendationsPage: NextPage = () => {
    );
    const { data: scData, isLoading: scLoading } = useQuery(
       ['sc-data', slug],
-      async () => { const r = await fetch(`/api/searchconsole?domain=${slug}`); return r.json(); },
+      async () => { const r = await fetch(`/api/gsc/search-data?domain=${slug}`); return r.json(); },
       { enabled: !!slug, staleTime: 5 * 60 * 1000 },
    );
    // Domain-scan recommendations (domain_recommendations). Shares the dashboard/sidebar
@@ -476,18 +476,31 @@ const RecommendationsPage: NextPage = () => {
 
 
    const handleCreateArticleForKeyword = async (keyword: string) => {
-      if (!activeDomain?.ID) return;
+      if (!activeDomain?.ID || !keyword.trim()) return;
       setCreatingKw(keyword);
       try {
          const res = await fetch('/api/articles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain_id: activeDomain.ID, title: keyword, target_keyword: keyword }),
+            body: JSON.stringify({
+               domain_id: activeDomain.ID,
+               title: keyword,
+               target_keyword: keyword,
+            }),
          });
-         const data = await res.json();
-         if (data.articleId) router.push(`/articles/${data.articleId}`);
-      } catch { /* ignore */ }
-      setCreatingKw(null);
+         const data = await res.json() as { articleId?: number; error?: string };
+         if (!res.ok || !data.articleId) {
+            toast.error(data.error || 'Could not create article');
+            return;
+         }
+         await router.push(
+            workspaceHref(wsId, `/articles/${data.articleId}?from=recommendations&keyword=${encodeURIComponent(keyword)}`),
+         );
+      } catch {
+         toast.error('Could not create article');
+      } finally {
+         setCreatingKw(null);
+      }
    };
 
    const handleAnalyze = async (row: RecommRow, e: React.MouseEvent) => {

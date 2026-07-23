@@ -1,6 +1,5 @@
 // GET /api/ai-visibility/[slug]/history — completed scans newest-first with their
-// visibility score. Not consumed by the UI yet; enables a future trend chart with
-// no schema change.
+// visibility overview (own + optional competitor). One SQL batch for all scans.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
@@ -9,8 +8,8 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
-import { loadScanResultRows } from '../../../../lib/aiVisibilityRead';
-import { buildSnapshotsForScan, snapshotForDomain } from '../../../../lib/aiVisibilityMetrics';
+import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibilityRead';
+import { overviewForDomain } from '../../../../lib/aiVisibilityMetrics';
 
 const HISTORY_LIMIT = 24;
 
@@ -34,25 +33,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ORDER BY s.id DESC LIMIT ${HISTORY_LIMIT}`,
          [domain.ID],
       );
-      // Deliberate N+1 (one snapshot build per scan), bounded by HISTORY_LIMIT (24).
-      // Fine at this cap; if history ever needs hundreds of points, replace with a
-      // single grouped aggregation query. Not worth the complexity now.
       const wanted = typeof req.query.competitor === 'string' ? req.query.competitor.toLowerCase().replace(/^www\./, '') : '';
-      const ownKey = domain.domain.toLowerCase().replace(/^www\./, '');
       // Prompt filter (CSV of prompt ids) so the trend matches the overview's picker.
       const pids = typeof req.query.prompts === 'string' && req.query.prompts
          ? req.query.prompts.split(',').map((x) => parseInt(x, 10)).filter((n) => !Number.isNaN(n)) : [];
-      const out = [] as Array<{ scanId: number, finishedAt: string | null, series: { you: unknown, competitor?: unknown } }>;
-      for (const s of scans) {
-         const allRows = await loadScanResultRows(s.id);
+
+      const byScan = await loadScanCitationRowsForScans(scans.map((s) => s.id));
+      const out = scans.map((s) => {
+         const allRows = byScan.get(s.id) ?? [];
          const rows = pids.length ? allRows.filter((r) => pids.includes(r.promptId)) : allRows;
-         const byDomain = buildSnapshotsForScan(rows, domain.domain);
-         const series: { you: unknown, competitor?: unknown } = { you: byDomain.get(ownKey)?.overview ?? null };
+         const series: { you: ReturnType<typeof overviewForDomain>; competitor?: ReturnType<typeof overviewForDomain> } = {
+            you: overviewForDomain(rows, domain.domain),
+         };
          // Always emit a competitor point per scan (0-visibility when uncited that scan)
          // so the trend line is continuous instead of collapsing to a single point.
-         if (wanted) series.competitor = (byDomain.get(wanted) ?? snapshotForDomain(rows, wanted)).overview;
-         out.push({ scanId: s.id, finishedAt: s.finished_at, series });
-      }
+         if (wanted) series.competitor = overviewForDomain(rows, wanted);
+         return { scanId: s.id, finishedAt: s.finished_at, series };
+      });
       return res.status(200).json({ scans: out });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) });

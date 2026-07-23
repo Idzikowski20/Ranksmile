@@ -1,10 +1,12 @@
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 import { verifyTwoFactor } from '../../lib/auth/fetchAuth';
+import { Button } from '../core';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
-  authPrimaryButtonStyle,
+  authFullWidthBtnStyle,
+  authLinkStyle,
   authSubtitleStyle,
   authTitleStyle,
 } from './authStyles';
@@ -49,33 +51,23 @@ export default function TwoFactorForm() {
         disabled={loading}
       />
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          ...authPrimaryButtonStyle,
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#783AFB'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-      >
-        {loading ? 'Verifying…' : 'Verify'}
-      </button>
+      <div style={authFullWidthBtnStyle}>
+        <Button type="submit" variant="primary" size="md" busy={loading} disabled={loading} style={{ width: '100%' }}>
+          {loading ? 'Verifying…' : 'Verify'}
+        </Button>
+      </div>
 
       <p style={{ marginTop: 16, textAlign: 'center' }}>
         <button
           type="button"
           onClick={() => router.push('/auth/sign-in')}
           style={{
+            ...authLinkStyle,
             background: 'none',
             border: 'none',
             padding: 0,
-            color: '#52525C',
-            fontSize: 14,
-            fontWeight: 500,
             cursor: 'pointer',
+            fontFamily: 'inherit',
           }}
         >
           Back to Sign In

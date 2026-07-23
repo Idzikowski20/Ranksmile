@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WordPressExportModal from './WordPressExportModal';
@@ -200,8 +199,14 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           <SectionTitle>Featured image</SectionTitle>
           {featuredImage?.url ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e4e4e7' }}>
-                <Image src={featuredImage.url} alt={featuredImage.alt || 'Featured'} width={800} height={180} unoptimized style={{ width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block', height: 'auto' }} />
+              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e4e4e7', background: '#F8F8F9', lineHeight: 0 }}>
+                {/* Native img keeps intrinsic aspect ratio — Next/Image width/height was squashing previews. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={featuredImage.url}
+                  alt={featuredImage.alt || 'Featured'}
+                  style={{ width: '100%', height: 'auto', maxHeight: 280, objectFit: 'contain', objectPosition: 'center', display: 'block' }}
+                />
               </div>
               <input
                 type="text" value={featuredImage.alt} placeholder="Alt text…" readOnly={readOnly}
@@ -283,12 +288,17 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
                         View post
                       </a>
                     )}
-                    <button type="button" onClick={() => router.push('/settings/wordpress')}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap', lineHeight: 1 }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                    <a
+                      href="/settings/wordpress"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap', lineHeight: 1, textDecoration: 'none' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}
+                    >
                       {IcoManage}
                       Manage
-                    </button>
+                    </a>
                   </div>
                 </div>
               </>

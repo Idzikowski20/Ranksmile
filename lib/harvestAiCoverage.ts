@@ -1,6 +1,7 @@
 import { scoreCitationPrompt } from './citationPrompts';
 import { scorePaaQuestion } from './curateCoverageItems';
 import type { LlmCoverageSource } from './llmCoverageQuestions';
+import type { MissingItem, StageResult } from './primitives/types';
 import {
   dedupeWithProvenance,
   type HarvestedQuestion,
@@ -12,6 +13,7 @@ import {
   type BudgetedTopic,
 } from './harvest/enforceBudget';
 import { fillMissingTopics } from './harvest/fillMissingTopics';
+import { checkKeywordArticleIntent } from './harvest/keywordArticleIntentGate';
 import {
   fetchAllProviders,
   type CoverageProvider,
@@ -21,7 +23,11 @@ import {
 
 export type { HarvestedQuestion };
 export type { BudgetedTopic };
-export type HarvestTopic = BudgetedTopic;
+export type HarvestTopic = BudgetedTopic & {
+  origin?: 'outline' | 'llm' | 'merged';
+  score?: number;
+  confidence?: number;
+};
 
 export type HarvestStats = {
   rawQuestions: number;
@@ -35,14 +41,22 @@ export type HarvestStats = {
   medianQuestionsPerTopic: number;
   lowConfidenceAssignments: number;
   providerLatency: Record<string, number>;
+  coverageEntropy?: number;
+  intentGateOnTopic?: boolean;
+  intentGateSense?: string;
+  schemaVersion: number;
+  pipelineVersion: number;
+  scoringVersion: number;
 };
 
 export type HarvestResult = {
   topics: HarvestTopic[];
   questions: HarvestedQuestion[];
   stats: HarvestStats;
-  /** Flat list for curateAiCoverageItems / buildGradedCoverageSnapshot */
   llmQuestions: Array<{ question: string; sources: LlmCoverageSource[] }>;
+  stages: StageResult[];
+  missing: MissingItem[];
+  intentGate?: ReturnType<typeof checkKeywordArticleIntent>;
 };
 
 function qualityFor(question: string, keyword: string): number {
@@ -52,8 +66,14 @@ function qualityFor(question: string, keyword: string): number {
 function mergeProviderRows(
   results: ProviderResult[],
   keyword: string,
-): Array<{ question: string; sources: LlmCoverageSource[]; quality: number; weightHint?: number }> {
-  const rows: Array<{ question: string; sources: LlmCoverageSource[]; quality: number; weightHint?: number }> = [];
+): Array<{ question: string; sources: LlmCoverageSource[]; quality: number; weightHint?: number; provider?: string }> {
+  const rows: Array<{
+    question: string;
+    sources: LlmCoverageSource[];
+    quality: number;
+    weightHint?: number;
+    provider?: string;
+  }> = [];
   for (const res of results) {
     for (const q of res.questions) {
       rows.push({
@@ -61,6 +81,7 @@ function mergeProviderRows(
         sources: q.sources,
         quality: qualityFor(q.question, keyword),
         weightHint: res.weightHint,
+        provider: res.provider,
       });
     }
   }
@@ -75,6 +96,19 @@ function buildBySource(questions: HarvestedQuestion[]): Record<string, number> {
     }
   }
   return bySource;
+}
+
+/** Shannon-ish entropy of question counts across topics (detects 12+1+1 clusters). */
+function coverageEntropy(topics: Array<{ questions: unknown[] }>): number {
+  const counts = topics.map((t) => t.questions.length).filter((n) => n > 0);
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (total <= 0 || counts.length <= 1) return 0;
+  let h = 0;
+  for (const c of counts) {
+    const p = c / total;
+    h -= p * Math.log2(p);
+  }
+  return Math.round(h * 1000) / 1000;
 }
 
 function parseOutlineTitles(cache: string | null | undefined): string[] {
@@ -117,15 +151,18 @@ export type HarvestOpts = ProviderContext & {
   outlineTitles?: string[];
   competitorOutlinesCache?: string | null;
   providers?: CoverageProvider[];
-  /** Skip LLM fill (tests). */
   skipFill?: boolean;
+  articleTitle?: string;
+  articleExcerpt?: string;
 };
 
-function emptyHarvest(): HarvestResult {
+function emptyHarvest(extra?: Partial<HarvestResult>): HarvestResult {
   return {
     topics: [],
     questions: [],
     llmQuestions: [],
+    stages: [],
+    missing: [],
     stats: {
       rawQuestions: 0,
       uniqueQuestions: 0,
@@ -138,13 +175,39 @@ function emptyHarvest(): HarvestResult {
       medianQuestionsPerTopic: 0,
       lowConfidenceAssignments: 0,
       providerLatency: {},
+      schemaVersion: 2,
+      pipelineVersion: 4,
+      scoringVersion: 3,
+    },
+    ...extra,
+  };
+}
+
+async function stage<TIn, TOut>(
+  name: string,
+  version: number,
+  input: TIn,
+  run: () => Promise<TOut> | TOut,
+  statsOf?: (out: TOut) => Record<string, number | string>,
+): Promise<{ out: TOut; stage: StageResult<TIn, TOut> }> {
+  const t0 = Date.now();
+  const out = await run();
+  return {
+    out,
+    stage: {
+      name,
+      input,
+      output: out,
+      stats: statsOf ? statsOf(out) : {},
+      durationMs: Date.now() - t0,
+      version,
     },
   };
 }
 
 /**
  * Harvest AI Search coverage questions into semantic topics.
- * Thin orchestrator: providers → merge → canonicalize/dedupe → cluster → fill → budget → stats.
+ * Staged: intent → collect → normalize/dedupe → cluster → fill → budget → persist stats.
  */
 export async function harvestAiCoverage(opts: HarvestOpts): Promise<HarvestResult> {
   const keyword = opts.keyword.trim();
@@ -152,15 +215,50 @@ export async function harvestAiCoverage(opts: HarvestOpts): Promise<HarvestResul
     return emptyHarvest();
   }
 
-  const providerResults = await fetchAllProviders(
-    {
-      keyword,
-      country: opts.country,
-      languageCode: opts.languageCode,
-      paaQuestions: opts.paaQuestions,
-    },
-    opts.providers,
-  );
+  const stages: StageResult[] = [];
+  const outlineTitles = opts.outlineTitles?.length
+    ? opts.outlineTitles
+    : parseOutlineTitles(opts.competitorOutlinesCache);
+
+  const intentGate = checkKeywordArticleIntent({
+    keyword,
+    articleTitle: opts.articleTitle,
+    articleExcerpt: opts.articleExcerpt,
+    outlineTitles,
+  });
+  stages.push({
+    name: 'intent_gate',
+    input: { keyword },
+    output: intentGate,
+    stats: { onTopic: intentGate.onTopic ? 1 : 0, confidence: intentGate.confidence },
+    durationMs: 0,
+    version: 1,
+  });
+
+  // Off-angle: skip LLM-heavy fill; still allow PAA/provider collect but mark missing intent.
+  const missing: MissingItem[] = [];
+  if (!intentGate.onTopic) {
+    missing.push({
+      id: 'intent-mismatch',
+      type: 'intent',
+      reason: intentGate.reason || 'Keyword may not match article angle',
+      severity: 'high',
+      confidence: intentGate.confidence,
+    });
+  }
+
+  const collectStage = await stage('collect', 4, { keyword }, () =>
+    fetchAllProviders(
+      {
+        keyword,
+        country: opts.country,
+        languageCode: opts.languageCode,
+        paaQuestions: opts.paaQuestions,
+      },
+      opts.providers,
+    ), (results) => ({ providers: results.length, questions: results.reduce((n, r) => n + r.questions.length, 0) }));
+  stages.push(collectStage.stage);
+  const providerResults = collectStage.out;
 
   const providerLatency: Record<string, number> = {};
   for (const r of providerResults) {
@@ -169,55 +267,95 @@ export async function harvestAiCoverage(opts: HarvestOpts): Promise<HarvestResul
 
   const rawRows = mergeProviderRows(providerResults, keyword);
   const rawQuestions = rawRows.length;
-  const questions = dedupeWithProvenance(rawRows);
+
+  const dedupeStage = await stage('dedupe', 3, { rawQuestions }, () => dedupeWithProvenance(rawRows), (qs) => ({
+    unique: qs.length,
+    deduped: Math.max(0, rawQuestions - qs.length),
+  }));
+  stages.push(dedupeStage.stage);
+  const questions = dedupeStage.out;
   const uniqueQuestions = questions.length;
   const deduped = Math.max(0, rawQuestions - uniqueQuestions);
 
-  const outlineTitles = opts.outlineTitles?.length
-    ? opts.outlineTitles
-    : parseOutlineTitles(opts.competitorOutlinesCache);
-
-  const clustered = clusterQuestions(outlineTitles, questions);
-  let topics = clustered.topics;
+  const clusterStage = await stage(
+    'cluster',
+    2,
+    { outlineCount: outlineTitles.length },
+    () => clusterQuestions(outlineTitles, questions),
+    (c) => ({ topics: c.topics.length, lowConf: c.lowConfidenceAssignments }),
+  );
+  stages.push(clusterStage.stage);
+  let topics = clusterStage.out.topics;
   let llmAddedTopics = 0;
 
-  if (!opts.skipFill) {
-    const filled = await fillMissingTopics({
-      keyword,
-      languageCode: opts.languageCode,
-      topics,
-      uniqueQuestions,
-    });
-    topics = filled.topics;
-    llmAddedTopics = filled.llmAddedTopics;
+  const skipFill = opts.skipFill || !intentGate.onTopic;
+  if (!skipFill) {
+    const fillStage = await stage('fill', 2, { topics: topics.length }, () =>
+      fillMissingTopics({
+        keyword,
+        languageCode: opts.languageCode,
+        topics,
+        uniqueQuestions,
+      }), (f) => ({ llmAdded: f.llmAddedTopics }));
+    stages.push(fillStage.stage);
+    topics = fillStage.out.topics;
+    llmAddedTopics = fillStage.out.llmAddedTopics;
   }
 
   const topicsBeforeBudget = topics.length;
-  const budgeted = enforceBudget(topics);
+  const budgetStage = await stage('budget', 2, { topics: topicsBeforeBudget }, () => enforceBudget(topics), (b) => ({
+    topics: b.topics.length,
+    removed: b.budgetRemovedQuestions,
+  }));
+  stages.push(budgetStage.stage);
+  const budgeted = budgetStage.out;
   const median = medianQuestionCount(budgeted.topics);
 
-  const flat = budgeted.topics.flatMap((t) => t.questions);
+  const enrichedTopics: HarvestTopic[] = budgeted.topics.map((t) => {
+    const score = t.questions.reduce((s, q) => s + q.questionScore, 0);
+    const origin: HarvestTopic['origin'] = outlineTitles.some((o) => o === t.title)
+      ? (llmAddedTopics > 0 ? 'merged' : 'outline')
+      : 'llm';
+    const avgConf =
+      t.questions.length > 0
+        ? t.questions.reduce((s, q) => s + (q.confidence ?? 0.7), 0) / t.questions.length
+        : 0.5;
+    return { ...t, origin, score, confidence: avgConf };
+  });
+
+  const flat = enrichedTopics.flatMap((t) =>
+    t.questions.map((q) => ({ ...q, topicId: t.id })),
+  );
   const llmQuestions = flat.map((q) => ({
     question: q.question,
     sources: q.sources,
   }));
 
   return {
-    topics: budgeted.topics,
+    topics: enrichedTopics,
     questions: flat,
     llmQuestions,
+    stages,
+    missing,
+    intentGate,
     stats: {
       rawQuestions,
       uniqueQuestions,
       deduped,
       topicsBeforeBudget,
-      topicsAfterBudget: budgeted.topics.length,
+      topicsAfterBudget: enrichedTopics.length,
       bySource: buildBySource(questions),
       llmAddedTopics,
       budgetRemovedQuestions: budgeted.budgetRemovedQuestions,
       medianQuestionsPerTopic: median,
-      lowConfidenceAssignments: clustered.lowConfidenceAssignments,
+      lowConfidenceAssignments: clusterStage.out.lowConfidenceAssignments,
       providerLatency,
+      coverageEntropy: coverageEntropy(enrichedTopics),
+      intentGateOnTopic: intentGate.onTopic,
+      intentGateSense: intentGate.sense,
+      schemaVersion: 2,
+      pipelineVersion: 4,
+      scoringVersion: 3,
     },
   };
 }

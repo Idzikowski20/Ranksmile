@@ -1,13 +1,18 @@
 import type { ArticleContext } from './articleContext';
 import type { Guideline } from './recommendationEngine';
-import { computeMissingTerms } from './optimizeSectionEdit';
+import {
+  computeTermUsageGaps,
+  type TermUsageGap,
+} from './optimizeSectionEdit';
 import { selectOptimizeMode, type OptimizeMode } from './optimizeMode';
 import type { OptimizePhase } from './optimizeRunPhase';
 import type { EditMode, StepFocus } from './optimizationPlanner';
 import { buildEffortOptimizeGuidance } from './contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
 import { countOccurrences } from './termMatch';
+import { STOP_SLOP_RULES } from './stopSlopPrompt';
 
+export { computeMissingTerms, computeOverusedTerms } from './optimizeSectionEdit';
 export const WHOLE_ARTICLE_ID = 'article-whole';
 
 const STRUCTURE_RULES = `STRUCTURE (write for HUMANS — not for bots / keyword stuffing):
@@ -30,7 +35,9 @@ RULES:
 - Write for human readers first; SEO terms and AI checkpoints must fit naturally into full paragraphs
 - Keep the SAME LANGUAGE as the input (auto-detect — do NOT translate)
 - Preserve <a> links, <img>, and list structure unless a change directly serves the focus below
-- ${STRUCTURE_RULES}`;
+- ${STRUCTURE_RULES}
+
+${STOP_SLOP_RULES}`;
 
 const OUTPUT_RULE = `OUTPUT: ONLY the full article's raw HTML. No markdown code fences, no commentary.`;
 
@@ -63,11 +70,23 @@ function effortBlock(ctx: ArticleContext | null, html: string): string {
   });
 }
 
+/**
+ * Mode selects a preference, but NLP term debt overrides "minimal/ai polish".
+ * SEO gauges can read "ready" (≥66) from structure/keyword placement while most
+ * multi-word NLP terms are still 0 — Auto-Optimize must still close those gaps.
+ */
 function focusForMode(mode: OptimizeMode, ctx: ArticleContext | null, html: string): StepFocus {
-  if (mode === 'ai-only' || mode === 'minimal') return 'ai-coverage';
+  const gaps = ctx ? computeTermUsageGaps(ctx.scoreData ?? undefined, html) : [];
+  const hasTermDebt = gaps.some((g) => g.status === 'missing' || g.status === 'low' || g.status === 'overuse');
+
+  if (mode === 'ai-only') {
+    // Truly weak AI Search: prefer AI first even if terms are incomplete.
+    return 'ai-coverage';
+  }
   if (mode === 'seo-first') return 'seo-terms';
-  const missing = ctx ? computeMissingTerms(ctx.scoreData ?? undefined, html) : [];
-  if (missing.length > 0) return 'seo-terms';
+  if (hasTermDebt) return 'seo-terms';
+  if (mode === 'minimal') return 'ai-coverage';
+
   const uncovered = ctx ? uncoveredAiCheckpoints(ctx) : [];
   if (uncovered.length > 0) return 'ai-coverage';
   return 'readability';
@@ -80,13 +99,48 @@ function editModeForFocus(focus: StepFocus, mode: OptimizeMode): EditMode {
   return 'less';
 }
 
+function formatGapLine(g: TermUsageGap): string {
+  return `- "${g.term}" (${g.current}/${g.target})`;
+}
+
+function seoTermsFocusBlock(gaps: TermUsageGap[]): string {
+  const under = gaps
+    .filter((g) => g.status === 'missing' || g.status === 'low')
+    .sort((a, b) => (b.target - b.current) - (a.target - a.current))
+    .slice(0, 30);
+  const over = gaps
+    .filter((g) => g.status === 'overuse')
+    .sort((a, b) => (b.current - b.target) - (a.current - a.target))
+    .slice(0, 12);
+
+  if (!under.length && !over.length) return '';
+
+  const parts: string[] = [
+    'FOCUS — SEO term balance (natural prose in existing H2 sections — do NOT invent a new H2/H3 per term):',
+    '- Prefer multi-word phrases over repeating short root words',
+    '- Weave exact phrases where they fit; do not keyword-stuff',
+  ];
+
+  if (under.length) {
+    parts.push(
+      'UNDERUSED — add until near target (current/target):',
+      ...under.map(formatGapLine),
+    );
+  }
+  if (over.length) {
+    parts.push(
+      'OVERUSED — reduce toward target by rephrasing; replace surplus short roots with UNDERUSED multi-word phrases above (keep meaning):',
+      ...over.map(formatGapLine),
+    );
+  }
+  return parts.join('\n');
+}
+
 function focusBlock(focus: StepFocus, ctx: ArticleContext | null, html: string, guidelines: Guideline[]): string {
   if (focus === 'seo-terms' && ctx?.scoreData) {
-    const missing = computeMissingTerms(ctx.scoreData, html).slice(0, 30);
-    if (missing.length) {
-      return `FOCUS — weave each MISSING NLP term naturally into existing H2 sections `
-        + `(full paragraphs of prose — do NOT invent a new H2/H3 per term): ${missing.map((t) => `"${t}"`).join(', ')}`;
-    }
+    const gaps = computeTermUsageGaps(ctx.scoreData, html);
+    const block = seoTermsFocusBlock(gaps);
+    if (block) return block;
   }
   if (focus === 'ai-coverage') {
     const uncovered = ctx ? uncoveredAiCheckpoints(ctx) : [];
@@ -140,31 +194,48 @@ export function buildWholeArticlePrompt(opts: {
   aiScore: number;
   phase: OptimizePhase;
   mode?: OptimizeMode;
+  /** Surgical Priority Action — single focused instruction. */
+  focusInstruction?: string;
 }): { systemPrompt: string; userInstruction: string; focus: StepFocus; editMode: EditMode; reason: string } {
   const mode = opts.mode ?? selectOptimizeMode(opts.seoScore, opts.aiScore, opts.phase);
   const focus = focusForMode(mode, opts.ctx, opts.html);
-  const editMode = editModeForFocus(focus, mode);
-  const block = focusBlock(focus, opts.ctx, opts.html, opts.guidelines);
-  const gaps = gapsBlock(opts.ctx, opts.html);
-  const effort = effortBlock(opts.ctx, opts.html);
+  const editMode = opts.focusInstruction ? 'less' : editModeForFocus(focus, mode);
+  const block = opts.focusInstruction
+    ? `FOCUS — Priority Action (surgical):\n${opts.focusInstruction}`
+    : focusBlock(focus, opts.ctx, opts.html, opts.guidelines);
+  const gaps = opts.focusInstruction ? '' : gapsBlock(opts.ctx, opts.html);
+  const effort = opts.focusInstruction ? '' : effortBlock(opts.ctx, opts.html);
   const brand = brandBlock(opts.ctx);
 
-  const lessRules = editMode === 'less'
+  // When minimal mode still has term debt, allow normal (not patch-only) edits so
+  // the model can redistribute phrases — "less" was too timid for 20+ missing terms.
+  const effectiveEditMode: EditMode =
+    opts.focusInstruction
+      ? 'less'
+      : (mode === 'minimal' && focus === 'seo-terms')
+        ? 'normal'
+        : editMode;
+
+  const lessRules = effectiveEditMode === 'less'
     ? '\n- Make targeted patches — preserve more than 90% of existing wording\n- Prefer fuller sections over adding many thin headings'
     : '';
 
   const gapsSection = gaps ? `\n\n${gaps}` : '';
   const effortSection = effort ? `\n\n${effort}` : '';
   const systemPrompt = `${SHARED_RULES}${lessRules}\n\n${block}${gapsSection}${effortSection}${brand}\n\n${OUTPUT_RULE}`;
-  const userInstruction = editMode === 'less'
-    ? "Improve this FULL article with minimal, targeted edits. Write for humans — full sections, not heading spam. Close WHAT'S MISSING and EFFORT gaps when listed. Return the complete HTML article."
-    : "Improve this FULL article according to the focus instructions. Write for humans — full sections, not heading spam. Close WHAT'S MISSING and EFFORT gaps when listed. Return the complete HTML article.";
+  const userInstruction = opts.focusInstruction
+    ? 'Apply ONLY the Priority Action above with minimal, targeted edits. Return the complete HTML article.'
+    : effectiveEditMode === 'less'
+      ? "Improve this FULL article with minimal, targeted edits. Write for humans — full sections, not heading spam. Close WHAT'S MISSING and EFFORT gaps when listed. Return the complete HTML article."
+      : "Improve this FULL article according to the focus instructions. Write for humans — full sections, not heading spam. Balance UNDERUSED/OVERUSED SEO terms when listed. Close WHAT'S MISSING and EFFORT gaps when listed. Return the complete HTML article.";
 
-  const reason = focus === 'ai-coverage'
-    ? 'Whole-article AI coverage'
-    : focus === 'seo-terms'
-      ? 'Whole-article SEO terms'
-      : 'Whole-article readability';
+  const reason = opts.focusInstruction
+    ? 'Surgical Priority Action'
+    : focus === 'ai-coverage'
+      ? 'Whole-article AI coverage'
+      : focus === 'seo-terms'
+        ? 'Whole-article SEO terms'
+        : 'Whole-article readability';
 
-  return { systemPrompt, userInstruction, focus, editMode, reason };
+  return { systemPrompt, userInstruction, focus, editMode: effectiveEditMode, reason };
 }

@@ -7,7 +7,7 @@ import EmailSignInForm from '../../components/auth/EmailSignInForm';
 const SignIn: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Log in — SerpBear</title>
+      <title>Sign in — Surfy</title>
     </Head>
     <AuthPageLayout>
       <EmailSignInForm />

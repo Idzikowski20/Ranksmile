@@ -1,6 +1,13 @@
 import type { BusinessDetails } from './types';
 
-export type GrowthTaskId = 'setup-agent' | 'add-categories' | 'improve-description';
+export type GrowthTaskId =
+  | 'setup-agent'
+  | 'add-logo'
+  | 'add-cover-photo'
+  | 'add-photos'
+  | 'schedule-gbp-post'
+  | 'add-categories'
+  | 'improve-description';
 
 export type GrowthTaskMeta = {
   id: GrowthTaskId;
@@ -10,6 +17,9 @@ export type GrowthTaskMeta = {
   imageHeight?: number;
 };
 
+export const GROWTH_MIN_PHOTOS = 5;
+export const GBP_POST_MAX_LENGTH = 1500;
+
 export const GROWTH_TASKS: GrowthTaskMeta[] = [
   {
     id: 'setup-agent',
@@ -17,6 +27,35 @@ export const GROWTH_TASKS: GrowthTaskMeta[] = [
     subtitle:
       'Google recommends weekly profile updates for better visibility. AI Agent handles the essentials:',
     image: '/images/local-growth-gbp-agent.webp',
+    imageHeight: 220,
+  },
+  {
+    id: 'add-logo',
+    title: 'Add business logo',
+    subtitle: 'Business profiles with logos have more visibility and get more clicks.',
+    image: '/images/local-growth-add-logo.webp',
+    imageHeight: 200,
+  },
+  {
+    id: 'add-cover-photo',
+    title: 'Add cover photo',
+    subtitle: 'Choose an eye-catching cover photo that truly represents your business.',
+    image: '/images/local-growth-add-cover-photo.webp',
+    imageHeight: 200,
+  },
+  {
+    id: 'add-photos',
+    title: 'Add at least 5 photos',
+    subtitle:
+      'Photos help your business stand out, build trust, and show customers what to expect. Listings with photos get',
+    image: '/images/local-growth-add-photos.webp',
+    imageHeight: 220,
+  },
+  {
+    id: 'schedule-gbp-post',
+    title: 'Make a post for Google Business Profile',
+    subtitle: 'Share something about your business to keep your customers updated.',
+    image: '/images/local-growth-schedule-gbp-post.webp',
     imageHeight: 220,
   },
   {
@@ -211,6 +250,46 @@ export function getSuggestedDescription(details: BusinessDetails): string {
   return improveEnglishDescription(name, current);
 }
 
+export function getSuggestedGbpPost(details: BusinessDetails): string {
+  const name = details.name.trim() || 'Our business';
+  const current = details.description.replace(/\s+/g, ' ').trim();
+  const polish = isPolishDescription(current) || isPolishDescription(details.address);
+
+  let body: string;
+  if (current) {
+    body = current;
+    if (!/[.!?]$/.test(body)) body += '.';
+  } else if (polish) {
+    body = `${name} oferuje profesjonalne usługi dla lokalnych klientów.`;
+  } else {
+    body = `${name} provides professional services for local customers.`;
+  }
+
+  if (polish) {
+    if (!/Sprawdź|skontaktuj|umów|napisz/i.test(body)) {
+      body += ' Sprawdź dostępność miejsc i umów rozmowę.';
+    }
+  } else if (!/contact|book|schedule|learn more/i.test(body)) {
+    body += ' Get in touch to learn more.';
+  }
+
+  return body.slice(0, GBP_POST_MAX_LENGTH);
+}
+
+export function generateGbpPostFromTopic(details: BusinessDetails, topic: string): string {
+  const cleaned = topic.trim();
+  if (!cleaned) return getSuggestedGbpPost(details);
+
+  const name = details.name.trim() || 'Our business';
+  const polish = isPolishDescription(details.description) || isPolishDescription(details.address) || isPolishDescription(cleaned);
+
+  const body = polish
+    ? `${name}: ${cleaned}. Sprawdź szczegóły i umów rozmowę.`
+    : `${name}: ${cleaned}. Learn more and get in touch today.`;
+
+  return body.slice(0, GBP_POST_MAX_LENGTH);
+}
+
 export function applySuggestedCategories(
   details: BusinessDetails,
   extraCategories: string[],
@@ -249,4 +328,43 @@ export function applySuggestedDescription(
   const next = description.trim();
   if (!next || next === details.description) return details;
   return { ...details, description: next };
+}
+
+export function hasBusinessLogo(details: BusinessDetails): boolean {
+  return Boolean(details.logoUrl?.trim());
+}
+
+export function applyBusinessLogo(
+  details: BusinessDetails,
+  logoUrl: string,
+): BusinessDetails {
+  const next = logoUrl.trim();
+  if (!next || next === details.logoUrl) return details;
+  return { ...details, logoUrl: next };
+}
+
+export function hasCoverPhoto(details: BusinessDetails): boolean {
+  return Boolean(details.coverUrl?.trim());
+}
+
+export function applyCoverPhoto(
+  details: BusinessDetails,
+  coverUrl: string,
+): BusinessDetails {
+  const next = coverUrl.trim();
+  if (!next || next === details.coverUrl) return details;
+  return { ...details, coverUrl: next };
+}
+
+export function hasEnoughBusinessPhotos(details: BusinessDetails): boolean {
+  return details.photoUrls.filter((url) => url.trim()).length >= GROWTH_MIN_PHOTOS;
+}
+
+export function applyBusinessPhotos(
+  details: BusinessDetails,
+  photoUrls: string[],
+): BusinessDetails {
+  const next = photoUrls.map((url) => url.trim()).filter(Boolean);
+  if (next.length < GROWTH_MIN_PHOTOS) return details;
+  return { ...details, photoUrls: next };
 }

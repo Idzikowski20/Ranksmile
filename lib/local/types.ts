@@ -1,3 +1,5 @@
+import type { GrowthTaskId } from './growthActions';
+
 export type LocalSetupStep =
   | 'search'
   | 'connect'
@@ -44,18 +46,6 @@ export type BusinessPlace = {
   phone?: string;
 };
 
-export type GbpProfile = {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  website?: string;
-  description?: string;
-  primaryCategory?: string;
-  directoryCategories?: string[];
-  hasEditAccess: boolean;
-};
-
 export type BusinessCategory = {
   id: string;
   label: string;
@@ -67,6 +57,30 @@ export type DayHours = {
   status: 'open' | 'closed';
   openTime?: string;
   closeTime?: string;
+};
+
+export type GbpProfile = {
+  id: string;
+  /** Google Account Management account id (numeric string). */
+  accountId: string;
+  /** Google Business Information location id (numeric string). */
+  locationId: string;
+  name: string;
+  address: string;
+  phone: string;
+  website?: string;
+  description?: string;
+  primaryCategory?: string;
+  additionalGoogleCategories?: string[];
+  directoryCategories?: string[];
+  logoUrl?: string;
+  coverUrl?: string;
+  photoUrls?: string[];
+  hours?: DayHours[];
+  serviceAreas?: string[];
+  deliversLocally?: boolean;
+  hideAddress?: boolean;
+  hasEditAccess: boolean;
 };
 
 export type BusinessDetails = {
@@ -104,6 +118,8 @@ export type LocalSetupState = {
   step: LocalSetupStep;
   selectedPlace: BusinessPlace | null;
   selectedGbpId: string | null;
+  gbpAccountId: string | null;
+  gbpLocationId: string | null;
   businessDetails: BusinessDetails | null;
   googleAccountEmail: string | null;
   completedAt: string | null;
@@ -113,7 +129,7 @@ export type LocalSetupState = {
   setupJobs: LocalSetupJobs | null;
   locationCreatedAt: string | null;
   growthActionsDay: string | null;
-  growthActionsCompletedIds: ('setup-agent' | 'add-categories' | 'improve-description')[];
+  growthActionsCompletedIds: GrowthTaskId[];
   growthActionsLog: GrowthActionLogEntry[];
 };
 

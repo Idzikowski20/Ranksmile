@@ -13,4 +13,6 @@ it('embeds the keyword, the outline, and tool guidance', () => {
   expect(sys).toContain('pozycjonowanie');
   expect(sys).toContain('[sid 0] <h1> Hello');
   expect(sys).toContain('apply_edit');
+  expect(sys).toMatch(/Greetings \/ small talk/i);
+  expect(sys).toMatch(/Do NOT call tools/i);
 });

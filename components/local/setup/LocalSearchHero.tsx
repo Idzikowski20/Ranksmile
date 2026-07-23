@@ -1,161 +1,205 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Input } from '../../core';
-import type { BusinessPlace } from '../../../lib/local/types';
-import { searchPlaces } from '../../../lib/local/mockPlaces';
-import { IconClose, IconSearch } from '../icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import type { GbpProfile } from '../../../lib/local/types';
+import { IconCheck, IconGoogleColor, IconPin } from '../icons';
 
 const FONT = 'var(--font-family-primary)';
-const MIN_QUERY_LEN = 2;
-const SEARCH_DEBOUNCE_MS = 280;
+
+type LoadErrorCode = 'no_account' | 'needs_reconnect' | 'forbidden' | 'rate_limit' | 'upstream' | 'unknown';
 
 type LocalSearchHeroProps = {
-  onSelect: (place: BusinessPlace) => void;
-  country?: string;
+  googleEmail?: string | null;
+  connectHref: string;
+  isConfigured: (gbpId: string) => boolean;
+  onSelectProfile: (profile: GbpProfile) => void | Promise<void>;
+  onChangeAccount?: () => void;
 };
 
-type PlacesSearchPayload = {
-  places?: BusinessPlace[];
-};
+export default function LocalSearchHero({
+  googleEmail,
+  connectHref,
+  isConfigured,
+  onSelectProfile,
+  onChangeAccount,
+}: LocalSearchHeroProps) {
+  const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState<GbpProfile[]>([]);
+  const [importingId, setImportingId] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<LoadErrorCode | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-export default function LocalSearchHero({ onSelect, country = 'PL' }: LocalSearchHeroProps) {
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<BusinessPlace[]>([]);
-  const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < MIN_QUERY_LEN) {
-      setSuggestions([]);
-      setOpen(false);
-      setActiveIndex(-1);
-      return;
+  const loadProfiles = useCallback(async () => {
+    setLoading(true);
+    setErrorCode(null);
+    setErrorMessage(null);
+    try {
+      const res = await fetch('/api/local/gbp-locations');
+      const data = (await res.json()) as {
+        locations?: GbpProfile[];
+        error?: string;
+        code?: LoadErrorCode;
+        detail?: string;
+      };
+      if (!res.ok) {
+        const code = data.code
+          || (res.status === 429 ? 'rate_limit' : res.status === 401 ? 'needs_reconnect' : 'upstream');
+        setErrorCode(code);
+        const baseMsg = code === 'rate_limit'
+          ? (data.error || 'Google API quota exceeded. Wait about a minute, then retry.')
+          : (data.error || 'Failed to load Google Business profiles');
+        setErrorMessage(
+          data.detail && data.detail !== baseMsg
+            ? `${baseMsg}\n\nGoogle: ${data.detail}`
+            : baseMsg,
+        );
+        setProfiles([]);
+        return;
+      }
+      setProfiles(data.locations || []);
+    } catch (err) {
+      setErrorCode('unknown');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to load profiles');
+      setProfiles([]);
+    } finally {
+      setLoading(false);
     }
-
-    const localResults = searchPlaces(trimmed);
-    setSuggestions(localResults);
-    setOpen(localResults.length > 0);
-    setActiveIndex(-1);
-
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const params = new URLSearchParams({ q: trimmed, country });
-        const response = await fetch(`/api/local/places-search?${params.toString()}`);
-        if (requestIdRef.current !== requestId) return;
-
-        if (!response.ok) return;
-
-        const data = (await response.json()) as PlacesSearchPayload;
-        const remote = data.places ?? [];
-        if (requestIdRef.current !== requestId) return;
-
-        setSuggestions(remote);
-        setOpen(remote.length > 0);
-        setActiveIndex(-1);
-      } catch {
-        // Keep local mock results when the API is unavailable.
-      }
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [query, country]);
-
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const pick = useCallback((place: BusinessPlace) => {
-    setQuery(place.name);
-    setOpen(false);
-    onSelect(place);
-  }, [onSelect]);
+  useEffect(() => {
+    void loadProfiles();
+    // Load once on mount — remounts/Strict Mode are deduped server-side.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional single load
+  }, []);
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (!open || suggestions.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setActiveIndex((i) => (i + 1) % suggestions.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      pick(suggestions[activeIndex]);
-    } else if (e.key === 'Escape') {
-      setOpen(false);
+  const handleSelect = async (profile: GbpProfile) => {
+    if (importingId) return;
+    setImportingId(profile.id);
+    try {
+      await onSelectProfile(profile);
+    } finally {
+      setImportingId(null);
     }
   };
 
+  const needsConnect = errorCode === 'no_account' || errorCode === 'needs_reconnect';
+  const isRateLimited = errorCode === 'rate_limit';
+
   return (
     <section className="local-setup-hero" style={{ fontFamily: FONT }}>
-      <div className="local-setup-hero-content">
+      <div className="local-setup-hero-content local-setup-hero-content--profiles">
         <span className="local-setup-hero-eyebrow">Local Dashboard</span>
         <h1 className="local-setup-hero-title">Automate your local growth</h1>
         <p className="local-setup-hero-subtitle">
           From Google to AI search—show up everywhere local customers search, with optimized
           Google Business Profile, listings, reviews, and rankings.
         </p>
-        <div ref={wrapRef} className="local-setup-search-wrap">
-          <div className="local-setup-search-bar">
-            <Input
-              size="md"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={onKeyDown}
-              onFocus={() => { if (suggestions.length > 0 && query.trim().length >= MIN_QUERY_LEN) setOpen(true); }}
-              placeholder="Put your business name or address to get a free local audit"
-              style={{ paddingRight: 52, width: '100%' }}
-              aria-autocomplete="list"
-              aria-expanded={open}
-              aria-controls="local-place-suggestions"
-            />
-            {query && (
-              <button
-                type="button"
-                className="local-setup-search-clear"
-                aria-label="Clear search"
-                onClick={() => { setQuery(''); setOpen(false); }}
-              >
-                <IconClose size={14} />
+
+        <div className="local-setup-profiles-panel">
+          <div className="local-setup-profiles-account">
+            <IconGoogleColor size={22} />
+            <span>{googleEmail || 'Google Business profiles'}</span>
+            {onChangeAccount && (
+              <button type="button" className="local-setup-profiles-change" onClick={onChangeAccount}>
+                Change account
               </button>
             )}
-            <Button
-              type="button"
-              size="md"
-              variant="primary"
-              className="local-setup-search-btn"
-              aria-label="Search"
-              onClick={() => { if (suggestions[0]) pick(suggestions[0]); }}
-            >
-              <IconSearch size={16} color="#FFFFFF" />
-            </Button>
           </div>
-          {open && (
-            <ul id="local-place-suggestions" className="local-setup-suggestions" role="listbox">
-              {suggestions.map((place, idx) => (
-                <li key={place.id} role="option" aria-selected={idx === activeIndex}>
-                  <button
-                    type="button"
-                    className={`local-setup-suggestion-item${idx === activeIndex ? ' local-setup-suggestion-item--active' : ''}`}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => pick(place)}
+
+          <h2 className="local-setup-profiles-heading">Your Google Business Profiles</h2>
+
+          {loading ? (
+            <div className="local-setup-profiles-loading" role="status">
+              Loading profiles from Google…
+            </div>
+          ) : needsConnect ? (
+            <div className="local-setup-profiles-empty">
+              <p>
+                Connect Google to load your Business Profiles and manage review replies.
+                This also enables Search Console access.
+              </p>
+              <a href={connectHref} className="local-reviews-gate-link">
+                Connect Google
+              </a>
+            </div>
+          ) : errorCode ? (
+            <div className="local-setup-profiles-empty">
+              <p style={{ whiteSpace: 'pre-wrap' }}>{errorMessage || 'Could not load profiles from Google.'}</p>
+              {isRateLimited ? (
+                <p style={{ marginTop: 8, fontSize: 13, color: '#6A6772', lineHeight: 1.45 }}>
+                  Check Cloud Console quotas for Account Management / Business Information.
+                  {' '}
+                  <a
+                    href="https://developers.google.com/my-business/content/prereqs"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    style={{ color: '#E07D42' }}
                   >
-                    <span className="local-setup-suggestion-name">{place.name}</span>
-                    <span className="local-setup-suggestion-address">{place.address}</span>
-                  </button>
-                </li>
-              ))}
+                    GBP API access prerequisites
+                  </a>
+                  {' · '}
+                  <a
+                    href="https://developers.google.com/my-business/content/limits"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    style={{ color: '#E07D42' }}
+                  >
+                    Usage limits
+                  </a>
+                </p>
+              ) : null}
+              <button type="button" className="local-reviews-gate-link" onClick={() => { void loadProfiles(); }}>
+                {isRateLimited ? 'Retry in a minute' : 'Retry'}
+              </button>
+            </div>
+          ) : profiles.length === 0 ? (
+            <div className="local-setup-profiles-empty">
+              <p>No Google Business Profiles found for this account.</p>
+              <a href={connectHref} className="local-reviews-gate-link">
+                Reconnect Google
+              </a>
+            </div>
+          ) : (
+            <ul className="local-setup-profiles-list">
+              {profiles.map((profile) => {
+                const configured = isConfigured(profile.id);
+                const importing = importingId === profile.id;
+                return (
+                  <li key={profile.id}>
+                    <button
+                      type="button"
+                      className="local-setup-profile-card"
+                      disabled={Boolean(importingId)}
+                      onClick={() => { void handleSelect(profile); }}
+                    >
+                      <span className="local-setup-profile-card-main">
+                        <span className="local-setup-profile-card-name">{profile.name}</span>
+                        <span className="local-setup-profile-card-meta">
+                          <IconPin size={14} color="#A1A1AA" />
+                          {profile.address || 'Address unavailable'}
+                        </span>
+                        {importing && (
+                          <span className="local-setup-profile-card-meta">
+                            Importing photos & details from Google…
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`local-setup-profile-badge${configured ? ' local-setup-profile-badge--ready' : ''}`}
+                      >
+                        {importing ? (
+                          'Importing…'
+                        ) : configured ? (
+                          <>
+                            <IconCheck size={14} color="#1AB25E" />
+                            Configured
+                          </>
+                        ) : (
+                          'Setup needed'
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

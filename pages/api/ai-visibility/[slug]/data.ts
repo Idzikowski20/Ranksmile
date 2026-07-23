@@ -7,17 +7,12 @@ import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTabl
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
-import { parseCitations as parseCitationsShared, loadScanResultRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibilityRead';
+import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibilityRead';
 import { refreshIntervalDays } from '../../../../lib/aiVisibility';
 
 // Compare never renders a competitor's Sources → drop them to bound the payload.
 const withoutSources = (s: DomainSnapshot): DomainSnapshot => ({ ...s, sources: [] });
 const NORM = (d: string): string => d.toLowerCase().replace(/^www\./, '');
-
-type DbResultRow = {
-   prompt_id: number, model: string, own_cited: number, own_position: number | null,
-   citations: unknown, topic: string, text: string,
-};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
@@ -171,29 +166,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          });
       }
 
-      const dbRows = await queryRows<DbResultRow>(
-         `SELECT r.prompt_id, r.model, r.own_cited, r.own_position, r.citations, p.topic, p.text
-          FROM ai_vis_results r JOIN ai_vis_prompts p ON p.id = r.prompt_id
-          WHERE r.scan_id = ? AND r.error IS NULL`,
-         [scan.id],
-      );
-      const rows: ResultRow[] = dbRows.map((r) => ({
-         promptId: r.prompt_id,
-         model: r.model,
-         ownCited: !!r.own_cited,
-         ownPosition: r.own_position,
-         citations: parseCitationsShared(r.citations),
-         topic: r.topic,
-         text: r.text,
-         brands: [], // competitors/prompts branches don't read brands; B3 uses loadScanResultRows for sources
-         fanOutQueries: [], // fanout view loads via loadScanResultRows (which selects the column)
-      }));
-
       if (view === 'overview') {
+         const rows = await loadScanCitationRows(scan.id);
          const own = domain.domain;
          const ownKey = NORM(own);
          const all = filterRows(rows); // scope own + competitor metrics to the picked prompts
-         const byDomain = buildSnapshotsForScan(all, own);
+         const wanted = typeof req.query.competitor === 'string' ? NORM(req.query.competitor) : '';
+         // Full sources/prompts only for own + top-5 (+ optional compare); rest = overview scores.
+         const byDomain = buildSnapshotsForScan(all, own, {
+            fullDetailTopCompetitors: 5,
+            extraFullDomains: wanted ? [wanted] : [],
+         });
          const ownSnap = byDomain.get(ownKey) ?? snapshotForDomain(all, own);
          const ranked = rankCompetitors(byDomain, own);
 
@@ -201,7 +184,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const competitorsAll = ranked.map((c) => ({ domain: c.domain, visibilityScore: c.snapshot.overview.visibilityScore }));
 
          // Long-tail: a picker choice outside the top-5. Reuse the already-computed map.
-         const wanted = typeof req.query.competitor === 'string' ? NORM(req.query.competitor) : '';
          const compare = wanted && byDomain.has(wanted) && !competitors.some((c) => c.domain === wanted)
             ? { competitorDomain: wanted, snapshot: withoutSources(byDomain.get(wanted) as DomainSnapshot) } : null;
 
@@ -210,7 +192,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          const prev = scan.finished_at
             ? await getPreviousDisplayScan(domain.ID, scan.finished_at)
             : undefined;
-         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanResultRows(prev.id)), own)) : null;
+         // Citations-only load (no brands/fan-out) — delta only needs own overview/sources/prompts.
+         const delta = prev ? computeDelta(ownSnap, snapshotForDomain(filterRows(await loadScanCitationRows(prev.id)), own)) : null;
 
          // Next automatic refresh = last finish + cadence; days until (clamped ≥ 0).
          const refreshDays = refreshIntervalDays(cfg?.priority);
@@ -248,8 +231,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (view === 'competitors') {
          // SurferSEO-style ranking: every cited competitor DOMAIN with its full
          // overview metrics, sorted by visibility desc. Respects prompt/model filters.
-         const all = filterRows(await loadScanResultRows(scan.id));
-         const byDomain = buildSnapshotsForScan(all, domain.domain);
+         const all = filterRows(await loadScanCitationRows(scan.id));
+         const byDomain = buildSnapshotsForScan(all, domain.domain, { fullDetailTopCompetitors: 0 });
          const ranked = rankCompetitors(byDomain, domain.domain);
          return res.status(200).json({
             competitors: ranked.map((c) => ({
@@ -316,11 +299,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          });
       }
       if (view === 'prompts') {
+         const citationRows = await loadScanCitationRows(scan.id);
          const byPrompt = new Map<number, { id: number, topic: string, text: string, perModel: Array<{ model: string, cited: boolean, position: number | null }> }>();
-         for (const r of dbRows) {
-            const entry = byPrompt.get(r.prompt_id) ?? { id: r.prompt_id, topic: r.topic, text: r.text, perModel: [] };
-            entry.perModel.push({ model: r.model, cited: !!r.own_cited, position: r.own_position });
-            byPrompt.set(r.prompt_id, entry);
+         for (const r of citationRows) {
+            const entry = byPrompt.get(r.promptId) ?? { id: r.promptId, topic: r.topic, text: r.text, perModel: [] };
+            entry.perModel.push({ model: r.model, cited: r.ownCited, position: r.ownPosition });
+            byPrompt.set(r.promptId, entry);
          }
          const prompts = Array.from(byPrompt.values()).map((p) => {
             const scores = p.perModel.map((m) => (m.cited && m.position ? Math.max(0, 100 - (m.position - 1) * 15) : 0));
