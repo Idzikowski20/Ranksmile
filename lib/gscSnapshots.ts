@@ -31,6 +31,20 @@ export async function captureWeeklySnapshot(domain: string, domainId: number, we
          { replacements },
       );
    }
+
+   try {
+      const { emitObservations, observationsFromGscLowCtr } = await import('./emitObservations');
+      const pageRows = rows.map(([page, s]) => ({
+         page,
+         impressions: Math.round(s.impressions),
+         clicks: Math.round(s.clicks),
+         position: s.position,
+      }));
+      await emitObservations(observationsFromGscLowCtr(pageRows, { domainId }), { domainId });
+   } catch {
+      /* non-fatal */
+   }
+
    return rows.length;
 }
 

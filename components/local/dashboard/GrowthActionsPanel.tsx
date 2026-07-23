@@ -1,10 +1,16 @@
 import { useRouter } from 'next/router';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  applyBusinessLogo,
+  applyBusinessPhotos,
+  applyCoverPhoto,
   applySuggestedCategories,
   applySuggestedDescription,
   GROWTH_TASKS,
+  hasBusinessLogo,
   hasCategorySuggestions,
+  hasCoverPhoto,
+  hasEnoughBusinessPhotos,
   type GrowthTaskId,
 } from '../../../lib/local/growthActions';
 import {
@@ -24,12 +30,16 @@ import {
 } from '../icons';
 import {
   AddCategoriesTask,
+  AddCoverPhotoTask,
+  AddLogoTask,
+  AddPhotosTask,
   GrowthActivityList,
   GrowthTaskFeedback,
   ImproveDescriptionTask,
   SetupAgentTask,
   type TaskOutcome,
 } from './growthTaskCards';
+import { MakeGbpPostTask } from './MakeGbpPostTask';
 
 type GrowthProgressPatch = {
   growthActionsDay: string;
@@ -98,6 +108,9 @@ export default function GrowthActionsPanel({
     () => GROWTH_TASKS.filter((task) => {
       if (completedSet.has(task.id)) return false;
       if (task.id === 'add-categories' && !hasCategorySuggestions(details)) return false;
+      if (task.id === 'add-logo' && hasBusinessLogo(details)) return false;
+      if (task.id === 'add-cover-photo' && hasCoverPhoto(details)) return false;
+      if (task.id === 'add-photos' && hasEnoughBusinessPhotos(details)) return false;
       return true;
     }),
     [completedSet, details],
@@ -203,6 +216,28 @@ export default function GrowthActionsPanel({
     });
   };
 
+  const handleSaveLogo = (logoUrl: string) => {
+    runTaskOutcome('add-logo', 'accepted', () => {
+      onDetailsChange(applyBusinessLogo(details, logoUrl));
+    });
+  };
+
+  const handleSaveCoverPhoto = (coverUrl: string) => {
+    runTaskOutcome('add-cover-photo', 'accepted', () => {
+      onDetailsChange(applyCoverPhoto(details, coverUrl));
+    });
+  };
+
+  const handleSavePhotos = (photoUrls: string[]) => {
+    runTaskOutcome('add-photos', 'accepted', () => {
+      onDetailsChange(applyBusinessPhotos(details, photoUrls));
+    });
+  };
+
+  const handlePublishGbpPost = (_postText: string) => {
+    runTaskOutcome('schedule-gbp-post', 'accepted');
+  };
+
   const handleDismissTask = (taskId: GrowthTaskId) => {
     runTaskOutcome(taskId, 'rejected');
   };
@@ -283,7 +318,21 @@ export default function GrowthActionsPanel({
                       <h4>{activeTask.title}</h4>
                       <IconSparkle size={16} color="#783AFB" />
                     </div>
-                    <p>{activeTask.subtitle}</p>
+                    {activeTask.id === 'add-photos' ? (
+                      <p>
+                        {activeTask.subtitle}
+                        {' '}
+                        <button
+                          type="button"
+                          className="local-dashboard-growth-inline-link"
+                          title="Businesses with photos typically get around 60% more views on Google."
+                        >
+                          60% more views
+                        </button>
+                      </p>
+                    ) : (
+                      <p>{activeTask.subtitle}</p>
+                    )}
                     <div className="local-dashboard-growth-divider" />
                   </div>
 
@@ -291,6 +340,40 @@ export default function GrowthActionsPanel({
                     <SetupAgentTask
                       onAccept={handleAcceptAgent}
                       onDismiss={() => handleDismissTask('setup-agent')}
+                      onNext={goNext}
+                      actionsDisabled={transitionLocked}
+                    />
+                  )}
+                  {activeTask.id === 'add-logo' && (
+                    <AddLogoTask
+                      onSave={handleSaveLogo}
+                      onDismiss={() => handleDismissTask('add-logo')}
+                      onNext={goNext}
+                      actionsDisabled={transitionLocked}
+                    />
+                  )}
+                  {activeTask.id === 'add-cover-photo' && (
+                    <AddCoverPhotoTask
+                      onSave={handleSaveCoverPhoto}
+                      onDismiss={() => handleDismissTask('add-cover-photo')}
+                      onNext={goNext}
+                      actionsDisabled={transitionLocked}
+                    />
+                  )}
+                  {activeTask.id === 'add-photos' && (
+                    <AddPhotosTask
+                      details={details}
+                      onSave={handleSavePhotos}
+                      onDismiss={() => handleDismissTask('add-photos')}
+                      onNext={goNext}
+                      actionsDisabled={transitionLocked}
+                    />
+                  )}
+                  {activeTask.id === 'schedule-gbp-post' && (
+                    <MakeGbpPostTask
+                      details={details}
+                      onPublish={handlePublishGbpPost}
+                      onDismiss={() => handleDismissTask('schedule-gbp-post')}
                       onNext={goNext}
                       actionsDisabled={transitionLocked}
                     />

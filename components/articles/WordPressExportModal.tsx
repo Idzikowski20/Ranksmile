@@ -195,6 +195,26 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
       if (!res.ok) throw new Error(data?.error || 'WordPress export failed');
       setResult(data);
       setStep('success');
+      // Record ActionExecuted (publish) — non-blocking.
+      fetch(`/api/articles/${articleId}/execute-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmed: true,
+          action: {
+            id: `publish-${articleId}`,
+            type: 'publish',
+            title: 'Publish to WordPress',
+            instruction: 'Publish',
+            expectedLift: 0,
+            confidence: 1,
+            cost: 'easy',
+            reason: 'User confirmed WordPress publish',
+            origin: 'planner',
+            appliesTo: { kind: 'article', id: String(articleId) },
+          },
+        }),
+      }).catch(() => {});
     } catch (e: unknown) {
       toast.error(getErrorMessage(e) || 'WordPress export failed');
     } finally {

@@ -6,6 +6,8 @@ import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
 import { WizardNextButton } from '../../components/articles/WizardShell';
+import { Button, CompactSelect } from '../../components/core';
+import type { SelectOption } from '../../components/core';
 
 const LANGUAGES = [
   { value: 'pl', label: 'Polski' },
@@ -26,59 +28,6 @@ const fieldLabel: React.CSSProperties = {
   color: '#3F3F47', paddingBottom: 6, fontFamily: 'var(--font-family-primary)',
 };
 
-/** Shared select used for both Domain and Language. */
-function Dropdown({ label, value, options, onSelect, open, setOpen, placeholder }: {
-  label: string; value: string; options: { value: string; label: string }[];
-  onSelect: (v: string) => void; open: boolean; setOpen: (o: boolean) => void; placeholder?: string;
-}) {
-  const current = options.find((o) => o.value === value);
-  return (
-    <div>
-      <label style={fieldLabel}>{label}</label>
-      <div className="nc-dropdown" style={{ position: 'relative' }}>
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          style={{
-            width: '100%', height: 40, padding: '0 12px', border: '1px solid #D4D4D8',
-            borderRadius: 8, background: '#fff', fontSize: 14, lineHeight: '20px',
-            color: current ? '#2F2F34' : '#52525C', cursor: 'pointer',
-            fontFamily: 'var(--font-family-primary)', display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)', textAlign: 'left',
-          }}
-        >
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-            {current?.label || placeholder || 'Select...'}
-          </span>
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0, color: '#9F9FA9', transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.15s' }}>
-            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {open && (
-          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#fff', border: '1px solid #E4E4E7', borderRadius: 8, boxShadow: '0px 4px 16px rgba(0,0,0,0.08)', zIndex: 60, maxHeight: 220, overflowY: 'auto' }}>
-            {options.map((o) => (
-              <div
-                key={o.value}
-                onClick={() => { onSelect(o.value); setOpen(false); }}
-                style={{
-                  height: 36, padding: '0 12px', display: 'flex', alignItems: 'center', fontSize: 14,
-                  color: o.value === value ? '#F29964' : '#2F2F34', fontWeight: o.value === value ? 600 : 400,
-                  fontFamily: 'var(--font-family-primary)', cursor: 'pointer',
-                  background: o.value === value ? '#FFF5EE' : 'transparent',
-                }}
-                onMouseEnter={(e) => { if (o.value !== value) (e.currentTarget as HTMLDivElement).style.background = '#F4F4F5'; }}
-                onMouseLeave={(e) => { if (o.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-              >
-                {o.label}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 const NewContentPage: NextPage = () => {
   const router = useRouter();
   const { data: domainsData } = useFetchDomains(router);
@@ -89,8 +38,6 @@ const NewContentPage: NextPage = () => {
   const [language, setLanguage] = useState('pl');
   const [trackedKeywords, setTrackedKeywords] = useState<TrackedKeyword[]>([]);
   const [isLoadingTracked, setIsLoadingTracked] = useState(false);
-  const [domainOpen, setDomainOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
 
   // Default to the first domain once loaded.
   useEffect(() => {
@@ -110,16 +57,6 @@ const NewContentPage: NextPage = () => {
       .catch(() => setTrackedKeywords([]))
       .finally(() => setIsLoadingTracked(false));
   }, [selectedDomainStr]);
-
-  // Close dropdowns on outside click.
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (!t.closest('.nc-dropdown')) { setDomainOpen(false); setLangOpen(false); }
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
 
   const country = LANG_TO_COUNTRY[language] || 'US';
   const selectedSet = new Set(keywords);
@@ -148,7 +85,8 @@ const NewContentPage: NextPage = () => {
     router.push(`/articles/deep-analysis?${q.toString()}`);
   };
 
-  const domainOptions = domains.map((d) => ({ value: String(d.ID), label: d.domain }));
+  const domainOptions: SelectOption[] = domains.map((d) => ({ value: String(d.ID), label: d.domain }));
+  const languageOptions: SelectOption[] = LANGUAGES;
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
@@ -171,15 +109,23 @@ const NewContentPage: NextPage = () => {
                 </div>
 
                 {/* Domain */}
-                <Dropdown
-                  label="Domain"
-                  value={String(domainId || '')}
-                  options={domainOptions}
-                  onSelect={(v) => { setDomainId(Number(v)); setKeywords([]); }}
-                  open={domainOpen}
-                  setOpen={(o) => { setDomainOpen(o); setLangOpen(false); }}
-                  placeholder="Select domain..."
-                />
+                <div>
+                  <label style={fieldLabel}>Domain</label>
+                  <div style={{ width: '100%', display: 'grid' }}>
+                    <CompactSelect
+                      size="md"
+                      value={String(domainId || '')}
+                      options={domainOptions}
+                      onChange={(opt) => { setDomainId(Number(opt.value)); setKeywords([]); }}
+                      menuWidth="100%"
+                      menuMinWidth="100%"
+                      triggerLabel={
+                        domainOptions.find((o) => o.value === String(domainId))?.label
+                        || <span style={{ color: '#6A6772' }}>Select domain...</span>
+                      }
+                    />
+                  </div>
+                </div>
 
                 {/* Target keywords */}
                 <div>
@@ -207,10 +153,10 @@ const NewContentPage: NextPage = () => {
                     </span>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {hasTracked && filteredTracked.length > 0 && (
-                        <button type="button" onClick={selectAllTracked} style={chipBtn}>Select all</button>
+                        <Button type="button" variant="secondary" size="xs" onClick={selectAllTracked}>Select all</Button>
                       )}
                       {keywords.length > 0 && (
-                        <button type="button" onClick={() => setKeywords([])} style={chipBtn}>Clear all</button>
+                        <Button type="button" variant="secondary" size="xs" onClick={() => setKeywords([])}>Clear all</Button>
                       )}
                     </div>
                   </div>
@@ -224,36 +170,40 @@ const NewContentPage: NextPage = () => {
                   {filteredTracked.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 144, overflowY: 'auto', padding: '6px 0' }}>
                       {filteredTracked.map((tk) => (
-                        <button
+                        <Button
                           key={tk.ID}
                           type="button"
+                          variant="secondary"
+                          size="xs"
                           onClick={() => addKeyword(tk.keyword)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #E4E4E7', background: '#fff', fontSize: 13, lineHeight: '18px', color: '#2F2F34', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s, border-color 0.15s, color 0.15s' }}
-                          onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#FFF5EE'; b.style.borderColor = '#F5C4A0'; b.style.color = '#F29964'; }}
-                          onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#fff'; b.style.borderColor = '#E4E4E7'; b.style.color = '#2F2F34'; }}
                         >
                           {tk.keyword}
                           {tk.position != null && tk.position > 0 && (
                             <span style={{ fontSize: 11, color: '#9F9FA9', fontWeight: 400 }}>#{tk.position}</span>
                           )}
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                             <path d="M12 5v14m-7-7h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   )}
                 </div>
 
                 {/* Language */}
-                <Dropdown
-                  label="Language"
-                  value={language}
-                  options={LANGUAGES}
-                  onSelect={setLanguage}
-                  open={langOpen}
-                  setOpen={(o) => { setLangOpen(o); setDomainOpen(false); }}
-                />
+                <div>
+                  <label style={fieldLabel}>Language</label>
+                  <div style={{ width: '100%', display: 'grid' }}>
+                    <CompactSelect
+                      size="md"
+                      value={language}
+                      options={languageOptions}
+                      onChange={(opt) => setLanguage(String(opt.value))}
+                      menuWidth="100%"
+                      menuMinWidth="100%"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -272,12 +222,6 @@ const NewContentPage: NextPage = () => {
       </div>
     </DashboardLayout>
   );
-};
-
-const chipBtn: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 6,
-  border: '1px solid #E4E4E7', background: '#fff', fontSize: 12, lineHeight: '18px',
-  color: '#52525C', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-family-primary)',
 };
 
 const mutedNote: React.CSSProperties = {

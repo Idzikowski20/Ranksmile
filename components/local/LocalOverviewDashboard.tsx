@@ -17,6 +17,7 @@ import {
   IconExport,
   IconKebab,
   IconPhone,
+  IconPicture,
   IconPin,
   IconPlus,
   IconShare,
@@ -150,8 +151,26 @@ export default function LocalOverviewDashboard({
 
       <div className="local-dashboard-content">
         <section className="local-dashboard-card local-dashboard-business-card">
+          <div
+            className={`local-dashboard-business-banner${details.coverUrl ? '' : ' local-dashboard-business-banner--empty'}`}
+            aria-hidden={!details.coverUrl}
+          >
+            {details.coverUrl ? (
+              <img src={details.coverUrl} alt="" />
+            ) : (
+              <span className="local-dashboard-business-banner-placeholder" />
+            )}
+          </div>
+
           <div className="local-dashboard-business-head">
             <div className="local-dashboard-business-identity">
+              <div className="local-dashboard-logo" aria-hidden={!details.logoUrl}>
+                {details.logoUrl ? (
+                  <img src={details.logoUrl} alt="" />
+                ) : (
+                  <IconPicture size={18} color="#A1A1AA" />
+                )}
+              </div>
               <div className="local-dashboard-business-name">
                 <span title={details.name}>{details.name}</span>
                 <LocalProBadge />

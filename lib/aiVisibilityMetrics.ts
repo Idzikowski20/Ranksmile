@@ -123,11 +123,16 @@ export function aggregateCompetitors(rows: ResultRow[], ownDomain: string) {
 
 /** Re-derive each row's ownCited/ownPosition for an ARBITRARY domain, so the same
  *  scan rows can be scored from any competitor's point of view. */
-function projectRows(rows: ResultRow[], domain: string): ResultRow[] {
+export function projectRows(rows: ResultRow[], domain: string): ResultRow[] {
    return rows.map((r) => {
       const pos = ownDomainPosition(r.citations, domain);
       return { ...r, ownCited: pos !== null, ownPosition: pos };
    });
+}
+
+/** Overview metrics for one domain — no sources/prompts/topics aggregation. */
+export function overviewForDomain(rows: ResultRow[], domain: string) {
+   return computeOverview(projectRows(rows, domain));
 }
 
 function promptsFor(projected: ResultRow[]): Array<{ promptId: number, topic: string, text: string, score: number }> {
@@ -148,59 +153,298 @@ function topicsFor(prompts: ReturnType<typeof promptsFor>): Array<{ topic: strin
    return Array.from(byTopic.entries()).map(([topic, s]) => ({ topic, score: Math.round(mean(s)) })).sort((a, b) => b.score - a.score);
 }
 
-export type DomainSnapshot = {
-   overview: ReturnType<typeof computeOverview>;
-   sources: ReturnType<typeof aggregateSources>;
-   prompts: Array<{ promptId: number, topic: string, text: string, score: number }>;
-   topics: Array<{ topic: string, score: number }>;
-   citedPromptIds: number[]; // prompts where the domain was cited in ≥1 model
+export type DomainProjection = {
+  domain: string;
+  projected: ResultRow[];
+  citedPromptIds: number[];
+  modelSet: Set<string>;
+  citationUrls: Set<string>;
 };
 
-/** THE primitive: a full snapshot for ANY domain. Every view (overview, compare,
- *  trend, future export) reads this one shape. Pure — the DB wrapper that loads
- *  the rows lives in lib/aiVisibilityRead.ts. */
-export function snapshotForDomain(rows: ResultRow[], domain: string): DomainSnapshot {
-   const projected = projectRows(rows, domain);
-   const prompts = promptsFor(projected);
-   return {
-      overview: computeOverview(projected),
-      sources: aggregateSources(projected),
-      prompts,
-      topics: topicsFor(prompts),
-      citedPromptIds: Array.from(new Set(projected.filter((r) => r.ownCited).map((r) => r.promptId))).sort((a, b) => a - b),
-   };
+export type ScoreVectorLike = {
+  score: number;
+  confidence: number;
+  version: number;
+  explainability?: string;
+  contributors: Array<{ id: string; label: string; delta: number }>;
+  components?: Record<string, number>;
+  weights?: Record<string, number>;
+};
+
+export type DomainSnapshot = {
+  metadata: {
+    schemaVersion: number;
+    pipelineVersion: number;
+    scoringVersion: number;
+    /** Append-only: when this snapshot instance was built (never mutate prior rows). */
+    createdAt: string;
+    experimentId?: string;
+    experimentVariant?: string;
+    experimentBucket?: string;
+  };
+  overview: ReturnType<typeof computeOverview> & {
+    peer?: { rank: number; of: number };
+    score?: ScoreVectorLike;
+    /** Faceted visibility — Exposure / Presence / Authority / … */
+    facets?: {
+      exposure?: number;
+      presence?: number;
+      authority?: number;
+      coverage?: number;
+      trust?: number;
+      citation?: number;
+    };
+  };
+  scores: ScoreVectorLike;
+  sources: ReturnType<typeof aggregateSources>;
+  prompts: Array<{ promptId: number; topic: string; text: string; score: number }>;
+  topics: Array<{ topic: string; score: number }>;
+  citedPromptIds: number[];
+  /** Section → Metric → Signal → Evidence (explainability shape; fill grows over time). */
+  sections: Array<{
+    id: string;
+    label: string;
+    metrics: Array<{
+      id: string;
+      label: string;
+      value: number | string | null;
+      signals: Array<{ key: string; value: number | string; evidence?: Array<{ engine?: string; url?: string }> }>;
+    }>;
+  }>;
+};
+
+function buildScoreVector(overview: ReturnType<typeof computeOverview>): ScoreVectorLike {
+  const weights = { mention: 0.3, position: 0.25, diversity: 0.2, citations: 0.15, pages: 0.1 };
+  const positionComponent =
+    overview.avgPosition == null ? 50 : Math.max(0, 100 - (overview.avgPosition - 1) * 12);
+  const diversity = Math.min(100, overview.perModel.length * 20);
+  const citations = Math.min(100, overview.directCitations * 5);
+  const pages = Math.min(100, overview.pages * 10);
+  const components = {
+    mention: overview.mentionRate,
+    position: Math.round(positionComponent),
+    diversity,
+    citations,
+    pages,
+  };
+  return {
+    score: overview.visibilityScore,
+    confidence: 0.8,
+    version: 3,
+    explainability: 'Composite of mention, position, model diversity, citations, pages',
+    contributors: [
+      { id: 'mention', label: 'Mention rate', delta: Math.round(overview.mentionRate - 50) },
+      { id: 'position', label: 'Avg position', delta: Math.round(positionComponent - 50) },
+      { id: 'diversity', label: 'Model diversity', delta: Math.round(diversity - 50) },
+      { id: 'citations', label: 'Citations', delta: Math.round(citations - 50) },
+    ],
+    components,
+    weights,
+  };
+}
+
+function snapshotMeta() {
+  return {
+    schemaVersion: 2,
+    pipelineVersion: 4,
+    scoringVersion: 3,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function overviewShell(proj: DomainProjection, overview: ReturnType<typeof computeOverview>, scores: ScoreVectorLike) {
+  return {
+    ...overview,
+    score: scores,
+    facets: {
+      exposure: overview.mentionRate,
+      presence: overview.visibilityScore,
+      citation: Math.min(100, overview.directCitations * 5),
+      coverage: Math.min(100, proj.citedPromptIds.length * 5),
+      authority: Math.min(100, overview.pages * 10),
+      trust: Math.round((overview.mentionRate + overview.visibilityScore) / 2),
+    },
+  };
+}
+
+/** Metrics + empty sources/prompts — enough for ranking and competitorsAll scores. */
+function overviewOnlyFromProjection(proj: DomainProjection): DomainSnapshot {
+  const overview = computeOverview(proj.projected);
+  const scores = buildScoreVector(overview);
+  return {
+    metadata: snapshotMeta(),
+    overview: overviewShell(proj, overview, scores),
+    scores,
+    sources: [],
+    prompts: [],
+    topics: [],
+    citedPromptIds: proj.citedPromptIds,
+    sections: [
+      {
+        id: 'visibility',
+        label: 'Visibility',
+        metrics: [
+          {
+            id: 'visibilityScore',
+            label: 'Visibility score',
+            value: overview.visibilityScore,
+            signals: [
+              { key: 'mentionRate', value: overview.mentionRate },
+              { key: 'avgPosition', value: overview.avgPosition ?? 'n/a' },
+              { key: 'directCitations', value: overview.directCitations },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function snapshotFromProjection(proj: DomainProjection): DomainSnapshot {
+  const prompts = promptsFor(proj.projected);
+  const overview = computeOverview(proj.projected);
+  const scores = buildScoreVector(overview);
+  return {
+    metadata: snapshotMeta(),
+    overview: overviewShell(proj, overview, scores),
+    scores,
+    sources: aggregateSources(proj.projected),
+    prompts,
+    topics: topicsFor(prompts),
+    citedPromptIds: proj.citedPromptIds,
+    sections: [
+      {
+        id: 'visibility',
+        label: 'Visibility',
+        metrics: [
+          {
+            id: 'visibilityScore',
+            label: 'Visibility score',
+            value: overview.visibilityScore,
+            signals: [
+              { key: 'mentionRate', value: overview.mentionRate },
+              { key: 'avgPosition', value: overview.avgPosition ?? 'n/a' },
+              { key: 'directCitations', value: overview.directCitations },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/** Build Projection Cache once per scan — metrics read from cache, not rows×domains. */
+export function buildProjectionCache(rows: ResultRow[], domains: Iterable<string>): Map<string, DomainProjection> {
+  const cache = new Map<string, DomainProjection>();
+  for (const domain of domains) {
+    const d = norm(domain);
+    if (!d || cache.has(d)) continue;
+    const projected = projectRows(rows, d);
+    const citedPromptIds = Array.from(
+      new Set(projected.filter((r) => r.ownCited).map((r) => r.promptId)),
+    ).sort((a, b) => a - b);
+    const modelSet = new Set(projected.map((r) => r.model));
+    const citationUrls = new Set<string>();
+    for (const r of projected) {
+      for (const c of r.citations) citationUrls.add(c.url);
+    }
+    cache.set(d, { domain: d, projected, citedPromptIds, modelSet, citationUrls });
+  }
+  return cache;
+}
+
+/** THE primitive: a full snapshot for ANY domain. Uses Projection Cache when provided. */
+export function snapshotForDomain(
+  rows: ResultRow[],
+  domain: string,
+  cache?: Map<string, DomainProjection>,
+): DomainSnapshot {
+  const d = norm(domain);
+  const proj = cache?.get(d) ?? buildProjectionCache(rows, [d]).get(d)!;
+  return snapshotFromProjection(proj);
 }
 
 /** Alias kept for existing callers that pass the tracked domain. */
 export function buildSnapshot(rows: ResultRow[], ownDomain: string): DomainSnapshot {
-   return snapshotForDomain(rows, ownDomain);
+  return snapshotForDomain(rows, ownDomain);
 }
 
-export type RankedCompetitor = { domain: string, snapshot: DomainSnapshot };
+export type RankedCompetitor = { domain: string; snapshot: DomainSnapshot };
 
-/** Snapshot for the tracked domain + every distinct cited domain (minus noise),
- *  computed ONCE. Keys are normalized (norm). Shared by ranking, compare, history. */
-export function buildSnapshotsForScan(rows: ResultRow[], ownDomain: string): Map<string, DomainSnapshot> {
-   const own = norm(ownDomain);
-   const domains = new Set<string>([own]);
-   for (const r of rows) for (const c of r.citations) {
+function compositeScore(snap: DomainSnapshot): number {
+  const o = snap.overview;
+  const mention = o.mentionRate;
+  const vis = o.visibilityScore;
+  const pos = o.avgPosition == null ? 40 : Math.max(0, 100 - (o.avgPosition - 1) * 12);
+  const diversity = Math.min(100, (o.perModel?.length || 0) * 20);
+  const promptCoverage = Math.min(100, snap.citedPromptIds.length * 5);
+  return Math.round(vis * 0.35 + mention * 0.25 + pos * 0.2 + diversity * 0.1 + promptCoverage * 0.1);
+}
+
+export type BuildSnapshotsOpts = {
+  /** Full sources/prompts only for own + this many top competitors (+ `extraFullDomains`). Default: all. */
+  fullDetailTopCompetitors?: number;
+  /** Extra domains that must get a full snapshot (e.g. compare picker). */
+  extraFullDomains?: Iterable<string>;
+};
+
+/** Snapshot for the tracked domain + every distinct cited domain (minus noise), via Projection Cache. */
+export function buildSnapshotsForScan(
+  rows: ResultRow[],
+  ownDomain: string,
+  opts?: BuildSnapshotsOpts,
+): Map<string, DomainSnapshot> {
+  const own = norm(ownDomain);
+  const domains = new Set<string>([own]);
+  for (const r of rows) {
+    for (const c of r.citations) {
       const d = norm(c.domain);
-      // Own domain and its subdomains (e.g. blog.example.com) are not competitors.
       if (d && d !== own && !d.endsWith(`.${own}`) && !isBlockedCitationDomain(d)) domains.add(d);
-   }
-   const map = new Map<string, DomainSnapshot>();
-   for (const d of domains) map.set(d, snapshotForDomain(rows, d));
-   return map;
+    }
+  }
+  const cache = buildProjectionCache(rows, domains);
+  const domainList = Array.from(domains);
+
+  // Rank from overview-only first so we know which competitors need full detail.
+  const light = new Map<string, DomainSnapshot>();
+  for (const d of domainList) {
+    light.set(d, overviewOnlyFromProjection(cache.get(d)!));
+  }
+  const ranked = domainList
+    .map((d) => ({ d, score: compositeScore(light.get(d)!) }))
+    .sort((a, b) => b.score - a.score);
+
+  const fullDetail = opts?.fullDetailTopCompetitors == null;
+  const fullDomains = new Set<string>([own]);
+  if (!fullDetail) {
+    const topN = Math.max(0, opts.fullDetailTopCompetitors!);
+    ranked.filter((e) => e.d !== own).slice(0, topN).forEach((e) => fullDomains.add(e.d));
+    for (const extra of opts.extraFullDomains ?? []) {
+      const n = norm(extra);
+      if (n && light.has(n)) fullDomains.add(n);
+    }
+  }
+
+  const map = new Map<string, DomainSnapshot>();
+  for (const d of domainList) {
+    map.set(d, fullDetail || fullDomains.has(d)
+      ? snapshotFromProjection(cache.get(d)!)
+      : light.get(d)!);
+  }
+  ranked.forEach((entry, i) => {
+    const snap = map.get(entry.d)!;
+    snap.overview.peer = { rank: i + 1, of: ranked.length };
+  });
+  return map;
 }
 
-/** All competitors (own excluded), each with its FULL snapshot, sorted by visibility desc.
- *  Callers slice top-N for the chart / instant-compare and use the whole list for the picker. */
+/** Competitors sorted by composite score (not visibility alone). */
 export function rankCompetitors(byDomain: Map<string, DomainSnapshot>, ownDomain: string): RankedCompetitor[] {
-   const own = norm(ownDomain);
-   return Array.from(byDomain.entries())
-      .filter(([domain]) => domain !== own && !domain.endsWith(`.${own}`))
-      .map(([domain, snapshot]) => ({ domain, snapshot }))
-      .sort((a, b) => b.snapshot.overview.visibilityScore - a.snapshot.overview.visibilityScore);
+  const own = norm(ownDomain);
+  return Array.from(byDomain.entries())
+    .filter(([domain]) => domain !== own && !domain.endsWith(`.${own}`))
+    .map(([domain, snapshot]) => ({ domain, snapshot }))
+    .sort((a, b) => compositeScore(b.snapshot) - compositeScore(a.snapshot));
 }
 
 export type DomainGapCard = { domain: string, gap: number, shared: number, you: number };
@@ -279,6 +523,8 @@ export type Trend = 'up' | 'down' | 'same';
 export type MetricDelta = { current: number; previous: number; delta: number; trend: Trend };
 export type OverviewDelta = {
    visibilityScore: MetricDelta;
+   mentionRate: MetricDelta;
+   directCitations: MetricDelta;
    perModel: Array<{ model: string } & MetricDelta>;
    sources: { added: string[]; removed: string[] };
    prompts: { gained: number[]; lost: number[] };
@@ -305,6 +551,8 @@ export function computeDelta(current: DomainSnapshot, previous: DomainSnapshot):
 
    return {
       visibilityScore: metricDelta(current.overview.visibilityScore, previous.overview.visibilityScore),
+      mentionRate: metricDelta(current.overview.mentionRate, previous.overview.mentionRate),
+      directCitations: metricDelta(current.overview.directCitations, previous.overview.directCitations),
       perModel,
       sources: { added, removed },
       prompts: { gained, lost },

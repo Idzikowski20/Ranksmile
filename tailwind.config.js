@@ -54,6 +54,15 @@ module.exports = {
             'green-60': 'var(--green-60)',
             'yellow-60': 'var(--yellow-60)',
             'red-60': 'var(--red-60)',
+            /* Bklit chart tokens */
+            chart: {
+               label: 'var(--chart-label)',
+               tooltip: {
+                  foreground: 'var(--chart-tooltip-foreground)',
+                  muted: 'var(--chart-tooltip-muted)',
+                  background: 'var(--chart-tooltip-background)',
+               },
+            },
          },
          borderRadius: {
             'ds-xs': 'var(--radius-xs)',

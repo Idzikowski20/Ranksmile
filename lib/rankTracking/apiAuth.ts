@@ -8,6 +8,7 @@ import { isRankTrackingRunnerEnabled, isRankTrackingUiEnabled } from '../feature
 export type RankTrackingApiContext = {
   domainId: number;
   slug: string;
+  userId: string | null;
 };
 
 export async function resolveRankTrackingApi(
@@ -52,5 +53,5 @@ export async function resolveRankTrackingApi(
   }
 
   const domainId = (ownership as unknown as { ID: number }).ID;
-  return { domainId, slug };
+  return { domainId, slug, userId: userId ?? null };
 }

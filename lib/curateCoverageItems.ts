@@ -11,6 +11,7 @@ import {
 import { isCorpusNoiseSentence } from './corpusNoiseFilter';
 import { isKeywordOnTopic, seedTokens } from './topicRelevance';
 import { normalizeTerm } from './termUtils';
+import { runCoverageEngine } from './engines/coverageEngine';
 
 /** Target curated AI Search checklist size (citation prompts + PAA). */
 export const AI_COVERAGE_MAX = 35;
@@ -126,7 +127,49 @@ export function curateAiCoverageItems(opts: {
     if (knowledge.length >= AI_COVERAGE_MAX - AI_COVERAGE_INTENT_COUNT) break;
   }
 
+  // ENTITY empty here — NER worker only (Etap 1.5). TERM/CONCEPT come from Coverage Engine.
   return { knowledge, entity: [] };
+}
+
+/**
+ * Typed coverage bootstrap: merge AI questions + NLP term/concept items.
+ * Never promotes TF-IDF terms to ENTITY.
+ */
+export function curateTypedCoverageItems(opts: {
+  keyword: string;
+  terms?: Array<{ term: string; doc_freq?: number; target_count?: number; salience?: number }>;
+  paaQuestions?: Array<{ question: string; answer?: string }>;
+  llmQuestions?: Array<{ question: string; sources: LlmCoverageSource[] }>;
+  articleFacts?: ArticleFact[];
+  urls?: string[];
+}): {
+  knowledge: CoverageItem[];
+  entity: CoverageItem[];
+  terms: CoverageItem[];
+  concepts: CoverageItem[];
+  questions: CoverageItem[];
+  facts: CoverageItem[];
+} {
+  const ai = curateAiCoverageItems(opts);
+  const engine = runCoverageEngine({
+    keyword: opts.keyword,
+    terms: opts.terms,
+    paaQuestions: opts.paaQuestions,
+    facts: (opts.articleFacts ?? []).map((f) => ({
+      label: f.text,
+      confidence: Math.min(1, 0.4 + f.sourceFrequency / 10),
+    })),
+    urls: opts.urls,
+  });
+
+  return {
+    knowledge: ai.knowledge,
+    entity: [],
+    terms: engine.byType.term ?? [],
+    concepts: engine.byType.concept ?? [],
+    questions: engine.byType.question ?? engine.byType.paa ?? [],
+    facts: engine.byType.fact ?? [],
+  };
 }
 
 /** Shrink legacy bloated snapshots down to the curated checklist. */

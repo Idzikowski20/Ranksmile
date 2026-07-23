@@ -1,6 +1,9 @@
 import {
   GROWTH_TASKS,
+  hasBusinessLogo,
   hasCategorySuggestions,
+  hasCoverPhoto,
+  hasEnoughBusinessPhotos,
   type GrowthTaskId,
 } from './growthActions';
 import type { BusinessDetails, GrowthActionLogEntry } from './types';
@@ -45,6 +48,9 @@ export function getApplicableGrowthTaskIds(
     .filter((task) => {
       if (completed.has(task.id)) return true;
       if (task.id === 'add-categories' && !hasCategorySuggestions(details)) return false;
+      if (task.id === 'add-logo' && hasBusinessLogo(details)) return false;
+      if (task.id === 'add-cover-photo' && hasCoverPhoto(details)) return false;
+      if (task.id === 'add-photos' && hasEnoughBusinessPhotos(details)) return false;
       return true;
     })
     .map((task) => task.id);

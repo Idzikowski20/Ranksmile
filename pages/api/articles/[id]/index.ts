@@ -108,6 +108,16 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
 
    try {
       const articleIdSql = await getArticleIdSql();
+      let beforeScore: number | undefined;
+      try {
+         const prev = await queryOne<{ content_score: number | null }>(
+            `SELECT content_score FROM articles WHERE ${articleIdSql} = ? LIMIT 1`,
+            [id],
+         );
+         if (prev?.content_score != null) beforeScore = Number(prev.content_score);
+      } catch {
+         beforeScore = undefined;
+      }
       if (version_type && content !== undefined) {
          await db.query(
             `INSERT INTO article_versions (article_id, version_type, content, score_data, created_at)
@@ -161,6 +171,38 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
             ],
          },
       );
+
+      // v7 live_score queue on content save (fire-and-forget)
+      if (content && score_data) {
+         try {
+            const { enqueueLiveScoreOnSave } = await import('../../../../lib/pipeline/enqueueFromDeepAnalysis');
+            const { recordScoreFeedback } = await import('../../../../lib/learning/scoreFeedback');
+            const userId = await getCurrentUserId(req, res);
+            const sd = typeof score_data === 'string' ? JSON.parse(score_data) : score_data;
+            const after = Number(
+              (sd && typeof sd === 'object' && (sd as { _content_score?: number })._content_score)
+              ?? contentScore
+              ?? 0,
+            );
+            void enqueueLiveScoreOnSave({
+               workspaceId: String(userId || '0'),
+               articleId: Number(id),
+               keyword: String(target_keyword || ''),
+               html: String(content),
+               scoreData: (sd && typeof sd === 'object' ? sd : {}) as Record<string, unknown>,
+            }).catch(() => undefined);
+            void recordScoreFeedback({
+               workspaceId: String(userId || '0'),
+               articleId: Number(id),
+               changeType: 'article_save',
+               beforeScore,
+               afterScore: after,
+            }).catch(() => undefined);
+         } catch {
+            /* non-fatal */
+         }
+      }
+
       return res.status(200).json({ updated: true });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });

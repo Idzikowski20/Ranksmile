@@ -16,6 +16,12 @@ export interface OnboardingStep {
 
 const getJson = <T, >(url: string): Promise<T | null> => fetch(url).then((r) => (r.ok ? (r.json() as Promise<T>) : null));
 
+/** Active site slug from /sites/{slug}/... when present. */
+function slugFromPath(asPath: string): string | null {
+   const m = asPath.split('?')[0].match(/\/sites\/([^/]+)/);
+   return m?.[1] ?? null;
+}
+
 /**
  * The "Get started" onboarding checklist, derived from real signals and shared by the
  * sidebar launchpad and the dashboard next-step card. Reuses the dashboard/sidebar
@@ -36,14 +42,41 @@ export function useOnboardingChecklist(): {
    const [mounted, setMounted] = useState(false);
    useEffect(() => setMounted(true), []);
    const wsId = deriveActiveId(mounted, router.asPath, wsData?.activeId);
-   const slug = domainsData?.domains?.[0]?.slug ?? null;
+   const pathSlug = slugFromPath(router.asPath);
+   const slug = pathSlug ?? domainsData?.domains?.[0]?.slug ?? null;
+   const onAiVis = router.asPath.includes('/ai-visibility');
 
-   const { data: sitesData, isLoading: sitesLoading } = useQuery('dashboardSites', () => getJson<{ sites?: unknown[] }>('/api/sites'), { staleTime: 5 * 60 * 1000, retry: false });
-   const { data: recsData, isLoading: recsLoading } = useQuery(['domainRecs', slug], () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`), { enabled: !!slug, staleTime: 60 * 1000 });
-   const { data: articlesData, isLoading: articlesLoading } = useQuery('dashboardArticles', () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles'));
+   // On AI Vis, defer sites/articles so they don't contend with overview/history on Neon.
+   const [deferHeavy, setDeferHeavy] = useState(onAiVis);
+   useEffect(() => {
+      if (!onAiVis) { setDeferHeavy(false); return undefined; }
+      setDeferHeavy(true);
+      const t = window.setTimeout(() => setDeferHeavy(false), 2500);
+      return () => window.clearTimeout(t);
+   }, [onAiVis]);
+
+   const { data: sitesData, isLoading: sitesLoading } = useQuery(
+      'dashboardSites',
+      () => getJson<{ sites?: unknown[] }>('/api/sites'),
+      { staleTime: 5 * 60 * 1000, retry: false, enabled: !deferHeavy },
+   );
+   const { data: recsData, isLoading: recsLoading } = useQuery(
+      ['domainRecs', slug],
+      () => getJson<{ recommendations?: unknown[] }>(`/api/domains/${slug}/recommendations`),
+      { enabled: !!slug && !deferHeavy, staleTime: 5 * 60 * 1000 },
+   );
+   const { data: articlesData, isLoading: articlesLoading } = useQuery(
+      'dashboardArticles',
+      () => getJson<{ articles?: Array<{ source?: string; title?: string }> }>('/api/articles?limit=1'),
+      { staleTime: 5 * 60 * 1000, enabled: !deferHeavy },
+   );
    // "See if AI mentions your brand" flips done once the AI Visibility scan finishes
    // (status 'completed' = the crunching bar is done and results are in the overview).
-   const { data: aiStatus, isLoading: aiLoading } = useQuery(['aiVisStatusOnboarding', slug], () => getJson<{ status?: string }>(`/api/ai-visibility/${slug}/scan-status`), { enabled: !!slug, staleTime: 60 * 1000 });
+   const { data: aiStatus, isLoading: aiLoading } = useQuery(
+      ['aiVisStatusOnboarding', slug],
+      () => getJson<{ status?: string }>(`/api/ai-visibility/${slug}/scan-status`),
+      { enabled: !!slug && !deferHeavy, staleTime: 60 * 1000 },
+   );
 
    // Until the real signals resolve, every step reads as not-done. Surfacing that
    // (0% → animating up → hide) is the "fills up then vanishes" flash the user saw,
@@ -53,7 +86,10 @@ export function useOnboardingChecklist(): {
    // the window where domains haven't loaded yet, the card renders with empty data, and
    // then flips once `slug` appears. `domainsLoading` clears as soon as domains resolve,
    // including the "loaded but zero domains" case (slug stays null), so this never hangs.
-   const loading = !wsData || domainsLoading || sitesLoading || articlesLoading || (!!slug && (recsLoading || aiLoading));
+   // While deferring on AI Vis, don't block the page on checklist fetches.
+   const loading = deferHeavy
+      ? false
+      : (!wsData || domainsLoading || sitesLoading || articlesLoading || (!!slug && (recsLoading || aiLoading)));
 
    return useMemo(() => {
       const ws = (p: string) => workspaceHref(wsId, p);

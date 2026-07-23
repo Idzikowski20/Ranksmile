@@ -20,6 +20,8 @@ import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from 
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
 import { Gauge } from '../core';
+import { useCoverageHistoryDelta } from '../../hooks/articles/useCoverageHistoryDelta';
+import PipelineStatusStrip from './PipelineStatusStrip';
 
 interface CompetitorHeading {
   level: number;
@@ -64,6 +66,9 @@ interface Props {
   initialPlagiarism?: PlagiarismResult | null;
   initialAiReadability?: AiReadabilityResult | null;
   onAutoOptimize?: () => void;
+  /** Surgical Priority Apply. */
+  onOptimizeAction?: (action: import('../../lib/primitives/types').Action) => void;
+  domainSlug?: string;
   isAutoOptimizing?: boolean;
   /** Drives the 3-state Auto-Optimize control: button → running → completed box. */
   optimizeState?: 'idle' | 'optimizing' | 'reviewing';
@@ -275,6 +280,7 @@ const ContentScorePanel = ({
   html,
   keyword,
   onAutoOptimize,
+  onOptimizeAction,
   isAutoOptimizing,
   optimizeState = 'idle',
   onCancelOptimize,
@@ -564,9 +570,14 @@ const ContentScorePanel = ({
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
 
+  const historyDelta = useCoverageHistoryDelta(articleId);
+  const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);
+  const trioDeltaTitles = scoreDeltas ? undefined : (historyDelta ? { ai: historyDelta.title } : undefined);
+
   if (isDeepAnalyzing) {
     return (
       <div className="editor-side-panel editor-side-panel--analyzing" style={{ height: '100%', boxSizing: 'border-box', padding: '16px' }}>
+        <PipelineStatusStrip articleId={articleId} />
         <DeepAnalysisProgressPanel
           state={deepAnalysisUi ?? {
             aiSearch: [],
@@ -594,7 +605,8 @@ const ContentScorePanel = ({
         ai={displayAi}
         content={displayContent}
         hasAi={hasAi}
-        scoreDeltas={scoreDeltas}
+        scoreDeltas={trioDeltas}
+        deltaTitles={trioDeltaTitles}
         coverageItems={coverageItems}
         coverageBuckets={coverageBuckets}
         coverageSnapshot={coverageSnapshot}
@@ -606,6 +618,10 @@ const ContentScorePanel = ({
         highlightTerms={highlightTerms}
         onHighlightTermsChange={onHighlightTermsChange}
         initialSection={writeSection ?? undefined}
+        articleId={articleId}
+        onAutoOptimize={onAutoOptimize}
+        onOptimizeAction={onOptimizeAction}
+        domainSlug={domainSlug}
       />
     );
   }
@@ -655,6 +671,9 @@ const ContentScorePanel = ({
 
   return (
     <div className="editor-side-panel">
+      <div style={{ padding: '12px 16px 0' }}>
+        <PipelineStatusStrip articleId={articleId} />
+      </div>
       <div data-tour="content-score" className="editor-side-panel-score">
         <SentryPanelHeader
           title={(
@@ -671,7 +690,8 @@ const ContentScorePanel = ({
           content={displayContent}
           ai={displayAi}
           hasAi={hasAi}
-          deltas={scoreDeltas}
+          deltas={trioDeltas}
+          deltaTitles={trioDeltaTitles}
           onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
           onAiClick={() => { setWriteSection('ai'); setView('write'); }}
         />

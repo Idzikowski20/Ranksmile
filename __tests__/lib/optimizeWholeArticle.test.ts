@@ -1,6 +1,28 @@
 import { buildWholeArticlePrompt } from '../../lib/optimizeWholeArticle';
 import { buildEffortOptimizeGuidance } from '../../lib/contentEffort';
 import type { ArticleContext } from '../../lib/articleContext';
+import type { ScoreData } from '../../lib/contentScore';
+
+function ctxWithTerms(terms: ScoreData['terms']): ArticleContext {
+  return {
+    articleId: 1,
+    keyword: 'darmowa strona internetowa',
+    scoreData: {
+      terms,
+      words_target: 1500,
+      words_min: 1000,
+      words_max: 2000,
+      headings_target: 10,
+      headings_min: 6,
+      headings_max: 14,
+    },
+    breakdown: null,
+    coverage: null,
+    paa: [],
+    terms: [],
+    competitors: [],
+  };
+}
 
 describe('optimizeWholeArticle prompt v2', () => {
   it('includes human-readable structure rules (not thin heading spam)', () => {
@@ -17,6 +39,51 @@ describe('optimizeWholeArticle prompt v2', () => {
     expect(systemPrompt).toContain('≈120–450 characters');
     expect(systemPrompt).not.toContain('MANY H2/H3');
     expect(systemPrompt).not.toContain('100–200 characters of plain text (NOT words)');
+  });
+
+  it('with high SEO+AI (minimal mode) still focuses SEO terms when NLP gaps remain', () => {
+    // Reproduces: SEO 85 / AI 68 → selectOptimizeMode = minimal → previously forced
+    // ai-coverage and never asked the model to weave missing multi-word terms.
+    const html = '<p>' + Array.from({ length: 25 }, () => 'darmowa').join(' ') + ' internetowa</p>';
+    const ctx = ctxWithTerms([
+      { term: 'darmowa', target_count: 2 },
+      { term: 'kreator stron www', target_count: 3 },
+      { term: 'notion strona internetowa', target_count: 3 },
+      { term: 'wix strona internetowa', target_count: 3 },
+    ]);
+    const { systemPrompt, focus, reason } = buildWholeArticlePrompt({
+      ctx,
+      html,
+      guidelines: [],
+      seoScore: 85,
+      aiScore: 68,
+      phase: 'first_run',
+    });
+    expect(focus).toBe('seo-terms');
+    expect(reason).toBe('Whole-article SEO terms');
+    expect(systemPrompt).toMatch(/kreator stron www/);
+    expect(systemPrompt).toMatch(/notion strona internetowa/);
+    expect(systemPrompt).toMatch(/0\/3|current 0|0\/target/i);
+  });
+
+  it('instructs reducing overused short roots while filling multi-word gaps', () => {
+    const html = '<p>' + Array.from({ length: 23 }, () => 'darmowa').join(' ') + '</p>';
+    const ctx = ctxWithTerms([
+      { term: 'darmowa', target_count: 2 },
+      { term: 'kreator stron www', target_count: 3 },
+    ]);
+    const { systemPrompt, focus } = buildWholeArticlePrompt({
+      ctx,
+      html,
+      guidelines: [],
+      seoScore: 85,
+      aiScore: 68,
+      phase: 'first_run',
+    });
+    expect(focus).toBe('seo-terms');
+    expect(systemPrompt).toMatch(/OVERUSED|reduce|odchud/i);
+    expect(systemPrompt).toMatch(/darmowa/);
+    expect(systemPrompt).toMatch(/kreator stron www/);
   });
 
   it('injects EFFORT gaps from fail/warn checklist into the AO system prompt', () => {

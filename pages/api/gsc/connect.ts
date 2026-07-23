@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { auth } from '@googleapis/searchconsole';
+import { GOOGLE_OAUTH_SCOPES } from '../../../lib/gscAccounts';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { getCurrentUserId } from '../../../utils/getUser';
@@ -45,12 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: [
-      'openid',
-      'email',
-      'profile',
-      'https://www.googleapis.com/auth/webmasters.readonly',
-    ],
+    scope: [...GOOGLE_OAUTH_SCOPES],
     state,
     prompt: 'consent select_account',
   });

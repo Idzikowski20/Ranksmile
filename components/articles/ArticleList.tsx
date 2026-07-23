@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Gauge } from '../core';
+import GeneratingStage from './GeneratingStage';
 
 interface Article {
   id: number;
@@ -320,7 +321,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
         // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
         const score = typeof article.content_score === 'number' ? article.content_score : null;
 
-        // Analyzing state — simplified row with spinner
+        // Analyzing state — nc-gen mini stage (same language as /generating)
         if (article.status === 'analyzing') {
           return (
             <Link href={`/articles/${article.id}`} key={article.id} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -336,37 +337,27 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 paddingRight: 24,
                 gap: 12,
                 userSelect: 'none',
-                opacity: 0.7,
+                opacity: 0.85,
                 cursor: 'pointer',
               }}
             >
-              {/* Left: Spinner */}
               <div
                 style={{
                   display: 'flex',
                   height: '100%',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  paddingLeft: 24,
-                  paddingRight: 12,
+                  paddingLeft: 16,
+                  paddingRight: 8,
                   width: 84,
                   flexShrink: 0,
                 }}
               >
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    border: '2.5px solid #E4E4E7',
-                    borderTopColor: '#F29964',
-                    borderRadius: '50%',
-                    animation: 'spin 0.7s linear infinite',
-                  }}
-                />
+                <GeneratingStage size="xs" showProgress={false} />
               </div>
 
               {/* Main content */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
                 <span
                   style={{
                     fontSize: 14,
@@ -392,6 +383,9 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 >
                   Analyzing content…
                 </span>
+                <div className="nc-gen-progress" style={{ maxWidth: 180, height: 4, marginTop: 4 }} aria-hidden>
+                  <div className="nc-gen-progress-fill nc-gen-progress-fill--indeterminate" />
+                </div>
               </div>
 
               {/* Right: delete button */}

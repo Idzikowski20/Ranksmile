@@ -431,7 +431,7 @@ const PerformancePage: NextPage = () => {
   const { data: scData, isLoading } = useQuery(
     ['sc-domain-performance', slug, performanceQuery],
     async () => {
-      const response = await fetch(`/api/searchconsole?${performanceQuery}`);
+      const response = await fetch(`/api/gsc/search-data?${performanceQuery}`);
       return response.json();
     },
     { enabled: !!slug, staleTime: 0, keepPreviousData: true },
@@ -440,7 +440,7 @@ const PerformancePage: NextPage = () => {
   const { data: baseScData } = useQuery(
     ['sc-domain-performance-base', slug],
     async () => {
-      const response = await fetch(`/api/searchconsole?domain=${slug}`);
+      const response = await fetch(`/api/gsc/search-data?domain=${slug}`);
       return response.json();
     },
     { enabled: !!slug, staleTime: 5 * 60 * 1000 },
