@@ -2,13 +2,8 @@ import Cryptr from 'cryptr';
 import { auth } from '@googleapis/searchconsole';
 import db from '../database/database';
 import GscAccount from '../database/models/gscAccount';
-import { hasGbpManageScope } from './googleOAuthScopes';
 
-export {
-  GOOGLE_OAUTH_SCOPES,
-  GBP_MANAGE_SCOPE,
-  hasGbpManageScope,
-} from './googleOAuthScopes';
+export { GOOGLE_OAUTH_SCOPES } from './googleOAuthScopes';
 
 let gscIndexesFixed = false;
 /**
@@ -112,40 +107,6 @@ export const buildOAuthClientFromAccount = (account: GscAccountRecord) => {
   oauth2.setCredentials({ refresh_token: decryptToken(account.refresh_token) });
   return oauth2;
 };
-
-export type GbpTokenResult =
-  | { ok: true; accessToken: string; account: GscAccountRecord }
-  | { ok: false; code: 'no_account' | 'needs_reconnect' | 'token_error'; reason?: string };
-
-/** Resolve a usable Google access token that includes GBP manage scope. */
-export async function getGbpAccessTokenForUser(userId: string): Promise<GbpTokenResult> {
-  const accounts = await getAccountsForUser(userId);
-  const account = accounts[0];
-  if (!account) {
-    return { ok: false, code: 'no_account' };
-  }
-  if (!hasGbpManageScope(account.scopes || '')) {
-    return { ok: false, code: 'needs_reconnect', reason: 'missing_business_manage_scope' };
-  }
-  try {
-    const oauthClient = buildOAuthClientFromAccount(account);
-    const tokenResponse = await oauthClient.getAccessToken();
-    const accessToken = typeof tokenResponse === 'string'
-      ? tokenResponse
-      : tokenResponse?.token;
-    if (!accessToken) {
-      return { ok: false, code: 'token_error', reason: 'empty_access_token' };
-    }
-    return { ok: true, accessToken, account };
-  } catch (err) {
-    const e = err as { response?: { data?: { error?: string } }; message?: string };
-    const detail = e?.response?.data?.error || e?.message || String(err);
-    if (/invalid_grant/i.test(detail)) {
-      return { ok: false, code: 'needs_reconnect', reason: detail };
-    }
-    return { ok: false, code: 'token_error', reason: detail };
-  }
-}
 
 export type AccountTokenStatus = { valid: boolean; expired: boolean; reason?: string };
 

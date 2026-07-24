@@ -2,7 +2,7 @@ import Link from 'next/link';
 import React, { useState } from 'react';
 import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
 import { Button } from '../core';
-import { IconGoogleColor } from '../local/icons';
+import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';
 import {
   authDividerLineStyle,

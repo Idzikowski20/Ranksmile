@@ -52,14 +52,9 @@ export function forEachChartChild(
 }
 
 const CLIP_EXCLUDED_COMPONENT_NAMES = new Set([
-  "Background",
   "Grid",
-  "XAxis",
   "YAxis",
   "BarXAxis",
-  "BarYAxis",
-  "LiveXAxis",
-  "LiveYAxis",
 ]);
 
 const UNDERLAY_COMPONENT_NAMES = new Set(["ReferenceArea", "BarColumnTrack"]);

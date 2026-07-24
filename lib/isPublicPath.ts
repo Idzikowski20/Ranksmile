@@ -6,6 +6,5 @@ export function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/drafts')
     || pathname.startsWith('/invite')
     || pathname === '/'
-    || pathname === '/homepage'
   );
 }
