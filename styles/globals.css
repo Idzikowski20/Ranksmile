@@ -1865,6 +1865,17 @@ html.editor-route .app-content {
   font-family: var(--font-family-primary);
 }
 
+/* Auto-Optimize review bar — status line fade/slide when the label changes. */
+@keyframes aoBarFadeSlideIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes aoBarFadeSlideIn {
+    from, to { opacity: 1; transform: none; }
+  }
+}
+
 /* Whole-article AO review — soft green wash for the new draft */
 .ao-whole-article-preview {
   border-radius: 8px;

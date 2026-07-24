@@ -74,28 +74,38 @@ function effortBlock(ctx: ArticleContext | null, html: string): string {
  * Mode selects a preference, but NLP term debt overrides "minimal/ai polish".
  * SEO gauges can read "ready" (≥66) from structure/keyword placement while most
  * multi-word NLP terms are still 0 — Auto-Optimize must still close those gaps.
+ *
+ * ai-only with an empty coverage snapshot used to force a vague AI focus + "less"
+ * (preserve 90%) → model echoed the article → client "didn't change this time".
+ * Prefer concrete SEO term debt when there are no uncovered AI checkpoints.
  */
 function focusForMode(mode: OptimizeMode, ctx: ArticleContext | null, html: string): StepFocus {
   const gaps = ctx ? computeTermUsageGaps(ctx.scoreData ?? undefined, html) : [];
   const hasTermDebt = gaps.some((g) => g.status === 'missing' || g.status === 'low' || g.status === 'overuse');
+  const uncovered = ctx ? uncoveredAiCheckpoints(ctx) : [];
 
   if (mode === 'ai-only') {
-    // Truly weak AI Search: prefer AI first even if terms are incomplete.
-    return 'ai-coverage';
+    if (uncovered.length > 0) return 'ai-coverage';
+    if (hasTermDebt) return 'seo-terms';
+    if ((ctx?.paa?.length ?? 0) > 0) return 'ai-coverage';
+    return 'readability';
   }
   if (mode === 'seo-first') return 'seo-terms';
   if (hasTermDebt) return 'seo-terms';
   if (mode === 'minimal') return 'ai-coverage';
-
-  const uncovered = ctx ? uncoveredAiCheckpoints(ctx) : [];
   if (uncovered.length > 0) return 'ai-coverage';
   return 'readability';
 }
 
+/**
+ * `less` (= preserve ≥90% wording) is for polish passes. Large AI/SEO gaps need
+ * `normal` or the whole-article path echoes the input and AO reports no_change.
+ */
 function editModeForFocus(focus: StepFocus, mode: OptimizeMode): EditMode {
-  if (mode === 'ai-only' || mode === 'minimal') return 'less';
-  if (focus === 'ai-coverage') return 'less';
   if (focus === 'seo-terms') return 'normal';
+  if (mode === 'ai-only') return 'normal';
+  if (mode === 'minimal') return 'less';
+  if (focus === 'ai-coverage') return 'less';
   return 'less';
 }
 
@@ -209,6 +219,7 @@ export function buildWholeArticlePrompt(opts: {
 
   // When minimal mode still has term debt, allow normal (not patch-only) edits so
   // the model can redistribute phrases — "less" was too timid for 20+ missing terms.
+  // ai-only already uses normal via editModeForFocus.
   const effectiveEditMode: EditMode =
     opts.focusInstruction
       ? 'less'

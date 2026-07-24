@@ -12,6 +12,7 @@ import {
    isUsableEdit,
    isUsableWholeArticleEdit,
    shouldChargeCredit,
+   resolveOptimizeDoneOutcome,
 } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
 import { computeOverallContentScore } from '../../../lib/aiSearchScore';
@@ -288,6 +289,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const MAX_ROUNDS = Math.min(6, Math.max(1, Number(maxRounds) || maxRoundsForPhase(phase) || DEFAULT_MAX_ROUNDS));
 
       let changedCount = 0;
+      let rejectedUnusable = 0;
       let aiTokens = 0;
       let roundsRun = 0;
       let finalSeo = 0;
@@ -332,6 +334,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const MAX_ATTEMPTS = 3;
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
                try {
+                  const surgicalHint = attempt > 1
+                     ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
+                       + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
+                     : '';
                   const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -341,7 +347,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         temperature: 0.3,
                         messages: [
                            { role: 'system', content: promptPack.systemPrompt },
-                           { role: 'user', content: `${promptPack.userInstruction}\n\n${workingHtml}` },
+                           { role: 'user', content: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}` },
                         ],
                      }),
                      signal: controller.signal,
@@ -350,7 +356,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   const data = parseChatCompletion(await aiRes.json());
                   aiTokens += data.totalTokens;
                   const cleaned = stripFences(data.content);
-                  if (isUsableWholeArticleEdit(cleaned, workingHtml, data.finishReason)) newHtml = cleaned;
+                  if (!isUsableWholeArticleEdit(cleaned, workingHtml, data.finishReason)) {
+                     rejectedUnusable += 1;
+                     // Truncate / too-short: retry with surgical hint instead of accepting "no change".
+                     if (attempt < MAX_ATTEMPTS) continue;
+                     break;
+                  }
+                  newHtml = cleaned;
 
                   const issues = structureIssues(newHtml);
                   if (issues.length > 0 && attempt === 1) {
@@ -383,7 +395,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                            const retryData = parseChatCompletion(await retryRes.json());
                            aiTokens += retryData.totalTokens;
                            const retryCleaned = stripFences(retryData.content);
-                           if (isUsableWholeArticleEdit(retryCleaned, workingHtml, retryData.finishReason)) newHtml = retryCleaned;
+                           if (isUsableWholeArticleEdit(retryCleaned, workingHtml, retryData.finishReason)) {
+                              newHtml = retryCleaned;
+                           } else {
+                              rejectedUnusable += 1;
+                           }
                         }
                      } catch { /* non-fatal */ }
                   }
@@ -430,14 +446,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const stillUncovered = collectUncoveredAiQuestions(liveItems).length;
             if ((hitContentTarget || hitSeoAi) && stillUncovered === 0) break;
             if ((hitContentTarget || hitSeoAi) && !roundChanged) break;
-            if (!roundChanged) break;
+            // One no-op is not "done" while still far from targets — the next round rebuilds
+            // the prompt (mode/focus can shift after a partial FAQ-less pass). Stop after 2.
+            if (!roundChanged && round >= 2) break;
+            if (!roundChanged && finalContent >= TARGET_CONTENT_SCORE - 5) break;
          }
 
-         // FAQ round — answer all remaining AI Search questions at the end of the article
-         if (!aborted && ctx?.coverage?.items?.length) {
+         // FAQ round — answer remaining AI Search questions (coverage items, else PAA fallback).
+         // Without this fallback, articles with AI≈19 and no coverage snapshot never get a FAQ
+         // and whole-article "less" edits used to echo → "didn't change this time".
+         if (!aborted && ctx && ((ctx.coverage?.items?.length ?? 0) > 0 || (ctx.paa?.length ?? 0) > 0)) {
             const plainForFaq = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-            const liveForFaq = liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml);
-            const uncovered = collectUncoveredAiQuestions(liveForFaq);
+            const liveForFaq = ctx.coverage?.items?.length
+               ? liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml)
+               : [];
+            let uncovered = collectUncoveredAiQuestions(liveForFaq);
+            if (uncovered.length === 0 && ctx.paa?.length) {
+               uncovered = ctx.paa.slice(0, 12).map((label, i) => ({ id: `paa-${i}`, label }));
+            }
             if (uncovered.length > 0) {
                const faqPrompt = buildFaqSectionPrompt({
                   keyword: ctx.keyword || '',
@@ -523,10 +549,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (aborted) return;
 
       const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
+      const outcome = resolveOptimizeDoneOutcome({
+         changedCount,
+         rejectedUnusable,
+         initialSeo,
+         initialAi,
+         initialContent,
+         targetSeo: TARGET_SEO_SCORE,
+         targetAi: TARGET_AI_SCORE,
+         targetContent: TARGET_CONTENT_SCORE,
+      });
 
       sse(res, 'done', {
          changedCount, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,
-         creditDeducted, rounds: roundsRun, phase,
+         creditDeducted, rounds: roundsRun, phase, outcome,
          seo: finalSeo, ai: finalAi, content: finalContent,
          targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
          trimmed: trimmedMeta.trimmed, ignoredLift: trimmedMeta.ignoredLift,

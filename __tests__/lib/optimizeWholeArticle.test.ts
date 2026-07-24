@@ -121,6 +121,29 @@ describe('optimizeWholeArticle prompt v2', () => {
     expect(userInstruction).toContain("WHAT'S MISSING");
     expect(userInstruction).toContain('EFFORT gaps');
   });
+
+  it('ai-only (SEO ready, AI weak) uses normal edits — not preserve-90% less mode', () => {
+    // Reproduces: SEO 73 / AI 19 / overall ~49 → selectOptimizeMode = ai-only → previously
+    // forced less ("preserve more than 90%") and the model echoed the article → no_change.
+    const html = '<p>Short article about gardening without useful FAQ or NLP coverage.</p>';
+    const ctx = ctxWithTerms([
+      { term: 'ogród warzywny', target_count: 4 },
+      { term: 'kompost', target_count: 3 },
+    ]);
+    const { editMode, focus, systemPrompt, userInstruction } = buildWholeArticlePrompt({
+      ctx,
+      html,
+      guidelines: [],
+      seoScore: 73,
+      aiScore: 19,
+      phase: 'first_run',
+    });
+    expect(focus).toBe('seo-terms');
+    expect(editMode).toBe('normal');
+    expect(systemPrompt).not.toContain('preserve more than 90%');
+    expect(userInstruction).not.toMatch(/minimal, targeted edits/);
+    expect(systemPrompt).toMatch(/ogród warzywny|kompost/);
+  });
 });
 
 describe('buildEffortOptimizeGuidance', () => {

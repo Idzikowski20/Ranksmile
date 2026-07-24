@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+﻿import React, { type ReactNode } from 'react';
 import {
   authBottomBarStyle,
   authCardStyle,
@@ -18,13 +18,13 @@ type AuthPageLayoutProps = {
 export default function AuthPageLayout({
   children,
   topAction = null,
-  bottomText = 'Joining product teams shipping SEO content faster with Surfy',
+  bottomText = 'Joining product teams shipping SEO content faster with Ranksmile',
 }: AuthPageLayoutProps) {
   return (
     <div style={authPageStyle}>
-      {/* Relume stack: base #222 → oversized gradient SVG → noise overlay */}
+      {/* Mesh gradient stage */}
       <img
-        src="/textures/gradient.svg"
+        src="/textures/auth-mesh.png"
         alt=""
         aria-hidden="true"
         style={authGradientImageStyle}

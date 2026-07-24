@@ -2,8 +2,8 @@ import type { CSSProperties } from 'react';
 
 export const AUTH_FONT = 'var(--font-family-primary)';
 
-/** Relume stage base — matches `#222` behind gradient SVG. */
-export const AUTH_SHELL_BG = '#222222';
+/** Soft mesh stage base — matches auth-mesh.png (blue → lavender). */
+export const AUTH_SHELL_BG = '#C5D4F0';
 
 export const authPageStyle: CSSProperties = {
   position: 'relative',
@@ -20,23 +20,20 @@ export const authPageStyle: CSSProperties = {
 };
 
 /**
- * Relume-style gradient plane: oversized SVG image (not CSS radials).
- * Matches RDL: w-[120vw] h-[175vh] min-w-[137.5rem], absolute inset-y 0%, centered.
+ * Full-bleed mesh gradient plane (auth-mesh.png).
+ * Covers the stage edge-to-edge; slight overscale avoids letterboxing on wide screens.
  */
 export const authGradientImageStyle: CSSProperties = {
   position: 'absolute',
   zIndex: 0,
-  top: 0,
-  left: '50%',
-  transform: 'translateX(-50%)',
-  width: '120vw',
-  minWidth: '137.5rem',
-  height: '175vh',
+  inset: 0,
+  width: '100%',
+  height: '100%',
   maxWidth: 'none',
   pointerEvents: 'none',
   userSelect: 'none',
   objectFit: 'cover',
-  objectPosition: 'center top',
+  objectPosition: 'center center',
 };
 
 /** Film grain — Relume `noise.webp` tile @ 250px, mix-blend overlay. */
@@ -81,7 +78,7 @@ export const authCardStyle: CSSProperties = {
   borderRadius: 8,
   padding: '32px 28px 28px',
   boxSizing: 'border-box',
-  boxShadow: '0 16px 48px rgba(0, 0, 0, 0.35)',
+  boxShadow: '0 12px 40px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(24, 18, 37, 0.08)',
 };
 
 export const authBottomBarStyle: CSSProperties = {
@@ -91,7 +88,7 @@ export const authBottomBarStyle: CSSProperties = {
   padding: '0 24px 32px',
   fontSize: 13,
   lineHeight: 1.45,
-  color: 'rgba(255, 255, 255, 0.5)',
+  color: 'rgba(24, 18, 37, 0.55)',
   flexShrink: 0,
 };
 
@@ -217,9 +214,9 @@ export const authPillLinkStyle: CSSProperties = {
   gap: 4,
   padding: '8px 14px',
   borderRadius: 8,
-  border: '1px solid rgba(255, 255, 255, 0.14)',
-  background: 'rgba(255, 255, 255, 0.04)',
-  color: 'rgba(255, 255, 255, 0.72)',
+  border: '1px solid rgba(24, 18, 37, 0.12)',
+  background: 'rgba(255, 255, 255, 0.55)',
+  color: '#302E36',
   fontSize: 13,
   fontWeight: 500,
   textDecoration: 'none',

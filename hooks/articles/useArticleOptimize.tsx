@@ -502,6 +502,7 @@ export function useArticleOptimize({
             const meta = payload as {
               changedCount: number; total: number; promptVersion: string; creditDeducted: boolean;
               seo?: number; ai?: number; content?: number; rounds?: number; phase?: string;
+              outcome?: 'improved' | 'already_optimal' | 'no_usable_edit' | 'no_change';
             };
             optimizeMetaRef.current = {
               changedCount: meta.changedCount,
@@ -520,9 +521,17 @@ export function useArticleOptimize({
               setOptimizeDocTick((t) => t + 1);
               setOptimizeState('reviewing');
               setAutoOptimizeStatus(`Review ${meta.changedCount} section${meta.changedCount === 1 ? '' : 's'}…`);
-            } else {
+            } else if (meta.outcome === 'already_optimal') {
               setAutoOptimizeStatus('Already well-optimized — no changes needed.');
               toast('Your article is well-optimized — we didn’t find anything to improve. No credit deducted.', { icon: '✨', duration: 6000 });
+              resetIdle();
+            } else if (meta.outcome === 'no_usable_edit') {
+              setAutoOptimizeStatus('Couldn’t apply rewrite — try again.');
+              toast.error('Auto-Optimize got an incomplete rewrite and kept your article unchanged. Try again.', { duration: 6000 });
+              resetIdle();
+            } else {
+              setAutoOptimizeStatus('No changes produced.');
+              toast('Auto-Optimize didn’t change the article this time. No credit deducted.', { duration: 6000 });
               resetIdle();
             }
             return;

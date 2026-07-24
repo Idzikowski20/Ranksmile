@@ -193,6 +193,7 @@ it('does not replace a whole article with a token-limited completion', async () 
 
   expect(events.find((e) => e.event === 'section')).toBeUndefined();
   expect(events.find((e) => e.event === 'done')?.data.changedCount).toBe(0);
+  expect(events.find((e) => e.event === 'done')?.data.outcome).toBe('no_usable_edit');
 });
 
 it('done event carries trimmed + ignoredLift', async () => {

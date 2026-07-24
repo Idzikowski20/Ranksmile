@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import SurfyMessage from './SurfyMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconSurfy from './IconSurfy';
+import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 import AILoadingState from './AILoadingState';
 import AITextLoading from './AITextLoading';
 import SurfyStreamingMessage from './SurfyStreamingMessage';
@@ -107,7 +108,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: SurfyPanelApi; onBack: (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 12px 32px' }}>
         <SentryEmptyState
           title="No conversations yet"
-          description="Your chats with Surfy are saved here. Start one to optimise this article."
+          description="Your chats with Smily are saved here. Start one to optimise this article."
           actions={(
             <Button
               type="button"
@@ -260,17 +261,17 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 48, padding: '0 8px 0 14px', borderBottom: '1px solid #f4f4f5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <IconSurfy size={18} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>Surfy</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>Smily</span>
           <span
             style={{ position: 'relative', display: 'inline-flex' }}
             onMouseEnter={() => setHelpOpen(true)} onMouseLeave={() => setHelpOpen(false)}
           >
-            <span aria-label="About Surfy" style={{ display: 'inline-flex', color: '#9f9fa9', cursor: 'help' }}>
+            <span aria-label="About Smily" style={{ display: 'inline-flex', color: '#9f9fa9', cursor: 'help' }}>
               <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10} /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
             </span>
             {helpOpen && (
               <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: -2, zIndex: 250, width: 210, background: '#18181b', color: '#fff', fontSize: 11.5, lineHeight: '16px', padding: '8px 10px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
-                <strong style={{ fontWeight: 600 }}>Pre alpha</strong> — Surfy can make mistakes; review changes before applying.
+                <strong style={{ fontWeight: 600 }}>Pre alpha</strong> — Smily can make mistakes; review changes before applying.
               </span>
             )}
           </span>
@@ -301,7 +302,10 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
           <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div ref={s.scrollRef} onScroll={onScroll} className="styled-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {empty && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 8 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, paddingBottom: 24 }}>
+                <div style={{ width: 96, height: 110 }}>
+                  <BounceSmileyAnimation entrance />
+                </div>
                 <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>What can I help you with?</div>
               </div>
             )}
@@ -371,7 +375,7 @@ const SurfyChatPanel = ({ s }: { s: SurfyPanelApi }) => {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#f29964" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
                   <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#52525c' }}>
-                    Surfy chce opublikować {response.pendingAction.title ? `„${response.pendingAction.title}” ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#18181b' }}>zapisany</strong> artykuł.
+                    Smily chce opublikować {response.pendingAction.title ? `„${response.pendingAction.title}” ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#18181b' }}>zapisany</strong> artykuł.
                   </div>
                 </div>
                 {response.pendingAction.warning && (

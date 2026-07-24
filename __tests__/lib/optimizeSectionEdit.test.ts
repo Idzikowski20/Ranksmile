@@ -1,9 +1,12 @@
 import {
   computeMissingTerms,
+  computeOverusedTerms,
+  computeTermUsageGaps,
   stripFences,
   isUsableEdit,
   isUsableWholeArticleEdit,
   shouldChargeCredit,
+  resolveOptimizeDoneOutcome,
 } from '../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../lib/contentScore';
 
@@ -15,6 +18,32 @@ const baseScore = (terms: ScoreData['terms']): ScoreData => ({
   headings_target: 10,
   headings_min: 8,
   headings_max: 12,
+});
+
+describe('computeTermUsageGaps', () => {
+  it('is a function that returns typed gaps', () => {
+    expect(typeof computeTermUsageGaps).toBe('function');
+    const score = baseScore([
+      { term: 'quantum', target_count: 3 },
+      { term: 'garden', target_count: 2 },
+      { term: 'soil', target_count: 2 },
+    ]);
+    const html = '<p>garden garden garden garden garden garden garden. soil soil.</p>';
+    const gaps = computeTermUsageGaps(score, html);
+    expect(gaps.find((g) => g.term === 'quantum')?.status).toBe('missing');
+    expect(gaps.find((g) => g.term === 'garden')?.status).toBe('overuse');
+    expect(gaps.find((g) => g.term === 'soil')?.status).toBe('ok');
+  });
+
+  it('marks underused (nonzero but below ~70%) as low', () => {
+    const score = baseScore([{ term: 'compost', target_count: 10 }]);
+    const gaps = computeTermUsageGaps(score, '<p>Use compost for the soil.</p>');
+    expect(gaps[0]?.status).toBe('low');
+  });
+
+  it('returns an empty array when scoreData is undefined', () => {
+    expect(computeTermUsageGaps(undefined, '<p>anything</p>')).toEqual([]);
+  });
 });
 
 describe('computeMissingTerms', () => {
@@ -43,6 +72,19 @@ describe('computeMissingTerms', () => {
 
   it('returns an empty array when there are no terms', () => {
     expect(computeMissingTerms(baseScore([]), '<p>anything</p>')).toEqual([]);
+  });
+});
+
+describe('computeOverusedTerms', () => {
+  it('reports terms above ~150% of target', () => {
+    const score = baseScore([{ term: 'garden', target_count: 2 }]);
+    const html = '<p>garden garden garden garden garden garden garden.</p>';
+    expect(computeOverusedTerms(score, html)).toContain('garden');
+  });
+
+  it('does not report terms in range', () => {
+    const score = baseScore([{ term: 'soil', target_count: 2 }]);
+    expect(computeOverusedTerms(score, '<p>soil soil.</p>')).not.toContain('soil');
   });
 });
 
@@ -109,5 +151,39 @@ describe('shouldChargeCredit', () => {
 
   it('does not charge when no tokens were measured', () => {
     expect(shouldChargeCredit(3, 0)).toBe(false);
+  });
+});
+
+describe('resolveOptimizeDoneOutcome', () => {
+  const base = {
+    changedCount: 0,
+    rejectedUnusable: 0,
+    initialSeo: 73,
+    initialAi: 19,
+    initialContent: 49,
+    targetSeo: 80,
+    targetAi: 65,
+    targetContent: 80,
+  };
+
+  it('returns improved when there were HTML changes', () => {
+    expect(resolveOptimizeDoneOutcome({ ...base, changedCount: 1 })).toBe('improved');
+  });
+
+  it('returns no_usable_edit when the truncate guard rejected rewrites (score 49 case)', () => {
+    expect(resolveOptimizeDoneOutcome({ ...base, rejectedUnusable: 2 })).toBe('no_usable_edit');
+  });
+
+  it('returns already_optimal only when scores already meet targets', () => {
+    expect(resolveOptimizeDoneOutcome({
+      ...base,
+      initialSeo: 85,
+      initialAi: 70,
+      initialContent: 82,
+    })).toBe('already_optimal');
+  });
+
+  it('returns no_change when below targets but LLM produced an identical article', () => {
+    expect(resolveOptimizeDoneOutcome(base)).toBe('no_change');
   });
 });

@@ -1,12 +1,15 @@
 import React from 'react';
+import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 
 const F = 'var(--font-family-primary)';
 
-/** Brand mark — purple square + wordmark. */
+/** Brand mark — Smily logo + Ranksmile wordmark. */
 const Brand = () => (
-  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-    <span style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #8b5cff, #F29964)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, boxShadow: '0 4px 14px rgba(242,153,100,0.45)' }}>S</span>
-    <span style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.01em', color: '#fafafa' }}>Surfer</span>
+  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+    <span style={{ width: 36, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+      <BounceSmileyAnimation compact size={36} entrance={false} />
+    </span>
+    <span style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.01em', color: '#fafafa' }}>Ranksmile</span>
   </div>
 );
 
@@ -39,21 +42,24 @@ const AuthSplitLayout = ({ children, title, subtitle }: { children: React.ReactN
     </main>
 
     {/* Right — brand panel */}
-    <aside className="auth-aside" aria-hidden="true" style={{ position: 'relative', overflow: 'hidden', flexDirection: 'column', justifyContent: 'space-between', padding: 48, background: 'radial-gradient(120% 110% at 0% 0%, #2a1568 0%, #160c33 44%, #0a0a0c 100%)' }}>
+    <aside className="auth-aside" aria-hidden="true" style={{ position: 'relative', overflow: 'hidden', flexDirection: 'column', justifyContent: 'space-between', padding: 48, background: 'radial-gradient(120% 110% at 0% 0%, #0c2a44 0%, #0a1624 44%, #0a0a0c 100%)' }}>
       {/* faint grid texture */}
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '46px 46px', maskImage: 'radial-gradient(80% 80% at 30% 20%, #000, transparent 75%)', WebkitMaskImage: 'radial-gradient(80% 80% at 30% 20%, #000, transparent 75%)', pointerEvents: 'none' }} />
 
       <div style={{ position: 'relative', maxWidth: 460 }}>
+        <div style={{ width: 140, height: 160, marginBottom: 18 }}>
+          <BounceSmileyAnimation entrance />
+        </div>
         <h2 style={{ margin: 0, fontSize: 30, fontWeight: 700, lineHeight: 1.18, letterSpacing: '-0.02em', color: '#fafafa', textWrap: 'balance' as React.CSSProperties['textWrap'] }}>
           Optimize content while you write, not after.
         </h2>
-        <p style={{ margin: '14px 0 0', fontSize: 15, lineHeight: 1.6, color: '#b6aee0', maxWidth: '52ch' }}>
-          Live content scoring, AI-search readiness, and reviewer comments in one editor.
+        <p style={{ margin: '14px 0 0', fontSize: 15, lineHeight: 1.6, color: '#9ec9e8', maxWidth: '52ch' }}>
+          Live content scoring, AI-search readiness, and reviewer comments in one editor — with Smily.
         </p>
       </div>
 
       {/* product mockup */}
-      <div style={{ position: 'relative', marginTop: 36, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(242,153,100,0.18), 0 0 60px rgba(242,153,100,0.22)', transform: 'rotate(-1.4deg)' }}>
+      <div style={{ position: 'relative', marginTop: 36, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(80,185,255,0.18), 0 0 60px rgba(80,185,255,0.18)', transform: 'rotate(-1.4deg)' }}>
         <img src="/article-viewer.png" alt="" style={{ display: 'block', width: '100%', height: 'auto' }} />
       </div>
     </aside>
