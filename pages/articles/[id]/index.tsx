@@ -1601,7 +1601,10 @@ const ArticleEditorPage: NextPage = () => {
               setAutoOptimizeStatus(`Round ${p.round} — refining…`);
             }
           } else if (eventType === 'done') {
-            const meta = payload as { changedCount: number; total: number; promptVersion: string; creditDeducted: boolean; wholeArticle?: boolean };
+            const meta = payload as {
+              changedCount: number; total: number; promptVersion: string; creditDeducted: boolean;
+              wholeArticle?: boolean; outcome?: 'improved' | 'already_optimal' | 'no_usable_edit' | 'no_change';
+            };
             optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted, promptVersion: meta.promptVersion };
             setScanningSectionId(null);
             if (meta.changedCount > 0) {
@@ -1618,10 +1621,17 @@ const ArticleEditorPage: NextPage = () => {
               setOptimizeDocTick((t) => t + 1);
               setOptimizeState('reviewing');
               setAutoOptimizeStatus('Review article changes…');
-            } else {
-              // AO-8a terminal outcome (b): already well-optimized — no changes, no credit.
+            } else if (meta.outcome === 'already_optimal') {
               setAutoOptimizeStatus('Already well-optimized — no changes needed.');
               toast('Your article is well-optimized — we didn’t find anything to improve. No credit deducted.', { icon: '✨', duration: 6000 });
+              resetIdle();
+            } else if (meta.outcome === 'no_usable_edit') {
+              setAutoOptimizeStatus('Couldn’t apply rewrite — try again.');
+              toast.error('Auto-Optimize got an incomplete rewrite and kept your article unchanged. Try again.', { duration: 6000 });
+              resetIdle();
+            } else {
+              setAutoOptimizeStatus('No changes produced.');
+              toast('Auto-Optimize didn’t change the article this time. No credit deducted.', { duration: 6000 });
               resetIdle();
             }
             return;

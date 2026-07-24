@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
 
@@ -124,7 +124,7 @@ const SidebarLaunchpad = () => {
       >
         <button
           type="button"
-          aria-label="Open Surfer setup"
+          aria-label="Open Ranksmile setup"
           onClick={() => setOpen((o) => !o)}
           onMouseEnter={() => setPillHover(true)}
           onMouseLeave={() => setPillHover(false)}

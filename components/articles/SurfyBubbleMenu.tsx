@@ -11,6 +11,9 @@ import {
   SURFY_VOICE_OPTIONS,
   surfyPresetVoice,
 } from '../../lib/surfyContextMenu';
+import IconSmily from './IconSmily';
+
+const IconSurfy = IconSmily;
 
 const IconBold = () => (
   <svg viewBox="0 0 256 256" width="20" height="20" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
@@ -57,25 +60,6 @@ const IconClose = () => (
 const IconClearFormatting = () => (
   <svg viewBox="0 0 256 256" width="20" height="20" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
     <path fill="currentColor" d="M225 80.4L183.6 39a24 24 0 0 0-33.94 0L31 157.66a24 24 0 0 0 0 33.94l30.06 30.06a8 8 0 0 0 5.68 2.34H216a8 8 0 0 0 0-16h-84.7l93.7-93.66a24 24 0 0 0 0-33.94M108.68 208H70.05l-27.72-27.72a8 8 0 0 1 0-11.31L96 115.31L148.69 168Zm105-105L160 156.69L107.31 104L161 50.34a8 8 0 0 1 11.32 0l41.38 41.38a8 8 0 0 1 0 11.31Z"/>
-  </svg>
-);
-
-const IconSurfy = () => (
-  <svg width="20" height="20" viewBox="0 0 32 32" fill="none" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-    <defs>
-      <linearGradient id="surfy-bubble-gradient" x1="2.01449e-7" y1="31.8993" x2="36.6637" y2="25.0444" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#FF4087"/>
-        <stop offset="1" stopColor="#FFC056"/>
-      </linearGradient>
-    </defs>
-    <path d="M3.07678 9.07672C3.07678 5.76301 5.76307 3.07672 9.07678 3.07672H22.9233C26.237 3.07672 28.9233 5.76301 28.9233 9.07672V22.9233C28.9233 26.237 26.237 28.9233 22.9233 28.9233H9.07678C5.76307 28.9233 3.07678 26.237 3.07678 22.9233V9.07672Z" fill="white"/>
-    <path fillRule="evenodd" clipRule="evenodd" d="M8.49224 2C4.92508 2 2.07498 4.94359 2.07498 8.46154L2 23.5385C2 27.1282 4.92508 30 8.4209 30H23.4743C27.0415 30 30 27.0564 30 23.5385L29.9722 8.05139C29.7595 4.65552 26.9073 2 23.5457 2H8.49224ZM27.1802 8.29085C27.0905 6.36259 25.4884 4.8718 23.617 4.8718H8.4209C6.49463 4.8 4.85373 6.45128 4.85373 8.46154L4.84956 23.5385H4.85373C4.85373 25.5487 6.49463 27.1282 8.4209 27.1282H23.4743C25.472 27.1282 27.1463 25.4769 27.1463 23.5385L27.1802 8.29085Z" fill="url(#surfy-bubble-gradient)"/>
-    <g style={{ transformOrigin: '11px 14px', animation: 'surfy-blink 4s ease-in-out infinite' }}>
-      <path d="M9.84155 11.1844C9.84155 10.3709 9.84155 9.96409 10.0943 9.71135C10.347 9.45862 10.7538 9.45862 11.5673 9.45862H12.1013C12.9148 9.45862 13.3216 9.45862 13.5743 9.71135C13.8271 9.96409 13.8271 10.3709 13.8271 11.1844V16.602C13.8271 17.4155 13.8271 17.8223 13.5743 18.075C13.3216 18.3278 12.9148 18.3278 12.1013 18.3278H11.5673C10.7538 18.3278 10.347 18.3278 10.0943 18.075C9.84155 17.8223 9.84155 17.4155 9.84155 16.602V11.1844Z" fill="black"/>
-    </g>
-    <g style={{ transformOrigin: '20px 14px', animation: 'surfy-blink 4s ease-in-out 0.15s infinite' }}>
-      <path d="M18.1047 11.1844C18.1047 10.3709 18.1047 9.96409 18.3575 9.71135C18.6102 9.45862 19.017 9.45862 19.8305 9.45862H20.3645C21.178 9.45862 21.5848 9.45862 21.8375 9.71135C22.0902 9.96409 22.0902 10.3709 22.0902 11.1844V16.602C22.0902 17.4155 22.0902 17.8223 21.8375 18.075C21.5848 18.3278 21.178 18.3278 20.3645 18.3278H19.8305C19.017 18.3278 18.6102 18.3278 18.3575 18.075C18.1047 17.8223 18.1047 17.4155 18.1047 16.602V11.1844Z" fill="black"/>
-    </g>
   </svg>
 );
 

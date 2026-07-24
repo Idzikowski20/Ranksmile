@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface Step { target: string; placement: 'bottom' | 'left'; title: string; body: React.ReactNode; }
@@ -7,12 +7,12 @@ interface Step { target: string; placement: 'bottom' | 'left'; title: string; bo
 const STEPS: Step[] = [
   // ── Editor toolbar ──
   {
-    target: 'ask-surfy', placement: 'bottom', title: 'Ask Surfy',
+    target: 'ask-surfy', placement: 'bottom', title: 'Ask Smily',
     body: (
       <>
-        Need to touch-up your content? Ask Surfy, our AI assistant for a hand!
+        Need to touch-up your content? Ask Smily, our AI assistant for a hand!
         <br /><br />
-        💡 Highlight the parts you&apos;d like to edit and click &quot;Ask Surfy&quot; to get started.
+        💡 Highlight the parts you&apos;d like to edit and click &quot;Ask Smily&quot; to get started.
         <br /><br />
         Surfy knows your and competitors&apos; articles and is aware of Content Editor guidelines.
       </>

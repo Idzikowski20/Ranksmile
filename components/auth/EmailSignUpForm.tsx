@@ -1,9 +1,10 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import React, { useState } from 'react';
 import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
 import { Button } from '../core';
 import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';
+import AuthBrandMark from './AuthBrandMark';
 import {
   authDividerLineStyle,
   authDividerTextStyle,
@@ -80,7 +81,8 @@ export default function EmailSignUpForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Create your Surfy account</h1>
+      <AuthBrandMark />
+      <h1 style={authTitleStyle}>Create your Ranksmile account</h1>
       <p style={authSubtitleStyle}>Start shipping SEO content faster.</p>
 
       {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}

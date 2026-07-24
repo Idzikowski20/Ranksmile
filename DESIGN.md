@@ -7,9 +7,10 @@
 
 ## 1. Brand & kontekst
 
-- **Produkt:** SerpBear / Surfy — SEO content workspace (scoring, TipTap, AI).
+- **Produkt:** Ranksmile / Smily — SEO content workspace (scoring, TipTap, AI).
 - **Design language:** **Sentry** (shell, primitives, app pages) + wyjątek **editor zone** (scoring / TipTap layout KEEP).
-- **Akcent brandowy:** Surfy orange **`#F29964`** (nie fiolet Surfera).
+- **Akcent brandowy:** Smily / Ranksmile orange **`#F29964`** (nie fiolet legacy Surfera).
+- **Logo:** Smily bounce mark (`components/pixel-perfect/bounce-smiley-animation.tsx`) — entrance raz przy mount, potem loop rotate.
 - **Tone:** clean, functional, data-dense — zero dekoracji dla dekoracji.
 - **Audience:** zalogowani SEO / content teams.
 
@@ -21,7 +22,7 @@
 |--------|--------|--------|------------|
 | **Sentry shell** | `SentryNav`, topbar, mobile nav | `theme.tsx` + `.sentry-*` / shell CSS | `components/core/*` |
 | **Sentry app** | Dashboard, domains, keywords, AI vis, settings, billing | `theme.tsx` (Rubik, orange accent, Sentry grays) | `core` + `components/sentry-pages/*` |
-| **Editor zone** | TipTap, Surfy chat, Content Score, AO, gauges | KEEP layout; score bands z `lib/scoreColor.ts`; akcent UI = `#F29964` gdzie toczone | Primitives z `core`; widgety w `components/surfer/` |
+| **Editor zone** | TipTap, Smily chat, Content Score, AO, gauges | KEEP layout; score bands z `lib/scoreColor.ts`; akcent UI = `#F29964` gdzie toczone | Primitives z `core`; widgety w `components/surfer/` |
 
 **Reguły:**
 - Nowy kod **poza edytorem** → `components/core` + Emotion / CSS vars Sentry. **Bez** nowych Tailwind klas. Inline styles tylko dla pozycji runtime (popover, caret).
@@ -75,11 +76,11 @@ Import: `import { theme } from 'components/core/theme'` (lub Emotion `Theme`).
 | `content.disabled` | `#878490` | disabled |
 | Shell text | `#FFFFFF` / `#9F9FA9` | nav primary / muted |
 
-### 2.3 Accent & interactive (Surfy / Sentry)
+### 2.3 Accent & interactive (Smily / Sentry)
 
 | Token | Hex | Użycie |
 |-------|-----|--------|
-| **Accent** | `#F29964` | primary CTA fill, focus, active, Surfy |
+| **Accent** | `#F29964` | primary CTA fill, focus, active, Smily |
 | Accent chonk | `#C97D52` | embossed underside (Button primary) |
 | Accent text link | `#E07D42` | `Button` link / content.accent |
 | Focus ring | `#F29964` | `theme.focus.default` |
@@ -225,10 +226,10 @@ Page bg: `#F8F8F9`. Unikaj `#F8F9FF` poza `--zone-editor-bg`.
 
 ## 11. Editor zone (wyjątek)
 
-- Layout TipTap / Write & Optimize / Surfy dock — **KEEP**.
+- Layout TipTap / Write & Optimize / Smily dock — **KEEP**.
 - Score gauges / bands: `lib/scoreColor.ts` (może trzymać legacy purple bands).
-- Surfy primary actions = accent `#F29964` (jak `Button` primary).
-- Autosave / AO review — istniejące wzorce; nie „Surfer redesign”.
+- Smily primary actions = accent `#F29964` (jak `Button` primary).
+- Autosave / AO review — istniejące wzorce; nie „Ranksmile redesign”.
 - Nowe kontrolki w edytorze → `core` Button/Modal, nie custom purple CTA.
 
 ---

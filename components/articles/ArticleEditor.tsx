@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import type { Editor, JSONContent } from '@tiptap/core';
@@ -39,6 +39,7 @@ import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
 import SlashCommand, { SlashItem } from './SlashCommand';
 import SurfyChatPanel, { SurfyPanelApi } from './SurfyChatPanel';
+import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 
 export interface HeadingItem {
@@ -113,24 +114,7 @@ const Sep = () => (
 
 const MAX_SURFY_HISTORY = 20;
 
-const IconSurfy = ({ size = 20 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-    <defs>
-      <linearGradient id="surfy-editor-grad" x1="2.01449e-7" y1="31.8993" x2="36.6637" y2="25.0444" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#FF4087"/>
-        <stop offset="1" stopColor="#FFC056"/>
-      </linearGradient>
-    </defs>
-    <path d="M3.07678 9.07672C3.07678 5.76301 5.76307 3.07672 9.07678 3.07672H22.9233C26.237 3.07672 28.9233 5.76301 28.9233 9.07672V22.9233C28.9233 26.237 26.237 28.9233 22.9233 28.9233H9.07678C5.76307 28.9233 3.07678 26.237 3.07678 22.9233V9.07672Z" fill="white"/>
-    <path fillRule="evenodd" clipRule="evenodd" d="M8.49224 2C4.92508 2 2.07498 4.94359 2.07498 8.46154L2 23.5385C2 27.1282 4.92508 30 8.4209 30H23.4743C27.0415 30 30 27.0564 30 23.5385L29.9722 8.05139C29.7595 4.65552 26.9073 2 23.5457 2H8.49224ZM27.1802 8.29085C27.0905 6.36259 25.4884 4.8718 23.617 4.8718H8.4209C6.49463 4.8 4.85373 6.45128 4.85373 8.46154L4.84956 23.5385H4.85373C4.85373 25.5487 6.49463 27.1282 8.4209 27.1282H23.4743C25.472 27.1282 27.1463 25.4769 27.1463 23.5385L27.1802 8.29085Z" fill="url(#surfy-editor-grad)"/>
-    <g style={{ transformOrigin: '11px 14px', animation: 'surfy-blink 4s ease-in-out infinite' }}>
-      <path d="M9.84155 11.1844C9.84155 10.3709 9.84155 9.96409 10.0943 9.71135C10.347 9.45862 10.7538 9.45862 11.5673 9.45862H12.1013C12.9148 9.45862 13.3216 9.45862 13.5743 9.71135C13.8271 9.96409 13.8271 10.3709 13.8271 11.1844V16.602C13.8271 17.4155 13.8271 17.8223 13.5743 18.075C13.3216 18.3278 12.9148 18.3278 12.1013 18.3278H11.5673C10.7538 18.3278 10.347 18.3278 10.0943 18.075C9.84155 17.8223 9.84155 17.4155 9.84155 16.602V11.1844Z" fill="black"/>
-    </g>
-    <g style={{ transformOrigin: '20px 14px', animation: 'surfy-blink 4s ease-in-out 0.15s infinite' }}>
-      <path d="M18.1047 11.1844C18.1047 10.3709 18.1047 9.96409 18.3575 9.71135C18.6102 9.45862 19.017 9.45862 19.8305 9.45862H20.3645C21.178 9.45862 21.5848 9.45862 21.8375 9.71135C22.0902 9.96409 22.0902 10.3709 22.0902 11.1844V16.602C22.0902 17.4155 22.0902 17.8223 21.8375 18.075C21.5848 18.3278 21.178 18.3278 20.3645 18.3278H19.8305C19.017 18.3278 18.6102 18.3278 18.3575 18.075C18.1047 17.8223 18.1047 17.4155 18.1047 16.602V11.1844Z" fill="black"/>
-    </g>
-  </svg>
-);
+const IconSurfy = IconSmily;
 
 /**
  * A toolbar group rendered as a single trigger button that opens a small
@@ -639,12 +623,12 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
 
       </div>
 
-      {/* Right: Ask Surfy */}
+      {/* Right: Ask Smily */}
       <button
         type="button"
         data-tour="ask-surfy"
         onClick={onAskSurfy}
-        title="Ask Surfy — edit with AI"
+        title="Ask Smily — edit with AI"
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           gap: 6, height: 28, padding: '0 6px 0 2px', borderRadius: 4,
@@ -659,7 +643,7 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
         onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
       >
         <IconSurfy size={20} />
-        Ask Surfy
+        Ask Smily
       </button>
       </div>
 
@@ -945,7 +929,7 @@ async function readSurfyAgentStream(
   return done;
 }
 
-// "/" slash-command menu items. Structural commands run on the live editor; Ask Surfy goes via a ref
+// "/" slash-command menu items. Structural commands run on the live editor; Ask Smily goes via a ref
 // (the handler is defined inside the component). Filtered by the text typed after "/".
 const SlashIcon = ({ d }: { d: string }) => (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
@@ -954,7 +938,7 @@ const SlashIcon = ({ d }: { d: string }) => (
 const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() => void>): SlashItem[] => {
   const del = (editor: Editor, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
   const all: SlashItem[] = [
-    { title: 'Ask Surfy', hint: '/ask', icon: <IconSurfy size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
+    { title: 'Ask Smily', hint: '/ask', icon: <IconSurfy size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
     { title: 'Add an image', hint: '/img', icon: <SlashIcon d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6" />, command: ({ editor, range }) => {
       del(editor, range).run();
       const inp = document.createElement('input');
@@ -1185,7 +1169,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     }, [surfyConvoKey]);
 
-    // Restore the last in-progress conversation once per article (Ask Surfy reopen / remount).
+    // Restore the last in-progress conversation once per article (Ask Smily reopen / remount).
     useEffect(() => {
       surfyDraftHydrated.current = false;
       if (!commentArticleId) return;
@@ -2114,7 +2098,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <CtaButton icon={<IconGlobe />} onClick={() => setCtaMode('import')}>Import content from URL</CtaButton>
                       <CtaButton icon={<IconOutline />} onClick={handleInsertOutline} busy={outlineBusy}>Insert Outline</CtaButton>
-                      <CtaButton icon={<IconSpark />} onClick={() => { void handleWriteWithAi(); }} busy={generateBusy}>Write with Surfy AI</CtaButton>
+                      <CtaButton icon={<IconSpark />} onClick={() => { void handleWriteWithAi(); }} busy={generateBusy}>Write with Smily AI</CtaButton>
                     </div>
                   </>
                 )}

@@ -5,6 +5,7 @@ import { signInEmail, signInSocial } from '../../lib/auth/fetchAuth';
 import { Button } from '../core';
 import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';
+import AuthBrandMark from './AuthBrandMark';
 import {
   authDividerLineStyle,
   authDividerTextStyle,
@@ -91,7 +92,8 @@ export default function EmailSignInForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Sign in to Surfy</h1>
+      <AuthBrandMark />
+      <h1 style={authTitleStyle}>Sign in to Ranksmile</h1>
       <p style={authSubtitleStyle}>Pick up where you left off.</p>
 
       {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
@@ -156,7 +158,7 @@ export default function EmailSignInForm() {
       </Button>
 
       <p style={authFooterStyle}>
-        New to Surfy?
+        New to Ranksmile?
         {' '}
         <Link href="/auth/sign-up" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
           Create an account

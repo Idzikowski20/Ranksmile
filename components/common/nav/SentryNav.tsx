@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
@@ -216,7 +216,7 @@ const WhatsNewMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => voi
 
 type StatusUpdate = { status: 'Operational' | 'Monitoring'; time: string; msg: string };
 const STATUS_UPDATES: StatusUpdate[] = [
-  { status: 'Operational', time: 'Now', msg: 'All Surfer SEO services are running normally.' },
+  { status: 'Operational', time: 'Now', msg: 'All Ranksmile services are running normally.' },
 ];
 const ServiceStatusMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }) => {
   const ref = useDismiss(onClose);

@@ -7,7 +7,7 @@ import EmailSignInForm from '../../components/auth/EmailSignInForm';
 const SignIn: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Sign in — Surfy</title>
+      <title>Sign in — Ranksmile</title>
     </Head>
     <AuthPageLayout>
       <EmailSignInForm />
