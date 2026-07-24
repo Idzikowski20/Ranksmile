@@ -68,7 +68,6 @@
     "@types/react-transition-group": "^4.4.12",
     "@visx/curve": "^4.0.1-alpha.0",
     "@visx/event": "^4.0.1-alpha.0",
-    "@visx/gradient": "^4.0.1-alpha.0",
     "@visx/grid": "^4.0.1-alpha.0",
     "@visx/group": "^4.0.1-alpha.0",
     "@visx/heatmap": "^4.0.1-alpha.0",
@@ -83,7 +82,6 @@
     "bullmq": "^5.80.9",
     "chart.js": "^3.9.1",
     "cheerio": "1.0.0-rc.12",
-    "clsx": "^2.1.1",
     "concurrently": "^7.6.0",
     "cookies": "^0.8.0",
     "croner": "^9.0.0",
@@ -124,7 +122,6 @@
     "sequelize-typescript": "^2.1.6",
     "sqlite3": "^5.1.7",
     "stripe": "^22.3.0",
-    "tailwind-merge": "^3.6.0",
     "umzug": "^3.8.2",
     "zod": "4.4.3"
   },

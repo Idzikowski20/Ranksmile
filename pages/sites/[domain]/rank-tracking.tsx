@@ -100,10 +100,6 @@ const RankTrackingPage: NextPage = () => {
 
   const trackerHref = `/sites/${slug}/keyword-tracker`;
   const activeCountry = (dataset?.meta?.locale?.country ?? 'US').toUpperCase().slice(0, 2);
-  const headerCountries = useMemo(() => {
-    if (!dataset) return [{ code: activeCountry, count: 0 }];
-    return [{ code: activeCountry, count: dataset.metrics.keywordCount }];
-  }, [dataset, activeCountry]);
 
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
@@ -119,8 +115,8 @@ const RankTrackingPage: NextPage = () => {
         heading={<OrganicPageTitle domain={domain} />}
         subtitle={(
           <OrganicPageHeaderInfo
-            countries={headerCountries}
-            activeCountry={activeCountry}
+            countryCode={activeCountry}
+            keywordCount={dataset?.metrics.keywordCount ?? 0}
             fetchedAt={dataset?.meta?.fetchedAt ?? null}
           />
         )}

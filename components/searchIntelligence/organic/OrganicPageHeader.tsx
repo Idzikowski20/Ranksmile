@@ -29,26 +29,9 @@ function IconDesktop() {
   );
 }
 
-function IconChevronDown() {
-  return (
-    <svg width={16} height={16} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M3.293 6.293a1 1 0 0 1 1.414 0L8 9.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z"
-      />
-    </svg>
-  );
-}
-
-type CountryPill = {
-  code: string;
-  count: number;
-};
-
 type OrganicPageHeaderInfoProps = {
-  countries: CountryPill[];
-  activeCountry: string;
+  countryCode: string;
+  keywordCount?: number;
   fetchedAt?: string | null;
   device?: 'desktop' | 'mobile';
   currency?: string;
@@ -69,14 +52,10 @@ const infoLabelStyle: React.CSSProperties = {
   marginTop: -1,
 };
 
-const linkTriggerStyle: React.CSSProperties = {
+const metaValueStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 4,
-  border: 'none',
-  background: 'transparent',
-  padding: 0,
-  cursor: 'default',
   fontSize: 13,
   color: '#302E36',
   fontFamily: FONT,
@@ -88,68 +67,6 @@ function InfoItem({ label, children }: { label: string; children: React.ReactNod
     <div style={infoItemStyle}>
       <span style={infoLabelStyle}>{label}</span>
       {children}
-    </div>
-  );
-}
-
-function LinkTrigger({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <button type="button" style={linkTriggerStyle} aria-label={label}>
-      {children}
-      <IconChevronDown />
-    </button>
-  );
-}
-
-function CountryPills({ countries, activeCountry }: { countries: CountryPill[]; activeCountry: string }) {
-  if (!countries.length) return null;
-
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Countries"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'stretch',
-        borderRadius: 6,
-        border: '1px solid #DAD9DE',
-        overflow: 'hidden',
-        background: '#fff',
-      }}
-    >
-      {countries.map((c, i) => {
-        const selected = c.code.toUpperCase() === activeCountry.toUpperCase();
-        const isLast = i === countries.length - 1;
-        return (
-          <button
-            key={c.code}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            disabled
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '5px 10px 5px 8px',
-              border: 'none',
-              borderRight: isLast ? 'none' : '1px solid #DAD9DE',
-              background: selected ? '#F0F0F2' : '#fff',
-              cursor: 'default',
-              fontFamily: FONT,
-              fontSize: 13,
-              fontWeight: selected ? 600 : 400,
-              color: '#302E36',
-            }}
-          >
-            <FlagIcon code={c.code} />
-            <span>{c.code.toUpperCase()}</span>
-            <span style={{ color: '#6A6772', fontSize: 12, marginLeft: 2 }}>
-              {formatCompact(c.count)}
-            </span>
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -176,8 +93,8 @@ export function OrganicPageTitle({ domain }: { domain: string }) {
 }
 
 export function OrganicPageHeaderInfo({
-  countries,
-  activeCountry,
+  countryCode,
+  keywordCount = 0,
   fetchedAt,
   device = 'desktop',
   currency = 'USD',
@@ -196,25 +113,43 @@ export function OrganicPageHeaderInfo({
         marginTop: 8,
       }}
     >
-      <CountryPills countries={countries} activeCountry={activeCountry} />
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '5px 10px 5px 8px',
+          borderRadius: 6,
+          border: '1px solid #DAD9DE',
+          background: '#F0F0F2',
+          fontFamily: FONT,
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#302E36',
+        }}
+      >
+        <FlagIcon code={countryCode} />
+        <span>{countryCode.toUpperCase()}</span>
+        {keywordCount > 0 && (
+          <span style={{ color: '#6A6772', fontSize: 12, marginLeft: 2 }}>
+            {formatCompact(keywordCount)}
+          </span>
+        )}
+      </span>
 
       <InfoItem label="Device:">
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#302E36', fontFamily: FONT }}>
+        <span style={metaValueStyle}>
           <IconDesktop />
           {device === 'desktop' ? 'Desktop' : 'Mobile'}
         </span>
       </InfoItem>
 
       <InfoItem label="Date:">
-        <LinkTrigger label="Dataset date">
-          <span>{dateLabel}</span>
-        </LinkTrigger>
+        <span style={metaValueStyle}>{dateLabel}</span>
       </InfoItem>
 
       <InfoItem label="Currency:">
-        <LinkTrigger label="Currency">
-          <span>{currency}</span>
-        </LinkTrigger>
+        <span style={metaValueStyle}>{currency}</span>
       </InfoItem>
     </div>
   );

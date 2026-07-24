@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       scopes: GOOGLE_OAUTH_SCOPES.join(' '),
     });
 
-    console.log('[GSC OAuth] Connected Google (GSC + GBP) for user', ownerUserId);
+    console.log('[GSC OAuth] Connected Google (GSC) for user', ownerUserId);
 
     return res.redirect(302, `${safeRelative(redirect)}?gsc_connected=1`);
   } catch (err) {

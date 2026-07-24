@@ -92,15 +92,6 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
       { label: 'Topic Research', href: workspaceHref(activeId, `/sites/${activeSlug}/topic-research`), match: '/topic-research' },
    ] : [];
 
-   const localLinks = activeSlug ? [
-      { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/local/overview`), match: '/local/overview' },
-      { label: 'Listing Management', href: workspaceHref(activeId, `/sites/${activeSlug}/local/listing-management`), match: '/local/listing-management' },
-      { label: 'Review Management', href: workspaceHref(activeId, `/sites/${activeSlug}/local/review-management`), match: '/local/review-management' },
-      { label: 'GBP Optimization', href: workspaceHref(activeId, `/sites/${activeSlug}/local/gbp-optimization`), match: '/local/gbp-optimization' },
-      { label: 'GBP AI Agent', href: workspaceHref(activeId, `/sites/${activeSlug}/local/gbp-ai-agent`), match: '/local/gbp-ai-agent' },
-      { label: 'Map Rank Tracker', href: workspaceHref(activeId, `/sites/${activeSlug}/local/map-rank-tracker`), match: '/local/map-rank-tracker' },
-   ] : [];
-
    const seoLinks = activeSlug ? [
       { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}/performance`), match: '/performance' },
       { label: 'Site Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/site-audit`), match: '/site-audit' },
@@ -231,23 +222,6 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
                   <p className="mobile-sheet-section-label">AI Visibility</p>
                   <ul className="mobile-sheet-list">
                      {aiVisLinks.map((ln) => (
-                        <MobileSheetLink
-                           key={ln.href}
-                           href={ln.href}
-                           label={ln.label}
-                           active={isMatch(ln.match)}
-                           onNavigate={closeSheet}
-                        />
-                     ))}
-                  </ul>
-               </div>
-            )}
-
-            {localLinks.length > 0 && (
-               <div className="mobile-sheet-section">
-                  <p className="mobile-sheet-section-label">Local</p>
-                  <ul className="mobile-sheet-list">
-                     {localLinks.map((ln) => (
                         <MobileSheetLink
                            key={ln.href}
                            href={ln.href}
