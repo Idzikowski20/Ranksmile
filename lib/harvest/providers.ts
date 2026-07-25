@@ -28,7 +28,7 @@ export type CoverageProvider = {
   reliability?: number;
   freshness?: number;
   variance?: number;
-  /** Preferred name (Surfer-style registry). */
+  /** Preferred name (Ranksmile-style registry). */
   collect: (ctx: ProviderContext) => Promise<ProviderResult>;
   /** @deprecated use collect */
   fetch: (ctx: ProviderContext) => Promise<ProviderResult>;

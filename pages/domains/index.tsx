@@ -89,12 +89,12 @@ const Domains: NextPage = () => {
          )}
          {migrationStatus?.hasMigrations && (
                <div className=' p-3 bg-black text-white text-sm text-center'>
-                  You need to Update your database. Stop Serpbear and run this command to update your database:
+                  You need to Update your database. Stop Ranksmile and run this command to update your database:
                   <code className=' bg-gray-700 px-2 py-0 ml-1'>npm run db:migrate</code>
                </div>
          )}
          <Head>
-            <title>Domains - SerpBear</title>
+            <title>Domains - Ranksmile</title>
          </Head>
          <SentryPage maxWidth={880}>
             <SentryPageHeader

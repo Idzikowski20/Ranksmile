@@ -8,7 +8,7 @@ import WpConnectionsTable from '../../components/wordpress/WpConnectionsTable';
 import { useFetchDomains } from '../../services/domains';
 
 const font = 'var(--font-family-primary)';
-const HELP_URL = 'https://docs.surferseo.com/en/articles/6328028-wordpress-plugin-explained';
+const HELP_URL = 'https://ranksmile.pl';
 
 const ChevronRight = () => (
    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8.25 4.5 7.5 7.5-7.5 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -22,20 +22,20 @@ const WordPressIntegration: NextPage = () => {
 
    const emptyState = (
       <div style={{ padding: '40px 16px', textAlign: 'center', fontSize: 14, color: '#71717B' }}>
-         No WordPress sites connected yet. Connect from your WordPress admin (Surfer → Connect).
+         No WordPress sites connected yet. Connect from your WordPress admin (Ranksmile → Connect).
       </div>
    );
 
    return (
       <DashboardLayout domains={domains} showAddModal={() => setShowAddDomain(true)}>
          <>
-            <Head><title>WordPress Integration — Surfer</title></Head>
+            <Head><title>WordPress Integration — Ranksmile</title></Head>
 
             <div style={{ flex: 1, overflow: 'auto', padding: '32px 16px' }} className="styled-scrollbar">
                <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24, fontFamily: font }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                      <h1 style={{ margin: 0, fontSize: 20, lineHeight: '28px', fontWeight: 600, color: '#18181B' }}>WordPress Integration</h1>
-                     <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', color: '#52525C' }}>Interact with your WordPress domains straight from Surfer!</p>
+                     <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', color: '#52525C' }}>Interact with your WordPress domains straight from Ranksmile!</p>
                   </div>
 
                   <div style={{ background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 12, padding: 24 }}>

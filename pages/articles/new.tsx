@@ -90,7 +90,7 @@ const NewContentPage: NextPage = () => {
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-      <Head><title>New Content — SerpBear</title></Head>
+      <Head><title>New Content — Ranksmile</title></Head>
 
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#f8f9ff' }}>
         <div style={{ padding: 4, display: 'flex', flex: 1, overflow: 'hidden' }}>

@@ -12,7 +12,7 @@ describe('buildConfirmEmailHtml', () => {
       expect(anyMatches?.length).toBe(1);
    });
 
-   it('uses the Surfer confirmation copy (30-minute self-destruct, CTA label, heading)', () => {
+   it('uses the Ranksmile confirmation copy (30-minute self-destruct, CTA label, heading)', () => {
       const html = buildConfirmEmailHtml(confirmUrl);
       expect(html).toContain("You're a click away");
       expect(html).toContain('Confirm my email address');

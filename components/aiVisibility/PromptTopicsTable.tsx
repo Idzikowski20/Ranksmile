@@ -42,7 +42,7 @@ const SortHead = ({ label, active, dir, onClick, bold }: { label: string; active
 
 const num = (v: number | null, suffix = '') => (v == null ? '—' : `${v}${suffix}`);
 
-/** SurferSEO-style prompts table: topics as expandable parent rows over their prompts,
+/** Ranksmile-style prompts table: topics as expandable parent rows over their prompts,
  *  with a brand favicon stack and sortable Avg pos / Mention rate / Visibility. */
 const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    const [sort, setSort] = useState<SortKey>('visibility');

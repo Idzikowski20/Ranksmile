@@ -1,4 +1,4 @@
-// Strip emoji / pictographs from Surfy's CHAT reply text (never from article HTML — the article may
+// Strip emoji / pictographs from Ranksmile's CHAT reply text (never from article HTML — the article may
 // legitimately use emojis). Defensive: the prompt already asks for emoji-free, minimalist prose.
 export function stripEmoji(s: string): string {
   if (!s) return s;
@@ -17,7 +17,7 @@ export function stripEmoji(s: string): string {
  * Never fall back to the full stream when the answer slice is empty — that duplicates
  * thinking into the visible message bubble.
  */
-export function splitSurfyThinkingAndMessage(
+export function splitRanksmileThinkingAndMessage(
   streamedText: string,
   thinkingLen: number,
 ): { thinking: string; message: string } {
@@ -33,7 +33,7 @@ export function splitSurfyThinkingAndMessage(
  * Once any tool runs in this turn, keep ALL streamed text inside Thinking until `done` —
  * between-tool narration must never appear as the answer bubble (collapsed Thinking leak).
  */
-export function shouldShowSurfyAnswerStream(opts: {
+export function shouldShowRanksmileAnswerStream(opts: {
   loading: boolean;
   streamAnswer: string;
   hasTools: boolean;
@@ -47,7 +47,7 @@ export function shouldShowSurfyAnswerStream(opts: {
  * Completed assistant bubbles: only show the Thinking disclosure when there is narration
  * and no final reply yet. Once `message` is present, Thinking chrome above the answer is noise.
  */
-export function shouldShowSurfyThinkingDisclosure(
+export function shouldShowRanksmileThinkingDisclosure(
   thinking: string | undefined,
   message: string | undefined,
 ): boolean {

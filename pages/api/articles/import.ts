@@ -303,7 +303,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          return $(el).text().trim().split(/\s+/).length >= 3;
       }).length;
 
-      // Build NLP terms from provided keywords only — Surfer-style entity lists come from
+      // Build NLP terms from provided keywords only — Ranksmile-style entity lists come from
       // deep-analysis (competitor corpus). Import-time n-gram extraction produced Polish
       // stopwords ("oraz", "jest") instead of phrases like "prywatny detektyw".
       const kwTerms: NlpTerm[] = (keywords as string[]).map((kw: string) => {

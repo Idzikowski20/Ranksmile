@@ -27,7 +27,7 @@ const SignOut: NextPage = () => {
   return (
     <AuthShell>
       <Head>
-        <title>Signing out — SerpBear</title>
+        <title>Signing out — Ranksmile</title>
       </Head>
       <AuthPageLayout>
         <h1 style={authTitleStyle}>Signing out</h1>

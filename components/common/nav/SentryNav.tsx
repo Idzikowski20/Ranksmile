@@ -12,6 +12,7 @@ import fetchJson from '../../../lib/fetchJson';
 import type { PlanLimitMetric, PlanSummaryData } from '../../../lib/planLimits';
 import { formatMetricUsage } from '../../../lib/planLimits';
 import { countActionableRecommendations } from '../../../lib/recommendations';
+import { AI_VISIBILITY_NAV, AUDIT_URL_PATH, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '../../../lib/navigation';
 import { Avatar } from '../../core/avatar';
 import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings, IconTools,
@@ -166,8 +167,8 @@ const HelpMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => void })
       </ul>
       <hr className="sentry-menu-sep" />
       <ul className="sentry-menu-list">
-        <li><MenuLink icon={<IconMegaphone />} label="Give feedback" href="https://help.surferseo.com/en/" /></li>
-        <li><MenuLink icon={<IconGlobe />} label="Tour the new navigation" href="https://docs.surferseo.com/" /></li>
+        <li><MenuLink icon={<IconMegaphone />} label="Give feedback" href="https://ranksmile.pl" /></li>
+        <li><MenuLink icon={<IconGlobe />} label="Tour the new navigation" href="https://ranksmile.pl" /></li>
       </ul>
     </div>
   );
@@ -178,17 +179,17 @@ const CHANGELOG: ChangelogEntry[] = [
   {
     title: 'Redesigned navigation',
     body: 'A new sidebar with dockable secondary panels, workspace switcher, and quicker access to SEO and AI Visibility tools.',
-    href: 'https://docs.surferseo.com/',
+    href: 'https://ranksmile.pl',
   },
   {
     title: 'AI Visibility tracking',
     body: 'Monitor how AI search engines mention your brand, track competitors, and discover new content opportunities.',
-    href: 'https://docs.surferseo.com/',
+    href: 'https://ranksmile.pl',
   },
   {
     title: 'Content recommendations',
     body: 'Automated content audits surface pages that need optimization and ideas for new content to create.',
-    href: 'https://docs.surferseo.com/',
+    href: 'https://ranksmile.pl',
   },
 ];
 const WhatsNewMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }) => {
@@ -223,7 +224,7 @@ const ServiceStatusMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () =
   return (
     <div ref={ref} className="sentry-nav-popover sentry-nav-popover--wide" style={{ left: anchor.right + 8, bottom: 12, top: 'auto' }}>
       <div className="sentry-status-title">All systems operational</div>
-      <a className="sentry-status-link" href="https://status.surferseo.com/" target="_blank" rel="noreferrer noopener">
+      <a className="sentry-status-link" href="https://ranksmile.pl" target="_blank" rel="noreferrer noopener">
         <IconOpen size={12} /> view status page
       </a>
       <ul className="sentry-status-list">
@@ -250,7 +251,7 @@ const OnboardingMenu = ({ anchor, onClose, steps, beyondSteps, done, pct }: {
 }) => {
   const ref = useDismiss(onClose);
   const [beyondOpen, setBeyondOpen] = useState(false);
-  const [skipped, setSkipped] = useLocalStorage<string[]>('serpbear-onb-skipped', []);
+  const [skipped, setSkipped] = useLocalStorage<string[]>('ranksmile-onb-skipped', []);
 
   const skipStep = (key: string) => setSkipped((prev) => [...new Set([...prev, key])]);
 
@@ -406,8 +407,8 @@ const SentryNav = ({ domains = [] }: Props) => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const [docked, setDocked, dockedReady] = useLocalStorage('serpbear-nav-docked', true);
-  const [pinnedKey, setPinnedKey, pinnedReady] = useLocalStorage<string | null>('serpbear-nav-pinned-key', null);
+  const [docked, setDocked, dockedReady] = useLocalStorage('ranksmile-nav-docked', true);
+  const [pinnedKey, setPinnedKey, pinnedReady] = useLocalStorage<string | null>('ranksmile-nav-pinned-key', null);
   const navReady = dockedReady && pinnedReady;
   const isDocked = navReady && docked;
 
@@ -482,24 +483,20 @@ const SentryNav = ({ domains = [] }: Props) => {
       },
     ];
     if (activeSlug) {
+      const hrefFn = (p: string) => workspaceHref(activeId, p);
+      const seoLinks = resolveSiteNav(SEO_NAV, activeSlug, hrefFn);
+      const aiLinks = resolveSiteNav(AI_VISIBILITY_NAV, activeSlug, hrefFn);
+      const toolsLinks = resolveSiteNav(TOOLS_NAV, activeSlug, hrefFn);
       items.push({
         key: 'seo',
         label: 'SEO',
         icon: <IconCompass />,
-        href: workspaceHref(activeId, `/sites/${activeSlug}/performance`),
+        href: seoLinks[0]?.href ?? workspaceHref(activeId, `/sites/${activeSlug}/performance`),
         match: `/sites/${activeSlug}`,
         secondary: {
           title: 'SEO',
           sections: [{
-            links: [
-              { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}/performance`), match: '/performance' },
-              { label: 'Site Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/site-audit`), match: `/sites/${activeSlug}/site-audit` },
-              { label: 'Recommendations', href: workspaceHref(activeId, `/sites/${activeSlug}/recommendations`), match: `/sites/${activeSlug}/recommendations` },
-              { label: 'Content Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/content-audit`), match: `/sites/${activeSlug}/content-audit` },
-              { label: 'Topical Map', href: workspaceHref(activeId, `/sites/${activeSlug}/topical-map`), match: `/sites/${activeSlug}/topical-map` },
-              { label: 'Search Intelligence', href: workspaceHref(activeId, `/sites/${activeSlug}/rank-tracking`), match: `/sites/${activeSlug}/rank-tracking` },
-              { label: 'Activity Log', href: workspaceHref(activeId, `/sites/${activeSlug}/activity-log`), match: `/sites/${activeSlug}/activity-log` },
-            ],
+            links: seoLinks.map(({ label, href, match }) => ({ label, href, match })),
           }],
         },
       });
@@ -507,18 +504,12 @@ const SentryNav = ({ domains = [] }: Props) => {
         key: 'aivis',
         label: 'AI Vis',
         icon: <IconSiren />,
-        href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/overview`),
+        href: aiLinks[0]?.href ?? workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/overview`),
         match: `/sites/${activeSlug}/ai-visibility`,
         secondary: {
           title: 'AI Visibility',
           sections: [{
-            links: [
-              { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/overview`), match: '/ai-visibility/overview' },
-              { label: 'Sources', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/sources`), match: '/ai-visibility/sources' },
-              { label: 'Competitors', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/competitors`), match: '/ai-visibility/competitors' },
-              { label: 'Prompts', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/prompts`), match: '/ai-visibility/prompts' },
-              { label: 'Fanout Queries', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/fanout-queries`), match: '/ai-visibility/fanout-queries' },
-            ],
+            links: aiLinks.map(({ label, href, match }) => ({ label, href, match })),
           }],
         },
       });
@@ -526,16 +517,12 @@ const SentryNav = ({ domains = [] }: Props) => {
         key: 'tools',
         label: 'Tools',
         icon: <IconTools />,
-        href: workspaceHref(activeId, `/sites/${activeSlug}/audit-tool`),
-        match: `/sites/${activeSlug}/audit-tool`,
+        href: toolsLinks[0]?.href ?? workspaceHref(activeId, `/sites/${activeSlug}/keyword-research`),
+        match: `/sites/${activeSlug}/keyword-research`,
         secondary: {
           title: 'Tools',
           sections: [{
-            links: [
-              { label: 'Audit Tool', href: workspaceHref(activeId, `/sites/${activeSlug}/audit-tool`), match: '/audit-tool' },
-              { label: 'Keyword Research', href: workspaceHref(activeId, `/sites/${activeSlug}/keyword-research`), match: '/keyword-research' },
-              { label: 'Topic Research', href: workspaceHref(activeId, `/sites/${activeSlug}/topic-research`), match: '/topic-research' },
-            ],
+            links: toolsLinks.map(({ label, href, match }) => ({ label, href, match })),
           }],
         },
       });
@@ -711,8 +698,11 @@ const SentryNav = ({ domains = [] }: Props) => {
 
   const isActivePrimary = (it: PrimaryItem) => {
     if (it.key === 'dashboard') return isMatch('/dashboard', true);
-    if (it.key === 'seo') return isMatch(it.match) && !isMatch('/ai-visibility');
-    if (it.key === 'tools') return isMatch('/audit-tool') || isMatch('/keyword-research') || isMatch('/topic-research');
+    if (it.key === 'seo') {
+      return (isMatch(it.match) && !isMatch('/ai-visibility') && !isMatch('/keyword-research') && !isMatch('/topic-research'))
+        || isMatch(`/${AUDIT_URL_PATH}`);
+    }
+    if (it.key === 'tools') return isMatch('/keyword-research') || isMatch('/topic-research');
     return isMatch(it.match);
   };
 

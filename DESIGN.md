@@ -1,4 +1,4 @@
-# SerpBear — Design System (Sentry-first)
+# Ranksmile — Design System (Sentry-first)
 
 > Źródło prawdy dla UI. **Przed każdą zmianą UI przeczytaj ten plik.**  
 > Tokeny runtime: [`components/core/theme.tsx`](components/core/theme.tsx) + CSS vars w [`styles/globals.css`](styles/globals.css).
@@ -9,7 +9,7 @@
 
 - **Produkt:** Ranksmile / Smily — SEO content workspace (scoring, TipTap, AI).
 - **Design language:** **Sentry** (shell, primitives, app pages) + wyjątek **editor zone** (scoring / TipTap layout KEEP).
-- **Akcent brandowy:** Smily / Ranksmile orange **`#F29964`** (nie fiolet legacy Surfera).
+- **Akcent brandowy:** Smily / Ranksmile orange **`#F29964`** (nie fiolet legacy `#783AFB`).
 - **Logo:** Smily bounce mark (`components/pixel-perfect/bounce-smiley-animation.tsx`) — entrance raz przy mount, potem loop rotate.
 - **Tone:** clean, functional, data-dense — zero dekoracji dla dekoracji.
 - **Audience:** zalogowani SEO / content teams.
@@ -22,13 +22,13 @@
 |--------|--------|--------|------------|
 | **Sentry shell** | `SentryNav`, topbar, mobile nav | `theme.tsx` + `.sentry-*` / shell CSS | `components/core/*` |
 | **Sentry app** | Dashboard, domains, keywords, AI vis, settings, billing | `theme.tsx` (Rubik, orange accent, Sentry grays) | `core` + `components/sentry-pages/*` |
-| **Editor zone** | TipTap, Smily chat, Content Score, AO, gauges | KEEP layout; score bands z `lib/scoreColor.ts`; akcent UI = `#F29964` gdzie toczone | Primitives z `core`; widgety w `components/surfer/` |
+| **Editor zone** | TipTap, Smily chat, Content Score, AO, gauges | KEEP layout; score bands z `lib/scoreColor.ts`; akcent UI = `#F29964` gdzie toczone | Primitives z `core`; widgety w `components/ranksmile/` |
 
 **Reguły:**
 - Nowy kod **poza edytorem** → `components/core` + Emotion / CSS vars Sentry. **Bez** nowych Tailwind klas. Inline styles tylko dla pozycji runtime (popover, caret).
 - Edytor (`components/articles/*`) — **KEEP** struktura TipTap/scoring; podmieniaj tylko primitives (`Button`, `Modal`, `Input`, `Textarea`, `Alert`).
-- Unikalne widgety bez odpowiednika Sentry: `Gauge`, `ScoreGauge`, `SelectionBar`, `SortableHeader`, `SlidePanel` → `components/surfer/`.
-- **Nie używaj Surfer purple `#783AFB` / `#653DE9` jako brand accent** w nowym UI. Legacy score colors mogą zostać w `scoreColor.ts` do czasu migracji gauge’y.
+- Unikalne widgety bez odpowiednika Sentry: `Gauge`, `ScoreGauge`, `SelectionBar`, `SortableHeader`, `SlidePanel` → `components/ranksmile/`.
+- **Nie używaj Ranksmile purple `#783AFB` / `#653DE9` jako brand accent** w nowym UI. Legacy score colors mogą zostać w `scoreColor.ts` do czasu migracji gauge’y.
 
 ---
 
@@ -187,7 +187,7 @@ Sizes: `md` 36px · `sm` 32px · `xs` 24–28px.
 ```
 background: #FFFFFF
 border: 1px solid #DAD9DE
-border-radius: 8px   /* Sentry panel — nie 12px Surfer card default */
+border-radius: 8px   /* Sentry panel — nie 12px Ranksmile card default */
 ```
 
 Page bg: `#F8F8F9`. Unikaj `#F8F9FF` poza `--zone-editor-bg`.
@@ -234,7 +234,7 @@ Page bg: `#F8F8F9`. Unikaj `#F8F9FF` poza `--zone-editor-bg`.
 
 ---
 
-## 12. Anti-slop checklist (SerpBear)
+## 12. Anti-slop checklist (Ranksmile)
 
 Zadaptowane z [pols.dev/slop.md](https://pols.dev/slop.md) pod **product UI** (nie landing). Sprawdź przed shipem UI:
 
@@ -272,7 +272,7 @@ Unikanie listy ≠ design. Trzymaj spójność z `theme.tsx` i jedną strefą wi
 - `outline: none` bez własnego focus
 - Nowe Tailwind utility classes w fresh code
 - Mieszanie dark shell z dark content cards
-- Surfer-style dark `#2F2F34` button + purple hover w Sentry app
+- Ranksmile-style dark `#2F2F34` button + purple hover w Sentry app
 
 ---
 
@@ -292,7 +292,7 @@ Unikanie listy ≠ design. Trzymaj spójność z `theme.tsx` i jedną strefą wi
 
 ## 15. Mapowanie legacy → Sentry
 
-| Stare (Surfer docs) | Nowe (Sentry) |
+| Stare (Ranksmile docs) | Nowe (Sentry) |
 |---------------------|---------------|
 | Brand purple `#783AFB` | Accent `#F29964` |
 | Purple focus `#AA93FD` | Focus `#F29964` |

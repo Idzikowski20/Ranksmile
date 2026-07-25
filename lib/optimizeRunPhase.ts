@@ -1,4 +1,4 @@
-/** First-run vs follow-up Auto-Optimize — Surfer-style progressive tightening. */
+/** First-run vs follow-up Auto-Optimize — Ranksmile-style progressive tightening. */
 
 export type OptimizePhase = 'first_run' | 'follow_up';
 

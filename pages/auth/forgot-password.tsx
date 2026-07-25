@@ -7,7 +7,7 @@ import ForgotPasswordForm from '../../components/auth/ForgotPasswordForm';
 const ForgotPassword: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Forgot password — SerpBear</title>
+      <title>Forgot password — Ranksmile</title>
     </Head>
     <AuthPageLayout>
       <ForgotPasswordForm />

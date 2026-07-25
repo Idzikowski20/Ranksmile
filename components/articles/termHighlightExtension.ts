@@ -12,7 +12,7 @@ export type HlTerm = {
   term: string;
   current_count?: number;
   target_count: number;
-  /** Competitor-derived usage range (Surfer "suggested" column). */
+  /** Competitor-derived usage range (Ranksmile "suggested" column). */
   suggested_min?: number;
   suggested_max?: number;
 };

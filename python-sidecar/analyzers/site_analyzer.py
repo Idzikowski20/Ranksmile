@@ -54,7 +54,7 @@ async def _fetch_public_html(url: str) -> tuple[str, str]:
         for _ in range(5):
             assert_public_url(current_url)
             response = await client.get(current_url, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
+                "User-Agent": "Mozilla/5.0 (compatible; RanksmileBot/1.0)"
             })
             if 300 <= response.status_code < 400:
                 location = response.headers.get("location")

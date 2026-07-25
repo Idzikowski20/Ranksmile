@@ -4,12 +4,12 @@ import db from '../database/database';
 import { getArticleIdSql } from './articleSql';
 import type { DbRow, SqlReplacements } from './types/db';
 
-/** Stable per-article hash the plugin stores alongside the post (Surfer's permalink_hash). */
+/** Stable per-article hash the plugin stores alongside the post (Ranksmile's permalink_hash). */
 export const permalinkHash = (id: number | string): string => crypto.createHash('md5').update(`wp-art-${id}`).digest('hex').slice(0, 16);
 
 const toIso = (d: unknown): string => { try { return new Date(d as string | number | Date).toISOString(); } catch { return new Date().toISOString(); } };
 
-/** Map our article row to the Surfer "draft" shape the WP plugin consumes (see get_user_drafts). */
+/** Map our article row to the Ranksmile "draft" shape the WP plugin consumes (see get_user_drafts). */
 export function articleToDraft(a: DbRow) {
    const kw = String(a.target_keyword ?? '');
    const id = a.id as number | string;

@@ -29,7 +29,7 @@ const OnboardingPage: NextPage = () => {
    return (
       <>
          <Head>
-            <title>Get started · SerpBear</title>
+            <title>Get started · Ranksmile</title>
             <meta name="robots" content="noindex" />
          </Head>
          <OnboardingShell>

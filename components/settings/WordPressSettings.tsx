@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import WpConnectionsTable from '../wordpress/WpConnectionsTable';
 import { SentryPanel, SentryPanelBody, SentryEmptyState } from '../sentry-pages';
 
-const DOCS_URL = 'https://docs.surferseo.com/en/articles/6328028-wordpress-plugin-explained';
+const DOCS_URL = 'https://ranksmile.pl';
 
 const WordPressSettings = () => {
   const [hover, setHover] = useState(false);

@@ -6,7 +6,7 @@ const NOW = 'CURRENT_TIMESTAMP';
 let tableChecked = false;
 
 /**
- * Stores connections to WordPress sites made by the (forked Surfer) WP plugin.
+ * Stores connections to WordPress sites made by the (forked Ranksmile) WP plugin.
  * One row per (workspace, site): the api_key is the shared secret both sides
  * send — the plugin sends it as the `api-key` header on its requests to us, and
  * we send it as `Authorization` when we call the plugin's REST routes. Idempotent.

@@ -1,6 +1,6 @@
 {
-   "name": "SerpBear",
-   "short_name": "SerpBear",
+   "name": "Ranksmile",
+   "short_name": "Ranksmile",
    "icons": [
      {
        "src": "/icon.png",
@@ -14,7 +14,7 @@
        "type": "image/png"
      }
    ],
-   "theme_color": "#1d4ed8",
+   "theme_color": "#50B9FF",
    "background_color": "#FFFFFF",
    "start_url": "/",
    "display": "standalone",

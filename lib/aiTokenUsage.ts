@@ -1,7 +1,7 @@
 import db from '../database/database';
 import { queryOne } from './db/query';
 
-// Org-wide AI token budget. Surfy/Auto-Optimize draw from a single per-organization pool that
+// Org-wide AI token budget. Ranksmile/Auto-Optimize draw from a single per-organization pool that
 // refills every 5 hours (fixed buckets). created_ms is stored as epoch milliseconds so the window
 // math is pure integers — no timezone/format pitfalls across Postgres and SQLite.
 export const AI_TOKEN_LIMIT_5H = 500_000;

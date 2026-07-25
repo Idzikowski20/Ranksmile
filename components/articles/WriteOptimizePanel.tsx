@@ -59,7 +59,6 @@ interface Props {
   initialSection?: 'seo' | 'ai';
   /** Live ↑N deltas during Auto-Optimize, or vs previous coverage run. */
   scoreDeltas?: { seo?: number; overall?: number; ai?: number };
-  deltaTitles?: { seo?: string; overall?: string; ai?: string };
   articleId?: number;
   /** @deprecated Prefer onOptimizeAction for surgical Apply. */
   onAutoOptimize?: () => void;
@@ -466,7 +465,7 @@ const WriteOptimizePanel = ({
   seo, ai, content, hasAi, coverageItems, coverageSnapshot, competitorOutlinesCache,
   html, keyword, paaQuestions,
   onBack, highlightTerms, onHighlightTermsChange,
-  initialSection, scoreDeltas, deltaTitles,
+  initialSection, scoreDeltas,
   articleId, onAutoOptimize, onOptimizeAction,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
@@ -517,7 +516,7 @@ const WriteOptimizePanel = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // SEO entity display settings (mirrors Surfer's settings popover) — persisted.
+  // SEO entity display settings (mirrors Ranksmile's settings popover) — persisted.
   const [countRanges, setCountRanges] = usePersist('wo:countRanges', true);
   const [showOptimized, setShowOptimized] = usePersist('wo:showOptimized', true);
   const [showPartial, setShowPartial] = usePersist('wo:showPartial', true);
@@ -541,7 +540,7 @@ const WriteOptimizePanel = ({
   useEffect(() => { onHighlightTermsChange?.(hlTerms); }, [hlTerms, onHighlightTermsChange]);
   useEffect(() => () => { onHighlightTermsChange?.(false); }, [onHighlightTermsChange]);
 
-  // Phrase-level entities (2+ words) — Surfer "Headings" tab; single tokens stay under All.
+  // Phrase-level entities (2+ words) — Ranksmile "Headings" tab; single tokens stay under All.
   const headingTerms = useMemo(
     () => terms.filter((t) => t.term.trim().split(/\s+/).length >= 2),
     [terms],
@@ -638,7 +637,7 @@ const WriteOptimizePanel = ({
 
       {/* Gauge trio */}
       <div style={{ paddingTop: 8, paddingBottom: 14 }}>
-        <ScoreTrio seo={seo} ai={ai} content={content} hasAi={hasAi} onSeoClick={expandSeo} onAiClick={expandAi} deltas={scoreDeltas} deltaTitles={deltaTitles} />
+        <ScoreTrio seo={seo} ai={ai} content={content} hasAi={hasAi} onSeoClick={expandSeo} onAiClick={expandAi} deltas={scoreDeltas} />
       </div>
 
       {/* Effort — collapsible (same pattern as SEO / AI) */}

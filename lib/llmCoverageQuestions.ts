@@ -47,7 +47,7 @@ function addQuestion(
   map.set(key, { text, sources: new Set([source]) });
 }
 
-/** Build extra LLM prompt seeds from PAA + related searches (Surfer-style fan-out). */
+/** Build extra LLM prompt seeds from PAA + related searches (Ranksmile-style fan-out). */
 export function buildExpansionSeeds(
   keyword: string,
   paaQuestions: Array<{ question: string }>,

@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // wpRestFetch falls back to `?rest_route=` when the site's pretty /wp-json/
       // routing is broken (LiteSpeed/plain-permalink hosts), so the handshake works
       // regardless of the WordPress site's permalink configuration.
-      const r = await wpRestFetch(String(siteUrl), 'surferseo/v1/connect/', {
+      const r = await wpRestFetch(String(siteUrl), 'ranksmileseo/v1/connect/', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({

@@ -43,7 +43,7 @@ const CheckMark = () => (
   </svg>
 );
 
-/** Surfer-style role dropdown (custom popover, not a native select). `compact` = inline pill for table rows. */
+/** Ranksmile-style role dropdown (custom popover, not a native select). `compact` = inline pill for table rows. */
 const RoleSelect = ({ value, options, onChange, compact }: {
   value: string; options: readonly string[]; onChange: (v: string) => void; compact?: boolean;
 }) => {

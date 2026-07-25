@@ -95,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    let result: { post_id?: number; post_url?: string; edit_post_url?: string; post_status?: string };
    try {
-      const r = await wpRestFetch(conn.site_url, 'surferseo/v1/import_post/', {
+      const r = await wpRestFetch(conn.site_url, 'ranksmileseo/v1/import_post/', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${conn.api_key}` },
          body: JSON.stringify(payload),

@@ -1,7 +1,7 @@
 import { useQuery } from 'react-query';
 
 export async function fetchChangelog() {
-   const res = await fetch('https://api.github.com/repos/towfiqi/serpbear/releases', { method: 'GET' });
+   const res = await fetch('https://api.github.com/repos/towfiqi/ranksmile/releases', { method: 'GET' });
    return res.json();
 }
 

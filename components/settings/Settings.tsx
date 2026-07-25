@@ -26,7 +26,7 @@ export const defaultSettings: SettingsType = {
    smtp_username: '',
    smtp_password: '',
    notification_email_from: '',
-   notification_email_from_name: 'SerpBear',
+   notification_email_from_name: 'Ranksmile',
    search_console: true,
    search_console_client_email: '',
    search_console_private_key: '',

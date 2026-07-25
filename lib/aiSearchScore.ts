@@ -32,7 +32,7 @@ export function computeAiSearchScore(summary?: AiVisibilitySummary | null): numb
    const avgReadiness = scores.reduce((a, b) => a + b, 0) / scores.length;
    const extractability = Math.min(Math.max(summary.extractability_score || avgReadiness, 0), 100) / 100;
 
-   // Content coverage dominates (Surfer parity); extractability secondary.
+   // Content coverage dominates (Ranksmile parity); extractability secondary.
    const coverageScore = coveredRate * 60;
    const readinessScore = (avgReadiness / 100) * 30;
    const extractScore = extractability * 10;
@@ -40,7 +40,7 @@ export function computeAiSearchScore(summary?: AiVisibilitySummary | null): numb
    return Math.round(Math.min(100, coverageScore + readinessScore + extractScore));
 }
 
-/** Surfer-style AI Search Score v2 — Facts Coverage (70%) + Upfront Intent (30%). */
+/** Ranksmile-style AI Search Score v2 — Facts Coverage (70%) + Upfront Intent (30%). */
 export function computeAiSearchScoreV2(opts: {
    facts: ArticleFact[];
    articleText: string;
@@ -86,7 +86,7 @@ export function resolveAiScore(opts: {
    return computeAiSearchScore(opts.summary);
 }
 
-/** Surfer-style Content Score — weighted blend with weak-dimension floor. */
+/** Ranksmile-style Content Score — weighted blend with weak-dimension floor. */
 export function computeOverallContentScore(seoScore: number, aiScore: number): number {
    const seo = Math.min(100, Math.max(0, seoScore));
    const ai = Math.min(100, Math.max(0, aiScore));

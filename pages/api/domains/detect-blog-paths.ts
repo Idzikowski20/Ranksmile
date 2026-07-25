@@ -5,13 +5,13 @@ import { rankBlogSegments } from '../../../lib/detectBlogPaths';
 import { fetchSitemapUrls } from '../../../lib/fetchSitemapUrls';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 
-import { SERPBEAR_UA } from '../../../lib/httpConstants';
+import { RANKSMILE_UA } from '../../../lib/httpConstants';
 
 /** True if a page shows article signals: JSON-LD Article/BlogPosting, datePublished, <article>, or RSS link. */
 async function hasArticleSignals(url: string): Promise<boolean> {
    try {
       await assertPublicUrl(url); // second-order SSRF: url comes from the fetched sitemap's <loc>
-      const r = await fetch(url, { headers: { 'User-Agent': SERPBEAR_UA } });
+      const r = await fetch(url, { headers: { 'User-Agent': RANKSMILE_UA } });
       if (!r.ok) return false;
       const html = (await r.text()).slice(0, 200_000);
       return /"@type"\s*:\s*"(Article|BlogPosting|NewsArticle)"/i.test(html)

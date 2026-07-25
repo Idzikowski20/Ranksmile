@@ -38,7 +38,7 @@ async function redisGet(key: string): Promise<string | null> {
     const { default: Redis } = await import('ioredis');
     const r = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
     await r.connect();
-    const v = await r.get(`surfy:cache:${key}`);
+    const v = await r.get(`ranksmile:cache:${key}`);
     await r.quit();
     return v;
   } catch {
@@ -53,7 +53,7 @@ async function redisSet(key: string, value: string, ttlSec: number): Promise<voi
     const { default: Redis } = await import('ioredis');
     const r = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
     await r.connect();
-    await r.setex(`surfy:cache:${key}`, ttlSec, value);
+    await r.setex(`ranksmile:cache:${key}`, ttlSec, value);
     await r.quit();
   } catch {
     /* ignore */

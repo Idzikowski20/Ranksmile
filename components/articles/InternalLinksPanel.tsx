@@ -181,7 +181,7 @@ const InternalLinksPanel: React.FC<Props> = ({
     }
   };
 
-  // ── "Select recommended by Surfy" — AI filters which links fit the article ──
+  // ── "Select recommended by Ranksmile" — AI filters which links fit the article ──
   const handleRecommend = async () => {
     if (!fetchedLinks.length || isRecommending) return;
     setIsRecommending(true);
@@ -600,11 +600,11 @@ const InternalLinksPanel: React.FC<Props> = ({
               </>
             ) : (
               <>
-                {/* Surfy sparkle icon */}
+                {/* Ranksmile sparkle icon */}
                 <svg viewBox="0 0 16 16" width={14} height={14} fill="none">
                   <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5z" fill="#7c3aed" />
                 </svg>
-                Select recommended by Surfy
+                Select recommended by Ranksmile
               </>
             )}
           </button>

@@ -2,10 +2,10 @@
 /**
  * Is Required Validator.
  *
- * @package SurferSEO
+ * @package Ranksmile
  */
 
-namespace SurferSEO\Forms\Validators;
+namespace Ranksmile\Forms\Validators;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Validator to check if field is required.
  */
-class Validator_Is_Required implements Surfer_Validator_Interface {
+class Validator_Is_Required implements Ranksmile_Validator_Interface {
 
 	/**
 	 * Validate value.
@@ -36,6 +36,6 @@ class Validator_Is_Required implements Surfer_Validator_Interface {
 	 * @return string.
 	 */
 	public function get_error() {
-		return __( 'This field is required.', 'surferseo' );
+		return __( 'This field is required.', 'ranksmileseo' );
 	}
 }

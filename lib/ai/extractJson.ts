@@ -26,8 +26,8 @@ export function extractJsonObject(raw: string): Record<string, unknown> | null {
   return null;
 }
 
-/** True when the parsed object looks like the legacy Surfy reply protocol ({message|content|action}). */
-export function isSurfyReplyShape(obj: Record<string, unknown> | null): boolean {
+/** True when the parsed object looks like the legacy Ranksmile reply protocol ({message|content|action}). */
+export function isRanksmileReplyShape(obj: Record<string, unknown> | null): boolean {
   if (!obj) return false;
   return typeof obj.message === 'string' || 'content' in obj || typeof obj.action === 'string';
 }

@@ -65,7 +65,7 @@ const ConfirmEmail: NextPage = () => {
 
    return (
       <>
-         <Head><title>Confirm your e-mail - SerpBear</title></Head>
+         <Head><title>Confirm your e-mail - Ranksmile</title></Head>
          <div style={{
             minHeight: '100vh',
             display: 'flex',

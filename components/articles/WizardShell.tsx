@@ -21,7 +21,7 @@ const WizardShell = ({ title, children, footer }: {
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-      <Head><title>{`${title} — SerpBear`}</title></Head>
+      <Head><title>{`${title} — Ranksmile`}</title></Head>
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#f8f9ff' }}>
         <div style={{ padding: 4, display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div style={{ border: '1px solid #E4E4E7', background: '#fff', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 12, overflow: 'hidden' }}>

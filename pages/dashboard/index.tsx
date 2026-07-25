@@ -91,7 +91,7 @@ const DashboardPage: NextPage = () => {
     return chart.map((p) => ({ date: p.date, clicks: p.clicks || 0 }));
   }, [sitesData, primaryDomainName]);
 
-  // Period-over-period like SurferSEO: the last 30 days vs the previous 30 days —
+  // Period-over-period like Ranksmile: the last 30 days vs the previous 30 days —
   // NOT the two halves of one window. The chart + total reflect the last 30 days.
   const recent30 = clickSeries.slice(-30);
   const prev30 = clickSeries.slice(-60, -30);
@@ -221,8 +221,8 @@ const DashboardPage: NextPage = () => {
     >
       <>
         <Head>
-          <title>Dashboard — SerpBear</title>
-          <meta name="description" content="SerpBear Dashboard" />
+          <title>Dashboard — Ranksmile</title>
+          <meta name="description" content="Ranksmile Dashboard" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
 

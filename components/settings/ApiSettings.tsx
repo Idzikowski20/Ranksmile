@@ -5,7 +5,7 @@ import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages
 
 const font = 'var(--font-family-primary)';
 
-const SurferMark = () => (
+const RanksmileMark = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M18.3955 0C21.4658 0 23.9548 2.48899 23.9548 5.55933V7.02488L21.4689 7.78901V5.55016C21.464 3.85696 20.0899 2.48587 18.3955 2.48587H5.55933C3.86192 2.48587 2.48589 3.86189 2.48589 5.55933V11.4871C2.48589 12.517 2.48589 13.0319 2.20286 13.415C1.91983 13.7981 1.42762 13.9494 0.443206 14.252L0 14.3882L9.42195e-06 5.55933C9.42195e-06 2.48899 2.489 0 5.55933 0H18.3955Z" fill="#FF5B49" />
     <path d="M23.5116 9.75731L23.9548 9.62109V18.4408C23.9548 21.5111 21.4658 24.0001 18.3955 24.0001H5.55933C2.48899 24.0001 0 21.5111 0 18.4408L1.55422e-06 16.9844L2.48589 16.2203V18.4499C2.49077 20.1431 3.86493 21.5143 5.55933 21.5143H18.3955C20.0929 21.5143 21.4689 20.1382 21.4689 18.4408V12.5222C21.4689 11.4923 21.4689 10.9774 21.752 10.5943C22.035 10.2112 22.5272 10.0599 23.5116 9.75731Z" fill="#FF5B49" />
@@ -56,7 +56,7 @@ const ApiSettings = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 24, fontFamily: font, width: '100%' }}>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <LogoCircle><SurferMark /></LogoCircle>
+        <LogoCircle><RanksmileMark /></LogoCircle>
         <div style={{ display: 'flex', alignItems: 'center', margin: '0 -6px', zIndex: 10 }}>
           <div style={{ width: 10, height: 10, borderRadius: 9999, background: '#D4D4D8' }} />
           <div style={{ width: 12, height: 2, background: '#D4D4D8' }} />
@@ -73,7 +73,7 @@ const ApiSettings = () => (
           Connect with Zapier, Looker Studio, or your CMS of choice.
         </span>
         <span style={{ display: 'block', fontWeight: 600, color: '#71717B', marginTop: 4 }}>
-          Automate query creation, work in bulk, and analyze data without accessing the Surfer web app.
+          Automate query creation, work in bulk, and analyze data without accessing the Ranksmile web app.
         </span>
       </p>
     </div>
@@ -85,9 +85,9 @@ const ApiSettings = () => (
           <SentryPanelBody>
             <p style={{ margin: '0 0 12px', fontSize: 14, color: '#71717B' }}>Examples, Troubleshooting, FAQ</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Button variant="secondary" size="sm" onClick={() => window.open('https://docs.surferseo.com/en/articles/5700335-surfer-api-introduction', '_blank')}>Overview</Button>
-              <Button variant="secondary" size="sm" onClick={() => window.open('https://docs.surferseo.com/', '_blank')}>API reference</Button>
-              <Button variant="secondary" size="sm" onClick={() => window.open('https://docs.surferseo.com/', '_blank')}>LLM-ready docs</Button>
+              <Button variant="secondary" size="sm" onClick={() => window.open('https://ranksmile.pl', '_blank')}>Overview</Button>
+              <Button variant="secondary" size="sm" onClick={() => window.open('https://ranksmile.pl', '_blank')}>API reference</Button>
+              <Button variant="secondary" size="sm" onClick={() => window.open('https://ranksmile.pl', '_blank')}>LLM-ready docs</Button>
             </div>
           </SentryPanelBody>
         </SentryPanel>
@@ -98,7 +98,7 @@ const ApiSettings = () => (
           <SentryPanelHeader title="API access" />
           <SentryPanelBody>
             <p style={{ margin: '0 0 12px', fontSize: 14, color: '#3F3F47', lineHeight: 1.45 }}>
-              API access is not available on your plan. Upgrade to unlock API access and integrate Surfer with your tools.
+              API access is not available on your plan. Upgrade to unlock API access and integrate Ranksmile with your tools.
             </p>
             <Button type="button" variant="primary" onClick={() => toast.success('Upgrade to Scale — coming soon!')}>
               Upgrade to Scale

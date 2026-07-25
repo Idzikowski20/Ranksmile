@@ -14,7 +14,7 @@ from pipeline.stages.domain.page_signals import extract_page_signals
 MAX_CRAWL_URLS_DEFAULT = 100
 CONCURRENCY = 8
 FETCH_TIMEOUT = 15.0
-UA = "Mozilla/5.0 (compatible; SerpBearBot/1.0)"
+UA = "Mozilla/5.0 (compatible; RanksmileBot/1.0)"
 from service_urls import nextjs_url
 PERMANENT_REDIRECT_CODES = {301, 308}
 

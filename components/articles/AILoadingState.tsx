@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import IconSurfy from './IconSurfy';
+import IconRanksmile from './IconRanksmile';
 
 export type AILoadingLine = {
   text: string;
@@ -12,7 +12,7 @@ type AILoadingStateProps = {
   status: string;
   /** Real tool / step lines — empty means header-only (no fake log). */
   lines?: AILoadingLine[];
-  /** Kept for API compat; unused after Surfy icon swap. */
+  /** Kept for API compat; unused after Ranksmile icon swap. */
   progress?: number;
   style?: React.CSSProperties;
 };
@@ -22,7 +22,7 @@ const VIEWPORT_LINES = 3;
 const FONT = 'var(--font-family-primary)';
 const MONO = "var(--font-family-mono, 'Roboto Mono', Monaco, Consolas, monospace)";
 
-/** Activity-driven Surfy loader. Only shows a step log when real `lines` are provided. */
+/** Activity-driven Ranksmile loader. Only shows a step log when real `lines` are provided. */
 export default function AILoadingState({
   status,
   lines = [],
@@ -59,7 +59,7 @@ export default function AILoadingState({
           color: '#6A6772',
         }}
       >
-        <IconSurfy size={20} />
+        <IconRanksmile size={20} />
         <span style={{ fontSize: 13 }}>{status}{status.endsWith('...') ? '' : '...'}</span>
       </div>
 

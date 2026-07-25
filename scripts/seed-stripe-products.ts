@@ -1,5 +1,5 @@
 /**
- * Creates SerpBear subscription products + prices in Stripe and prints .env lines.
+ * Creates Ranksmile subscription products + prices in Stripe and prints .env lines.
  * Usage: npx ts-node scripts/seed-stripe-products.ts
  * Requires STRIPE_SECRET_KEY in environment (or stripe CLI logged in via `stripe config`).
  */
@@ -25,9 +25,9 @@ async function main(): Promise<void> {
 
   for (const plan of PLANS) {
     const product = await stripe.products.create({
-      name: `SerpBear ${plan.name}`,
+      name: `Ranksmile ${plan.name}`,
       description: `${plan.name} subscription plan`,
-      metadata: { plan_slug: plan.slug, app: 'serpbear' },
+      metadata: { plan_slug: plan.slug, app: 'ranksmile' },
     });
 
     const monthly = await stripe.prices.create({

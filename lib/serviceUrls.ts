@@ -1,6 +1,6 @@
 /** Public production hosts — overridden by env when set. */
-export const PRODUCTION_APP_URL = 'https://serp-bear-neon.vercel.app';
-export const PRODUCTION_SIDECAR_URL = 'https://serpbear-sidecar.onrender.com';
+export const PRODUCTION_APP_URL = 'https://ranksmile.pl';
+export const PRODUCTION_SIDECAR_URL = 'https://ranksmile-sidecar.onrender.com';
 
 export const LOCAL_NEXTJS_URL = 'http://127.0.0.1:3000';
 export const LOCAL_SIDECAR_URL = 'http://127.0.0.1:8001';

@@ -103,8 +103,8 @@ export function useArticleEditorState({
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [surfyDockOpen, setSurfyDockOpen] = useState(false);
-  const [surfyDockEl, setSurfyDockEl] = useState<HTMLElement | null>(null);
+  const [ranksmileDockOpen, setRanksmileDockOpen] = useState(false);
+  const [ranksmileDockEl, setRanksmileDockEl] = useState<HTMLElement | null>(null);
   const [showCustomization, setShowCustomization] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(false);
@@ -133,7 +133,7 @@ export function useArticleEditorState({
   const shareRef = useRef<HTMLDivElement>(null);
   const sharePopoverRef = useRef<HTMLDivElement>(null);
   const [domainBaseUrl, setDomainBaseUrl] = useState('');
-  const [surfyAiActive, setSurfyAiActive] = useState(false);
+  const [ranksmileAiActive, setRanksmileAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
   const [articleKeywords, setArticleKeywords] = useState<string[]>([]);
   const [breadcrumbKeywords, setBreadcrumbKeywords] = useState<string[]>([]);
@@ -227,8 +227,8 @@ export function useArticleEditorState({
       pixabayCallbackRef.current = onSelect;
       setShowPixabay(true);
     };
-    window.addEventListener('surfer:open-pixabay', handler);
-    return () => window.removeEventListener('surfer:open-pixabay', handler);
+    window.addEventListener('ranksmile:open-pixabay', handler);
+    return () => window.removeEventListener('ranksmile:open-pixabay', handler);
   }, []);
 
   useEffect(() => {
@@ -575,10 +575,10 @@ export function useArticleEditorState({
     setShowInternalLinksPanel,
     showHistory,
     setShowHistory,
-    surfyDockOpen,
-    setSurfyDockOpen,
-    surfyDockEl,
-    setSurfyDockEl,
+    ranksmileDockOpen,
+    setRanksmileDockOpen,
+    ranksmileDockEl,
+    setRanksmileDockEl,
     showCustomization,
     setShowCustomization,
     panelCollapsed,
@@ -599,8 +599,8 @@ export function useArticleEditorState({
     shareRef,
     sharePopoverRef,
     domainBaseUrl,
-    surfyAiActive,
-    setSurfyAiActive,
+    ranksmileAiActive,
+    setRanksmileAiActive,
     linksAiActive,
     setLinksAiActive,
     articleKeywords,

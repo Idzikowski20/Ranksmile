@@ -45,10 +45,10 @@ export type { SelectOption, SelectSection, SelectOptionOrSection, CompactSelectP
 export { PageFilterBar } from './pageFilterBar/pageFilterBar';
 export { ToolRibbon } from './toolRibbon/toolRibbon';
 
-// KEEP_UNIQUE — Surfer widgets (see components/surfer/)
-export { default as Gauge } from '../surfer/Gauge';
-export { default as SelectionBar } from '../surfer/SelectionBar';
-export { default as SortableHeader } from '../surfer/SortableHeader';
-export { default as SlidePanel } from '../surfer/SlidePanel';
-export * from '../surfer/icons';
-export * from '../surfer/tokens';
+// KEEP_UNIQUE — Ranksmile widgets (see components/ranksmile/)
+export { default as Gauge } from '../ranksmile/Gauge';
+export { default as SelectionBar } from '../ranksmile/SelectionBar';
+export { default as SortableHeader } from '../ranksmile/SortableHeader';
+export { default as SlidePanel } from '../ranksmile/SlidePanel';
+export * from '../ranksmile/icons';
+export * from '../ranksmile/tokens';

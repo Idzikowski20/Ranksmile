@@ -19,7 +19,7 @@ type JobsResponse = {
   jobs: PipelineJob[];
 };
 
-const STORAGE_KEY = (articleId: number) => `surfy:pipeline-active:${articleId}`;
+const STORAGE_KEY = (articleId: number) => `ranksmile:pipeline-active:${articleId}`;
 
 const QUEUE_LABEL: Record<string, string> = {
   serp: 'SERP',

@@ -87,7 +87,7 @@ type FlatIdea = { idea: TopicIdea; cluster: TopicCluster; clusterIdx: number; id
  *  node click can open that cluster's ideas in the drawer. Fields the canvas never reads are
  *  filled with inert defaults.
  *
- *  SurferSEO-style radial layout: clusters are ranked by search volume; only the top one sits
+ *  Ranksmile-style radial layout: clusters are ranked by search volume; only the top one sits
  *  in the central HIGH zone, the rest fan outward into MEDIUM/LOW rings, spread by the golden
  *  angle so blobs don't collide. */
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));

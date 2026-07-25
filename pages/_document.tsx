@@ -7,8 +7,10 @@ class MyDocument extends Document {
       <Html>
         <Head>
           <link rel="manifest" href="/manifest.json" />
-          <link rel="apple-touch-icon" href="/icon.png"></link>
-          <meta name="theme-color" content="#fff" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="icon" href="/favicon.ico" sizes="any" />
+          <link rel="apple-touch-icon" href="/icon.png" />
+          <meta name="theme-color" content="#50B9FF" />
           {/* Official Inter (rsms.me) — the Google Fonts build is outdated and ships
               WITHOUT the cvXX / slashed-zero OpenType features, so font-feature-settings
               had no effect. This build (InterVariable) includes them. */}

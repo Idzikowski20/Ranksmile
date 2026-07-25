@@ -1,4 +1,4 @@
-# Seeds SerpBear plans in Stripe via Stripe CLI.
+# Seeds Ranksmile plans in Stripe via Stripe CLI.
 # Prerequisite: stripe login  (or set STRIPE_SECRET_KEY and use scripts/seed-stripe-products.ts)
 param(
   [string]$StripeExe = ''
@@ -38,7 +38,7 @@ function Get-StripeConfigValue {
   return $null
 }
 
-function New-SerpBearPlan {
+function New-RanksmilePlan {
   param(
     [string]$Slug,
     [string]$Name,
@@ -48,9 +48,9 @@ function New-SerpBearPlan {
 
   Write-Host "Creating $Name..." -ForegroundColor Green
   $productJson = (& $StripeExe products create `
-    --name "SerpBear $Name" `
+    --name "Ranksmile $Name" `
     -d "metadata[plan_slug]=$Slug" `
-    -d "metadata[app]=serpbear") -join "`n"
+    -d "metadata[app]=ranksmile") -join "`n"
   $product = $productJson | ConvertFrom-Json
 
   $monthlyJson = (& $StripeExe prices create `
@@ -88,7 +88,7 @@ $plans = @(
 
 $created = @()
 foreach ($plan in $plans) {
-  $created += New-SerpBearPlan -Slug $plan.Slug -Name $plan.Name -MonthlyCents $plan.Monthly -YearlyCents $plan.Yearly
+  $created += New-RanksmilePlan -Slug $plan.Slug -Name $plan.Name -MonthlyCents $plan.Monthly -YearlyCents $plan.Yearly
 }
 
 $testKey = Get-StripeConfigValue 'test_mode_api_key'

@@ -3,7 +3,7 @@ import { useProfile, useUpdateProfile } from '../../services/profile';
 import { Switch } from '../core';
 import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
 
-/** Your account → Notifications: a single per-user product-updates opt-in (Surfer parity). */
+/** Your account → Notifications: a single per-user product-updates opt-in (Ranksmile parity). */
 const AccountNotificationSettings = () => {
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();

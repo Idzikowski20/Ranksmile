@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { authClient } from '../../lib/auth/client';
 
 // ──────────────────────────────────────────────
-// Shared button base classes (Surfer canonical)
+// Shared button base classes (Ranksmile canonical)
 // ──────────────────────────────────────────────
 const btnBase =
    'gap-sm focus-visible:outline-purple-40 relative inline-flex cursor-pointer items-center justify-center border-none font-sans font-semibold transition-[color,background-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 [&:not(:focus-visible)]:outline-none';
@@ -19,7 +19,7 @@ const btnLink      = `${btnBase} text-base rounded-none bg-transparent p-0 text-
 // ──────────────────────────────────────────────
 const Wordmark = () => (
    <span className="h-lg flex items-center text-xl font-bold tracking-tight text-gray-base">
-      SerpBear
+      Ranksmile
    </span>
 );
 
@@ -184,7 +184,7 @@ export default function InvitePage() {
          <div className="py-lg flex flex-col items-center">
             <div className="text-base">
                You&apos;ve been invited to join{' '}
-               <span className="font-semibold">{orgName || 'a Surfer organization'}</span>
+               <span className="font-semibold">{orgName || 'a Ranksmile organization'}</span>
                {' '}as{' '}
                <span className="font-semibold">{role}</span>
                {' '}with access to{' '}

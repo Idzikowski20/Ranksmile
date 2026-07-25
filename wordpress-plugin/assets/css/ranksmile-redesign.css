@@ -1,0 +1,202 @@
+/*
+ * Ranksmile plugin admin redesign — aligns the settings screen with the app's
+ * design system (design.md tokens). Loaded after components/admin/ranksmileseo
+ * css so equal-specificity rules win by source order.
+ *
+ * Tokens: text #18181B · muted #52525C · subtle #71717B · borders #E4E4E7/#D4D4D8
+ * card #F4F4F5 · brand #783AFB · brand-dark #4D08B5 · dark btn #18181B
+ * success #1AB25E · error #FF6F77 · focus ring rgba(120,58,251,0.1)
+ */
+
+/* ---- Typography ------------------------------------------------------- */
+div.ranksmile-layout h1 {
+  color: #18181B;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 30px;
+  margin-bottom: 20px;
+}
+div.ranksmile-layout div,
+div.ranksmile-layout p {
+  color: #52525C;
+}
+div.ranksmile-layout a {
+  color: #783AFB;
+  transition: color 0.15s ease;
+}
+div.ranksmile-layout a:hover {
+  color: #4D08B5;
+}
+
+/* ---- Content shell: a clean white card ------------------------------- */
+.ranksmile-layout .ranksmile-wrapper {
+  gap: 12px;
+}
+.ranksmile-layout .ranksmile-wrapper__content {
+  background: #FFFFFF;
+  border: 1px solid #E4E4E7;
+  border-radius: 12px;
+  padding: 28px 32px;
+  box-shadow: 0px 1px 2px 0px rgba(26, 29, 40, 0.06);
+  max-width: 880px;
+  box-sizing: border-box;
+}
+
+/* ---- Section + field headings ---------------------------------------- */
+.ranksmile-layout .ranksmile-admin-config-form__section-header h3,
+.ranksmile-layout .ranksmile-admin-config-form #header_core {
+  color: #18181B;
+  font-weight: 600;
+  border-top: 1px solid #E4E4E7;
+  padding-top: 24px;
+}
+.ranksmile-layout .ranksmile-admin-config-form__single-field-row h3,
+.ranksmile-layout .ranksmile-connection-box h3,
+.ranksmile-layout .ranksmile-admin-footer h3,
+.ranksmile-layout .ranksmile-debug-box h3 {
+  color: #18181B;
+  font-weight: 600;
+}
+.ranksmile-layout div.ranksmile-layout label,
+.ranksmile-layout label {
+  color: #3F3F47;
+}
+
+/* ---- Primary buttons (dark → purple hover) --------------------------- */
+input[type=submit].ranksmile-button--primary,
+button.ranksmile-button--primary,
+a.ranksmile-button--primary,
+div.ranksmile-layout a.ranksmile-button--primary {
+  background-color: #18181B;
+  color: #FFFFFF;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+input[type=submit].ranksmile-button--primary:hover,
+button.ranksmile-button--primary:hover,
+a.ranksmile-button--primary:hover,
+div.ranksmile-layout a.ranksmile-button--primary:hover {
+  background-color: #783AFB;
+  color: #FFFFFF;
+}
+input[type=submit].ranksmile-button--primary:active,
+button.ranksmile-button--primary:active,
+a.ranksmile-button--primary:active,
+div.ranksmile-layout a.ranksmile-button--primary:active {
+  background-color: #4D08B5;
+  color: #FFFFFF;
+}
+
+/* ---- Secondary buttons (white, bordered) ----------------------------- */
+input[type=submit].ranksmile-button--secondary,
+button.ranksmile-button--secondary,
+a.ranksmile-button--secondary,
+div.ranksmile-layout a.ranksmile-button--secondary {
+  background-color: #FFFFFF;
+  color: #18181B;
+  border: 1px solid #D4D4D8;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+input[type=submit].ranksmile-button--secondary:hover,
+button.ranksmile-button--secondary:hover,
+a.ranksmile-button--secondary:hover,
+div.ranksmile-layout a.ranksmile-button--secondary:hover {
+  background-color: #F4F4F5;
+  color: #18181B;
+}
+input[type=submit].ranksmile-button--secondary:active,
+button.ranksmile-button--secondary:active,
+a.ranksmile-button--secondary:active,
+div.ranksmile-layout a.ranksmile-button--secondary:active {
+  background-color: #E4E4E7;
+  color: #18181B;
+}
+
+/* ---- Link buttons ---------------------------------------------------- */
+input[type=submit].ranksmile-button--link,
+button.ranksmile-button--link,
+a.ranksmile-button--link,
+div.ranksmile-layout a.ranksmile-button--link {
+  color: #52525C;
+}
+input[type=submit].ranksmile-button--link:hover,
+button.ranksmile-button--link:hover,
+a.ranksmile-button--link:hover,
+div.ranksmile-layout a.ranksmile-button--link:hover {
+  color: #18181B;
+}
+
+/* ---- Inputs & selects ------------------------------------------------ */
+div.ranksmile-layout select,
+.ranksmile-admin-config-form input:not([type=submit]):not([type=checkbox]):not([type=radio]),
+.ranksmile-admin-config-form select {
+  border: 1px solid #D4D4D8;
+  border-radius: 8px;
+  color: #18181B;
+  background-color: #FFFFFF;
+  line-height: 24px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+div.ranksmile-layout select:focus,
+.ranksmile-admin-config-form input:not([type=submit]):not([type=checkbox]):not([type=radio]):focus,
+.ranksmile-admin-config-form select:focus {
+  border-color: #AA93FD;
+  box-shadow: 0 0 0 2px rgba(120, 58, 251, 0.1);
+  outline: none;
+}
+
+/* Native checkboxes / radios pick up the brand colour */
+.ranksmile-layout input[type=checkbox],
+.ranksmile-layout input[type=radio] {
+  accent-color: #783AFB;
+}
+
+/* ---- Toggle switch --------------------------------------------------- */
+.ranksmile-switch-box input:checked + .slider {
+  background-color: #783AFB;
+}
+.ranksmile-switch-box input:focus + .slider {
+  box-shadow: 0 0 0 2px rgba(120, 58, 251, 0.1);
+}
+.ranksmile-switch-box a {
+  color: #783AFB;
+}
+.ranksmile-switch-box a:hover {
+  color: #4D08B5;
+}
+
+/* ---- Sticky Save button ---------------------------------------------- */
+.ranksmile-layout .ranksmile-wrapper__submit input[type=submit] {
+  background-color: #18181B;
+  border-radius: 8px;
+  padding: 9px 20px;
+  box-sizing: border-box;
+  line-height: 20px;
+  transition: background-color 0.15s ease;
+}
+.ranksmile-layout .ranksmile-wrapper__submit input[type=submit]:hover {
+  background-color: #783AFB;
+}
+
+/* ---- Connection status colours --------------------------------------- */
+.ranksmile-connection-box--connected .ranksmile-connection-box__connection-info {
+  color: #1AB25E;
+}
+.ranksmile-connection-box--not-connected .ranksmile-connection-box__connection-info {
+  color: #FF6F77;
+}
+
+/* ---- Dividers (dashed → solid, on-brand) ----------------------------- */
+.ranksmile-layout .ranksmile-admin-footer {
+  border-top: 1px solid #E4E4E7;
+}
+
+/* ---- WP-core legacy primary button used in this layout --------------- */
+div.ranksmile-layout .button-primary {
+  background-color: #18181B;
+  border-radius: 8px;
+}
+div.ranksmile-layout .button-primary:hover {
+  background-color: #783AFB;
+}

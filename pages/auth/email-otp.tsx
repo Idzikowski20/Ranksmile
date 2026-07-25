@@ -7,7 +7,7 @@ import EmailOtpForm from '../../components/auth/EmailOtpForm';
 const EmailOtp: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Email verification — SerpBear</title>
+      <title>Email verification — Ranksmile</title>
     </Head>
     <AuthPageLayout>
       <EmailOtpForm />

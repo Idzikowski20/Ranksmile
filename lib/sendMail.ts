@@ -9,7 +9,7 @@ export async function sendMail(opts: { to: string; subject: string; html: string
       smtp_username = '',
       smtp_password = '',
       notification_email_from = '',
-      notification_email_from_name = 'SerpBear',
+      notification_email_from_name = 'Ranksmile',
    } = settings;
 
    if (!smtp_server || !smtp_port || !notification_email_from) {

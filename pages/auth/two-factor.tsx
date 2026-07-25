@@ -7,7 +7,7 @@ import TwoFactorForm from '../../components/auth/TwoFactorForm';
 const TwoFactor: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Two-factor — SerpBear</title>
+      <title>Two-factor — Ranksmile</title>
     </Head>
     <AuthPageLayout>
       <TwoFactorForm />

@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { parseJsonish } from '../types/json';
-import { SERPBEAR_UA } from '../httpConstants';
+import { RANKSMILE_UA } from '../httpConstants';
 import { assertPublicUrl } from '../ssrfGuard';
 import type { AuditRow } from './issues';
 import type { External403Instance, PageAuditSignals } from './types';
@@ -78,7 +78,7 @@ async function probe403(externalUrl: string): Promise<boolean> {
     const r = await fetch(externalUrl, {
       method: 'HEAD',
       redirect: 'follow',
-      headers: { 'User-Agent': SERPBEAR_UA },
+      headers: { 'User-Agent': RANKSMILE_UA },
       signal: AbortSignal.timeout(12_000),
     });
     if (r.status === 403) return true;
@@ -86,7 +86,7 @@ async function probe403(externalUrl: string): Promise<boolean> {
       const r2 = await fetch(externalUrl, {
         method: 'GET',
         redirect: 'follow',
-        headers: { 'User-Agent': SERPBEAR_UA },
+        headers: { 'User-Agent': RANKSMILE_UA },
         signal: AbortSignal.timeout(12_000),
       });
       return r2.status === 403;

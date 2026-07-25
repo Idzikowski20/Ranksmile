@@ -51,7 +51,7 @@ const STAGE_TO_STEPS: Record<string, string[]> = {
   finalizing: ['image', 'save'],
 };
 
-const PAGE_RUN_PREFIX = 'serpbear-deep-analysis-page:';
+const PAGE_RUN_PREFIX = 'ranksmile-deep-analysis-page:';
 
 function pageRunKey(flow: string, urlStr: string, kwStr: string, domainId: string) {
   return `${PAGE_RUN_PREFIX}${flow}:${urlStr}:${kwStr}:${domainId}`;
@@ -395,7 +395,7 @@ const DeepAnalysisPage: NextPage = () => {
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head>
-        <title>Deep Analysis — SerpBear</title>
+        <title>Deep Analysis — Ranksmile</title>
       </Head>
 
       <SentryPage maxWidth={560} className="nc-wizard-page">

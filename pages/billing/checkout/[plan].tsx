@@ -184,7 +184,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
 
   const goToDashboardWithTrialToast = () => {
     router.push('/dashboard').then(() => showWelcomeToast(
-      'Welcome to your 7-day Surfer trial',
+      'Welcome to your 7-day Ranksmile trial',
       'Give our AI SEO workflow a try before you commit. Follow the checklist on the left or explore on your own. Happy Surfing!',
     ));
   };
@@ -282,7 +282,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   const checkoutBody = (
     <>
           <h1 style={{ margin: '0 0 28px', textAlign: 'center', fontSize: 24, lineHeight: '32px', fontWeight: 700, letterSpacing: 0 }}>
-            {isUpfront ? `Finalize your order for the ${plan.name} plan` : 'Try Surfer free for 7 days'}
+            {isUpfront ? `Finalize your order for the ${plan.name} plan` : 'Try Ranksmile free for 7 days'}
           </h1>
 
           <div className="checkout-grid">
@@ -567,7 +567,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
 
   return (
     <AppShell domains={[]} showAddModal={() => {}} showSettings={() => {}} showSidebar={false} hideMobileNav>
-      <Head><title>{isUpfront ? 'Complete your purchase' : 'Start your trial'} - SerpBear</title></Head>
+      <Head><title>{isUpfront ? 'Complete your purchase' : 'Start your trial'} - Ranksmile</title></Head>
       <style>{`
         .checkout-grid { display: grid; grid-template-columns: minmax(0, 1fr) 328px; gap: 20px; align-items: start; }
         @media (max-width: 960px) { .checkout-grid { grid-template-columns: 1fr; } }

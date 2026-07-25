@@ -7,15 +7,15 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 export const DURATION = { instant: 0.1, fast: 0.15, normal: 0.25, slow: 0.35, slower: 0.5 } as const;
 
 /** Named CustomEases — same cubic-bezier control points as the CSS --motion-ease-* tokens. */
-export const EASE = { out: 'surfer-out', in: 'surfer-in', inOut: 'surfer-in-out' } as const;
+export const EASE = { out: 'ranksmile-out', in: 'ranksmile-in', inOut: 'ranksmile-in-out' } as const;
 
 let easesReady = false;
 function ensureEases(): void {
   if (easesReady) return;
   gsap.registerPlugin(CustomEase);
-  CustomEase.create('surfer-out', '0.117,0.517,0.23,0.998');
-  CustomEase.create('surfer-in', '0.755,0.05,0.855,0.06');
-  CustomEase.create('surfer-in-out', '0.86,0,0.07,1');
+  CustomEase.create('ranksmile-out', '0.117,0.517,0.23,0.998');
+  CustomEase.create('ranksmile-in', '0.755,0.05,0.855,0.06');
+  CustomEase.create('ranksmile-in-out', '0.86,0,0.07,1');
   easesReady = true;
 }
 

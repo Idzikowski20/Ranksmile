@@ -8,7 +8,7 @@ export function stripDataImages(html: string): { stripped: string; map: Map<stri
   const map = new Map<string, string>();
   let i = 0;
   const stripped = html.replace(/(<img[^>]*\ssrc=)["'](data:[^"']+)["']/gi, (_m, pre, dataUrl) => {
-    const token = `__SURFY_IMG_${i}__`;
+    const token = `__RANKSMILE_IMG_${i}__`;
     i += 1;
     map.set(token, dataUrl);
     return `${pre}"${token}"`;

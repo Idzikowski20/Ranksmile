@@ -15,7 +15,7 @@ function ignoreExisting(label: string, e: unknown): void {
 /**
  * Standalone Audit tool (More tools › Audit). One row per (url, keyword). Distinct
  * from the GSC-based content-audit page and from page_audits: these hold a full
- * SurferSEO-style content audit serialized into result_json.
+ * Ranksmile-style content audit serialized into result_json.
  *
  * status ∈ queued | running | completed | failed. started_at is the staleness
  * heartbeat: a `running` audit whose compute died can be re-kicked by comparing it

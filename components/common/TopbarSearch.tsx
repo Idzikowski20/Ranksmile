@@ -4,9 +4,10 @@ import { useRouter } from 'next/router';
 import { useWorkspaces } from '../../services/workspaces';
 import { useFetchDomains } from '../../services/domains';
 import { deriveActiveId, workspaceHref } from '../../lib/activeWorkspace';
+import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '../../lib/navigation';
 import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings,
-  IconFire, IconGlobe, IconBuilding, IconDocs,
+  IconFire, IconGlobe, IconBuilding, IconDocs, IconTools,
 } from './nav/sentryIcons';
 
 const ICO = 14;
@@ -53,25 +54,40 @@ function useCommandSections(): PaletteSection[] {
     ];
 
     if (slug) {
+      const iconFor = (id: string): React.ReactNode => {
+        if (id === 'recommendations') return <IconFire size={ICO} />;
+        if (id === 'content-audit' || id === 'site-audit') return <IconIssues size={ICO} />;
+        if (id === 'activity-log') return <IconDocs size={ICO} />;
+        if (id.startsWith('ai-')) {
+          if (id === 'ai-overview') return <IconSiren size={ICO} />;
+          if (id === 'ai-sources') return <IconGlobe size={ICO} />;
+          if (id === 'ai-competitors') return <IconBuilding size={ICO} />;
+          if (id === 'ai-prompts') return <IconDocs size={ICO} />;
+          return <IconCompass size={ICO} />;
+        }
+        if (id === 'keyword-research' || id === 'topic-research') return <IconTools size={ICO} />;
+        return <IconCompass size={ICO} />;
+      };
+
+      const toPalette = (items: ReturnType<typeof resolveSiteNav>) => items.map((item) => ({
+        id: item.id,
+        label: item.label,
+        href: item.href,
+        icon: iconFor(item.id),
+        keywords: item.keywords ?? [],
+      }));
+
       sections.push({
         title: 'SEO',
-        items: [
-          { id: 'performance', label: 'Performance', href: ws(`/sites/${slug}`), icon: <IconCompass size={ICO} />, keywords: ['gsc', 'traffic'] },
-          { id: 'recommendations', label: 'Recommendations', href: ws(`/sites/${slug}/recommendations`), icon: <IconFire size={ICO} />, keywords: ['optimize'] },
-          { id: 'content-audit', label: 'Content Audit', href: ws(`/sites/${slug}/content-audit`), icon: <IconIssues size={ICO} />, keywords: ['audit'] },
-          { id: 'topical-map', label: 'Topical Map', href: ws(`/sites/${slug}/topical-map`), icon: <IconCompass size={ICO} />, keywords: ['topics', 'clusters'] },
-          { id: 'activity-log', label: 'Activity Log', href: ws(`/sites/${slug}/activity-log`), icon: <IconDocs size={ICO} />, keywords: ['history', 'log'] },
-        ],
+        items: toPalette(resolveSiteNav(SEO_NAV, slug, ws)),
       });
       sections.push({
         title: 'AI Visibility',
-        items: [
-          { id: 'ai-overview', label: 'Overview', href: ws(`/sites/${slug}/ai-visibility/overview`), icon: <IconSiren size={ICO} />, keywords: ['ai vis'] },
-          { id: 'ai-sources', label: 'Sources', href: ws(`/sites/${slug}/ai-visibility/sources`), icon: <IconGlobe size={ICO} />, keywords: ['citations'] },
-          { id: 'ai-competitors', label: 'Competitors', href: ws(`/sites/${slug}/ai-visibility/competitors`), icon: <IconBuilding size={ICO} />, keywords: ['rivals'] },
-          { id: 'ai-prompts', label: 'Prompts', href: ws(`/sites/${slug}/ai-visibility/prompts`), icon: <IconDocs size={ICO} />, keywords: ['queries'] },
-          { id: 'ai-fanout', label: 'Fanout Queries', href: ws(`/sites/${slug}/ai-visibility/fanout-queries`), icon: <IconCompass size={ICO} />, keywords: ['fanout'] },
-        ],
+        items: toPalette(resolveSiteNav(AI_VISIBILITY_NAV, slug, ws)),
+      });
+      sections.push({
+        title: 'Tools',
+        items: toPalette(resolveSiteNav(TOOLS_NAV, slug, ws)),
       });
     }
 

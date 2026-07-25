@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fetchSitemapEntries } from '../fetchSitemapUrls';
-import { SERPBEAR_UA } from '../httpConstants';
+import { RANKSMILE_UA } from '../httpConstants';
 import { assertPublicUrl } from '../ssrfGuard';
 import type { SitemapIssueInstance } from './types';
 
@@ -63,7 +63,7 @@ async function checkSitemapUrl(url: string): Promise<SitemapCheckResult> {
     await assertPublicUrl(url);
     const r = await fetch(url, {
       redirect: 'manual',
-      headers: { 'User-Agent': SERPBEAR_UA },
+      headers: { 'User-Agent': RANKSMILE_UA },
       signal: AbortSignal.timeout(12_000),
     });
     if (r.status >= 300 && r.status < 400) return 'redirect';

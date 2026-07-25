@@ -33,7 +33,7 @@ const AuthCallback: NextPage = () => {
   return (
     <AuthShell>
       <Head>
-        <title>SerpBear</title>
+        <title>Ranksmile</title>
       </Head>
       <AuthPageLayout>
         <h1 style={authTitleStyle}>Completing sign in</h1>

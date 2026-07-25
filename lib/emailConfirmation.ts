@@ -5,10 +5,10 @@ import { queryOne } from './db/query';
 const isPostgres = !!process.env.DATABASE_URL;
 
 // App-owned email verification. Kept out of NextAuth's user table since email confirmation is a
-// SerpBear-specific gate (not every auth provider needs it), and this way it can be added/removed
+// Ranksmile-specific gate (not every auth provider needs it), and this way it can be added/removed
 // without touching the NextAuth schema. token_hash/expires_ms/confirmed_ms mirror the aiTokenUsage
 // idiom: epoch-ms integers, no timezone pitfalls across Postgres/SQLite.
-// 30 min — matches the confirmation e-mail's "self-destruct in 30 minutes" copy (Surfer parity).
+// 30 min — matches the confirmation e-mail's "self-destruct in 30 minutes" copy (Ranksmile parity).
 export const TOKEN_TTL_MS = 30 * 60 * 1000;
 export const RESEND_COOLDOWN_MS = 60_000;
 

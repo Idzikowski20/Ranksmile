@@ -7,14 +7,14 @@ interface Step { target: string; placement: 'bottom' | 'left'; title: string; bo
 const STEPS: Step[] = [
   // ── Editor toolbar ──
   {
-    target: 'ask-surfy', placement: 'bottom', title: 'Ask Smily',
+    target: 'ask-ranksmile', placement: 'bottom', title: 'Ask Smily',
     body: (
       <>
         Need to touch-up your content? Ask Smily, our AI assistant for a hand!
         <br /><br />
         💡 Highlight the parts you&apos;d like to edit and click &quot;Ask Smily&quot; to get started.
         <br /><br />
-        Surfy knows your and competitors&apos; articles and is aware of Content Editor guidelines.
+        Ranksmile knows your and competitors&apos; articles and is aware of Content Editor guidelines.
       </>
     ),
   },

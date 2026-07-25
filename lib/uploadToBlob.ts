@@ -5,7 +5,7 @@
 //   R2_ACCOUNT_ID         — Cloudflare account ID
 //   R2_ACCESS_KEY_ID      — R2 API token access key
 //   R2_SECRET_ACCESS_KEY  — R2 API token secret key
-//   R2_BUCKET_NAME        — bucket name (e.g. "serpbear-media")
+//   R2_BUCKET_NAME        — bucket name (e.g. "ranksmile-media")
 //   R2_PUBLIC_URL         — public base URL  (e.g. "https://media.yourdomain.com"
 //                           or "https://pub-xxxx.r2.dev" from R2 dev subdomain)
 

@@ -164,7 +164,7 @@ export async function discoverRankingKeywords(opts: {
     } catch { /* non-fatal */ }
   };
 
-  // Competitors first — Surfer-style SERP footprint, not whole-domain noise.
+  // Competitors first — Ranksmile-style SERP footprint, not whole-domain noise.
   for (const comp of competitors) {
     await addRankedOnTopic(comp, `discover-ranked-comp-${comp}`);
   }

@@ -479,7 +479,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     // Terms come from competitor CONTENT only (sidecar scrape_serp + extract_terms),
-    // like Surfer's "important terms". We deliberately do NOT layer DataForSEO keyword
+    // like Ranksmile's "important terms". We deliberately do NOT layer DataForSEO keyword
     // ideas: for brand keywords they flood the list with irrelevant suggestions
     // (maps, translate, minecraft…) the article never contains, which tanks the score.
     const rawTerms = [

@@ -132,7 +132,7 @@ describe('buildAuditResult with real competitor data (phase 2)', () => {
       expect(['add', 'ok', 'remove']).toContain(t?.action);
    });
 
-   it('builds SurferSEO-exact description suffixes per factor style', () => {
+   it('builds Ranksmile-exact description suffixes per factor style', () => {
       const msg = (key: string) => r.factors.find((f) => f.key === key)?.message || '';
       // range style: competitor spread 1400–2000 with the unit noun "words"
       expect(msg('word_count_body')).toContain('while the suggested range is 1400 - 2000 words.');
@@ -152,7 +152,7 @@ describe('buildAuditResult with real competitor data (phase 2)', () => {
    });
 });
 
-describe('SurferSEO-style factor parity', () => {
+describe('Ranksmile-style factor parity', () => {
    const r = buildAuditResult(HTML, URL, KEYWORD, { ttfbMs: 120, loadMs: 340 });
    const by = (k: string) => r.factors.find((f) => f.key === k);
 
@@ -176,7 +176,7 @@ describe('SurferSEO-style factor parity', () => {
       expect([by('exact_kw_title')?.suggestedMin, by('exact_kw_title')?.suggestedMax]).toEqual([1, 1]);
    });
 
-   it('covers all SurferSEO sections in order', () => {
+   it('covers all Ranksmile sections in order', () => {
       const sections = r.factors.map((f) => f.section).filter((s, i, a) => a.indexOf(s) === i);
       expect(sections).toEqual([
          'Word count', 'Exact keywords', 'Partial keywords', 'Page structure',
@@ -185,9 +185,9 @@ describe('SurferSEO-style factor parity', () => {
    });
 });
 
-describe('audit content score (SurferSEO calibration)', () => {
+describe('audit content score (Ranksmile calibration)', () => {
    it('is coverage-dominated: low term coverage → mid score even with good length', () => {
-      // 20% coverage, full length, 70% structure → ~48 (SurferSEO-like, not the inflated ~90)
+      // 20% coverage, full length, 70% structure → ~48 (Ranksmile-like, not the inflated ~90)
       expect(auditContentScore(0.2, 1, 0.7)).toBe(48);
    });
    it('bounds: full coverage → 100, none → 0', () => {

@@ -153,7 +153,7 @@ async def extract_semantic_terms(keyword: str, texts: list[str], deepseek_key: s
         else:
             target_count = max(1, round(doc_freq * avg_relevance * 3))
 
-        # Suggested range = spread of real per-competitor occurrence counts (SurferSEO
+        # Suggested range = spread of real per-competitor occurrence counts (Ranksmile
         # shows e.g. "1-4"): min/max across the pages that actually use the term.
         per_doc = [lt.count(term) for lt in lower_texts]
         nonzero = [c for c in per_doc if c > 0]
@@ -248,7 +248,7 @@ TEXT:
 
 
 def _fallback_terms(texts: list[str], keyword: str) -> list[dict]:
-    """TF-IDF phrase extraction when DeepSeek is unavailable — Surfer-style n-grams."""
+    """TF-IDF phrase extraction when DeepSeek is unavailable — Ranksmile-style n-grams."""
     if not texts:
         return [{"term": keyword, "target_count": 3, "type": "core"}] if keyword else []
 

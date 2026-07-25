@@ -160,7 +160,7 @@ const IconBtn = ({
   </button>
 );
 
-/* ── Surfer-style action-bar icons (20px) ─────────────────────────── */
+/* ── Ranksmile-style action-bar icons (20px) ─────────────────────────── */
 const sIco = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 const IcoDoneFilled = () => (<svg width={20} height={20} viewBox="0 0 24 24"><path fillRule="evenodd" clipRule="evenodd" fill="currentColor" d="M12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM17.2071 9.70711C17.5976 9.31658 17.5976 8.68342 17.2071 8.29289C16.8166 7.90237 16.1834 7.90237 15.7929 8.29289L10.5 13.5858L8.20711 11.2929C7.81658 10.9024 7.18342 10.9024 6.79289 11.2929C6.40237 11.6834 6.40237 12.3166 6.79289 12.7071L9.79289 15.7071C10.1834 16.0976 10.8166 16.0976 11.2071 15.7071L17.2071 9.70711Z" /></svg>);
 const IcoDoneOutline = () => (<svg width={20} height={20} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" {...sIco} /><path {...sIco} d="M8.4 12.3l2.4 2.4 4.8-5.4" /></svg>);
@@ -259,7 +259,7 @@ const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
   );
 };
 
-/* Share popover (edit link + comment link, like Surfer) */
+/* Share popover (edit link + comment link, like Ranksmile) */
 const IcoReset = () => (
   <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3.5 9a8.5 8.5 0 0 1 14.4-3.1L21 9M21 5v4h-4M20.5 15a8.5 8.5 0 0 1-14.4 3.1L3 15M3 19v-4h4" /></svg>
 );
@@ -433,7 +433,7 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, paddingLeft: 8 }}>
       <Link href="/dashboard" style={{ display: 'inline-flex', flexShrink: 0 }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8 }}>
-          <img alt="" width={20} height={20} style={{ borderRadius: 4 }} src={`https://www.google.com/s2/favicons?domain=${domain || 'serpbear'}&sz=32`} />
+          <img alt="" width={20} height={20} style={{ borderRadius: 4 }} src={`https://www.google.com/s2/favicons?domain=${domain || 'ranksmile'}&sz=32`} />
         </span>
       </Link>
       <div className="ce-bc-rest" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
@@ -513,9 +513,9 @@ const ArticleEditorPage: NextPage = () => {
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  // Surfy docks into the right panel: ArticleEditor notifies open-state; the dock <div> is the portal target.
-  const [surfyDockOpen, setSurfyDockOpen] = useState(false);
-  const [surfyDockEl, setSurfyDockEl] = useState<HTMLElement | null>(null);
+  // Ranksmile docks into the right panel: ArticleEditor notifies open-state; the dock <div> is the portal target.
+  const [ranksmileDockOpen, setRanksmileDockOpen] = useState(false);
+  const [ranksmileDockEl, setRanksmileDockEl] = useState<HTMLElement | null>(null);
   const [showCustomization, setShowCustomization] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(false);
@@ -578,7 +578,7 @@ const ArticleEditorPage: NextPage = () => {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [savedBannerOpen, setSavedBannerOpen] = useState(false);
-  const [surfyAiActive, setSurfyAiActive] = useState(false);
+  const [ranksmileAiActive, setRanksmileAiActive] = useState(false);
   const [linksAiActive, setLinksAiActive] = useState(false);
   const [aiVisibilitySummary, setAiVisibilitySummary] = useState<AiVisibilitySummary | null>(null);
   const [coverageItems, setCoverageItems] = useState<CoverageItem[]>([]);
@@ -749,8 +749,8 @@ const ArticleEditorPage: NextPage = () => {
       pixabayCallbackRef.current = onSelect;
       setShowPixabay(true);
     };
-    window.addEventListener('surfer:open-pixabay', handler);
-    return () => window.removeEventListener('surfer:open-pixabay', handler);
+    window.addEventListener('ranksmile:open-pixabay', handler);
+    return () => window.removeEventListener('ranksmile:open-pixabay', handler);
   }, []);
 
   // The Content Editor must scroll INTERNALLY (fixed dark shell + scrollable
@@ -1205,7 +1205,7 @@ const ArticleEditorPage: NextPage = () => {
   };
 
   // Flush pending edits immediately on tab-hide / close, in-app navigation, and Cmd/Ctrl+S —
-  // so changes are never lost to the debounce window (the main gap vs. Surfer-style autosave).
+  // so changes are never lost to the debounce window (the main gap vs. Ranksmile-style autosave).
   useEffect(() => {
     // Page-teardown flushes (tab-hide / close / in-app nav) need keepalive so the PUT survives;
     // Cmd/Ctrl+S is a manual save while the page stays, so it uses a normal (uncapped) request.
@@ -1833,7 +1833,7 @@ const ArticleEditorPage: NextPage = () => {
         contentClassName="article-editor-shell"
         hideMobileNav
       >
-        {/* Surfer-style loading screen inside the editor gray wrapper */}
+        {/* Ranksmile-style loading screen inside the editor gray wrapper */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
           <div style={{ flex: 1, minHeight: 0, display: 'flex', background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', overflow: 'hidden' }}>
             <EditorLoading />
@@ -1885,144 +1885,144 @@ const ArticleEditorPage: NextPage = () => {
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Surfer-SEO-style image NodeView ──────────────────────── */
-        [data-surfer-image] { margin: 0.5rem 0; }
-        .surfer-image-group {
+        /* ── Ranksmile-SEO-style image NodeView ──────────────────────── */
+        [data-ranksmile-image] { margin: 0.5rem 0; }
+        .ranksmile-image-group {
           display: flex; flex-direction: column; gap: 0.5rem;
           background: #fff; border-radius: 0.5rem; overflow: hidden;
           padding-bottom: 0.25rem;
           position: relative;
         }
-        .ProseMirror-selectednode .surfer-image-group {
+        .ProseMirror-selectednode .ranksmile-image-group {
           outline: 2px solid #51A2FF; border-radius: 0.5rem;
         }
-        .surfer-image-container {
+        .ranksmile-image-container {
           position: relative; overflow: hidden;
           transition: all 0.2s ease-in-out;
         }
-        .group:hover .surfer-image-container { border-radius: 0; }
-        .surfer-image-overlay {
+        .group:hover .ranksmile-image-container { border-radius: 0; }
+        .ranksmile-image-overlay {
           position: absolute; inset: 0; z-index: 4;
           background: #18181B; opacity: 0;
           display: flex; align-items: center; justify-content: center;
           transition: opacity 0.1s ease-in-out;
           border-radius: 0;
         }
-        .group:hover .surfer-image-overlay {
+        .group:hover .ranksmile-image-overlay {
           opacity: 0.24;
           border-bottom-right-radius: 0.75rem;
           border-bottom-left-radius: 0.75rem;
         }
-        .surfer-image-img {
+        .ranksmile-image-img {
           display: block; width: 100%; height: auto; min-height: 100px;
           max-width: 100%; object-fit: cover; aspect-ratio: 16 / 9;
           transition: border-radius 0.2s ease-in-out;
         }
-        .group:hover .surfer-image-img {
+        .group:hover .ranksmile-image-img {
           border-bottom-right-radius: 0.75rem;
           border-bottom-left-radius: 0.75rem;
         }
-        .surfer-image-toolbar {
+        .ranksmile-image-toolbar {
           position: absolute; bottom: 0; z-index: 5; width: 100%;
           overflow: hidden; max-height: 0;
           transition: max-height 0.1s ease-in-out;
         }
-        .group:hover .surfer-image-toolbar { max-height: 300px; }
-        .surfer-toolbar-inner {
+        .group:hover .ranksmile-image-toolbar { max-height: 300px; }
+        .ranksmile-toolbar-inner {
           display: flex; flex-direction: column; gap: 1px;
           background: #fff; border-radius: 0.5rem;
         }
-        .surfer-toolbar-prompt-row {
+        .ranksmile-toolbar-prompt-row {
           display: flex; align-items: flex-end; justify-content: space-between;
           min-height: 48px; padding: 0.5rem 0.75rem;
           background: #F4F4F5; border-radius: 0.5rem 0.5rem 0 0;
         }
-        .surfer-toolbar-prompt-icon {
+        .ranksmile-toolbar-prompt-icon {
           display: flex; align-items: flex-end; justify-content: center;
           width: 21px; height: 100%; padding-bottom: 0.375rem;
           color: #3F3F47; flex-shrink: 0;
         }
-        .surfer-toolbar-prompt-input {
+        .ranksmile-toolbar-prompt-input {
           flex: 1; min-height: 28px; border: none; background: transparent;
           padding: 0.25rem 0; font-size: 0.875rem; line-height: 1.25rem;
           color: #18181B; resize: none; outline: none;
           font-family: var(--font-family-primary);
           box-shadow: none;
         }
-        .surfer-toolbar-prompt-input::placeholder { color: #52525C; }
-        .surfer-toolbar-send-btn {
+        .ranksmile-toolbar-prompt-input::placeholder { color: #52525C; }
+        .ranksmile-toolbar-send-btn {
           display: inline-flex; align-items: center; justify-content: center;
           padding: 0.375rem; border: none; border-radius: 0.375rem;
           background: #F4F4F5; color: #18181B; cursor: pointer;
           flex-shrink: 0; transition: background 0.15s;
         }
-        .surfer-toolbar-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .surfer-toolbar-send-btn:not(:disabled):hover { background: #E4E4E7; }
-        .surfer-toolbar-actions-row {
+        .ranksmile-toolbar-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ranksmile-toolbar-send-btn:not(:disabled):hover { background: #E4E4E7; }
+        .ranksmile-toolbar-actions-row {
           display: flex; align-items: center; gap: 0.5rem;
           height: 48px; padding: 0.5rem 0.75rem;
           background: #F8F8F9; border-radius: 0 0 0.5rem 0.5rem;
         }
-        .surfer-toolbar-actions-left {
+        .ranksmile-toolbar-actions-left {
           display: flex; align-items: center; gap: 0.5rem; flex: 1;
         }
-        .surfer-toolbar-actions-right {
+        .ranksmile-toolbar-actions-right {
           display: flex; align-items: center; gap: 0.125rem;
         }
-        .surfer-btn {
+        .ranksmile-btn {
           display: inline-flex; align-items: center; justify-content: center;
           padding: 0.25rem 0.75rem; border: none; border-radius: 0.375rem;
           font-size: 0.8125rem; line-height: 1rem; font-weight: 600;
           font-family: var(--font-family-primary); cursor: pointer;
           transition: background 0.15s; white-space: nowrap;
         }
-        .surfer-btn-ghost {
+        .ranksmile-btn-ghost {
           background: #F4F4F5; color: #18181B;
         }
-        .surfer-btn-ghost:hover { background: #E4E4E7; }
-        .surfer-btn-ghost:active { background: #D4D4D8; }
-        .surfer-toolbar-drag-text {
+        .ranksmile-btn-ghost:hover { background: #E4E4E7; }
+        .ranksmile-btn-ghost:active { background: #D4D4D8; }
+        .ranksmile-toolbar-drag-text {
           font-size: 0.875rem; line-height: 1.25rem; color: #3F3F47;
           overflow: hidden; white-space: nowrap;
         }
-        .surfer-btn-delete {
+        .ranksmile-btn-delete {
           display: inline-flex; align-items: center; justify-content: center;
           padding: 0.375rem; border: none; border-radius: 0;
           background: transparent; color: inherit; cursor: pointer;
           transition: opacity 0.15s;
         }
-        .surfer-btn-delete:hover { opacity: 0.8; }
-        .surfer-audio-bars { display: flex; gap: 0.125rem; }
-        .surfer-audio-bar { width: 4px; height: 12px; background: #1AB25E; }
+        .ranksmile-btn-delete:hover { opacity: 0.8; }
+        .ranksmile-audio-bars { display: flex; gap: 0.125rem; }
+        .ranksmile-audio-bar { width: 4px; height: 12px; background: #1AB25E; }
         /* ── Glow effect during AI image generation ─────────────── */
-        @keyframes surferGlow {
+        @keyframes ranksmileGlow {
           0%, 100% { box-shadow: 0 0 15px rgba(99, 13, 227, 0.3), 0 0 35px rgba(99, 13, 227, 0.15), 0 0 60px rgba(99, 13, 227, 0.08); }
           50%      { box-shadow: 0 0 25px rgba(99, 13, 227, 0.5), 0 0 55px rgba(99, 13, 227, 0.3), 0 0 90px rgba(99, 13, 227, 0.15); }
         }
-        .surfer-image-generating .surfer-image-group::before {
+        .ranksmile-image-generating .ranksmile-image-group::before {
           content: '';
           position: absolute;
           inset: -8px;
           z-index: -1;
           pointer-events: none;
           border-radius: 0.625rem;
-          animation: surferGlow 1.5s ease-in-out infinite;
+          animation: ranksmileGlow 1.5s ease-in-out infinite;
         }
-        .surfer-image-generating.surfer-image-group {
+        .ranksmile-image-generating.ranksmile-image-group {
           overflow: visible;
         }
-        .surfer-alt-row {
+        .ranksmile-alt-row {
           display: flex; align-items: center; height: 20px;
           padding-right: 0.5rem; gap: 0;
         }
-        .surfer-alt-input {
+        .ranksmile-alt-input {
           flex: 1; border: none; outline: none; padding-right: 0.75rem;
           font-size: 0.875rem; line-height: 1.25rem; color: #3F3F47;
           background: transparent; font-family: var(--font-family-primary);
         }
-        .surfer-alt-input::placeholder { color: #52525C; }
-        .surfer-alt-input:disabled { background: #fff; }
-        .surfer-alt-clear-btn {
+        .ranksmile-alt-input::placeholder { color: #52525C; }
+        .ranksmile-alt-input:disabled { background: #fff; }
+        .ranksmile-alt-clear-btn {
           display: inline-flex; align-items: center; justify-content: center;
           border: none; border-radius: 0; background: transparent;
           padding: 0; font-size: 0.875rem; line-height: 1.25rem;
@@ -2030,9 +2030,9 @@ const ArticleEditorPage: NextPage = () => {
           font-weight: 600; visibility: hidden; white-space: nowrap;
           transition: color 0.15s;
         }
-        .group:hover .surfer-alt-clear-btn { visibility: visible; }
-        .surfer-alt-clear-btn:hover { color: #2F2F34; }
-        .surfer-alt-clear-btn:active { color: #09090B; }
+        .group:hover .ranksmile-alt-clear-btn { visibility: visible; }
+        .ranksmile-alt-clear-btn:hover { color: #2F2F34; }
+        .ranksmile-alt-clear-btn:active { color: #09090B; }
       `}</style>
 
       {/* ── Gray zone (bg-gray-5 equivalent) ──────────────────────── */}
@@ -2052,7 +2052,7 @@ const ArticleEditorPage: NextPage = () => {
       >
 
         <Head>
-          <title>{`${article.meta_title || article.title || 'Editor'} – SerpBear`}</title>
+          <title>{`${article.meta_title || article.title || 'Editor'} – Ranksmile`}</title>
           {article.schema_json && (() => {
             try {
               const schema = JSON.parse(article.schema_json);
@@ -2120,8 +2120,8 @@ const ArticleEditorPage: NextPage = () => {
           >
             <ArticleEditor
               editorRef={editorRef}
-              onSurfyOpenChange={setSurfyDockOpen}
-              surfyDockEl={surfyDockEl}
+              onRanksmileOpenChange={setRanksmileDockOpen}
+              ranksmileDockEl={ranksmileDockEl}
               content={article.content || ''}
               keyword={article.target_keyword}
               metaTitle={article.meta_title}
@@ -2132,7 +2132,7 @@ const ArticleEditorPage: NextPage = () => {
               formattingSuspended={optimizeState === 'optimizing'}
               readOnly={editorLocked}
               highlightTerms={highlightTerms}
-              onAiActivity={setSurfyAiActive}
+              onAiActivity={setRanksmileAiActive}
               articleKeyword={article?.target_keyword || ''}
               plagiarismSentences={plagSentences}
               plagiarismFocused={plagFocused}
@@ -2327,9 +2327,9 @@ const ArticleEditorPage: NextPage = () => {
                     deepAnalysisUi={deepAnalysisUi}
                   />
                 </div>
-              ) : surfyDockOpen ? (
-                // Docked Surfy pane — the editor portals SurfyChatPanel into this element.
-                <div ref={setSurfyDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
+              ) : ranksmileDockOpen ? (
+                // Docked Ranksmile pane — the editor portals RanksmileChatPanel into this element.
+                <div ref={setRanksmileDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
               ) : showInternalLinksPanel ? (
                 <InternalLinksPanel
                   articleId={article.id}
@@ -2592,7 +2592,7 @@ const ArticleEditorPage: NextPage = () => {
           />
         )}
 
-        {/* ── Link review floating modal (Surfy-style) ─────────────── */}
+        {/* ── Link review floating modal (Ranksmile-style) ─────────────── */}
         {linkBar && (
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
@@ -2683,7 +2683,7 @@ const ArticleEditorPage: NextPage = () => {
           onClose={() => setShowCustomization(false)}
         />
 
-        {/* First-visit onboarding coachmark (Ask Surfy + Content Score) */}
+        {/* First-visit onboarding coachmark (Ask Ranksmile + Content Score) */}
         <EditorOnboarding />
       </div>
     </AppShell>

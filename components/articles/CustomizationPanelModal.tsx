@@ -153,14 +153,14 @@ const PLFlag = () => (
   </svg>
 );
 
-const SurferLogo = () => (
+const RanksmileLogo = () => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
     <span style={{ width: 26, height: 26, borderRadius: 6, background: '#FF5A1F', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <svg viewBox="0 0 20 20" width={13} height={13}>
         <path fill="#fff" d="M3 4h14v3H3zM3 9h9v3H3zM3 14h12v3H3z" />
       </svg>
     </span>
-    <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em', color: C.g160, fontFamily: F }}>SURFER</span>
+    <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em', color: C.g160, fontFamily: F }}>RANKSMILE</span>
   </div>
 );
 
@@ -499,7 +499,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
             overflowY: 'auto',
           }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'center' }}><SurferLogo /></div>
+              <div style={{ display: 'flex', justifyContent: 'center' }}><RanksmileLogo /></div>
               <div style={{ padding: '48px 0' }}>
                 {NAV.map(({ key, label }) => {
                   const on = active === key;
@@ -534,7 +534,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ padding: '16px 0', fontSize: 14, lineHeight: '1.25rem', color: C.g160, fontFamily: F }}>Wanna learn how to<br />use Content Editor?</div>
-                  <a href="https://docs.surferseo.com/en/collections/3203181-content-editor" target="_blank" rel="noopener noreferrer" style={{
+                  <a href="https://ranksmile.pl" target="_blank" rel="noopener noreferrer" style={{
                     display: 'inline-flex', alignItems: 'center', padding: '4px 16px', borderRadius: 6, background: C.g10,
                     color: C.g160, fontSize: 14, fontWeight: 600, fontFamily: F, textDecoration: 'none',
                   }}
@@ -600,7 +600,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
               {/* Terms */}
               <div ref={refs.terms} style={{ padding: 16 }}>
                 <SectionHeader title="Terms to Use">
-                  Surfer extracts prominent words and phrases for your main query.<br />
+                  Ranksmile extracts prominent words and phrases for your main query.<br />
                   You can add or remove them from the list. <LearnMore />
                 </SectionHeader>
 
@@ -675,7 +675,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
               <div ref={refs.topics} style={{ padding: 16, minHeight: '60vh' }}>
                 <SectionHeader title="Topics & Questions">
                   Define your content draft by picking relevant topics and questions to answer.<br />
-                  Surfer extracts them from the top-ranking pages and Google suggestions. <LearnMore />
+                  Ranksmile extracts them from the top-ranking pages and Google suggestions. <LearnMore />
                 </SectionHeader>
 
                 <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: `1px solid ${C.g20}`, marginBottom: 16 }}>

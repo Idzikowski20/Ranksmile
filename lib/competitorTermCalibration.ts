@@ -1,5 +1,5 @@
 /**
- * Surfer-style term range calibration — min/max usage counts across competitor pages.
+ * Ranksmile-style term range calibration — min/max usage counts across competitor pages.
  */
 import type { NlpTerm } from './contentScore';
 import { countOccurrences } from './termMatch';
@@ -61,7 +61,7 @@ export function filterUsefulNlpTerms(terms: NlpTerm[]): NlpTerm[] {
   return [...best.values()];
 }
 
-/** True when the list is mostly stopwords, unigrams, or too thin for Surfer-style scoring. */
+/** True when the list is mostly stopwords, unigrams, or too thin for Ranksmile-style scoring. */
 export function isWeakTermList(terms: NlpTerm[], primaryKeyword: string): boolean {
   if (!terms.length) return true;
   if (terms.length < 12) return true;
@@ -81,7 +81,7 @@ export function isWeakTermList(terms: NlpTerm[], primaryKeyword: string): boolea
   return avgWords < 1.6;
 }
 
-/** Surfer-style: rescale min/max/target to current article word count vs corpus average. */
+/** Ranksmile-style: rescale min/max/target to current article word count vs corpus average. */
 export function scaleTermRangesToWordCount(
   terms: NlpTerm[],
   articleWords: number,
@@ -101,7 +101,7 @@ export function scaleTermRangesToWordCount(
   });
 }
 
-/** Surfer requires ≥3 distinct competitor domains for reliable scoring. */
+/** Ranksmile requires ≥3 distinct competitor domains for reliable scoring. */
 export function hasMinCompetitorDomains(domains: string[]): boolean {
   const unique = new Set(domains.map((d) => d.replace(/^www\./, '').toLowerCase()).filter(Boolean));
   return unique.size >= 3;

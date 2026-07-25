@@ -1,16 +1,16 @@
 <?php
 /**
- * Template used on WordPress post list as part of Surfer column with GSC data.
+ * Template used on WordPress post list as part of Ranksmile column with GSC data.
  *
- * @package SurferSEO
+ * @package Ranksmile
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 ?>
 
-<div class="surfer-post-list-traffic" style="max-width: 230px;">
-	<div class="surfer-traffic-details-box" 
+<div class="ranksmile-post-list-traffic" style="max-width: 230px;">
+	<div class="ranksmile-traffic-details-box" 
 		data-post-id="<?php echo isset( $post_id ) ? intval( $post_id ) : 0; ?>" 
 		data-permalink-hash="<?php echo isset( $permalink_hash ) ? esc_html( $permalink_hash ) : ''; ?>" 
 		data-draft-id="<?php echo isset( $draft_id ) && $draft_id > 0 ? intval( $draft_id ) : -1; ?>"  

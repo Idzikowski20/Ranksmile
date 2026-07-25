@@ -3,10 +3,10 @@
   Package the WordPress plugin into public/downloads/ so the in-app updater can serve it.
 
 .DESCRIPTION
-  Zips wordpress-plugin/ into public/downloads/surfer-plugin.zip with a top-level
-  "surferseo/" folder (matching the installed plugin slug), and rewrites
+  Zips wordpress-plugin/ into public/downloads/ranksmile-plugin.zip with a top-level
+  "ranksmileseo/" folder (matching the installed plugin slug), and rewrites
   public/downloads/wp-plugin.json. When -Version is given it also bumps the
-  plugin's Version: header and the SURFER_VERSION constant, so WordPress sites
+  plugin's Version: header and the RANKSMILE_VERSION constant, so WordPress sites
   see the new version on their next update check.
 
 .EXAMPLE
@@ -26,11 +26,11 @@ $ErrorActionPreference = 'Stop'
 
 $root      = Split-Path -Parent $PSScriptRoot
 $pluginDir = Join-Path $root 'wordpress-plugin'
-$mainFile  = Join-Path $pluginDir 'surferseo.php'
+$mainFile  = Join-Path $pluginDir 'ranksmileseo.php'
 $outDir    = Join-Path $root 'public\downloads'
 $manifest  = Join-Path $outDir 'wp-plugin.json'
-$zipPath   = Join-Path $outDir 'surfer-plugin.zip'
-$slug      = 'surferseo'
+$zipPath   = Join-Path $outDir 'ranksmile-plugin.zip'
+$slug      = 'ranksmileseo'
 
 if (-not (Test-Path $pluginDir)) { throw "Plugin dir not found: $pluginDir" }
 if (-not (Test-Path $outDir))    { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
@@ -39,7 +39,7 @@ if (-not (Test-Path $outDir))    { New-Item -ItemType Directory -Force -Path $ou
 if ($Version) {
   $php = Get-Content -Raw -Encoding UTF8 $mainFile
   $php = $php -replace '(\*\s*Version:\s*)[\d.]+', "`${1}$Version"
-  $php = $php -replace "(define\(\s*'SURFER_VERSION',\s*')[\d.]+(')", "`${1}$Version`${2}"
+  $php = $php -replace "(define\(\s*'RANKSMILE_VERSION',\s*')[\d.]+(')", "`${1}$Version`${2}"
   # Write UTF-8 WITHOUT BOM — a BOM in a PHP file is emitted before headers and
   # breaks WordPress ("headers already sent"). PS 5.1's -Encoding UTF8 adds a BOM.
   [System.IO.File]::WriteAllText($mainFile, $php, (New-Object System.Text.UTF8Encoding($false)))
@@ -48,12 +48,12 @@ if ($Version) {
 
 # Read the version we're shipping straight from the source of truth.
 $php = Get-Content -Raw -Encoding UTF8 $mainFile
-if ($php -match "define\(\s*'SURFER_VERSION',\s*'([\d.]+)'") { $shipVersion = $Matches[1] }
-else { throw "Could not read SURFER_VERSION from $mainFile" }
+if ($php -match "define\(\s*'RANKSMILE_VERSION',\s*'([\d.]+)'") { $shipVersion = $Matches[1] }
+else { throw "Could not read RANKSMILE_VERSION from $mainFile" }
 
-# Build the zip manually so entry paths use forward slashes and a "surferseo/" root.
+# Build the zip manually so entry paths use forward slashes and a "ranksmileseo/" root.
 # PowerShell's Compress-Archive writes backslash separators, which WordPress' unzip
-# on Linux mis-reads as literal filenames ("surferseo\templates"), breaking install.
+# on Linux mis-reads as literal filenames ("ranksmileseo\templates"), breaking install.
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }

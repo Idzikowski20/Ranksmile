@@ -80,7 +80,7 @@ server.tool(
   {
     query: z.string().describe('Question / search query'),
     session_id: z.string().optional(),
-    dataset_name: z.string().optional().describe('e.g. surfy'),
+    dataset_name: z.string().optional().describe('e.g. ranksmile'),
     search_type: z
       .enum(['HYBRID_COMPLETION', 'GRAPH_COMPLETION', 'CHUNKS', 'GRAPH_SUMMARY_COMPLETION'])
       .optional(),
@@ -127,14 +127,14 @@ server.tool(
   {
     text: z.string().describe('Plain text / markdown to ingest'),
     filename: z.string().optional().default('memory.txt'),
-    dataset_name: z.string().optional().default('surfy'),
+    dataset_name: z.string().optional().default('ranksmile'),
   },
   async ({ text, filename, dataset_name }) => {
     requireEnv();
     const form = new FormData();
     const blob = new Blob([text], { type: 'text/plain' });
     form.append('data', blob, filename || 'memory.txt');
-    form.append('datasetName', dataset_name || 'surfy');
+    form.append('datasetName', dataset_name || 'ranksmile');
     const res = await fetch(`${baseUrl}/api/v1/remember`, {
       method: 'POST',
       headers: { 'X-Api-Key': apiKey },

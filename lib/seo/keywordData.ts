@@ -314,7 +314,7 @@ export function paaCoverageItems(questions: Array<{ question: string }>): Covera
   }));
 }
 
-/** Surfer-style "Facts to include" — one coverage item per PAA answer sentence. */
+/** Ranksmile-style "Facts to include" — one coverage item per PAA answer sentence. */
 export function paaFactsCoverageItems(questions: Array<{ question: string; answer?: string }>): CoverageItem[] {
   const out: CoverageItem[] = [];
   const seen = new Set<string>();

@@ -5,7 +5,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - serpbear_redis:/data
+      - ranksmile_redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -13,7 +13,7 @@ services:
       retries: 5
 
   app:
-    image: towfiqi/serpbear:latest
+    image: towfiqi/ranksmile:latest
     # Build from source instead of pulling the image:
     # build: .
     restart: unless-stopped
@@ -36,7 +36,7 @@ services:
       - SEARCH_CONSOLE_CLIENT_EMAIL=${SEARCH_CONSOLE_CLIENT_EMAIL:-}
       - SEARCH_CONSOLE_PRIVATE_KEY=${SEARCH_CONSOLE_PRIVATE_KEY:-}
     volumes:
-      - serpbear_data:/app/data
+      - ranksmile_data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
       interval: 30s
@@ -45,5 +45,5 @@ services:
       start_period: 15s
 
 volumes:
-  serpbear_data:
-  serpbear_redis:
+  ranksmile_data:
+  ranksmile_redis:

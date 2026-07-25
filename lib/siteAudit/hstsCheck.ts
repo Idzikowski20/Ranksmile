@@ -1,4 +1,4 @@
-import { SERPBEAR_UA } from '../httpConstants';
+import { RANKSMILE_UA } from '../httpConstants';
 import { assertPublicUrl } from '../ssrfGuard';
 import type { HstsMissingInstance } from './types';
 
@@ -10,7 +10,7 @@ async function hasHsts(url: string): Promise<boolean> {
     const r = await fetch(url, {
       method: 'HEAD',
       redirect: 'follow',
-      headers: { 'User-Agent': SERPBEAR_UA },
+      headers: { 'User-Agent': RANKSMILE_UA },
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     const hsts = r.headers.get('strict-transport-security');

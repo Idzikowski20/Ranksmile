@@ -1,5 +1,5 @@
 /**
- * Surfer-style Content Score for every page_audit row after domain setup.
+ * Ranksmile-style Content Score for every page_audit row after domain setup.
  * One score per page: NLP term coverage + word/structure vs top-10 SERP peers.
  */
 import { queryRows } from './db/query';
@@ -189,7 +189,7 @@ export async function scoreDomainPages(domainId: number): Promise<{ scored: numb
       scored += 1;
    }
 
-   // Drop optimize recs that now meet the Surfer-style threshold.
+   // Drop optimize recs that now meet the Ranksmile-style threshold.
    await db.query(
       `DELETE FROM domain_recommendations WHERE domain_id = ? AND type = 'optimize' AND score >= ?`,
       { replacements: [domainId, OPTIMIZE_THRESHOLD] },

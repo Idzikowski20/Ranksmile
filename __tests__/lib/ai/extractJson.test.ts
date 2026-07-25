@@ -1,4 +1,4 @@
-import { extractJsonObject, isSurfyReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
+import { extractJsonObject, isRanksmileReplyShape, stripCodeFence } from '../../../lib/ai/extractJson';
 
 describe('extractJsonObject', () => {
   it('parses a ```json-fenced reply blob (the bug: bare JSON.parse threw on the fence)', () => {
@@ -7,7 +7,7 @@ describe('extractJsonObject', () => {
     expect(obj).not.toBeNull();
     expect(obj!.message).toBe('Poprawiłem formatowanie.');
     expect(obj!.content).toBe('<h3>T</h3><p>x</p>');
-    expect(isSurfyReplyShape(obj)).toBe(true);
+    expect(isRanksmileReplyShape(obj)).toBe(true);
   });
 
   it('parses bare JSON and preserves null content', () => {
@@ -18,12 +18,12 @@ describe('extractJsonObject', () => {
 
   it('does NOT misfire on prose containing stray braces', () => {
     const obj = extractJsonObject('Dodałem słowa do sekcji {ważne} — gotowe.');
-    expect(isSurfyReplyShape(obj)).toBe(false);
+    expect(isRanksmileReplyShape(obj)).toBe(false);
   });
 
-  it('does NOT treat a non-reply JSON object as a Surfy reply', () => {
+  it('does NOT treat a non-reply JSON object as a Ranksmile reply', () => {
     const obj = extractJsonObject('Use {"key":"val"} as the format.');
-    expect(isSurfyReplyShape(obj)).toBe(false);
+    expect(isRanksmileReplyShape(obj)).toBe(false);
   });
 
   it('stripCodeFence removes a leading/trailing fence but leaves plain text intact', () => {

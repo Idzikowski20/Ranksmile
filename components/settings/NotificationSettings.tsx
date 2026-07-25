@@ -105,8 +105,8 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
           <SentrySettingsRow label="Email from name">
             <Input
               type="text"
-              value={settings?.notification_email_from_name || 'Serpbear'}
-              placeholder="Serpbear"
+              value={settings?.notification_email_from_name || 'Ranksmile'}
+              placeholder="Ranksmile"
               onChange={(e) => updateSettings('notification_email_from_name', e.target.value)}
               style={{ width: '100%', maxWidth: 420 }}
             />

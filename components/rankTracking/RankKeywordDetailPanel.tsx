@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import Chart from '../common/Chart';
 import { CompactSelect } from '../core';
 import type { SelectOption } from '../core';
-import { XIcon } from '../surfer/icons';
+import { XIcon } from '../ranksmile/icons';
 import useOnKey from '../../hooks/useOnKey';
 import { useRankKeywordHistory } from '../../services/rankTracking';
 import { generateTheChartData } from '../../utils/client/generateChartData';

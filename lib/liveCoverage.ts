@@ -44,7 +44,7 @@ function hasStructure(html: string): boolean {
   return lists.some((l) => (l.match(/<li/gi) || []).length >= 3);
 }
 
-/** Normalize a coverage question label for fuzzy matching (Semrush/Surfer H3-as-question pattern). */
+/** Normalize a coverage question label for fuzzy matching (Semrush/Ranksmile H3-as-question pattern). */
 export function normalizeCoverageQuestion(q: string): string {
   return q.toLowerCase()
     .replace(/[?!.,;:]/g, '')
@@ -84,7 +84,7 @@ function readableParagraphs(html: string): boolean {
   return avg >= 100 && avg <= 500;
 }
 
-/** FAQ-answered signal — Surfer/Semrush pattern: question as H2/H3 + direct short answer in <p>. */
+/** FAQ-answered signal — Ranksmile/Semrush pattern: question as H2/H3 + direct short answer in <p>. */
 function faqAnswered(label: string, html: string): boolean {
   const normalizedLabel = normalizeCoverageQuestion(label);
   const pairs = extractHeadingAnswerPairs(html);
@@ -129,6 +129,7 @@ const TYPE_DISPLAY_LABEL: Record<CoverageType, string> = {
   readability: 'Readability', intent: 'Intent', definition: 'Definitions',
   comparison: 'Comparisons', example: 'Examples', process: 'Processes',
   statistic: 'Statistics', expectation: 'Expectations', warning: 'Warnings',
+  term: 'Terms', concept: 'Concepts', question: 'Questions',
 };
 
 /** Uncovered items grouped per TYPE ("Entities 0 · Facts 3 · Questions 2 · Structure 1") —

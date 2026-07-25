@@ -2,17 +2,17 @@
 // fetch) — the app's SMTP path (lib/sendMail) is settings-table driven and unset on fresh installs,
 // while registration mail must always work. Sender domain is the Resend-verified one.
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
-const FROM = 'Surfy <noreply@elearning.riskcom.pl>';
-export const CONFIRM_EMAIL_SUBJECT = 'Confirm your e-mail — Surfy';
+const FROM = 'Ranksmile <noreply@elearning.riskcom.pl>';
+export const CONFIRM_EMAIL_SUBJECT = 'Confirm your e-mail — Ranksmile';
 
 const F = 'Inter, Helvetica, Arial, sans-serif';
 
-/** Surfer-style confirmation mail ("You're a click away"). Pure — no I/O. */
+/** Ranksmile-style confirmation mail ("You're a click away"). Pure — no I/O. */
 export function buildConfirmEmailHtml(confirmUrl: string): string {
   return `<div lang="en-us" style="background-color:#ffffff;">
   <div style="margin:0 auto;max-width:600px;padding:32px;">
     <div style="max-width:536px;margin:0 auto;text-align:left;">
-      <div style="font-family:${F};font-size:16px;font-weight:700;color:#000000;">Surfy</div>
+      <div style="font-family:${F};font-size:16px;font-weight:700;color:#000000;">Ranksmile</div>
       <div style="font-family:${F};font-size:30px;font-weight:600;line-height:38px;color:#000000;padding-top:32px;">You're a click away</div>
       <div style="font-family:${F};font-size:16px;font-weight:400;line-height:26px;color:#000000;padding-top:32px;">Hit the button to verify your email. You're just a few steps away from skyrocketing your organic traffic!</div>
       <div style="padding-top:32px;">

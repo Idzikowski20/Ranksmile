@@ -48,7 +48,7 @@ def is_useful_phrase(phrase: str) -> bool:
 
 
 def extract_nlp_terms(texts: list[str], keyword: str) -> list[dict]:
-    """TF-IDF n-grams from competitor pages — Surfer-style phrase discovery."""
+    """TF-IDF n-grams from competitor pages — Ranksmile-style phrase discovery."""
     if not texts:
         return []
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import Icon from './Icon';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
+import { AI_VISIBILITY_NAV, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '../../lib/navigation';
 
 type MobileBottomNavProps = {
    domains?: DomainType[];
@@ -12,7 +13,7 @@ type MobileBottomNavProps = {
    showSettings?: () => void;
 };
 
-/* ── Bar icons (match the Surfer bottom nav) ──────────────────────────── */
+/* ── Bar icons (match the Ranksmile bottom nav) ──────────────────────────── */
 
 const IcoDashboard = () => (
    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -86,28 +87,10 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
       { href: workspaceHref(activeId, '/articles'), label: 'Content Editor', icon: <IcoContent />, active: isMatch('/articles') },
    ];
 
-   const toolsLinks = activeSlug ? [
-      { label: 'Audit Tool', href: workspaceHref(activeId, `/sites/${activeSlug}/audit-tool`), match: '/audit-tool' },
-      { label: 'Keyword Research', href: workspaceHref(activeId, `/sites/${activeSlug}/keyword-research`), match: '/keyword-research' },
-      { label: 'Topic Research', href: workspaceHref(activeId, `/sites/${activeSlug}/topic-research`), match: '/topic-research' },
-   ] : [];
-
-   const seoLinks = activeSlug ? [
-      { label: 'Performance', href: workspaceHref(activeId, `/sites/${activeSlug}/performance`), match: '/performance' },
-      { label: 'Site Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/site-audit`), match: '/site-audit' },
-      { label: 'Recommendations', href: workspaceHref(activeId, `/sites/${activeSlug}/recommendations`), match: '/recommendations' },
-      { label: 'Content Audit', href: workspaceHref(activeId, `/sites/${activeSlug}/content-audit`), match: '/content-audit' },
-      { label: 'Topical Map', href: workspaceHref(activeId, `/sites/${activeSlug}/topical-map`), match: '/topical-map' },
-      { label: 'Activity Log', href: workspaceHref(activeId, `/sites/${activeSlug}/activity-log`), match: '/activity-log' },
-   ] : [];
-
-   const aiVisLinks = activeSlug ? [
-      { label: 'Overview', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/overview`), match: '/ai-visibility/overview' },
-      { label: 'Sources', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/sources`), match: '/ai-visibility/sources' },
-      { label: 'Competitors', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/competitors`), match: '/ai-visibility/competitors' },
-      { label: 'Prompts', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/prompts`), match: '/ai-visibility/prompts' },
-      { label: 'Fanout Queries', href: workspaceHref(activeId, `/sites/${activeSlug}/ai-visibility/fanout-queries`), match: '/ai-visibility/fanout-queries' },
-   ] : [];
+   const hrefFn = (p: string) => workspaceHref(activeId, p);
+   const toolsLinks = activeSlug ? resolveSiteNav(TOOLS_NAV, activeSlug, hrefFn) : [];
+   const seoLinks = activeSlug ? resolveSiteNav(SEO_NAV, activeSlug, hrefFn) : [];
+   const aiVisLinks = activeSlug ? resolveSiteNav(AI_VISIBILITY_NAV, activeSlug, hrefFn) : [];
 
    return (
       <>
@@ -267,7 +250,7 @@ const MobileBottomNav = ({ domains = [], showAddModal }: MobileBottomNavProps) =
                   </li>
                   <li>
                      <a
-                        href="https://docs.serpbear.com/"
+                        href="https://ranksmile.pl/"
                         target="_blank"
                         rel="noreferrer"
                         className="mobile-sheet-item"

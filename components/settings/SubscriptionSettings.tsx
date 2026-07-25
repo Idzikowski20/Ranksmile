@@ -362,14 +362,14 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
                 <p style={{ margin: 0, fontSize: 13, color: '#52525C', lineHeight: '1.55' }}>
                   Need help? Our new{' '}
                   <a
-                    href="https://surferseo.com/academy/content-optimization-masterclass/"
+                    href="https://ranksmile.pl"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: '#18181B', textDecoration: 'underline' }}
                   >
                     Content Optimization Masterclass
                   </a>{' '}
-                  will help you get more value from Surfer.
+                  will help you get more value from Ranksmile.
                 </p>
               </div>
             </div>
@@ -509,7 +509,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
             </span>
             {step === 3 && (
               <span style={{ fontSize: 14, color: '#52525C', lineHeight: '1.5', maxWidth: 560 }}>
-                Your business deserves a watertight SEO strategy. Let&apos;s build yours with Surfer.
+                Your business deserves a watertight SEO strategy. Let&apos;s build yours with Ranksmile.
               </span>
             )}
           </div>
@@ -584,17 +584,17 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                   <p style={{ margin: 0, fontSize: 14, color: '#52525C', lineHeight: '1.55' }}>
                     Need help? Our new{' '}
                     <a
-                      href="https://surferseo.com/academy/content-optimization-masterclass/"
+                      href="https://ranksmile.pl"
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ color: '#18181B', textDecoration: 'underline' }}
                     >
                       Content Optimization Masterclass
                     </a>{' '}
-                    will help you get more value from Surfer.
+                    will help you get more value from Ranksmile.
                   </p>
                   <a
-                    href="https://community.surferseo.com/c/content-optimization-masterclass/"
+                    href="https://ranksmile.pl"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'inline-block', alignSelf: 'flex-start', textDecoration: 'none' }}

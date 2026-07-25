@@ -1,4 +1,4 @@
-// Internal-link OPPORTUNITIES (SurferSEO-style): topically-relevant pages on the SAME
+// Internal-link OPPORTUNITIES (Ranksmile-style): topically-relevant pages on the SAME
 // site that could link to the audited URL. Unlike the audited page's own outbound links,
 // this crawls the site (sitemap first, homepage fallback), fetches a bounded set of pages,
 // and for each decides: does it already link to the audited URL (green ✓) or is it a

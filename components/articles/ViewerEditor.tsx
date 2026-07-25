@@ -14,7 +14,7 @@ import Superscript from '@tiptap/extension-superscript';
 import { TextStyle, Color } from '@tiptap/extension-text-style';
 import { Details, DetailsSummary, DetailsContent } from '@tiptap/extension-details';
 import Youtube from '@tiptap/extension-youtube';
-import SurferImageNode from './SurferImageNode';
+import RanksmileImageNode from './RanksmileImageNode';
 
 export type ViewerEditorHandle = {
   /** Replace the rendered doc with new HTML (no history, no events). Preserves scroll. */
@@ -34,9 +34,9 @@ type Props = { initialHtml: string };
  * unknown nodes — sanitization for free.
  */
 const ViewerEditor = forwardRef<ViewerEditorHandle, Props>(({ initialHtml }, ref) => {
-  const SurferImage = ImageExt.extend({
+  const RanksmileImage = ImageExt.extend({
     addNodeView() {
-      return ReactNodeViewRenderer(SurferImageNode);
+      return ReactNodeViewRenderer(RanksmileImageNode);
     },
   });
 
@@ -46,7 +46,7 @@ const ViewerEditor = forwardRef<ViewerEditorHandle, Props>(({ initialHtml }, ref
     content: initialHtml,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: false }),
-      SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
+      RanksmileImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
       TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
       Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { rel: 'noopener noreferrer' } }),
       Highlight.configure({ multicolor: true }),

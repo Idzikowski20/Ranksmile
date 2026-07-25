@@ -8,7 +8,7 @@ const Bar = ({ w, light }: { w: string; light?: boolean }) => (
   <span style={{ display: 'block', height: 8, borderRadius: 999, width: w, background: light ? '#efe7fa' : '#d7b8ff' }} />
 );
 
-// Full-screen "scanning" overlay shown while the plagiarism check runs (Surfer-style):
+// Full-screen "scanning" overlay shown while the plagiarism check runs (Ranksmile-style):
 // an animated magnifying glass sweeping over two document cards + an indeterminate bar.
 const PlagiarismScanningModal = ({ onCancel }: { onCancel: () => void }) => createPortal(
   <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(9,9,11,0.72)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28, padding: 24, fontFamily: F }}>

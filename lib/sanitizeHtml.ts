@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio';
 
 // Tags that must never survive into rendered article HTML. Mirrors lib/ai/workingDoc.ts'
 // sanitizeFragment but is the shared, render-boundary sanitizer for ANY stored article body
-// (auto-optimize / ask-surfy / import / AI generation all write raw model/scraped HTML to the DB).
+// (auto-optimize / ask-ranksmile / import / AI generation all write raw model/scraped HTML to the DB).
 const UNSAFE_TAGS = 'script,style,iframe,object,embed,noscript,link,meta,base,form,input,button,textarea,select,svg';
 
 /**

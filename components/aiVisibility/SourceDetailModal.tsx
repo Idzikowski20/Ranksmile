@@ -101,7 +101,7 @@ const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="n
 const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: '#52525C', cursor: 'pointer', borderRadius: 6 };
 
 /** Right-side slide-over for a source row. When `navigable`, the up/down arrows (and
- *  ↑/↓ keys) page through the surrounding list — SurferSEO's ungrouped behaviour. */
+ *  ↑/↓ keys) page through the surrounding list — Ranksmile's ungrouped behaviour. */
 const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }: {
    slug: string | undefined;
    list: SourceRow[];

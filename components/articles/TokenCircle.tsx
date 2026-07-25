@@ -11,7 +11,7 @@ const Row = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-/** Twenty/Claude-style usage ring for the dark Surfy bar: this turn's tokens filling toward
+/** Twenty/Claude-style usage ring for the dark Ranksmile bar: this turn's tokens filling toward
  *  TOKEN_BUDGET (ring only, no inline number). Click to open a popover with the count + breakdown. */
 const TokenCircle = ({ tokens, inputTokens = 0, outputTokens = 0 }: { tokens: number; inputTokens?: number; outputTokens?: number }) => {
   const [open, setOpen] = useState(false);
@@ -76,7 +76,7 @@ const TokenCircle = ({ tokens, inputTokens = 0, outputTokens = 0 }: { tokens: nu
           </div>
 
           <div style={{ marginTop: 11, paddingTop: 9, borderTop: '1px solid #221e28', fontSize: 10.5, lineHeight: '14px', color: 'rgba(255,255,255,0.4)' }}>
-            Tokens Surfy used on the last request. The ring fills toward a soft {formatTokens(TOKEN_BUDGET)} per-turn budget.
+            Tokens Ranksmile used on the last request. The ring fills toward a soft {formatTokens(TOKEN_BUDGET)} per-turn budget.
           </div>
         </div>
       )}

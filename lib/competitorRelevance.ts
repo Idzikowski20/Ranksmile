@@ -1,6 +1,6 @@
 // Relevance filter for organic competitors. The SERP top-10 for an informational
 // keyword often includes non-article hosts (streaming, social, video, translation,
-// app stores) that are useless as content-audit peers — SurferSEO drops them. We filter
+// app stores) that are useless as content-audit peers — Ranksmile drops them. We filter
 // them out Node-side (no sidecar redeploy) before storing/using competitors.
 
 // Hosts that are never a content-article competitor. Matched as a suffix on the bare

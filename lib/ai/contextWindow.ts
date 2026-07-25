@@ -1,4 +1,4 @@
-// Context-window usage for the Surfy chat ring (Twenty-style: conversation tokens vs the model's
+// Context-window usage for the Ranksmile chat ring (Twenty-style: conversation tokens vs the model's
 // context window, NOT an arbitrary budget). deepseek-chat has a 64K context window.
 import { formatTokens } from './sse';
 

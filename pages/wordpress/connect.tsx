@@ -87,7 +87,7 @@ const WordPressConnect: NextPage = () => {
          return (
             <div style={headingWrap}>
                <h1 style={h1}>Connect your WordPress site</h1>
-               <p style={subtitle}>This page is opened from the Surfer plugin in your WordPress admin. We couldn’t find a connection token — start the connection again from WordPress (Surfer → Connect).</p>
+               <p style={subtitle}>This page is opened from the Ranksmile plugin in your WordPress admin. We couldn’t find a connection token — start the connection again from WordPress (Ranksmile → Connect).</p>
             </div>
          );
       }
@@ -176,7 +176,7 @@ const WordPressConnect: NextPage = () => {
 
    return (
       <div className="p-sm relative flex flex-col overflow-hidden" style={{ minHeight: '100dvh', fontFamily: font }}>
-         <Head><title>Connect WordPress — Surfer</title></Head>
+         <Head><title>Connect WordPress — Ranksmile</title></Head>
          <div
             className="relative flex-1 overflow-auto rounded-xl [color-scheme:light] bg-white-base"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}

@@ -85,7 +85,7 @@ const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style
 const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#fff'; setOpenIcon(e.currentTarget, false); };
 const hoverOffChild = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FCFCFD'; setOpenIcon(e.currentTarget, false); };
 
-/** SurferSEO-style sources table: fill-bar source column, optional group-by-domain with
+/** Ranksmile-style sources table: fill-bar source column, optional group-by-domain with
  *  expandable URL rows, sortable Times shown, incremental "Show more" paging.
  *  onSelect receives the navigable list + index so the detail modal can page through it. */
 const CompareCell = ({ on }: { on: boolean }) => (

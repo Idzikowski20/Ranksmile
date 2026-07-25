@@ -323,7 +323,7 @@ const ActivityLogPage: NextPage = () => {
 
    // Build raw events from article timestamps. Optimizations are attributed to
    // Content Audit (our auto-optimize is driven by audit recs); creates/publishes
-   // belong to the Content Editor — matching Surfer's activity surfaces.
+   // belong to the Content Editor — matching Ranksmile's activity surfaces.
    const allEvents: LogEvent[] = useMemo(() => {
       const list = (articlesData?.articles || []).filter((a) => a.source !== 'site_context');
       const out: LogEvent[] = [];
@@ -400,7 +400,7 @@ const ActivityLogPage: NextPage = () => {
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head>
-            <title>{`Activity Log — ${domain} — SerpBear`}</title>
+            <title>{`Activity Log — ${domain} — Ranksmile`}</title>
          </Head>
 
          <DomainSubLayout

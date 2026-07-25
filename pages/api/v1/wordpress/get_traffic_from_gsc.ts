@@ -1,6 +1,6 @@
 // POST /api/v1/wordpress/get_traffic_from_gsc — per-page GSC traffic for the workspace's
 // domain, aggregated by page (clicks/impressions summed, position impression-weighted).
-// Shape mirrors Surfer's: { traffic_data: [{ site, clicks, impressions, position }] }.
+// Shape mirrors Ranksmile's: { traffic_data: [{ site, clicks, impressions, position }] }.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { authPluginRequest } from '../../../../lib/wpConnection';

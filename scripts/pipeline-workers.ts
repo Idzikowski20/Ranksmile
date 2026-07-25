@@ -79,7 +79,7 @@ async function reclaimQueuedJobs(url: string): Promise<void> {
   for (const row of queued) {
     const queue = row.queue as QueueName;
     try {
-      const q = new Queue(`surfy-${queue}`, { connection: { url } });
+      const q = new Queue(`ranksmile-${queue}`, { connection: { url } });
       await q.add(
         queue,
         { jobKey: row.jobKey, payload: row.payload, dbJobId: row.id },
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
 
   const handles: Worker[] = [];
   for (const w of workers) {
-    const queueName = `surfy-${w.queue}`;
+    const queueName = `ranksmile-${w.queue}`;
     const handle = new Worker(
       queueName,
       async (job) => {

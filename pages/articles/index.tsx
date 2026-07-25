@@ -150,7 +150,7 @@ const ArticlesPage: NextPage = () => {
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
-      <Head><title>Content Editor — SerpBear</title></Head>
+      <Head><title>Content Editor — Ranksmile</title></Head>
       <SentryPage maxWidth={880}>
         <SentryPageHeader title="Content Editor" actions={headerActions} borderless />
 

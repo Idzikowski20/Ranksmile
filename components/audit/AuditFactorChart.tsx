@@ -15,7 +15,7 @@ const NUM = '#,###.##';
 interface Bar { cat: string; host: string; link: string; value: number; you: boolean; }
 
 /**
- * One SurferSEO-style factor chart (amCharts 5, client-only — imported via
+ * One Ranksmile-style factor chart (amCharts 5, client-only — imported via
  * next/dynamic({ ssr:false })): "You" (purple) vs ranked competitors (grey, dimmed when
  * placeholder), a hatched green suggested-range band, value labels, a dashed cursor with
  * a dark value pill, and a legend (You / Competitors / Suggested range).
