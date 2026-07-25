@@ -308,7 +308,7 @@ export function useArticleOptimize({
         if (resolvedPos.parent?.type?.name === 'heading') {
           return { url, anchorText, success: false as const };
         }
-        const linkAttrs = { href, target: '_blank', 'data-surfer-link': 'true' };
+        const linkAttrs = { href, target: '_blank', 'data-ranksmile-link': 'true' };
         editor.chain().setTextSelection(range).setLink(linkAttrs).run();
         positions.push(range.from);
         return { url, anchorText, success: true as const };

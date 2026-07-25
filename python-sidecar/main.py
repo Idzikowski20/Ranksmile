@@ -42,7 +42,7 @@ from service_urls import nextjs_url as resolved_nextjs_url
 
 app = FastAPI(
     title="SEO Autopilot Sidecar",
-    description="Python sidecar dla SerpBear — generuje artykuły SEO przez Claude API",
+    description="Python sidecar dla Ranksmile — generuje artykuły SEO przez Claude API",
     version="1.0.0",
 )
 

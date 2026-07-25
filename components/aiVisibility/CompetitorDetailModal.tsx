@@ -39,7 +39,7 @@ type SourceRow = { url: string; domain: string; timesShown: number; mentioned?: 
 const splitUrl = (url: string, fallback: string) => { try { const u = new URL(url); return { host: u.host, path: `${u.pathname}${u.search}` }; } catch { return { host: fallback, path: '' }; } };
 
 /** Decorative descending sparkline for the "Times shown" cell (higher value → line
- *  starts higher), with a faint gradient fill — mirrors the SurferSEO glyph. */
+ *  starts higher), with a faint gradient fill — mirrors the Ranksmile glyph. */
 const Sparkline = ({ value, max }: { value: number; max: number }) => {
    const W = 76; const H = 24;
    const y0 = 2 + (1 - value / Math.max(1, max)) * (H - 8);

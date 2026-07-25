@@ -173,7 +173,7 @@ function WatchtowerGauge({
 
         {/* Score + label */}
         <foreignObject width="118" height="76" x="35" y="61">
-          <div xmlns="http://www.w3.org/1999/xhtml" className="sentry-audit-watchtower-center" aria-hidden="true">
+          <div className="sentry-audit-watchtower-center" aria-hidden="true">
             <div className="sentry-audit-watchtower-score">{s}</div>
             {showLabel ? <div className="sentry-audit-watchtower-label">{label}</div> : null}
           </div>

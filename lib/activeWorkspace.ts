@@ -1,4 +1,4 @@
-/** Active-workspace helpers for SurferSEO-style /workspace/<id>/... URLs. */
+/** Active-workspace helpers for Ranksmile-style /workspace/<id>/... URLs. */
 
 /** The numeric workspace id leading a `/workspace/<id>[-slug]/...` path, or null. */
 export function parseWorkspaceId(path: string): number | null {

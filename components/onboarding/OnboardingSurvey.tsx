@@ -43,7 +43,7 @@ const QUESTIONS: Question[] = [
    {
       id: 'source',
       type: 'checkbox',
-      title: 'How did you hear about Surfer?',
+      title: 'How did you hear about Ranksmile?',
       subtitle: 'Select as many channels as you want:',
       options: ['Events', 'LinkedIn', 'YouTube', 'Facebook', 'External Advisors', 'Content Optimization Masterclass', 'Software reviews (G2, Capterra)', 'Google Search', 'Word of mouth and peers', 'ChatGPT or other AI', 'Other'],
    },

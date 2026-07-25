@@ -8,7 +8,7 @@ import { LinePath } from "@visx/shape";
 type CurveFactory = any;
 
 import {
-  type RefObject,
+  type Ref,
   useCallback,
   useId,
   useMemo,
@@ -110,7 +110,7 @@ function LineSeriesStroke({
   animatedPathD: string;
   curve: CurveFactory;
   getY: (datum: Record<string, unknown>) => number;
-  pathRef: RefObject<SVGPathElement | null>;
+  pathRef: Ref<SVGPathElement>;
   renderData: Record<string, unknown>[];
   strokeWidth: number;
   useDataTransitionPath: boolean;

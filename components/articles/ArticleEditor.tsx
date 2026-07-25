@@ -16,9 +16,9 @@ import Placeholder from '@tiptap/extension-placeholder';
 import type { ScoreData, NlpTerm } from '../../lib/contentScore';
 import { getErrorMessage } from '../../lib/errors';
 import { HIGHLIGHT_COLORS, HighlightSwatchIcon, isHighlightActive } from '../../lib/highlightColors';
-import SurferImageNode from './SurferImageNode';
+import RanksmileImageNode from './RanksmileImageNode';
 import ContentOptimizer from './contentOptimizerNode';
-import SurfyBubbleMenu, { SurfyLinkModal } from './SurfyBubbleMenu';
+import RanksmileBubbleMenu, { RanksmileLinkModal } from './RanksmileBubbleMenu';
 import { CommentHighlight, CommentAnchor } from './comments/commentHighlightExtension';
 import { TableKit } from '@tiptap/extension-table';
 import Typography from '@tiptap/extension-typography';
@@ -38,7 +38,7 @@ import EditorCommentsOverlay from './comments/EditorCommentsOverlay';
 import { Thread, CommentAuthor } from './comments/CommentThreadBubble';
 import CompareVersionsModal from './CompareVersionsModal';
 import SlashCommand, { SlashItem } from './SlashCommand';
-import SurfyChatPanel, { SurfyPanelApi } from './SurfyChatPanel';
+import RanksmileChatPanel, { RanksmilePanelApi } from './RanksmileChatPanel';
 import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
 
@@ -71,9 +71,9 @@ interface Props {
   readOnly?: boolean;
   /** Highlight NLP entity terms inline (Write & Optimize). */
   highlightTerms?: boolean;
-  /** Fired with true when Surfy is processing, false when done */
+  /** Fired with true when Ranksmile is processing, false when done */
   onAiActivity?: (active: boolean) => void;
-  /** Target keyword for Surfy scoring context */
+  /** Target keyword for Ranksmile scoring context */
   articleKeyword?: string;
   /** Plagiarised sentences to underline in red (view-only; from the Plagiarism panel). */
   plagiarismSentences?: string[];
@@ -91,17 +91,17 @@ interface Props {
   onCommentsChanged?: () => void;
   /** Create a comment anchored to the selected quote; resolves to the new id. */
   onCreateComment?: (quote: string, draft: { text: string; images: string[] }) => Promise<string | undefined> | void;
-  /** Notified whenever Surfy opens/closes, so the page can swap its right panel to the docked pane. */
-  onSurfyOpenChange?: (open: boolean) => void;
-  /** When provided, the Surfy chat renders (via portal) into this docked element instead of the
-   *  floating modal — the page supplies it in the right column while Surfy is open. */
-  surfyDockEl?: HTMLElement | null;
+  /** Notified whenever Ranksmile opens/closes, so the page can swap its right panel to the docked pane. */
+  onRanksmileOpenChange?: (open: boolean) => void;
+  /** When provided, the Ranksmile chat renders (via portal) into this docked element instead of the
+   *  floating modal — the page supplies it in the right column while Ranksmile is open. */
+  ranksmileDockEl?: HTMLElement | null;
 }
 
 interface MenuBarProps {
   editor: Editor;
   keyword?: string;
-  onAskSurfy: () => void;
+  onAskRanksmile: () => void;
   formattingSuspended?: boolean;
 }
 
@@ -112,9 +112,9 @@ const Sep = () => (
   </div>
 );
 
-const MAX_SURFY_HISTORY = 20;
+const MAX_RANKSMILE_HISTORY = 20;
 
-const IconSurfy = IconSmily;
+const IconRanksmile = IconSmily;
 
 /**
  * A toolbar group rendered as a single trigger button that opens a small
@@ -218,7 +218,7 @@ const ToolbarMenu = ({
   );
 };
 
-const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarProps) => {
+const MenuBar = ({ editor, keyword, onAskRanksmile, formattingSuspended }: MenuBarProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkInitialText, setLinkInitialText] = useState('');
@@ -626,8 +626,8 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
       {/* Right: Ask Smily */}
       <button
         type="button"
-        data-tour="ask-surfy"
-        onClick={onAskSurfy}
+        data-tour="ask-ranksmile"
+        onClick={onAskRanksmile}
         title="Ask Smily — edit with AI"
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -642,12 +642,12 @@ const MenuBar = ({ editor, keyword, onAskSurfy, formattingSuspended }: MenuBarPr
         onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
       >
-        <IconSurfy size={20} />
+        <IconRanksmile size={20} />
         Ask Smily
       </button>
       </div>
 
-      <SurfyLinkModal
+      <RanksmileLinkModal
         editor={editor}
         open={linkModalOpen}
         initialText={linkInitialText}
@@ -727,7 +727,7 @@ const FeaturedImageBlock = ({
               <button
                 type="button"
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('surfer:open-pixabay', {
+                  window.dispatchEvent(new CustomEvent('ranksmile:open-pixabay', {
                     detail: { onSelect: (img: { url: string; alt: string }) => { onImageChange?.(img); } },
                   }));
                 }}
@@ -873,7 +873,7 @@ const TitleDescriptionBlock = ({
 };
 
 // Friendly labels for the live activity list (tool name → human phrase).
-const SURFY_TOOL_LABELS: Record<string, string> = {
+const RANKSMILE_TOOL_LABELS: Record<string, string> = {
   get_tool_catalog: 'Reviewing available tools', get_content_score: 'Checking content score',
   list_missing_terms: 'Finding missing terms', get_ranking_signals: 'Reading ranking signals',
   list_internal_link_targets: 'Looking up internal links', get_ai_search_score: 'Checking AI-search score',
@@ -883,9 +883,9 @@ const SURFY_TOOL_LABELS: Record<string, string> = {
   generate_social_posts: 'Writing social posts', apply_readability: 'Improving readability',
   publish_to_wordpress: 'Preparing to publish',
 };
-const surfyToolLabel = (tool: string) => SURFY_TOOL_LABELS[tool] || tool;
+const ranksmileToolLabel = (tool: string) => RANKSMILE_TOOL_LABELS[tool] || tool;
 
-type SurfyAgentDonePayload = {
+type RanksmileAgentDonePayload = {
   message?: string;
   finalHtml?: string | null;
   content?: string | null;
@@ -898,14 +898,14 @@ type SurfyAgentDonePayload = {
 };
 
 /** Read the agent's SSE stream, forwarding live events, and resolve with the terminal `done` payload. */
-async function readSurfyAgentStream(
+async function readRanksmileAgentStream(
   res: Response,
   on: { text: (delta: string) => void; step: (d: { phase: string; tool: string }) => void; usage: (n: number) => void },
-): Promise<SurfyAgentDonePayload> {
+): Promise<RanksmileAgentDonePayload> {
   const reader = res.body!.getReader();
   const dec = new TextDecoder();
   let buf = '';
-  let done: SurfyAgentDonePayload | null = null;
+  let done: RanksmileAgentDonePayload | null = null;
   for (;;) {
     const { value, done: streamDone } = await reader.read();
     if (streamDone) break;
@@ -921,7 +921,7 @@ async function readSurfyAgentStream(
       if (ev === 'text') on.text(String(parsed.delta || ''));
       else if (ev === 'step') on.step(parsed as { phase: string; tool: string });
       else if (ev === 'usage') on.usage(Number(parsed.totalTokens) || 0);
-      else if (ev === 'done') done = parsed as SurfyAgentDonePayload;
+      else if (ev === 'done') done = parsed as RanksmileAgentDonePayload;
       else if (ev === 'error') throw new Error(String(parsed.error || 'stream error'));
     }
   }
@@ -935,10 +935,10 @@ const SlashIcon = ({ d }: { d: string }) => (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
 );
 
-const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() => void>): SlashItem[] => {
+const filterSlashItems = (query: string, askRanksmileRef: React.MutableRefObject<() => void>): SlashItem[] => {
   const del = (editor: Editor, range: { from: number; to: number }) => editor.chain().focus().deleteRange(range);
   const all: SlashItem[] = [
-    { title: 'Ask Smily', hint: '/ask', icon: <IconSurfy size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askSurfyRef.current?.(); } },
+    { title: 'Ask Smily', hint: '/ask', icon: <IconRanksmile size={18} />, command: ({ editor, range }) => { del(editor, range).run(); askRanksmileRef.current?.(); } },
     { title: 'Add an image', hint: '/img', icon: <SlashIcon d="M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6" />, command: ({ editor, range }) => {
       del(editor, range).run();
       const inp = document.createElement('input');
@@ -966,8 +966,8 @@ const filterSlashItems = (query: string, askSurfyRef: React.MutableRefObject<() 
 };
 
 /* ── Empty-article "get started" CTA ──────────────────────────────────
- * Surfer-style blank state shown under the title/first line when the doc is
- * empty: import from URL, insert a competitor-derived outline, or open Surfy. */
+ * Ranksmile-style blank state shown under the title/first line when the doc is
+ * empty: import from URL, insert a competitor-derived outline, or open Ranksmile. */
 const CTA_FONT = 'var(--font-family-primary)';
 const IconGlobe = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8.25V18a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 18V8.25m-18 0V6a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 6v2.25m-18 0h18M5.25 6h.008v.008H5.25zM7.5 6h.008v.008H7.5zm2.25 0h.008v.008H9.75z" /></svg>);
 const IconOutline = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.008v.008H3.75zm0 5.25h.008v.008H3.75zm0 5.25h.008v.008H3.75z" /></svg>);
@@ -1047,7 +1047,7 @@ const ImportBar = ({ url, onChange, onImport, onClose, busy }: { url: string; on
   </form>
 );
 
-const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onSurfyOpenChange, surfyDockEl }: Props) => {
+const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData, internalArticles, onChange, onMetaTitleChange, onMetaDescriptionChange, onHeadingsChange, initialFeaturedImage, onFeaturedImageChange, editorRef, reviewMode, formattingSuspended, readOnly, highlightTerms, onAiActivity, articleKeyword, comments, threads, commentAuthor, commentArticleId, onCommentsChanged, onCreateComment, plagiarismSentences, plagiarismFocused, onRanksmileOpenChange, ranksmileDockEl }: Props) => {
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const onHeadingsChangeRef = useRef(onHeadingsChange);
@@ -1082,10 +1082,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     useEffect(() => {
       if (initialFeaturedImage !== undefined) setFeaturedImage(initialFeaturedImage ?? null);
     }, [initialFeaturedImage]);
-    const [surfyOpen, setSurfyOpen] = useState(false);
-    const [surfyPrompt, setSurfyPrompt] = useState('');
-    const [surfyLoading, setSurfyLoading] = useState(false);
-    // Empty-document "get started" state (Surfer-style CTA on a blank article).
+    const [ranksmileOpen, setRanksmileOpen] = useState(false);
+    const [ranksmilePrompt, setRanksmilePrompt] = useState('');
+    const [ranksmileLoading, setRanksmileLoading] = useState(false);
+    // Empty-document "get started" state (Ranksmile-style CTA on a blank article).
     const [docEmpty, setDocEmpty] = useState(true);
     const [ctaMode, setCtaMode] = useState<'menu' | 'import'>('menu');
     const [importUrl, setImportUrl] = useState('');
@@ -1094,151 +1094,151 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
     const [generateBusy, setGenerateBusy] = useState(false);
     const [generateMsg, setGenerateMsg] = useState('Generating article…');
     const [generatePct, setGeneratePct] = useState<number | null>(null);
-    const [surfyResponse, setSurfyResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
+    const [ranksmileResponse, setRanksmileResponse] = useState<{ action?: string; message: string; content: string | null; changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null } | null>(null);
     const [publishing, setPublishing] = useState(false);
     // Live streaming state for the agent (SSE): per-tool activity, the in-progress text, token usage.
-    const [surfyActivity, setSurfyActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
-    const [surfyStreamText, setSurfyStreamText] = useState('');
-    const [surfyStreamThinkingLen, setSurfyStreamThinkingLen] = useState(0);
-    const surfyStreamLenRef = useRef(0);
-    const [surfyUsageDetail, setSurfyUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
+    const [ranksmileActivity, setRanksmileActivity] = useState<Array<{ tool: string; done: boolean; error?: boolean }>>([]);
+    const [ranksmileStreamText, setRanksmileStreamText] = useState('');
+    const [ranksmileStreamThinkingLen, setRanksmileStreamThinkingLen] = useState(0);
+    const ranksmileStreamLenRef = useRef(0);
+    const [ranksmileUsageDetail, setRanksmileUsageDetail] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
     // Running totals across all turns of the current conversation (reset on a new conversation).
-    const [surfyTotals, setSurfyTotals] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
+    const [ranksmileTotals, setRanksmileTotals] = useState<{ input: number; output: number }>({ input: 0, output: 0 });
     // The organization's shared 5h AI-token pool (drives the ring + the blocked banner).
     const [orgUsage, setOrgUsage] = useState<{ used: number; limit: number; resetsAt: number; over: boolean } | null>(null);
     const refreshOrgUsage = useCallback(async () => {
       try { const r = await fetch('/api/ai-usage'); if (r.ok) setOrgUsage(await r.json()); } catch { /* never block the editor on a usage read */ }
     }, []);
-    const [surfySelection, setSurfySelection] = useState<{ text: string; from: number; to: number } | null>(null);
+    const [ranksmileSelection, setRanksmileSelection] = useState<{ text: string; from: number; to: number } | null>(null);
     // In-editor "Add comment" composer, anchored below the selection (viewport coords).
     const [commentDraft, setCommentDraft] = useState<{ quote: string; top: number; left: number; from: number; to: number } | null>(null);
     // Keep the commented range highlighted while the composer is open (decoration).
     const draftRangeRef = useRef<{ from: number; to: number } | null>(null);
     draftRangeRef.current = commentDraft ? { from: commentDraft.from, to: commentDraft.to } : null;
-    const surfyInputRef = useRef<HTMLTextAreaElement>(null);
-    const surfyScrollRef = useRef<HTMLDivElement>(null);
-    const handleSurfySubmitRef = useRef<
+    const ranksmileInputRef = useRef<HTMLTextAreaElement>(null);
+    const ranksmileScrollRef = useRef<HTMLDivElement>(null);
+    const handleRanksmileSubmitRef = useRef<
       ((overridePrompt?: string, overrideSelection?: { text: string; from: number; to: number } | null) => Promise<void>) | null
     >(null);
-    // The "/ask" slash item opens Surfy via this ref (the handler is defined further down).
-    const slashAskSurfyRef = useRef<() => void>(() => {});
+    // The "/ask" slash item opens Ranksmile via this ref (the handler is defined further down).
+    const slashAskRanksmileRef = useRef<() => void>(() => {});
 
-    // Auto-grow the Surfy textarea to fit its content (capped, then it scrolls).
+    // Auto-grow the Ranksmile textarea to fit its content (capped, then it scrolls).
     // Keep the cap modest so the context ring footer stays inside the clipped side panel.
-    const SURFY_TEXTAREA_MAX_PX = 160;
+    const RANKSMILE_TEXTAREA_MAX_PX = 160;
     useEffect(() => {
-      const el = surfyInputRef.current;
+      const el = ranksmileInputRef.current;
       if (!el) return;
       el.style.height = '0px';
-      el.style.height = `${Math.min(el.scrollHeight, SURFY_TEXTAREA_MAX_PX)}px`;
-    }, [surfyPrompt, surfyOpen]);
+      el.style.height = `${Math.min(el.scrollHeight, RANKSMILE_TEXTAREA_MAX_PX)}px`;
+    }, [ranksmilePrompt, ranksmileOpen]);
 
-    useEffect(() => { onAiActivity?.(surfyLoading); }, [surfyLoading]); // eslint-disable-line react-hooks/exhaustive-deps
-    // Tell the page when Surfy opens/closes so it can dock the chat pane in the right column.
-    useEffect(() => { onSurfyOpenChange?.(surfyOpen); }, [surfyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { onAiActivity?.(ranksmileLoading); }, [ranksmileLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Tell the page when Ranksmile opens/closes so it can dock the chat pane in the right column.
+    useEffect(() => { onRanksmileOpenChange?.(ranksmileOpen); }, [ranksmileOpen]); // eslint-disable-line react-hooks/exhaustive-deps
     // Keep the org's shared 5h usage fresh while the panel is open: on open, when the tab regains
     // focus, and on a slow interval — so a teammate burning the pool shows up without a failed send.
     useEffect(() => {
-      if (!surfyOpen) return undefined;
+      if (!ranksmileOpen) return undefined;
       void refreshOrgUsage();
       const onFocus = () => { void refreshOrgUsage(); };
       window.addEventListener('focus', onFocus);
       const iv = setInterval(() => { void refreshOrgUsage(); }, 60000);
       return () => { window.removeEventListener('focus', onFocus); clearInterval(iv); };
-    }, [surfyOpen, refreshOrgUsage]);
+    }, [ranksmileOpen, refreshOrgUsage]);
 
 
-    type SurfyMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
-    const [surfyHistory, setSurfyHistory] = useState<SurfyMsg[]>([]);
+    type RanksmileMsg = { role: 'user' | 'assistant'; message: string; content?: string | null; action?: string; thinking?: string };
+    const [ranksmileHistory, setRanksmileHistory] = useState<RanksmileMsg[]>([]);
     // Saved conversations (localStorage, per article) for the header's history dropdown.
-    type SurfyConvo = { id: string; title: string; ts: number; history: SurfyMsg[] };
-    type SurfyDraft = { id: string; history: SurfyMsg[]; prompt: string; ts: number };
-    const [surfyConversations, setSurfyConversations] = useState<SurfyConvo[]>([]);
-    const [surfyActiveConvoId, setSurfyActiveConvoId] = useState<string | null>(null);
-    const surfyConvoKey = `surfy-conversations-${commentArticleId || 'x'}`;
-    const surfyDraftKey = `surfy-draft-${commentArticleId || 'x'}`;
-    const surfyDraftHydrated = useRef(false);
+    type RanksmileConvo = { id: string; title: string; ts: number; history: RanksmileMsg[] };
+    type RanksmileDraft = { id: string; history: RanksmileMsg[]; prompt: string; ts: number };
+    const [ranksmileConversations, setRanksmileConversations] = useState<RanksmileConvo[]>([]);
+    const [ranksmileActiveConvoId, setRanksmileActiveConvoId] = useState<string | null>(null);
+    const ranksmileConvoKey = `ranksmile-conversations-${commentArticleId || 'x'}`;
+    const ranksmileDraftKey = `ranksmile-draft-${commentArticleId || 'x'}`;
+    const ranksmileDraftHydrated = useRef(false);
 
     useEffect(() => {
       try {
-        const raw = localStorage.getItem(surfyConvoKey);
-        if (raw) setSurfyConversations(JSON.parse(raw) as SurfyConvo[]);
-        else setSurfyConversations([]);
+        const raw = localStorage.getItem(ranksmileConvoKey);
+        if (raw) setRanksmileConversations(JSON.parse(raw) as RanksmileConvo[]);
+        else setRanksmileConversations([]);
       } catch {
-        setSurfyConversations([]);
+        setRanksmileConversations([]);
       }
-    }, [surfyConvoKey]);
+    }, [ranksmileConvoKey]);
 
     // Restore the last in-progress conversation once per article (Ask Smily reopen / remount).
     useEffect(() => {
-      surfyDraftHydrated.current = false;
+      ranksmileDraftHydrated.current = false;
       if (!commentArticleId) return;
       try {
-        const raw = localStorage.getItem(surfyDraftKey);
+        const raw = localStorage.getItem(ranksmileDraftKey);
         if (!raw) {
-          surfyDraftHydrated.current = true;
+          ranksmileDraftHydrated.current = true;
           return;
         }
-        const draft = JSON.parse(raw) as SurfyDraft;
+        const draft = JSON.parse(raw) as RanksmileDraft;
         if (Array.isArray(draft.history) && draft.history.length > 0) {
-          setSurfyHistory(draft.history);
-          setSurfyActiveConvoId(draft.id || null);
-          if (typeof draft.prompt === 'string' && draft.prompt) setSurfyPrompt(draft.prompt);
+          setRanksmileHistory(draft.history);
+          setRanksmileActiveConvoId(draft.id || null);
+          if (typeof draft.prompt === 'string' && draft.prompt) setRanksmilePrompt(draft.prompt);
         }
       } catch {
         /* ignore corrupt draft */
       }
-      surfyDraftHydrated.current = true;
-    }, [surfyDraftKey, commentArticleId]);
+      ranksmileDraftHydrated.current = true;
+    }, [ranksmileDraftKey, commentArticleId]);
 
-    const persistConvos = (list: SurfyConvo[]) => {
-      setSurfyConversations(list);
-      try { localStorage.setItem(surfyConvoKey, JSON.stringify(list)); } catch { /* quota/unavailable */ }
+    const persistConvos = (list: RanksmileConvo[]) => {
+      setRanksmileConversations(list);
+      try { localStorage.setItem(ranksmileConvoKey, JSON.stringify(list)); } catch { /* quota/unavailable */ }
     };
 
-    const persistDraft = useCallback((draft: SurfyDraft | null) => {
+    const persistDraft = useCallback((draft: RanksmileDraft | null) => {
       try {
-        if (!draft || draft.history.length === 0) localStorage.removeItem(surfyDraftKey);
-        else localStorage.setItem(surfyDraftKey, JSON.stringify(draft));
+        if (!draft || draft.history.length === 0) localStorage.removeItem(ranksmileDraftKey);
+        else localStorage.setItem(ranksmileDraftKey, JSON.stringify(draft));
       } catch { /* quota/unavailable */ }
-    }, [surfyDraftKey]);
+    }, [ranksmileDraftKey]);
 
-    // Keep draft in sync so closing Surfy / refreshing still restores the last thread.
+    // Keep draft in sync so closing Ranksmile / refreshing still restores the last thread.
     useEffect(() => {
-      if (!surfyDraftHydrated.current || !commentArticleId) return;
-      if (!surfyHistory.length) {
+      if (!ranksmileDraftHydrated.current || !commentArticleId) return;
+      if (!ranksmileHistory.length) {
         persistDraft(null);
         return;
       }
-      const id = surfyActiveConvoId || `${Date.now()}`;
-      if (!surfyActiveConvoId) setSurfyActiveConvoId(id);
-      persistDraft({ id, history: surfyHistory, prompt: surfyPrompt, ts: Date.now() });
-    }, [surfyHistory, surfyPrompt, surfyActiveConvoId, commentArticleId, persistDraft]);
+      const id = ranksmileActiveConvoId || `${Date.now()}`;
+      if (!ranksmileActiveConvoId) setRanksmileActiveConvoId(id);
+      persistDraft({ id, history: ranksmileHistory, prompt: ranksmilePrompt, ts: Date.now() });
+    }, [ranksmileHistory, ranksmilePrompt, ranksmileActiveConvoId, commentArticleId, persistDraft]);
 
     // Archive the current chat (if it has messages) before clearing for a new/loaded one.
     const archiveCurrentConvo = () => {
-      if (!surfyHistory.length) return;
-      const firstUser = surfyHistory.find((m) => m.role === 'user')?.message || 'Conversation';
-      const id = surfyActiveConvoId || `${Date.now()}`;
-      const without = surfyConversations.filter((c) => c.id !== id);
-      const convo: SurfyConvo = { id, title: firstUser.slice(0, 60), ts: Date.now(), history: surfyHistory };
+      if (!ranksmileHistory.length) return;
+      const firstUser = ranksmileHistory.find((m) => m.role === 'user')?.message || 'Conversation';
+      const id = ranksmileActiveConvoId || `${Date.now()}`;
+      const without = ranksmileConversations.filter((c) => c.id !== id);
+      const convo: RanksmileConvo = { id, title: firstUser.slice(0, 60), ts: Date.now(), history: ranksmileHistory };
       persistConvos([convo, ...without].slice(0, 20));
     };
 
-    const handleAskSurfy = () => {
+    const handleAskRanksmile = () => {
       if (!editor) return;
       // Toggle dock — draft persistence keeps the last started conversation.
-      if (surfyOpen) { setSurfyOpen(false); return; }
+      if (ranksmileOpen) { setRanksmileOpen(false); return; }
       // If memory was cleared but draft exists, restore before showing the panel.
-      if (!surfyHistory.length) {
+      if (!ranksmileHistory.length) {
         try {
-          const raw = localStorage.getItem(surfyDraftKey);
+          const raw = localStorage.getItem(ranksmileDraftKey);
           if (raw) {
-            const draft = JSON.parse(raw) as SurfyDraft;
+            const draft = JSON.parse(raw) as RanksmileDraft;
             if (Array.isArray(draft.history) && draft.history.length > 0) {
-              setSurfyHistory(draft.history);
-              setSurfyActiveConvoId(draft.id || null);
-              if (typeof draft.prompt === 'string') setSurfyPrompt(draft.prompt);
+              setRanksmileHistory(draft.history);
+              setRanksmileActiveConvoId(draft.id || null);
+              if (typeof draft.prompt === 'string') setRanksmilePrompt(draft.prompt);
             }
           }
         } catch { /* ignore */ }
@@ -1246,46 +1246,46 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       const { from, to, empty } = editor.state.selection;
       if (!empty && from !== to) {
         const text = editor.state.doc.textBetween(from, to, '\n');
-        setSurfySelection({ text, from, to });
+        setRanksmileSelection({ text, from, to });
       } else {
-        setSurfySelection(null);
+        setRanksmileSelection(null);
       }
-      setSurfyOpen(true);
-      setTimeout(() => surfyInputRef.current?.focus(), 50);
+      setRanksmileOpen(true);
+      setTimeout(() => ranksmileInputRef.current?.focus(), 50);
     };
-    slashAskSurfyRef.current = handleAskSurfy;
+    slashAskRanksmileRef.current = handleAskRanksmile;
 
-  const handleSurfySubmit = async (
+  const handleRanksmileSubmit = async (
       overridePrompt?: string,
       overrideSelection?: { text: string; from: number; to: number } | null,
     ) => {
-      const prompt = (overridePrompt ?? surfyPrompt).trim();
+      const prompt = (overridePrompt ?? ranksmilePrompt).trim();
       if (!prompt || !editor) return;
-      const activeSelection = overrideSelection !== undefined ? overrideSelection : surfySelection;
-      setSurfyLoading(true);
-      setSurfyResponse(null);
-      setSurfyActivity([]);
-      setSurfyStreamText('');
-      setSurfyStreamThinkingLen(0);
-      surfyStreamLenRef.current = 0;
-      setSurfyUsageDetail({ input: 0, output: 0 });
+      const activeSelection = overrideSelection !== undefined ? overrideSelection : ranksmileSelection;
+      setRanksmileLoading(true);
+      setRanksmileResponse(null);
+      setRanksmileActivity([]);
+      setRanksmileStreamText('');
+      setRanksmileStreamThinkingLen(0);
+      ranksmileStreamLenRef.current = 0;
+      setRanksmileUsageDetail({ input: 0, output: 0 });
 
-      setSurfyHistory((prev) => {
+      setRanksmileHistory((prev) => {
         const next = [...prev, { role: 'user' as const, message: prompt }];
-        return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
+        return next.length > MAX_RANKSMILE_HISTORY ? next.slice(-MAX_RANKSMILE_HISTORY) : next;
       });
       // Clear the composer once the message is sent (restored below only if the
       // request is blocked by the shared budget).
-      setSurfyPrompt('');
+      setRanksmilePrompt('');
 
       try {
         const htmlContent = editor.getHTML();
         const useAgent = !activeSelection; // article mode → multi-step agent
-        const endpoint = useAgent ? '/api/articles/surfy-agent' : '/api/articles/ask-surfy';
-        if (useAgent) surfyOriginalRef.current = htmlContent; // remember pre-edit HTML for the diff
+        const endpoint = useAgent ? '/api/articles/ranksmile-agent' : '/api/articles/ask-ranksmile';
+        if (useAgent) ranksmileOriginalRef.current = htmlContent; // remember pre-edit HTML for the diff
 
         const ac = new AbortController();
-        surfyAbortRef.current = ac;
+        ranksmileAbortRef.current = ac;
 
         const body = useAgent
           ? {
@@ -1296,7 +1296,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               internalArticles: internalArticles || [],
               articleTitle: metaTitle || '',
               articleMetaDescription: metaDescription || '',
-              history: surfyHistory,
+              history: ranksmileHistory,
               articleId: commentArticleId ? Number(commentArticleId) : null,
               authorName: commentAuthor?.name || '',
             }
@@ -1309,7 +1309,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               scoreData: scoreData || null,
               internalArticles: internalArticles || [],
               keyword: articleKeyword || keyword || '',
-              history: surfyHistory,
+              history: ranksmileHistory,
             };
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -1323,20 +1323,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           const ej = await res.json().catch(() => ({}));
           if (ej.error === 'org_limit') {
             setOrgUsage({ used: ej.used ?? 0, limit: ej.limit ?? 0, resetsAt: ej.resetsAt ?? 0, over: true });
-            setSurfyHistory((prev) => prev.slice(0, -1)); // drop the optimistic user bubble; keep their prompt in the box
-            setSurfyPrompt(prompt); // restore the composer so they can retry after the reset
+            setRanksmileHistory((prev) => prev.slice(0, -1)); // drop the optimistic user bubble; keep their prompt in the box
+            setRanksmilePrompt(prompt); // restore the composer so they can retry after the reset
             return;
           }
         }
 
-        let data: SurfyAgentDonePayload & Record<string, unknown>;
+        let data: RanksmileAgentDonePayload & Record<string, unknown>;
         if (useAgent) {
           // SSE stream: errors before streaming come back as JSON; otherwise read the stream.
           if (!res.ok) { const ej = await res.json().catch(() => ({})); throw new Error(ej.error || 'Request failed'); }
-          data = await readSurfyAgentStream(res, {
-            text: (delta) => setSurfyStreamText((t) => {
+          data = await readRanksmileAgentStream(res, {
+            text: (delta) => setRanksmileStreamText((t) => {
               const next = t + delta;
-              surfyStreamLenRef.current = next.length;
+              ranksmileStreamLenRef.current = next.length;
               return next;
             }),
             usage: () => {}, // live running count not shown; the ring updates from the final usage below
@@ -1344,9 +1344,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               // Absorb all text so far into Thinking on tool start AND end. Between tools the
               // model streams narration; without start-boundary it briefly leaks into the answer.
               if (d.phase === 'start' || d.phase === 'end' || d.phase === 'error') {
-                setSurfyStreamThinkingLen(surfyStreamLenRef.current);
+                setRanksmileStreamThinkingLen(ranksmileStreamLenRef.current);
               }
-              setSurfyActivity((a) => {
+              setRanksmileActivity((a) => {
                 if (d.phase === 'start') return [...a, { tool: d.tool, done: false }];
                 const rev = [...a].reverse().findIndex((x) => x.tool === d.tool && !x.done);
                 if (rev === -1) return a;
@@ -1357,17 +1357,17 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               });
             },
           });
-          setSurfyUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
-          setSurfyTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
+          setRanksmileUsageDetail({ input: data.usage?.inputTokens || 0, output: data.usage?.outputTokens || 0 });
+          setRanksmileTotals((t) => ({ input: t.input + (data.usage?.inputTokens || 0), output: t.output + (data.usage?.outputTokens || 0) }));
         } else {
           const json = await res.json() as Record<string, unknown>;
           if (!res.ok) throw new Error(String(json.error || 'Request failed'));
-          data = json as SurfyAgentDonePayload & Record<string, unknown>;
+          data = json as RanksmileAgentDonePayload & Record<string, unknown>;
         }
 
         if (useAgent) {
-          surfyMetaRef.current = data.meta || null;
-          setSurfyResponse({
+          ranksmileMetaRef.current = data.meta || null;
+          setRanksmileResponse({
             action: 'replace_article',
             message: data.message || '',
             content: data.finalHtml || null,
@@ -1376,10 +1376,10 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             pendingAction: data.pendingAction || null,
           });
         } else {
-          surfyMetaRef.current = null;
-          setSurfyResponse({ action: data.action, message: data.message || '', content: data.content ?? null });
+          ranksmileMetaRef.current = null;
+          setRanksmileResponse({ action: data.action, message: data.message || '', content: data.content ?? null });
         }
-        setSurfyHistory((prev) => {
+        setRanksmileHistory((prev) => {
           const next = [...prev, {
             role: 'assistant' as const,
             message: data.message || '',
@@ -1387,77 +1387,77 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             action: data.action,
             thinking: data.thinking || '',
           }];
-          return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
+          return next.length > MAX_RANKSMILE_HISTORY ? next.slice(-MAX_RANKSMILE_HISTORY) : next;
         });
-        setSurfyPrompt('');
+        setRanksmilePrompt('');
         void refreshOrgUsage(); // this turn drew from the shared pool — refresh the ring
       } catch (err) {
         const e = err as { name?: string; message?: string };
         if (e?.name === 'AbortError') return; // user pressed Stop
         const errMsg = 'Error: ' + e.message;
-        setSurfyResponse({ message: errMsg, content: null });
-        setSurfyHistory((prev) => {
+        setRanksmileResponse({ message: errMsg, content: null });
+        setRanksmileHistory((prev) => {
           const next = [...prev, { role: 'assistant' as const, message: errMsg }];
-          return next.length > MAX_SURFY_HISTORY ? next.slice(-MAX_SURFY_HISTORY) : next;
+          return next.length > MAX_RANKSMILE_HISTORY ? next.slice(-MAX_RANKSMILE_HISTORY) : next;
         });
       } finally {
-        setSurfyLoading(false);
-        surfyAbortRef.current = null;
+        setRanksmileLoading(false);
+        ranksmileAbortRef.current = null;
       }
     };
-    handleSurfySubmitRef.current = handleSurfySubmit;
+    handleRanksmileSubmitRef.current = handleRanksmileSubmit;
 
-    const handleSurfyApply = () => {
-      if (!editor || !surfyResponse) return;
+    const handleRanksmileApply = () => {
+      if (!editor || !ranksmileResponse) return;
       // For analysis-only, there's nothing to apply
-      if (!surfyResponse.content && surfyResponse.action !== 'delete_selection') return;
+      if (!ranksmileResponse.content && ranksmileResponse.action !== 'delete_selection') return;
 
-      if (surfySelection) {
-        const action = surfyResponse.action || 'replace_selection';
+      if (ranksmileSelection) {
+        const action = ranksmileResponse.action || 'replace_selection';
         switch (action) {
           case 'delete_selection':
-            editor.chain().focus().deleteRange({ from: surfySelection.from, to: surfySelection.to }).run();
+            editor.chain().focus().deleteRange({ from: ranksmileSelection.from, to: ranksmileSelection.to }).run();
             break;
           case 'insert_after_selection':
-            editor.chain().focus().insertContentAt(surfySelection.to, surfyResponse.content || '').run();
+            editor.chain().focus().insertContentAt(ranksmileSelection.to, ranksmileResponse.content || '').run();
             break;
           case 'replace_selection':
           default:
             editor.chain().focus().insertContentAt(
-              { from: surfySelection.from, to: surfySelection.to },
-              surfyResponse.content || ''
+              { from: ranksmileSelection.from, to: ranksmileSelection.to },
+              ranksmileResponse.content || ''
             ).run();
             break;
         }
       } else {
         // Full article mode
-        if (surfyResponse.content) {
+        if (ranksmileResponse.content) {
           // emitUpdate:true so the editor fires onUpdate → page onChange → AUTO-SAVE.
           // Without it setContent is silent and the applied changes never persist.
-          editor.commands.setContent(surfyResponse.content, { emitUpdate: true });
+          editor.commands.setContent(ranksmileResponse.content, { emitUpdate: true });
         }
-        if (surfyMetaRef.current) {
-          if (surfyMetaRef.current.metaTitle != null) onMetaTitleChange?.(surfyMetaRef.current.metaTitle);
-          if (surfyMetaRef.current.metaDescription != null) onMetaDescriptionChange?.(surfyMetaRef.current.metaDescription);
-          surfyMetaRef.current = null;
+        if (ranksmileMetaRef.current) {
+          if (ranksmileMetaRef.current.metaTitle != null) onMetaTitleChange?.(ranksmileMetaRef.current.metaTitle);
+          if (ranksmileMetaRef.current.metaDescription != null) onMetaDescriptionChange?.(ranksmileMetaRef.current.metaDescription);
+          ranksmileMetaRef.current = null;
         }
       }
       // Keep the panel + conversation open so the user can continue; just clear the
       // applied response/draft. (Closing wiped the chat — that surprised users.)
-      setSurfyPrompt('');
-      setSurfyResponse(null);
-      setSurfySelection(null);
+      setRanksmilePrompt('');
+      setRanksmileResponse(null);
+      setRanksmileSelection(null);
     };
 
     // Always-current editor ref — useEditor returns null on first render in
     // Next.js (TipTap v3 detects window.next and forces immediatelyRender:false).
     // A plain ref lets getEditor() read the live value without stale-closure issues.
     const editorLiveRef = useRef<Editor | null>(null);
-    const surfyOpenRef = useRef(surfyOpen);
-    surfyOpenRef.current = surfyOpen;
-    const surfyMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
-    const surfyOriginalRef = useRef<string>('');                  // pre-edit HTML, for the diff preview
-    const surfyAbortRef = useRef<AbortController | null>(null);   // for Stop/Cancel
+    const ranksmileOpenRef = useRef(ranksmileOpen);
+    ranksmileOpenRef.current = ranksmileOpen;
+    const ranksmileMetaRef = useRef<{ metaTitle?: string; metaDescription?: string } | null>(null);
+    const ranksmileOriginalRef = useRef<string>('');                  // pre-edit HTML, for the diff preview
+    const ranksmileAbortRef = useRef<AbortController | null>(null);   // for Stop/Cancel
 
     // The agent never publishes; it PROPOSES (pendingAction). The user confirms here, and we call the
     // existing publish endpoint, which publishes the SAVED article.
@@ -1472,84 +1472,84 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || 'Publish failed');
         toast.success(d.url ? `Opublikowano: ${d.url}` : 'Opublikowano');
-        setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev));
+        setRanksmileResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev));
       } catch (e) {
         toast.error(getErrorMessage(e) || 'Publikacja nie powiodła się');
       } finally {
         setPublishing(false);
       }
     }, []);
-    const [surfyCompareOpen, setSurfyCompareOpen] = useState(false);
+    const [ranksmileCompareOpen, setRanksmileCompareOpen] = useState(false);
 
-    // Contract for the docked light SurfyChatPanel (when the page provides a dock element).
-    const surfyApi: SurfyPanelApi = {
-      history: surfyHistory,
-      loading: surfyLoading,
-      activity: surfyActivity,
-      streamText: surfyStreamText,
-      streamThinkingLen: surfyStreamThinkingLen,
-      response: surfyResponse,
-      metaPending: surfyMetaRef.current
-        ? (surfyMetaRef.current.metaTitle != null && surfyMetaRef.current.metaDescription != null ? 'title + description'
-          : surfyMetaRef.current.metaTitle != null ? 'title' : 'description')
+    // Contract for the docked light RanksmileChatPanel (when the page provides a dock element).
+    const ranksmileApi: RanksmilePanelApi = {
+      history: ranksmileHistory,
+      loading: ranksmileLoading,
+      activity: ranksmileActivity,
+      streamText: ranksmileStreamText,
+      streamThinkingLen: ranksmileStreamThinkingLen,
+      response: ranksmileResponse,
+      metaPending: ranksmileMetaRef.current
+        ? (ranksmileMetaRef.current.metaTitle != null && ranksmileMetaRef.current.metaDescription != null ? 'title + description'
+          : ranksmileMetaRef.current.metaTitle != null ? 'title' : 'description')
         : null,
-      prompt: surfyPrompt,
+      prompt: ranksmilePrompt,
       publishing,
-      canApply: Boolean(surfyResponse && (surfyResponse.content || surfyResponse.action === 'delete_selection' || surfyMetaRef.current)),
-      canCompare: Boolean(surfyResponse?.content && surfyOriginalRef.current),
-      usage: { conversation: surfyUsageDetail.input, lastInput: surfyUsageDetail.input, lastOutput: surfyUsageDetail.output, totalInput: surfyTotals.input, totalOutput: surfyTotals.output },
+      canApply: Boolean(ranksmileResponse && (ranksmileResponse.content || ranksmileResponse.action === 'delete_selection' || ranksmileMetaRef.current)),
+      canCompare: Boolean(ranksmileResponse?.content && ranksmileOriginalRef.current),
+      usage: { conversation: ranksmileUsageDetail.input, lastInput: ranksmileUsageDetail.input, lastOutput: ranksmileUsageDetail.output, totalInput: ranksmileTotals.input, totalOutput: ranksmileTotals.output },
       orgUsage,
       suggestions: ['Add missing keywords', 'Improve the weakest ranking signal', 'Add an FAQ section', 'Rewrite the intro'],
-      inputRef: surfyInputRef,
-      scrollRef: surfyScrollRef,
-      toolLabel: surfyToolLabel,
-      setPrompt: setSurfyPrompt,
-      submit: handleSurfySubmit,
-      stop: () => surfyAbortRef.current?.abort(),
-      apply: handleSurfyApply,
-      openCompare: () => setSurfyCompareOpen(true),
-      dismiss: () => { setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null; },
-      conversations: surfyConversations.map((c) => ({ id: c.id, title: c.title, ts: c.ts })),
+      inputRef: ranksmileInputRef,
+      scrollRef: ranksmileScrollRef,
+      toolLabel: ranksmileToolLabel,
+      setPrompt: setRanksmilePrompt,
+      submit: handleRanksmileSubmit,
+      stop: () => ranksmileAbortRef.current?.abort(),
+      apply: handleRanksmileApply,
+      openCompare: () => setRanksmileCompareOpen(true),
+      dismiss: () => { setRanksmileResponse(null); setRanksmilePrompt(''); ranksmileMetaRef.current = null; },
+      conversations: ranksmileConversations.map((c) => ({ id: c.id, title: c.title, ts: c.ts })),
       newConversation: () => {
         archiveCurrentConvo();
-        setSurfyHistory([]); setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
-        setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
-        setSurfyActiveConvoId(null);
+        setRanksmileHistory([]); setRanksmileResponse(null); setRanksmilePrompt(''); ranksmileMetaRef.current = null;
+        setRanksmileTotals({ input: 0, output: 0 }); setRanksmileUsageDetail({ input: 0, output: 0 });
+        setRanksmileActiveConvoId(null);
         persistDraft(null);
       },
       openConversation: (id) => {
-        const convo = surfyConversations.find((c) => c.id === id);
+        const convo = ranksmileConversations.find((c) => c.id === id);
         if (!convo) return;
         archiveCurrentConvo();
-        setSurfyHistory(convo.history);
-        setSurfyActiveConvoId(convo.id);
-        setSurfyResponse(null); setSurfyPrompt(''); surfyMetaRef.current = null;
-        setSurfyTotals({ input: 0, output: 0 }); setSurfyUsageDetail({ input: 0, output: 0 });
+        setRanksmileHistory(convo.history);
+        setRanksmileActiveConvoId(convo.id);
+        setRanksmileResponse(null); setRanksmilePrompt(''); ranksmileMetaRef.current = null;
+        setRanksmileTotals({ input: 0, output: 0 }); setRanksmileUsageDetail({ input: 0, output: 0 });
         persistDraft({ id: convo.id, history: convo.history, prompt: '', ts: Date.now() });
       },
       deleteConversation: (id) => {
-        persistConvos(surfyConversations.filter((c) => c.id !== id));
-        if (surfyActiveConvoId === id) {
-          setSurfyActiveConvoId(null);
+        persistConvos(ranksmileConversations.filter((c) => c.id !== id));
+        if (ranksmileActiveConvoId === id) {
+          setRanksmileActiveConvoId(null);
           persistDraft(null);
         }
       },
-      renameConversation: (id, title) => persistConvos(surfyConversations.map((c) => (c.id === id ? { ...c, title: title.trim() || c.title } : c))),
-      confirmPublish: () => { if (surfyResponse?.pendingAction) confirmPublish(surfyResponse.pendingAction); },
-      cancelPublish: () => setSurfyResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
-      pickSuggestion: (sug) => { setSurfyPrompt(sug); surfyInputRef.current?.focus(); },
+      renameConversation: (id, title) => persistConvos(ranksmileConversations.map((c) => (c.id === id ? { ...c, title: title.trim() || c.title } : c))),
+      confirmPublish: () => { if (ranksmileResponse?.pendingAction) confirmPublish(ranksmileResponse.pendingAction); },
+      cancelPublish: () => setRanksmileResponse((prev) => (prev ? { ...prev, pendingAction: null } : prev)),
+      pickSuggestion: (sug) => { setRanksmilePrompt(sug); ranksmileInputRef.current?.focus(); },
       // Selected-text context chip. Clearing it nulls the selection → the highlight effect
-      // ([surfyOpen, surfySelection]) removes the purple highlight from the article.
-      selectionText: surfySelection?.text || null,
-      clearSelection: () => setSurfySelection(null),
-      close: () => setSurfyOpen(false),
+      // ([ranksmileOpen, ranksmileSelection]) removes the purple highlight from the article.
+      selectionText: ranksmileSelection?.text || null,
+      clearSelection: () => setRanksmileSelection(null),
+      close: () => setRanksmileOpen(false),
     };
 
     const calcAndEmit = useCallback((ed: Editor) => {
       setDocEmpty(ed.getText().trim().length === 0);
       let html = ed.getHTML();
-      // Strip highlight marks when Surfy is open to prevent leaking into saved content
-      if (surfyOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
+      // Strip highlight marks when Ranksmile is open to prevent leaking into saved content
+      if (ranksmileOpenRef.current) html = html.replace(/<\/?mark[^>]*>/g, '');
       const text = ed.getText();
       // Word count comes from Tiptap's CharacterCount (handles unicode/whitespace
       // more robustly than a naive split) with a split fallback if unavailable.
@@ -1568,9 +1568,9 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       }
     }, []);
 
-    const SurferImage = ImageExt.extend({
+    const RanksmileImage = ImageExt.extend({
       addNodeView() {
-        return ReactNodeViewRenderer(SurferImageNode);
+        return ReactNodeViewRenderer(RanksmileImageNode);
       },
     });
 
@@ -1580,7 +1580,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         // our explicit Link.configure() below is the only Link extension.
         // Underline is bundled in StarterKit v3, so it is NOT registered separately.
         StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, link: false }),
-        SurferImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
+        RanksmileImage.configure({ inline: false, allowBase64: true, HTMLAttributes: { class: 'article-image' } }),
         // contentOptimizer nodes are ephemeral review markers — never persisted to the saved article.
         // The orchestration layer (auto-optimize flow) suspends autosave while these nodes exist.
         ContentOptimizer,
@@ -1589,11 +1589,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           addAttributes() {
             return {
               ...this.parent?.(),
-              'data-surfer-link': {
+              'data-ranksmile-link': {
                 default: null,
-                parseHTML: (el: HTMLElement) => el.getAttribute('data-surfer-link'),
+                parseHTML: (el: HTMLElement) => el.getAttribute('data-ranksmile-link'),
                 renderHTML: (attrs: Record<string, unknown>) => (
-                  attrs['data-surfer-link'] ? { 'data-surfer-link': String(attrs['data-surfer-link']) } : {}
+                  attrs['data-ranksmile-link'] ? { 'data-ranksmile-link': String(attrs['data-ranksmile-link']) } : {}
                 ),
               },
             };
@@ -1631,7 +1631,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           includeChildren: false,
           showOnlyCurrent: false,
         }),
-        SlashCommand.configure({ items: (query: string) => filterSlashItems(query, slashAskSurfyRef) }),
+        SlashCommand.configure({ items: (query: string) => filterSlashItems(query, slashAskRanksmileRef) }),
       ],
       content: content || '<h1></h1><p></p>',
       immediatelyRender: false,
@@ -1652,26 +1652,26 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
 
     const toolbarLocked = !!formattingSuspended || !!readOnly;
 
-    const surfyHlRangeRef = useRef<{ from: number; to: number } | null>(null);
+    const ranksmileHlRangeRef = useRef<{ from: number; to: number } | null>(null);
     useEffect(() => {
       if (!editor) return;
-      if (surfyOpen && surfySelection) {
-        editor.chain().unsetHighlight().setTextSelection({ from: surfySelection.from, to: surfySelection.to }).setHighlight({ color: 'rgba(242, 153, 100, 0.15)' }).run();
-        surfyHlRangeRef.current = { from: surfySelection.from, to: surfySelection.to };
-      } else if (surfyHlRangeRef.current) {
-        // Remove the Surfy highlight from its EXACT range. The cursor may have moved off it, so
+      if (ranksmileOpen && ranksmileSelection) {
+        editor.chain().unsetHighlight().setTextSelection({ from: ranksmileSelection.from, to: ranksmileSelection.to }).setHighlight({ color: 'rgba(242, 153, 100, 0.15)' }).run();
+        ranksmileHlRangeRef.current = { from: ranksmileSelection.from, to: ranksmileSelection.to };
+      } else if (ranksmileHlRangeRef.current) {
+        // Remove the Ranksmile highlight from its EXACT range. The cursor may have moved off it, so
         // unsetHighlight()/isActive('highlight') (which act on the current selection) miss it and
         // the purple highlight lingers. removeMark on the stored range clears it without moving the
         // caret or touching the user's own highlights.
-        const { from, to } = surfyHlRangeRef.current;
-        surfyHlRangeRef.current = null;
+        const { from, to } = ranksmileHlRangeRef.current;
+        ranksmileHlRangeRef.current = null;
         const markType = editor.state.schema.marks.highlight;
         const docSize = editor.state.doc.content.size;
         if (markType && from < to && to <= docSize) {
           editor.view.dispatch(editor.state.tr.removeMark(from, to, markType));
         }
       }
-    }, [surfyOpen, surfySelection]);
+    }, [ranksmileOpen, ranksmileSelection]);
 
     // Expose handle via prop-based ref (React.forwardRef doesn't work through
     // Next.js dynamic() / loadable — the wrapper intercepts the ref prop and
@@ -1680,47 +1680,47 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
       if (!editorRef) return;
       editorRef.current = {
         getEditor: () => editorLiveRef.current,
-        triggerSurfy: (prompt: string) => {
+        triggerRanksmile: (prompt: string) => {
           // Resume last draft if present; only seed the composer with the new prompt.
           try {
-            if (!surfyHistory.length) {
-              const raw = localStorage.getItem(surfyDraftKey);
+            if (!ranksmileHistory.length) {
+              const raw = localStorage.getItem(ranksmileDraftKey);
               if (raw) {
-                const draft = JSON.parse(raw) as SurfyDraft;
+                const draft = JSON.parse(raw) as RanksmileDraft;
                 if (Array.isArray(draft.history) && draft.history.length > 0) {
-                  setSurfyHistory(draft.history);
-                  setSurfyActiveConvoId(draft.id || null);
+                  setRanksmileHistory(draft.history);
+                  setRanksmileActiveConvoId(draft.id || null);
                 }
               }
             }
           } catch { /* ignore */ }
-          setSurfyOpen(true);
-          setSurfyResponse(null);
-          setSurfySelection(null);
-          setSurfyPrompt(prompt);
-          setTimeout(() => surfyInputRef.current?.focus(), 100);
+          setRanksmileOpen(true);
+          setRanksmileResponse(null);
+          setRanksmileSelection(null);
+          setRanksmilePrompt(prompt);
+          setTimeout(() => ranksmileInputRef.current?.focus(), 100);
         },
         // Right-panel toolbar toggle (docked pane), mirrors the Version-History button.
-        toggleSurfy: () => {
-          setSurfyOpen((o) => {
+        toggleRanksmile: () => {
+          setRanksmileOpen((o) => {
             if (o) return false;
             // Reopen → restore draft if the in-memory thread was cleared.
-            if (!surfyHistory.length) {
+            if (!ranksmileHistory.length) {
               try {
-                const raw = localStorage.getItem(surfyDraftKey);
+                const raw = localStorage.getItem(ranksmileDraftKey);
                 if (raw) {
-                  const draft = JSON.parse(raw) as SurfyDraft;
+                  const draft = JSON.parse(raw) as RanksmileDraft;
                   if (Array.isArray(draft.history) && draft.history.length > 0) {
-                    setSurfyHistory(draft.history);
-                    setSurfyActiveConvoId(draft.id || null);
-                    if (typeof draft.prompt === 'string' && draft.prompt) setSurfyPrompt(draft.prompt);
+                    setRanksmileHistory(draft.history);
+                    setRanksmileActiveConvoId(draft.id || null);
+                    if (typeof draft.prompt === 'string' && draft.prompt) setRanksmilePrompt(draft.prompt);
                   }
                 }
               } catch { /* ignore */ }
             }
             return true;
           });
-          setTimeout(() => surfyInputRef.current?.focus(), 80);
+          setTimeout(() => ranksmileInputRef.current?.focus(), 80);
         },
       };
       return () => { editorRef.current = null; };
@@ -1989,7 +1989,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
           .art-editor-scroll .ProseMirror blockquote { border-left: 3px solid #e5e7eb; padding: 10px 18px; margin: 16px 0; color: #6b7280; font-style: italic; background: #f9fafb; border-radius: 0 6px 6px 0; }
           .art-editor-scroll .ProseMirror img { max-width: 100%; height: auto; }
           .art-editor-scroll .ProseMirror img.article-image.ProseMirror-selectednode { outline: 3px solid var(--color-surface-raised); }
-          /* New-line placeholder — Surfer-style: inherits the paragraph's size/line-height/spacing
+          /* New-line placeholder — Ranksmile-style: inherits the paragraph's size/line-height/spacing
              (so a fresh line sits as a normal paragraph and nothing shifts when you start typing),
              soft gray, NOT italic. */
           .art-editor-scroll .ProseMirror p.is-empty::before { color: #9ca3af; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
@@ -2038,7 +2038,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         `}</style>
 
         {/* Toolbar */}
-        {editor && <MenuBar editor={editor} keyword={keyword} onAskSurfy={handleAskSurfy} formattingSuspended={toolbarLocked} />}
+        {editor && <MenuBar editor={editor} keyword={keyword} onAskRanksmile={handleAskRanksmile} formattingSuspended={toolbarLocked} />}
 
         {/* Scrollable editor — Featured image sits above the body; Title/Description
             live in Publish or Export. Relative wrapper pins blur fades to scroll edges. */}
@@ -2046,7 +2046,7 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         <div className="art-editor-scroll styled-scrollbar" data-review={reviewMode ? 'true' : 'false'} data-readonly={readOnly ? 'true' : 'false'} data-empty={docEmpty && !readOnly ? 'true' : 'false'} data-importing={importBusy ? 'true' : 'false'}>
           <div
             ref={editorWrapRef}
-            className={surfySelection ? 'surfy-selection-highlight' : ''}
+            className={ranksmileSelection ? 'ranksmile-selection-highlight' : ''}
             style={{ position: 'relative', paddingTop: 24 }}
             onMouseOver={(e) => {
               const el = e.target as HTMLElement;
@@ -2110,27 +2110,27 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
               </div>
             )}
             {editor && (
-              <SurfyBubbleMenu
+              <RanksmileBubbleMenu
                 editor={editor}
-                onAskSurfy={(selection) => {
-                  setSurfySelection({ text: selection.text, from: selection.from, to: selection.to });
-                  setSurfyResponse(null);
-                  setSurfyOpen(true);
+                onAskRanksmile={(selection) => {
+                  setRanksmileSelection({ text: selection.text, from: selection.from, to: selection.to });
+                  setRanksmileResponse(null);
+                  setRanksmileOpen(true);
                   if (selection.presetPrompt && selection.autoSubmit) {
-                    setSurfyPrompt(selection.presetPrompt);
+                    setRanksmilePrompt(selection.presetPrompt);
                     // Defer submit until selection + prompt state are committed.
                     window.setTimeout(() => {
-                      void handleSurfySubmitRef.current?.(selection.presetPrompt, {
+                      void handleRanksmileSubmitRef.current?.(selection.presetPrompt, {
                         text: selection.text,
                         from: selection.from,
                         to: selection.to,
                       });
                     }, 0);
                   } else if (selection.presetPrompt) {
-                    setSurfyPrompt(selection.presetPrompt);
-                    window.setTimeout(() => surfyInputRef.current?.focus(), 50);
+                    setRanksmilePrompt(selection.presetPrompt);
+                    window.setTimeout(() => ranksmileInputRef.current?.focus(), 50);
                   } else {
-                    window.setTimeout(() => surfyInputRef.current?.focus(), 50);
+                    window.setTimeout(() => ranksmileInputRef.current?.focus(), 50);
                   }
                 }}
                 onAddComment={onCreateComment ? (selection) => {
@@ -2188,20 +2188,20 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
         )}
         </div>
 
-        {/* Docked Surfy chat — rendered (via portal) into the page's right-column dock when present. */}
-        {surfyOpen && surfyDockEl && createPortal(
+        {/* Docked Ranksmile chat — rendered (via portal) into the page's right-column dock when present. */}
+        {ranksmileOpen && ranksmileDockEl && createPortal(
           <>
-            <SurfyChatPanel s={surfyApi} />
-            {surfyCompareOpen && surfyResponse?.content && (
+            <RanksmileChatPanel s={ranksmileApi} />
+            {ranksmileCompareOpen && ranksmileResponse?.content && (
               <CompareVersionsModal
-                original={surfyOriginalRef.current}
-                updated={surfyResponse.content}
+                original={ranksmileOriginalRef.current}
+                updated={ranksmileResponse.content}
                 terms={(scoreData?.terms || []).map((t) => t.term)}
-                onClose={() => setSurfyCompareOpen(false)}
+                onClose={() => setRanksmileCompareOpen(false)}
               />
             )}
           </>,
-          surfyDockEl,
+          ranksmileDockEl,
         )}
 
       </div>

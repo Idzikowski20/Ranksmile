@@ -354,7 +354,7 @@ const SetupPage: NextPage = () => {
    if (step === 1) {
       const stepTitle = gscLoaded && availableGscSites.length > 0 ? 'Create a new workspace' : 'Set up your workspace';
       return (
-         <SetupShell title="Create a new workspace · SerpBear" layout="narrow">
+         <SetupShell title="Create a new workspace · Ranksmile" layout="narrow">
             <SetupWizardCard layout="narrow">
                <SetupStepProgress step={1} />
                <SetupHeader
@@ -584,7 +584,7 @@ const SetupPage: NextPage = () => {
    // STEP 2 — Set up Brand Knowledge
    // ─────────────────────────────────────────────────────────────────────
    return (
-      <SetupShell title="Set up Brand Knowledge · SerpBear" layout="wide">
+      <SetupShell title="Set up Brand Knowledge · Ranksmile" layout="wide">
          <SetupWizardCard layout="wide">
             <SetupStepProgress step={2} />
             <SetupHeader

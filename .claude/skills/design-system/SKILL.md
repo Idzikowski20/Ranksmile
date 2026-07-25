@@ -1,18 +1,18 @@
 ---
-name: design-system-surfer-ai-visibility-platform
+name: design-system-ranksmile-ai-visibility-platform
 description: Creates implementation-ready design-system guidance with tokens, component behavior, and accessibility standards. Use when creating or updating UI rules, component specifications, or design-system documentation.
 ---
 
 <!-- TYPEUI_SH_MANAGED_START -->
 
-# Surfer: AI Visibility Platform
+# Ranksmile: AI Visibility Platform
 
 ## Mission
-Deliver implementation-ready design-system guidance for Surfer: AI Visibility Platform that can be applied consistently across marketing site interfaces.
+Deliver implementation-ready design-system guidance for Ranksmile: AI Visibility Platform that can be applied consistently across marketing site interfaces.
 
 ## Brand
-- Product/brand: Surfer: AI Visibility Platform
-- URL: https://surferseo.com/
+- Product/brand: Ranksmile: AI Visibility Platform
+- URL: https://ranksmile.pl
 - Audience: authenticated users and operators
 - Product surface: marketing site
 

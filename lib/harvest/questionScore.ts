@@ -21,7 +21,7 @@ export function maxSourceWeight(sources: readonly (LlmCoverageSource | 'paa')[])
   return Math.max(...sources.map(sourceWeight));
 }
 
-/** Cross-engine multiplier: more unique engines → higher score (Surfer-like). */
+/** Cross-engine multiplier: more unique engines → higher score (Ranksmile-like). */
 export function crossEngineMultiplier(engineCoverage: number): number {
   if (engineCoverage <= 1) return 1;
   if (engineCoverage === 2) return 1.35;

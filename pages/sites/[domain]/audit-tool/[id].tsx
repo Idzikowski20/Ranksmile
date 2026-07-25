@@ -17,7 +17,7 @@ const TermsTable = dynamic(() => import('../../../../components/audit/TermsTable
 
 const FONT = 'var(--font-family-primary)';
 
-// ─── Verdict palette (mirrors the SurferSEO reference: green/yellow/blue + a red state
+// ─── Verdict palette (mirrors the Ranksmile reference: green/yellow/blue + a red state
 //     used for the Internal-links / Terms call-to-action rows) ───
 type Tone = 'ok' | 'warn' | 'info' | 'red';
 const HEADLINE_COLOR: Record<Tone, string> = { ok: '#15803D', warn: '#B45309', info: '#1D4ED8', red: '#B91C1C' };
@@ -105,8 +105,8 @@ function factorHeadline(f: AuditFactor): string {
 }
 
 // The description is now assembled in the backend (assembleFactor → buildDescription),
-// including the exact SurferSEO "…, while the suggested range is X - Y <noun>." suffix
-// on real data. Info factors carry an empty message (SurferSEO shows no description line).
+// including the exact Ranksmile "…, while the suggested range is X - Y <noun>." suffix
+// on real data. Info factors carry an empty message (Ranksmile shows no description line).
 function factorDescription(f: AuditFactor): string {
    return f.message;
 }
@@ -204,7 +204,7 @@ const AuditDetailPage: NextPage = () => {
                   {/* Content Score */}
                   <SectionCard title="Content Score">
                      {(() => {
-                        // Goal = the top competitor's content score (SurferSEO's "for the best results").
+                        // Goal = the top competitor's content score (Ranksmile's "for the best results").
                         const goal = result.contentScoreSuggestedMax;
                         const below = goal !== null && result.contentScore < goal;
                         return (

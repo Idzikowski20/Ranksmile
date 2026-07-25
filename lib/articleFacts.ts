@@ -1,5 +1,5 @@
 /**
- * Surfer-style Facts pipeline — factual statements from DataForSEO People Also Ask.
+ * Ranksmile-style Facts pipeline — factual statements from DataForSEO People Also Ask.
  * No synthetic citation templates ("X czy warto?") — only real SERP questions + answers.
  */
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';

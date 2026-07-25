@@ -6,7 +6,7 @@ const font = 'var(--font-family-primary)';
 const NoAccess: NextPage = () => (
   <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f9ff', padding: 24 }}>
     <Head>
-      <title>No access — SerpBear</title>
+      <title>No access — Ranksmile</title>
       <meta name="description" content="You don't have access to any workspace" />
       <link rel="icon" href="/favicon.ico" />
     </Head>

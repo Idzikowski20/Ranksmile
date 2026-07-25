@@ -68,7 +68,6 @@ interface Props {
   onAutoOptimize?: () => void;
   /** Surgical Priority Apply. */
   onOptimizeAction?: (action: import('../../lib/primitives/types').Action) => void;
-  domainSlug?: string;
   isAutoOptimizing?: boolean;
   /** Drives the 3-state Auto-Optimize control: button → running → completed box. */
   optimizeState?: 'idle' | 'optimizing' | 'reviewing';
@@ -572,7 +571,6 @@ const ContentScorePanel = ({
 
   const historyDelta = useCoverageHistoryDelta(articleId);
   const trioDeltas = scoreDeltas ?? (historyDelta ? { ai: historyDelta.delta } : undefined);
-  const trioDeltaTitles = scoreDeltas ? undefined : (historyDelta ? { ai: historyDelta.title } : undefined);
 
   if (isDeepAnalyzing) {
     return (
@@ -606,7 +604,6 @@ const ContentScorePanel = ({
         content={displayContent}
         hasAi={hasAi}
         scoreDeltas={trioDeltas}
-        deltaTitles={trioDeltaTitles}
         coverageItems={coverageItems}
         coverageBuckets={coverageBuckets}
         coverageSnapshot={coverageSnapshot}
@@ -691,7 +688,6 @@ const ContentScorePanel = ({
           ai={displayAi}
           hasAi={hasAi}
           deltas={trioDeltas}
-          deltaTitles={trioDeltaTitles}
           onSeoClick={() => { setWriteSection('seo'); setView('write'); }}
           onAiClick={() => { setWriteSection('ai'); setView('write'); }}
         />

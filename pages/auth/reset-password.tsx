@@ -7,7 +7,7 @@ import ResetPasswordForm from '../../components/auth/ResetPasswordForm';
 const ResetPassword: NextPage = () => (
   <AuthShell>
     <Head>
-      <title>Reset password — SerpBear</title>
+      <title>Reset password — Ranksmile</title>
     </Head>
     <AuthPageLayout>
       <ResetPasswordForm />

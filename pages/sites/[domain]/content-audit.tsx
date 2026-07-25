@@ -372,7 +372,7 @@ const ContentAuditPage: NextPage = () => {
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
          <Head>
-            <title>{`Content Audit — ${domain} — SerpBear`}</title>
+            <title>{`Content Audit — ${domain} — Ranksmile`}</title>
          </Head>
 
          <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%"

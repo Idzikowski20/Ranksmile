@@ -51,8 +51,8 @@ const Home: NextPage<HomeProps> = () => {
   return (
     <div>
       <Head>
-        <title>SerpBear</title>
-        <meta name="description" content="SerpBear Google Keyword Position Tracking App" />
+        <title>Ranksmile</title>
+        <meta name="description" content="Ranksmile Google Keyword Position Tracking App" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main role="main">

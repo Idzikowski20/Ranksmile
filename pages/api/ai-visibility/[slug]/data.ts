@@ -229,7 +229,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          });
       }
       if (view === 'competitors') {
-         // SurferSEO-style ranking: every cited competitor DOMAIN with its full
+         // Ranksmile-style ranking: every cited competitor DOMAIN with its full
          // overview metrics, sorted by visibility desc. Respects prompt/model filters.
          const all = filterRows(await loadScanCitationRows(scan.id));
          const byDomain = buildSnapshotsForScan(all, domain.domain, { fullDetailTopCompetitors: 0 });

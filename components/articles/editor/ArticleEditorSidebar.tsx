@@ -14,8 +14,8 @@ import { VersionHistoryPanel } from './ArticleEditorModals';
 
 export interface ArticleEditorSidebarProps {
   editorLocked: boolean;
-  surfyDockOpen: boolean;
-  setSurfyDockEl: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
+  ranksmileDockOpen: boolean;
+  setRanksmileDockEl: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
   showInternalLinksPanel: boolean;
   setShowInternalLinksPanel: (open: boolean) => void;
   showHistory: boolean;
@@ -74,8 +74,8 @@ export interface ArticleEditorSidebarProps {
 
 export function ArticleEditorSidebar({
   editorLocked,
-  surfyDockOpen,
-  setSurfyDockEl,
+  ranksmileDockOpen,
+  setRanksmileDockEl,
   showInternalLinksPanel,
   setShowInternalLinksPanel,
   showHistory,
@@ -154,8 +154,8 @@ export function ArticleEditorSidebar({
             deepAnalysisUi={deepAnalysisUi}
           />
         </div>
-      ) : surfyDockOpen ? (
-        <div ref={setSurfyDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
+      ) : ranksmileDockOpen ? (
+        <div ref={setRanksmileDockEl} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} />
       ) : showInternalLinksPanel ? (
         <InternalLinksPanel
           articleId={article.id}

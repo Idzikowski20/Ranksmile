@@ -1,6 +1,6 @@
 // In-process pub/sub for comment changes, so the editor and the public preview
 // can be notified over SSE the moment a comment is added/edited/resolved/deleted —
-// no polling. Single Node process (the SerpBear container) means writer and SSE
+// no polling. Single Node process (the Ranksmile container) means writer and SSE
 // listeners share this emitter. Pinned on globalThis so Next dev hot-reload
 // doesn't create duplicate emitters.
 import { EventEmitter } from 'events';

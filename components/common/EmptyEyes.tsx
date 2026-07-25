@@ -2,7 +2,7 @@ import React from 'react';
 
 const ASPECT = 80 / 81;
 
-/** Static empty-state illustration (replaces animated Surfy eyes). */
+/** Static empty-state illustration (replaces animated Ranksmile eyes). */
 const EmptyEyes = ({ size = 80 }: { size?: number; color?: string }) => {
   const height = Math.round(size * ASPECT);
   return (

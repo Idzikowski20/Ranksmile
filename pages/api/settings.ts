@@ -122,13 +122,13 @@ const getScraperEnvConfig = () => {
 };
 
 export const getAppSettings = async () : Promise<SettingsType> => {
-   const screenshotAPIKey = process.env.SCREENSHOT_API || '69408-serpbear';
+   const screenshotAPIKey = process.env.SCREENSHOT_API || '69408-ranksmile';
    const defaultSettings: SettingsType = {
       scraper_type: 'none',
       notification_interval: 'never',
       notification_email: '',
       notification_email_from: '',
-      notification_email_from_name: 'SerpBear',
+      notification_email_from_name: 'Ranksmile',
       smtp_server: '',
       smtp_port: '',
       smtp_username: '',

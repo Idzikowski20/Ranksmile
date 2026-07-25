@@ -64,7 +64,7 @@ const TopicalMapCanvas = ({ clusters, showTitles, onKeywordClick, onNodeClick, s
     *  selected-cluster card (used by Topic Research to open its idea drawer). */
    onNodeClick?: (c: TopicCluster) => void;
    /** Satellite hex placement (local units). Defaults to the 3-hex topical-map cluster;
-    *  Topic Research passes a larger honeycomb spiral for a SurferSEO-style blob. */
+    *  Topic Research passes a larger honeycomb spiral for a Ranksmile-style blob. */
    satelliteOffsets?: Array<[number, number]>;
 }) => {
    const [zoom, setZoom] = useState(100);

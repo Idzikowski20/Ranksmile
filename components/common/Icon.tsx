@@ -52,7 +52,7 @@ type IconProps = {
   classes?: string;
 };
 
-/* Custom SerpBear logo — kept as is since it's the app's brand identity */
+/* Custom Ranksmile logo — kept as is since it's the app's brand identity */
 const LogoIcon = ({ size, color }: { size: number; color: string }) => (
   <svg
     width={size}

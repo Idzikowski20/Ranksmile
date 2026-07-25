@@ -13,7 +13,7 @@ const Login: NextPage = () => {
    return (
       <>
          <Head>
-            <title>Log in — SerpBear</title>
+            <title>Log in — Ranksmile</title>
             <style>{`
                *, *::before, *::after { box-sizing: border-box; font-family: "Inter", sans-serif; }
                html, body { margin: 0; padding: 0; background: #000; }
@@ -29,7 +29,7 @@ const Login: NextPage = () => {
             `}</style>
          </Head>
          <div className="splash">
-            <h1 className="splash-title">SerpBear</h1>
+            <h1 className="splash-title">Ranksmile</h1>
             <div className="splash-spin" />
             <p className="splash-sub">Redirecting to login…</p>
          </div>

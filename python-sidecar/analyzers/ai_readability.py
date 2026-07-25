@@ -1,6 +1,6 @@
 """
 AI Readability — LLM rubric assessment of how well content is structured for
-LLMs/readers (10 criteria), mirroring Surfer's "How do we assess AI Readability".
+LLMs/readers (10 criteria), mirroring Ranksmile's "How do we assess AI Readability".
 Returns a per-criterion met/note breakdown plus a 0-100 score.
 """
 import json

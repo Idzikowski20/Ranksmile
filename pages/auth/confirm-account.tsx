@@ -132,7 +132,7 @@ const ConfirmAccount: NextPage = () => {
 
    return (
       <>
-         <Head><title>Confirm your e-mail - SerpBear</title></Head>
+         <Head><title>Confirm your e-mail - Ranksmile</title></Head>
          <style>{'.confirm-right-panel { display: none; } @media (min-width: 1280px) { .confirm-right-panel { display: flex; } }'}</style>
          <div style={{ minHeight: '100vh', padding: 8, background: '#09090B', fontFamily: F }}>
             <div style={{ display: 'flex', gap: 8, minHeight: 'calc(100vh - 16px)' }}>

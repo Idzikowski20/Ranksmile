@@ -1,5 +1,5 @@
 // POST /api/articles/publish
-// Publikuje artykuł do WordPress lub własnego Next.js i auto-dodaje keyword do SerpBear
+// Publikuje artykuł do WordPress lub własnego Next.js i auto-dodaje keyword do Ranksmile
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          { replacements: [target, publishedUrl, articleId] },
       );
 
-      // Auto-dodaj keyword do SerpBear rank trackera (jeśli jeszcze nie istnieje)
+      // Auto-dodaj keyword do Ranksmile rank trackera (jeśli jeszcze nie istnieje)
       if (article.target_keyword) {
          try {
             const existing = await queryRows<{ ID: number }>(

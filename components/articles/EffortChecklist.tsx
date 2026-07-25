@@ -27,7 +27,7 @@ type Props = {
 
 /**
  * Five effort signals — “not AI vs human, but hard to replicate with one prompt”.
- * Surfer editor zone: inline styles + Sentry Badge for status.
+ * Ranksmile editor zone: inline styles + Sentry Badge for status.
  */
 const EffortChecklist = ({
    items,

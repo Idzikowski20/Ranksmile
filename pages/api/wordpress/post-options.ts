@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    let data: Record<string, unknown> = {};
    try {
-      const r = await wpRestFetch(conn.site_url, 'surferseo/v1/list_post_details_options/', {
+      const r = await wpRestFetch(conn.site_url, 'ranksmileseo/v1/list_post_details_options/', {
          headers: { Authorization: `Bearer ${conn.api_key}` },
       });
       data = await r.json().catch(() => ({}));

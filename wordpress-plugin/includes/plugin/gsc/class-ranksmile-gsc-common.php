@@ -1,0 +1,114 @@
+<?php
+/**
+ * Common functions for GSC module.
+ *
+ * @package Ranksmile
+ */
+
+namespace Ranksmile\Plugin\GSC;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+trait Ranksmile_GSC_Common {
+
+	/**
+	 * Checks if GSC is connected.
+	 *
+	 * @param bool $force - if true, will force check.
+	 * @return bool
+	 */
+	public function check_if_gsc_connected( $force = false ) {
+		$connected = Ranksmile()->get_plugin()->is_ranksmile_connected();
+		if ( false === $connected ) {
+			return false;
+		}
+
+		$cached_status = Ranksmile()->get_ranksmile_settings()->get_option( 'content-importer', 'ranksmile_gsc_connection', null );
+
+		if ( null !== $cached_status && false === $force ) {
+			return $cached_status;
+		}
+
+		$params = array(
+			'url' => home_url(),
+		);
+
+		$return = Ranksmile()->get_plugin()->make_ranksmile_request( '/check_gsc_connection', $params );
+
+		$response = isset( $return['response'] ) ? $return['response'] : array();
+
+		if ( isset( $response['gsc_connected'] ) && true === (bool) $response['gsc_connected'] ) {
+			$connection = true;
+		} else {
+			$connection = false;
+		}
+
+		Ranksmile()->get_ranksmile_settings()->save_option( 'content-importer', 'ranksmile_gsc_connection', $connection );
+		return $connection;
+	}
+
+	/**
+	 * Gets data of a single post for performance report.
+	 *
+	 * @param int $post_id - ID of the post.
+	 * @return string | bool
+	 */
+	public function get_previous_period_date( $post_id ) {
+		global $wpdb;
+		$cache_key       = 'gsc_prev_period_date_' . absint( $post_id );
+		$previous_record = wp_cache_get( $cache_key, 'ranksmileseo_db' );
+
+		if ( false === $previous_record ) {
+			$previous_record = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT p.data_gathering_date FROM ' . $wpdb->prefix . 'ranksmile_gsc_traffic AS p WHERE p.post_id = %d ORDER BY p.data_gathering_date DESC LIMIT 2',
+					$post_id
+				)
+			);
+			wp_cache_set( $cache_key, $previous_record, 'ranksmileseo_db', 5 * MINUTE_IN_SECONDS );
+		}
+
+		if ( null !== $previous_record && 2 === count( $previous_record ) ) {
+			return $previous_record[1]->data_gathering_date;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Checks if user want to receive performance report by email
+	 *
+	 * @return bool
+	 */
+	public function performance_report_email_notification_enabled() {
+
+		$notification_enabled = Ranksmile()->get_ranksmile_settings()->get_option( 'content-importer', 'ranksmile_position_monitor_summary', false );
+
+		if ( isset( $notification_enabled ) && 1 === intval( $notification_enabled ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Display data period value.
+	 *
+	 * @param string $date - date.
+	 * @return string
+	 */
+	public function return_period_based_on_gathering_date( $date ) {
+
+		if ( false !== \DateTime::createFromFormat( 'Y-m-d H:i:s', $date ) || false !== \DateTime::createFromFormat( 'Y-m-d', $date ) ) {
+
+			$start = gmdate( 'd-m-Y', strtotime( 'previous monday', strtotime( $date ) ) );
+			$end   = gmdate( 'd-m-Y', strtotime( 'previous sunday', strtotime( $date ) ) );
+
+			return $start . ' - ' . $end;
+		}
+
+		return esc_html__( 'No data gathered yet.', 'ranksmileseo' );
+	}
+}

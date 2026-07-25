@@ -1,9 +1,9 @@
 {
-    "name":  "Surfer – WordPress Plugin",
+    "name":  "Ranksmile – WordPress Plugin",
     "version":  "1.7.0.640",
     "requires":  "6.0",
     "tested":  "6.9",
-    "download":  "/downloads/surfer-plugin.zip",
-    "homepage":  "",
+    "download":  "/downloads/ranksmile-plugin.zip",
+    "homepage":  "https://ranksmile.pl",
     "changelog":  "\u003ch4\u003e1.7.0.640\u003c/h4\u003e\u003cul\u003e\u003cli\u003eDefault app URL now points to the production deployment.\u003c/li\u003e\u003c/ul\u003e"
 }

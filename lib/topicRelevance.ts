@@ -114,7 +114,7 @@ function isKnownNoiseTerm(term: string): boolean {
 export function filterNlpTermsForAnalysis<T extends { term: string }>(terms: T[], seedKeyword: string): T[] {
   const strict = filterOnTopicTerms(terms, seedKeyword);
   if (!terms.length) return [];
-  // Only skip soft expansion once we already have a Surfer-like term floor.
+  // Only skip soft expansion once we already have a Ranksmile-like term floor.
   // (Do not early-return on keep-ratio — 3/9 seed matches would otherwise drop
   // related competitor phrases like "dezinformacja".)
   if (strict.length >= MIN_ANALYSIS_TERMS) return strict;

@@ -28,12 +28,12 @@ export interface NlpTerm {
    term: string;
    target_count: number;
    current_count?: number;
-   /** Competitor-derived usage range (Surfer "suggested" column). */
+   /** Competitor-derived usage range (Ranksmile "suggested" column). */
    suggested_min?: number;
    suggested_max?: number;
    relevance?: number;
    doc_freq?: number;
-   /** 0–100 prominence from competitor H2/bold/font-weight zones (Surfer NLP salience v2). */
+   /** 0–100 prominence from competitor H2/bold/font-weight zones (Ranksmile NLP salience v2). */
    salience?: number;
 }
 
@@ -52,10 +52,10 @@ export interface ScoreData {
    competitor_count?: number;
    /** People Also Ask questions fetched from Serper — used for FAQ coverage signal */
    paa_questions?: string[];
-   /** When set, content score uses Surfer-style competitor benchmarking. */
+   /** When set, content score uses Ranksmile-style competitor benchmarking. */
    scoring_model?: 'competitor' | 'legacy';
    content_targets?: { avgWords: number; avgHeadings: number; avgPs: number };
-   /** Full Surfer-style audit payload (factors, terms, internal links). */
+   /** Full Ranksmile-style audit payload (factors, terms, internal links). */
    audit_result?: import('./auditTypes').AuditResult;
    /** On-page SEO score from audit factor verdicts. */
    seo_score?: number;

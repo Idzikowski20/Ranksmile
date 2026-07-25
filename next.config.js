@@ -9,6 +9,7 @@ if (typeof globalThis.crypto === 'undefined') {
 
 const path = require('path');
 const { version } = require('./package.json');
+const { buildSiteSegmentRedirects } = require('./lib/navigation/routeAliases.cjs');
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
@@ -71,6 +72,8 @@ const nextConfig = {
       { source: '/workspace/:wsId', destination: '/workspace/:wsId/dashboard', permanent: false },
       // The WordPress plugin opens the editor at /drafts/<id> (draft id == article id).
       { source: '/drafts/:id', destination: '/articles/:id', permanent: false },
+      // IA migration — legacy site segments → canonical (see lib/navigation/routeAliases).
+      ...buildSiteSegmentRedirects(),
     ];
   },
   serverRuntimeConfig: {
@@ -96,7 +99,7 @@ if (SENTRY_ENABLED) {
     // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
     org: 'selmi',
-    project: 'serpbear',
+    project: 'ranksmile',
 
     // Only print logs for uploading source maps in CI
     silent: !process.env.CI,

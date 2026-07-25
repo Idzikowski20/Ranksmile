@@ -1,7 +1,7 @@
 // lib/fetchSitemapUrls.ts — fetch all page URLs from sitemap.xml / sitemap index trees.
 import { assertPublicUrl } from './ssrfGuard';
 
-import { SERPBEAR_UA } from './httpConstants';
+import { RANKSMILE_UA } from './httpConstants';
 const LOC_RE = /<loc>\s*([^<\s]+)\s*<\/loc>/gi;
 const MAX_CHILD_SITEMAPS = 12;
 const MAX_URLS = 5000;
@@ -21,7 +21,7 @@ async function fetchXml(url: string): Promise<string | null> {
       let current = url;
       for (let hop = 0; hop < MAX_REDIRECTS; hop += 1) {
          await assertPublicUrl(current);
-         const r = await fetch(current, { headers: { 'User-Agent': SERPBEAR_UA }, redirect: 'manual' });
+         const r = await fetch(current, { headers: { 'User-Agent': RANKSMILE_UA }, redirect: 'manual' });
          if (r.status >= 300 && r.status < 400) {
             const location = r.headers.get('location');
             if (!location) return null;

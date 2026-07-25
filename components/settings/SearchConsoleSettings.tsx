@@ -87,7 +87,7 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
     <SentrySettingsSection title="Connected accounts">
       <SentrySettingsRow
         label="Google Search Console"
-        description="Connect your Google Search Console with SerpBear to get accurate data about your domains."
+        description="Connect your Google Search Console with Ranksmile to get accurate data about your domains."
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
           {isLoading ? (

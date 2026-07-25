@@ -191,7 +191,7 @@ const AiVisibilityOverview: NextPage = () => {
             } else if (chartMode === 'bar') {
                chartBody = <CompetitorBarChart competitors={barItems} selected={compareDomain} onSelect={setCompareDomain} />;
             } else {
-               // Line mode mirrors SurferSEO: trend on the left, a "Top Competitors"
+               // Line mode mirrors Ranksmile: trend on the left, a "Top Competitors"
                // picker on the right (the line only plots You + the chosen competitor).
                chartBody = (
                   <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>

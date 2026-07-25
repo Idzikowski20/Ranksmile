@@ -1,4 +1,4 @@
-/** Surfer-style Auto-Optimize routing — SEO vs AI Search focus. */
+/** Ranksmile-style Auto-Optimize routing — SEO vs AI Search focus. */
 
 import type { OptimizePhase } from './optimizeRunPhase';
 

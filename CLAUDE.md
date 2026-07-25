@@ -104,7 +104,7 @@ Rules:
 - **Font:** `var(--font-family-primary)` / Rubik w shell — nigdy hardcode Inter jako brand
 - **Ikony:** wyłącznie inline SVG
 
-### Kluczowe tokeny (Sentry / Surfy)
+### Kluczowe tokeny (Sentry / Ranksmile)
 
 | Token | Wartość | Kiedy |
 |-------|---------|--------|
@@ -116,14 +116,14 @@ Rules:
 | Body | `#302E36` | primary text |
 | Muted | `#6A6772` | secondary |
 
-**Nie używaj** Surfer purple `#783AFB` jako brand accent w nowym UI (legacy tylko w `scoreColor.ts`). Anti-slop: `DESIGN.md` §12.
+**Nie używaj** Ranksmile purple `#783AFB` jako brand accent w nowym UI (legacy tylko w `scoreColor.ts`). Anti-slop: `DESIGN.md` §12.
 
 ### Struktura
 
 ```
 components/core/           — Button, Modal, Input, theme.tsx
 components/sentry-pages/   — SentryPage, Panel, Table
-components/surfer/         — Gauge, SelectionBar (KEEP)
+components/ranksmile/         — Gauge, SelectionBar (KEEP)
 components/common/AppShell.tsx
 styles/globals.css         — CSS vars + shell
 ```

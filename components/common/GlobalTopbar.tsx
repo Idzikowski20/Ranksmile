@@ -10,7 +10,7 @@ type Props = {
 
 const HelpButton = () => (
    <a
-      href="https://docs.surferseo.com/"
+      href="https://ranksmile.pl"
       target="_blank"
       rel="noreferrer noopener"
       aria-label="Help"

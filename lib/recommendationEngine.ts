@@ -137,6 +137,9 @@ const templates: Record<CoverageType, TemplateFn> = {
   readability: readabilityTemplate,
   structure: fallbackTemplate,
   intent: intentTemplate,
+  term: entityTemplate,
+  concept: knowledgeTemplate,
+  question: knowledgeTemplate,
 };
 
 export function buildInstruction(item: CoverageItem, context?: ArticleContext): { title: string; instruction: string } {

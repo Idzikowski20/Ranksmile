@@ -57,7 +57,7 @@ type Props = {
    onOpenRow: (index: number) => void;
 };
 
-/** SurferSEO/Peec-style fanout table: parent rows (grouped by fanout query or by
+/** Ranksmile/Peec-style fanout table: parent rows (grouped by fanout query or by
  * prompt) sortable by "Times shown" (desc default), each expandable to its children,
  * with a faint gradient "times-shown" bar behind the first column. Rows arrive already
  * filtered+sorted; clicking a parent row (not the chevron) opens the shared detail

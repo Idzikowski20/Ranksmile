@@ -226,7 +226,7 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
             </div>
             <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: '20px', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
                Google Ads has not been integrated yet. Please follow{' '}
-               <a href="https://docs.serpbear.com/miscellaneous/integrate-google-ads" target="_blank" rel="noreferrer" style={{ color: '#F29964', fontWeight: 600 }}>
+               <a href="https://ranksmile.pl/miscellaneous/integrate-google-ads" target="_blank" rel="noreferrer" style={{ color: '#F29964', fontWeight: 600 }}>
                   These Steps
                </a>{' '}
                to integrate Google Ads and unlock keyword research.

@@ -7,7 +7,7 @@ const FONT = 'var(--font-family-primary)';
 type Tab = 'all' | 'phrase' | 'word' | 'number';
 const TAB_LABEL: Record<Tab, string> = { all: 'All', phrase: 'Phrases', word: 'Words', number: 'Numbers' };
 
-// SurferSEO renders the matched surface form bold (background transparent) inside the
+// Ranksmile renders the matched surface form bold (background transparent) inside the
 // example sentence; reuse the editor's inflection-tolerant matcher so highlighting is
 // consistent with the rest of the app.
 const Highlighted = ({ text, term }: { text: string; term: string }) => {
@@ -40,13 +40,13 @@ const GreenCheck = () => (
 const th: React.CSSProperties = { textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#71717B', borderBottom: '1px solid #E4E4E7', padding: '10px 12px', whiteSpace: 'nowrap' };
 const td: React.CSSProperties = { borderBottom: '1px solid #F4F4F5', padding: '12px 12px', fontSize: 13, color: '#3F3F47', verticalAlign: 'top' };
 
-// SurferSEO action copy: "Add N-M" / "Remove N-M" expresses the gap to the suggested range.
+// Ranksmile action copy: "Add N-M" / "Remove N-M" expresses the gap to the suggested range.
 function parseRange(suggested: string): [number, number] {
    const [a, b] = suggested.split('-').map((n) => Number(n));
    return [a || 0, Number.isFinite(b) ? (b as number) : (a || 0)];
 }
 // Verb + amount kept separate so the range ("12-13") never breaks across lines while the
-// verb can wrap above it — matching SurferSEO's two-line Action cell.
+// verb can wrap above it — matching Ranksmile's two-line Action cell.
 function actionParts(t: AuditTerm): { verb: string; amount: string } {
    const [sMin, sMax] = parseRange(t.suggested);
    if (t.action === 'add') { const g1 = Math.max(0, sMin - t.you); const g2 = Math.max(0, sMax - t.you); return { verb: 'Add', amount: g2 > g1 ? `${g1}-${g2}` : `${g1}` }; }
@@ -62,7 +62,7 @@ const ExportButton = () => (
 );
 
 /** The inner content of the "Terms to Use" section: All/Phrases/Words/Numbers tabs and the
- *  8-column SurferSEO-style table with an expandable per-term Examples panel. */
+ *  8-column Ranksmile-style table with an expandable per-term Examples panel. */
 const TermsTable = ({ terms }: { terms: AuditTerm[] }) => {
    const [tab, setTab] = useState<Tab>('all');
    const [open, setOpen] = useState<Set<string>>(new Set());

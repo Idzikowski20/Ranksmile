@@ -4,10 +4,10 @@
  *
  * When it will be hard to manage this, use: composer require illuminate/database
  *
- * @package SurferSEO
+ * @package Ranksmile
  */
 
-namespace SurferSEO\Upgrade;
+namespace Ranksmile\Upgrade;
 
 
 if ( ! defined( 'ABSPATH' ) ) exit;

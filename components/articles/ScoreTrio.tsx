@@ -7,7 +7,7 @@ const F = 'var(--font-family-primary)';
 /* Side gauge = small dual-arc gauge + its label, rendered as a clickable button
    that jumps into the matching Write & Optimize section. The hover/focus highlight
    is NOT drawn here — it's an overlay pill in ScoreTrio that spans this side AND the
-   centre content-score gauge (Surfer-style). This button only reports hover intent
+   centre content-score gauge (Ranksmile-style). This button only reports hover intent
    and handles the click. */
 const SideGauge = ({ score, label, align, pending, onClick, onHover, delta, deltaPlacement }: {
   score: number; label: string; align: 'start' | 'end'; pending?: boolean;

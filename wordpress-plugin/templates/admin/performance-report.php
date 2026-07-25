@@ -1,8 +1,8 @@
 <?php
 /**
- * Template for general Surfer plugin settings.
+ * Template for general Ranksmile plugin settings.
  *
- * @package SurferSEO.
+ * @package Ranksmile.
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 ?>
 
 <div class="wrap">
-	<h1><?php esc_html_e( 'Performance Reports', 'surferseo' ); ?></h1>
+	<h1><?php esc_html_e( 'Performance Reports', 'ranksmileseo' ); ?></h1>
 
-	<div id="surfer-performance-report"></div>
+	<div id="ranksmile-performance-report"></div>
 </div>

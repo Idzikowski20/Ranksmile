@@ -43,14 +43,14 @@ const ChangeLog = ({ closeChangeLog }: ChangeLogProps) => {
             major: !!(name.match(/v\d+\.0+\.0/)),
             date: published_at,
             content: body.replaceAll(/^(##|###) \[([^\]]+)\]\(([^)]+)\) \(([^)]+)\)/g, '')
-            .replaceAll(/\(\[(.*?)\]\((https:\/\/github\.com\/towfiqi\/serpbear\/commit\/([a-f0-9]{40}))\)\)/g, ''),
+            .replaceAll(/\(\[(.*?)\]\((https:\/\/github\.com\/towfiqi\/ranksmile\/commit\/([a-f0-9]{40}))\)\)/g, ''),
          }));
       }
       return [];
    }, [changeLogData]);
 
    return (
-      <SidePanel open title="SerpBear Changelog" onClose={onClose} width="small">
+      <SidePanel open title="Ranksmile Changelog" onClose={onClose} width="small">
          <React.Suspense fallback={<ChangeLogloader />}>
             {!isLoading && changeLogs.length > 0 && (
                <div
@@ -63,7 +63,7 @@ const ChangeLog = ({ closeChangeLog }: ChangeLogProps) => {
                            key={version}
                            className={`domKeywords bg-white rounded mb-6 border ${major ? ' border-indigo-400' : 'border-transparent'}`}>
                               <h4 className=' px-5 py-3 border-b border-b-gray-100 flex justify-between text-indigo-700 font-semibold'>
-                                 <a href={`https://github.com/towfiqi/serpbear/releases/tag/${version}`}>
+                                 <a href={`https://github.com/towfiqi/ranksmile/releases/tag/${version}`}>
                                     {version} {major && <span className=' text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded ml-2'>Major</span>}
                                  </a>
                                  <span className=' text-sm text-gray-500'>

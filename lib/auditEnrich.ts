@@ -63,7 +63,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
       terms = Array.isArray(serp?.terms) ? serp.terms : [];
    } catch { terms = []; }
 
-   // Search Volume (DataForSEO) for multi-word phrase terms only — mirrors SurferSEO,
+   // Search Volume (DataForSEO) for multi-word phrase terms only — mirrors Ranksmile,
    // which shows a volume for phrases and "—" for single words. Best-effort: any failure
    // (unconfigured / API error) just leaves searchVolume null.
    if (terms.length) {
@@ -78,7 +78,7 @@ export async function enrichAudit(domainId: number, url: string, keyword: string
       }
    }
 
-   // Calibrate content scores (coverage-dominated, SurferSEO-style) so "You" and every
+   // Calibrate content scores (coverage-dominated, Ranksmile-style) so "You" and every
    // competitor are scored by the SAME model. Competitor-set averages are shared back so
    // buildAuditResult can score "You" identically. Only when we actually have terms.
    const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);

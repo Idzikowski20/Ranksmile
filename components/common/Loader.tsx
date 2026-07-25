@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 
 type LoaderSize = 'sm' | 'md' | 'lg';
 
@@ -12,7 +13,7 @@ interface LoaderProps extends React.HTMLAttributes<HTMLDivElement> {
 const SIZE: Record<
   LoaderSize,
   {
-    ring: number;
+    mark: number;
     titleSize: number;
     titleWeight: number;
     subtitleSize: number;
@@ -21,7 +22,7 @@ const SIZE: Record<
   }
 > = {
   sm: {
-    ring: 80,
+    mark: 72,
     titleSize: 14,
     titleWeight: 500,
     subtitleSize: 12,
@@ -29,7 +30,7 @@ const SIZE: Record<
     maxWidth: 192,
   },
   md: {
-    ring: 128,
+    mark: 112,
     titleSize: 16,
     titleWeight: 500,
     subtitleSize: 14,
@@ -37,7 +38,7 @@ const SIZE: Record<
     maxWidth: 224,
   },
   lg: {
-    ring: 160,
+    mark: 144,
     titleSize: 18,
     titleWeight: 600,
     subtitleSize: 16,
@@ -49,51 +50,6 @@ const SIZE: Record<
 const FONT = 'var(--font-family-primary)';
 const EASE_SOFT: [number, number, number, number] = [0.4, 0, 0.6, 1];
 const EASE_OUT: [number, number, number, number] = [0.4, 0, 0.2, 1];
-
-type RingSpec = {
-  background: string;
-  mask: string;
-  opacity: number;
-  duration: number;
-  reverse?: boolean;
-  ease?: 'linear' | [number, number, number, number];
-};
-
-const RINGS: RingSpec[] = [
-  {
-    background:
-      'conic-gradient(from 0deg, transparent 0deg, rgb(24, 18, 37) 90deg, transparent 180deg)',
-    mask: 'radial-gradient(circle at 50% 50%, transparent 35%, black 37%, black 39%, transparent 41%)',
-    opacity: 0.8,
-    duration: 3,
-    ease: 'linear',
-  },
-  {
-    background:
-      'conic-gradient(from 0deg, transparent 0deg, rgb(24, 18, 37) 120deg, rgba(24, 18, 37, 0.5) 240deg, transparent 360deg)',
-    mask: 'radial-gradient(circle at 50% 50%, transparent 42%, black 44%, black 48%, transparent 50%)',
-    opacity: 0.9,
-    duration: 2.5,
-    ease: EASE_SOFT,
-  },
-  {
-    background:
-      'conic-gradient(from 180deg, transparent 0deg, rgba(48, 46, 54, 0.6) 45deg, transparent 90deg)',
-    mask: 'radial-gradient(circle at 50% 50%, transparent 52%, black 54%, black 56%, transparent 58%)',
-    opacity: 0.35,
-    duration: 4,
-    reverse: true,
-    ease: EASE_SOFT,
-  },
-  {
-    background:
-      'conic-gradient(from 270deg, transparent 0deg, rgba(48, 46, 54, 0.4) 20deg, transparent 40deg)',
-    mask: 'radial-gradient(circle at 50% 50%, transparent 61%, black 62%, black 63%, transparent 64%)',
-    opacity: 0.5,
-    duration: 3.5,
-    ease: 'linear',
-  },
-];
 
 export default function Loader({
   title,
@@ -113,48 +69,26 @@ export default function Loader({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 32,
+        gap: 28,
         padding: 32,
         fontFamily: FONT,
         ...style,
       }}
       {...props}
     >
-      <motion.div
-        animate={{ scale: [1, 1.02, 1] }}
+      <div
         style={{
-          position: 'relative',
-          width: config.ring,
-          height: config.ring,
+          width: config.mark,
+          height: config.mark,
           flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-        transition={{
-          duration: 4,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: EASE_SOFT,
-        }}
+        aria-hidden="true"
       >
-        {RINGS.map((ring, i) => (
-          <motion.div
-            key={i}
-            animate={{ rotate: ring.reverse ? [0, -360] : [0, 360] }}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              background: ring.background,
-              maskImage: ring.mask,
-              WebkitMaskImage: ring.mask,
-              opacity: ring.opacity,
-            }}
-            transition={{
-              duration: ring.duration,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: ring.ease ?? 'linear',
-            }}
-          />
-        ))}
-      </motion.div>
+        <BounceSmileyAnimation compact size={config.mark} entrance={false} />
+      </div>
 
       {(title || subtitle) && (
         <motion.div
@@ -167,7 +101,7 @@ export default function Loader({
             gap: config.textGap,
             maxWidth: config.maxWidth,
           }}
-          transition={{ delay: 0.4, duration: 1, ease: EASE_OUT }}
+          transition={{ delay: 0.25, duration: 0.8, ease: EASE_OUT }}
         >
           {title ? (
             <motion.h1
@@ -182,7 +116,7 @@ export default function Loader({
                 color: '#181225',
                 WebkitFontSmoothing: 'antialiased',
               }}
-              transition={{ delay: 0.6, duration: 0.8, ease: EASE_OUT }}
+              transition={{ delay: 0.35, duration: 0.7, ease: EASE_OUT }}
             >
               <motion.span
                 animate={{ opacity: [0.9, 0.7, 0.9] }}
@@ -210,7 +144,7 @@ export default function Loader({
                 color: '#181225',
                 WebkitFontSmoothing: 'antialiased',
               }}
-              transition={{ delay: 0.8, duration: 0.8, ease: EASE_OUT }}
+              transition={{ delay: 0.45, duration: 0.7, ease: EASE_OUT }}
             >
               <motion.span
                 animate={{ opacity: [0.6, 0.4, 0.6] }}

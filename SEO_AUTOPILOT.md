@@ -42,7 +42,7 @@ python -m spacy download en_core_web_sm
 uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-## 5. Uruchom SerpBear
+## 5. Uruchom Ranksmile
 
 ```bash
 npm run dev
@@ -90,7 +90,7 @@ Wymaga zmiennej `CRON_SECRET` i skonfigurowanych `topics` w `site_context`.
 ## Struktura nowych plików
 
 ```
-serpbear/
+ranksmile/
 ├── pages/articles/
 │   ├── index.tsx              ← lista artykułów
 │   └── [id]/index.tsx         ← edytor + score panel

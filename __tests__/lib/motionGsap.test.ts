@@ -6,8 +6,8 @@ describe('motion foundation', () => {
     expect(DURATION).toEqual({ instant: 0.1, fast: 0.15, normal: 0.25, slow: 0.35, slower: 0.5 });
   });
 
-  it('names the surfer eases', () => {
-    expect(EASE).toEqual({ out: 'surfer-out', in: 'surfer-in', inOut: 'surfer-in-out' });
+  it('names the ranksmile eases', () => {
+    expect(EASE).toEqual({ out: 'ranksmile-out', in: 'ranksmile-in', inOut: 'ranksmile-in-out' });
   });
 
   it('registerMotionPlugins is idempotent (no throw on repeat)', () => {

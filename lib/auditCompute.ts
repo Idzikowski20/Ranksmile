@@ -41,7 +41,7 @@ export interface RealAuditData {
 }
 
 /**
- * SEO score from audit factor verdicts (Surfer-style on-page checklist).
+ * SEO score from audit factor verdicts (Ranksmile-style on-page checklist).
  * Non-info factors contribute; internal-link gaps apply a logarithmic penalty.
  */
 export function computeSeoScoreFromAudit(audit: AuditResult): number {
@@ -118,7 +118,7 @@ interface FactorDef {
    fixedMin?: number; // fixed optimal range (overrides competitor-derived); e.g. title 55–70
    fixedMax?: number; // undefined ⇒ derive both bounds from competitors
    // Range-suffix noun + phrasing appended to the description when real competitor data is
-   // present (mirrors SurferSEO exactly): "…, while the suggested range is 2 - 4 exact keywords."
+   // present (mirrors Ranksmile exactly): "…, while the suggested range is 2 - 4 exact keywords."
    unitNoun?: string;
    rangeStyle?: 'range' | 'atLeast' | 'single' | 'optimal';
 }
@@ -126,7 +126,7 @@ interface FactorDef {
 const INFO = (): 'info' => 'info';
 const singular = (v: number, word: string) => `${word}${v === 1 ? '' : 's'}`;
 
-// Full SurferSEO-style factor set. Keyword factors are broken out per content zone
+// Full Ranksmile-style factor set. Keyword factors are broken out per content zone
 // (body / h2-h6 / paragraphs / img-alt) as raw count + per-100-words density; the
 // sub-zone variants are informational (blue "compared pages have …") while the primary
 // targets (title/body/h1, body density) and structural factors carry ok/warn verdicts.
@@ -210,7 +210,7 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
    const strongWords = wordCount(plainText(strongEls.map((_, el) => $(el).text()).get().join(' ')));
 
    // Exact + partial keyword occurrences per content zone (body / h2-h6 / paragraphs /
-   // img-alt), each as a raw count and a per-100-words density — mirrors SurferSEO's
+   // img-alt), each as a raw count and a per-100-words density — mirrors Ranksmile's
    // factor breakdown so the audit surfaces the same requirement rows.
    const tokens = keyword.split(/\s+/).filter(Boolean);
    const exact = (text: string) => countOccurrences(text, keyword);
@@ -270,7 +270,7 @@ export function extractFactorValues(html: string, url: string, keyword: string, 
 
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100));
 
-// Full SurferSEO-style description, built where the range is known. Info factors show no
+// Full Ranksmile-style description, built where the range is known. Info factors show no
 // description; timing/h1 factors keep their self-contained sentence; everything else gets
 // the exact "…, while the suggested range is X - Y <noun>." suffix (real data only — the
 // phase-1 placeholder range is intentionally not stated as fact).
@@ -321,14 +321,14 @@ function assembleFactor(def: FactorDef, you: number, real?: RealAuditData): Audi
    };
 }
 
-// SurferSEO tab bucket: all-numeric → number, multi-word → phrase, single token → word.
+// Ranksmile tab bucket: all-numeric → number, multi-word → phrase, single token → word.
 function termType(term: string): AuditTerm['type'] {
    if (/^[\s\d.,%-]+$/.test(term)) return 'number';
    return /\s/.test(term.trim()) ? 'phrase' : 'word';
 }
 
 // One highlighted example: the window of text around a match, snapped to word
-// boundaries and ellipsis-padded (SurferSEO shows "… text <mark>term</mark> text …").
+// boundaries and ellipsis-padded (Ranksmile shows "… text <mark>term</mark> text …").
 function exampleWindow(text: string, s: number, e: number): string {
    const WIN = 90;
    let start = Math.max(0, s - WIN);
@@ -338,7 +338,7 @@ function exampleWindow(text: string, s: number, e: number): string {
    return `${start > 0 ? '…' : ''}${text.slice(start, end).trim()}${end < text.length ? '…' : ''}`;
 }
 
-// Map sidecar NLP terms to the SurferSEO "Terms to Use" rows: real per-page count (You),
+// Map sidecar NLP terms to the Ranksmile "Terms to Use" rows: real per-page count (You),
 // distinct inflected forms, example sentences, a competitor-derived suggested range, and an
 // Add/Remove/OK action. `findTermRangesBatch` gives inflection-tolerant match ranges in one
 // pass, so You / forms / examples all stay consistent with the editor's term highlighting.
@@ -409,7 +409,7 @@ export function buildAuditResult(html: string, url: string, keyword: string, tim
 
 /** Fetch a page (SSRF-guarded, manual redirects re-validated each hop), timed. */
 export async function fetchPage(url: string): Promise<{ html: string; timing: FetchTiming }> {
-   const headers = { 'User-Agent': 'SerpBearAuditBot/1.0 (+https://serpbear.com)' };
+   const headers = { 'User-Agent': 'RanksmileAuditBot/1.0 (+https://ranksmile.com)' };
    const startedAt = Date.now();
    let current = url;
    let resp: Awaited<ReturnType<typeof fetch>> | null = null;

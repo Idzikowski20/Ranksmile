@@ -2,11 +2,11 @@
 /**
  * Object to autoload required files.
  *
- * @package SurferSEO
- * @link https://surferseo.com
+ * @package Ranksmile
+ * @link https://ranksmile.pl
  */
 
-namespace SurferSEO;
+namespace Ranksmile;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -33,7 +33,7 @@ class Autoloader {
 	public function register_autoloader( $class_name ) {
 
 		// If the specified $class_name does not include our namespace, duck out.
-		if ( false === strpos( $class_name, 'SurferSEO' ) ) {
+		if ( false === strpos( $class_name, 'Ranksmile' ) ) {
 			return;
 		}
 

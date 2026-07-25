@@ -73,13 +73,13 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
 };
 
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
-  notifications: 'Manage notifications from Surfer or other organization members',
+  notifications: 'Manage notifications from Ranksmile or other organization members',
   brand_knowledge: 'Manage what we know about your brand',
-  custom_voices: 'Manage Custom Voices to be used in Content Editor, Humanizer, and Surfer AI',
+  custom_voices: 'Manage Custom Voices to be used in Content Editor, Humanizer, and Ranksmile AI',
   billing_details: 'Manage your billing information',
-  wordpress: 'Interact with your WordPress domains straight from Surfer',
+  wordpress: 'Interact with your WordPress domains straight from Ranksmile',
   api: 'Scale your workflows with powerful API access',
-  profile: 'Manage your Surfer profile',
+  profile: 'Manage your Ranksmile profile',
 };
 
 type SettingsLayoutProps = {
@@ -112,7 +112,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     smtp_username: '',
     smtp_password: '',
     notification_email_from: '',
-    notification_email_from_name: 'SerpBear',
+    notification_email_from_name: 'Ranksmile',
     search_console: true,
     search_console_client_email: '',
     search_console_private_key: '',
@@ -176,7 +176,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head>
-        <title>{`${pageTitle} — SerpBear`}</title>
+        <title>{`${pageTitle} — Ranksmile`}</title>
       </Head>
 
       <SentryPage maxWidth={880} className="sentry-page--settings">

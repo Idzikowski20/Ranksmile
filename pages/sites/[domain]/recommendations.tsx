@@ -594,7 +594,7 @@ const RecommendationsPage: NextPage = () => {
 
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-         <Head><title>{`Recommendations — ${domain} — SerpBear`}</title></Head>
+         <Head><title>{`Recommendations — ${domain} — Ranksmile`}</title></Head>
 
          <DomainSubLayout
             domain={domain}

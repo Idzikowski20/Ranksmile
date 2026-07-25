@@ -27,7 +27,7 @@ export const liveScoreWorker: PipelineWorker = {
     const scores = scoreArticleHtml({
       html,
       keyword,
-      scoreData: scoreData as Parameters<typeof scoreArticleHtml>[0]['scoreData'],
+      scoreData: scoreData as unknown as Parameters<typeof scoreArticleHtml>[0]['scoreData'],
       coverageItems: coverageItems as Parameters<typeof scoreArticleHtml>[0]['coverageItems'],
     });
 

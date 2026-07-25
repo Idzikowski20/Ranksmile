@@ -1,5 +1,5 @@
 /**
- * Topic Research (More tools › Topic Research) — Surfer "Topic Explorer" parity.
+ * Topic Research (More tools › Topic Research) — Ranksmile "Topic Explorer" parity.
  * One run per (domain, seed, country). The full result is serialized into
  * topic_research_runs.result_json; a small summary is mirrored into stats_json so
  * the list cards render without parsing the (large) result.

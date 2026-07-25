@@ -5,10 +5,9 @@ import {
   Input,
   PageFilterBar,
   SearchBar,
-  SegmentedControl,
   type SelectOptionOrSection,
 } from '../../core';
-import type { OrganicFilters, OrganicTab } from '../../../lib/organicResearch/filter';
+import type { OrganicFilters } from '../../../lib/organicResearch/filter';
 import {
   kdFilterFromValue,
   kdFilterValue,
@@ -20,12 +19,6 @@ import {
 import type { SearchIntent } from '../../../lib/organicResearch/types';
 
 const FONT = 'var(--font-family-primary)';
-
-const TAB_OPTIONS: { value: OrganicTab; label: string }[] = [
-  { value: 'all', label: 'All Positions' },
-  { value: 'organic', label: 'Organic' },
-  { value: 'serp_features', label: 'SERP Features' },
-];
 
 const POSITION_OPTIONS: SelectOptionOrSection<string>[] = [
   {
@@ -153,10 +146,6 @@ export default function OrganicFilterBar({ filters, onChange, serpFeatureOptions
   const intents = (filters.intents || []).filter(Boolean) as string[];
   const features = filters.serpFeatures || [];
 
-  const tabOptions = isGsc
-    ? TAB_OPTIONS.filter((t) => t.value !== 'serp_features')
-    : TAB_OPTIONS;
-
   const posLabel = useMemo(() => {
     if (posVal === 'all') return 'Positions';
     const flat = POSITION_OPTIONS.flatMap((o) => ('options' in o ? o.options : [o]));
@@ -184,22 +173,13 @@ export default function OrganicFilterBar({ filters, onChange, serpFeatureOptions
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <SegmentedControl
-          name="organic-positions-tab"
-          size="sm"
-          value={filters.tab || 'all'}
-          options={tabOptions}
-          onChange={(tab) => onChange({ ...filters, tab })}
+      <div style={{ minWidth: 220, maxWidth: 320 }}>
+        <SearchBar
+          value={filters.q || ''}
+          onChange={(q) => onChange({ ...filters, q })}
+          placeholder="Filter by keyword"
+          width="100%"
         />
-        <div style={{ marginLeft: 'auto', minWidth: 220, flex: '1 1 220px', maxWidth: 320 }}>
-          <SearchBar
-            value={filters.q || ''}
-            onChange={(q) => onChange({ ...filters, q })}
-            placeholder="Filter by keyword"
-            width="100%"
-          />
-        </div>
       </div>
 
       <PageFilterBar condensed>

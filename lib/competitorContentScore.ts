@@ -1,5 +1,5 @@
 /**
- * Client-safe Surfer-style competitor content scoring (no Node/network deps).
+ * Client-safe Ranksmile-style competitor content scoring (no Node/network deps).
  * Server fetch + HTML parsing lives in auditCompute / competitorAuditScore.
  */
 import { countOccurrences } from './termMatch';

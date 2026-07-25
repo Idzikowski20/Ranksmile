@@ -1,4 +1,4 @@
-// Server-Sent Events helpers for the streaming Surfy agent route. Pure + unit-testable.
+// Server-Sent Events helpers for the streaming Ranksmile agent route. Pure + unit-testable.
 
 /** One SSE frame. `data` is JSON-encoded; `event` names group client handling. */
 export function sseEvent(event: string, data: unknown): string {

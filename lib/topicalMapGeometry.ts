@@ -1,7 +1,7 @@
 /**
  * Pure geometry + palette constants for the Topical Map radar canvas
  * (components/domains/TopicalMapCanvas.tsx). Every value here was
- * cross-checked field-by-field against SurferSEO's reference SVG markup:
+ * cross-checked field-by-field against Ranksmile's reference SVG markup:
  * ring radii step 44.44 (8 rings, r=44.44..355.55), axis rect spans
  * center±400 over an 800-unit rect, axis-label x/y offsets and their
  * `translate` adjustments, hex path `d` strings, and node fill/stroke
@@ -56,7 +56,7 @@ export const ringRadius = (i: number): number => (i + 1) * MAP_RING_STEP;
 
 /**
  * Flat-top honeycomb spiral offsets (local, pre-hexScale units), excluding the
- * center cell. Used to pack a cluster's satellite hexes into a tight SurferSEO-style
+ * center cell. Used to pack a cluster's satellite hexes into a tight Ranksmile-style
  * blob around its main node. Cells are emitted ring-by-ring so smaller clusters fill
  * the inner rings first.
  */

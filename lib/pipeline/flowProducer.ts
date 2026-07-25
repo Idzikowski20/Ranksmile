@@ -69,18 +69,18 @@ async function tryFlowProducer(opts: AnalyzeDagOpts, rootJobKey: string): Promis
 
     await flow.add({
       name: 'coverage',
-      queueName: 'surfy-coverage',
+      queueName: 'ranksmile-coverage',
       data: basePayload,
       opts: { priority: QUEUE_PRIORITY.coverage, jobId: `cov-${rootJobKey}` },
       children: PARALLEL.map((q) => ({
         name: q,
-        queueName: `surfy-${q}`,
+        queueName: `ranksmile-${q}`,
         data: basePayload,
         opts: { priority: QUEUE_PRIORITY[q], jobId: `${q}-${rootJobKey}` },
         children: [
           {
             name: 'serp',
-            queueName: 'surfy-serp_crawl',
+            queueName: 'ranksmile-serp_crawl',
             data: basePayload,
             opts: {
               priority: QUEUE_PRIORITY.serp_crawl,

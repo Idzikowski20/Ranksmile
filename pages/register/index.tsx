@@ -13,7 +13,7 @@ const Register: NextPage = () => {
    return (
       <>
          <Head>
-            <title>Sign up - SerpBear</title>
+            <title>Sign up - Ranksmile</title>
             <style>{`
                *, *::before, *::after { box-sizing: border-box; font-family: "Inter", sans-serif; }
                html, body { margin: 0; padding: 0; background: #000; }
@@ -29,7 +29,7 @@ const Register: NextPage = () => {
             `}</style>
          </Head>
          <div className="splash">
-            <h1 className="splash-title">SerpBear</h1>
+            <h1 className="splash-title">Ranksmile</h1>
             <div className="splash-spin" />
             <p className="splash-sub">Redirecting to sign up...</p>
          </div>

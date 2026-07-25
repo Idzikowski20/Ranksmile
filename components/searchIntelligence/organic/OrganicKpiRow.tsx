@@ -82,7 +82,6 @@ function MiniKeywordsBarSpark({ values }: { values: number[] }) {
         aspectRatio="168 / 40"
         margin={{ top: 4, right: 2, bottom: 2, left: 2 }}
         animationDuration={900}
-        style={{ width: '100%', height: '100%' }}
       >
         <Bar dataKey="past" fill={KEYWORDS_BAR} stroke={KEYWORDS_BAR} lineCap={2} />
         <Bar dataKey="current" fill={KEYWORDS_BAR_CURRENT} stroke={KEYWORDS_BAR_CURRENT} lineCap={2} />

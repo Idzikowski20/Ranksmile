@@ -89,7 +89,7 @@ Rules:
 
 ## 6. Design Frontend
 - Use always /frontend-design
-- Read `DESIGN.md` before any UI (Sentry-first; accent `#F29964`, not Surfer purple)
+- Read `DESIGN.md` before any UI (Sentry-first; accent `#F29964`, not Ranksmile purple)
 - Stick `DESIGN.md` + anti-slop §12
 - New UI outside editor → `components/core` + `theme.tsx`; editor KEEP TipTap/scoring layout
 

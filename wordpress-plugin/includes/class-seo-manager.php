@@ -1,19 +1,19 @@
 <?php
 /**
- * Object to manage SEO related features, but not connected to Surfer directly.
+ * Object to manage SEO related features, but not connected to Ranksmile directly.
  *
- * @package SurferSEO
- * @link https://surferseo.com
+ * @package Ranksmile
+ * @link https://ranksmile.pl
  */
 
-namespace SurferSEO;
+namespace Ranksmile;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Object to manage SEO related features, but not connected to Surfer directly.
+ * Object to manage SEO related features, but not connected to Ranksmile directly.
  */
 class Seo_Manager {
 
@@ -37,7 +37,7 @@ class Seo_Manager {
 			),
 		);
 
-		$html_tag = Surfer()->get_surfer_settings()->get_option( 'content-importer', 'surfer_gsc_meta_script', false );
+		$html_tag = Ranksmile()->get_ranksmile_settings()->get_option( 'content-importer', 'ranksmile_gsc_meta_script', false );
 		if ( false !== $html_tag ) {
 			echo wp_kses( stripslashes( $html_tag ), $allow_meta );
 		}

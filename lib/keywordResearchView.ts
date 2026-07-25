@@ -1,6 +1,6 @@
 /**
  * View-model helpers for the Keyword Research detail page. Adapts the shared
- * TopicResearchResult (clusters → ideas → keywords) into Surfer-style keyword
+ * TopicResearchResult (clusters → ideas → keywords) into Ranksmile-style keyword
  * clusters: one card per cluster, showing an intent badge, MSV/KD and the flat
  * list of keywords in that cluster.
  */

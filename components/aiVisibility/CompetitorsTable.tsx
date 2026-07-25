@@ -30,7 +30,7 @@ const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.styl
 
 const PAGE = 50;
 
-/** SurferSEO competitor ranking: fill-bar (∝ visibility) behind favicon+name, then
+/** Ranksmile competitor ranking: fill-bar (∝ visibility) behind favicon+name, then
  *  Avg. pos / Mention rate / Visibility score. Row click opens the detail modal. */
 const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRow[]; onSelect: (domain: string) => void }) => {
    const [sort, setSort] = useState<SortKey>('visibilityScore');

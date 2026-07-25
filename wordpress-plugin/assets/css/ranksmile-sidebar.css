@@ -1,0 +1,10 @@
+#ranksmile-guidelines-container {
+  max-width: 100%;
+}
+#ranksmile-guidelines-container iframe {
+  max-width: 100%;
+}
+
+.ranksmile-picker input[type=radio]::before {
+  background-color: transparent;
+}

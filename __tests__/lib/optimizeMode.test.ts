@@ -31,7 +31,7 @@ describe('selectOptimizeMode', () => {
 });
 
 describe('optimizeMode constants', () => {
-  it('uses Surfer parity targets', () => {
+  it('uses Ranksmile parity targets', () => {
     expect(TARGET_SEO).toBe(80);
     expect(TARGET_AI).toBe(65);
     expect(DEFAULT_MAX_ROUNDS).toBe(2);

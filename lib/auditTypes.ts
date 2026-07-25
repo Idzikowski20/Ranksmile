@@ -1,4 +1,4 @@
-// Shared contract for the standalone Audit tool (SurferSEO-style content audit).
+// Shared contract for the standalone Audit tool (Ranksmile-style content audit).
 // Phase 1 (UI-first): the `you` column is real (computed offline from the fetched page
 // HTML); competitor columns + suggested ranges are a clearly-labelled placeholder
 // (placeholder:true) until phase 2 wires real DataForSEO SERP data.

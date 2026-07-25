@@ -99,7 +99,7 @@ function parseCrawlDetail(message: string): string | undefined {
   return undefined;
 }
 
-/** Map sidecar job-progress fields to Surfer-style sidebar steps. */
+/** Map sidecar job-progress fields to Ranksmile-style sidebar steps. */
 export function deriveDeepAnalysisUi(job: JobProgressSnapshot): DeepAnalysisUiState {
   const stage = job.currentStage || '';
   const msg = job.progressMessage || '';
@@ -207,7 +207,7 @@ export function deriveDeepAnalysisUi(job: JobProgressSnapshot): DeepAnalysisUiSt
   };
 }
 
-export const ANALYZE_SESSION_PREFIX = 'serpbear-analyze:';
+export const ANALYZE_SESSION_PREFIX = 'ranksmile-analyze:';
 
 export interface AnalyzeSessionPayload {
   url: string;

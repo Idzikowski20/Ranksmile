@@ -7,7 +7,7 @@ describe('stripDataImages / restoreDataImages', () => {
     const html = '<p>hi</p><img src="data:image/png;base64,AAAA"><img src="https://x/y.png">';
     const { stripped, map } = stripDataImages(html);
     expect(stripped).not.toContain('data:image/png;base64,AAAA');
-    expect(stripped).toContain('__SURFY_IMG_0__');
+    expect(stripped).toContain('__RANKSMILE_IMG_0__');
     expect(stripped).toContain('https://x/y.png'); // non-data src untouched
     expect(restoreDataImages(stripped, map)).toContain('data:image/png;base64,AAAA');
   });

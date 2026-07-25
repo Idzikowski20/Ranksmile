@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 interface AITextLoadingProps {
   texts?: string[];
-  /** Matches Surfy Thinking label by default (12.5px / 500). */
+  /** Matches Ranksmile Thinking label by default (12.5px / 500). */
   style?: React.CSSProperties;
   className?: string;
   interval?: number;

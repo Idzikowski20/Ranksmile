@@ -224,7 +224,7 @@ type VoiceUiProps = {
   style?: React.CSSProperties;
 };
 
-/** Compact mic / stop control for the Surfy composer toolbar. */
+/** Compact mic / stop control for the Ranksmile composer toolbar. */
 export function AIVoiceButton({
   listening,
   supported,
@@ -271,14 +271,14 @@ export function AIVoiceButton({
             height: 12,
             borderRadius: 3,
             background: '#181225',
-            animation: 'surfy-voice-spin 3s linear infinite',
+            animation: 'ranksmile-voice-spin 3s linear infinite',
             display: 'block',
           }}
         />
       ) : (
         <MicIcon size={16} />
       )}
-      <style>{`@keyframes surfy-voice-spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes ranksmile-voice-spin { to { transform: rotate(360deg); } }`}</style>
     </button>
   );
 }
@@ -297,8 +297,8 @@ export function AIVoicePanel({
   return (
     <div style={{ width: '100%', padding: '8px 0 4px', fontFamily: FONT, ...style }}>
       <style>{`
-        @keyframes surfy-voice-spin { to { transform: rotate(360deg); } }
-        @keyframes surfy-voice-pulse {
+        @keyframes ranksmile-voice-spin { to { transform: rotate(360deg); } }
+        @keyframes ranksmile-voice-pulse {
           0%, 100% { opacity: 0.45; transform: scaleY(0.85); }
           50% { opacity: 0.9; transform: scaleY(1); }
         }
@@ -349,7 +349,7 @@ export function AIVoicePanel({
                 height: 22,
                 borderRadius: 4,
                 background: '#181225',
-                animation: 'surfy-voice-spin 3s linear infinite',
+                animation: 'ranksmile-voice-spin 3s linear infinite',
                 display: 'block',
               }}
             />
@@ -390,7 +390,7 @@ export function AIVoicePanel({
                 background: listening ? 'rgba(24,18,37,0.5)' : 'rgba(24,18,37,0.1)',
                 height: listening ? `${h}%` : 4,
                 transition: 'height 300ms ease, background 300ms ease',
-                animation: listening ? 'surfy-voice-pulse 1.1s ease-in-out infinite' : undefined,
+                animation: listening ? 'ranksmile-voice-pulse 1.1s ease-in-out infinite' : undefined,
                 animationDelay: listening ? `${i * 0.05}s` : undefined,
                 transformOrigin: 'center',
               }}
@@ -420,7 +420,7 @@ export function AIVoicePanel({
   );
 }
 
-/** Default export: self-contained panel (demo / standalone). Prefer hook + button/panel in Surfy. */
+/** Default export: self-contained panel (demo / standalone). Prefer hook + button/panel in Ranksmile. */
 export default function AIVoice(props: UseAIVoiceOptions & { style?: React.CSSProperties }) {
   const voice = useAIVoice(props);
   return (

@@ -64,12 +64,19 @@ const AuditToolPage: NextPage = () => {
 
    return (
       <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-         <Head><title>{`Audit — ${domain}`}</title></Head>
+         <Head><title>{`Audit URL — ${domain}`}</title></Head>
          <style>{'@keyframes spin{to{transform:rotate(360deg)}}@keyframes auditBarPulse{0%,100%{opacity:.55}50%{opacity:1}}'}</style>
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Audit" contentMaxWidth="100%">
+         <DomainSubLayout
+            domain={domain}
+            slug={slug || ''}
+            section="Site Audit"
+            heading="Audit URL"
+            subtitle="Analyze one specific page"
+            contentMaxWidth="100%"
+         >
             <div style={{ width: '100%', maxWidth: 880, margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
-               <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#09090B', fontFamily: FONT }}>Audit</h1>
+               <div style={{ fontSize: 13, color: '#6A6772', fontFamily: FONT }}>One-off URL audits</div>
                {actions}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

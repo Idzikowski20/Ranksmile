@@ -1,7 +1,7 @@
 // GET /api/articles/[id]/debug-export  (DEV ONLY)
 // Dumps everything we hold for an article — content, scores + per-slot breakdown,
 // targets vs. actuals, NLP terms, competitors, ranking sources, the raw deep-analysis
-// job result and AI-visibility — as one JSON, for comparing our scoring against Surfer.
+// job result and AI-visibility — as one JSON, for comparing our scoring against Ranksmile.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { QueryTypes } from 'sequelize';
 import db from '../../../../database/database';

@@ -1,5 +1,5 @@
 /**
- * Build Surfer-style topic groups for AI Search "Info to cover" from citations,
+ * Build Ranksmile-style topic groups for AI Search "Info to cover" from citations,
  * coverage items, and competitor outline headings.
  */
 import type { AiVisibilitySummary } from './aiSearchScore';

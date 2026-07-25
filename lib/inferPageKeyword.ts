@@ -63,7 +63,7 @@ export function keywordFromUrl(url: string): string {
 }
 
 /**
- * Pick the target query for Surfer-style scoring: GSC page→query, then URL slug,
+ * Pick the target query for Ranksmile-style scoring: GSC page→query, then URL slug,
  * then best overlap with domain seed keywords.
  */
 export function inferPageKeyword(

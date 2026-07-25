@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design tokens (Sentry-first shell + Surfy accent) ───────────────── */
+/* ─── Design tokens (Sentry-first shell + Ranksmile accent) ───────────────── */
 :root {
    /* Colors */
    --color-text-primary: #ffffff;
@@ -1037,7 +1037,7 @@ html.editor-route .app-content {
 .article-editor-shell .ProseMirror img { max-width: 100%; height: auto; }
 
 /* Phones + tablets: hide the editor's top format toolbar entirely — formatting
-   is reached by selecting text (the SurfyBubbleMenu appears on touch). The
+   is reached by selecting text (the RanksmileBubbleMenu appears on touch). The
    right-hand actions (…, sidebar toggle, Share) live in the page header and
    stay put. Avoids the cramped horizontal-scroll toolbar on narrow screens. */
 @media (max-width: 1023px) {
@@ -1830,32 +1830,32 @@ html.editor-route .app-content {
    line-height: 1;
 }
 
-/* ── Surfy AI animations ─────────────────────────────────────────── */
+/* ── Ranksmile AI animations ─────────────────────────────────────────── */
 
-@keyframes surfy-blink {
+@keyframes ranksmile-blink {
   0%, 50%, 56%, 100% { transform: scaleY(1); }
   53% { transform: scaleY(0.12); }
 }
 
-.surfy-selection-highlight ::selection {
+.ranksmile-selection-highlight ::selection {
   background: rgba(242, 153, 100, 0.15);
 }
 
-/* Surfy selection highlight — override browser default mark styling */
-.surfy-selection-highlight mark {
+/* Ranksmile selection highlight — override browser default mark styling */
+.ranksmile-selection-highlight mark {
   color: inherit;
   border-radius: 2px;
 }
 
-/* Surfer loader — sweeping mask band rotates around the logo square. */
-@keyframes surferLoaderSweep { to { transform: rotate(360deg); } }
-.surfer-loader-sweep {
+/* Ranksmile loader — sweeping mask band rotates around the logo square. */
+@keyframes ranksmileLoaderSweep { to { transform: rotate(360deg); } }
+.ranksmile-loader-sweep {
    transform-box: view-box;
    transform-origin: center;
-   animation: surferLoaderSweep 1.1s linear infinite;
+   animation: ranksmileLoaderSweep 1.1s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-   .surfer-loader-sweep { animation: none; }
+   .ranksmile-loader-sweep { animation: none; }
 }
 
 /* Auto-Optimize text shimmer — pulses opacity on the section being scanned. */
@@ -3869,7 +3869,7 @@ html.editor-route .app-content {
   align-self: flex-end;
 }
 
-/* In-editor generate overlay (Write with Surfy AI empty-state CTA) */
+/* In-editor generate overlay (Write with Ranksmile AI empty-state CTA) */
 .nc-gen-editor-overlay {
   position: absolute;
   inset: 0;
@@ -6003,7 +6003,7 @@ html.editor-route .app-content {
       --chart-marker-border: oklch(0.85 0.01 260);
       --chart-marker-foreground: oklch(0.3 0.01 260);
       --chart-label: oklch(0.45 0.01 260);
-      /* Surfy orange sequential scale (Activity Log heatmap) */
+      /* Ranksmile orange sequential scale (Activity Log heatmap) */
       --chart-scale-01: oklch(0.98 0.003 106);
       --chart-scale-02: oklch(0.92 0.008 106);
       --chart-scale-03: oklch(0.82 0.015 106);

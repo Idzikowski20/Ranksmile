@@ -1,5 +1,5 @@
 // POST /api/v1/wordpress/get_user_drafts — list this workspace's drafts (articles)
-// in the Surfer draft shape the plugin consumes.
+// in the Ranksmile draft shape the plugin consumes.
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authPluginRequest } from '../../../../lib/wpConnection';
 import { getDomainIdForWorkspace, listArticlesForDomain, articleToDraft } from '../../../../lib/wpDraft';

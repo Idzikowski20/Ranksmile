@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import type { NextPage } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ import SiteAuditCompareCrawls from '../../../components/siteAudit/SiteAuditCompa
 import { CrawlLimitIndicator } from '../../../components/siteAudit/CrawlLimitPopover';
 import CrawlLimitUpgradeBanner from '../../../components/siteAudit/CrawlLimitUpgradeBanner';
 import { Button, Tabs } from '../../../components/core';
+import { AUDIT_URL_PATH, sitePath } from '../../../lib/navigation';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { useSiteAuditCompareCrawls, useSiteAuditCrawledPages, useSiteAuditIssueDetail, useSiteAuditOverview } from '../../../services/siteAudit';
@@ -139,10 +141,18 @@ const SiteAuditPage: NextPage = () => {
         section="Site Audit"
         contentMaxWidth={1280}
         heading={slug ? `Site Audit: ${domain}` : 'Site Audit'}
+        subtitle="Analyze your entire website"
         meta={headerMeta}
         filters={filters}
         actions={(
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {slug && (
+              <Link href={sitePath(slug, AUDIT_URL_PATH)} style={{ textDecoration: 'none' }}>
+                <Button type="button" variant="secondary" size="sm">
+                  Audit URL
+                </Button>
+              </Link>
+            )}
             <Button
               type="button"
               variant="primary"

@@ -189,7 +189,7 @@ async function tryBullmqEnqueue(
   if (!url) return false;
   try {
     const { Queue } = await import('bullmq');
-    const q = new Queue(`surfy-${queue}`, { connection: { url } });
+    const q = new Queue(`ranksmile-${queue}`, { connection: { url } });
     // Unique BullMQ id per DB row — same jobKey + force:true must not collide after Redis wipe
     await q.add(
       queue,

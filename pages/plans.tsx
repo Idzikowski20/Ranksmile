@@ -8,7 +8,7 @@ const PlansPage: NextPage = () => {
    return (
       <>
          <Head>
-            <title>Pricing &amp; Plans · SerpBear</title>
+            <title>Pricing &amp; Plans · Ranksmile</title>
             <meta name="robots" content="noindex" />
          </Head>
          <div style={{ minHeight: '100dvh', height: '100%', overflowY: 'auto', background: '#f8f9ff', fontFamily: 'var(--font-family-primary)', padding: '48px 24px 80px' }}>

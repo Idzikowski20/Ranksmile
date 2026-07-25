@@ -88,7 +88,7 @@ const ImportPage: NextPage = () => {
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-      <Head><title>Import Content — SerpBear</title></Head>
+      <Head><title>Import Content — Ranksmile</title></Head>
 
       <div
         style={{

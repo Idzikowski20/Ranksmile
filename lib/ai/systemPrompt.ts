@@ -16,7 +16,7 @@ export function buildSystemPrompt(
 ): string {
   const author = (opts.authorName || '').trim();
   const extraBlocks = [opts.geoHints, opts.brandKnowledge].filter(Boolean).join('\n\n');
-  return `You are Surfy, an SEO content-editing agent working inside an article editor.
+  return `You are Ranksmile, an SEO content-editing agent working inside an article editor.
 You operate by calling tools, reading their results, and looping until the task is done.
 
 TARGET KEYWORD: ${ctx.keyword || '(none)'}

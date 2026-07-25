@@ -69,16 +69,22 @@ export const authMainStyle: CSSProperties = {
   padding: '16px 16px 40px',
 };
 
-/** Sentry panel card — white, `#DAD9DE`, radius 8px. */
+/** Sentry panel card — white surface + frosted white rim against mesh. */
 export const authCardStyle: CSSProperties = {
   width: '100%',
   maxWidth: 400,
   background: '#FFFFFF',
-  border: '1px solid #DAD9DE',
-  borderRadius: 8,
+  border: '1px solid rgba(255, 255, 255, 0.95)',
+  borderRadius: 16,
   padding: '32px 28px 28px',
   boxSizing: 'border-box',
-  boxShadow: '0 12px 40px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(24, 18, 37, 0.08)',
+  /* Crisp inner edge + thick semi-transparent white rim (no blur) + soft lift */
+  boxShadow: [
+    '0 0 0 1px rgba(255, 255, 255, 0.9)',
+    '0 0 0 8px rgba(255, 255, 255, 0.35)',
+    '0 12px 40px rgba(37, 99, 235, 0.10)',
+    '0 4px 16px rgba(24, 18, 37, 0.06)',
+  ].join(', '),
 };
 
 export const authBottomBarStyle: CSSProperties = {

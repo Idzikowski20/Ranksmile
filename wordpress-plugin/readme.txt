@@ -1,5 +1,5 @@
-=== Surfer – WordPress Plugin  ===
-Contributors: surferseo, xingupl, judytafromsurfer 
+=== Ranksmile – WordPress Plugin  ===
+Contributors: ranksmileseo, xingupl, judytafromranksmile 
 Tags: seo, keywords, content writing, content, keyword research
 Requires at least: 6.0
 Requires PHP: 7.4
@@ -8,70 +8,70 @@ Stable tag: 1.7.0.639
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Connect Surfer's Content Editor to WordPress. Write and optimize your articles for SEO, find new keyword ideas and publish straight to WordPress.
+Connect Ranksmile's Content Editor to WordPress. Write and optimize your articles for SEO, find new keyword ideas and publish straight to WordPress.
 
 == Description ==
 
-Connect Surfer’s Content Editor to WordPress and make writing content, discovering keywords, and optimizing your work for SEO a breeze. 
+Connect Ranksmile’s Content Editor to WordPress and make writing content, discovering keywords, and optimizing your work for SEO a breeze. 
 
-== SURFER’S OFFICIAL WORDPRESS PLUGIN ==
-Surfer’s free WordPress plugin that connects your WordPress page to Surfer’s Content Editor. Surfer’s WP plugin just saved you a step (or 2!). Write, publish and start ranking. 
+== RANKSMILE’S OFFICIAL WORDPRESS PLUGIN ==
+Ranksmile’s free WordPress plugin that connects your WordPress page to Ranksmile’s Content Editor. Ranksmile’s WP plugin just saved you a step (or 2!). Write, publish and start ranking. 
 
 == EASY SETUP AND FAST INTEGRATION ==
 It takes just a few minutes to download and install the plugin, and even less to publish your content!
 
 * Install the free WordPress plugin
-* Write highly rankable content using Surfer’s trusted guidelines
+* Write highly rankable content using Ranksmile’s trusted guidelines
 * Research and find new keyword ideas
-* Work in WordPress using Surfer’s Content Editor without any hassle
-* Create a Content Editor directly in WordPress, or export it to Surfer
+* Work in WordPress using Ranksmile’s Content Editor without any hassle
+* Create a Content Editor directly in WordPress, or export it to Ranksmile
 * Track how many clicks and impressions your posts generated directly in WordPress
 
 == AVOID FORMATTING ISSUES AND INCONSISTENCIES ==
-CTRL + A, CTRL + C, CTRL + V, in two clicks! What you write in Surfer’s Content Editor is what you’ll get (and see) when you publish on WordPress.
+CTRL + A, CTRL + C, CTRL + V, in two clicks! What you write in Ranksmile’s Content Editor is what you’ll get (and see) when you publish on WordPress.
 
-Headings, images and text are converted block by block and transferred seamlessly from Surfer’s interface to your WordPress site.
+Headings, images and text are converted block by block and transferred seamlessly from Ranksmile’s interface to your WordPress site.
 
 Images are downloaded and stored on WordPress and are accessible in your media library versus an external link which improves performance and SEO!
 
-Surfer’s Plugin currently supports the two most widely used WordPress text editors: Gutenberg and Classic Editor (and can distinguish between the two!).
+Ranksmile’s Plugin currently supports the two most widely used WordPress text editors: Gutenberg and Classic Editor (and can distinguish between the two!).
 
-V.1, V.2 V.3? **With Surfer plugin you always publish the current and correct version of your article without the copy-paste confusion.**
+V.1, V.2 V.3? **With Ranksmile plugin you always publish the current and correct version of your article without the copy-paste confusion.**
 
 == OPTIMIZE AND IMPROVE EXISTING ARTICLES ==
 Keep your content relevant and competitive with periodic updates to keep climbing the SERPs!
 
-Use Surfer’s Content Editor to refresh your article and optimize its keywords for an even better performance.
+Use Ranksmile’s Content Editor to refresh your article and optimize its keywords for an even better performance.
 
 Finally, once you’re satisfied with the improvements, publish the updated piece on WP. You can also easily access all your WordPress articles in the Content Editor!
 
-== SURFER RESOURCES AND SUPPORT ==
-Get your questions answered whenever you need help. Simply go to our [website](https://surferseo.com/) and reach out to us via chat, or drop us an email at [support@surferseo.com](https://wordpress.org/plugins/surferseo/support@surferseo.com).
+== RANKSMILE RESOURCES AND SUPPORT ==
+Get your questions answered whenever you need help. Simply go to our [website](https://ranksmile.pl/) and reach out to us via chat, or drop us an email at [support@ranksmile.pl](https://wordpress.org/plugins/ranksmileseo/support@ranksmile.pl).
 
-You can also sign up for [Surfer Academy](https://surferseo.com/academy/) and learn how to take advantage of Surfer with unlimited tips and tricks packaged into training videos and live sessions. For free!
+You can also sign up for [Ranksmile Academy](https://ranksmile.pl/academy/) and learn how to take advantage of Ranksmile with unlimited tips and tricks packaged into training videos and live sessions. For free!
 
 == READ MORE ==
-Want more information about Search Engine Optimization and Surfer?
+Want more information about Search Engine Optimization and Ranksmile?
 
-* Join our [Facebook Group](https://www.facebook.com/groups/seosurfers)
-* Find us on [LinkedIn](https://www.linkedin.com/company/surfer/) and [YouTube](https://www.youtube.com/c/SurferSEO)
-* Check our [Knowledge Base](https://docs.surferseo.com/en/) 
+* Join our [Facebook Group](https://www.facebook.com/groups/seoranksmiles)
+* Find us on [LinkedIn](https://www.linkedin.com/company/ranksmile/) and [YouTube](https://www.youtube.com/c/Ranksmile)
+* Check our [Knowledge Base](https://ranksmile.pl/en/) 
 
 == Installation ==
 
-You can install plugin easily and for free, using our [guide](https://docs.surferseo.com/en/articles/6328028-wpsurfer-export-the-content-from-content-editor-to-your-wordpress#h_0c607b048f).
+You can install plugin easily and for free, using our [guide](https://ranksmile.pl/en/articles/6328028-wpranksmile-export-the-content-from-content-editor-to-your-wordpress#h_0c607b048f).
 
-In case of any troubles, just go to our [website](https://surferseo.com/) and reach out to us via chat, or drop us an email at [support@surferseo.com](support@surferseo.com).
+In case of any troubles, just go to our [website](https://ranksmile.pl/) and reach out to us via chat, or drop us an email at [support@ranksmile.pl](support@ranksmile.pl).
 
 == Frequently Asked Questions ==
 
-= What is Surfer? =
-Surfer is there to help you with your whole content optimization process. You’ll be able to find new ideas to write about that are backed by what currently ranks in Google, create those pieces of content using data-driven guidelines, and then optimize your already existing pages.
+= What is Ranksmile? =
+Ranksmile is there to help you with your whole content optimization process. You’ll be able to find new ideas to write about that are backed by what currently ranks in Google, create those pieces of content using data-driven guidelines, and then optimize your already existing pages.
 
 = Is the plugin free? =
-Yes, but some features require account in [Surfer](https://surferseo.com)
+Yes, but some features require account in [Ranksmile](https://ranksmile.pl)
 
-= Do I need a Surfer account to use this plugin? =
+= Do I need a Ranksmile account to use this plugin? =
 Some features are available right away, and you can use them for free, some features require an account.
 
 = Why there is no support via WordPress forum? =
@@ -81,9 +81,9 @@ It is not a bug, it is a feature. ;)
 
 == Screenshots ==
 
-1. Write and optimize your content directly in WordPress with the Surfer WordPress plugin
-2. Manage, edit, and optimize your content with Surfer’s seamless WordPress plugin. 
-3. Create new content and export it from Surfer to WordPress with ease.
+1. Write and optimize your content directly in WordPress with the Ranksmile WordPress plugin
+2. Manage, edit, and optimize your content with Ranksmile’s seamless WordPress plugin. 
+3. Create new content and export it from Ranksmile to WordPress with ease.
 4. Select prewritten, drafted, pending, future, and published content  and export it to WordPress with just a few clicks.
 
 == Changelog ==
@@ -97,11 +97,11 @@ It is not a bug, it is a feature. ;)
 * FIX: Elementor duplicated table issue
 
 = 1.6.7 =
-* FEATURE: Support for new workspaces in Surfer 
+* FEATURE: Support for new workspaces in Ranksmile 
 * FIX: Improved security & speed
 * FIX: Config form save error that randomly occurred
 * FIX: CRON reduce logs
-* FIX: URLs redirecting to old Surfer paths
+* FIX: URLs redirecting to old Ranksmile paths
 
 = 1.6.6 =
 * FIX: Issue with importing content
@@ -121,7 +121,7 @@ It is not a bug, it is a feature. ;)
 * FIX: Missing content during some exports
 
 = 1.6.3 =
-* FEATURE: Handle tables export from Surfer
+* FEATURE: Handle tables export from Ranksmile
 * FIX: But that sometimes put whole content into single Text element in Elementor
 * FIX: Limit number of tags, categories and users on export list, to avoid errors
 * FIX: Remove <p> tag from inside of the <li> elements in lists
@@ -129,23 +129,23 @@ It is not a bug, it is a feature. ;)
 
 = 1.6.2 =
 * FEATURE: Allow to set rel and target arguments for internal and external links during content import
-* FIX: Connection issue that sometimes occurred during exporting from Surfer
+* FIX: Connection issue that sometimes occurred during exporting from Ranksmile
 * FIX: Execute shrotcodes during export from WordPress
 * FIX: Other small fixes
 
 = 1.6.1 =
-* FEATURE: Developer tool, to remove old Surfer Backups
-* FIX: searching posts in Surfer will be by title only instead of current keyword search
+* FEATURE: Developer tool, to remove old Ranksmile Backups
+* FIX: searching posts in Ranksmile will be by title only instead of current keyword search
 * FIX: Elementor: images caption is counted to content score
 * FIX: Hide Grid container notification for new Elementor versions.
 * FIX: Set proper target attribute for links
 
 
 = 1.6.0 =
-* FEATURE: Support Meta Tags Import/Export from/to Surfer
+* FEATURE: Support Meta Tags Import/Export from/to Ranksmile
 * FEATURE: Configuration option to disable writing guidelines in Elementor
-* FEATURE: Support for files with same name or files with name changed after export from Surfer, during saving images in Media Library
-* FIX: Notification for conflict between Surfer export and Elementor settings
+* FEATURE: Support for files with same name or files with name changed after export from Ranksmile, during saving images in Media Library
+* FIX: Notification for conflict between Ranksmile export and Elementor settings
 * FIX: GSC reports e-mails with empty "to"
 * FIX: Security improvements
 * FIX: Typos
@@ -161,12 +161,12 @@ It is not a bug, it is a feature. ;)
 = 1.4.3 =
 * FEATURE: Improvements in Elementor integration (beta)
 * FEATURE: Automatic post reconnection (debugging tool)
-* FIX: On export from Surfer, not all post types were visible on list.
+* FIX: On export from Ranksmile, not all post types were visible on list.
 * FIX: On export from WordPress from posts list content sometimes was distorted
 
 = 1.4.2 =
 * FEATURE: Content Score details in writing guidelines
-* FEATURE: Support for advanced export from Surfer
+* FEATURE: Support for advanced export from Ranksmile
 * FEATURE: Help button in sidebar
 * Fix: Speed improvements in Gutenberg and Classic Editor
 * Fix: Issues with import to Gutenberg
@@ -183,7 +183,7 @@ It is not a bug, it is a feature. ;)
 * Fix: Other small fixes
 
 = 1.4.0 =
-* FEATURE: Surfer writing guidelines Sidebar introduced
+* FEATURE: Ranksmile writing guidelines Sidebar introduced
 * FEATURE: Elementor integration (Beta)
 
 = 1.3.4 =
@@ -196,7 +196,7 @@ It is not a bug, it is a feature. ;)
 * Fix: Updated CRON tasks
 * Fix: Better versioning for JS files (no more caching conflicts)
 * Fix: Resolve notices
-* Fix: Missing images on export to Surfer from Classic Editor 
+* Fix: Missing images on export to Ranksmile from Classic Editor 
 * Fix: Better error handling for no credits error
 
 = 1.3.2 =
@@ -222,16 +222,16 @@ It is not a bug, it is a feature. ;)
 
 = 1.2.2 =
 * Fix: Timeout error for large posts
-* Fix: Posts exported from Surfer will be connected 
+* Fix: Posts exported from Ranksmile will be connected 
 
 = 1.2.1 =
 * Fix: Better JS file loading
 * Fix: Notices
 
 = 1.2.0 =
-* FEATURE: We eliminated the 30 day limit for blog posts. Access all of your WordPress articles in Surfer's Content Editor.
+* FEATURE: We eliminated the 30 day limit for blog posts. Access all of your WordPress articles in Ranksmile's Content Editor.
 * FEATURE: You can now create a new Content Editor directly from WordPress. Use it to create new posts and then update them with one click from the WordPress dashboard.
-* FEATURE: You can now see the clicks and impressions that your posts gathered in the last 30 days. To unlock it, connect Google Search Console to your Surfer account.
+* FEATURE: You can now see the clicks and impressions that your posts gathered in the last 30 days. To unlock it, connect Google Search Console to your Ranksmile account.
 * FEATURE: We added (optional) tracking which will allow us to better understand how users interact with the plugin and how to prioritize incoming improvements. 
 * Fix: Fixes on commonly know bugs
 
@@ -254,7 +254,7 @@ It is not a bug, it is a feature. ;)
 
 = 1.0.0 =
 * FEATURE: Initial release.
-* FEATURE: Export content from Surfer Content Editor to WordPress.
+* FEATURE: Export content from Ranksmile Content Editor to WordPress.
 
 == Upgrade Notice ==
 
@@ -265,7 +265,7 @@ Integration with Advanced Custom Fields (ACF) plugin.
 Solve import error for Elementor.
 
 = 1.6.7 =
-Required to use new workspaces in Surfer. Also better speed and security.
+Required to use new workspaces in Ranksmile. Also better speed and security.
 
 = 1.6.6 =
 Solve import error for Elementor and Classic Editor. 
@@ -286,7 +286,7 @@ Allow to set attributes for links during import
 Improves Elementor integration and better images handling
 
 = 1.6.0 =
-Support for Surfer AI Meta Tags
+Support for Ranksmile AI Meta Tags
 
 = 1.5.0 =
 Elementor Integration
@@ -301,7 +301,7 @@ Improves Writing Guidelines
 Adds custom filters 
 
 = 1.4.0 =
-Surfer writing guidelines inside your WordPress (Gutenberg and Classic Editor)
+Ranksmile writing guidelines inside your WordPress (Gutenberg and Classic Editor)
 
 = 1.3.4 =
 Fixes Classic Editor issues.
@@ -325,7 +325,7 @@ Fix for large posts.
 Speed improvements.
 
 = 1.2.0 =
-You can create Content Editor inside Surfer from WordPress.
+You can create Content Editor inside Ranksmile from WordPress.
 
 = 1.1.2 = 
 New custom hooks.
@@ -337,4 +337,4 @@ Support for headless WordPress.
 Keyword Research.
 
 = 1.0.0 =
-Export content to Surfer!
+Export content to Ranksmile!

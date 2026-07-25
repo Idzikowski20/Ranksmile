@@ -1,5 +1,5 @@
 ---
-description: Design system SerpBear — DESIGN.md, Sentry-first, editor exception
+description: Design system Ranksmile — DESIGN.md, Sentry-first, editor exception
 globs: "**/*.{tsx,jsx}"
 alwaysApply: false
 ---
@@ -14,7 +14,7 @@ alwaysApply: false
 |--------|-------|------|
 | Sentry shell | Nav, topbar, mobile | `components/core/*`, dark `#252525` / `#09090b` |
 | Sentry app | Dashboard, domains, AI vis, settings | `sentry-pages/*`, `@components/core/theme.tsx` |
-| Editor zone | `pages/articles/[id]/*`, scoring, Surfy | KEEP layout TipTap/scoring; primitives z `core` |
+| Editor zone | `pages/articles/[id]/*`, scoring, Ranksmile | KEEP layout TipTap/scoring; primitives z `core` |
 
 ## Reguły
 
@@ -22,7 +22,7 @@ alwaysApply: false
 - **Edytor** — nie przebudowuj struktury; podmieniaj `Button` / `Modal` / `Input`
 - Font: `var(--font-family-primary)` / Rubik w shell — nigdy hardcode Inter jako brand
 - Ikony: wyłącznie inline SVG
-- **Accent:** `#F29964` (Surfy/Sentry) — **nie** Surfer purple `#783AFB` w nowym UI
+- **Accent:** `#F29964` (Ranksmile/Sentry) — **nie** Ranksmile purple `#783AFB` w nowym UI
 - Karty Sentry: border `#DAD9DE`, radius `8px`
 - Anti-slop: DESIGN.md §12 przed shipem
 
