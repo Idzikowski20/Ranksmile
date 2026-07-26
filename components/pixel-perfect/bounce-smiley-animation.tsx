@@ -1,17 +1,10 @@
 "use client";
 
+import React, { useId } from "react";
 import { motion } from "motion/react";
-import { useId } from "react";
 
 const SMILEY_PATH =
   "M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015Z";
-
-const EYE_OPEN =
-  "M 123 112.5 C 123 116.642 126.358 120 130.5 120 C 134.642 120 138 116.642 138 112.5 C 138 108.358 134.589 104.915 130.447 104.915 C 126.305 104.915 123 108.358 123 112.5 Z";
-const EYE_BLINK =
-  "M 123 112.5 C 123 116.642 126.358 120 130.5 120 C 134.642 120 138 116.642 138 112.5 C 138 108.358 134.85 117.69 130.708 117.69 C 126.565 117.69 123 108.358 123 112.5 Z";
-const EYE_AFTER =
-  "M 123 112.5 C 123 116.642 126.358 120 130.5 120 C 134.642 120 138 116.642 138 112.5 C 138 108.358 134.669 104.836 130.527 104.836 C 126.385 104.836 123 108.358 123 112.5 Z";
 
 const REST_X = 24.661;
 const REST_Y = 109.888;
@@ -26,7 +19,7 @@ export type BounceSmileyAnimationProps = {
   entrance?: boolean;
   /** Pixel size when `compact` (default 20). */
   size?: number;
-  /** Disable looping rotate (static mark). */
+  /** Disable looping rotate/blink (static mark). */
   animateRotate?: boolean;
 };
 
@@ -39,61 +32,36 @@ function SmileyFace({
   paintId: string;
   animateRotate?: boolean;
 }) {
+  // CSS keyframes (globals.css) — same approach as legacy Surfy blink.
+  // Motion SVG rotate/path loops were not reliably painting in production.
   return (
     <g fill="none">
-      <motion.g
-        initial={{ rotate: 0 }}
-        animate={animateRotate ? { rotate: [0, 226.382, 84.284, 100.226] } : { rotate: 0 }}
-        transition={
-          animateRotate
-            ? {
-                rotate: {
-                  duration: 5,
-                  times: [0, 0.5915, 0.902, 1],
-                  ease: [
-                    [0.42, 0, 0.58, 1],
-                    [0.42, 0, 0.58, 1],
-                    [0.42, 0, 0.58, 1],
-                  ],
-                  repeat: Infinity,
-                  repeatType: "loop",
-                },
-              }
-            : undefined
-        }
+      <g
+        className={animateRotate ? "smily-face-spin" : undefined}
         filter={`url(#${filterId})`}
-        style={{ transformBox: "view-box", transformOrigin: "113px 113px" }}
+        style={
+          animateRotate
+            ? undefined
+            : { transformBox: "view-box", transformOrigin: "113px 113px" }
+        }
       >
         <path d={SMILEY_PATH} fill="#50B9FF" />
         <path d={SMILEY_PATH} fill={`url(#${paintId})`} />
-      </motion.g>
+      </g>
       <circle cx="80.5" cy="112.5" r="7.5" fill="#00558E" />
-      <motion.path
-        initial={{ d: EYE_OPEN }}
-        animate={
+      <g
+        className={animateRotate ? "smily-eye-blink" : undefined}
+        style={
           animateRotate
-            ? { d: [EYE_OPEN, EYE_BLINK, EYE_AFTER] }
-            : { d: EYE_OPEN }
+            ? undefined
+            : { transformBox: "view-box", transformOrigin: "130.5px 112.5px" }
         }
-        transition={
-          animateRotate
-            ? {
-                d: {
-                  duration: 5,
-                  times: [0.5308, 0.5915, 0.6484],
-                  ease: [
-                    [0.42, 0, 0.58, 1],
-                    [0.42, 0, 0.58, 1],
-                  ],
-                  repeat: Infinity,
-                  repeatType: "loop",
-                },
-              }
-            : undefined
-        }
-        fill="#00558E"
-        style={{ transformBox: "view-box", transformOrigin: "130.5px 112.5px" }}
-      />
+      >
+        <path
+          d="M 123 112.5 C 123 116.642 126.358 120 130.5 120 C 134.642 120 138 116.642 138 112.5 C 138 108.358 134.589 104.915 130.447 104.915 C 126.305 104.915 123 108.358 123 112.5 Z"
+          fill="#00558E"
+        />
+      </g>
       <path
         d="M90 127C97.2727 139 112.727 139 120 127"
         stroke="#057BC9"
@@ -142,8 +110,8 @@ function SmileyFace({
 
 /**
  * Ranksmile / Smily mark.
- * - Full: bounce entrance once on mount, then rests; rotate + blink loop forever.
- * - Compact: face-only for toolbars (rotate loop, no bounce stage).
+ * - Full: bounce entrance once on mount, then rests; CSS rotate + blink forever.
+ * - Compact: face-only for toolbars (CSS rotate loop, no bounce stage).
  */
 export function BounceSmileyAnimation({
   className,
