@@ -1,3 +1,5 @@
+# Built with Railway Root Directory = /python-sidecar
+# (context is the sidecar folder — requirements.txt is at context root)
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -16,4 +18,5 @@ COPY . .
 ENV PORT=8001
 EXPOSE 8001
 
+# Bind all interfaces for Railway private networking (IPv4/IPv6)
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
