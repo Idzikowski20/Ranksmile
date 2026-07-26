@@ -124,11 +124,15 @@ export async function processQueuedForDomain(domainId: number, budgetMs = 45000)
             "UPDATE keyword_research_runs SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'",
             { replacements: [JSON.stringify(result), JSON.stringify(stats), candidate.id] },
          );
+         const { settleKeywordResearchQuota } = await import('./quota/keywordResearch');
+         await settleKeywordResearchQuota(domainId, candidate.id, 'commit').catch(() => {});
       } catch (e) {
          await db.query(
             "UPDATE keyword_research_runs SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'",
             { replacements: [getErrorMessage(e), candidate.id] },
          ).catch(() => { /* best effort */ });
+         const { settleKeywordResearchQuota } = await import('./quota/keywordResearch');
+         await settleKeywordResearchQuota(domainId, candidate.id, 'release').catch(() => {});
       }
       processed += 1;
    }

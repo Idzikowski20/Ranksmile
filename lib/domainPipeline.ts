@@ -247,6 +247,9 @@ export async function kickDomainSetup(jobId: string): Promise<void> {
             const { orgId } = await ensureUserTenancy(ownerId);
             const billing = await getOrgBillingState(orgId);
             siteAuditPages = getSiteAuditPageLimit(resolvePlanSlug(billing?.planSlug));
+            const { findReservationByIdempotency } = await import('./quota');
+            const existing = await findReservationByIdempotency(orgId, `site-audit:${jobId}`);
+            if (existing) siteAuditPages = Number(existing.quantity);
          }
       } catch { /* default 100 */ }
       const body = { jobId, nextjsUrl: nextjsUrl(), payload: { domainId, domain: domainName, seedKeywords, brandKnowledge: drows[0]?.brand_knowledge || '', blog_urls: blogUrls, language, limits: { keywords: 20, competitorsPerKeyword: 10, site_audit_pages: siteAuditPages } } };

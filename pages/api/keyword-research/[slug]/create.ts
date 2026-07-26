@@ -25,6 +25,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    try {
       const id = await enqueueKeywordResearch(domainId, seed, country);
+      try {
+         const { reserveKeywordResearchQuota } = await import('../../../../lib/quota/keywordResearch');
+         await reserveKeywordResearchQuota(domainId, id, userId);
+      } catch (e) {
+         const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+         if (isPlanLimitError(e)) {
+            const db = (await import('../../../../database/database')).default;
+            await db.query(
+               "UPDATE keyword_research_runs SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+               { replacements: ['Plan quota exceeded', id] },
+            ).catch(() => { /* best effort */ });
+            return res.status(402).json(planLimitBody(e));
+         }
+         const { settleKeywordResearchQuota } = await import('../../../../lib/quota/keywordResearch');
+         await settleKeywordResearchQuota(domainId, id, 'release').catch(() => {});
+         throw e;
+      }
       return res.status(202).json({ id });
    } catch (e) {
       return res.status(500).json({ error: getErrorMessage(e) });

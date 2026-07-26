@@ -2,8 +2,28 @@ import type { BillingPeriod } from './billingPlans';
 import type { PlanSlug } from './stripePrices';
 import type { OrgPlanUsage } from './planUsage';
 
+/** Quota meter kinds — see docs/superpowers/specs/2026-07-26-plan-quotas-ledger-design.md */
+export type MeterKind = 'active_resource' | 'period_usage' | 'per_run_cap';
+
+export type QuotaMeter =
+  | 'documents'
+  | 'aiPrompts'
+  | 'brandSpaces'
+  | 'keywordResearch'
+  | 'siteAuditPages';
+
+export const METER_KIND: Record<QuotaMeter, MeterKind> = {
+  documents: 'active_resource',
+  aiPrompts: 'active_resource',
+  brandSpaces: 'active_resource',
+  keywordResearch: 'period_usage',
+  siteAuditPages: 'per_run_cap',
+};
+
+export const ACTIVE_PERIOD_KEY = '_';
+
 export interface PlanLimitDefinition {
-  key: string;
+  key: QuotaMeter | string;
   label: string;
   limit: number | null;
 }
@@ -24,7 +44,7 @@ export interface PlanSummaryData {
   overallPct: number;
 }
 
-const PLAN_LIMITS: Record<PlanSlug, PlanLimitDefinition[]> = {
+export const PLAN_LIMITS: Record<PlanSlug, PlanLimitDefinition[]> = {
   starter: [
     { key: 'documents', label: 'Documents', limit: 10 },
     { key: 'aiPrompts', label: 'AI Prompts', limit: 15 },
@@ -74,6 +94,20 @@ export function getSiteAuditPageLimit(planSlug: PlanSlug | null | undefined): nu
 export function resolvePlanSlug(slug: string | null | undefined): PlanSlug {
   if (slug === 'starter' || slug === 'growth' || slug === 'scale' || slug === 'agency') return slug;
   return DEFAULT_PLAN_SLUG;
+}
+
+export function isQuotaMeter(key: string): key is QuotaMeter {
+  return key in METER_KIND;
+}
+
+export function getMeterKind(meter: QuotaMeter): MeterKind {
+  return METER_KIND[meter];
+}
+
+/** Limit for a meter from current plan — source of truth (never read from balances). */
+export function getPlanMeterLimit(planSlug: PlanSlug, meter: QuotaMeter): number | null {
+  const def = PLAN_LIMITS[planSlug].find((d) => d.key === meter);
+  return def?.limit ?? null;
 }
 
 export function buildPlanMetrics(

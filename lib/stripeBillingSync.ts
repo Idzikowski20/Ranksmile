@@ -56,6 +56,9 @@ export async function syncSubscriptionToOrg(
     trialEndsAt: toDate(subscription.trial_end),
     currentPeriodEnd: toDate(periodEnd),
   });
+
+  const { ensureOrgQuotaBalances } = await import('./quota/ensureBalances');
+  await ensureOrgQuotaBalances(orgId, { seedFromCounts: true });
 }
 
 export async function syncCheckoutSessionToOrg(

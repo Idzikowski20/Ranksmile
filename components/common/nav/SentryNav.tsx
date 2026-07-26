@@ -416,7 +416,8 @@ const SentryNav = ({ domains = [] }: Props) => {
   const { data: profile } = useProfile();
   const { data: gscAccount } = useGscAccount();
   const session = authClient.useSession?.();
-  const { steps: onboardingSteps, beyondSteps: onboardingBeyond, done: onboardingDone, pct: onboardingPct } = useOnboardingChecklist();
+  const { steps: onboardingSteps, beyondSteps: onboardingBeyond, done: onboardingDone, pct: onboardingPct, loading: onboardingLoading } = useOnboardingChecklist();
+  const showOnboarding = !onboardingLoading && onboardingPct < 100;
 
   const { data: planSummaryData, isLoading: planSummaryLoading } = useQuery(
     'planSummary',
@@ -733,9 +734,11 @@ const SentryNav = ({ domains = [] }: Props) => {
         {/* Footer utility bar */}
         <div className="sentry-nav-footer">
           <div className="sentry-nav-btnbar">
-            <button type="button" aria-label="Onboarding" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'onboarding'} onClick={openPopover('onboarding')}>
-              <NavProgressRing pct={onboardingPct} />
-            </button>
+            {showOnboarding && (
+              <button type="button" aria-label="Onboarding" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'onboarding'} onClick={openPopover('onboarding')}>
+                <NavProgressRing pct={onboardingPct} />
+              </button>
+            )}
             <button type="button" aria-label="Your plan" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'plan'} onClick={openPopover('plan')}>
               <IconCreditCard />
             </button>
@@ -816,7 +819,7 @@ const SentryNav = ({ domains = [] }: Props) => {
       {popover?.kind === 'help' && <HelpMenu anchor={popover.rect} onClose={closePopover} />}
       {popover?.kind === 'whatsnew' && <WhatsNewMenu anchor={popover.rect} onClose={closePopover} />}
       {popover?.kind === 'status' && <ServiceStatusMenu anchor={popover.rect} onClose={closePopover} />}
-      {popover?.kind === 'onboarding' && (
+      {popover?.kind === 'onboarding' && showOnboarding && (
         <OnboardingMenu
           anchor={popover.rect}
           onClose={closePopover}

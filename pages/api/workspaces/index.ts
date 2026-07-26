@@ -14,7 +14,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (req.method === 'POST') {
       const name = String(req.body?.name ?? '').trim();
       if (!name) return res.status(400).json({ error: 'Name is required' });
-      return res.status(201).json(await createWorkspace(userId, name));
+      try {
+         return res.status(201).json(await createWorkspace(userId, name));
+      } catch (e) {
+         const { isPlanLimitError, planLimitBody } = await import('../../../lib/quota');
+         if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
+         throw e;
+      }
    }
    res.setHeader('Allow', 'GET, POST');
    return res.status(405).json({ error: 'Method not allowed' });

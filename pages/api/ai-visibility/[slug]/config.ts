@@ -62,63 +62,97 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          if (selectedCount === 0) return res.status(400).json({ error: 'Select at least one prompt' });
          if (selectedCount > AI_VIS_PROMPT_LIMIT) return res.status(400).json({ error: `Prompt limit is ${AI_VIS_PROMPT_LIMIT}` });
 
-         const existing = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
-         let configId: number;
-         if (existing) {
-            configId = existing.id;
-            await db.query(
-               'UPDATE ai_vis_configs SET brand_name = ?, priority = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-               { replacements: [brandName, tier, configId] },
-            );
-         } else {
-            await db.query(
-               'INSERT INTO ai_vis_configs (domain_id, brand_name, prompt_limit, models, priority, completed_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
-               { replacements: [domain.ID, brandName, AI_VIS_PROMPT_LIMIT, JSON.stringify(AI_VIS_DEFAULT_MODELS), tier] },
-            );
-            const created = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
-            if (!created) throw new Error('Failed to create config');
-            configId = created.id;
-         }
+         const {
+            getOrgIdForDomain,
+            ensureOrgQuotaBalances,
+            adjustActiveUsage,
+            isPlanLimitError,
+            planLimitBody,
+         } = await import('../../../../lib/quota');
+         const orgId = await getOrgIdForDomain(domain.ID);
+         if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
+         await ensureOrgQuotaBalances(orgId);
 
-         // Reconcile prompts instead of wiping the table: prompts carry a stable id
-         // that ai_vis_results rows reference. A DELETE+reinsert renumbers every
-         // prompt, orphaning all scan results (the read JOIN drops them → the whole
-         // dashboard shows zeros). So: UPDATE prompts sent back with their id in
-         // place, INSERT id-less (new) ones, DELETE any the editor dropped. Scan
-         // results for kept prompts survive; only genuinely new prompts get scanned.
-         const priorRows = await queryRows<{ id: number, text: string }>('SELECT id, text FROM ai_vis_prompts WHERE config_id = ?', [configId]);
-         const priorById = new Map(priorRows.map((r) => [r.id, r.text]));
-         const keptIds = new Set<number>();
-         let order = 0;
-         for (const t of topics) {
-            for (const p of t.prompts) {
-               const pid = Number((p as { id?: number }).id) || 0;
-               const isCustom = (p as { isCustom?: boolean }).isCustom ? 1 : 0;
-               if (pid > 0 && priorById.has(pid)) {
-                  keptIds.add(pid);
-                  await db.query(
-                     'UPDATE ai_vis_prompts SET topic = ?, text = ?, provenance = ?, selected = ?, is_custom = ?, sort_order = ? WHERE id = ?',
-                     { replacements: [t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, isCustom, order, pid] },
-                  );
-                  // Text changed ⇒ the stored answer is stale. Drop its results so the
-                  // incremental scan re-runs this prompt instead of carrying it forward.
-                  if (priorById.get(pid) !== p.text) {
-                     await db.query('DELETE FROM ai_vis_results WHERE prompt_id = ?', { replacements: [pid] });
-                  }
-               } else {
-                  await db.query(
-                     'INSERT INTO ai_vis_prompts (config_id, topic, text, provenance, selected, is_custom, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                     { replacements: [configId, t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, isCustom, order] },
+         const priorConfig = await loadConfig(domain.ID);
+         const oldDomainSelected = priorConfig
+            ? priorConfig.topics.reduce((n, t) => n + t.prompts.filter((p) => p.selected).length, 0)
+            : 0;
+         const domainDelta = selectedCount - oldDomainSelected;
+
+         try {
+            await db.transaction(async (tx) => {
+               if (domainDelta !== 0) {
+                  await adjustActiveUsage(
+                     {
+                        orgId,
+                        meter: 'aiPrompts',
+                        delta: domainDelta,
+                        idempotencyKey: `ai-prompts:${domain.ID}:${oldDomainSelected}->${selectedCount}`,
+                        ref: { type: 'ai_vis_config', id: String(domain.ID) },
+                        userId,
+                     },
+                     { transaction: tx },
                   );
                }
-               order += 1;
-            }
-         }
-         // Prune prompts the editor removed, along with their now-unreachable results.
-         const removed = priorRows.filter((r) => !keptIds.has(r.id));
-         for (const r of removed) {
-            await db.query('DELETE FROM ai_vis_results WHERE prompt_id = ?', { replacements: [r.id] });
-            await db.query('DELETE FROM ai_vis_prompts WHERE id = ?', { replacements: [r.id] });
+
+               const existing = await queryOne<{ id: number }>('SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1', [domain.ID]);
+               let configId: number;
+               if (existing) {
+                  configId = existing.id;
+                  await db.query(
+                     'UPDATE ai_vis_configs SET brand_name = ?, priority = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                     { replacements: [brandName, tier, configId], transaction: tx },
+                  );
+               } else {
+                  await db.query(
+                     'INSERT INTO ai_vis_configs (domain_id, brand_name, prompt_limit, models, priority, completed_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                     { replacements: [domain.ID, brandName, AI_VIS_PROMPT_LIMIT, JSON.stringify(AI_VIS_DEFAULT_MODELS), tier], transaction: tx },
+                  );
+                  const createdRows = await db.query(
+                     'SELECT id FROM ai_vis_configs WHERE domain_id = ? LIMIT 1',
+                     { replacements: [domain.ID], transaction: tx },
+                  ) as [Array<{ id: number }>, unknown];
+                  const created = createdRows[0][0];
+                  if (!created) throw new Error('Failed to create config');
+                  configId = created.id;
+               }
+
+               const priorRows = await queryRows<{ id: number, text: string }>('SELECT id, text FROM ai_vis_prompts WHERE config_id = ?', [configId]);
+               // note: priorRows outside tx is fine for id set; mutations use tx
+               const priorById = new Map(priorRows.map((r) => [r.id, r.text]));
+               const keptIds = new Set<number>();
+               let order = 0;
+               for (const t of topics) {
+                  for (const p of t.prompts) {
+                     const pid = Number((p as { id?: number }).id) || 0;
+                     const isCustom = (p as { isCustom?: boolean }).isCustom ? 1 : 0;
+                     if (pid > 0 && priorById.has(pid)) {
+                        keptIds.add(pid);
+                        await db.query(
+                           'UPDATE ai_vis_prompts SET topic = ?, text = ?, provenance = ?, selected = ?, is_custom = ?, sort_order = ? WHERE id = ?',
+                           { replacements: [t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, isCustom, order, pid], transaction: tx },
+                        );
+                        if (priorById.get(pid) !== p.text) {
+                           await db.query('DELETE FROM ai_vis_results WHERE prompt_id = ?', { replacements: [pid], transaction: tx });
+                        }
+                     } else {
+                        await db.query(
+                           'INSERT INTO ai_vis_prompts (config_id, topic, text, provenance, selected, is_custom, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                           { replacements: [configId, t.title, p.text, JSON.stringify(p.provenance || []), p.selected ? 1 : 0, isCustom, order], transaction: tx },
+                        );
+                     }
+                     order += 1;
+                  }
+               }
+               const removed = priorRows.filter((r) => !keptIds.has(r.id));
+               for (const r of removed) {
+                  await db.query('DELETE FROM ai_vis_results WHERE prompt_id = ?', { replacements: [r.id], transaction: tx });
+                  await db.query('DELETE FROM ai_vis_prompts WHERE id = ?', { replacements: [r.id], transaction: tx });
+               }
+            });
+         } catch (e) {
+            if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
+            throw e;
          }
          return res.status(200).json({ config: await loadConfig(domain.ID) });
       }

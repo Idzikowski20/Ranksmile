@@ -158,28 +158,53 @@ async function createArticle(req: NextApiRequest, res: NextApiResponse, userId: 
    }
 
    try {
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../lib/quota');
+      const orgId = await getOrgIdForDomain(parseInt(domain_id, 10));
+      if (!orgId) return res.status(400).json({ error: 'Domain has no organization' });
+      await ensureOrgQuotaBalances(orgId);
+
       const articleIdSql = await getArticleIdSql();
       let articleId: number | undefined;
-      if (process.env.DATABASE_URL) {
-         const rows = await db.query<{ id: number }>(
-            `INSERT INTO articles (domain_id, title, target_keyword, status, created_at, updated_at)
-             VALUES (?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-             RETURNING ${articleIdSql} AS id`,
-            { replacements: [domain_id, title, target_keyword || ''], type: QueryTypes.SELECT },
+      const idem = `doc-create:${orgId}:${domain_id}:${title}:${cryptoRandom()}`;
+      await db.transaction(async (tx) => {
+         await adjustActiveUsage(
+            {
+               orgId,
+               meter: 'documents',
+               delta: 1,
+               idempotencyKey: idem,
+               ref: { type: 'article', id: 'pending' },
+               userId,
+            },
+            { transaction: tx },
          );
-         articleId = rows[0]?.id;
-      } else {
-         const [newArticleId] = await db.query(
-            `INSERT INTO articles (domain_id, title, target_keyword, status, created_at, updated_at)
-             VALUES (?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-            { replacements: [domain_id, title, target_keyword || ''], type: QueryTypes.INSERT },
-         );
-         articleId = newArticleId as unknown as number;
-      }
+         if (process.env.DATABASE_URL) {
+            const rows = await db.query<{ id: number }>(
+               `INSERT INTO articles (domain_id, title, target_keyword, status, created_at, updated_at)
+                VALUES (?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING ${articleIdSql} AS id`,
+               { replacements: [domain_id, title, target_keyword || ''], type: QueryTypes.SELECT, transaction: tx },
+            );
+            articleId = rows[0]?.id;
+         } else {
+            const [newArticleId] = await db.query(
+               `INSERT INTO articles (domain_id, title, target_keyword, status, created_at, updated_at)
+                VALUES (?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+               { replacements: [domain_id, title, target_keyword || ''], type: QueryTypes.INSERT, transaction: tx },
+            );
+            articleId = newArticleId as unknown as number;
+         }
+      });
       return res.status(200).json({ articleId, title });
    } catch (error) {
+      const { isPlanLimitError, planLimitBody } = await import('../../../lib/quota');
+      if (isPlanLimitError(error)) return res.status(402).json(planLimitBody(error));
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
+}
+
+function cryptoRandom(): string {
+   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: string | null) {
@@ -200,7 +225,25 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
          return res.status(403).json({ error: 'Access denied.' });
       }
 
-      await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id] });
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../lib/quota');
+      const orgId = await getOrgIdForDomain(article.domain_id);
+      await db.transaction(async (tx) => {
+         await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });
+         if (orgId) {
+            await ensureOrgQuotaBalances(orgId);
+            await adjustActiveUsage(
+               {
+                  orgId,
+                  meter: 'documents',
+                  delta: -1,
+                  idempotencyKey: `doc-delete:${id}`,
+                  ref: { type: 'article', id: String(id) },
+                  userId,
+               },
+               { transaction: tx },
+            );
+         }
+      });
       return res.status(200).json({ deleted: true });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });

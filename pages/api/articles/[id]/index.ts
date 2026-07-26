@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    if (req.method === 'GET') return getArticle(id, res);
    if (req.method === 'PUT') return updateArticle(id, req, res);
-   if (req.method === 'DELETE') return deleteArticle(id, res);
+   if (req.method === 'DELETE') return deleteArticle(id, res, userId);
    return res.status(405).json({ error: 'Method not allowed' });
 }
 
@@ -212,10 +212,33 @@ async function updateArticle(id: string, req: NextApiRequest, res: NextApiRespon
    }
 }
 
-async function deleteArticle(id: string, res: NextApiResponse) {
+async function deleteArticle(id: string, res: NextApiResponse, userId: string | null) {
    try {
       const articleIdSql = await getArticleIdSql();
-      await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id] });
+      const article = await queryOne<Pick<ArticleRow, 'domain_id'>>(
+         `SELECT domain_id FROM articles WHERE ${articleIdSql} = ?`,
+         [id],
+      );
+      if (!article) return res.status(404).json({ error: 'Article not found' });
+      const { getOrgIdForDomain, ensureOrgQuotaBalances, adjustActiveUsage } = await import('../../../../lib/quota');
+      const orgId = await getOrgIdForDomain(article.domain_id);
+      await db.transaction(async (tx) => {
+         await db.query(`DELETE FROM articles WHERE ${articleIdSql} = ?`, { replacements: [id], transaction: tx });
+         if (orgId) {
+            await ensureOrgQuotaBalances(orgId);
+            await adjustActiveUsage(
+               {
+                  orgId,
+                  meter: 'documents',
+                  delta: -1,
+                  idempotencyKey: `doc-delete:${id}`,
+                  ref: { type: 'article', id: String(id) },
+                  userId,
+               },
+               { transaction: tx },
+            );
+         }
+      });
       return res.status(200).json({ deleted: true });
    } catch (error) {
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });

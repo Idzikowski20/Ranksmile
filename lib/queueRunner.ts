@@ -126,11 +126,19 @@ export async function processQueueForDomain(
         `UPDATE ${config.table} SET status = 'completed', result_json = ?, stats_json = ?, progress_done = 1, progress_total = 1, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'`,
         { replacements: [resultJson, statsJson, candidate.id] },
       );
+      if (config.table === 'keyword_research_runs') {
+        const { settleKeywordResearchQuota } = await import('./quota/keywordResearch');
+        await settleKeywordResearchQuota(domainId, candidate.id, 'commit').catch(() => {});
+      }
     } catch (e) {
       await db.query(
         `UPDATE ${config.table} SET status = 'failed', error = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'running'`,
         { replacements: [getErrorMessage(e), candidate.id] },
       ).catch(() => { /* best effort */ });
+      if (config.table === 'keyword_research_runs') {
+        const { settleKeywordResearchQuota } = await import('./quota/keywordResearch');
+        await settleKeywordResearchQuota(domainId, candidate.id, 'release').catch(() => {});
+      }
     }
     processed += 1;
   }

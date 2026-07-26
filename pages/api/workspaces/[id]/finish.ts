@@ -14,6 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await finishWorkspaceSetup(userId, wsId, brandName, brandKnowledge || '');
    } catch (e) {
       if ((e as { message?: string }).message === 'WORKSPACE_NOT_FOUND') return res.status(404).json({ error: 'Workspace not found' });
+      const { isPlanLimitError, planLimitBody } = await import('../../../../lib/quota');
+      if (isPlanLimitError(e)) return res.status(402).json(planLimitBody(e));
       throw e;
    }
    // resolve the workspace's domain, then enqueue + kick the setup pipeline (best-effort)
