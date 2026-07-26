@@ -12,6 +12,7 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne, queryRows } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
 import type { AiVisibilitySummary } from '../../../../lib/aiSearchScore';
+import { computeAiSearchScore } from '../../../../lib/aiSearchScore';
 import {
   buildAiRankingSources,
   buildGoogleRankingSourcesFromRows,
@@ -59,9 +60,11 @@ async function getArticle(id: string, res: NextApiResponse) {
       );
       if (latestVisibility?.summary_json) {
          try {
+            const summary = JSON.parse(latestVisibility.summary_json) as AiVisibilitySummary;
+            const recomputed = computeAiSearchScore(summary);
             article.ai_visibility_summary = {
-               ...JSON.parse(latestVisibility.summary_json),
-               score: latestVisibility.score,
+               ...summary,
+               score: Math.max(latestVisibility.score ?? 0, recomputed),
             };
          } catch {
             article.ai_visibility_summary = null;

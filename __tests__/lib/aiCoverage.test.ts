@@ -61,12 +61,36 @@ describe('computeCoverageScores', () => {
     const stringItem = { ...gi('b', true, 3, 'knowledge'), quality: 'oops' as unknown as number };
     const { overall, buckets } = computeCoverageScores([nanItem], false);
     expect(Number.isFinite(overall)).toBe(true);
-    expect(overall).toBe(0);
+    // covered + quality 0 still gets soft floor (checklist checkmark ≠ AI gauge 0)
+    expect(overall).toBe(1);
     expect(Number.isFinite(buckets.find((b) => b.key === 'knowledge')?.score)).toBe(true);
 
     const strResult = computeCoverageScores([stringItem], false);
     expect(Number.isFinite(strResult.overall)).toBe(true);
-    expect(strResult.overall).toBe(0);
+    expect(strResult.overall).toBe(1);
+  });
+
+  it('soft floor: a few quality covers do not round to 0 under a huge uncovered max', () => {
+    const items = [
+      gi('covered', true, 4, 'style', 'recommended'),
+      ...Array.from({ length: 40 }, (_, i) => gi(`u${i}`, false, 0, 'knowledge', 'critical')),
+    ];
+    const { overall } = computeCoverageScores(items, false);
+    expect(overall).toBeGreaterThanOrEqual(2);
+    expect(overall).toBeLessThan(20);
+  });
+
+  it('soft floor: covered checklist items with quality 0 still raise AI score above 0', () => {
+    // Judge (or stale snap) can mark covered:true with quality:0 → UI "Covered" + AI gauge 0.
+    const items = [
+      gi('q1', true, 0, 'knowledge', 'recommended'),
+      gi('q2', true, 0, 'knowledge', 'recommended'),
+      gi('q3', true, 0, 'knowledge', 'recommended'),
+      gi('q4', true, 0, 'knowledge', 'recommended'),
+      ...Array.from({ length: 40 }, (_, i) => gi(`u${i}`, false, 0, 'knowledge', 'critical')),
+    ];
+    const { overall } = computeCoverageScores(items, false);
+    expect(overall).toBeGreaterThan(0);
   });
 });
 
