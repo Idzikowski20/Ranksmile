@@ -13,8 +13,9 @@ export const DEFAULT_MAX_ROUNDS = 2;
 export const AI_GAP = 25;
 
 function selectFirstRunMode(seoScore: number, aiScore: number): OptimizeMode {
-  if (seoScore >= SEO_READY && aiScore >= TARGET_AI - 5) return 'minimal';
-  if (seoScore >= SEO_READY && aiScore < AI_WEAK) return 'ai-only';
+  // SEO already good → push AI Search until TARGET_AI (do not early-exit at TARGET_AI-5).
+  if (seoScore >= SEO_READY && aiScore >= TARGET_AI) return 'minimal';
+  if (seoScore >= SEO_READY) return 'ai-only';
   if (seoScore < SEO_WEAK && aiScore < SEO_WEAK) return 'full';
   if (seoScore < SEO_READY) return 'seo-first';
   return 'full';

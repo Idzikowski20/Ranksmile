@@ -97,11 +97,12 @@ function focusForMode(mode: OptimizeMode, ctx: ArticleContext | null, html: stri
   const onlyShallowAi = uncoveredItems.length > 0 && uncoveredItems.every((i) => i.covered);
 
   if (mode === 'ai-only') {
+    // Overuse + only shallow Covered → balance SEO first (avoids AI polish echo / no_change).
     if (hasOveruse && onlyShallowAi) return 'seo-terms';
-    if (uncovered.length > 0 && !onlyShallowAi) return 'ai-coverage';
-    if (hasTermDebt) return 'seo-terms';
+    // SEO-ready runs are ai-only: prefer AI Search checkpoints over NLP term debt.
     if (uncovered.length > 0) return 'ai-coverage';
     if ((ctx?.paa?.length ?? 0) > 0) return 'ai-coverage';
+    if (hasTermDebt) return 'seo-terms';
     return 'ai-coverage';
   }
   if (mode === 'seo-first') return 'seo-terms';

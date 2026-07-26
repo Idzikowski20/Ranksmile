@@ -12,11 +12,17 @@ describe('selectOptimizeMode', () => {
     expect(selectOptimizeMode(SEO_READY, 30, 'first_run')).toBe('ai-only');
   });
 
+  it('routes to ai-only when SEO is ready and AI is below target (not minimal at TARGET_AI-5)', () => {
+    // SEO 82 / AI 60 used to flip to minimal and stop pushing AI Search.
+    expect(selectOptimizeMode(SEO_READY, TARGET_AI - 5, 'first_run')).toBe('ai-only');
+    expect(selectOptimizeMode(SEO_READY, TARGET_AI - 1, 'first_run')).toBe('ai-only');
+  });
+
   it('routes to seo-first when SEO is below ready threshold', () => {
     expect(selectOptimizeMode(50, 70, 'first_run')).toBe('seo-first');
   });
 
-  it('routes to minimal when both SEO and AI are strong', () => {
+  it('routes to minimal only when SEO is ready and AI hits target', () => {
     expect(selectOptimizeMode(SEO_READY, TARGET_AI, 'first_run')).toBe('minimal');
   });
 
