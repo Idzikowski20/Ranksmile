@@ -38,6 +38,15 @@ Staging: use the Railway HTTPS URL for `NEXT_PUBLIC_APP_URL` and add that origin
 
 Also copy existing secrets from Vercel (Neon Auth, Stripe, DeepSeek, DataForSEO, Ably, Google, `APIKEY`, `SECRET`, etc.).
 
+**Required on `python-sidecar` (and ideally `app` / `pipeline-workers`):**
+
+| Variable | Why |
+|----------|-----|
+| `SERPER_API_KEY` | SERP / PAA / plagiarism / AI visibility evidence. Without it sidecar logs `No SERPER_API_KEY - using keyword seed data`. |
+| `DEEPSEEK_API_KEY` | LLM stages |
+| `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` | Paid SEO metrics (optional fallback) |
+| `INTERNAL_PIPELINE_TOKEN` | Must match app |
+
 Exact private URL syntax: follow current Railway private networking docs when wiring.
 
 ## Healthchecks

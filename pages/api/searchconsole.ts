@@ -11,6 +11,11 @@ import {
  * Legacy alias — same handler as /api/gsc/search-data.
  * Prefer /api/gsc/search-data for new callers.
  */
+export const config = {
+  api: { responseLimit: '32mb' },
+  maxDuration: 60,
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   const authorized = await verifyUser(req, res);
