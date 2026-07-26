@@ -40,7 +40,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 # - sequelize-cli: entrypoint migrations
 RUN chmod +x /app/entrypoint.sh && \
     rm -f package.json && npm init -y && \
-    npm install --no-package-lock \
+    npm install --no-package-lock --legacy-peer-deps \
       dotenv@16.0.3 \
       @googleapis/searchconsole@1.0.5 \
       sequelize-cli@6.6.5 \
