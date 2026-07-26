@@ -1,4 +1,5 @@
 import type { CoverageItem } from './aiCoverage';
+import { isUncoveredAiSearchItem } from './aiCoverage';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
 
 const FAQ_HEADING_RE = /<h2[^>]*>\s*(faq|najcz[eę]ściej zadawane pytania|frequently asked questions|pytania i odpowiedzi)\s*<\/h2>/i;
@@ -10,11 +11,7 @@ export interface UncoveredAiQuestion {
 
 export function collectUncoveredAiQuestions(items: readonly CoverageItem[]): UncoveredAiQuestion[] {
   return items
-    .filter((i) =>
-      (i.category === 'intent' || i.category === 'knowledge')
-      && (i.type === 'paa' || i.type === 'fact' || i.type === 'intent' || i.type === 'definition' || i.type === 'comparison')
-      && (!i.covered || i.quality < 4),
-    )
+    .filter(isUncoveredAiSearchItem)
     .map((i) => ({ id: i.id, label: i.label }));
 }
 

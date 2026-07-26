@@ -557,15 +557,17 @@ const ContentScorePanel = ({
 
   const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0);
   const intentScore = coverageBuckets?.find((b) => b.key === 'intent')?.score;
-  const baseAiScore = scoreData?.ai_score ?? resolveAiScore({
+  const resolvedAi = resolveAiScore({
     summary: aiVisibilitySummary,
     articleText: plainText,
     intentScore,
     answersMainQuestionEarly: coverageSnapshot?.answersMainQuestionEarly,
     coverageOverall: aiCoverageScore,
   });
+  // Stored ai_score can be 0 from a facts-V2 miss while citation summary is healthy — never let 0 mask that.
+  const baseAiScore = Math.max(scoreData?.ai_score ?? 0, resolvedAi);
   const displaySeo = optimizeLiveScores?.seo ?? score;
-  const displayAi = optimizeLiveScores?.ai ?? (aiCoverageScore ?? baseAiScore);
+  const displayAi = optimizeLiveScores?.ai ?? baseAiScore;
   const displayContent = optimizeLiveScores?.overall
     ?? (hasAi ? computeOverallContentScore(displaySeo, displayAi) : displaySeo);
 

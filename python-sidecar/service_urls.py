@@ -1,7 +1,7 @@
-"""Resolve Next.js / sidecar URLs — production public hosts vs local dev."""
+"""Resolve Next.js URL — production public hosts vs local dev."""
 import os
 
-PRODUCTION_APP_URL = "https://serp-bear-neon.vercel.app"
+PRODUCTION_APP_URL = "https://ranksmile.pl"
 LOCAL_NEXTJS_URL = "http://127.0.0.1:3000"
 
 
@@ -24,16 +24,20 @@ def nextjs_url() -> str:
     if explicit:
         resolved = explicit.replace("localhost", "127.0.0.1").rstrip("/")
         if _is_deployed() and _is_local_url(resolved):
+            public = (os.getenv("NEXT_PUBLIC_APP_URL") or "").strip() or PRODUCTION_APP_URL
             print(
                 f"[service_urls] ignoring local NEXTJS_URL={resolved!r} on deployed host — "
-                f"using {PRODUCTION_APP_URL}"
+                f"using {public}"
             )
-            return PRODUCTION_APP_URL
+            return public.replace("localhost", "127.0.0.1").rstrip("/")
         return resolved
 
     public = (os.getenv("NEXT_PUBLIC_APP_URL") or "").strip()
     if public and _is_deployed():
         return public.replace("localhost", "127.0.0.1").rstrip("/")
+
+    if os.getenv("RAILWAY_ENVIRONMENT"):
+        raise RuntimeError("NEXTJS_URL or NEXT_PUBLIC_APP_URL required on Railway")
 
     if _is_deployed():
         return PRODUCTION_APP_URL

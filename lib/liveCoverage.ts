@@ -4,7 +4,11 @@
 import type { CoverageItem, CoverageType, BucketScore } from './aiCoverage';
 import { countOccurrences } from './contentScore';
 
-export const PRESENCE_CHECKABLE: ReadonlySet<CoverageType> = new Set(['entity', 'structure', 'readability', 'paa', 'intent']);
+// `question` is what coverageEngine emits for PAA rows — must live-check like `paa`
+// or the UI shows Covered (judge) while live score never floors quality → AI gauge stuck at 0.
+export const PRESENCE_CHECKABLE: ReadonlySet<CoverageType> = new Set([
+  'entity', 'structure', 'readability', 'paa', 'intent', 'question',
+]);
 
 /** Re-derive `covered` for presence-checkable items from the current text/HTML; carry frozen items
  *  verbatim. Immutable — returns a NEW readonly array, never mutates an item. */
@@ -31,6 +35,7 @@ function presenceCovered(it: CoverageItem, plainText: string, html: string): boo
     case 'structure':   return hasStructure(html);                                     // headings/lists/question-format
     case 'readability': return readableParagraphs(html);                               // paragraph-length metric
     case 'paa':         return faqAnswered(it.label, html);                            // question answered in body/heading
+    case 'question':    return faqAnswered(it.label, html);                           // PAA rows typed as question
     case 'intent':      return faqAnswered(it.label, html);
     default:            return it.covered;
   }
