@@ -3,8 +3,9 @@ WORKDIR /app
 ENV PIPELINE_INLINE_WORKERS=0
 ENV PIPELINE_STAGE=5
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 # tsx is a devDependency — NODE_ENV=production npm ci would omit it.
+# .npmrc has legacy-peer-deps (Neon auth peer vs Next 12).
 RUN npm ci --omit=dev \
  && npm install --no-save tsx@4.22.4 \
  && node -e "require('tsx/package.json')"
