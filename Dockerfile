@@ -38,9 +38,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 # Runtime packages not reliably traced into standalone:
 # - @googleapis/searchconsole: complex module resolution
 # - sequelize-cli: entrypoint migrations
+# Keep standalone package.json/node_modules. Do NOT `npm init` over them —
+# that forces npm to reconcile the whole tree and rebuild optional natives
+# (msgpackr-extract) which fail on Alpine musl without Python/make.
 RUN chmod +x /app/entrypoint.sh && \
-    rm -f package.json && npm init -y && \
-    npm install --no-package-lock --legacy-peer-deps \
+    npm install --legacy-peer-deps --ignore-scripts --no-package-lock \
       dotenv@16.0.3 \
       @googleapis/searchconsole@1.0.5 \
       sequelize-cli@6.6.5 \
