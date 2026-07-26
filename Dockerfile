@@ -2,6 +2,10 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
+# Root postinstall patches jsdiff — needs scripts/ before npm ci.
+COPY scripts/patch-jsdiff-word.js ./scripts/patch-jsdiff-word.js
+# Skip redis-memory-server binary download (dev tooling; needs `make` on Alpine).
+ENV REDISMS_DISABLE_POSTINSTALL=1
 RUN npm ci
 
 # Stage 2: Build the application
@@ -10,6 +14,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN rm -rf data __tests__ __mocks__
+ENV REDISMS_DISABLE_POSTINSTALL=1
 RUN npm run build
 
 # Stage 3: Production runner (web only — cron is a separate Railway service)
