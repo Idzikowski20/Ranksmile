@@ -184,6 +184,28 @@ export async function saveCrawlSnapshot(domainId: number, domainHint?: string): 
   return id;
 }
 
+export type CrawlVsPreviousDeltas = {
+  siteHealthDelta: number | null;
+  pagesDelta: number | null;
+  errorsDelta: number | null;
+  warningsDelta: number | null;
+};
+
+export { crawlVsPreviousDeltas } from './crawlDeltas';
+
+/** Second-newest snapshot metrics for domain (null if <2 crawls). */
+export async function getPreviousCrawlMetrics(
+  domainId: number,
+): Promise<CrawlSnapshotMetrics | null> {
+  const rows = await queryRows<{ metrics_json: string }>(
+    `SELECT metrics_json FROM site_audit_crawl_snapshots
+     WHERE domain_id = ? ORDER BY crawled_at DESC LIMIT 2`,
+    [domainId],
+  );
+  if (rows.length < 2) return null;
+  return parseCrawlSnapshotMetrics(rows[1].metrics_json);
+}
+
 export async function listCrawlSnapshots(domainId: number): Promise<CrawlSnapshotListItem[]> {
   const rows = await queryRows<{ id: string; crawled_at: string }>(
     `SELECT id, crawled_at FROM site_audit_crawl_snapshots

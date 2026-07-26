@@ -12,6 +12,8 @@ import {
 } from './issues';
 import type { PageBucket, SiteAuditOverviewPayload, ThematicReport } from './types';
 import type { SiteAuditLimitInfo } from './pageLimit';
+import { getPreviousCrawlMetrics } from './crawlSnapshot';
+import { crawlVsPreviousDeltas } from './crawlDeltas';
 
 const BENCHMARK_HEALTH = 92;
 
@@ -188,6 +190,12 @@ export async function buildSiteAuditOverview(
       ? 'Some pages need optimization for AI search'
       : 'Improve structure and metadata for AI search visibility';
 
+  const previous = await getPreviousCrawlMetrics(domainId);
+  const deltas = crawlVsPreviousDeltas(
+    { siteHealth, pagesCrawled: rows.length, errors, warnings },
+    previous,
+  );
+
   return {
     domain,
     slug,
@@ -198,21 +206,21 @@ export async function buildSiteAuditOverview(
     pagesLimit: limitInfo.pagesLimit,
     atCrawlLimit: rows.length >= limitInfo.pagesLimit,
     siteHealth,
-    siteHealthDelta: null,
+    siteHealthDelta: deltas.siteHealthDelta,
     benchmarkHealth: BENCHMARK_HEALTH,
     aiSearchHealth: aiHealth,
     aiSearchIssues: aiIssues,
     aiSearchNotice: aiNotice,
     crawledPages: {
       total: rows.length,
-      delta: null,
+      delta: deltas.pagesDelta,
       distribution,
     },
     trends: {
       errors,
       warnings,
-      errorsDelta: null,
-      warningsDelta: null,
+      errorsDelta: deltas.errorsDelta,
+      warningsDelta: deltas.warningsDelta,
     },
     topInsights: issues.slice(0, 5),
     issuesReport: buildIssuesReport(rows, ctx),

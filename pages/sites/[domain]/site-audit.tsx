@@ -19,7 +19,9 @@ import { AUDIT_URL_PATH, sitePath } from '../../../lib/navigation';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import { useSiteAuditCompareCrawls, useSiteAuditCrawledPages, useSiteAuditIssueDetail, useSiteAuditOverview } from '../../../services/siteAudit';
+import { useRunSetup, useSetupStatus } from '../../../services/domainPipeline';
 import type { SiteAuditTab } from '../../../lib/siteAudit/types';
+import { useQueryClient } from 'react-query';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -48,10 +50,30 @@ const SiteAuditPage: NextPage = () => {
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [compareOlderId, setCompareOlderId] = useState<string | undefined>();
   const [compareNewerId, setCompareNewerId] = useState<string | undefined>();
-  const [rerunning, setRerunning] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: domainsData } = useFetchDomains(router, true);
   const domains = domainsData?.domains ?? [];
+
+  const setupQ = useSetupStatus(slug);
+  const runSetup = useRunSetup();
+  const setupStatus = setupQ.data?.status;
+  const auditing = setupStatus === 'queued' || setupStatus === 'running';
+  const prevSetupRef = React.useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const prev = prevSetupRef.current;
+    prevSetupRef.current = setupStatus;
+    if (!slug) return;
+    if ((prev === 'queued' || prev === 'running') && (setupStatus === 'done' || setupStatus === 'failed')) {
+      void queryClient.invalidateQueries(['site-audit', slug]);
+      void queryClient.invalidateQueries(['site-audit-pages', slug]);
+      void queryClient.invalidateQueries(['site-audit-compare', slug]);
+      void queryClient.invalidateQueries(['site-audit-issue', slug]);
+      if (setupStatus === 'done') toast.success('Site audit crawl finished');
+      if (setupStatus === 'failed') toast.error(setupQ.data?.error || 'Site audit crawl failed');
+    }
+  }, [setupStatus, slug, queryClient, setupQ.data?.error]);
 
   const auditQ = useSiteAuditOverview(slug);
   const data = auditQ.data;
@@ -85,24 +107,20 @@ const SiteAuditPage: NextPage = () => {
   };
 
   const rerunCampaign = async () => {
-    if (!slug || rerunning) return;
-    setRerunning(true);
+    if (!slug || auditing || runSetup.isLoading) return;
     try {
-      const res = await fetch(`/api/domains/${encodeURIComponent(slug)}/run-setup`, { method: 'POST' });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Rerun failed');
-      }
+      await runSetup.mutateAsync(slug);
       toast.success('Site audit crawl queued');
-      await auditQ.refetch();
-      if (tab === 'pagereport') await crawledPagesQ.refetch();
-      if (tab === 'compare') await compareQ.refetch();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Rerun failed');
-    } finally {
-      setRerunning(false);
     }
   };
+
+  const busyLabel = auditing
+    ? (setupStatus === 'queued' ? 'Queued…' : `Auditing… ${setupQ.data?.stagePercent ?? 0}%`)
+    : runSetup.isLoading
+      ? 'Queuing…'
+      : 'Rerun campaign';
 
   const filters = (
     <div className="sentry-page-filters" style={{ marginBottom: 16 }}>
@@ -158,11 +176,11 @@ const SiteAuditPage: NextPage = () => {
               variant="primary"
               size="sm"
               onClick={rerunCampaign}
-              disabled={!slug || rerunning}
+              disabled={!slug || auditing || runSetup.isLoading}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <ReloadIcon />
-                {rerunning ? 'Queuing…' : 'Rerun campaign'}
+                {busyLabel}
               </span>
             </Button>
             <Button type="button" variant="secondary" size="sm" disabled>Export</Button>
@@ -170,6 +188,49 @@ const SiteAuditPage: NextPage = () => {
           </div>
         )}
       >
+        {auditing && (
+          <div
+            role="status"
+            style={{
+              marginBottom: 16,
+              padding: '12px 16px',
+              borderRadius: 8,
+              border: '1px solid #DAD9DE',
+              background: '#FFFFFF',
+              color: '#302E36',
+              fontFamily: FONT,
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 14,
+                height: 14,
+                border: '2px solid #DAD9DE',
+                borderTopColor: '#F29964',
+                borderRadius: '50%',
+                animation: 'spin 0.7s linear infinite',
+                flexShrink: 0,
+              }}
+            />
+            <span>
+              Site audit running
+              {setupQ.data?.auditCounts
+                ? ` — ${setupQ.data.auditCounts.audited}/${setupQ.data.auditCounts.total} pages`
+                : ''}
+              {`. UI read-only until crawl finishes.`}
+            </span>
+            <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
+          </div>
+        )}
+        <div
+          style={auditing ? { opacity: 0.55, pointerEvents: 'none', userSelect: 'none' } : undefined}
+          aria-busy={auditing || undefined}
+        >
         {auditQ.isLoading && (
           <div style={{ padding: 40, textAlign: 'center', color: '#52525C', fontFamily: FONT }}>Loading site audit…</div>
         )}
@@ -197,8 +258,8 @@ const SiteAuditPage: NextPage = () => {
               {' '}
               pages and generate your Site Audit overview.
             </p>
-            <Button type="button" variant="primary" size="sm" onClick={rerunCampaign} disabled={rerunning}>
-              {rerunning ? 'Queuing…' : 'Start crawl'}
+            <Button type="button" variant="primary" size="sm" onClick={rerunCampaign} disabled={auditing || runSetup.isLoading}>
+              {auditing || runSetup.isLoading ? busyLabel : 'Start crawl'}
             </Button>
           </div>
         )}
@@ -294,6 +355,7 @@ const SiteAuditPage: NextPage = () => {
             )}
           </>
         )}
+        </div>
       </DomainSubLayout>
     </AppShell>
   );

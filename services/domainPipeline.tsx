@@ -33,7 +33,12 @@ export function useSetupStatus(slug: string | null | undefined) {
 export function useRunSetup() {
    const qc = useQueryClient();
    return useMutation(
-      (slug: string) => fetch(`/api/domains/${slug}/run-setup`, { method: 'POST' }).then((r) => r.json()),
+      async (slug: string) => {
+         const r = await fetch(`/api/domains/${slug}/run-setup`, { method: 'POST' });
+         const body = await r.json().catch(() => ({})) as { error?: string; jobId?: string };
+         if (!r.ok) throw new Error(body.error ?? `Run setup failed (${r.status})`);
+         return body;
+      },
       // Refetch setup-status right after kicking so the fallback effect sees 'queued'
       // (not stale 'none') and stops firing — prevents a run-setup retry storm.
       { onSuccess: (_d, slug) => qc.invalidateQueries(['setup-status', slug]) },
