@@ -38,6 +38,13 @@ Staging: use the Railway HTTPS URL for `NEXT_PUBLIC_APP_URL` and add that origin
 
 Also copy existing secrets from Vercel (Neon Auth, Stripe, DeepSeek, DataForSEO, Ably, Google, `APIKEY`, `SECRET`, etc.).
 
+**Keyword Tracker flags on `app` (optional; SI organic does not need them):**
+
+| Variable | Why |
+|----------|-----|
+| `ENABLE_RANK_TRACKING_UI=true` | Keyword Tracker APIs under `/api/rank-tracking/*/configs|runs|…`. Search Intelligence `…/organic` is always on (auth + domain only). |
+| `ENABLE_RANK_TRACKING_RUNNER=true` | Scheduled/BullMQ rank checks |
+
 **Required on `python-sidecar` (and ideally `app` / `pipeline-workers`):**
 
 | Variable | Why |

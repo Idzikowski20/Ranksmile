@@ -49,7 +49,9 @@ function parseFilters(query: NextApiRequest['query']): OrganicFilters {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const ctx = await resolveRankTrackingApi(req, res);
+  // Search Intelligence organic is a shipped product surface — do not gate on
+  // ENABLE_RANK_TRACKING_UI (that flag is for keyword-tracker APIs only).
+  const ctx = await resolveRankTrackingApi(req, res, { requireUi: false });
   if (!ctx) return;
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
