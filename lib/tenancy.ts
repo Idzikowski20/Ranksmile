@@ -85,6 +85,8 @@ export async function ensureUserTenancy(userId: string): Promise<{ orgId: number
             const [orgs] = await db.query('SELECT id FROM organizations WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1', opt([userId])) as unknown as [Row[], unknown];
             const newOrgId = Number(orgs[0].id);
             await db.query("INSERT INTO organization_members (org_id, user_id, role, status) VALUES (?, ?, 'owner', 'active')", opt([newOrgId, userId]));
+            const { ensureOrgQuotaBalances } = await import('./quota/ensureBalances');
+            await ensureOrgQuotaBalances(newOrgId, { transaction: t, seedFromCounts: false });
          });
       } catch { /* concurrent winner — re-read below */ }
       member = await select(MEMBERSHIP_SQL, [userId]);

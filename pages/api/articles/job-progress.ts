@@ -138,6 +138,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { materializeDomainSetup } = await import('../../../lib/domainPipeline');
         try {
           await materializeDomainSetup(Number(domainId), result || {});
+          const { closeSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+          await closeSiteAuditRun(Number(domainId), jobId).catch(() => {});
           void import('../../../lib/siteAudit/crawlSnapshot')
             .then((m) => m.saveCrawlSnapshot(Number(domainId)))
             .catch((err) => { console.warn('[job-progress] crawl snapshot failed (non-fatal):', err); });
@@ -156,8 +158,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             `UPDATE analysis_jobs SET status = 'failed', error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
             { replacements: [`materialize failed: ${msg}`, jobId] },
           );
+          const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+          await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
           return res.status(500).json({ error: 'materialization failed' });
         }
+      } else if (status === 'failed' && jt === 'domain_setup' && domainId) {
+        const { releaseSiteAuditRun } = await import('../../../lib/quota/siteAudit');
+        await releaseSiteAuditRun(Number(domainId), jobId).catch(() => {});
       }
       if (jt === 'article_generate' && genArticleId) {
         const { getArticleIdSql } = await import('../../../lib/articleSql');

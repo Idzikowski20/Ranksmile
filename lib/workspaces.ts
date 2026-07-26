@@ -58,7 +58,29 @@ export async function markWorkspaceReady(userId: string, wsId: number, name: str
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
-   await db.query("UPDATE workspaces SET name = ?, status = 'ready' WHERE id = ? AND org_id = ?", { replacements: [clean, wsId, orgId] });
+   const prior = await select('SELECT status FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
+   const wasReady = String(prior[0]?.status ?? '') === 'ready';
+   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('./quota');
+   await ensureOrgQuotaBalances(orgId);
+   await db.transaction(async (tx: import('sequelize').Transaction) => {
+      await db.query("UPDATE workspaces SET name = ?, status = 'ready' WHERE id = ? AND org_id = ?", {
+         replacements: [clean, wsId, orgId],
+         transaction: tx,
+      });
+      if (!wasReady) {
+         await adjustActiveUsage(
+            {
+               orgId,
+               meter: 'brandSpaces',
+               delta: 1,
+               idempotencyKey: `brand-ready:${wsId}`,
+               ref: { type: 'workspace', id: String(wsId) },
+               userId,
+            },
+            { transaction: tx },
+         );
+      }
+   });
 }
 
 /** Persists brand knowledge onto the workspace's domain and flips the workspace to 'ready'. */
@@ -72,11 +94,34 @@ export async function finishWorkspaceSetup(userId: string, wsId: number, brandNa
 export async function createWorkspace(userId: string, name: string): Promise<Workspace> {
    const { orgId } = await ensureUserTenancy(userId);
    const clean = (name || '').trim().slice(0, 60) || 'Untitled';
-   try {
-      await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', { replacements: [orgId, clean] });
-   } catch { /* UNIQUE(org_id,name) race — re-read the winner below */ }
-   const back = await select('SELECT id, name FROM workspaces WHERE org_id = ? AND name = ? ORDER BY id DESC LIMIT 1', [orgId, clean]);
-   return { id: Number(back[0].id), name: String(back[0].name) };
+   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('./quota');
+   await ensureOrgQuotaBalances(orgId);
+   let wsId = 0;
+   await db.transaction(async (tx: import('sequelize').Transaction) => {
+      await adjustActiveUsage(
+         {
+            orgId,
+            meter: 'brandSpaces',
+            delta: 1,
+            idempotencyKey: `brand-create:${orgId}:${clean}:${Date.now()}`,
+            ref: { type: 'workspace', id: 'pending' },
+            userId,
+         },
+         { transaction: tx },
+      );
+      try {
+         await db.query('INSERT INTO workspaces (org_id, name) VALUES (?, ?)', {
+            replacements: [orgId, clean],
+            transaction: tx,
+         });
+      } catch { /* UNIQUE race — re-read below */ }
+      const back = await db.query(
+         'SELECT id, name FROM workspaces WHERE org_id = ? AND name = ? ORDER BY id DESC LIMIT 1',
+         { replacements: [orgId, clean], transaction: tx },
+      ) as [Array<{ id: number; name: string }>, unknown];
+      wsId = Number(back[0][0].id);
+   });
+   return { id: wsId, name: clean };
 }
 
 export async function renameWorkspace(userId: string, wsId: number, name: string): Promise<void> {
@@ -97,7 +142,11 @@ export async function deleteWorkspace(userId: string, wsId: number): Promise<voi
    const { orgId } = await ensureUserTenancy(userId);
    await assertInOrg(orgId, wsId);
 
+   const statusRows = await select('SELECT status FROM workspaces WHERE id = ? AND org_id = ? LIMIT 1', [wsId, orgId]);
+   const wasReady = String(statusRows[0]?.status ?? '') === 'ready';
    const domains = await select('SELECT "ID" AS id, domain FROM domain WHERE workspace_id = ?', [wsId]) as Array<{ id: number; domain: string }>;
+   const { ensureOrgQuotaBalances, adjustActiveUsage } = await import('./quota');
+   if (wasReady) await ensureOrgQuotaBalances(orgId);
    await db.transaction(async (tx: import('sequelize').Transaction) => {
       const q = (sql: string, repl: unknown[]) => db.query(sql, { replacements: repl, transaction: tx });
       for (const d of domains) {
@@ -107,5 +156,18 @@ export async function deleteWorkspace(userId: string, wsId: number): Promise<voi
          await q('DELETE FROM domain WHERE "ID" = ?', [d.id]);
       }
       await q('DELETE FROM workspaces WHERE id = ? AND org_id = ?', [wsId, orgId]);
+      if (wasReady) {
+         await adjustActiveUsage(
+            {
+               orgId,
+               meter: 'brandSpaces',
+               delta: -1,
+               idempotencyKey: `brand-delete:${wsId}`,
+               ref: { type: 'workspace', id: String(wsId) },
+               userId,
+            },
+            { transaction: tx },
+         );
+      }
    });
 }

@@ -1,13 +1,19 @@
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) => cb({})) } }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 5, defaultWorkspaceId: 9 }) }));
 jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('../../lib/quota', () => ({
+  ensureOrgQuotaBalances: jest.fn().mockResolvedValue(undefined),
+  adjustActiveUsage: jest.fn().mockResolvedValue({ used: 1 }),
+}));
 
 import db from '../../database/database';
 import { listWorkspaces, createWorkspace, renameWorkspace, deleteWorkspace, createSetupWorkspace, markWorkspaceReady, finishWorkspaceSetup } from '../../lib/workspaces';
 import { assertCanManage } from '../../lib/members';
+import { adjustActiveUsage } from '../../lib/quota';
 
 const mockQuery = db.query as jest.Mock;
 const mockAssertCanManage = assertCanManage as jest.MockedFunction<typeof assertCanManage>;
+const mockAdjust = adjustActiveUsage as jest.Mock;
 const rows = (r: unknown[]) => [r, {}];
 
 describe('workspaces helpers', () => {
@@ -15,6 +21,8 @@ describe('workspaces helpers', () => {
     mockQuery.mockReset();
     mockAssertCanManage.mockReset();
     mockAssertCanManage.mockResolvedValue(undefined);
+    mockAdjust.mockClear();
+    mockAdjust.mockResolvedValue({ used: 1 });
   });
 
   it('listWorkspaces returns the org workspaces', async () => {
@@ -26,33 +34,36 @@ describe('workspaces helpers', () => {
 
   it('createWorkspace inserts under the org and returns the new row', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([]))                          // INSERT
-      .mockResolvedValueOnce(rows([{ id: 11, name: 'New' }]));  // SELECT back
+      .mockResolvedValueOnce(rows([]))
+      .mockResolvedValueOnce(rows([{ id: 11, name: 'New' }]));
     expect(await createWorkspace('u1', 'New')).toEqual({ id: 11, name: 'New' });
     expect(String(mockQuery.mock.calls[0][0])).toContain('INSERT INTO workspaces');
+    expect(mockAdjust).toHaveBeenCalled();
   });
 
   it('renameWorkspace updates only when the workspace is in the org', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 10 }]))   // ownership SELECT
-      .mockResolvedValueOnce(rows([]));            // UPDATE
+      .mockResolvedValueOnce(rows([{ id: 10 }]))
+      .mockResolvedValueOnce(rows([]));
     await renameWorkspace('u1', 10, 'Renamed');
     expect(String(mockQuery.mock.calls[1][0])).toContain('UPDATE workspaces SET name = ?');
   });
 
   it('renameWorkspace throws WORKSPACE_NOT_FOUND when not in the org', async () => {
-    mockQuery.mockResolvedValueOnce(rows([]));     // ownership SELECT -> none
+    mockQuery.mockResolvedValueOnce(rows([]));
     await expect(renameWorkspace('u1', 99, 'X')).rejects.toThrow('WORKSPACE_NOT_FOUND');
   });
 
   it('deleteWorkspace cascades the domain(s) then removes the workspace', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 10 }]))                  // assertInOrg ownership
-      .mockResolvedValueOnce(rows([{ id: 42, domain: 'x.pl' }])); // domains in the workspace
+      .mockResolvedValueOnce(rows([{ id: 10 }]))
+      .mockResolvedValueOnce(rows([{ status: 'ready' }]))
+      .mockResolvedValueOnce(rows([{ id: 42, domain: 'x.pl' }]));
     await expect(deleteWorkspace('u1', 10)).resolves.toBeUndefined();
     const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
     expect(sqls.some((s) => s.includes('DELETE FROM domain'))).toBe(true);
     expect(sqls.some((s) => s.includes('DELETE FROM workspaces'))).toBe(true);
+    expect(mockAdjust).toHaveBeenCalled();
   });
 
   it('deleteWorkspace rejects callers who cannot manage the org before deleting data', async () => {
@@ -63,8 +74,9 @@ describe('workspaces helpers', () => {
 
   it('deleteWorkspace removes even the last workspace (caller then routes to the creator)', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 9 }]))                    // assertInOrg ownership
-      .mockResolvedValueOnce(rows([{ id: 7, domain: 'only.pl' }])); // the workspace's domain
+      .mockResolvedValueOnce(rows([{ id: 9 }]))
+      .mockResolvedValueOnce(rows([{ status: 'ready' }]))
+      .mockResolvedValueOnce(rows([{ id: 7, domain: 'only.pl' }]));
     await expect(deleteWorkspace('u1', 9)).resolves.toBeUndefined();
     const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
     expect(sqls.some((s) => s.includes('DELETE FROM workspaces'))).toBe(true);
@@ -72,9 +84,9 @@ describe('workspaces helpers', () => {
 
   it('createSetupWorkspace inserts a setup workspace and returns its id when none exists', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([]))              // existing-setup SELECT → none
-      .mockResolvedValueOnce(rows([]))              // INSERT
-      .mockResolvedValueOnce(rows([{ id: 7 }]));   // SELECT back
+      .mockResolvedValueOnce(rows([]))
+      .mockResolvedValueOnce(rows([]))
+      .mockResolvedValueOnce(rows([{ id: 7 }]));
     const id = await createSetupWorkspace('u1');
     expect(id).toBe(7);
     expect(String(mockQuery.mock.calls[1][0])).toContain('INSERT INTO workspaces');
@@ -82,34 +94,32 @@ describe('workspaces helpers', () => {
   });
 
   it('createSetupWorkspace reuses an existing in-progress setup workspace', async () => {
-    mockQuery.mockResolvedValueOnce(rows([{ id: 4 }])); // existing-setup SELECT → found
+    mockQuery.mockResolvedValueOnce(rows([{ id: 4 }]));
     const id = await createSetupWorkspace('u1');
     expect(id).toBe(4);
-    expect(mockQuery).toHaveBeenCalledTimes(1);          // no INSERT issued
+    expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(String(mockQuery.mock.calls[0][0])).toContain("status = 'setup'");
   });
 
   it('markWorkspaceReady issues an UPDATE setting status = ready', async () => {
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 7 }]))   // ownership SELECT
-      .mockResolvedValueOnce(rows([]));            // UPDATE
+      .mockResolvedValueOnce(rows([{ id: 7 }]))
+      .mockResolvedValueOnce(rows([{ status: 'setup' }]))
+      .mockResolvedValueOnce(rows([]));
     await markWorkspaceReady('u1', 7, 'My Workspace');
-    expect(String(mockQuery.mock.calls[1][0])).toContain("status = 'ready'");
+    expect(String(mockQuery.mock.calls[2][0])).toContain("status = 'ready'");
+    expect(mockAdjust).toHaveBeenCalled();
   });
 
   it('finishWorkspaceSetup updates brand_knowledge and marks workspace ready', async () => {
-    // Query sequence:
-    // 1. assertInOrg SELECT (from finishWorkspaceSetup's own assertInOrg call)
-    // 2. UPDATE domain SET brand_knowledge
-    // 3. assertInOrg SELECT (from markWorkspaceReady's assertInOrg call)
-    // 4. UPDATE workspaces SET name + status = 'ready'
     mockQuery
-      .mockResolvedValueOnce(rows([{ id: 7 }]))   // assertInOrg SELECT
-      .mockResolvedValueOnce(rows([]))             // UPDATE domain
-      .mockResolvedValueOnce(rows([{ id: 7 }]))   // assertInOrg SELECT (inside markWorkspaceReady)
-      .mockResolvedValueOnce(rows([]));            // UPDATE workspaces
+      .mockResolvedValueOnce(rows([{ id: 7 }]))
+      .mockResolvedValueOnce(rows([]))
+      .mockResolvedValueOnce(rows([{ id: 7 }]))
+      .mockResolvedValueOnce(rows([{ status: 'setup' }]))
+      .mockResolvedValueOnce(rows([]));
     await finishWorkspaceSetup('u1', 7, 'Acme', 'We sell widgets');
-    const sqls = mockQuery.mock.calls.map((c: any[]) => String(c[0]));
+    const sqls = mockQuery.mock.calls.map((c: unknown[]) => String(c[0]));
     expect(sqls.some((s) => s.includes('UPDATE domain SET brand_knowledge'))).toBe(true);
     expect(sqls.some((s) => s.includes("status = 'ready'"))).toBe(true);
   });

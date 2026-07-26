@@ -189,6 +189,23 @@ const runAppCronJobs = () => {
          });
       }, { scheduled: true });
    }
+
+   // Plan quota reservation sweeper — every 5 minutes
+   if (process.env.CRON_SECRET) {
+      new Cron('*/5 * * * *', () => {
+         const fetchOpts = {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+         };
+         fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron/plan-reservations`, fetchOpts)
+            .then((res) => res.json())
+            .then((data) => console.log('[cron] plan-reservations', data))
+            .catch((err) => {
+               console.log('ERROR Making plan-reservations Cron Request (after retries)..');
+               console.log(err);
+            });
+      }, { scheduled: true });
+   }
 };
 
 runAppCronJobs();
