@@ -7,6 +7,12 @@ import {
   getDomainSearchConsoleData,
 } from '../../../lib/gsc/domainSearchData';
 
+/** Custom date ranges can return up to 25k×2 query/page rows — above Next's 4mb default. */
+export const config = {
+  api: { responseLimit: '32mb' },
+  maxDuration: 60,
+};
+
 /** Canonical GSC domain search-analytics route (one-path). */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
