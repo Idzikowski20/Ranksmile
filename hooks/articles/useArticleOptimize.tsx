@@ -126,9 +126,10 @@ export function useArticleOptimize({
       keyword: article?.target_keyword || '',
       coverageItems,
       coverageSnapshot,
+      aiVisibilitySummary,
       substitutePlaceholders: substituteOptimizerPlaceholders,
     });
-  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, coverageSnapshot, optimizeDocTick]);
+  }, [optimizeState, editorHtml, scoreData, article?.target_keyword, coverageItems, coverageSnapshot, aiVisibilitySummary, optimizeDocTick]);
 
   const aoScoresReady = optimizeState === 'reviewing'
     || (optimizeState === 'optimizing' && editorHtml !== preReviewHtmlRef.current && optimizeProgress.processed > 0);

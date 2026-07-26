@@ -94,17 +94,19 @@ function scoreSeo(
 }
 
 function scoreAiFromContext(ctx: ArticleContext | null, html: string, latestAiScore: number): number {
-   if (ctx?.coverage?.items?.length && ctx.scoreData) {
-      return scoreArticleHtml({
-         html,
-         scoreData: ctx.scoreData,
-         keyword: ctx.keyword || '',
-         coverageItems: ctx.coverage.items,
-         answersMainQuestionEarly: !!ctx.coverage.answersMainQuestionEarly,
-      }).ai;
-   }
-   // score_data.ai_score === 0 is a common facts-V2 miss — prefer recomputed visibility score.
-   return Math.max(ctx?.scoreData?.ai_score ?? 0, latestAiScore);
+  if (ctx?.coverage?.items?.length && ctx.scoreData) {
+    const live = scoreArticleHtml({
+      html,
+      scoreData: ctx.scoreData,
+      keyword: ctx.keyword || '',
+      coverageItems: ctx.coverage.items,
+      answersMainQuestionEarly: !!ctx.coverage.answersMainQuestionEarly,
+    }).ai;
+    // Live FAQ presence can collapse to 0 after a rewrite while visibility summary stays healthy.
+    return Math.max(live, ctx.scoreData.ai_score ?? 0, latestAiScore);
+  }
+  // score_data.ai_score === 0 is a common facts-V2 miss — prefer recomputed visibility score.
+  return Math.max(ctx?.scoreData?.ai_score ?? 0, latestAiScore);
 }
 
 /** Latest AI-visibility score for an article — same query as pages/api/articles/[id]/index.ts:46-52.

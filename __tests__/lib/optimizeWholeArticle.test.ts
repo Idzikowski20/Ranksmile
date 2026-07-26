@@ -122,9 +122,8 @@ describe('optimizeWholeArticle prompt v2', () => {
     expect(userInstruction).toContain('EFFORT gaps');
   });
 
-  it('ai-only (SEO ready, AI weak) uses normal edits — not preserve-90% less mode', () => {
-    // Reproduces: SEO 73 / AI 19 / overall ~49 → selectOptimizeMode = ai-only → previously
-    // forced less ("preserve more than 90%") and the model echoed the article → no_change.
+  it('ai-only (SEO ready, AI weak, no AI checkpoints) falls back to SEO terms with normal edits', () => {
+    // No coverage/PAA debt — term balance is the only concrete lever (avoid vague polish echo).
     const html = '<p>Short article about gardening without useful FAQ or NLP coverage.</p>';
     const ctx = ctxWithTerms([
       { term: 'ogród warzywny', target_count: 4 },
@@ -143,6 +142,58 @@ describe('optimizeWholeArticle prompt v2', () => {
     expect(systemPrompt).not.toContain('preserve more than 90%');
     expect(userInstruction).not.toMatch(/minimal, targeted edits/);
     expect(systemPrompt).toMatch(/ogród warzywny|kompost/);
+  });
+
+  it('when SEO is ready, prefers AI Search coverage over SEO term debt', () => {
+    // SEO 82 / AI 55 → ai-only; uncovered questions must win over missing NLP terms.
+    const html = '<h1>Zakaz</h1><p>Artykuł z dobrym SEO, ale bez odpowiedzi na pytania AI Search.</p>'.repeat(6);
+    const ctx: ArticleContext = {
+      articleId: 1,
+      keyword: 'zakaz zbliżania',
+      scoreData: {
+        terms: [
+          { term: 'zakaz zbliżania', target_count: 5, current_count: 1 },
+          { term: 'wniosek do sądu', target_count: 3, current_count: 0 },
+        ],
+        words_target: 1200,
+        words_min: 700,
+        words_max: 2000,
+        headings_target: 8,
+        headings_min: 3,
+        headings_max: 14,
+      },
+      breakdown: null,
+      coverage: {
+        version: 1,
+        overall: 20,
+        answersMainQuestionEarly: false,
+        buckets: [],
+        items: [
+          {
+            id: 'q1', label: 'Kiedy da się uzyskać zakaz zbliżania?', type: 'question', category: 'knowledge',
+            importance: 'critical', source: 'llm', covered: false, quality: 0,
+          },
+          {
+            id: 'q2', label: 'Kto może nałożyć zakaz?', type: 'paa', category: 'knowledge',
+            importance: 'recommended', source: 'paa', covered: false, quality: 0,
+          },
+        ],
+      },
+      paa: [],
+      terms: [],
+      competitors: [],
+    };
+    const { focus, editMode, systemPrompt } = buildWholeArticlePrompt({
+      ctx,
+      html,
+      guidelines: [],
+      seoScore: 82,
+      aiScore: 55,
+      phase: 'first_run',
+    });
+    expect(focus).toBe('ai-coverage');
+    expect(editMode).toBe('normal');
+    expect(systemPrompt).toMatch(/Kiedy da się uzyskać zakaz|Kto może nałożyć zakaz/);
   });
 
   it('ai-only with SEO ready + question/concept debt focuses AI Search (not timid readability)', () => {

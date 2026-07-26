@@ -47,6 +47,8 @@ export function computeOptimizeLiveSnapshot(opts: {
   keyword: string;
   coverageItems: CoverageItem[];
   coverageSnapshot: CoverageSnapshot | null;
+  /** Citation readiness — same blend as idle gauges (avoids AO review AI=0). */
+  aiVisibilitySummary?: AiVisibilitySummary | null;
   substitutePlaceholders: (html: string) => string;
 }): OptimizeLiveSnapshot {
   const postHtml = opts.substitutePlaceholders(opts.editorHtml);
@@ -61,13 +63,26 @@ export function computeOptimizeLiveSnapshot(opts: {
     scored.liveItems,
     !!opts.coverageSnapshot?.answersMainQuestionEarly,
   );
+  const intentScore = buckets.find((b) => b.key === 'intent')?.score;
+  // Match ContentScorePanel idle path: never let a live-coverage miss mask a healthy summary.
+  const ai = Math.max(
+    opts.scoreData.ai_score ?? 0,
+    resolveAiScore({
+      summary: opts.aiVisibilitySummary,
+      articleText: scored.plainText,
+      intentScore,
+      answersMainQuestionEarly: opts.coverageSnapshot?.answersMainQuestionEarly,
+      coverageOverall: scored.liveItems.length > 0 ? scored.ai : null,
+    }),
+  );
+  const overall = computeOverallContentScore(scored.seo, ai);
 
   return {
     postHtml,
     postText: scored.plainText,
     seo: scored.seo,
-    ai: scored.ai,
-    overall: scored.overall,
+    ai,
+    overall,
     liveItems: scored.liveItems,
     buckets,
     remainingRows: remainingOpportunities(scored.liveItems),
