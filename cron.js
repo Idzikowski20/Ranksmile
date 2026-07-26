@@ -5,15 +5,44 @@ const { readFile } = require('fs');
 const { Cron } = require('croner');
 require('dotenv').config({ path: './.env.local' });
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // Build the internal base URL for cron→server requests.
-// NEXT_PUBLIC_APP_URL is the external/browser URL which may use a different port
-// (e.g. Docker -p 5000:3000). Inside the container the server listens on PORT (default 3000).
+// On Railway, NEXTJS_URL / APP_BASE_URL is required (no localhost fallback).
 const getInternalBaseURL = () => {
+   const explicit = (process.env.NEXTJS_URL || process.env.APP_BASE_URL || '').trim();
+   if (explicit) return explicit.replace(/\/$/, '');
+
+   if (process.env.RAILWAY_ENVIRONMENT) {
+      console.error(
+         '[cron] FATAL: NEXTJS_URL or APP_BASE_URL required on Railway (refusing localhost fallback)',
+      );
+      process.exit(1);
+   }
+
    const serverPort = process.env.PORT || 3000;
-   return `http://localhost:${serverPort}`;
+   return `http://127.0.0.1:${serverPort}`;
 };
 
 const INTERNAL_BASE_URL = getInternalBaseURL();
+console.log(`[cron] INTERNAL_BASE_URL=${INTERNAL_BASE_URL}`);
+
+async function fetchWithRetry(url, fetchOpts, { attempts = 3, baseDelayMs = 1000 } = {}) {
+   let lastErr;
+   for (let i = 0; i < attempts; i++) {
+      try {
+         const res = await fetch(url, fetchOpts);
+         if (res.status >= 500) {
+            throw new Error(`HTTP ${res.status}`);
+         }
+         return res;
+      } catch (err) {
+         lastErr = err;
+         if (i < attempts - 1) await sleep(baseDelayMs * (2 ** i));
+      }
+   }
+   throw lastErr;
+}
 
 const getAppSettings = async () => {
    const defaultSettings = {
@@ -25,7 +54,6 @@ const getAppSettings = async () => {
       smtp_username: '',
       smtp_password: '',
    };
-   // console.log('process.env.SECRET: ', process.env.SECRET);
    try {
       let decryptedSettings = {};
       const exists = await promises.stat(`${process.cwd()}/data/settings.json`).then(() => true).catch(() => false);
@@ -35,7 +63,6 @@ const getAppSettings = async () => {
          try {
             settings = settingsRaw ? JSON.parse(settingsRaw) : {};
          } catch (parseError) {
-            // File exists but JSON is corrupt — back it up instead of overwriting
             const backupPath = `${process.cwd()}/data/settings.json.${Date.now()}.corrupt`;
             console.log(`[WARN] Corrupt settings.json detected. Backing up to ${backupPath}`);
             await promises.rename(`${process.cwd()}/data/settings.json`, backupPath).catch(() => {});
@@ -56,7 +83,6 @@ const getAppSettings = async () => {
       }
       return decryptedSettings;
    } catch (error) {
-      // console.log('CRON ERROR: Reading Settings File. ', error);
       await promises.mkdir(`${process.cwd()}/data`, { recursive: true }).catch(() => {});
       await promises.writeFile(`${process.cwd()}/data/settings.json`, JSON.stringify(defaultSettings), { encoding: 'utf-8' }).catch(() => {});
       return defaultSettings;
@@ -81,44 +107,43 @@ const generateCronTime = (interval) => {
       cronTime = '0 0 * * 1';
    }
    if (interval === 'monthly') {
-      cronTime = '0 0 1 * *'; // Run every first day of the month at 00:00(midnight)
+      cronTime = '0 0 1 * *';
    }
 
    return cronTime;
 };
 
 const runAppCronJobs = () => {
+   if (!process.env.APIKEY) {
+      console.error('[cron] APIKEY missing — cron HTTP calls will fail auth');
+   }
+
    getAppSettings().then((settings) => {
-      // RUN SERP Scraping CRON (EveryDay at Midnight) 0 0 0 * *
       const scrape_interval = settings.scrape_interval || 'daily';
       if (scrape_interval !== 'never') {
          const scrapeCronTime = generateCronTime(scrape_interval);
          new Cron(scrapeCronTime, () => {
-            // console.log('### Running Keyword Position Cron Job!');
             const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
-            fetch(`${INTERNAL_BASE_URL}/api/cron`, fetchOpts)
+            fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron`, fetchOpts)
             .then((res) => res.json())
-            // .then((data) =>{ console.log(data)})
             .catch((err) => {
-               console.log('ERROR Making SERP Scraper Cron Request..');
+               console.log('ERROR Making SERP Scraper Cron Request (after retries)..');
                console.log(err);
             });
          }, { scheduled: true });
       }
 
-      // RUN Email Notification CRON
       const notif_interval = (!settings.notification_interval || settings.notification_interval === 'never') ? false : settings.notification_interval;
       if (notif_interval) {
          const cronTime = generateCronTime(notif_interval === 'daily' ? 'daily_morning' : notif_interval);
          if (cronTime) {
             new Cron(cronTime, () => {
-               // console.log('### Sending Notification Email...');
                const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
-               fetch(`${INTERNAL_BASE_URL}/api/notify`, fetchOpts)
+               fetchWithRetry(`${INTERNAL_BASE_URL}/api/notify`, fetchOpts)
                .then((res) => res.json())
                .then((data) => console.log(data))
                .catch((err) => {
-                  console.log('ERROR Making Cron Email Notification Request..');
+                  console.log('ERROR Making Cron Email Notification Request (after retries)..');
                   console.log(err);
                });
             }, { scheduled: true });
@@ -126,22 +151,19 @@ const runAppCronJobs = () => {
       }
    });
 
-   // Run Failed scraping CRON (Every Hour)
    const failedCronTime = generateCronTime('hourly');
    new Cron(failedCronTime, () => {
-      // console.log('### Retrying Failed Scrapes...');
-
       readFile(`${process.cwd()}/data/failed_queue.json`, { encoding: 'utf-8' }, (err, data) => {
          if (data) {
             try {
                const keywordsToRetry = data ? JSON.parse(data) : [];
                if (keywordsToRetry.length > 0) {
                   const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
-                  fetch(`${INTERNAL_BASE_URL}/api/refresh?id=${keywordsToRetry.join(',')}`, fetchOpts)
+                  fetchWithRetry(`${INTERNAL_BASE_URL}/api/refresh?id=${keywordsToRetry.join(',')}`, fetchOpts)
                   .then((res) => res.json())
                   .then((refreshedData) => console.log(refreshedData))
                   .catch((fetchErr) => {
-                     console.log('ERROR Making failed_queue Cron Request..');
+                     console.log('ERROR Making failed_queue Cron Request (after retries)..');
                      console.log(fetchErr);
                   });
                }
@@ -154,16 +176,15 @@ const runAppCronJobs = () => {
       });
    }, { scheduled: true });
 
-   // Run Google Search Console Scraper Daily
    if (process.env.SEARCH_CONSOLE_PRIVATE_KEY && process.env.SEARCH_CONSOLE_CLIENT_EMAIL) {
       const searchConsoleCRONTime = generateCronTime('daily');
       new Cron(searchConsoleCRONTime, () => {
          const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
-         fetch(`${INTERNAL_BASE_URL}/api/searchconsole`, fetchOpts)
+         fetchWithRetry(`${INTERNAL_BASE_URL}/api/searchconsole`, fetchOpts)
          .then((res) => res.json())
          .then((data) => console.log(data))
          .catch((err) => {
-            console.log('ERROR Making Google Search Console Scraper Cron Request..');
+            console.log('ERROR Making Google Search Console Scraper Cron Request (after retries)..');
             console.log(err);
          });
       }, { scheduled: true });

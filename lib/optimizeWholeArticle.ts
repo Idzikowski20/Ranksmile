@@ -11,6 +11,7 @@ import { buildEffortOptimizeGuidance } from './contentEffort';
 import { buildWhatsMissingOptimizeGuidance } from './contentScore';
 import { countOccurrences } from './termMatch';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
+import { isUncoveredAiSearchItem } from './aiCoverage';
 
 export { computeMissingTerms, computeOverusedTerms } from './optimizeSectionEdit';
 export const WHOLE_ARTICLE_ID = 'article-whole';
@@ -42,12 +43,15 @@ ${STOP_SLOP_RULES}`;
 const OUTPUT_RULE = `OUTPUT: ONLY the full article's raw HTML. No markdown code fences, no commentary.`;
 
 function uncoveredAiCheckpoints(ctx: ArticleContext): string[] {
+  const primary = (ctx.coverage?.items || [])
+    .filter(isUncoveredAiSearchItem)
+    .map((i) => i.label);
+  if (primary.length) return primary;
+  // Fallback: any shallow knowledge/intent left (except SEO presence types)
   return (ctx.coverage?.items || [])
-    .filter((i) =>
-      (i.category === 'intent' || i.category === 'knowledge')
-      && (i.type === 'paa' || i.type === 'fact' || i.type === 'intent' || i.type === 'definition' || i.type === 'comparison')
-      && (!i.covered || i.quality < 4),
-    )
+    .filter((i) => (i.category === 'intent' || i.category === 'knowledge')
+      && i.type !== 'entity' && i.type !== 'structure' && i.type !== 'readability' && i.type !== 'term'
+      && (!i.covered || i.quality < 4))
     .map((i) => i.label);
 }
 
@@ -78,17 +82,27 @@ function effortBlock(ctx: ArticleContext | null, html: string): string {
  * ai-only with an empty coverage snapshot used to force a vague AI focus + "less"
  * (preserve 90%) → model echoed the article → client "didn't change this time".
  * Prefer concrete SEO term debt when there are no uncovered AI checkpoints.
+ *
+ * When SEO is already strong, stay on AI Search (facts/formatting) — do not fall
+ * through to timid readability polish that echoes the article (no_change).
  */
 function focusForMode(mode: OptimizeMode, ctx: ArticleContext | null, html: string): StepFocus {
   const gaps = ctx ? computeTermUsageGaps(ctx.scoreData ?? undefined, html) : [];
   const hasTermDebt = gaps.some((g) => g.status === 'missing' || g.status === 'low' || g.status === 'overuse');
-  const uncovered = ctx ? uncoveredAiCheckpoints(ctx) : [];
+  const hasOveruse = gaps.some((g) => g.status === 'overuse');
+  const uncoveredItems = (ctx?.coverage?.items || []).filter(isUncoveredAiSearchItem);
+  const uncovered = uncoveredItems.map((i) => i.label);
+  // Shallow = checklist already "Covered" but quality < 4. Whole-article AI polish then echoes → no_change.
+  // Prefer SEO term balance (esp. overuse) first; FAQ round still deepens shallow AI checkpoints.
+  const onlyShallowAi = uncoveredItems.length > 0 && uncoveredItems.every((i) => i.covered);
 
   if (mode === 'ai-only') {
-    if (uncovered.length > 0) return 'ai-coverage';
+    if (hasOveruse && onlyShallowAi) return 'seo-terms';
+    if (uncovered.length > 0 && !onlyShallowAi) return 'ai-coverage';
     if (hasTermDebt) return 'seo-terms';
+    if (uncovered.length > 0) return 'ai-coverage';
     if ((ctx?.paa?.length ?? 0) > 0) return 'ai-coverage';
-    return 'readability';
+    return 'ai-coverage';
   }
   if (mode === 'seo-first') return 'seo-terms';
   if (hasTermDebt) return 'seo-terms';

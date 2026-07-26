@@ -8,6 +8,24 @@ export type CoverageType =
   /** v7 typed coverage — TERM/CONCEPT from NLP; ENTITY only from NER; QUESTION/FACT explicit */
   | 'term' | 'concept' | 'question';
 
+/**
+ * AI Search checkpoints Auto-Optimize should close when SEO is already strong.
+ * Excludes entity/term/structure/readability — those are SEO / presence debt, not AI facts.
+ */
+export const AI_SEARCH_CHECKPOINT_TYPES: ReadonlySet<CoverageType> = new Set([
+  'paa', 'fact', 'intent', 'definition', 'comparison',
+  'question', 'concept', 'example', 'process', 'statistic', 'expectation', 'warning',
+]);
+
+/** Uncovered (or shallow) AI Search items — shared by AO prompts + FAQ round. */
+export function isUncoveredAiSearchItem(item: Pick<CoverageItem, 'category' | 'type' | 'covered' | 'quality'>): boolean {
+  if (item.category !== 'intent' && item.category !== 'knowledge' && item.category !== 'authority') {
+    return false;
+  }
+  if (!AI_SEARCH_CHECKPOINT_TYPES.has(item.type)) return false;
+  return !item.covered || item.quality < 4;
+}
+
 // 'authority' declared now (empty in A) to lock the bucket taxonomy + score denominator; sources land in E.
 export type CoverageCategory = 'knowledge' | 'authority' | 'quality' | 'style' | 'intent';
 export type Importance = 'critical' | 'recommended' | 'optional';
@@ -192,7 +210,15 @@ export function computeCoverageScores(
   answersMainQuestionEarly: boolean,
 ): { overall: number; buckets: BucketScore[] } {
   const buckets = CATEGORIES.map((key) => computeBucketScore(key, items));
-  const overall = Math.round(blendBuckets(buckets) + earlyAnswerBonus(answersMainQuestionEarly));
+  const raw = blendBuckets(buckets) + earlyAnswerBonus(answersMainQuestionEarly);
+  // Soft floor: checklist "Covered" must not display as AI Search 0.
+  // Judge can mark covered:true with quality:0; large uncovered max otherwise drowns earned → round(raw)=0.
+  const coveredCount = items.filter((it) => it.covered).length;
+  const coveredWithQuality = items.filter((it) => it.covered && clampQuality(it.quality) > 0).length;
+  const softFloor = coveredCount > 0
+    ? Math.min(12, Math.max(coveredCount, coveredWithQuality * 2))
+    : 0;
+  const overall = Math.max(Math.round(raw), softFloor);
   return { overall, buckets };
 }
 

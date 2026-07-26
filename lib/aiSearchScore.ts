@@ -74,16 +74,22 @@ export function resolveAiScore(opts: {
    answersMainQuestionEarly?: boolean;
    coverageOverall?: number | null;
 }): number {
+   // Prefer the best available signal. Facts-V2 alone can be 0 while citation readiness
+   // (legacy summary) is healthy — article 159: V2=0 persisted, summary ≈37, UI showed 0.
+   let fromFacts = 0;
    if (opts.facts?.length && opts.articleText) {
-      return computeAiSearchScoreV2({
+      fromFacts = computeAiSearchScoreV2({
          facts: opts.facts,
          articleText: opts.articleText,
          intentScore: opts.intentScore,
          answersMainQuestionEarly: opts.answersMainQuestionEarly,
       });
    }
-   if (opts.coverageOverall != null && opts.coverageOverall > 0) return opts.coverageOverall;
-   return computeAiSearchScore(opts.summary);
+   const fromCoverage = (opts.coverageOverall != null && opts.coverageOverall > 0)
+      ? opts.coverageOverall
+      : 0;
+   const fromSummary = computeAiSearchScore(opts.summary);
+   return Math.max(fromFacts, fromCoverage, fromSummary);
 }
 
 /** Ranksmile-style Content Score — weighted blend with weak-dimension floor. */

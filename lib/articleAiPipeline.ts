@@ -11,7 +11,7 @@ import {
 import { resolveFactKeyword } from './resolveFactKeyword';
 import { getAiSearchInfo } from './seo/keywordData';
 import {
-  computeAiSearchScoreV2,
+  resolveAiScore,
   type AiVisibilitySummary,
 } from './aiSearchScore';
 
@@ -84,14 +84,13 @@ export async function runArticleAiPipeline(opts: {
       : opts.sidecarSummary;
   }
 
-  const aiScore = facts.length
-    ? computeAiSearchScoreV2({
-      facts,
-      articleText,
-      intentScore: opts.intentScore,
-      answersMainQuestionEarly: opts.answersMainQuestionEarly,
-    })
-    : 0;
+  const aiScore = resolveAiScore({
+    facts,
+    articleText,
+    summary,
+    intentScore: opts.intentScore,
+    answersMainQuestionEarly: opts.answersMainQuestionEarly,
+  });
 
   return { facts, summary, aiScore };
 }

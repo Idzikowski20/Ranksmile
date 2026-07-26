@@ -111,6 +111,24 @@ describe('liveCoverageItems', () => {
       expect(out[0].covered).toBe(true);
     });
 
+    it('question type (PAA from coverageEngine) presence-checks like paa + floors quality', () => {
+      // Reproduces: AI checklist shows Covered while AI Search score stays 0 —
+      // coverageEngine emits type=question, but live presence only handled type=paa.
+      const snap = [item({
+        id: 'q1',
+        type: 'question',
+        label: 'Czy inwigilacja jest legalna?',
+        covered: false,
+        quality: 0,
+      })];
+      const html = '<h3>Czy inwigilacja jest legalna?</h3><p>Inwigilacja może być legalna tylko gdy spełnia ustawowe warunki i ma podstawę prawną.</p>';
+      const out = liveCoverageItems(snap, 'text', html);
+      expect(out[0].covered).toBe(true);
+      expect(out[0].quality).toBeGreaterThan(0);
+      const { overall } = computeCoverageScores(out, false);
+      expect(overall).toBeGreaterThan(0);
+    });
+
     it('covered true when body text answers the question (>=70% content words present)', () => {
       const snap = [item({ id: 'p1', type: 'paa', label: 'What is the best gizmo cleaning method?', covered: false })];
       const html = '<p>The best gizmo cleaning method involves warm water and a soft cloth.</p>';

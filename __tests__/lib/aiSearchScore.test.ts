@@ -54,17 +54,62 @@ describe('contentScoreSplit', () => {
 });
 
 describe('resolveAiScore', () => {
-  it('prefers v2 facts score when facts are provided', () => {
-    const article = 'Prywatny detektyw oferuje uslugi detektywistyczne w Warszawie.';
-    const v2 = resolveAiScore({ facts: sampleFacts.slice(0, 1), articleText: article });
-    const legacy = computeAiSearchScore({
-      prompts_total: 1,
-      prompts_cited: 0,
-      competitor_citations: 0,
-      extractability_score: 0,
-      citations: [{ prompt: 'x', answer_readiness_score: 10 }],
+  it('takes max of facts-v2 and legacy summary (V2=0 must not wipe healthy citations)', () => {
+    // Reproduces article 159: facts pipeline scored 0, citation readiness still healthy.
+    const summary = {
+      prompts_total: 19,
+      prompts_cited: 5,
+      competitor_citations: 5,
+      extractability_score: 44,
+      citations: [
+        { prompt: 'Czy inwigilacja jest legalna?', answer_readiness_score: 100 },
+        { prompt: 'Czy inwigilacja jest karalna?', answer_readiness_score: 67 },
+        { prompt: 'other', answer_readiness_score: 40 },
+      ],
+    };
+    const unmatchedFacts: ArticleFact[] = [
+      { id: 'f1', text: 'Unrelated fact that will not match the article body at all.', sourceFrequency: 2, sources: [{ kind: 'serp' }] },
+    ];
+    const fromV2 = computeAiSearchScoreV2({
+      facts: unmatchedFacts,
+      articleText: 'Inwigilacja to obserwacja. Czy inwigilacja jest legalna? Tak, w granicach prawa.',
     });
-    expect(v2).not.toBe(legacy);
+    const fromLegacy = computeAiSearchScore(summary);
+    expect(fromV2).toBe(0);
+    expect(fromLegacy).toBeGreaterThan(0);
+    expect(resolveAiScore({
+      facts: unmatchedFacts,
+      articleText: 'Inwigilacja to obserwacja. Czy inwigilacja jest legalna? Tak, w granicach prawa.',
+      summary,
+    })).toBe(fromLegacy);
+  });
+
+  it('uses facts-v2 when it is the stronger signal', () => {
+    const article = 'Prywatny detektyw oferuje uslugi detektywistyczne w Warszawie.';
+    const resolved = resolveAiScore({
+      facts: sampleFacts.slice(0, 1),
+      articleText: article,
+      summary: {
+        prompts_total: 1,
+        prompts_cited: 0,
+        competitor_citations: 0,
+        extractability_score: 0,
+        citations: [{ prompt: 'x', answer_readiness_score: 10 }],
+      },
+    });
+    expect(resolved).toBeGreaterThan(0);
+    expect(resolved).toBe(
+      Math.max(
+        computeAiSearchScoreV2({ facts: sampleFacts.slice(0, 1), articleText: article }),
+        computeAiSearchScore({
+          prompts_total: 1,
+          prompts_cited: 0,
+          competitor_citations: 0,
+          extractability_score: 0,
+          citations: [{ prompt: 'x', answer_readiness_score: 10 }],
+        }),
+      ),
+    );
   });
 
   it('falls back to coverage overall then legacy summary', () => {

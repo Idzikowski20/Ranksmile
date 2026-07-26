@@ -144,6 +144,112 @@ describe('optimizeWholeArticle prompt v2', () => {
     expect(userInstruction).not.toMatch(/minimal, targeted edits/);
     expect(systemPrompt).toMatch(/ogród warzywny|kompost/);
   });
+
+  it('ai-only with SEO ready + question/concept debt focuses AI Search (not timid readability)', () => {
+    const html = '<h1>Test</h1><p>Solid SEO article with little AI Search substance yet.</p>'.repeat(8);
+    const ctx: ArticleContext = {
+      articleId: 1,
+      keyword: 'test',
+      scoreData: {
+        terms: [{ term: 'test', target_count: 2, current_count: 8 }],
+        words_target: 800,
+        words_min: 400,
+        words_max: 1200,
+        headings_target: 6,
+        headings_min: 3,
+        headings_max: 10,
+      },
+      breakdown: null,
+      coverage: {
+        version: 1,
+        overall: 0,
+        answersMainQuestionEarly: false,
+        buckets: [],
+        items: [
+          {
+            id: 'q1', label: 'What is the main benefit?', type: 'question', category: 'knowledge',
+            importance: 'critical', source: 'llm', covered: false, quality: 0,
+          },
+          {
+            id: 'c1', label: 'Core concept explained', type: 'concept', category: 'knowledge',
+            importance: 'recommended', source: 'llm', covered: false, quality: 0,
+          },
+          {
+            id: 'e1', label: 'brandname', type: 'entity', category: 'knowledge',
+            importance: 'optional', source: 'competitors', covered: true, quality: 4,
+          },
+        ],
+      },
+      paa: [],
+      terms: [],
+      competitors: [],
+    };
+    const { focus, editMode, systemPrompt } = buildWholeArticlePrompt({
+      ctx,
+      html,
+      guidelines: [],
+      seoScore: 80,
+      aiScore: 0,
+      phase: 'first_run',
+    });
+    expect(focus).toBe('ai-coverage');
+    expect(editMode).toBe('normal');
+    expect(systemPrompt).toMatch(/What is the main benefit|Core concept explained/);
+    expect(systemPrompt).not.toMatch(/brandname/);
+  });
+
+  it('ai-only + shallow Covered AI + term overuse prefers seo-terms (avoid echo no_change)', () => {
+    // Reproduces screenshot: SEO 82 / AI 0 / checklist Covered / AO "didn't change".
+    // Shallow covered (quality 0) + keyword stuffing — whole-article AI polish echoes.
+    const html = '<p>inwigilacja inwigilacja inwigilacja pracownikow pracownikow '.repeat(20) + '</p>';
+    const ctx: ArticleContext = {
+      articleId: 1,
+      keyword: 'inwigilacja',
+      scoreData: {
+        terms: [
+          { term: 'inwigilacja', target_count: 13, current_count: 41 },
+          { term: 'pracownikow', target_count: 5, current_count: 12 },
+        ],
+        words_target: 800,
+        words_min: 400,
+        words_max: 1200,
+        headings_target: 6,
+        headings_min: 3,
+        headings_max: 10,
+      },
+      breakdown: null,
+      coverage: {
+        version: 1,
+        overall: 0,
+        answersMainQuestionEarly: false,
+        buckets: [],
+        items: [
+          {
+            id: 'q1', label: 'Czy inwigilacja jest legalna?', type: 'question', category: 'knowledge',
+            importance: 'recommended', source: 'paa', covered: true, quality: 0,
+          },
+          {
+            id: 'q2', label: 'Czy inwigilacja jest karalna?', type: 'question', category: 'knowledge',
+            importance: 'recommended', source: 'paa', covered: true, quality: 0,
+          },
+        ],
+      },
+      paa: [],
+      terms: [],
+      competitors: [],
+    };
+    const { focus, editMode, systemPrompt } = buildWholeArticlePrompt({
+      ctx,
+      html,
+      guidelines: [],
+      seoScore: 82,
+      aiScore: 0,
+      phase: 'first_run',
+    });
+    expect(focus).toBe('seo-terms');
+    expect(editMode).toBe('normal');
+    expect(systemPrompt).toMatch(/OVERUSED|inwigilacja/);
+  });
 });
 
 describe('buildEffortOptimizeGuidance', () => {
