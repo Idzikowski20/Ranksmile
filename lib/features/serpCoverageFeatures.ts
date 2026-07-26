@@ -47,7 +47,8 @@ export async function upsertSerpCoverageFeatures(opts: {
 
   const feature: Feature = {
     id: `coverage:${opts.workspaceId}:${opts.keyword}`,
-    version: Date.now(),
+    // growth_feature_versions.version is INT4 — Date.now() ms overflows → DLQ "integer out of range"
+    version: Math.floor(Date.now() / 1000),
     createdAt: new Date().toISOString(),
     score,
     confidence: 0.7,

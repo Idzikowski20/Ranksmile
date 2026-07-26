@@ -15,7 +15,7 @@ import {
    resolveOptimizeDoneOutcome,
 } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
-import { computeOverallContentScore } from '../../../lib/aiSearchScore';
+import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '../../../lib/aiSearchScore';
 import { buildArticleContext } from '../../../lib/articleContext';
 import type { ArticleContext } from '../../../lib/articleContext';
 import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articleKeywordDiscovery';
@@ -44,6 +44,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { throwIfAborted } from '../../../lib/abortSignal';
 import { queryOne } from '../../../lib/db/query';
 import { flushSse, flushHeaders } from '../../../lib/types/api';
+import { safeJsonParse } from '../../../lib/safeJson';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
@@ -102,8 +103,57 @@ function scoreAiFromContext(ctx: ArticleContext | null, html: string, latestAiSc
          answersMainQuestionEarly: !!ctx.coverage.answersMainQuestionEarly,
       }).ai;
    }
-   if (ctx?.scoreData?.ai_score != null) return ctx.scoreData.ai_score;
-   return latestAiScore;
+   // score_data.ai_score === 0 is a common facts-V2 miss — prefer recomputed visibility score.
+   return Math.max(ctx?.scoreData?.ai_score ?? 0, latestAiScore);
+}
+
+/** Latest AI-visibility score for an article — same query as pages/api/articles/[id]/index.ts:46-52.
+ *  A failed score read must NOT break optimize (worst case: no AI-takeover), so any error -> 0.
+ *  When the stored run score is 0 but summary_json has citation readiness, recompute (article 159). */
+async function readLatestAiScore(articleId: number): Promise<number> {
+   try {
+      const row = await queryOne<{ score: number | null; summary_json: string | null }>(
+         `SELECT score, summary_json
+          FROM ai_visibility_runs
+          WHERE article_id = ?
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1`,
+         [articleId],
+      );
+      const stored = row?.score ?? 0;
+      if (stored > 0) return stored;
+      const summary = safeJsonParse<AiVisibilitySummary | null>(row?.summary_json, null);
+      if (summary) return Math.max(stored, computeAiSearchScore(summary));
+      return stored;
+   } catch {
+      return 0;
+   }
+}
+
+/** Citation prompts that still need coverage — FAQ fallback when ai_info_to_cover is null. */
+async function readWeakVisibilityPrompts(articleId: number): Promise<Array<{ id: string; label: string }>> {
+   try {
+      const row = await queryOne<{ summary_json: string | null }>(
+         `SELECT summary_json
+          FROM ai_visibility_runs
+          WHERE article_id = ?
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1`,
+         [articleId],
+      );
+      const summary = safeJsonParse<AiVisibilitySummary | null>(row?.summary_json, null);
+      if (!summary?.citations?.length) return [];
+      return summary.citations
+         .filter((c) => (c.answer_readiness_score ?? 0) < 60)
+         .map((c, i) => ({
+            id: `vis-${i}`,
+            label: (c.prompt || '').replace(/\s+/g, ' ').trim(),
+         }))
+         .filter((q) => q.label.length >= 8)
+         .slice(0, 12);
+   } catch {
+      return [];
+   }
 }
 
 async function persistScoreDataTerms(
@@ -128,24 +178,6 @@ async function persistScoreDataTerms(
 function sse(res: NextApiResponse, event: string, data: object) {
    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
    flushSse(res);
-}
-
-/** Latest AI-visibility score for an article — same query as pages/api/articles/[id]/index.ts:46-52.
- *  A failed score read must NOT break optimize (worst case: no AI-takeover), so any error -> 0. */
-async function readLatestAiScore(articleId: number): Promise<number> {
-   try {
-      const row = await queryOne<{ score: number | null }>(
-         `SELECT score
-          FROM ai_visibility_runs
-          WHERE article_id = ?
-          ORDER BY created_at DESC, id DESC
-          LIMIT 1`,
-         [articleId],
-      );
-      return row?.score ?? 0;
-   } catch {
-      return 0;
-   }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -452,10 +484,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             if (!roundChanged && finalContent >= TARGET_CONTENT_SCORE - 5) break;
          }
 
-         // FAQ round — answer remaining AI Search questions (coverage items, else PAA fallback).
-         // Without this fallback, articles with AI≈19 and no coverage snapshot never get a FAQ
-         // and whole-article "less" edits used to echo → "didn't change this time".
-         if (!aborted && ctx && ((ctx.coverage?.items?.length ?? 0) > 0 || (ctx.paa?.length ?? 0) > 0)) {
+         // FAQ round — coverage items, else PAA, else weak visibility citation prompts
+         // (article 159: ai_info_to_cover null + paa empty → previously skipped FAQ entirely → no_change).
+         if (!aborted && ctx && articleId != null) {
             const plainForFaq = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
             const liveForFaq = ctx.coverage?.items?.length
                ? liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml)
@@ -463,6 +494,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             let uncovered = collectUncoveredAiQuestions(liveForFaq);
             if (uncovered.length === 0 && ctx.paa?.length) {
                uncovered = ctx.paa.slice(0, 12).map((label, i) => ({ id: `paa-${i}`, label }));
+            }
+            if (uncovered.length === 0) {
+               uncovered = await readWeakVisibilityPrompts(Number(articleId));
             }
             if (uncovered.length > 0) {
                const faqPrompt = buildFaqSectionPrompt({

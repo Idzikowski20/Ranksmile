@@ -22,7 +22,7 @@ import {
   scaleTermRangesToWordCount,
 } from '../../../lib/competitorTermCalibration';
 import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
-import { computeAiSearchScoreV2, computeOverallContentScore } from '../../../lib/aiSearchScore';
+import { computeOverallContentScore, resolveAiScore } from '../../../lib/aiSearchScore';
 import type { ArticleFact } from '../../../lib/articleFacts';
 
 type RawSerpTerm = NlpTerm & { text?: string; importance?: number; count?: number };
@@ -1016,14 +1016,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         const intentBucket = coverageSnapshot.buckets.find((b) => b.key === 'intent');
-        const aiScore = articleFacts.length
-          ? computeAiSearchScoreV2({
-            facts: articleFacts,
-            articleText: plainText,
-            intentScore: intentBucket?.score,
-            answersMainQuestionEarly: coverageSnapshot.answersMainQuestionEarly,
-          })
-          : 0;
+        const aiScore = resolveAiScore({
+          facts: articleFacts,
+          articleText: plainText,
+          summary: aiVisibilitySummary,
+          intentScore: intentBucket?.score,
+          answersMainQuestionEarly: coverageSnapshot.answersMainQuestionEarly,
+          coverageOverall: coverageSnapshot.overall,
+        });
         const contentScore = computeOverallContentScore(seoScore, aiScore);
         // Keyword mode: empty draft — don't persist content-based scores (see above).
         // The ai_info_to_cover snapshot is already saved; scores stay live in the editor.
@@ -1051,7 +1051,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (err) {
       console.warn('[coverage] deep-analysis snapshot compute failed', err);
       if (!isKeywordMode && aiVisibilitySummary?.citations?.length && articleFacts.length) {
-        const fallbackAi = computeAiSearchScoreV2({ facts: articleFacts, articleText: plainText });
+        const fallbackAi = resolveAiScore({
+          facts: articleFacts,
+          articleText: plainText,
+          summary: aiVisibilitySummary,
+        });
         const contentScore = computeOverallContentScore(seoScore, fallbackAi);
         scoreData.ai_score = fallbackAi;
         scoreData._content_score = contentScore;

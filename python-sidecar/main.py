@@ -69,17 +69,38 @@ async def _start_ai_vis_scheduler() -> None:
     print("[ai_vis_scheduler] started")
 
 
+_EXEMPT_PATHS = {"/health", "/ready"}
+
+
+def _is_deployed_host() -> bool:
+    return bool(
+        os.getenv("RAILWAY_ENVIRONMENT")
+        or os.getenv("RENDER")
+        or os.getenv("VERCEL")
+    )
+
+
+@app.on_event("startup")
+async def _require_internal_token_on_deploy() -> None:
+    if _is_deployed_host() and not os.getenv("INTERNAL_PIPELINE_TOKEN", "").strip():
+        raise RuntimeError("INTERNAL_PIPELINE_TOKEN is required on deployed hosts")
+
+
 @app.middleware("http")
 async def require_internal_token(request: Request, call_next):
     """Authorise every request with the shared secret when one is configured.
 
     The sidecar is deployed publicly (the Next.js app calls it server-to-server),
     so without this anyone could hit the LLM endpoints and burn API credits. When
-    INTERNAL_PIPELINE_TOKEN is unset (local dev) the check is skipped; /health and
-    CORS preflight stay open.
+    INTERNAL_PIPELINE_TOKEN is unset (local dev) the check is skipped; /health, /ready
+    and CORS preflight stay open. New routes inherit this middleware by default.
     """
     expected = os.getenv("INTERNAL_PIPELINE_TOKEN", "")
-    if expected and request.method != "OPTIONS" and request.url.path != "/health":
+    if (
+        expected
+        and request.method != "OPTIONS"
+        and request.url.path not in _EXEMPT_PATHS
+    ):
         if request.headers.get("x-internal-token", "") != expected:
             return JSONResponse(status_code=401, content={"detail": "unauthorized"})
     return await call_next(request)
@@ -122,6 +143,18 @@ class GenerateResponse(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "1.0.0"}
+
+
+@app.get("/ready")
+def ready():
+    token_ok = bool(os.getenv("INTERNAL_PIPELINE_TOKEN", "").strip())
+    nextjs = (os.getenv("NEXTJS_URL") or os.getenv("APP_BASE_URL") or "").strip()
+    if _is_deployed_host() and (not token_ok or not nextjs):
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "token": token_ok, "nextjs_url": bool(nextjs)},
+        )
+    return {"ok": True, "token": token_ok, "nextjs_url": bool(nextjs)}
 
 
 @app.post("/generate", response_model=GenerateResponse)
