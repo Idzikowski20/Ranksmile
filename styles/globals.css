@@ -1837,6 +1837,34 @@ html.editor-route .app-content {
   53% { transform: scaleY(0.12); }
 }
 
+/* Smily mark — body wobble + eye blink (CSS, not Motion — Motion SVG loops
+   were skipped under prefers-reduced-motion / failed to paint on SVG <g>). */
+@keyframes smily-wobble {
+  0% { transform: rotate(0deg); }
+  59% { transform: rotate(226.382deg); }
+  90% { transform: rotate(84.284deg); }
+  100% { transform: rotate(100.226deg); }
+}
+
+.smily-face-spin {
+  transform-box: view-box;
+  transform-origin: 113px 113px;
+  animation: smily-wobble 5s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+}
+
+.smily-eye-blink {
+  transform-box: view-box;
+  transform-origin: 130.5px 112.5px;
+  animation: ranksmile-blink 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smily-face-spin,
+  .smily-eye-blink {
+    animation: none;
+  }
+}
+
 .ranksmile-selection-highlight ::selection {
   background: rgba(242, 153, 100, 0.15);
 }
