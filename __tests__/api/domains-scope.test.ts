@@ -5,6 +5,10 @@ jest.mock('../../database/models/keyword', () => ({ __esModule: true, default: {
 jest.mock('../../lib/tenancy', () => ({
   getAccessibleWorkspaceIds: jest.fn(),
   getActiveWorkspaceId: jest.fn(),
+  getScopedWorkspaceIds: jest.fn(),
+  ForbiddenWorkspaceError: class ForbiddenWorkspaceError extends Error {
+    constructor() { super('FORBIDDEN_WORKSPACE'); this.name = 'ForbiddenWorkspaceError'; }
+  },
 }));
 jest.mock('../../utils/domains', () => ({ __esModule: true, default: jest.fn(async (d) => d) }));
 jest.mock('../../utils/searchConsole', () => ({ checkSerchConsoleIntegration: jest.fn(), removeLocalSCData: jest.fn() }));
@@ -13,31 +17,34 @@ jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn(
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn(async () => 'user-a') }));
 
 import Domain from '../../database/models/domain';
-import { getAccessibleWorkspaceIds, getActiveWorkspaceId } from '../../lib/tenancy';
+import { getActiveWorkspaceId, getScopedWorkspaceIds } from '../../lib/tenancy';
 import { getDomains, addDomain } from '../../pages/api/domains';
 
 const findAll = Domain.findAll as jest.Mock;
 const bulkCreate = Domain.bulkCreate as jest.Mock;
 
 const makeRes = () => {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
+  const res: { status: jest.Mock; json: jest.Mock } = {
+    status: jest.fn(),
+    json: jest.fn(),
+  };
+  res.status.mockReturnValue(res);
+  res.json.mockReturnValue(res);
   return res;
 };
 
 describe('domains route scoping', () => {
   beforeEach(() => {
     findAll.mockReset(); bulkCreate.mockReset();
-    (getAccessibleWorkspaceIds as jest.Mock).mockReset();
+    (getScopedWorkspaceIds as jest.Mock).mockReset();
     (getActiveWorkspaceId as jest.Mock).mockReset();
   });
 
-  it('getDomains filters Domain.findAll by accessible workspace ids', async () => {
-    (getAccessibleWorkspaceIds as jest.Mock).mockResolvedValue([8]);
+  it('getDomains filters Domain.findAll by scoped (active) workspace ids', async () => {
+    (getScopedWorkspaceIds as jest.Mock).mockResolvedValue([8]);
     findAll.mockResolvedValue([]);
     const res = makeRes();
-    await getDomains({ query: {} } as any, res, 'user-a');
+    await getDomains({ query: {}, cookies: {} } as never, res, 'user-a');
     const whereArg = findAll.mock.calls[0][0].where;
     expect(JSON.stringify(whereArg)).toContain('8');
     expect(res.status).toHaveBeenCalledWith(200);
@@ -47,7 +54,7 @@ describe('domains route scoping', () => {
     (getActiveWorkspaceId as jest.Mock).mockResolvedValue(8);
     bulkCreate.mockResolvedValue([{ get: () => ({ ID: 1 }) }]);
     const res = makeRes();
-    await addDomain({ body: { domains: ['a.com'] } } as any, res, 'user-a');
+    await addDomain({ body: { domains: ['a.com'] } } as never, res, 'user-a');
     expect(bulkCreate.mock.calls[0][0][0].workspace_id).toBe(8);
   });
 });

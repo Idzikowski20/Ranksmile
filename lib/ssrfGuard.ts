@@ -61,3 +61,28 @@ export async function assertPublicUrl(rawUrl: string): Promise<URL> {
   for (const a of addrs) if (isPrivateAddress(a.address)) throw new Error('Blocked private address');
   return u;
 }
+
+/**
+ * Fetch following redirects manually, re-validating every hop with assertPublicUrl.
+ * Use this instead of fetch(..., { redirect: 'follow' }) / axios maxRedirects for user URLs.
+ */
+export async function ssrfSafeFetch(
+  initial: string,
+  init: RequestInit = {},
+  maxRedirects = 4,
+): Promise<Response> {
+  let current = initial;
+  for (let i = 0; i < maxRedirects; i += 1) {
+    await assertPublicUrl(current);
+    // eslint-disable-next-line no-await-in-loop
+    const r = await fetch(current, { ...init, redirect: 'manual' });
+    if (r.status >= 300 && r.status < 400) {
+      const loc = r.headers.get('location');
+      if (!loc) return r;
+      current = new URL(loc, current).toString();
+      continue;
+    }
+    return r;
+  }
+  throw new Error('Too many redirects');
+}

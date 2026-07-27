@@ -1,8 +1,7 @@
 // GET /api/favicon?domain=example.com
 // Generuje SVG placeholder z pierwszą literą domeny + próbuje pobrać prawdziwe favicon
 import type { NextApiRequest, NextApiResponse } from 'next';
-import axios from 'axios';
-import { assertPublicUrl } from '../../lib/ssrfGuard';
+import { ssrfSafeFetch } from '../../lib/ssrfGuard';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
 
@@ -33,20 +32,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    for (const url of sources) {
       try {
-         await assertPublicUrl(url); // block ?domain= pointing at private/loopback/metadata hosts
-         const upstream = await axios.get(url, {
-            responseType: 'arraybuffer',
-            timeout: 4000,
-            maxRedirects: 2,
+         const controller = new AbortController();
+         const timer = setTimeout(() => controller.abort(), 4000);
+         const upstream = await ssrfSafeFetch(url, {
+            signal: controller.signal,
             headers: { 'User-Agent': 'Mozilla/5.0' },
-            validateStatus: (s) => s === 200,
-         });
-         const ct = (String(upstream.headers['content-type'] || '')).split(';')[0].trim();
-         // Akceptuj tylko prawdziwe formaty graficzne
-         if (ct && (ct.startsWith('image/') || ct === 'application/octet-stream') && upstream.data?.length > 100) {
+         }, 2);
+         clearTimeout(timer);
+         if (!upstream.ok) continue;
+         const buf = Buffer.from(await upstream.arrayBuffer());
+         const ct = (upstream.headers.get('content-type') || '').split(';')[0].trim();
+         if (ct && (ct.startsWith('image/') || ct === 'application/octet-stream') && buf.length > 100) {
             res.setHeader('Content-Type', ct === 'image/x-icon' ? 'image/png' : ct);
             res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-            return res.status(200).send(Buffer.from(upstream.data));
+            return res.status(200).send(buf);
          }
       } catch { /* próbuj kolejne źródło */ }
    }

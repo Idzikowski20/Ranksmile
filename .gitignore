@@ -24,6 +24,9 @@ fly.toml
 # local scratch / one-off scripts (dlugo, fizjo, etc.)
 .tmp/
 
+# Strix local pentest runs (may contain secrets / PoCs)
+/strix_runs/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

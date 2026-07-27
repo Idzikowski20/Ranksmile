@@ -6,7 +6,7 @@ import Keyword from '../../database/models/keyword';
 import getdomainStats from '../../utils/domains';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getAccessibleWorkspaceIds, getActiveWorkspaceId } from '../../lib/tenancy';
+import { getAccessibleWorkspaceIds, getActiveWorkspaceId, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../lib/tenancy';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
@@ -58,9 +58,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 export const getDomains = async (req: NextApiRequest, res: NextApiResponse<DomainsGetRes>, userId?: string | null) => {
    const withStats = !!req?.query?.withstats;
    try {
+      if (!userId) return res.status(401).json({ domains: [], error: 'Not authorized' });
       const { Op } = await import('sequelize');
-      const wsIds = await getAccessibleWorkspaceIds(userId);
-      const allDomains: Domain[] = await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } });
+      const wsIds = await getScopedWorkspaceIds(req, userId);
+      const allDomains: Domain[] = wsIds.length
+         ? await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } })
+         : [];
       const formattedDomains: DomainType[] = allDomains.map((el) => {
          const domainItem:DomainType = el.get({ plain: true });
          const scData = domainItem?.search_console ? JSON.parse(domainItem.search_console) : {};
@@ -71,6 +74,9 @@ export const getDomains = async (req: NextApiRequest, res: NextApiResponse<Domai
       const theDomains: DomainType[] = withStats ? await getdomainStats(formattedDomains) : formattedDomains;
       return res.status(200).json({ domains: theDomains });
    } catch (error) {
+      if (error instanceof ForbiddenWorkspaceError) {
+         return res.status(403).json({ domains: [], error: 'Forbidden workspace' });
+      }
       return res.status(400).json({ domains: [], error: 'Error Getting Domains.' });
    }
 };

@@ -38,6 +38,7 @@ from analyzers.ranking_scorer import predict_ranking
 from analyzers.plagiarism import run_plagiarism
 from analyzers.ner import extract_entities
 from pipeline.article_pipeline import run_pipeline, suggest_internal_links, generate_brand_knowledge
+from pipeline.ssrf_guard import assert_public_url
 from service_urls import nextjs_url as resolved_nextjs_url
 
 app = FastAPI(
@@ -308,6 +309,12 @@ async def analyze_site_endpoint(body: dict):
     url = body.get("url", "")
     if not url:
         raise HTTPException(status_code=400, detail="url is required")
+    if not url.startswith("http"):
+        url = f"https://{url}"
+    try:
+        assert_public_url(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return await analyze_site(url)
 
 
@@ -317,6 +324,12 @@ async def brand_knowledge_endpoint(body: dict):
     url = body.get("url", "")
     if not url:
         raise HTTPException(status_code=400, detail="url is required")
+    if not url.startswith("http"):
+        url = f"https://{url}"
+    try:
+        assert_public_url(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not os.getenv("DEEPSEEK_API_KEY", ""):
         raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured")
     print(f"[brand-knowledge] Analyzing {url}")

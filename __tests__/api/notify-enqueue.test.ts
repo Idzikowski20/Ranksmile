@@ -3,6 +3,14 @@ jest.mock('../../utils/verifyUser', () => ({
   default: jest.fn().mockResolvedValue('authorized'),
 }));
 
+jest.mock('../../utils/getUser', () => ({
+  getCurrentUserId: jest.fn().mockResolvedValue('user-1'),
+}));
+
+jest.mock('../../lib/tenancy', () => ({
+  ensureUserTenancy: jest.fn().mockResolvedValue({ orgId: 9 }),
+}));
+
 jest.mock('../../pages/api/settings', () => ({
   getAppSettings: jest.fn().mockResolvedValue({
     notification_interval: 'daily',
@@ -45,6 +53,9 @@ jest.mock('../../database/database', () => ({
 }));
 
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
+import { ensureUserTenancy } from '../../lib/tenancy';
+import db from '../../database/database';
 import notifyHandler from '../../pages/api/notify';
 
 const makeRes = () => {
@@ -61,6 +72,8 @@ describe('POST /api/notify', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (verifyUser as jest.Mock).mockResolvedValue('authorized');
+    (getCurrentUserId as jest.Mock).mockResolvedValue('user-1');
+    (ensureUserTenancy as jest.Mock).mockResolvedValue({ orgId: 9 });
     mockEnqueue.mockResolvedValue({
       enqueued: 1,
       skipped: 1,
@@ -69,21 +82,33 @@ describe('POST /api/notify', () => {
     });
   });
 
-  it('returns 202 with counters', async () => {
+  it('returns 202 with counters and scopes domains to caller org', async () => {
     const res = makeRes();
-    await notifyHandler({ method: 'POST', query: {}, cookies: {} } as never, res);
+    await notifyHandler({ method: 'POST', query: {}, cookies: {}, headers: {} } as never, res);
     expect(res.status).toHaveBeenCalledWith(202);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       enqueued: 1,
       skipped: 1,
     }));
     expect(mockEnqueue).toHaveBeenCalled();
+    expect(ensureUserTenancy).toHaveBeenCalledWith('user-1');
+    const sql = String((db.query as jest.Mock).mock.calls[0][0]);
+    expect(sql).toMatch(/w\.org_id\s*=\s*\?/);
+    expect((db.query as jest.Mock).mock.calls[0][1]).toEqual({ replacements: [9] });
   });
 
   it('returns 401 without auth', async () => {
     (verifyUser as jest.Mock).mockResolvedValueOnce('Unauthorized');
     const res = makeRes();
-    await notifyHandler({ method: 'POST', query: {}, cookies: {} } as never, res);
+    await notifyHandler({ method: 'POST', query: {}, cookies: {}, headers: {} } as never, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it('rejects when session user cannot be resolved', async () => {
+    (getCurrentUserId as jest.Mock).mockResolvedValue(null);
+    const res = makeRes();
+    await notifyHandler({ method: 'POST', query: {}, cookies: {}, headers: {} } as never, res);
     expect(res.status).toHaveBeenCalledWith(401);
     expect(mockEnqueue).not.toHaveBeenCalled();
   });

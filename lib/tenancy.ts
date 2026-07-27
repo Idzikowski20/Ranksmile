@@ -114,15 +114,32 @@ export async function getAccessibleWorkspaceIds(userId: string | null | undefine
    return all.filter((id) => allowed.includes(id));
 }
 
-/** The active workspace: a valid `active_workspace` cookie, else the first accessible workspace, else 0 (none → create-workspace flow). */
+/** The active workspace: a valid `active_workspace` cookie, else the first accessible workspace, else 0 (none → create-workspace flow).
+ *  Present-but-invalid cookie → throws ForbiddenWorkspaceError (callers map to 403). */
+export class ForbiddenWorkspaceError extends Error {
+   constructor() {
+      super('FORBIDDEN_WORKSPACE');
+      this.name = 'ForbiddenWorkspaceError';
+   }
+}
+
 export async function getActiveWorkspaceId(req: NextApiRequest, userId: string): Promise<number> {
    const accessible = await getAccessibleWorkspaceIds(userId);
    const raw = req.cookies?.active_workspace;
-   if (raw) {
+   if (raw != null && String(raw).trim() !== '') {
       const id = Number(raw);
-      if (Number.isInteger(id) && id > 0 && accessible.includes(id)) return id;
+      if (!Number.isInteger(id) || id <= 0 || !accessible.includes(id)) {
+         throw new ForbiddenWorkspaceError();
+      }
+      return id;
    }
    return accessible.length ? accessible[0] : 0;
+}
+
+/** List-query scope: only the active workspace (cookie-enforced). */
+export async function getScopedWorkspaceIds(req: NextApiRequest, userId: string): Promise<number[]> {
+   const id = await getActiveWorkspaceId(req, userId);
+   return id > 0 ? [id] : [];
 }
 
 /**

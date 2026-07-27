@@ -11,6 +11,7 @@ import httpx
 from bs4 import BeautifulSoup
 from analyzers.html_parse import parse_html
 from analyzers.semantic_terms import extract_semantic_terms
+from pipeline.ssrf_guard import ssrf_safe_get
 
 
 # ── SPA fallback: use Next.js headless browser endpoint for JS-rendered pages ──
@@ -149,16 +150,19 @@ async def analyze_serp(keyword: str, language: str = "pl", num_results: int = 10
 
 
 async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]]:
-    async def _fetch_one(client: httpx.AsyncClient, url: str, *, verify: bool = True):
+    scrape_headers = {
+        "User-Agent": BROWSER_UA,
+        "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
+    }
+
+    async def _fetch_one(url: str, *, verify: bool = True):
         try:
-            response = await client.get(
+            response = await ssrf_safe_get(
                 url,
-                headers={
-                    "User-Agent": BROWSER_UA,
-                    "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
-                },
-                # verify is set on the client; this branch uses a dedicated client when False
+                headers=scrape_headers,
+                timeout=15,
+                verify=verify,
             )
             if response.status_code >= 400:
                 print(f"[serp_analyzer] HTTP {response.status_code} for {url}")
@@ -184,16 +188,14 @@ async def _scrape_pages(urls: list[str]) -> tuple[list[str], list[BeautifulSoup]
             if verify and ("CERTIFICATE_VERIFY_FAILED" in msg or "SSL" in msg):
                 print(f"[serp_analyzer] SSL error for {url} — retrying without verify")
                 try:
-                    async with httpx.AsyncClient(timeout=15, follow_redirects=True, verify=False) as insecure:
-                        return await _fetch_one(insecure, url, verify=False)
+                    return await _fetch_one(url, verify=False)
                 except Exception as retry_exc:
                     print(f"[serp_analyzer] Failed to scrape {url}: {retry_exc}")
                     return ("", None)
             print(f"[serp_analyzer] Failed to scrape {url}: {exc}")
             return ("", None)
 
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-        results = await asyncio.gather(*(_fetch_one(client, url) for url in urls), return_exceptions=False)
+    results = await asyncio.gather(*(_fetch_one(url) for url in urls), return_exceptions=False)
 
     texts = [r[0] for r in results if r[1] is not None]
     soups = [r[1] for r in results if r[1] is not None]
@@ -405,10 +407,14 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
     # Fetch more results than needed so we can skip thin/error pages
     results, _ = await _fetch_serp_results(keyword, language, num * 2, serper_key)
 
-    async def _fetch_one(client: httpx.AsyncClient, result: dict, serp_position: int):
+    async def _fetch_one(result: dict, serp_position: int):
         url = result["link"]
         try:
-            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            response = await ssrf_safe_get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=10,
+            )
             html = response.text
 
             # SPA fallback: if content is thin, retry with headless browser
@@ -451,9 +457,8 @@ async def extract_competitor_outlines(keyword: str, language: str = "pl", num: i
             print(f"[serp_analyzer] outline failed for {url}: {exc}")
             return None
 
-    async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-        tasks = [_fetch_one(client, r, i + 1) for i, r in enumerate(results)]
-        all_outlines = await asyncio.gather(*tasks, return_exceptions=False)
+    tasks = [_fetch_one(r, i + 1) for i, r in enumerate(results)]
+    all_outlines = await asyncio.gather(*tasks, return_exceptions=False)
 
     # Filter thin/failed pages, keep top `num` by original SERP order
     valid = [o for o in all_outlines if o is not None]
