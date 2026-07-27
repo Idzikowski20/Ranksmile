@@ -5,7 +5,7 @@ import { QueryTypes } from 'sequelize';
 import db from '../../../database/database';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
+import { getAccessibleWorkspaceIds, getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../../lib/tenancy';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import Domain from '../../../database/models/domain';
 import { Op } from 'sequelize';
@@ -29,9 +29,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    return res.status(405).json({ error: 'Method not allowed' });
 }
 
-/** Domain IDs in the user's accessible workspaces. */
-export async function getUserDomainIds(userId: string | null): Promise<number[]> {
-   const wsIds = await getAccessibleWorkspaceIds(userId);
+/** Domain IDs in the user's active (scoped) workspace. */
+export async function getUserDomainIds(
+   userId: string | null,
+   req?: NextApiRequest,
+): Promise<number[]> {
+   if (!userId) return [];
+   const wsIds = req
+      ? await getScopedWorkspaceIds(req, userId)
+      : await getAccessibleWorkspaceIds(userId);
+   if (!wsIds.length) return [];
    const domains = await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } }, attributes: ['ID'] });
    return domains.map((d) => d.ID);
 }
@@ -55,7 +62,7 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
       let where = '';
       const replacements: SqlReplacements = [];
 
-      const allowedIds = await getUserDomainIds(userId);
+      const allowedIds = await getUserDomainIds(userId, req);
 
       let resolvedDomainId: number | undefined;
       if (domainId) {
@@ -141,6 +148,9 @@ async function getArticles(req: NextApiRequest, res: NextApiResponse, userId: st
       const hasMore = offset + limit < total;
       return res.status(200).json({ articles: result, total, hasMore, limit, offset });
    } catch (error) {
+      if (error instanceof ForbiddenWorkspaceError) {
+         return res.status(403).json({ error: 'Forbidden workspace' });
+      }
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }

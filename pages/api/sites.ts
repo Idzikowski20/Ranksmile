@@ -3,7 +3,7 @@ import { auth, searchconsole_v1 } from '@googleapis/searchconsole';
 import Cryptr from 'cryptr';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
-import { getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { getScopedWorkspaceIds, ForbiddenWorkspaceError } from '../../lib/tenancy';
 import db from '../../database/database';
 import Domain from '../../database/models/domain';
 import GscAccount from '../../database/models/gscAccount';
@@ -51,18 +51,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(401).json({ error: authorized });
   }
   const userId = await getCurrentUserId(req, res);
-  const { Op } = await import('sequelize');
-  const wsIds = await getAccessibleWorkspaceIds(userId);
+  if (!userId) return res.status(401).json({ error: 'Not authorized' });
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let wsIds: number[];
+  try {
+    wsIds = await getScopedWorkspaceIds(req, userId);
+  } catch (e) {
+    if (e instanceof ForbiddenWorkspaceError) {
+      return res.status(403).json({ error: 'Forbidden workspace' });
+    }
+    throw e;
+  }
+
+  const { Op } = await import('sequelize');
+
   const allSites: GSCSite[] = [];
   const errors: string[] = [];
 
   // Fetch configured domains for chart data
-  const configuredDomains = userId
+  const configuredDomains = wsIds.length
     ? await Domain.findAll({ where: { workspace_id: { [Op.in]: wsIds } } })
     : [];
   const domainStats: Record<string, DomainStats> = {};

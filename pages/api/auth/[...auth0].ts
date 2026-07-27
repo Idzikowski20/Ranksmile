@@ -2,10 +2,36 @@
  * Neon Auth proxy for Pages Router.
  * Forwards all /api/auth/* requests to the Neon Auth upstream server,
  * then relays the response (including Set-Cookie headers) back to the client.
+ *
+ * CORS: Neon reflects any Origin + credentials. Strip those headers and only
+ * re-emit ACAO for known app origins (defense in depth vs credentialed XSS).
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getAppOrigin } from '../../../lib/appOrigin';
 
 const BASE_URL = process.env.NEON_AUTH_BASE_URL;
+
+const STRIP_FROM_UPSTREAM = new Set([
+  'transfer-encoding',
+  'access-control-allow-origin',
+  'access-control-allow-credentials',
+  'access-control-allow-headers',
+  'access-control-allow-methods',
+  'access-control-expose-headers',
+]);
+
+function allowedAuthOrigins(req: NextApiRequest): Set<string> {
+  const origins = new Set<string>();
+  const app = getAppOrigin(req);
+  if (app) origins.add(app);
+  origins.add('https://ranksmile.pl');
+  origins.add('https://www.ranksmile.pl');
+  if (process.env.NODE_ENV !== 'production') {
+    origins.add('http://localhost:3000');
+    origins.add('http://127.0.0.1:3000');
+  }
+  return origins;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (!BASE_URL) {
@@ -40,10 +66,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       response.headers.forEach((value, key) => {
-         if (key.toLowerCase() !== 'transfer-encoding') {
+         if (!STRIP_FROM_UPSTREAM.has(key.toLowerCase())) {
             res.setHeader(key, value);
          }
       });
+
+      const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
+      if (origin && allowedAuthOrigins(req).has(origin)) {
+         res.setHeader('Access-Control-Allow-Origin', origin);
+         res.setHeader('Access-Control-Allow-Credentials', 'true');
+         res.setHeader('Vary', 'Origin');
+      }
 
       res.status(response.status);
       const buffer = await response.arrayBuffer();

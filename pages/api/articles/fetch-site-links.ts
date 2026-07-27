@@ -5,7 +5,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { renderPage } from '../../../utils/spaScraper';
-import { assertPublicUrl } from '../../../lib/ssrfGuard';
+import { ssrfSafeFetch } from '../../../lib/ssrfGuard';
 import { getErrorMessage } from '../../../lib/errors';
 
 const FETCH_HEADERS = {
@@ -70,7 +70,7 @@ async function fetchSitemapLinks(origin: string, baseUrl: string): Promise<Array
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 6_000);
 
-      const res = await fetch(`${origin}${path}`, {
+      const res = await ssrfSafeFetch(`${origin}${path}`, {
         signal: controller.signal,
         headers: FETCH_HEADERS,
       });
@@ -129,15 +129,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch {
     return res.status(400).json({ error: 'Invalid URL' });
   }
-  // SSRF: block fetching/rendering private/loopback/metadata hosts (covers the direct fetch,
-  // the sitemap fallback over base.origin, and the renderPage() call below — all use this host).
-  try { await assertPublicUrl(targetUrl); } catch { return res.status(400).json({ error: 'Blocked URL' }); }
-
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15_000);
 
   try {
-    const response = await fetch(targetUrl, {
+    // SSRF: assertPublicUrl on every hop (incl. redirects) via ssrfSafeFetch.
+    const response = await ssrfSafeFetch(targetUrl, {
       signal: controller.signal,
       headers: FETCH_HEADERS,
     });

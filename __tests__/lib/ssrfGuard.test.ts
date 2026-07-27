@@ -1,4 +1,4 @@
-import { isPrivateAddress, assertPublicUrl } from '../../lib/ssrfGuard';
+import { isPrivateAddress, assertPublicUrl, ssrfSafeFetch } from '../../lib/ssrfGuard';
 
 describe('isPrivateAddress', () => {
   it.each(['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '0.0.0.0', '100.64.0.1'])(
@@ -32,5 +32,26 @@ describe('assertPublicUrl', () => {
   });
   it('rejects malformed URLs', async () => {
     await expect(assertPublicUrl('not a url')).rejects.toThrow();
+  });
+});
+
+describe('ssrfSafeFetch', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('blocks redirects that land on private IPs', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      status: 302,
+      headers: { get: (k: string) => (k.toLowerCase() === 'location' ? 'http://127.0.0.1:3000/' : null) },
+    }) as unknown as typeof fetch;
+
+    await expect(ssrfSafeFetch('http://8.8.8.8/start')).rejects.toThrow(/Blocked|private/i);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://8.8.8.8/start',
+      expect.objectContaining({ redirect: 'manual' }),
+    );
   });
 });

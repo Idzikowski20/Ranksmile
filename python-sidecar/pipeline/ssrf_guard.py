@@ -1,7 +1,12 @@
 """SSRF guard for sidecar fetches of user-supplied URLs."""
+from __future__ import annotations
+
 import ipaddress
 import socket
-from urllib.parse import urlparse
+from typing import Mapping
+from urllib.parse import urljoin, urlparse
+
+import httpx
 
 
 def _is_private_address(address: str) -> bool:
@@ -48,3 +53,38 @@ def assert_public_url(raw_url: str) -> None:
     for address in addresses:
         if _is_private_address(address):
             raise ValueError("Blocked private address")
+
+
+async def ssrf_safe_get(
+    url: str,
+    *,
+    headers: Mapping[str, str] | None = None,
+    timeout: float = 20,
+    max_redirects: int = 5,
+    verify: bool = True,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> httpx.Response:
+    """GET with manual redirect following; re-validate every hop (SSRF-safe)."""
+    current_url = url
+    req_headers = dict(headers) if headers else None
+    client_kwargs: dict[str, object] = {
+        "timeout": timeout,
+        "follow_redirects": False,
+        "verify": verify,
+    }
+    if transport is not None:
+        client_kwargs["transport"] = transport
+
+    async with httpx.AsyncClient(**client_kwargs) as client:
+        for _ in range(max_redirects):
+            assert_public_url(current_url)
+            response = await client.get(current_url, headers=req_headers)
+            if 300 <= response.status_code < 400:
+                location = response.headers.get("location")
+                if not location:
+                    return response
+                current_url = urljoin(current_url, location)
+                continue
+            return response
+
+    raise ValueError("Too many redirects")

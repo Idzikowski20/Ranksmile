@@ -1,11 +1,10 @@
 """Stage 1: Fetch page content. Plain HTTP with SPA fallback."""
 import os
-from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
 from pipeline.contracts import AnalysisStage, StageContext
-from pipeline.ssrf_guard import assert_public_url
+from pipeline.ssrf_guard import ssrf_safe_get
 
 from service_urls import nextjs_url
 
@@ -123,26 +122,15 @@ class FetchPageStage(AnalysisStage):
         }
 
     async def _fetch(self, url: str) -> str:
-        current_url = url
-        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
-            for _ in range(5):
-                assert_public_url(current_url)
-                resp = await client.get(current_url, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                })
-                if 300 <= resp.status_code < 400:
-                    location = resp.headers.get("location")
-                    if not location:
-                        resp.raise_for_status()
-                        html = resp.text
-                        break
-                    current_url = urljoin(current_url, location)
-                    continue
-                resp.raise_for_status()
-                html = resp.text
-                break
-            else:
-                raise ValueError("Too many redirects")
+        resp = await ssrf_safe_get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        html = resp.text
 
         # SPA fallback check
         soup = BeautifulSoup(html, "lxml")

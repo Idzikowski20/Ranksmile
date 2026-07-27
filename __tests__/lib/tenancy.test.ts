@@ -89,11 +89,17 @@ describe('getActiveWorkspaceId', () => {
 
   it('uses a valid cookie', async () => {
     accessibleOwner();
-    expect(await getActiveWorkspaceId({ cookies: { active_workspace: '10' } } as any, 'u1')).toBe(10);
+    expect(await getActiveWorkspaceId({ cookies: { active_workspace: '10' } } as never, 'u1')).toBe(10);
+  });
+  it('rejects a present but inaccessible cookie', async () => {
+    accessibleOwner();
+    await expect(
+      getActiveWorkspaceId({ cookies: { active_workspace: '999' } } as never, 'u1'),
+    ).rejects.toMatchObject({ name: 'ForbiddenWorkspaceError' });
   });
   it('falls back to the first accessible workspace', async () => {
     accessibleOwner();
-    expect(await getActiveWorkspaceId({ cookies: {} } as any, 'u1')).toBe(9);
+    expect(await getActiveWorkspaceId({ cookies: {} } as never, 'u1')).toBe(9);
   });
   it('returns 0 when the user has no workspaces', async () => {
     mockQuery
@@ -102,7 +108,7 @@ describe('getActiveWorkspaceId', () => {
       .mockResolvedValueOnce(rows([]))                // ensure: orphans
       .mockResolvedValueOnce(owner())                 // own membership
       .mockResolvedValueOnce(rows([]));               // workspaces -> none
-    expect(await getActiveWorkspaceId({ cookies: {} } as any, 'u1')).toBe(0);
+    expect(await getActiveWorkspaceId({ cookies: {} } as never, 'u1')).toBe(0);
   });
 });
 

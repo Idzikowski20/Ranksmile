@@ -11,13 +11,13 @@ Scrape'uje URL i zwraca pełny raport techniczny:
 import os
 import re
 import json
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
 
-from pipeline.ssrf_guard import assert_public_url
+from pipeline.ssrf_guard import ssrf_safe_get
 from service_urls import nextjs_url
 
 
@@ -49,24 +49,13 @@ async def _fetch_via_spa_fallback(url: str, html: str) -> str | None:
 
 
 async def _fetch_public_html(url: str) -> tuple[str, str]:
-    current_url = url
-    async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
-        for _ in range(5):
-            assert_public_url(current_url)
-            response = await client.get(current_url, headers={
-                "User-Agent": "Mozilla/5.0 (compatible; RanksmileBot/1.0)"
-            })
-            if 300 <= response.status_code < 400:
-                location = response.headers.get("location")
-                if not location:
-                    response.raise_for_status()
-                    return response.text, str(response.url)
-                current_url = urljoin(current_url, location)
-                continue
-            response.raise_for_status()
-            return response.text, str(response.url)
-
-    raise ValueError("Too many redirects")
+    response = await ssrf_safe_get(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; RanksmileBot/1.0)"},
+        timeout=20,
+    )
+    response.raise_for_status()
+    return response.text, str(response.url)
 
 
 async def analyze_site(url: str) -> dict:
