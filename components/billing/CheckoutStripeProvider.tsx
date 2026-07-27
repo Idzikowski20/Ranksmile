@@ -300,12 +300,13 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
 
     React.useEffect(() => {
       let cancelled = false;
+      const checkoutAttemptId = crypto.randomUUID();
       (async () => {
         try {
           const response = await fetch('/api/billing/create-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ planSlug, billing, mode }),
+            body: JSON.stringify({ planSlug, billing, mode, checkoutAttemptId }),
           });
           const data = await response.json() as IntentPayload & { error?: string };
           if (!response.ok || !data.clientSecret || !data.publishableKey) {

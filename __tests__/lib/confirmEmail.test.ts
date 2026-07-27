@@ -55,7 +55,7 @@ describe('sendConfirmationEmail', () => {
       expect(url).toBe('https://api.resend.com/emails');
       expect(init.headers.Authorization).toBe('Bearer test-key');
       const body = JSON.parse(init.body);
-      expect(body.from).toContain('elearning.riskcom.pl');
+      expect(body.from).toContain('ranksmile.pl');
       expect(body.to).toEqual(['user@example.com']);
       expect(body.subject).toBe(CONFIRM_EMAIL_SUBJECT);
       expect(body.html).toContain(confirmUrl);

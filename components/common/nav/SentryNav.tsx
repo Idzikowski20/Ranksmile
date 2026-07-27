@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useQuery } from 'react-query';
@@ -13,12 +13,14 @@ import type { PlanLimitMetric, PlanSummaryData } from '../../../lib/planLimits';
 import { formatMetricUsage } from '../../../lib/planLimits';
 import { countActionableRecommendations } from '../../../lib/recommendations';
 import { AI_VISIBILITY_NAV, AUDIT_URL_PATH, resolveSiteNav, SEO_NAV, TOOLS_NAV } from '../../../lib/navigation';
+import { levelCss } from '../../../lib/serviceStatus';
+import { useServiceStatus } from '../../../services/serviceStatus';
 import { Avatar } from '../../core/avatar';
 import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings, IconTools,
   IconCreditCard, IconFire, IconBroadcast, IconEllipsis, IconChevron,
   IconQuestion, IconGroup, IconSentryLogo, IconDocs, IconSupport,
-  IconBuilding, IconMegaphone, IconGlobe, IconOpen,
+  IconBuilding, IconMegaphone, IconGlobe,
 } from './sentryIcons';
 
 type Props = {
@@ -215,27 +217,39 @@ const WhatsNewMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => voi
   );
 };
 
-type StatusUpdate = { status: 'Operational' | 'Monitoring'; time: string; msg: string };
-const STATUS_UPDATES: StatusUpdate[] = [
-  { status: 'Operational', time: 'Now', msg: 'All Ranksmile services are running normally.' },
-];
 const ServiceStatusMenu = ({ anchor, onClose }: { anchor: DOMRect; onClose: () => void }) => {
   const ref = useDismiss(onClose);
+  const { data, isLoading } = useServiceStatus();
+  const overall = data?.overall ?? 'ok';
+  const tone = levelCss(overall);
+
   return (
     <div ref={ref} className="sentry-nav-popover sentry-nav-popover--wide" style={{ left: anchor.right + 8, bottom: 12, top: 'auto' }}>
-      <div className="sentry-status-title">All systems operational</div>
-      <a className="sentry-status-link" href="https://ranksmile.pl" target="_blank" rel="noreferrer noopener">
-        <IconOpen size={12} /> view status page
-      </a>
+      <div className="sentry-status-title">{isLoading ? 'Checking status…' : (data?.title ?? 'All systems operational')}</div>
       <ul className="sentry-status-list">
-        {STATUS_UPDATES.map((u, i) => (
-          <li key={i} className="sentry-status-update">
-            <span className={`sentry-status-dot ${u.status === 'Operational' ? 'sentry-status-dot--green' : 'sentry-status-dot--yellow'}`} />
-            <span className={`sentry-status-label ${u.status === 'Operational' ? 'sentry-status-label--yellow' : 'sentry-status-label--yellow'}`}>{u.status}</span>
-            <span className="sentry-status-time">({u.time})</span>
-            <p className="sentry-status-msg">{u.msg}</p>
+        {(data?.services ?? []).map((s) => {
+          const css = levelCss(s.level);
+          return (
+            <li key={s.id} className="sentry-status-update">
+              <div className="sentry-status-head">
+                <span className={`sentry-status-dot sentry-status-dot--${css}`} />
+                <span className={`sentry-status-label sentry-status-label--${css}`}>{s.name}</span>
+                <span className="sentry-status-time">({s.label})</span>
+              </div>
+              <p className="sentry-status-msg">{s.msg}</p>
+            </li>
+          );
+        })}
+        {!isLoading && !data?.services.length && (
+          <li className="sentry-status-update">
+            <div className="sentry-status-head">
+              <span className={`sentry-status-dot sentry-status-dot--${tone}`} />
+              <span className={`sentry-status-label sentry-status-label--${tone}`}>Status</span>
+              <span className="sentry-status-time">(Unknown)</span>
+            </div>
+            <p className="sentry-status-msg">Could not load service status.</p>
           </li>
-        ))}
+        )}
       </ul>
     </div>
   );
@@ -415,6 +429,8 @@ const SentryNav = ({ domains = [] }: Props) => {
   const { data: wsData } = useWorkspaces();
   const { data: profile } = useProfile();
   const { data: gscAccount } = useGscAccount();
+  const { data: serviceStatus } = useServiceStatus();
+  const statusTone = levelCss(serviceStatus?.overall ?? 'ok');
   const session = authClient.useSession?.();
   const { steps: onboardingSteps, beyondSteps: onboardingBeyond, done: onboardingDone, pct: onboardingPct, loading: onboardingLoading } = useOnboardingChecklist();
   const showOnboarding = !onboardingLoading && onboardingPct < 100;
@@ -744,7 +760,7 @@ const SentryNav = ({ domains = [] }: Props) => {
             </button>
             <button type="button" aria-label="Service status" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'status'} onClick={openPopover('status')}>
               <IconBroadcast />
-              <span className="sentry-nav-unread" aria-hidden="true" />
+              <span className={`sentry-nav-unread sentry-nav-unread--${statusTone}`} aria-hidden="true" />
             </button>
             <button type="button" aria-label="What's New" className="sentry-nav-utilbtn" aria-expanded={popover?.kind === 'whatsnew'} onClick={openPopover('whatsnew')}>
               <IconFire />

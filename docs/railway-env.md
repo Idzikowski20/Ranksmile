@@ -38,6 +38,25 @@ Staging: use the Railway HTTPS URL for `NEXT_PUBLIC_APP_URL` and add that origin
 
 Also copy existing secrets from Vercel (Neon Auth, Stripe, DeepSeek, DataForSEO, Ably, Google, `APIKEY`, `SECRET`, etc.).
 
+**Resend (transactional email) — required on `app` + `pipeline-workers`:**
+
+| Variable | Why |
+|----------|-----|
+| `RESEND_API_KEY` | Send via Resend API (`lib/sendMail`, confirm-account). Preferred over SMTP. |
+| `RESEND_FROM` | Optional. Default `Ranksmile <noreply@ranksmile.pl>` (domain must be verified in Resend). |
+
+**Stripe billing — required on `app` (and webhook target URL):**
+
+| Variable | Why |
+|----------|-----|
+| `STRIPE_MODE` | `test` or `live` — must match `STRIPE_SECRET_KEY` prefix |
+| `STRIPE_SECRET_KEY` | Server Stripe API |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Payment Element |
+| `STRIPE_WEBHOOK_SECRET` | `POST /api/webhooks/stripe` signature |
+| `STRIPE_PRICE_*` | Eight price IDs (starter/growth/scale/agency × monthly/yearly) |
+
+Webhook events: see [`docs/stripe-event-matrix.md`](./stripe-event-matrix.md). Cron: `GET /api/cron/stripe-billing-reconcile`, `GET /api/cron/starter-nudge` (Bearer `CRON_SECRET`).
+
 **Keyword Tracker flags on `app` (optional; SI organic does not need them):**
 
 | Variable | Why |

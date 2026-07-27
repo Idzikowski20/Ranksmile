@@ -15,7 +15,7 @@ $ranksmile_tracking_is_enabled = isset( $tracking_enabled ) && $tracking_enabled
 
 <div style="background-color: #F8FAFB; padding: 40px;">
 
-	<?php ranksmile_image_printer( Ranksmile()->get_baseurl() . '/assets/images/emails/ranksmile_logo.png', 'Ranksmile', 'display: block; width: 114px; height: auto; margin: 0px auto 40px;', '' ); ?>
+	<?php ranksmile_image_printer( Ranksmile()->get_baseurl() . '/assets/images/emails/ranksmile_logo.png', 'Ranksmile', 'display: block; width: 160px; height: auto; margin: 0px auto 40px;', '' ); ?>
 
 	<div style="padding: 32px; width: 720px; box-sizing: border-box; background-color: #ffffff; margin: 0px auto;">
 		<?php /* translators: %s: Site URL. */ ?>

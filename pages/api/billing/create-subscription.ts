@@ -1,20 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import type { BillingPeriod } from '../../../lib/billingPlans';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
-import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
+import { getOrgBillingState, updateOrgBillingState } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
+import { assertStripeModeOrThrow } from '../../../lib/stripeMode';
 import { ensureStripeCustomer } from '../../../lib/stripeCustomer';
 import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
+import { isCheckoutAttemptId } from '../../../lib/checkoutAttemptId';
 import type Stripe from 'stripe';
 
 const createSubscriptionSchema = z.object({
   planSlug: z.string().min(1),
   billing: z.enum(['monthly', 'yearly']),
   mode: z.enum(['trial', 'upfront']),
+  checkoutAttemptId: z.string().min(1),
 });
 
 type CheckoutMode = z.infer<typeof createSubscriptionSchema>['mode'];
@@ -41,10 +43,23 @@ function clientSecretFromSubscription(
   return null;
 }
 
+function blocksNewPaidCheckout(status: string | null | undefined): boolean {
+  return status === 'active'
+    || status === 'trialing'
+    || status === 'past_due'
+    || status === 'unpaid';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    assertStripeModeOrThrow();
+  } catch (e) {
+    return res.status(503).json({ error: e instanceof Error ? e.message : 'Stripe mode misconfigured' });
   }
 
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
@@ -60,7 +75,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' });
   }
 
-  const { planSlug: rawSlug, billing, mode } = parsed.data;
+  const { planSlug: rawSlug, billing, mode, checkoutAttemptId: rawAttempt } = parsed.data;
+  if (!isCheckoutAttemptId(rawAttempt)) {
+    return res.status(400).json({ error: 'checkoutAttemptId must be a UUID' });
+  }
+  const checkoutAttemptId = rawAttempt.trim();
   const planSlug = rawSlug.trim().toLowerCase();
 
   const plan = getCheckoutPlan(planSlug);
@@ -74,11 +93,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { orgId } = await ensureUserTenancy(user.id);
   try { await assertCanManage(user.id); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billingState = await getOrgBillingState(orgId);
-  if (hasNonTerminalStripeSubscription(billingState)) {
+  if (blocksNewPaidCheckout(billingState?.subscriptionStatus)) {
     return res.status(409).json({ error: 'An active Stripe subscription already exists for this organization' });
   }
-  const stripe = getStripe();
 
+  const stripe = getStripe();
   const customerId = await ensureStripeCustomer(
     stripe,
     orgId,
@@ -99,11 +118,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         plan_slug: plan.slug,
         billing_period: billing,
         checkout_mode: mode,
+        checkout_attempt_id: checkoutAttemptId,
       },
       ...(mode === 'trial' ? { trial_period_days: 7 } : {}),
     },
-    { idempotencyKey: `org-${orgId}-subscription-${plan.slug}-${billing}-${mode}` },
+    { idempotencyKey: `org-${orgId}-checkout-${checkoutAttemptId}` },
   );
+
+  // Cancel other incompletes (not this attempt's sub) so Opcja B doesn't leave dangling A.
+  try {
+    const incompletes = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'incomplete',
+      limit: 20,
+    });
+    for (const other of incompletes.data) {
+      if (other.id === subscription.id) continue;
+      await stripe.subscriptions.cancel(other.id).catch((err) => {
+        console.warn('[create-subscription] cancel other incomplete', other.id, err);
+      });
+    }
+  } catch (err) {
+    console.warn('[create-subscription] list incompletes', err);
+  }
+
+  await updateOrgBillingState(orgId, {
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscription.id,
+    planSlug: plan.slug as PlanSlug,
+    billingPeriod: billing,
+    subscriptionStatus: 'incomplete',
+    cancelAtPeriodEnd: false,
+    lastCheckoutStartedAt: new Date(),
+  });
 
   const secret = clientSecretFromSubscription(subscription, mode);
   if (!secret) {
@@ -115,5 +162,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     intentType: secret.intentType,
     subscriptionId: subscription.id,
     publishableKey,
+    checkoutAttemptId,
   });
 }

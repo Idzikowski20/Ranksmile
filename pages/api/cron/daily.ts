@@ -7,7 +7,7 @@ import { getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../.
 import { ensureGscSnapshotTables } from '../../../lib/ensureGscSnapshotTables';
 import { captureWeeklySnapshot, getSnapshot, weekStartFor, shiftWeek } from '../../../lib/gscSnapshots';
 import { computeDrops } from '../../../lib/gscDrops';
-import { buildGscDigest, DomainDigest } from '../../../lib/gscDigestEmail';
+import { buildGscDigest, loadDigestInlineAttachments, type DomainDigest } from '../../../lib/gscDigestEmail';
 import { sendMail } from '../../../lib/sendMail';
 import { queryRows, type ArticleRow } from '../../../lib/db/query';
 import { getErrorMessage } from '../../../lib/errors';
@@ -84,9 +84,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                if (emails.length === 0) continue;
 
                const html = buildGscDigest({ orgName: org.name, domains: digests });
+               const attachments = loadDigestInlineAttachments();
                let anySent = false;
                for (const to of emails) {
-                  try { const { sent } = await sendMail({ to, subject: `Weekly search report — ${org.name}`, html }); anySent = anySent || sent; }
+                  try { const { sent } = await sendMail({ to, subject: `Weekly Ranksmile Performance - ${org.name}`, html, attachments }); anySent = anySent || sent; }
                   catch (e) { console.error('[cron] digest email failed for', to, e); }
                }
                if (anySent) {

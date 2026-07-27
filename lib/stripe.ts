@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { stripeModeMismatchError } from './stripeMode';
 
 let client: Stripe | null = null;
 
@@ -13,6 +14,8 @@ export function getStripeWebhookSecret(): string | null {
 }
 
 export function getStripe(): Stripe {
+  const mismatch = stripeModeMismatchError();
+  if (mismatch) throw new Error(mismatch);
   const key = getStripeSecretKey();
   if (!key) throw new Error('STRIPE_SECRET_KEY is not configured');
   if (!client) {
@@ -22,5 +25,5 @@ export function getStripe(): Stripe {
 }
 
 export function isStripeConfigured(): boolean {
-  return getStripeSecretKey() !== null;
+  return getStripeSecretKey() !== null && !stripeModeMismatchError();
 }

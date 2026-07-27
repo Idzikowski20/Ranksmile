@@ -1,96 +1,79 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import nodeMailer from 'nodemailer';
 import db from '../../database/database';
-import Domain from '../../database/models/domain';
-import Keyword from '../../database/models/keyword';
-import generateEmail from '../../utils/generateEmail';
-import parseKeywords from '../../utils/parseKeywords';
 import verifyUser from '../../utils/verifyUser';
 import { getAppSettings } from './settings';
+import { getErrorMessage } from '../../lib/errors';
+import {
+  enqueueKeywordPositionEmails,
+  type DomainNotifyCandidate,
+} from '../../lib/notifications/emailQueue';
+import type { EnqueueNotifyResult } from '../../lib/notifications/emailTypes';
 
-type NotifyResponse = {
-   success?: boolean
-   error?: string|null,
-}
+type NotifyResponse = EnqueueNotifyResult | { success?: boolean; error?: string | null };
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-   if (req.method !== 'POST') return res.status(401).json({ success: false, error: 'Invalid Method' });
-   // The handler triggers an email blast over all (or one) domain — it must be authenticated
-   // (APIKEY for the scheduler, or a logged-in session). Previously it ran with no auth at all.
-   const authorized = await verifyUser(req, res);
-   if (authorized !== 'authorized') return res.status(401).json({ success: false, error: authorized });
-   await db.sync();
-   return notify(req, res);
+  if (req.method !== 'POST') return res.status(401).json({ success: false, error: 'Invalid Method' });
+  const authorized = await verifyUser(req, res);
+  if (authorized !== 'authorized') return res.status(401).json({ success: false, error: authorized });
+  await db.sync();
+  return notify(req, res);
 }
 
 const notify = async (req: NextApiRequest, res: NextApiResponse<NotifyResponse>) => {
-   const reqDomain = req?.query?.domain as string || '';
-   try {
-      const settings = await getAppSettings();
-      const { smtp_server = '', smtp_port = '', notification_email = '' } = settings;
+  const reqDomain = (req?.query?.domain as string) || '';
+  try {
+    const settings = await getAppSettings();
+    const notificationInterval = String(settings.notification_interval || 'daily');
+    const defaultToEmail = String(settings.notification_email || '');
 
-      if (!smtp_server || !smtp_port || !notification_email) {
-         return res.status(401).json({ success: false, error: 'SMTP has not been setup properly!' });
-      }
+    const candidates = await loadDomainCandidates(reqDomain);
+    const result = await enqueueKeywordPositionEmails({
+      domains: candidates,
+      defaultToEmail,
+      notificationInterval,
+    });
 
-      if (reqDomain) {
-         const theDomain = await Domain.findOne({ where: { domain: reqDomain } });
-         if (theDomain) {
-            await sendNotificationEmail(theDomain, settings);
-         }
-      } else {
-         const allDomains: Domain[] = await Domain.findAll({
-            attributes: ['domain', 'notification', 'notification_emails'],
-         });
-         if (allDomains && allDomains.length > 0) {
-            const domains = allDomains.map((el) => el.get({ plain: true }));
-            for (const domain of domains) {
-               if (domain.notification !== false) {
-                  await sendNotificationEmail(domain, settings);
-               }
-            }
-         }
-      }
-
-      return res.status(200).json({ success: true, error: null });
-   } catch (error) {
-      console.log(error);
-      return res.status(401).json({ success: false, error: 'Error Sending Notification Email.' });
-   }
+    return res.status(202).json(result);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      error: getErrorMessage(error) || 'Error enqueueing notification emails.',
+    });
+  }
 };
 
-const sendNotificationEmail = async (domain: Domain, settings: SettingsType) => {
-   const {
-      smtp_server = '',
-      smtp_port = '',
-      smtp_username = '',
-      smtp_password = '',
-      notification_email = '',
-      notification_email_from = '',
-      notification_email_from_name = 'Ranksmile',
-     } = settings;
+async function loadDomainCandidates(reqDomain: string): Promise<DomainNotifyCandidate[]> {
+  if (reqDomain) {
+    const [rows] = await db.query(
+      `SELECT d."ID" AS domain_id, d.domain, d.notification, d.notification_emails,
+              w.org_id AS org_id
+         FROM domain d
+         LEFT JOIN workspaces w ON w.id = d.workspace_id
+        WHERE d.domain = ?
+        LIMIT 1`,
+      { replacements: [reqDomain] },
+    );
+    return mapRows(rows as Array<Record<string, unknown>>);
+  }
 
-   const fromEmail = `${notification_email_from_name} <${notification_email_from || 'no-reply@ranksmile.com'}>`;
-   const mailerSettings:any = { host: smtp_server, port: parseInt(smtp_port, 10) };
-   if (smtp_username || smtp_password) {
-      mailerSettings.auth = {};
-      if (smtp_username) mailerSettings.auth.user = smtp_username;
-      if (smtp_password) mailerSettings.auth.pass = smtp_password;
-   }
-   const transporter = nodeMailer.createTransport(mailerSettings);
-   const domainName = domain.domain;
-   const query = { where: { domain: domainName } };
-   const domainKeywords:Keyword[] = await Keyword.findAll(query);
-   const keywordsArray = domainKeywords.map((el) => el.get({ plain: true }));
-   const keywords: KeywordType[] = parseKeywords(keywordsArray);
-   const emailHTML = await generateEmail(domainName, keywords, settings);
-   await transporter.sendMail({
-      from: fromEmail,
-      to: domain.notification_emails || notification_email,
-      subject: `[${domainName}] Keyword Positions Update`,
-      html: emailHTML,
-   }).catch((err:any) => console.log('[ERROR] Sending Notification Email for', domainName, err?.response || err));
-};
+  const [rows] = await db.query(
+    `SELECT d."ID" AS domain_id, d.domain, d.notification, d.notification_emails,
+            w.org_id AS org_id
+       FROM domain d
+       LEFT JOIN workspaces w ON w.id = d.workspace_id`,
+  );
+  return mapRows(rows as Array<Record<string, unknown>>);
+}
+
+function mapRows(rows: Array<Record<string, unknown>>): DomainNotifyCandidate[] {
+  return rows.map((r) => ({
+    domainId: Number(r.domain_id),
+    domain: String(r.domain ?? ''),
+    orgId: r.org_id == null ? null : Number(r.org_id),
+    notification: r.notification == null ? true : Boolean(r.notification),
+    notificationEmails: r.notification_emails == null ? null : String(r.notification_emails),
+  }));
+}

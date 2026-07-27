@@ -23,6 +23,9 @@ export interface OrgBillingState {
   subscriptionStatus: SubscriptionStatus | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  lastCheckoutStartedAt: string | null;
+  starterNudgeSentAt: string | null;
 }
 
 const TERMINAL_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
@@ -47,7 +50,14 @@ type OrgBillingRow = {
   subscription_status: string | null;
   trial_ends_at: string | null;
   current_period_end: string | null;
+  cancel_at_period_end: number | boolean | null;
+  last_checkout_started_at: string | null;
+  starter_nudge_sent_at: string | null;
 };
+
+function truthyFlag(v: number | boolean | null | undefined): boolean {
+  return v === true || v === 1;
+}
 
 function mapRow(row: OrgBillingRow): OrgBillingState {
   const billingPeriod = row.billing_period === 'monthly' || row.billing_period === 'yearly'
@@ -70,6 +80,9 @@ function mapRow(row: OrgBillingRow): OrgBillingState {
     subscriptionStatus,
     trialEndsAt: row.trial_ends_at,
     currentPeriodEnd: row.current_period_end,
+    cancelAtPeriodEnd: truthyFlag(row.cancel_at_period_end),
+    lastCheckoutStartedAt: row.last_checkout_started_at,
+    starterNudgeSentAt: row.starter_nudge_sent_at,
   };
 }
 
@@ -77,11 +90,21 @@ export async function getOrgBillingState(orgId: number): Promise<OrgBillingState
   await ensureBillingTables();
   const row = await queryOne<OrgBillingRow>(
     `SELECT id, stripe_customer_id, stripe_subscription_id, plan_slug, billing_period,
-            subscription_status, trial_ends_at, current_period_end
+            subscription_status, trial_ends_at, current_period_end,
+            cancel_at_period_end, last_checkout_started_at, starter_nudge_sent_at
        FROM organizations WHERE id = ? LIMIT 1`,
     [orgId],
   );
   return row ? mapRow(row) : null;
+}
+
+export async function getOrgIdByStripeCustomerId(customerId: string): Promise<number | null> {
+  await ensureBillingTables();
+  const row = await queryOne<{ id: number }>(
+    'SELECT id FROM organizations WHERE stripe_customer_id = ? LIMIT 1',
+    [customerId],
+  );
+  return row ? Number(row.id) : null;
 }
 
 export interface OrgBillingPatch {
@@ -92,6 +115,9 @@ export interface OrgBillingPatch {
   subscriptionStatus?: SubscriptionStatus | null;
   trialEndsAt?: Date | null;
   currentPeriodEnd?: Date | null;
+  cancelAtPeriodEnd?: boolean | null;
+  lastCheckoutStartedAt?: Date | null;
+  starterNudgeSentAt?: Date | null;
 }
 
 export async function updateOrgBillingState(orgId: number, patch: OrgBillingPatch): Promise<void> {
@@ -126,6 +152,18 @@ export async function updateOrgBillingState(orgId: number, patch: OrgBillingPatc
   if (patch.currentPeriodEnd !== undefined) {
     sets.push('current_period_end = ?');
     replacements.push(patch.currentPeriodEnd ? patch.currentPeriodEnd.toISOString() : null);
+  }
+  if (patch.cancelAtPeriodEnd !== undefined) {
+    sets.push('cancel_at_period_end = ?');
+    replacements.push(patch.cancelAtPeriodEnd ? 1 : 0);
+  }
+  if (patch.lastCheckoutStartedAt !== undefined) {
+    sets.push('last_checkout_started_at = ?');
+    replacements.push(patch.lastCheckoutStartedAt ? patch.lastCheckoutStartedAt.toISOString() : null);
+  }
+  if (patch.starterNudgeSentAt !== undefined) {
+    sets.push('starter_nudge_sent_at = ?');
+    replacements.push(patch.starterNudgeSentAt ? patch.starterNudgeSentAt.toISOString() : null);
   }
 
   replacements.push(orgId);
