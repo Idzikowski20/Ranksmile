@@ -190,8 +190,8 @@ const runAppCronJobs = () => {
       }, { scheduled: true });
    }
 
-   // Plan quota reservation sweeper — every 5 minutes
-   if (process.env.CRON_SECRET) {
+  // Plan quota reservation sweeper — every 5 minutes
+  if (process.env.CRON_SECRET) {
       new Cron('*/5 * * * *', () => {
          const fetchOpts = {
             method: 'GET',
@@ -205,7 +205,36 @@ const runAppCronJobs = () => {
                console.log(err);
             });
       }, { scheduled: true });
-   }
-};
 
+      // Stripe billing reconciler — hourly
+      new Cron('0 0 * * * *', () => {
+         const fetchOpts = {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+         };
+         fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron/stripe-billing-reconcile`, fetchOpts)
+            .then((res) => res.json())
+            .then((data) => console.log('[cron] stripe-billing-reconcile', data))
+            .catch((err) => {
+               console.log('ERROR Making stripe-billing-reconcile Cron Request (after retries)..');
+               console.log(err);
+            });
+      }, { scheduled: true });
+
+      // Starter nudge — daily 03:00
+      new Cron('0 0 3 * * *', () => {
+         const fetchOpts = {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+         };
+         fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron/starter-nudge`, fetchOpts)
+            .then((res) => res.json())
+            .then((data) => console.log('[cron] starter-nudge', data))
+            .catch((err) => {
+               console.log('ERROR Making starter-nudge Cron Request (after retries)..');
+               console.log(err);
+            });
+      }, { scheduled: true });
+  }
+};
 runAppCronJobs();

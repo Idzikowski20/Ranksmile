@@ -28,6 +28,9 @@ async function runEnsureBillingTables(): Promise<void> {
     { sql: 'ALTER TABLE organizations ADD COLUMN subscription_status TEXT', label: 'subscription_status' },
     { sql: 'ALTER TABLE organizations ADD COLUMN trial_ends_at TIMESTAMP', label: 'trial_ends_at' },
     { sql: 'ALTER TABLE organizations ADD COLUMN current_period_end TIMESTAMP', label: 'current_period_end' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN cancel_at_period_end INTEGER DEFAULT 0', label: 'cancel_at_period_end' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN last_checkout_started_at TIMESTAMP', label: 'last_checkout_started_at' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN starter_nudge_sent_at TIMESTAMP', label: 'starter_nudge_sent_at' },
   ];
 
   for (const column of columns) {

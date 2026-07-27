@@ -186,8 +186,16 @@ async function main(): Promise<void> {
     console.log(`[pipeline-workers] listening on ${queueName}`);
   }
 
+  // Email outbox — DB poll (no BullMQ); claim/retry owned by notification_email_jobs.
+  const { ensureNotificationEmailTables } = await import('../lib/ensureNotificationEmailTables');
+  const { startEmailOutboxReconciler } = await import('../lib/notifications/emailOutboxReconciler');
+  await ensureNotificationEmailTables();
+  const reconcilerTimer = startEmailOutboxReconciler(60_000);
+  console.log('[pipeline-workers] notification_email DB poller registered');
+
   const shutdown = async () => {
     console.log('[pipeline-workers] shutting down…');
+    clearInterval(reconcilerTimer);
     await Promise.all(handles.map((h) => h.close()));
     process.exit(0);
   };

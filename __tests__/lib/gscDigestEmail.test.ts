@@ -12,13 +12,19 @@ const domain: DomainDigest = {
 };
 
 describe('buildGscDigest', () => {
-  it('renders org name, domain, the dropped page and prev->now', () => {
+  it('renders performance-report layout with CID images, no org label or deep-link CTA', () => {
     const html = buildGscDigest({ orgName: 'Idztech', domains: [domain] });
-    expect(html).toContain('Idztech');
-    expect(html).toContain('soze.pl');
+    expect(html).not.toContain('Idztech');
+    expect(html).not.toContain("View this week's report");
+    expect(html).toContain('Weekly Ranksmile Performance for soze.pl');
+    expect(html).toContain('Total Impressions');
+    expect(html).toContain('Total Clicks');
     expect(html).toContain('/oferta');
-    expect(html).toContain('4'); expect(html).toContain('9'); // prev -> now
-    expect(html).toContain('-20%'); // clicks WoW
-    expect(html).toContain('Out of index');
+    expect(html).toContain('-5');
+    expect(html).toContain('-20');
+    expect(html).toContain('Deindexed pages');
+    expect(html).toContain('Dropped in ranking');
+    expect(html).toContain('cid:ranksmile-logo');
+    expect(html).not.toContain('Weekly search report');
   });
 });

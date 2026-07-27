@@ -55,6 +55,7 @@ export async function syncSubscriptionToOrg(
     subscriptionStatus: asSubscriptionStatus(subscription.status),
     trialEndsAt: toDate(subscription.trial_end),
     currentPeriodEnd: toDate(periodEnd),
+    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
   });
 
   const { ensureOrgQuotaBalances } = await import('./quota/ensureBalances');

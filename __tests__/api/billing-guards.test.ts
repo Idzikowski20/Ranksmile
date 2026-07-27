@@ -6,6 +6,7 @@ jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn() }));
 jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn() }));
 jest.mock('../../lib/orgBilling', () => ({
   getOrgBillingState: jest.fn(),
+  updateOrgBillingState: jest.fn(),
   hasNonTerminalStripeSubscription: jest.fn((
     billing: { stripeSubscriptionId?: string | null; subscriptionStatus?: string | null } | null | undefined,
   ) => Boolean(
@@ -17,6 +18,9 @@ jest.mock('../../lib/orgBilling', () => ({
 jest.mock('../../lib/stripe', () => ({
   getStripe: jest.fn(),
   isStripeConfigured: jest.fn(),
+}));
+jest.mock('../../lib/stripeMode', () => ({
+  assertStripeModeOrThrow: jest.fn(),
 }));
 jest.mock('../../lib/stripeBillingSync', () => ({ syncSubscriptionToOrg: jest.fn() }));
 jest.mock('../../lib/stripeCustomer', () => ({ ensureStripeCustomer: jest.fn() }));
@@ -92,7 +96,12 @@ describe('billing mutation guards', () => {
     ['portal', portalHandler, postReq()],
     ['update-customer', updateCustomerHandler, postReq({ billingEmail: 'billing@example.com' })],
     ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' })],
-    ['create-subscription', createSubscriptionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' })],
+    ['create-subscription', createSubscriptionHandler, postReq({
+      planSlug: 'growth',
+      billing: 'monthly',
+      mode: 'trial',
+      checkoutAttemptId: '11111111-1111-4111-8111-111111111111',
+    })],
   ])('returns 403 for non-manager callers on %s', async (_name, handler, req) => {
     mockAssertCanManage.mockRejectedValueOnce(new Error('FORBIDDEN'));
     const res = makeRes();
@@ -103,10 +112,15 @@ describe('billing mutation guards', () => {
     expect(res.body).toEqual({ error: 'FORBIDDEN' });
   });
 
-  it.each<[string, ApiHandler]>([
-    ['checkout-session', checkoutSessionHandler],
-    ['create-subscription', createSubscriptionHandler],
-  ])('refuses to create duplicate Stripe subscriptions via %s', async (_name, handler) => {
+  it.each<[string, ApiHandler, NextApiRequest]>([
+    ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' })],
+    ['create-subscription', createSubscriptionHandler, postReq({
+      planSlug: 'growth',
+      billing: 'monthly',
+      mode: 'trial',
+      checkoutAttemptId: '11111111-1111-4111-8111-111111111111',
+    })],
+  ])('refuses to create duplicate Stripe subscriptions via %s', async (_name, handler, req) => {
     mockGetOrgBillingState.mockResolvedValueOnce({
       orgId: 7,
       stripeCustomerId: 'cus_123',
@@ -116,10 +130,13 @@ describe('billing mutation guards', () => {
       subscriptionStatus: 'active',
       trialEndsAt: null,
       currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      lastCheckoutStartedAt: null,
+      starterNudgeSentAt: null,
     });
     const res = makeRes();
 
-    await handler(postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' }), res);
+    await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.body).toEqual({ error: 'An active Stripe subscription already exists for this organization' });
