@@ -103,6 +103,8 @@
     "nodemailer": "^8.0.1",
     "pg": "^8.21.0",
     "pg-hstore": "^2.3.4",
+    "posthog-js": "^1.407.6",
+    "posthog-node": "^5.46.1",
     "puppeteer": "^24.43.1",
     "puppeteer-core": "^24.43.1",
     "react": "18.2.0",
