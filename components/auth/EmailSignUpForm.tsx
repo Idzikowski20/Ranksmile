@@ -1,5 +1,6 @@
 ﻿import Link from 'next/link';
 import React, { useState } from 'react';
+import posthog from 'posthog-js';
 import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
 import { Button } from '../core';
 import { IconGoogleColor } from './IconGoogleColor';
@@ -47,6 +48,8 @@ export default function EmailSignUpForm() {
       setError(result.error.message);
       return;
     }
+
+    posthog.capture('user_signed_up', { method: 'email' });
 
     window.location.href = '/';
   };

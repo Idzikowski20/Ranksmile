@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';
 import toast from 'react-hot-toast';
+import posthog from 'posthog-js';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/core';
 import {
@@ -247,6 +248,11 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   };
 
   const handleTrialStart = async () => {
+    posthog.capture('checkout_started', {
+      plan: plan.name,
+      billing,
+      mode: 'trial',
+    });
     if (stripeCheckoutEnabled) {
       await stripeRef.current?.submit();
       return;
@@ -259,6 +265,11 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   };
 
   const handleUpfrontPurchase = async () => {
+    posthog.capture('checkout_started', {
+      plan: plan.name,
+      billing,
+      mode: 'upfront',
+    });
     if (stripeCheckoutEnabled) {
       await stripeRef.current?.submit();
       return;

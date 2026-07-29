@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
+import posthog from 'posthog-js';
 import { signInEmail, signInSocial } from '../../lib/auth/fetchAuth';
 import { Button } from '../core';
 import { IconGoogleColor } from './IconGoogleColor';
@@ -58,6 +59,8 @@ export default function EmailSignInForm() {
       await router.push('/auth/two-factor');
       return;
     }
+
+    posthog.capture('user_signed_in', { method: 'email' });
 
     window.location.href = callbackURL;
   };

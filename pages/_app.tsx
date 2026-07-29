@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
 import { Hydrate } from 'react-query/hydration';
 import { ThemeProvider } from '@emotion/react';
+import posthog from 'posthog-js';
 import { fetchBootstrapOrNull } from '../lib/fetchBootstrap';
 import { isPublicPath } from '../lib/isPublicPath';
 import AppToaster from '../components/common/AppToaster';
@@ -17,6 +18,28 @@ import { EmailConfirmedStatusContext } from '../lib/emailConfirmedStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { theme } from '../components/core/theme';
 import { IconDefaultsProvider } from '../components/core/IconDefaultsProvider';
+
+if (typeof window !== 'undefined') {
+  const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+  if (!token) {
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.error(
+        'NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, '
+        + 'this causes events to be silently missed. This error stops appearing once NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+      );
+    }
+  } else {
+    posthog.init(token, {
+      api_host: '/ingest',
+      ui_host: 'https://eu.posthog.com',
+      defaults: '2026-01-30',
+      capture_exceptions: true,
+      capture_pageview: false,
+      debug: process.env.NODE_ENV === 'development',
+    });
+  }
+}
 
 const GlobalSmoothCaret = dynamic(
   () => import('../components/common/GlobalSmoothCaret'),
@@ -85,6 +108,13 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
    if (hasSession) everHadUser.current = true;
    if (bootstrap) everHadBootstrap.current = true;
+
+   React.useEffect(() => {
+      if (!bootstrap?.userId) return;
+      posthog.identify(bootstrap.userId, {
+         email: bootstrap.email.email ?? undefined,
+      });
+   }, [bootstrap?.userId, bootstrap?.email.email]);
 
    const completed = completedOverride ?? (bootstrap ? bootstrap.onboarding.completed : null);
    const confirmed = confirmedOverride ?? (bootstrap ? bootstrap.email.confirmed : null);
@@ -164,6 +194,7 @@ type AppPageProps = AppProps['pageProps'] & { dehydratedState?: unknown };
 
 function MyApp({ Component, pageProps }: AppProps) {
    const { dehydratedState, ...restPageProps } = pageProps as AppPageProps;
+   const router = useRouter();
    const [queryClient] = React.useState(() => new QueryClient({
       defaultOptions: {
         queries: {
@@ -171,6 +202,14 @@ function MyApp({ Component, pageProps }: AppProps) {
         },
       },
     }));
+
+   React.useEffect(() => {
+      posthog.capture('$pageview');
+      const handleRouteChange = () => posthog.capture('$pageview');
+      router.events.on('routeChangeComplete', handleRouteChange);
+      return () => router.events.off('routeChangeComplete', handleRouteChange);
+   }, [router.events]);
+
     return (
        <QueryClientProvider client={queryClient}>
           <Hydrate state={dehydratedState}>

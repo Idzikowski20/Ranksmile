@@ -18,6 +18,7 @@ export type BootstrapData = {
   setupWorkspaceId: number | null;
   canCreateSetup: boolean;
   redirectTo: string | null;
+  userId?: string;
 };
 
 export type GetBootstrapOptions = {
