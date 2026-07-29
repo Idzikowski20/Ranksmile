@@ -5,13 +5,14 @@ import Domain from '../../database/models/domain';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type DomainGetResponse = {
    domain?: DomainType | null
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized === 'authorized' && req.method === 'GET') {
       await db.sync();
@@ -52,3 +53,5 @@ const getDomain = async (req: NextApiRequest, res: NextApiResponse<DomainGetResp
       return res.status(400).json({ error: 'Error Loading Domain' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

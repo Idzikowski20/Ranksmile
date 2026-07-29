@@ -1,18 +1,11 @@
-// Tenancy / auth guards for the section-by-section Auto-Optimize endpoint.
-// Replaces the coverage lost when the legacy auto-optimize guard test was removed in AO-9.
+// Tenancy / auth guards + Precision AO contracts for optimize-sections.
 jest.mock('sequelize', () => ({ Op: { in: 'Op.in' } }));
-// Real cheerio is required — splitSections/normalizeHtmlForDiff (used by the planner-path
-// tests below) are genuine parsing logic, not something to stub. Re-export the actual module.
 jest.mock('cheerio', () => jest.requireActual('cheerio'));
 jest.mock('../../database/database', () => ({ __esModule: true, default: { query: jest.fn(), sync: jest.fn().mockResolvedValue(undefined) } }));
 jest.mock('../../utils/verifyUser', () => ({ __esModule: true, default: jest.fn().mockResolvedValue('authorized') }));
 jest.mock('../../utils/getUser', () => ({ getCurrentUserId: jest.fn().mockResolvedValue('user-1') }));
 jest.mock('../../lib/tenancy', () => ({ assertArticleAccess: jest.fn(), ensureUserTenancy: jest.fn() }));
 
-// LOCAL mocks for planner-path tests (skip short-circuit, token accounting, done payload).
-// Scoped to this file only — do not touch global jest infra.
-// `scoreData.terms` defaults empty (-> every section skips); tests that need a non-skip step
-// (routing an under-target NLP term into `secTerms`) override via mockBuildArticleContext.mockResolvedValueOnce.
 jest.mock('../../lib/articleContext', () => ({
   buildArticleContext: jest.fn(async () => ({
     articleId: 1, keyword: 'k', scoreData: { terms: [], words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
@@ -29,14 +22,6 @@ jest.mock('../../lib/aiTokenUsage', () => ({
   recordAiTokens: (orgId: number | null | undefined, tokens: number) => recordAiTokens(orgId, tokens),
 }));
 
-// LOCAL mock for the planner-path tests below (b/d): full control over PlanStep.mode/focus/reason
-// so tests don't depend on the real routing/threshold logic. requireActual keeps the real StepFocus/
-// EditMode/PlanStep types + userInstructionForMode etc. available where a test needs them directly.
-jest.mock('../../lib/optimizationPlanner', () => ({
-  __esModule: true,
-  ...jest.requireActual('../../lib/optimizationPlanner'),
-  buildOptimizationPlan: jest.fn(),
-}));
 const mockEnrichNlpTermsIfNeeded = jest.fn(async (opts: { terms: { term: string; target_count: number }[] }) => opts.terms);
 jest.mock('../../lib/articleKeywordDiscovery', () => ({
   __esModule: true,
@@ -54,16 +39,10 @@ import { getCurrentUserId } from '../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../lib/tenancy';
 import { getOrgUsage5h } from '../../lib/aiTokenUsage';
 import { buildArticleContext } from '../../lib/articleContext';
-import { buildOptimizationPlan } from '../../lib/optimizationPlanner';
 import { needsTermEnrichment } from '../../lib/articleKeywordDiscovery';
-import db from '../../database/database';
-import { getArticleIdSql } from '../../lib/articleSql';
-import type { Plan, PlanStep } from '../../lib/optimizationPlanner';
 
 const mockNeedsTermEnrichment = needsTermEnrichment as jest.MockedFunction<typeof needsTermEnrichment>;
-
 const mockBuildArticleContext = buildArticleContext as jest.MockedFunction<typeof buildArticleContext>;
-const mockBuildOptimizationPlan = buildOptimizationPlan as jest.MockedFunction<typeof buildOptimizationPlan>;
 const mockVerifyUser = verifyUser as jest.MockedFunction<typeof verifyUser>;
 const mockGetCurrentUserId = getCurrentUserId as jest.MockedFunction<typeof getCurrentUserId>;
 const mockAssertArticleAccess = assertArticleAccess as jest.MockedFunction<typeof assertArticleAccess>;
@@ -71,14 +50,22 @@ const mockEnsureUserTenancy = ensureUserTenancy as jest.MockedFunction<typeof en
 const mockGetOrgUsage5h = getOrgUsage5h as jest.MockedFunction<typeof getOrgUsage5h>;
 
 const makeRes = () => {
-  const res: any = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.setHeader = jest.fn();
-  res.write = jest.fn();
-  res.end = jest.fn();
-  res.flushHeaders = jest.fn();
-  return res;
+  const res: Record<string, unknown> = {};
+  const r = res as {
+    status: jest.Mock;
+    json: jest.Mock;
+    setHeader: jest.Mock;
+    write: jest.Mock;
+    end: jest.Mock;
+    flushHeaders: jest.Mock;
+  };
+  r.status = jest.fn().mockReturnValue(r);
+  r.json = jest.fn().mockReturnValue(r);
+  r.setHeader = jest.fn();
+  r.write = jest.fn();
+  r.end = jest.fn();
+  r.flushHeaders = jest.fn();
+  return r;
 };
 
 const makeReq = (overrides: Record<string, unknown> = {}) => ({
@@ -89,184 +76,181 @@ const makeReq = (overrides: Record<string, unknown> = {}) => ({
   on: jest.fn(),
   off: jest.fn(),
   ...overrides,
-}) as any;
+});
 
-/** SSE-capturing harness: runs the handler against a `res.write`-recording mock and
- *  parses the `event: <name>\ndata: <json>\n\n` frames it was given into {event, data} objects. */
-type SseEvent = { event: string; data: any };
+type SseEvent = { event: string; data: Record<string, unknown> };
 async function runHandler(bodyOverrides: Record<string, unknown> = {}): Promise<SseEvent[]> {
   const res = makeRes();
   const req = makeReq({ body: { content: '<h2>x</h2><p>body</p>', articleId: 123, ...bodyOverrides } });
-  await handler(req, res);
+  await handler(req as never, res as never);
   const frames: SseEvent[] = [];
   for (const call of res.write.mock.calls as unknown as [string][]) {
     const raw = call[0];
     const m = /^event: (.+)\ndata: (.+)\n\n$/.exec(raw);
-    if (!m) continue; // skip the leading ":ok\n\n" keepalive comment
-    frames.push({ event: m[1], data: JSON.parse(m[2]) });
+    if (!m) continue;
+    frames.push({ event: m[1], data: JSON.parse(m[2]) as Record<string, unknown> });
   }
   return frames;
 }
 
-const realBuildOptimizationPlan = jest.requireActual('../../lib/optimizationPlanner').buildOptimizationPlan as typeof buildOptimizationPlan;
+/** Long enough section that a small sentence insert passes EditSafetyGate. */
+const LONG_SECTION =
+  '<h2>Guide</h2><p>'
+  + Array(80).fill('helpful guide content about usage and setup details here').join(' ')
+  + '</p>';
+
+const ctxWithMissingTerm = {
+  articleId: 1,
+  keyword: 'gizmo',
+  scoreData: {
+    terms: [{ term: 'gizmo', target_count: 5 }],
+    words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0,
+  },
+  breakdown: null,
+  coverage: {
+    schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '',
+    items: [], buckets: [], answersMainQuestionEarly: false, overall: 0,
+  },
+  paa: [], terms: [], competitors: [],
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
   recordAiTokens.mockClear();
   process.env.DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'test';
   mockVerifyUser.mockResolvedValue('authorized');
-  mockGetCurrentUserId.mockResolvedValue('user-1' as any);
+  mockGetCurrentUserId.mockResolvedValue('user-1');
   mockAssertArticleAccess.mockResolvedValue(true);
-  mockEnsureUserTenancy.mockResolvedValue({ orgId: 1 } as any);
-  mockGetOrgUsage5h.mockResolvedValue({ over: false, used: 0, limit: 500000, resetsAt: 0 } as any);
+  mockEnsureUserTenancy.mockResolvedValue({ orgId: 1 } as never);
+  mockGetOrgUsage5h.mockResolvedValue({ over: false, used: 0, limit: 500000, resetsAt: 0 } as never);
   (global.fetch as unknown) = jest.fn();
-  // Default: delegate to the real planner so pre-existing tests keep exercising real routing logic.
-  // Tests below that need a specific mode/focus override via mockBuildOptimizationPlan.mockReturnValueOnce.
-  mockBuildOptimizationPlan.mockImplementation(realBuildOptimizationPlan);
   mockNeedsTermEnrichment.mockReturnValue(false);
   mockEnrichNlpTermsIfNeeded.mockImplementation(async (opts) => opts.terms);
 });
 
 it('rejects an unauthenticated caller with 401 before any work', async () => {
-  mockVerifyUser.mockResolvedValueOnce('Unauthorized' as any);
+  mockVerifyUser.mockResolvedValueOnce('Unauthorized' as never);
   const res = makeRes();
-  await handler(makeReq(), res);
+  await handler(makeReq() as never, res as never);
   expect(res.status).toHaveBeenCalledWith(401);
-  expect(res.setHeader).not.toHaveBeenCalled(); // never opened the SSE stream
+  expect(res.setHeader).not.toHaveBeenCalled();
 });
 
 it('denies optimizing an article the caller cannot reach (403)', async () => {
   mockAssertArticleAccess.mockResolvedValue(false);
   const res = makeRes();
-  await handler(makeReq(), res);
+  await handler(makeReq() as never, res as never);
   expect(res.status).toHaveBeenCalledWith(403);
   expect(res.setHeader).not.toHaveBeenCalled();
 });
 
 it('blocks with 429 org_limit when the shared token pool is exhausted, before opening the stream', async () => {
-  mockGetOrgUsage5h.mockResolvedValue({ over: true, used: 600000, limit: 500000, resetsAt: 1234 } as any);
+  mockGetOrgUsage5h.mockResolvedValue({ over: true, used: 600000, limit: 500000, resetsAt: 1234 } as never);
   const res = makeRes();
-  await handler(makeReq(), res);
+  await handler(makeReq() as never, res as never);
   expect(res.status).toHaveBeenCalledWith(429);
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'org_limit', resetsAt: 1234 }));
   expect(res.setHeader).not.toHaveBeenCalled();
 });
 
-it('skip step emits changed:false and makes NO fetch call', async () => {
+it('no candidates → zero LLM and no section event', async () => {
   const fetchSpy = jest.spyOn(global, 'fetch');
-  // content: one already-covered section, no guidelines, no terms -> planner returns focus:skip
   const events = await runHandler({ content: '<h2>Covered</h2><p>full and complete</p>', articleId: 1 });
-  const sectionEvt = events.find((e) => e.event === 'section');
-  expect(sectionEvt?.data.changed).toBe(false);
-  expect(fetchSpy).not.toHaveBeenCalled();       // zero LLM calls for a skip
+  expect(events.find((e) => e.event === 'section')).toBeUndefined();
+  expect(fetchSpy).not.toHaveBeenCalled();
 });
 
-it('records tokens in finally even if a mid-run step throws', async () => {
-  // An under-target NLP term routes BOTH sections to focus:seo-terms (non-skip),
-  // so section A's fetch succeeds and section B's fetch exhausts its retries.
-  mockBuildArticleContext.mockResolvedValueOnce({
-    articleId: 1, keyword: 'widget',
-    scoreData: { terms: [{ term: 'widget', target_count: 5 }], words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 } as any,
-    breakdown: null,
-    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 } as any,
-    paa: [], terms: [], competitors: [],
-  });
-  (global.fetch as jest.Mock) = jest.fn()
-    .mockResolvedValueOnce({ ok: true, json: async () => ({ usage: { total_tokens: 200 }, choices: [{ message: { content: '<h2>A</h2><p>edited enough to be usable here</p>' } }] }) })
-    .mockRejectedValue(new Error('boom'));       // second section throws all retries
-  await runHandler({ content: '<h2>A</h2><p>aaa</p><h2>B</h2><p>bbb</p>', articleId: 1 });
-  expect(recordAiTokens).toHaveBeenCalled();      // finally recorded the 200 from section A
-});
+it('records tokens when a precision edit is accepted', async () => {
+  mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
 
-it('does not replace a whole article with a token-limited completion', async () => {
-  const original = '<h1>Guide</h1>' + '<p>Original paragraph with important details.</p>'.repeat(30);
-  const truncated = '<h1>Guide</h1>' + '<p>Only the beginning survived.</p>'.repeat(3);
+  const edited =
+    LONG_SECTION.replace(
+      '</p>',
+      ' A short clarification about gizmo usage.</p>',
+    );
+
   (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
-      usage: { total_tokens: 8000 },
-      choices: [{ finish_reason: 'length', message: { content: truncated } }],
+      usage: { total_tokens: 200 },
+      choices: [{ message: { content: edited } }],
     }),
   });
 
-  const events = await runHandler({ content: original, articleId: 1, maxRounds: 1 });
+  await runHandler({ content: LONG_SECTION, articleId: 1, maxRounds: 1 });
+  expect(recordAiTokens).toHaveBeenCalled();
+});
 
+it('rejects unsafe LLM rewrite via EditSafetyGate (no section accept)', async () => {
+  mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
+
+  // Full rewrite — fails CHANGE_RATIO / PRESERVATION
+  const rewrite = '<h2>Guide</h2><p>' + Array(80).fill('completely different text about other topics').join(' ') + '</p>';
+  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      usage: { total_tokens: 100 },
+      choices: [{ message: { content: rewrite } }],
+    }),
+  });
+
+  const events = await runHandler({ content: LONG_SECTION, articleId: 1, maxRounds: 1 });
   expect(events.find((e) => e.event === 'section')).toBeUndefined();
   expect(events.find((e) => e.event === 'done')?.data.changedCount).toBe(0);
   expect(events.find((e) => e.event === 'done')?.data.outcome).toBe('no_usable_edit');
 });
 
-it('done event carries trimmed + ignoredLift', async () => {
+it('done event carries trimmed + ignoredLift + precision strategy', async () => {
   const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const done = events.find((e) => e.event === 'done');
   expect(done?.data).toHaveProperty('trimmed');
   expect(done?.data).toHaveProperty('ignoredLift');
+  expect(done?.data.optimizationStrategy).toBe('precision');
+  expect(done?.data.wholeArticle).toBe(false);
 });
 
-// --- Task 8: mode-varying user message + section SSE focus/mode/reason (UX contract) ---
+it('precision prompt asks for a bounded operation (not whole-article rewrite)', async () => {
+  mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
 
-/** A single-step Plan for one section (index 0, headingText 'A'), overriding just what each test cares about. */
-function planWith(step: Partial<PlanStep>): Plan {
-  const base: PlanStep = {
-    sectionId: 's0', index: 0, headingText: 'A', html: '<p>aaa</p>',
-    focus: 'seo-terms', systemPrompt: 'sys', guidelines: [], missingTerms: [],
-    estimatedTokens: 10, expectedLift: 20, reason: 'Optimize: test', mode: 'normal',
-  };
-  const merged = { ...base, ...step };
-  return { steps: [merged], estimatedTokens: 10, trimmed: false, ignoredLift: 0, rationale: 'test' };
-}
-
-it('NORMAL step sends the "Improve this section" user message (byte-for-byte)', async () => {
-  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ mode: 'normal', userInstruction: undefined }));
   (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
-    ok: true, json: async () => ({ usage: { total_tokens: 1 }, choices: [{ message: { content: '<p>edited enough to be usable here</p>' } }] }),
+    ok: true,
+    json: async () => ({
+      usage: { total_tokens: 1 },
+      choices: [{ message: { content: LONG_SECTION } }],
+    }),
   });
-  await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
-  const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
-  const body = JSON.parse(opts.body);
-  expect(body.messages[1].content).toBe('Improve this section:\n\n<h2>A</h2><p>aaa</p>');
+
+  await runHandler({ content: LONG_SECTION, articleId: 1, maxRounds: 1 });
+  expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(0);
+  const [, opts] = (global.fetch as jest.Mock).mock.calls[0] as [string, { body: string }];
+  const body = JSON.parse(opts.body) as { messages: Array<{ content: string }> };
+  expect(body.messages[0].content).toMatch(/precision editor/i);
+  expect(body.messages[1].content).toMatch(/OPERATION:/);
+  expect(body.messages[1].content).not.toMatch(/Optimize this section/i);
 });
 
-it('LESS step sends step.userInstruction as the user message (not "Improve this section")', async () => {
-  const userInstruction = 'Patch this section with the minimal number of local edits.';
-  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ mode: 'less', userInstruction }));
+it('accepted precision edit emits section with Precision reason', async () => {
+  mockBuildArticleContext.mockResolvedValueOnce(ctxWithMissingTerm as never);
+
+  const edited =
+    LONG_SECTION.replace(
+      '</p>',
+      ' A short clarification about gizmo usage.</p>',
+    );
+
   (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
-    ok: true, json: async () => ({ usage: { total_tokens: 1 }, choices: [{ message: { content: '<p>edited enough to be usable here</p>' } }] }),
+    ok: true,
+    json: async () => ({
+      usage: { total_tokens: 50 },
+      choices: [{ message: { content: edited } }],
+    }),
   });
-  await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
-  const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
-  const body = JSON.parse(opts.body);
-  expect(body.messages[1].content).toBe(userInstruction);
-  expect(body.messages[1].content).not.toContain('Improve this section');
-});
 
-it('skip step makes NO fetch and emits changed:false WITH focus/mode/reason from the step', async () => {
-  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({
-    focus: 'skip', mode: 'normal', reason: 'Skipped - below benefit threshold', systemPrompt: '',
-  }));
-  const fetchSpy = jest.spyOn(global, 'fetch');
-  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
-  const sectionEvt = events.find((e) => e.event === 'section');
-  expect(fetchSpy).not.toHaveBeenCalled();
-  expect(sectionEvt?.data.changed).toBe(false);
-  expect(sectionEvt?.data.focus).toBe('skip');
-  expect(sectionEvt?.data.mode).toBe('normal');
-  expect(sectionEvt?.data.reason).toBe('Skipped - below benefit threshold');
-});
-
-it('changed step emits a section event carrying focus/mode/reason from the step (UX contract)', async () => {
-  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({
-    focus: 'ai-coverage', mode: 'less', reason: 'Optimize: 1 guidelines', userInstruction: 'Patch this section.',
-  }));
-  (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
-    ok: true, json: async () => ({ usage: { total_tokens: 1 }, choices: [{ message: { content: '<p>edited enough to be usable here</p>' } }] }),
-  });
-  const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
-  const sectionEvt = events.find((e) => e.event === 'section');
-  expect(sectionEvt?.data.changed).toBe(true);
-  expect(sectionEvt?.data.focus).toBe('ai-coverage');
-  expect(sectionEvt?.data.mode).toBe('less');
-  expect(sectionEvt?.data.reason).toBe('Optimize: 1 guidelines');
+  const events = await runHandler({ content: LONG_SECTION, articleId: 1, maxRounds: 1 });
+  const sectionEvts = events.filter((e) => e.event === 'section');
+  expect(sectionEvts.some((e) => e.data.changed === true)).toBe(true);
+  expect(sectionEvts.find((e) => e.data.changed)?.data.reason).toBe('Precision section optimization');
+  expect(sectionEvts.find((e) => e.data.changed)?.data.mode).toBe('less');
 });
 
 it('emits a terms SSE event when NLP enrichment grows the term list', async () => {
@@ -278,14 +262,13 @@ it('emits a terms SSE event when NLP enrichment grows the term list', async () =
   ];
   mockBuildArticleContext.mockResolvedValueOnce({
     articleId: 1, keyword: 'detektyw warszawa',
-    scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 } as any,
+    scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
     breakdown: null,
-    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 } as any,
+    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 },
     paa: [], terms: [], competitors: [],
-  });
+  } as never);
   mockNeedsTermEnrichment.mockReturnValueOnce(true);
   mockEnrichNlpTermsIfNeeded.mockResolvedValueOnce(enrichedTerms);
-  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ focus: 'skip', reason: 'skip for test' }));
   const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const termsEvt = events.find((e) => e.event === 'terms');
   expect(termsEvt?.data.terms).toHaveLength(4);
@@ -308,15 +291,13 @@ it('restores terms from article_terms instead of shrinking score_data', async ()
   }));
   mockBuildArticleContext.mockResolvedValueOnce({
     articleId: 1, keyword: 'detektyw warszawa',
-    scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 } as any,
+    scoreData: { terms: thinTerms, words_target: 0, words_min: 0, words_max: 0, headings_target: 0, headings_min: 0, headings_max: 0 },
     breakdown: null,
-    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 } as any,
+    coverage: { schemaVersion: 1, judgeVersion: 'v1', promptVersion: 'v1', model: 'm', createdAt: '', items: [], buckets: [], answersMainQuestionEarly: false, overall: 0 },
     paa: [], terms: tableTerms, competitors: [],
-  });
-  mockBuildOptimizationPlan.mockReturnValueOnce(planWith({ focus: 'skip', reason: 'skip for test' }));
+  } as never);
   const events = await runHandler({ content: '<h2>A</h2><p>aaa</p>', articleId: 1 });
   const termsEvt = events.find((e) => e.event === 'terms');
-  expect(termsEvt?.data.terms.length).toBeGreaterThanOrEqual(12);
-  expect(termsEvt?.data.terms.length).not.toBe(3);
+  expect((termsEvt?.data.terms as unknown[]).length).toBeGreaterThanOrEqual(12);
+  expect((termsEvt?.data.terms as unknown[]).length).not.toBe(3);
 });
-

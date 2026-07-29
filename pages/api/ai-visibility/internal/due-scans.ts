@@ -7,10 +7,11 @@ import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTabl
 import { findDueConfigIds, enqueueAiVisScan } from '../../../../lib/aiVisibilityScan';
 import { queryRows } from '../../../../lib/db/query';
 import { getErrorMessage } from '../../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const token = req.headers['x-internal-token'];
    if (!process.env.INTERNAL_PIPELINE_TOKEN || token !== process.env.INTERNAL_PIPELINE_TOKEN) {
       return res.status(401).json({ error: 'unauthorized' });
@@ -63,3 +64,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -12,11 +12,12 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 // Vercel: the LLM rewrite can take ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -53,3 +54,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'Apply readability failed' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

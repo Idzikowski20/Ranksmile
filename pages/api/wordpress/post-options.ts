@@ -10,6 +10,7 @@ import { assertArticleAccess } from '../../../lib/tenancy';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getConnectionForWorkspace } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 30 };
 
@@ -22,7 +23,7 @@ const STATUSES = [
    { value: 'private', label: 'Private' },
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -70,3 +71,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metaDescription: article.meta_description || '',
    });
 }
+
+export default withOrgPaymentAccess(handler);

@@ -15,11 +15,12 @@ import { CoverageItem } from '../../../lib/aiCoverage';
 import { mergeCoverageItems, parseSnapshot, buildSnapshot } from '../../../lib/coverageStore';
 import { persistCoverageFeatureRun } from '../../../lib/persistCoverageFeatureRun';
 import { safeJsonParse } from '../../../lib/safeJson';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -118,3 +119,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'AI readability failed' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

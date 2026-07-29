@@ -6,8 +6,9 @@ import verifyUser from '../../utils/verifyUser';
 import { renderPage } from '../../utils/spaScraper';
 import { assertPublicUrl } from '../../lib/ssrfGuard';
 import { getErrorMessage } from '../../lib/errors';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { url, timeout } = req.body as { url: string; timeout?: number };
@@ -39,3 +40,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: msg || 'Failed to render page' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

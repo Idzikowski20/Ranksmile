@@ -3,8 +3,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { authPluginRequest } from '../../../../lib/wpConnection';
 import { getAccessibleWorkspaceIds } from '../../../../lib/tenancy';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);
    if (!conn) return res.status(401).json({ message: 'Invalid api-key.' });
 
@@ -19,3 +20,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
    return res.status(200).json({ workspaces, default_workspace_id: conn.workspace_id });
 }
+
+export default withOrgPaymentAccess(handler);

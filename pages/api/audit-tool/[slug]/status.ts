@@ -5,11 +5,12 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { queryRows } from '../../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type CountRow = { status: string, n: number };
 type InFlightRow = { id: number, status: string, progress_done: number | null, progress_total: number | null };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
@@ -48,3 +49,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })),
    });
 }
+
+export default withOrgPaymentAccess(handler);

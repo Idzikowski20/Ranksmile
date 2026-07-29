@@ -138,11 +138,6 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
       : `W tle · ${queueLabel(queue)}`;
 
   const activeJobs = dedupeActiveJobs(data?.jobs ?? []);
-  const jobsTotal = Math.max(1, activeJobs.length);
-  const jobsDone = 0;
-  const progressPct = waitingForResume
-    ? null
-    : Math.min(95, Math.round((jobsDone / jobsTotal) * 100) + (status === 'running' ? 35 : 12));
 
   return (
     <div
@@ -162,8 +157,7 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
         layout="inline"
         title={label}
         status="Działa w tle — możesz odświeżyć stronę, kolejka wróci sama."
-        progressPct={progressPct}
-        showProgress
+        showProgress={false}
       />
       {activeJobs.length > 0 ? (
         <div className="pipeline-queue-chips">

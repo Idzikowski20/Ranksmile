@@ -6,10 +6,11 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { processQueuedForDomain } from '../../../../lib/auditRunner';
 import { getErrorMessage } from '../../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
@@ -28,3 +29,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(e) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

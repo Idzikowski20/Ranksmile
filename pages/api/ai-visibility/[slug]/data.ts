@@ -9,12 +9,13 @@ import { queryOne, queryRows } from '../../../../lib/db/query';
 import { aggregateSources, buildSnapshotsForScan, rankCompetitors, snapshotForDomain, computeDelta, computeOverview, domainMentionGap, domainGapCandidates, brandsForSource, competitorPrompts, sourceMentions, groupFanoutByQuery, groupFanoutByPrompt, commonPhrases, ResultRow, DomainSnapshot } from '../../../../lib/aiVisibilityMetrics';
 import { loadScanResultRows, loadScanCitationRows, getDisplayScan, getPreviousDisplayScan } from '../../../../lib/aiVisibilityRead';
 import { refreshIntervalDays } from '../../../../lib/aiVisibility';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 // Compare never renders a competitor's Sources → drop them to bound the payload.
 const withoutSources = (s: DomainSnapshot): DomainSnapshot => ({ ...s, sources: [] });
 const NORM = (d: string): string => d.toLowerCase().replace(/^www\./, '');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAiVisibilityTables();
    const authorized = await verifyUser(req, res);
@@ -318,3 +319,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'Data fetch failed' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

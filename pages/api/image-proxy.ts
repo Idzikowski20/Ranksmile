@@ -4,12 +4,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ssrfSafeFetch } from '../../lib/ssrfGuard';
 import { getErrorMessage } from '../../lib/errors';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 // SVG intentionally excluded: served same-origin it is a script-execution vector on direct navigation.
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'GET') return res.status(405).end();
 
    const { url } = req.query;
@@ -57,3 +58,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to fetch image' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

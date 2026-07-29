@@ -5,8 +5,9 @@ import { verifyDomainOwnershipBySlug } from '../../../../../utils/verifyDomainOw
 import { ensurePipelineTables } from '../../../../../lib/ensurePipelineTables';
 import { buildCompareCrawlsReport } from '../../../../../lib/siteAudit/buildCompareCrawls';
 import type { CompareCrawlsReport } from '../../../../../lib/siteAudit/types';
+import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CompareCrawlsReport | { error: string }>,
 ) {
@@ -33,3 +34,5 @@ export default async function handler(
   const payload = await buildCompareCrawlsReport(domainId, domain, olderId, newerId);
   return res.status(200).json(payload);
 }
+
+export default withOrgPaymentAccess(handler);

@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../../utils/verifyUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../../utils/adwords';
 import { getKeywordSuggestions as getDfsKeywordSuggestions } from '../../../lib/seo/keywordData';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type Suggestion = {
    keyword: string;
@@ -23,7 +24,7 @@ type Response = {
    hasVolumeData: boolean;
 } | { error: string };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<Response>) {
+async function handler(req: NextApiRequest, res: NextApiResponse<Response>) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
@@ -103,3 +104,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
    return res.status(200).json({ suggestions: [], hasVolumeData: false });
 }
+
+export default withOrgPaymentAccess(handler);

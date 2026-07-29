@@ -6,8 +6,9 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getDomainLocale } from '../../../../lib/domainLanguage';
 import { topicsNeedLocalization } from '../../../../lib/domainLanguagePrompts';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -32,3 +33,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       needsLocalization: topicsNeedLocalization(titles, locale.languageCode),
    });
 }
+
+export default withOrgPaymentAccess(handler);

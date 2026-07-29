@@ -3,8 +3,9 @@ import { getErrorMessage } from '../../../../../lib/errors';
 import { resolveRankTrackingApi } from '../../../../../lib/rankTracking/apiAuth';
 import { archiveConfig, getConfig, updateConfig } from '../../../../../lib/rankTracking/service';
 import type { RankDevices, ScheduleInterval } from '../../../../../lib/types/rankTracking';
+import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);
   if (!ctx) return;
 
@@ -56,3 +57,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Allow', 'GET, PATCH, POST');
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);

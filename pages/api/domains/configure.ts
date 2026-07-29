@@ -11,8 +11,9 @@ import { getActiveWorkspaceId, getAccessibleWorkspaceIds } from '../../../lib/te
 import { getWorkspace } from '../../../lib/workspaces';
 import { getErrorMessage } from '../../../lib/errors';
 import { mergeGscProperty } from '../../../lib/gscProperty';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -152,3 +153,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'Failed to configure domain' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

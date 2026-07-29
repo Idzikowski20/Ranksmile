@@ -10,10 +10,11 @@ import { callSidecar } from '../../../../lib/sidecar';
 import { getErrorMessage } from '../../../../lib/errors';
 import { manualRefreshCooldownDays, refreshIntervalDays } from '../../../../lib/aiVisibility';
 import { nextjsUrl } from '../../../../lib/serviceUrls';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAiVisibilityTables();
    const authorized = await verifyUser(req, res);
@@ -71,3 +72,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    }
    return res.status(202).json({ scanId });
 }
+
+export default withOrgPaymentAccess(handler);

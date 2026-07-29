@@ -26,6 +26,12 @@ export interface OrgBillingState {
   cancelAtPeriodEnd: boolean;
   lastCheckoutStartedAt: string | null;
   starterNudgeSentAt: string | null;
+  paymentFailedLockedAt: string | null;
+  paymentFailedInvoiceId: string | null;
+  paymentFailedSubscriptionId: string | null;
+  paymentFailedCustomerId: string | null;
+  paymentLockLastEventCreatedAt: string | null;
+  paymentLockLastEventId: string | null;
 }
 
 const TERMINAL_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
@@ -53,6 +59,12 @@ type OrgBillingRow = {
   cancel_at_period_end: number | boolean | null;
   last_checkout_started_at: string | null;
   starter_nudge_sent_at: string | null;
+  payment_failed_locked_at: string | null;
+  payment_failed_invoice_id: string | null;
+  payment_failed_subscription_id: string | null;
+  payment_failed_customer_id: string | null;
+  payment_lock_last_event_created_at: string | null;
+  payment_lock_last_event_id: string | null;
 };
 
 function truthyFlag(v: number | boolean | null | undefined): boolean {
@@ -83,6 +95,12 @@ function mapRow(row: OrgBillingRow): OrgBillingState {
     cancelAtPeriodEnd: truthyFlag(row.cancel_at_period_end),
     lastCheckoutStartedAt: row.last_checkout_started_at,
     starterNudgeSentAt: row.starter_nudge_sent_at,
+    paymentFailedLockedAt: row.payment_failed_locked_at ?? null,
+    paymentFailedInvoiceId: row.payment_failed_invoice_id,
+    paymentFailedSubscriptionId: row.payment_failed_subscription_id,
+    paymentFailedCustomerId: row.payment_failed_customer_id,
+    paymentLockLastEventCreatedAt: row.payment_lock_last_event_created_at,
+    paymentLockLastEventId: row.payment_lock_last_event_id,
   };
 }
 
@@ -91,7 +109,10 @@ export async function getOrgBillingState(orgId: number): Promise<OrgBillingState
   const row = await queryOne<OrgBillingRow>(
     `SELECT id, stripe_customer_id, stripe_subscription_id, plan_slug, billing_period,
             subscription_status, trial_ends_at, current_period_end,
-            cancel_at_period_end, last_checkout_started_at, starter_nudge_sent_at
+            cancel_at_period_end, last_checkout_started_at, starter_nudge_sent_at,
+            payment_failed_locked_at, payment_failed_invoice_id,
+            payment_failed_subscription_id, payment_failed_customer_id,
+            payment_lock_last_event_created_at, payment_lock_last_event_id
        FROM organizations WHERE id = ? LIMIT 1`,
     [orgId],
   );

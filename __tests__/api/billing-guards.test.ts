@@ -4,6 +4,19 @@ jest.mock('../../utils/getUser', () => ({
 }));
 jest.mock('../../lib/tenancy', () => ({ ensureUserTenancy: jest.fn() }));
 jest.mock('../../lib/members', () => ({ assertCanManage: jest.fn() }));
+jest.mock('../../lib/billingPlanLock', () => ({
+  getLockedCheckoutPlanSlug: jest.fn((
+    billing: { planSlug?: string | null; subscriptionStatus?: string | null } | null | undefined,
+  ) => {
+    if (!billing?.planSlug) return null;
+    const s = billing.subscriptionStatus;
+    if (s !== 'active' && s !== 'trialing' && s !== 'past_due' && s !== 'unpaid') return null;
+    return billing.planSlug;
+  }),
+  blocksNewPaidCheckout: jest.fn((status: string | null | undefined) => (
+    status === 'active' || status === 'trialing' || status === 'past_due' || status === 'unpaid'
+  )),
+}));
 jest.mock('../../lib/orgBilling', () => ({
   getOrgBillingState: jest.fn(),
   updateOrgBillingState: jest.fn(),
@@ -65,12 +78,13 @@ const makeRes = (): TestResponse => {
   return res;
 };
 
-const postReq = (body: Record<string, unknown> = {}): NextApiRequest => ({
+const postReq = (body: Record<string, unknown> = {}, url: string): NextApiRequest => ({
   method: 'POST',
   body,
   query: {},
   cookies: {},
   headers: {},
+  url,
 } as NextApiRequest);
 
 describe('billing mutation guards', () => {
@@ -92,16 +106,16 @@ describe('billing mutation guards', () => {
   });
 
   it.each<[string, ApiHandler, NextApiRequest]>([
-    ['cancel', cancelHandler, postReq()],
-    ['portal', portalHandler, postReq()],
-    ['update-customer', updateCustomerHandler, postReq({ billingEmail: 'billing@example.com' })],
-    ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' })],
+    ['cancel', cancelHandler, postReq({}, '/api/billing/cancel')],
+    ['portal', portalHandler, postReq({}, '/api/billing/portal')],
+    ['update-customer', updateCustomerHandler, postReq({ billingEmail: 'billing@example.com' }, '/api/billing/update-customer')],
+    ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' }, '/api/billing/checkout-session')],
     ['create-subscription', createSubscriptionHandler, postReq({
       planSlug: 'growth',
       billing: 'monthly',
       mode: 'trial',
       checkoutAttemptId: '11111111-1111-4111-8111-111111111111',
-    })],
+    }, '/api/billing/create-subscription')],
   ])('returns 403 for non-manager callers on %s', async (_name, handler, req) => {
     mockAssertCanManage.mockRejectedValueOnce(new Error('FORBIDDEN'));
     const res = makeRes();
@@ -113,13 +127,13 @@ describe('billing mutation guards', () => {
   });
 
   it.each<[string, ApiHandler, NextApiRequest]>([
-    ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' })],
+    ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' }, '/api/billing/checkout-session')],
     ['create-subscription', createSubscriptionHandler, postReq({
       planSlug: 'growth',
       billing: 'monthly',
       mode: 'trial',
       checkoutAttemptId: '11111111-1111-4111-8111-111111111111',
-    })],
+    }, '/api/billing/create-subscription')],
   ])('refuses to create duplicate Stripe subscriptions via %s', async (_name, handler, req) => {
     mockGetOrgBillingState.mockResolvedValueOnce({
       orgId: 7,
@@ -139,6 +153,6 @@ describe('billing mutation guards', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.body).toEqual({ error: 'An active Stripe subscription already exists for this organization' });
+    expect(res.body).toEqual({ error: 'You are already on this plan' });
   });
 });

@@ -11,11 +11,12 @@ import { buildGscDigest, loadDigestInlineAttachments, type DomainDigest } from '
 import { sendMail } from '../../../lib/sendMail';
 import { queryRows, type ArticleRow } from '../../../lib/db/query';
 import { getErrorMessage } from '../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    // Weryfikuj Vercel Cron Secret
    if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -151,3 +152,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

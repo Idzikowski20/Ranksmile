@@ -7,11 +7,12 @@ import { GOOGLE_OAUTH_SCOPES } from '../../../lib/gscAccounts';
 import verifyUser from '../../../utils/verifyUser';
 import db from '../../../database/database';
 import { getCurrentUserId } from '../../../utils/getUser';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /** Only allow same-origin relative redirect targets (blocks ?redirect=https://evil open-redirect). */
 const safeRelative = (r: unknown): string | null => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') ? r : null);
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') {
@@ -53,3 +54,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.redirect(302, authUrl);
 }
+
+export default withOrgPaymentAccess(handler);

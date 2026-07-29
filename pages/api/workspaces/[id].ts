@@ -2,12 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { renameWorkspace, deleteWorkspace } from '../../../lib/workspaces';
 import { getErrorMessage } from '../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 const ERR_STATUS: Record<string, number> = {
    WORKSPACE_NOT_FOUND: 404,
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
    const wsId = parseInt(req.query.id as string, 10);
@@ -32,3 +33,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(code).json({ error: msg || 'Error' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

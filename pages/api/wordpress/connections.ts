@@ -6,8 +6,9 @@ import { getCurrentUser } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { listConnectionsForWorkspace, deleteConnection } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
 
@@ -43,3 +44,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    res.setHeader('Allow', 'GET, DELETE');
    return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);

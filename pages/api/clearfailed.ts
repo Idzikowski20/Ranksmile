@@ -1,13 +1,14 @@
 import { writeFile } from 'fs/promises';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import verifyUser from '../../utils/verifyUser';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type SettingsGetResponse = {
    cleared?: boolean,
    error?: string,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
@@ -27,3 +28,5 @@ const clearFailedQueue = async (req: NextApiRequest, res: NextApiResponse<Settin
       return res.status(200).json({ error: 'Error Clearing Failed Queue!' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

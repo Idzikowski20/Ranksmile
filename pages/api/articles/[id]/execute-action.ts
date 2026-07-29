@@ -11,8 +11,9 @@ import {
   ensureDomainEventTables,
   ensureKnowledgeLayerTables,
 } from '../../../../lib/ensureGrowthMetaTables';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureDomainEventTables().catch(() => {});
   await ensureKnowledgeLayerTables().catch(() => {});
@@ -45,3 +46,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: getErrorMessage(err) });
   }
 }
+
+export default withOrgPaymentAccess(handler);

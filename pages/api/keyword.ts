@@ -5,13 +5,14 @@ import parseKeywords from '../../utils/parseKeywords';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type KeywordGetResponse = {
    keyword?: KeywordType | null
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized === 'authorized' && req.method === 'GET') {
       await db.sync();
@@ -42,3 +43,5 @@ const getKeyword = async (req: NextApiRequest, res: NextApiResponse<KeywordGetRe
       return res.status(400).json({ error: 'Error Loading Keyword' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

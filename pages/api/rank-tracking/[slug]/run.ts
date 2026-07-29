@@ -2,10 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getErrorMessage } from '../../../../lib/errors';
 import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
 import { processRunChunk } from '../../../../lib/rankTracking/service';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res, { requireRunner: true });
   if (!ctx) return;
   if (req.method !== 'POST') {
@@ -23,3 +24,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: getErrorMessage(e) });
   }
 }
+
+export default withOrgPaymentAccess(handler);

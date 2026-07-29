@@ -7,8 +7,9 @@ import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { enqueueAudit } from '../../../../lib/auditRunner';
 import { langForCountry } from '../../../../lib/countryLang';
 import { getErrorMessage } from '../../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
@@ -57,3 +58,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    if (ids.length === 0) return res.status(500).json({ error: 'Failed to create audits' });
    return res.status(202).json({ ids, failed });
 }
+
+export default withOrgPaymentAccess(handler);

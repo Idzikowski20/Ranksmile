@@ -5,10 +5,11 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTables';
 import { queryOne } from '../../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ScanRow = { status: string, progress_done: number, progress_total: number, cost_micros: number, finished_at: string | null };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAiVisibilityTables();
    const authorized = await verifyUser(req, res);
@@ -35,3 +36,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       finishedAt: scan.finished_at,
    });
 }
+
+export default withOrgPaymentAccess(handler);

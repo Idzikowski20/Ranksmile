@@ -5,6 +5,7 @@ import {
   expireStaleQueuedJobs,
 } from '../../../lib/ensurePipelineJobsTables';
 import db from '../../../database/database';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type JobPublic = {
   id: number;
@@ -25,7 +26,7 @@ type JobPublic = {
  * GET /api/pipeline/jobs?articleId=123
  * Recent v7 pipeline jobs for an article (status strip / polling).
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
+async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     res.status(405).json({ error: 'Method not allowed' });
@@ -112,3 +113,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     jobs: list,
   });
 }
+
+export default withOrgPaymentAccess(handler);

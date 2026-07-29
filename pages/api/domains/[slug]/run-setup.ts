@@ -6,8 +6,9 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { enqueueDomainSetup, kickDomainSetup } from '../../../../lib/domainPipeline';
 import { getErrorMessage } from '../../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -42,3 +43,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(e) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

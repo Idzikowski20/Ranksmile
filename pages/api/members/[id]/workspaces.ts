@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { setMemberWorkspaces } from '../../../../lib/members';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
    const id = Number(req.query.id);
@@ -20,3 +21,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw e;
    }
 }
+
+export default withOrgPaymentAccess(handler);

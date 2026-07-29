@@ -41,6 +41,7 @@ import SlashCommand, { SlashItem } from './SlashCommand';
 import RanksmileChatPanel, { RanksmilePanelApi } from './RanksmileChatPanel';
 import IconSmily from './IconSmily';
 import ProgressiveBlur from '../common/ProgressiveBlur';
+import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 
 export interface HeadingItem {
   level: number;
@@ -2086,9 +2087,11 @@ const ArticleEditor = ({ content, keyword, metaTitle, metaDescription, scoreData
             {editor && docEmpty && !readOnly && !generateBusy && (
               <div style={{ maxWidth: 860, margin: '0 auto', padding: '4px 64px 80px', fontFamily: CTA_FONT }}>
                 {importBusy ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#52525C', fontSize: 14 }}>
-                    <span style={{ width: 16, height: 16, border: '2px solid #D4D4D8', borderTopColor: '#52525C', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                    Importing your content…
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 320 }}>
+                    <AnalysisCircuitBoard variant="import" importing width={280} height={168} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#52525C', fontSize: 14 }}>
+                      Importing your content…
+                    </div>
                   </div>
                 ) : ctaMode === 'import' ? (
                   <ImportBar url={importUrl} onChange={setImportUrl} onImport={handleImportUrl} onClose={() => { setCtaMode('menu'); setImportUrl(''); }} busy={importBusy} />

@@ -10,6 +10,7 @@ import { getCallerRole } from '../../lib/members';
 import { ensureUserTenancy } from '../../lib/tenancy';
 import refreshAndUpdateKeywords from '../../utils/refresh';
 import { queryRows } from '../../lib/db/query';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type CRONRefreshRes = {
    started: boolean
@@ -22,7 +23,7 @@ function isApiKeyAuth(req: NextApiRequest): boolean {
    return auth.substring('Bearer '.length) === process.env.APIKEY;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -88,3 +89,5 @@ const cronRefreshkeywords = async (
       return res.status(400).json({ started: false, error: 'CRON Error refreshing keywords!' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

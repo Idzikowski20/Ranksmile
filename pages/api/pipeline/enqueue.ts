@@ -6,13 +6,14 @@ import type { QueueName } from '../../../lib/pipeline/queuePriorities';
 import { QUEUE_PRIORITY } from '../../../lib/pipeline/queuePriorities';
 import { isQueueEnabled } from '../../../lib/workers/registry';
 import { getPipelineStage } from '../../../lib/pipeline/pipelineStage';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /**
  * POST /api/pipeline/enqueue
  * Body: { queue, keyword, workspaceId?, language?, payload?, force? }
  * Returns 202 Accepted.
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
+async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).json({ error: 'Method not allowed' });
@@ -72,3 +73,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     throw err;
   }
 }
+
+export default withOrgPaymentAccess(handler);

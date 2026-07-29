@@ -10,6 +10,7 @@ import {
   type DomainNotifyCandidate,
 } from '../../lib/notifications/emailQueue';
 import type { EnqueueNotifyResult } from '../../lib/notifications/emailTypes';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type NotifyResponse = EnqueueNotifyResult | { success?: boolean; error?: string | null };
 
@@ -21,7 +22,7 @@ function isApiKeyAuth(req: NextApiRequest): boolean {
   return auth.substring('Bearer '.length) === process.env.APIKEY;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(401).json({ success: false, error: 'Invalid Method' });
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ success: false, error: authorized });
@@ -116,3 +117,5 @@ function mapRows(rows: Array<Record<string, unknown>>): DomainNotifyCandidate[] 
     notificationEmails: r.notification_emails == null ? null : String(r.notification_emails),
   }));
 }
+
+export default withOrgPaymentAccess(handler);

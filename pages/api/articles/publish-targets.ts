@@ -10,8 +10,9 @@ import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
 import { queryOne } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -70,3 +71,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);

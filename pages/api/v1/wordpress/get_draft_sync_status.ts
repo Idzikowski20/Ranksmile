@@ -2,8 +2,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authPluginRequest } from '../../../../lib/wpConnection';
 import { getArticleRow } from '../../../../lib/wpDraft';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);
    if (!conn) return res.status(401).json({ message: 'Invalid api-key.' });
 
@@ -12,3 +13,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const iso = new Date(raw != null ? String(raw) : Date.now()).toISOString();
    return res.status(200).json({ surfer_last_update_date: iso, last_sync_date: iso, last_sync_direction: 'from Ranksmile to WordPress' });
 }
+
+export default withOrgPaymentAccess(handler);

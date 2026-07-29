@@ -17,13 +17,14 @@ export const AI_SEARCH_CHECKPOINT_TYPES: ReadonlySet<CoverageType> = new Set([
   'question', 'concept', 'example', 'process', 'statistic', 'expectation', 'warning',
 ]);
 
-/** Uncovered (or shallow) AI Search items — shared by AO prompts + FAQ round. */
+/** Uncovered (or shallow) AI Search items — shared by AO prompts + FAQ round.
+ *  Adequate = quality ≥ 3 (Presence alone must not clear checkpoints). */
 export function isUncoveredAiSearchItem(item: Pick<CoverageItem, 'category' | 'type' | 'covered' | 'quality'>): boolean {
   if (item.category !== 'intent' && item.category !== 'knowledge' && item.category !== 'authority') {
     return false;
   }
   if (!AI_SEARCH_CHECKPOINT_TYPES.has(item.type)) return false;
-  return !item.covered || item.quality < 4;
+  return !item.covered || item.quality < 3;
 }
 
 // 'authority' declared now (empty in A) to lock the bucket taxonomy + score denominator; sources land in E.

@@ -7,7 +7,7 @@ interface Props {
   compact?: boolean;
   size?: number;
   pending?: boolean;
-  /** Green "↑N" increase badge (vs a baseline) shown during/after Auto-Optimize. */
+  /** Signed delta badge vs AO baseline (positive ↑ green, negative ↓ red). */
   delta?: number;
   /** Where the delta badge sits relative to the gauge. */
   deltaPlacement?: 'right' | 'left' | 'below';
@@ -33,10 +33,17 @@ const UpArrow = () => (
   </svg>
 );
 
+const DownArrow = () => (
+  <svg viewBox="0 0 20 20" width="1em" height="1em" aria-hidden="true" style={{ display: 'inline-block', verticalAlign: '-0.12em' }}>
+    <path fill="currentColor" fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v10.638l3.96-4.158a.75.75 0 1 1 1.08 1.04l-5.25 5.5a.75.75 0 0 1-1.08 0l-5.25-5.5a.75.75 0 1 1 1.08-1.04l3.96 4.158V3.75A.75.75 0 0 1 10 3" clipRule="evenodd" />
+  </svg>
+);
+
 const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 'left' | 'below' }) => {
+  const up = delta > 0;
   const base: React.CSSProperties = {
     position: 'absolute', display: 'inline-flex', alignItems: 'center', gap: 2,
-    color: '#1AB25E', fontSize: 13, fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap',
+    color: up ? '#1AB25E' : '#DC2626', fontSize: 13, fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap',
     fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-family-primary)', pointerEvents: 'none',
   };
   const pos: React.CSSProperties = placement === 'right'
@@ -46,8 +53,15 @@ const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 
       : { left: '30%', top: '60%', transform: 'translateX(-50%)' };
   const reduced = useReducedMotion();
   return (
-    <motion.span initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : 0.25 }} style={{ ...base, ...pos }}>
-      <UpArrow />{delta}
+    <motion.span
+      initial={reduced ? false : { opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? 0 : 0.25 }}
+      style={{ ...base, ...pos }}
+      aria-label={up ? `up ${delta}` : `down ${Math.abs(delta)}`}
+    >
+      {up ? <UpArrow /> : <DownArrow />}
+      {Math.abs(delta)}
     </motion.span>
   );
 };
@@ -132,7 +146,7 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
         )}
       </div>
 
-      {delta != null && delta > 0 && <DeltaBadge delta={delta} placement={deltaPlacement} />}
+      {delta != null && delta !== 0 && <DeltaBadge delta={delta} placement={deltaPlacement} />}
     </div>
   );
 };

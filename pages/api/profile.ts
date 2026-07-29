@@ -2,11 +2,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../utils/getUser';
 import { readProfile, writeProfile } from '../../lib/userProfile';
 import { parseDataUrl, uploadImageBuffer } from '../../lib/uploadToBlob';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 // Avatar data URLs can be a few MB — raise the JSON body limit above the 1mb default.
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
@@ -32,3 +33,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    res.setHeader('Allow', 'GET, PUT');
    return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);

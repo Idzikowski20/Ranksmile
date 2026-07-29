@@ -14,6 +14,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
@@ -143,7 +144,7 @@ function restoreDataImages(html: string, map: Map<string, string>): string {
   return out;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -343,3 +344,5 @@ RULES:
     return res.status(500).json({ error: getErrorMessage(error) || 'Request failed' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

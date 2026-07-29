@@ -9,13 +9,14 @@ import { ensureAiVisibilityTables } from '../../../../lib/ensureAiVisibilityTabl
 import { runScanChunk, AI_VIS_CHUNK_PAIRS } from '../../../../lib/aiVisibilityScan';
 import { queryOne } from '../../../../lib/db/query';
 import { getErrorMessage } from '../../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 300 };
 
 // Cap a caller-supplied chunk size so it can never blow the serverless timeout.
 const AI_VIS_HARD_LIMIT = 60;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const token = req.headers['x-internal-token'];
    if (!process.env.INTERNAL_PIPELINE_TOKEN || token !== process.env.INTERNAL_PIPELINE_TOKEN) {
       return res.status(401).json({ error: 'unauthorized' });
@@ -48,3 +49,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

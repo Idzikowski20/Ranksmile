@@ -17,11 +17,12 @@ import { resolveOrgId, orgBudgetBlocked } from '../../../../lib/aiBudget';
 import { resolveContentLocale } from '../../../../lib/domainLanguage';
 import { getErrorMessage } from '../../../../lib/errors';
 import { nextjsUrl, sidecarUrl } from '../../../../lib/serviceUrls';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();
   const authorized = await verifyUser(req, res);
@@ -130,3 +131,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: getErrorMessage(error) || 'Generation failed' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

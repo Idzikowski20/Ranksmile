@@ -18,6 +18,7 @@ import {
   type CheckoutAddressValue,
   type CheckoutFieldErrors,
 } from '../../lib/checkoutValidation';
+import { CheckoutPageSkeleton } from './CheckoutPageSkeleton';
 
 const F = 'var(--font-family-primary)';
 
@@ -310,7 +311,13 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
           });
           const data = await response.json() as IntentPayload & { error?: string };
           if (!response.ok || !data.clientSecret || !data.publishableKey) {
-            if (!cancelled) setLoadError(data.error ?? 'Could not load payment form');
+            if (cancelled) return;
+            const message = data.error ?? 'Could not load payment form';
+            if (response.status === 409 && message.includes('already on this plan')) {
+              window.location.replace('/plans');
+              return;
+            }
+            setLoadError(message);
             return;
           }
           if (!cancelled) {
@@ -344,11 +351,18 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
     }), [intent?.intentType, company, fieldErrors, onFieldErrors, onAddressChange, onSuccess, onError, onSubmittingChange]);
 
     if (loadError) {
-      return <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>{loadError}</p>;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
+          <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>{loadError}</p>
+          <a href="/plans" style={{ fontSize: 14, color: '#18181B', fontFamily: F, fontWeight: 500 }}>
+            ← Back to plans
+          </a>
+        </div>
+      );
     }
 
     if (!intent || !stripePromise) {
-      return <p style={{ margin: 0, fontSize: 14, color: '#52525C', fontFamily: F }}>Loading secure payment form…</p>;
+      return <CheckoutPageSkeleton />;
     }
 
     const options: StripeElementsOptions = {

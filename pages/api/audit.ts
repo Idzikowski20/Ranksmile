@@ -10,6 +10,7 @@ import { verifyDomainOwnershipBySlug } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
 import { getErrorMessage } from '../../lib/errors';
 import { queryRows } from '../../lib/db/query';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 export interface AuditItem {
   id: number;
@@ -30,7 +31,7 @@ export interface AuditResponse {
   lastSCUpdate: string | null;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -131,3 +132,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: message || 'Audit failed' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -156,7 +156,7 @@ export function useArticleOptimize({
 
   const optimizeReview = aoScoresReady && aoLiveSnapshot ? {
     postScore: aoLiveSnapshot.seo,
-    seoDelta: Math.max(0, aoLiveSnapshot.seo - preScoreRef.current),
+    seoDelta: Math.round(aoLiveSnapshot.seo) - Math.round(preScoreRef.current),
     postHtml: aoLiveSnapshot.postHtml,
     postText: aoLiveSnapshot.postText,
   } : null;

@@ -13,6 +13,7 @@ import { queryOne, queryRows, ArticleRow } from '../../../lib/db/query';
 import { runArticleAiPipeline } from '../../../lib/articleAiPipeline';
 import { buildCompetitorBenchmarks } from '../../../lib/competitorAuditScore';
 import { computeContentScore } from '../../../lib/contentScore';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 function domainFromUrl(url: string): string {
    try {
@@ -31,7 +32,7 @@ function plainArticleText(article: ArticleRow): string {
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -143,3 +144,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'AI visibility failed' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

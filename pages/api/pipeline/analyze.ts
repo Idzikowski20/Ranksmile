@@ -6,12 +6,13 @@ import {
   FlowProducerStageError,
 } from '../../../lib/pipeline/flowProducer';
 import { getPipelineStage } from '../../../lib/pipeline/pipelineStage';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /**
  * POST /api/pipeline/analyze — Etap 2+ FlowProducer DAG (or sequential fallback).
  * Requires PIPELINE_STAGE >= 2. Returns 202 Accepted.
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
+async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).json({ error: 'Method not allowed' });
@@ -59,3 +60,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     throw err;
   }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { BillingPeriod } from '../../../lib/billingPlans';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
 import { getOrgBillingState, hasNonTerminalStripeSubscription } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
@@ -8,6 +9,7 @@ import { getStripePriceId, type PlanSlug } from '../../../lib/stripePrices';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getAppOrigin } from '../../../lib/appOrigin';
 import { getCurrentUser } from '../../../utils/getUser';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type CheckoutMode = 'trial' | 'upfront';
 
@@ -19,7 +21,7 @@ function isBillingPeriod(value: unknown): value is BillingPeriod {
   return value === 'monthly' || value === 'yearly';
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -50,6 +52,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { orgId } = await ensureUserTenancy(user.id);
   try { await assertCanManage(user.id); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billingState = await getOrgBillingState(orgId);
+  const lockedPlanSlug = getLockedCheckoutPlanSlug(billingState);
+  if (lockedPlanSlug && lockedPlanSlug === plan.slug) {
+    return res.status(409).json({ error: 'You are already on this plan' });
+  }
   if (hasNonTerminalStripeSubscription(billingState)) {
     return res.status(409).json({ error: 'An active Stripe subscription already exists for this organization' });
   }
@@ -91,3 +97,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session.url) return res.status(502).json({ error: 'Stripe did not return a checkout URL' });
   return res.status(200).json({ url: session.url });
 }
+
+export default withOrgPaymentAccess(handler);

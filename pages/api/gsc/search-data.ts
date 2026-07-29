@@ -6,6 +6,7 @@ import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
 } from '../../../lib/gsc/domainSearchData';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 /** Custom date ranges can return up to 25k×2 query/page rows — above Next's 4mb default. */
 export const config = {
@@ -14,7 +15,7 @@ export const config = {
 };
 
 /** Canonical GSC domain search-analytics route (one-path). */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') {
@@ -29,3 +30,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   return res.status(502).json({ error: 'Unrecognized Route.' });
 }
+
+export default withOrgPaymentAccess(handler);

@@ -11,8 +11,9 @@ import {
 import { getOrgPlanUsage } from '../../../lib/planUsage';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -44,3 +45,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     statusLine: formatPlanStatus(summary.subscriptionStatus, summary.trialEndsAt, summary.billingPeriod),
   });
 }
+
+export default withOrgPaymentAccess(handler);

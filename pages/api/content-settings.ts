@@ -6,6 +6,7 @@ import { getDomainVoices, setDomainVoices } from '../../lib/domainVoices';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getActiveWorkspaceId } from '../../lib/tenancy';
 import db from '../../database/database';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type Row = Record<string, any>;
 
@@ -20,7 +21,7 @@ async function getActiveDomainId(req: NextApiRequest, userId: string | null): Pr
   return rows.length ? Number(rows[0].ID) : 0;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
 
@@ -53,3 +54,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);

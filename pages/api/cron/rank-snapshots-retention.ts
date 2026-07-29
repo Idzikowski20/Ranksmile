@@ -2,8 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ensureRankTrackingTables } from '../../../lib/ensureRankTrackingTables';
 import { pruneOldSnapshotPartitions } from '../../../lib/rankTracking/partitions';
 import { getErrorMessage } from '../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -17,3 +18,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: getErrorMessage(e) });
   }
 }
+
+export default withOrgPaymentAccess(handler);

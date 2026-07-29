@@ -7,6 +7,7 @@ import verifyUser from '../../../utils/verifyUser';
 import { renderPage } from '../../../utils/spaScraper';
 import { ssrfSafeFetch } from '../../../lib/ssrfGuard';
 import { getErrorMessage } from '../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 const FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -113,7 +114,7 @@ async function fetchSitemapLinks(origin: string, baseUrl: string): Promise<Array
   return [];
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -183,3 +184,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: message || 'Failed to fetch URL' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

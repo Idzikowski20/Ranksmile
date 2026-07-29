@@ -9,8 +9,9 @@ import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { createConnection, mintApiKey } from '../../../lib/wpConnection';
 import { wpRestFetch } from '../../../lib/wpRest';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') {
@@ -62,3 +63,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    await createConnection({ workspaceId: Number(workspaceId), userId: user.id, siteUrl, apiKey, orgName: orgName || null, email: user.email || null });
    return res.status(200).json({ connected: true });
 }
+
+export default withOrgPaymentAccess(handler);

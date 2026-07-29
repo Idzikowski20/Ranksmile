@@ -13,6 +13,7 @@ import { integrateKeywordSCData, readLocalSCData } from '../../utils/searchConso
 import refreshAndUpdateKeywords from '../../utils/refresh';
 import { getKeywordsVolume, updateKeywordsVolumeData } from '../../utils/adwords';
 import { removeFromRetryQueue } from '../../utils/scraper';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 export async function userOwnsAllKeywords(ids: Array<number | string>, userId: string | null): Promise<boolean> {
    if (!ids.length) return false;
@@ -38,7 +39,7 @@ type KeywordsDeleteRes = {
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -237,3 +238,5 @@ const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
       return res.status(200).json({ error: 'Error Updating keywords!' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

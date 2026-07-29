@@ -9,6 +9,7 @@ import {
   verifyAccountToken,
   type GscAccountRecord,
 } from '../../../lib/gscAccounts';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type GscAccountsResponse = {
   accounts?: ReturnType<typeof normalizeAccount>[];
@@ -27,7 +28,7 @@ const normalizeAccount = (account: GscAccountRecord & { status?: string }) => ({
   status: account.status || 'connected',
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<GscAccountsResponse>) {
+async function handler(req: NextApiRequest, res: NextApiResponse<GscAccountsResponse>) {
   await db.sync();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') {
@@ -65,3 +66,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);

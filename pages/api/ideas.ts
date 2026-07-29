@@ -4,6 +4,7 @@ import verifyUser from '../../utils/verifyUser';
 import {
    KeywordIdeasDatabase, getAdwordsCredentials, getAdwordsKeywordIdeas, getLocalKeywordIdeas, updateLocalKeywordIdeas,
 } from '../../utils/adwords';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type keywordsIdeasUpdateResp = {
    keywords: IdeaKeyword[],
@@ -15,7 +16,7 @@ type keywordsIdeasGetResp = {
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -109,3 +110,5 @@ const favoriteKeywords = async (req: NextApiRequest, res: NextApiResponse<keywor
       return res.status(400).json({ keywords: [], error: errMsg });
    }
 };
+
+export default withOrgPaymentAccess(handler);

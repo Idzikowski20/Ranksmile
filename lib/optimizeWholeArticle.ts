@@ -51,7 +51,7 @@ function uncoveredAiCheckpoints(ctx: ArticleContext): string[] {
   return (ctx.coverage?.items || [])
     .filter((i) => (i.category === 'intent' || i.category === 'knowledge')
       && i.type !== 'entity' && i.type !== 'structure' && i.type !== 'readability' && i.type !== 'term'
-      && (!i.covered || i.quality < 4))
+      && (!i.covered || i.quality < 3))
     .map((i) => i.label);
 }
 
@@ -92,7 +92,7 @@ function focusForMode(mode: OptimizeMode, ctx: ArticleContext | null, html: stri
   const hasOveruse = gaps.some((g) => g.status === 'overuse');
   const uncoveredItems = (ctx?.coverage?.items || []).filter(isUncoveredAiSearchItem);
   const uncovered = uncoveredItems.map((i) => i.label);
-  // Shallow = checklist already "Covered" but quality < 4. Whole-article AI polish then echoes → no_change.
+  // Shallow = checklist already "Covered" but quality < 3. Whole-article AI polish then echoes → no_change.
   // Prefer SEO term balance (esp. overuse) first; FAQ round still deepens shallow AI checkpoints.
   const onlyShallowAi = uncoveredItems.length > 0 && uncoveredItems.every((i) => i.covered);
 

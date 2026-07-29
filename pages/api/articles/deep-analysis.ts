@@ -54,6 +54,7 @@ import { findInternalLinkOpportunities } from '../../../lib/auditInternalLinks';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { resolveContentLocale } from '../../../lib/domainLanguage';
 import { replaceArticleTerms, replaceCompetitors } from '../../../lib/articleAnalysisStorage';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 function sse(res: NextApiResponse, event: string, data: Record<string, unknown>) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -176,7 +177,7 @@ function addSelectedKeywordTerms(terms: NlpTerm[], selected: string[], plainText
 // Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('[deep-analysis] handler invoked', req.method);
   await db.sync();
   await ensureArticlesTables();
@@ -1176,3 +1177,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.end();
   }
 }
+
+export default withOrgPaymentAccess(handler);

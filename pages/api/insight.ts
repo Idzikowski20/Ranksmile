@@ -6,13 +6,14 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import Domain from '../../database/models/domain';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type SCInsightRes = {
    data: InsightDataType | null,
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -67,3 +68,5 @@ const getDomainSearchConsoleInsight = async (req: NextApiRequest, res: NextApiRe
       return res.status(400).json({ data: null, error: 'Error Fetching Stats from Google Search Console.' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

@@ -10,10 +10,11 @@ import { getErrorMessage } from '../../../../lib/errors';
 import { queryRows } from '../../../../lib/db/query';
 import { loadScanCitationRowsForScans } from '../../../../lib/aiVisibilityRead';
 import { overviewForDomain } from '../../../../lib/aiVisibilityMetrics';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const HISTORY_LIMIT = 24;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAiVisibilityTables();
    const authorized = await verifyUser(req, res);
@@ -55,3 +56,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

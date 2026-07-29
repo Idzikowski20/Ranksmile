@@ -16,10 +16,11 @@ import { queryRows, queryOne } from '../../../../lib/db/query';
 import type { ArticleRow } from '../../../../lib/db/query';
 
 import { parseJsonish } from '../../../../lib/types/json';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const parse = (v: unknown): unknown => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Not found' });
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -95,3 +96,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

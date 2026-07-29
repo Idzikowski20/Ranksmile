@@ -10,10 +10,11 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../lib/tenancy';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne } from '../../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const makeToken = () => randomBytes(24).toString('base64url');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -51,3 +52,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

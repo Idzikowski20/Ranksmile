@@ -4,8 +4,9 @@ import db from '../../../../database/database';
 import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'GET' && req.method !== 'DELETE') { res.setHeader('Allow', 'GET, DELETE'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -40,3 +41,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    );
    return res.status(200).json({ recommendations });
 }
+
+export default withOrgPaymentAccess(handler);

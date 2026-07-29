@@ -1,9 +1,16 @@
-import { collectUncoveredAiQuestions, mergeFaqHtml, buildFaqSectionPrompt } from '../../lib/aoFaqSection';
+import {
+  collectUncoveredAiQuestions,
+  mergeFaqHtml,
+  buildFaqSectionPrompt,
+  faqBudgetForWordCount,
+  selectFaqQuestions,
+} from '../../lib/aoFaqSection';
 import type { CoverageItem } from '../../lib/aiCoverage';
+import { buildIntentProfile } from '../../lib/ao/intentProfile';
 
 const items: CoverageItem[] = [
-  { id: '1', label: 'Kiedy można oskarżyć?', category: 'intent', type: 'paa', covered: false, quality: 2, importance: 'high', source: 'llm' },
-  { id: '2', label: 'Done item', category: 'knowledge', type: 'fact', covered: true, quality: 5, importance: 'medium', source: 'llm' },
+  { id: '1', label: 'Kiedy można oskarżyć?', category: 'intent', type: 'paa', covered: false, quality: 2, importance: 'critical', source: 'llm' },
+  { id: '2', label: 'Done item', category: 'knowledge', type: 'fact', covered: true, quality: 5, importance: 'recommended', source: 'llm' },
 ];
 
 describe('aoFaqSection', () => {
@@ -35,5 +42,27 @@ describe('aoFaqSection', () => {
     expect(systemPrompt).toContain('120–350 characters');
     expect(userInstruction).toContain('Q1');
     expect(userInstruction).toContain('Q2');
+  });
+
+  it('faqBudgetForWordCount scales with length', () => {
+    expect(faqBudgetForWordCount(100)).toBe(2);
+    expect(faqBudgetForWordCount(900)).toBe(3);
+  });
+
+  it('selectFaqQuestions respects budget', () => {
+    const profile = buildIntentProfile({
+      keyword: 'nękanie',
+      plainText: 'nękanie stalking prawo ofiara',
+    });
+    const qs = Array.from({ length: 8 }, (_, i) => ({
+      id: String(i),
+      label: `Jak zgłosić nękanie przypadek ${i}?`,
+    }));
+    const selected = selectFaqQuestions({
+      questions: qs,
+      profile,
+      articlePlainText: Array(100).fill('słowo').join(' '),
+    });
+    expect(selected.length).toBeLessThanOrEqual(2);
   });
 });

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { getCallerRole } from '../../../../lib/members';
 import { listWorkspaceAccess, setWorkspaceAccess } from '../../../../lib/workspaceMembers';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 function mapError(res: NextApiResponse, e: unknown): void {
    const m = e instanceof Error ? e.message : String(e);
@@ -10,7 +11,7 @@ function mapError(res: NextApiResponse, e: unknown): void {
    throw e;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const userId = await getCurrentUserId(req, res);
    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
    const id = Number(req.query.id);
@@ -33,3 +34,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return mapError(res, e);
    }
 }
+
+export default withOrgPaymentAccess(handler);

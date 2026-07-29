@@ -3,8 +3,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authPluginRequest } from '../../../../lib/wpConnection';
 import { getDomainIdForWorkspace, createArticleFromWp, permalinkHash } from '../../../../lib/wpDraft';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
    const conn = await authPluginRequest(req);
    if (!conn) return res.status(401).json({ message: 'Invalid api-key.' });
@@ -26,3 +27,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    return res.status(200).json({ id, permalink_hash: permalinkHash(id), url: `${origin}/drafts/${id}` });
 }
 
+export default withOrgPaymentAccess(handler);

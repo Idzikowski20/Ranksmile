@@ -8,6 +8,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { getActiveWorkspaceId } from '../../../lib/tenancy';
 import { parseDataUrl, uploadImageBuffer } from '../../../lib/uploadToBlob';
 import { SETUP_LOCATIONS } from '../../../lib/setupLocations';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 // Logo data URLs can be a few MB — raise the JSON body limit above the 1mb default.
 export const config = { api: { bodyParser: { sizeLimit: '6mb' } } };
@@ -34,7 +35,7 @@ function ccForCountry(country: string | null): string | null {
    return match ? match.cc : null;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
 
@@ -79,3 +80,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    res.setHeader('Allow', 'GET, PUT');
    return res.status(405).json({ error: 'Method not allowed' });
 }
+
+export default withOrgPaymentAccess(handler);
