@@ -1,6 +1,10 @@
 import type { CoverageItem } from './aiCoverage';
 import { isUncoveredAiSearchItem } from './aiCoverage';
 import { STOP_SLOP_RULES } from './stopSlopPrompt';
+import type { ArticleIntentProfile } from './ao/intentProfile';
+import { textHitsForbidden } from './ao/intentProfile';
+import { scoreCandidateAgainstProfile } from './ao/intentGuard';
+import { makeCandidate } from './ao/editCandidate';
 
 const FAQ_HEADING_RE = /<h2[^>]*>\s*(faq|najcz[eę]ściej zadawane pytania|frequently asked questions|pytania i odpowiedzi)\s*<\/h2>/i;
 
@@ -9,10 +13,72 @@ export interface UncoveredAiQuestion {
   label: string;
 }
 
+/** Length-based FAQ budget (safety cap, not a target). */
+export function faqBudgetForWordCount(wordCount: number): number {
+  if (wordCount < 800) return 2;
+  if (wordCount < 1500) return 3;
+  if (wordCount < 2500) return 4;
+  return 5;
+}
+
+export function countPlainWords(text: string): number {
+  return (text || '').split(/\s+/).filter(Boolean).length;
+}
+
 export function collectUncoveredAiQuestions(items: readonly CoverageItem[]): UncoveredAiQuestion[] {
   return items
     .filter(isUncoveredAiSearchItem)
     .map((i) => ({ id: i.id, label: i.label }));
+}
+
+/**
+ * FAQ gate: IntentGuard + unanswered + non-redundant + length budget.
+ * High intentFit fills budget; does not dump all uncovered.
+ */
+export function selectFaqQuestions(opts: {
+  questions: UncoveredAiQuestion[];
+  profile: ArticleIntentProfile;
+  articlePlainText: string;
+  maxQuestions?: number;
+}): UncoveredAiQuestion[] {
+  const budget = opts.maxQuestions ?? faqBudgetForWordCount(countPlainWords(opts.articlePlainText));
+  const plainLow = opts.articlePlainText.toLowerCase();
+  const selected: UncoveredAiQuestion[] = [];
+  const seen = new Set<string>();
+
+  for (const q of opts.questions) {
+    if (selected.length >= budget) break;
+    const label = (q.label || '').trim();
+    if (label.length < 8) continue;
+    if (textHitsForbidden(label, opts.profile)) continue;
+
+    const key = label.toLowerCase().replace(/\s+/g, ' ');
+    if (seen.has(key)) continue;
+
+    // Redundant if question tokens already answered in body
+    const tokens = key.split(/\s+/).filter((w) => w.length > 3);
+    const hitRatio = tokens.length
+      ? tokens.filter((t) => plainLow.includes(t)).length / tokens.length
+      : 0;
+    if (hitRatio >= 0.85) continue;
+
+    const scored = scoreCandidateAgainstProfile(
+      makeCandidate({
+        id: q.id,
+        source: 'paa',
+        targetGap: label,
+        priority: 'recommended',
+        intentFit: 0.5,
+      }),
+      opts.profile,
+    );
+    if (scored.commercialDrift > 0.5 || scored.intentFit < 0.45) continue;
+
+    seen.add(key);
+    selected.push({ id: q.id, label });
+  }
+
+  return selected;
 }
 
 export function detectFaqSectionStart(html: string): number | null {
@@ -50,6 +116,7 @@ RULES:
 - Do NOT wrap in markdown fences. No commentary outside HTML.
 - Match the article language (${opts.language}).
 - Answer ALL ${opts.questions.length} questions — none may be skipped.
+- Do NOT introduce commercial services (detectives, loyalty testers, paid investigation).
 
 ${STOP_SLOP_RULES}`;
 

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
+import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
 import { getOrgBillingState, updateOrgBillingState } from '../../../lib/orgBilling';
 import { assertCanManage } from '../../../lib/members';
 import { getStripe } from '../../../lib/stripe';
@@ -11,6 +12,7 @@ import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUser } from '../../../utils/getUser';
 import { isCheckoutAttemptId } from '../../../lib/checkoutAttemptId';
 import type Stripe from 'stripe';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 const createSubscriptionSchema = z.object({
   planSlug: z.string().min(1),
@@ -43,14 +45,7 @@ function clientSecretFromSubscription(
   return null;
 }
 
-function blocksNewPaidCheckout(status: string | null | undefined): boolean {
-  return status === 'active'
-    || status === 'trialing'
-    || status === 'past_due'
-    || status === 'unpaid';
-}
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -93,6 +88,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { orgId } = await ensureUserTenancy(user.id);
   try { await assertCanManage(user.id); } catch { return res.status(403).json({ error: 'FORBIDDEN' }); }
   const billingState = await getOrgBillingState(orgId);
+  const lockedPlanSlug = getLockedCheckoutPlanSlug(billingState);
+  if (lockedPlanSlug && lockedPlanSlug === plan.slug) {
+    return res.status(409).json({ error: 'You are already on this plan' });
+  }
   if (blocksNewPaidCheckout(billingState?.subscriptionStatus)) {
     return res.status(409).json({ error: 'An active Stripe subscription already exists for this organization' });
   }
@@ -165,3 +164,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     checkoutAttemptId,
   });
 }
+
+export default withOrgPaymentAccess(handler);

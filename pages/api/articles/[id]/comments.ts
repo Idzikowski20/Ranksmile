@@ -15,6 +15,7 @@ import { ABLY_EVENTS } from '../../../../lib/ably/channel';
 import { getCommentAccessKind } from '../../../../lib/commentAccess';
 import { getErrorMessage } from '../../../../lib/errors';
 import { queryOne } from '../../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type Row = {
    id: string; quote: string; body: string; images_json: string; author: string; color: string;
@@ -59,7 +60,7 @@ const shape = (r: Row) => ({
 
 type Shaped = ReturnType<typeof shape>;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
 
@@ -157,3 +158,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

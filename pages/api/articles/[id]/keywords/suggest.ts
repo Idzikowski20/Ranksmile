@@ -7,8 +7,9 @@ import { computeRelevanceScore } from '../../../../../lib/keywordEnrichment';
 import { getCurrentUserId } from '../../../../../utils/getUser';
 import { assertArticleAccess } from '../../../../../lib/tenancy';
 import { queryRows, queryOne } from '../../../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   await ensureArticlesTables();
   const authorized = await verifyUser(req, res);
@@ -87,3 +88,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(200).json({ suggestions });
 }
+
+export default withOrgPaymentAccess(handler);

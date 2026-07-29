@@ -14,6 +14,7 @@ import { getErrorMessage } from '../../../lib/errors';
 import { queryOne } from '../../../lib/db/query';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export interface LinkSuggestion {
   anchorText: string;
@@ -23,7 +24,7 @@ export interface LinkSuggestion {
   context: string; // short excerpt showing the anchor in context
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -168,3 +169,5 @@ If no natural links found, return: []`;
     return res.status(500).json({ error: getErrorMessage(err) || 'Analysis failed' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

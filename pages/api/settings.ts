@@ -7,13 +7,14 @@ import { getCurrentUserId } from '../../utils/getUser';
 import { assertCanManage } from '../../lib/members';
 import allScrapers from '../../scrapers/index';
 import { readSettingsBlob, writeSettingsBlob } from '../../lib/appSettingsStore';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type SettingsGetResponse = {
    settings?: object | null,
    error?: string,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
@@ -184,3 +185,5 @@ export const getAppSettings = async () : Promise<SettingsType> => {
 
    return decryptedSettings;
 };
+
+export default withOrgPaymentAccess(handler);

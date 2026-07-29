@@ -6,8 +6,9 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { queryOne, AuditRunRow } from '../../../../lib/db/query';
 import type { AuditResult } from '../../../../lib/auditTypes';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
@@ -57,3 +58,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       result,
    });
 }
+
+export default withOrgPaymentAccess(handler);

@@ -4,8 +4,9 @@ import Domain from '../../../database/models/domain';
 import verifyUser from '../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../utils/verifyDomainOwnership';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
 
@@ -84,3 +85,5 @@ async function deleteGoal(req: NextApiRequest, res: NextApiResponse, domainSlug:
       return res.status(400).json({ error: 'Error deleting goal' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -6,8 +6,9 @@ import db from '../../../../database/database';
 import { ensureArticlesTables } from '../../../../lib/ensureArticlesTables';
 import { onCommentChange } from '../../../../lib/commentBus';
 import { assertCommentAccess } from '../../../../lib/commentAccess';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const { id } = req.query;
    if (!id) { res.status(400).end(); return; }
 
@@ -35,3 +36,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    req.on('close', () => { clearInterval(heartbeat); off(); res.end(); });
 }
+
+export default withOrgPaymentAccess(handler);

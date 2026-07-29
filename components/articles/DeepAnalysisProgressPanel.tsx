@@ -1,7 +1,7 @@
 import React from 'react';
 import type { DeepAnalysisUiState, DeepAnalysisUiStep } from '../../lib/deepAnalysisProgress';
 import DomainFavicon from '../common/DomainFavicon';
-import GeneratingStage from './GeneratingStage';
+import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 
 const Spinner = () => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.8s linear infinite' }}>
@@ -130,17 +130,38 @@ const DeepAnalysisProgressPanel = ({ state }: Props) => (
       display: 'flex',
       flexDirection: 'column',
       gap: 24,
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
       minHeight: 280,
       fontFamily: 'var(--font-family-primary)',
     }}
   >
-    <GeneratingStage
-      size="md"
-      title="Deep analysis"
-      status={runningStatus(state)}
-      progressPct={progressFromState(state)}
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <AnalysisCircuitBoard variant="deep-analysis" state={state} width={280} height={168} />
+      <div>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#181225', lineHeight: '22px' }}>Deep analysis</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6A6772', lineHeight: '18px' }} aria-live="polite">
+          {runningStatus(state)}
+        </p>
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressFromState(state)}
+          style={{ marginTop: 10, height: 4, borderRadius: 999, background: '#E6E6E9', overflow: 'hidden' }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${progressFromState(state)}%`,
+              background: '#F29964',
+              borderRadius: 999,
+              transition: 'width 0.4s ease',
+            }}
+          />
+        </div>
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6A6772' }}>{progressFromState(state)}%</p>
+      </div>
+    </div>
 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

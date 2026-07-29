@@ -16,6 +16,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { safeJsonParse } from '../../../lib/safeJson';
 import type { CoverageSnapshot } from '../../../lib/aiCoverage';
 import { resolveContentLocale, languageDisplayName } from '../../../lib/domainLanguage';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60 };
 
@@ -35,7 +36,7 @@ function formatCompetitorStructures(competitors: CompetitorOutline[]): string {
   }).join('\n\n');
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -185,3 +186,5 @@ H3: [subsection]
     return res.status(500).json({ error: getErrorMessage(err) || 'Generation failed' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

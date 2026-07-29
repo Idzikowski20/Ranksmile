@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { resetPassword } from '../../lib/auth/fetchAuth';
 import { Button } from '../core';
 import AuthField from './AuthField';
+import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import {
   authErrorStyle,
   authFooterStyle,
@@ -78,14 +79,14 @@ export default function ResetPasswordForm() {
         </div>
       ) : null}
 
-      <AuthField
+      <PasswordStrengthIndicator
         id="reset-password"
         label="New password"
-        type="password"
         value={password}
         onChange={setPassword}
         autoComplete="new-password"
         disabled={loading || success}
+        placeholder="Enter a new password"
       />
 
       <AuthField
@@ -96,6 +97,7 @@ export default function ResetPasswordForm() {
         onChange={setConfirm}
         autoComplete="new-password"
         disabled={loading || success}
+        revealable
       />
 
       <div style={authFullWidthBtnStyle}>

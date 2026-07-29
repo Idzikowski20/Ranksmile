@@ -5,8 +5,9 @@ import { getStripe, isStripeConfigured } from '../../../lib/stripe';
 import { syncSubscriptionToOrg } from '../../../lib/stripeBillingSync';
 import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getCurrentUserId } from '../../../utils/getUser';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -35,3 +36,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(200).json({ ok: true, cancelAtPeriodEnd: updated.cancel_at_period_end });
 }
+
+export default withOrgPaymentAccess(handler);

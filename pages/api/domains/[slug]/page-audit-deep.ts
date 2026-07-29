@@ -11,10 +11,11 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { runDeepAnalysisForUrl, DeepResult } from '../../../../lib/deepAnalysis';
 import { getDomainLocale } from '../../../../lib/domainLanguage';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -67,3 +68,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    );
    return res.status(200).json({ deep, cached: false });
 }
+
+export default withOrgPaymentAccess(handler);

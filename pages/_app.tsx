@@ -10,6 +10,8 @@ import { ThemeProvider } from '@emotion/react';
 import posthog from 'posthog-js';
 import { fetchBootstrapOrNull } from '../lib/fetchBootstrap';
 import { isPublicPath } from '../lib/isPublicPath';
+import { isFrontendRouteAllowedDuringPaymentLock } from '../lib/paymentFailedLock';
+import type { SubscriptionDetails } from '../lib/subscriptionDetails';
 import AppToaster from '../components/common/AppToaster';
 import AppLoading from '../components/common/AppLoading';
 import TopProgressBar from '../components/common/TopProgressBar';
@@ -190,6 +192,36 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
    );
 }
 
+function PaymentFailedLockGuard({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const isPublic = isPublicPath(router.pathname);
+
+  const { data } = useQuery(
+    'subscriptionDetails',
+    async () => {
+      const res = await fetch('/api/billing/subscription');
+      if (!res.ok) throw new Error('Failed to load subscription');
+      return res.json() as Promise<{ subscription: SubscriptionDetails }>;
+    },
+    {
+      enabled: !isPublic,
+      staleTime: 30 * 1000,
+      retry: false,
+    },
+  );
+
+  const paymentFailedLocked = data?.subscription?.paymentFailedLocked === true;
+
+  React.useEffect(() => {
+    if (isPublic) return;
+    if (!paymentFailedLocked) return;
+    const allowed = isFrontendRouteAllowedDuringPaymentLock(router.asPath);
+    if (!allowed) router.replace('/plans?reason=payment_failed');
+  }, [isPublic, paymentFailedLocked, router, router.asPath]);
+
+  return <>{children}</>;
+}
+
 type AppPageProps = AppProps['pageProps'] & { dehydratedState?: unknown };
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -218,7 +250,9 @@ function MyApp({ Component, pageProps }: AppProps) {
                    <TopProgressBar />
                    <WorkspaceCookieSync />
                    <OnboardingGuard>
-                      <Component {...restPageProps} />
+                      <PaymentFailedLockGuard>
+                        <Component {...restPageProps} />
+                      </PaymentFailedLockGuard>
                    </OnboardingGuard>
                    <AppToaster />
                    <GlobalSmoothCaret />

@@ -93,9 +93,10 @@ export function curateAiCoverageItems(opts: {
 }): { knowledge: CoverageItem[]; entity: CoverageItem[] } {
   const keyword = opts.keyword.trim();
   const llmRows = opts.llmQuestions ?? [];
+  // PAA / fallback templates are not AI Overviews — leave sources empty so UI doesn't lie.
   const paaRows = (opts.paaQuestions ?? []).map((q) => ({
     question: q.question,
-    sources: ['ai_overview'] as LlmCoverageSource[],
+    sources: [] as LlmCoverageSource[],
   }));
 
   const ranked = [...llmRows, ...paaRows]

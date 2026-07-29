@@ -11,7 +11,8 @@ import {
   SentryPanelBody,
   SentryPanelHeader,
 } from '../../components/sentry-pages';
-import GeneratingStage from '../../components/articles/GeneratingStage';
+import AnalysisCircuitBoard from '../../components/ranksmile/AnalysisCircuitBoard';
+import type { DeepAnalysisUiState, StepVisualStatus } from '../../lib/deepAnalysisProgress';
 import { useFetchDomains } from '../../services/domains';
 
 // ── Must match the API handler ────────────────────────────────────────
@@ -362,6 +363,32 @@ const DeepAnalysisPage: NextPage = () => {
   const completedCount = steps.filter((s) => s.status === 'done').length;
   const progressPct = apiProgressPct ?? Math.round((completedCount / STEPS.length) * 100);
 
+  const circuitState = useMemo((): DeepAnalysisUiState => {
+    const statusOf = (keys: string[]): StepVisualStatus => {
+      const matched = keys
+        .map((k) => steps.find((s) => s.key === k)?.status)
+        .filter((s): s is StepStatus => Boolean(s));
+      if (matched.some((s) => s === 'running' || s === 'error')) return 'running';
+      if (matched.length > 0 && matched.every((s) => s === 'done')) return 'done';
+      if (matched.some((s) => s === 'done')) return 'done';
+      return 'pending';
+    };
+    return {
+      googleSearch: [
+        { key: 'serp_results', label: 'Fetching', status: statusOf(['fetch', 'metadata', 'structure']) },
+        { key: 'serp_crawl', label: 'SERP', status: statusOf(['serp']) },
+        { key: 'serp_scores', label: 'Score', status: statusOf(['score', 'image', 'save']) },
+      ],
+      aiSearch: [
+        { key: 'ai_prompts', label: 'NLP', status: statusOf(['nlp']) },
+        { key: 'ai_scrape', label: 'NLP', status: statusOf(['nlp']) },
+        { key: 'ai_guidelines', label: 'Guidelines', status: statusOf(['score']) },
+      ],
+      error: overallError,
+      isComplete: allDone,
+    };
+  }, [steps, overallError, allDone]);
+
   const subtitle = useMemo(() => {
     if (allDone) return 'Analysis complete — opening your article…';
     if (overallError) return 'Something went wrong while analyzing your content.';
@@ -434,13 +461,16 @@ const DeepAnalysisPage: NextPage = () => {
             />
             <SentryPanelBody>
               {!overallError && !allDone && (
-                <div style={{ marginBottom: 20 }}>
-                  <GeneratingStage
-                    size="md"
-                    title="Deep analysis"
-                    status={steps.find((s) => s.status === 'running')?.label || 'Analyzing content…'}
-                    progressPct={progressPct}
+                <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+                  <AnalysisCircuitBoard
+                    variant="deep-analysis"
+                    state={circuitState}
+                    width={420}
+                    height={200}
                   />
+                  <p style={{ margin: 0, fontSize: 13, color: '#6A6772', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }} aria-live="polite">
+                    {steps.find((s) => s.status === 'running')?.label || 'Analyzing content…'}
+                  </p>
                 </div>
               )}
               <div className="deep-analysis-steps">

@@ -6,6 +6,7 @@ import { Button } from '../core';
 import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';
 import AuthBrandMark from './AuthBrandMark';
+import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import {
   authDividerLineStyle,
   authDividerTextStyle,
@@ -112,16 +113,14 @@ export default function EmailSignUpForm() {
         placeholder="you@work.com"
       />
 
-      <AuthField
+      <PasswordStrengthIndicator
         id="sign-up-password"
         label="Password"
-        type="password"
         value={password}
         onChange={setPassword}
         autoComplete="new-password"
         disabled={busy}
         placeholder="Create a password"
-        revealable
       />
 
       <div style={authFullWidthBtnStyle}>

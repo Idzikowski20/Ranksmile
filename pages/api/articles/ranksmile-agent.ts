@@ -18,12 +18,13 @@ import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import type { ToolCtx } from '../../../lib/ai/types';
 import { getErrorMessage } from '../../../lib/errors';
 import { flushSse } from '../../../lib/types/api';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 // maxDuration 300: the route covers DeepSeek steps PLUS up to two sequential sidecar LLM
 // calls (apply_readability), so it must be >= the sum of the action tool budgets (ACTION_TIMEOUT).
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -180,3 +181,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.end();
   }
 }
+
+export default withOrgPaymentAccess(handler);

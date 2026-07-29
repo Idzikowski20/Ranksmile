@@ -3,8 +3,9 @@ import verifyUser from '../../../../utils/verifyUser';
 import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { getSetupStatus } from '../../../../lib/domainPipeline';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -15,3 +16,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const domainId = (ownership as { ID: number }).ID;
    return res.status(200).json(await getSetupStatus(domainId));
 }
+
+export default withOrgPaymentAccess(handler);

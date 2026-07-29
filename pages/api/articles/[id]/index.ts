@@ -18,8 +18,9 @@ import {
   buildGoogleRankingSourcesFromRows,
   parseRankingSources,
 } from '../../../../lib/rankingSources';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -244,3 +245,5 @@ async function deleteArticle(id: string, res: NextApiResponse, userId: string | 
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

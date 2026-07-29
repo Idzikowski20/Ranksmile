@@ -8,6 +8,7 @@ import { getAppSettings } from './settings';
 import verifyUser from '../../utils/verifyUser';
 import parseKeywords from '../../utils/parseKeywords';
 import { scrapeKeywordFromGoogle } from '../../utils/scraper';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type KeywordsRefreshRes = {
    keywords?: KeywordType[]
@@ -24,7 +25,7 @@ type KeywordSearchResultRes = {
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -123,3 +124,5 @@ const getKeywordSearchResults = async (req: NextApiRequest, res: NextApiResponse
       return res.status(400).json({ error: 'Error refreshing keywords!' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

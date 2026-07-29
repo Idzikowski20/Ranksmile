@@ -17,6 +17,7 @@ import { countOccurrences } from '../../../lib/contentScore';
 import { assertPublicUrl } from '../../../lib/ssrfGuard';
 import { isSidecarConfigured } from '../../../lib/sidecar';
 import { publicAppUrl } from '../../../lib/serviceUrls';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 class BlockedUrlError extends Error {}
 
@@ -63,7 +64,7 @@ async function fetchWithPuppeteer(url: string): Promise<{ html: string; finalUrl
    return { html: rendered.html, finalUrl: rendered.url };
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -424,3 +425,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(error) || 'Import failed' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

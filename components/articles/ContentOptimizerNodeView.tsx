@@ -62,9 +62,9 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
 
   const isWholeArticle = sectionId === WHOLE_ARTICLE_ID;
 
-  const inlineDiffHtml = isWholeArticle
-    ? newHtml
-    : renderDiffHtml(wordDiffSegments(stripTags(oldHtml), stripTags(newHtml)));
+  // Always word-diff plain text (See changes parity). Whole-article fallback used to
+  // skip this and dump newHtml with zero add/remove marks.
+  const inlineDiffHtml = renderDiffHtml(wordDiffSegments(stripTags(oldHtml), stripTags(newHtml)));
 
   let body: React.ReactNode;
   if (isQueued) {
@@ -75,13 +75,12 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
     body = (
       <div className="ao-text-shimmer" dangerouslySetInnerHTML={{ __html: oldHtml }} />
     );
-  } else if (isWholeArticle) {
-    body = (
-      <div className="ao-whole-article-preview" dangerouslySetInnerHTML={{ __html: newHtml }} />
-    );
   } else {
     body = (
-      <div dangerouslySetInnerHTML={{ __html: inlineDiffHtml }} />
+      <div
+        className={isWholeArticle ? 'ao-whole-article-preview' : undefined}
+        dangerouslySetInnerHTML={{ __html: inlineDiffHtml }}
+      />
     );
   }
 

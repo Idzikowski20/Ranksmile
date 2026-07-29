@@ -199,7 +199,7 @@ const DashboardPage: NextPage = () => {
         const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
         return bTime - aTime;
       })
-      .slice(0, 8)
+      .slice(0, 3)
       .map((a) => ({
         id: a.id,
         title: a.title,

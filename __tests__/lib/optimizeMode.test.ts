@@ -1,5 +1,6 @@
 import {
   selectOptimizeMode,
+  shouldSkipOptimize,
   SEO_READY,
   SEO_WEAK,
   TARGET_AI,
@@ -36,10 +37,21 @@ describe('selectOptimizeMode', () => {
   });
 });
 
+describe('shouldSkipOptimize', () => {
+  it('is true only when both TARGET_SEO and TARGET_AI are met (AND)', () => {
+    expect(shouldSkipOptimize(TARGET_SEO, TARGET_AI)).toBe(true);
+    expect(shouldSkipOptimize(TARGET_SEO, TARGET_AI - 1)).toBe(false);
+    expect(shouldSkipOptimize(TARGET_SEO - 1, TARGET_AI)).toBe(false);
+    expect(shouldSkipOptimize(89, 85)).toBe(false);
+    expect(shouldSkipOptimize(90, 84)).toBe(false);
+    expect(shouldSkipOptimize(95, 90)).toBe(true);
+  });
+});
+
 describe('optimizeMode constants', () => {
-  it('uses Ranksmile parity targets', () => {
-    expect(TARGET_SEO).toBe(80);
-    expect(TARGET_AI).toBe(65);
+  it('uses v4.1 skip targets 90/85', () => {
+    expect(TARGET_SEO).toBe(90);
+    expect(TARGET_AI).toBe(85);
     expect(DEFAULT_MAX_ROUNDS).toBe(2);
   });
 });

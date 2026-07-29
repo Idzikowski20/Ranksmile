@@ -7,8 +7,9 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import { getConnectionForWorkspace } from '../../../lib/wpConnection';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
 
@@ -39,3 +40,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       postUrl: published ? (arow!.publish_url || null) : null,
    });
 }
+
+export default withOrgPaymentAccess(handler);

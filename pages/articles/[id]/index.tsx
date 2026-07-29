@@ -29,7 +29,6 @@ import { computeCoverageScores } from '../../../lib/aiCoverage';
 import { filterSyntheticCitationTemplates } from '../../../lib/citationPrompts';
 import AoScoreFloat from '../../../components/articles/AoScoreFloat';
 import { substituteOptimizerPlaceholders } from '../../../lib/optimizePostHtml';
-import { sanitizeArticleHtml } from '../../../lib/sanitizeHtml';
 import { collectOptimizerPositions } from '../../../lib/optimizeResolveAll';
 import type { PMDocLike } from '../../../lib/optimizeResolveAll';
 import { authClient } from '../../../lib/auth/client';
@@ -46,6 +45,7 @@ import { readAnalyzeSession, resolveAnalyzingStatusOnLoad } from '../../../lib/d
 import { getErrorMessage } from '../../../lib/errors';
 import { isAbortError } from '../../../lib/abortSignal';
 import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
+import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
 import { optimizeStore } from '../../../components/articles/optimizeStore';
 import { useBackgroundDeepAnalysis } from '../../../hooks/useBackgroundDeepAnalysis';
 import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
@@ -1609,19 +1609,22 @@ const ArticleEditorPage: NextPage = () => {
             optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted, promptVersion: meta.promptVersion };
             setScanningSectionId(null);
             if (meta.changedCount > 0) {
-              const ev = orderedEvents.find((e) => e.changed) ?? orderedEvents[orderedEvents.length - 1];
-              if (ev) {
+              // Per-section contentOptimizer atoms → ContentOptimizerNodeView wordDiff
+              // (same red/green marks as CompareVersions / See changes). Never dump raw newHtml.
+              for (const ev of orderedEvents) {
                 optimizeStore.set(ev.sectionId, {
-                  oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: true,
+                  oldHtml: ev.oldHtml, newHtml: ev.newHtml, changed: ev.changed,
                   focus: ev.focus, mode: ev.mode, reason: ev.reason,
                 });
               }
-              const reviewHtml = sanitizeArticleHtml(ev.newHtml);
+              const reviewHtml = buildReviewDoc(orderedEvents);
               try { editor.commands.setContent(reviewHtml, { emitUpdate: false }); } catch (e) { console.error('[optimize-sections] setContent error', e); }
               setEditorHtml(reviewHtml);
               setOptimizeDocTick((t) => t + 1);
               setOptimizeState('reviewing');
-              setAutoOptimizeStatus('Review article changes…');
+              const nChanged = orderedEvents.filter((e) => e.changed).length;
+              setOptimizeRemaining(nChanged);
+              setAutoOptimizeStatus(`Review ${nChanged} section${nChanged === 1 ? '' : 's'}…`);
             } else if (meta.outcome === 'already_optimal') {
               setAutoOptimizeStatus('Already well-optimized — no changes needed.');
               toast('Your article is well-optimized — we didn’t find anything to improve. No credit deducted.', { icon: '✨', duration: 6000 });
@@ -2364,15 +2367,17 @@ const ArticleEditorPage: NextPage = () => {
                       internalLinksCount={internalLinksCount}
                       html={editorHtml}
                       scoreDeltas={aoScoresReady && aoLiveSnapshot ? (() => {
-                        const aiBase = aiVisibilityBaselineRef.current || (scoreData?.ai_score ?? 0);
+                        const aiBase = aiVisibilityBaselineRef.current;
+                        const seoBase = preScoreRef.current;
+                        const contentBase = preContentScoreRef.current;
                         const hasAi = aiCoverageScore != null || !!(aiVisibilitySummary && aiVisibilitySummary.prompts_total > 0) || scoreData?.ai_score != null;
-                        const seoDelta = Math.max(0, aoLiveSnapshot.seo - preScoreRef.current);
+                        const seoDelta = Math.round(aoLiveSnapshot.seo) - Math.round(seoBase);
                         const aiDelta = Math.round(aoLiveSnapshot.ai) - Math.round(aiBase);
-                        const overallDelta = aoLiveSnapshot.overall - preContentScoreRef.current;
+                        const overallDelta = Math.round(aoLiveSnapshot.overall) - Math.round(contentBase);
                         return {
-                          seo: seoDelta > 0 ? seoDelta : undefined,
-                          overall: overallDelta > 0 ? overallDelta : undefined,
-                          ai: hasAi && aiDelta > 0 ? aiDelta : undefined,
+                          seo: seoDelta !== 0 ? seoDelta : undefined,
+                          overall: overallDelta !== 0 ? overallDelta : undefined,
+                          ai: hasAi && aiDelta !== 0 ? aiDelta : undefined,
                         };
                       })() : undefined}
                       optimizeLiveScores={aoScoresReady && aoLiveSnapshot ? {

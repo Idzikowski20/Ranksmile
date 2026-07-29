@@ -3,8 +3,9 @@ import { queryOne } from '../../../../../lib/db/query';
 import type { RankCheckRunRow } from '../../../../../lib/types/rankTracking';
 import { resolveRankTrackingApi } from '../../../../../lib/rankTracking/apiAuth';
 import { getConfig } from '../../../../../lib/rankTracking/service';
+import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);
   if (!ctx) return;
   if (req.method !== 'GET') {
@@ -28,3 +29,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!run) return res.status(404).json({ error: 'Run not found' });
   return res.status(200).json({ run });
 }
+
+export default withOrgPaymentAccess(handler);

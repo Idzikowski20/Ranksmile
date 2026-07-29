@@ -8,6 +8,7 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess } from '../../../lib/tenancy';
 import { verifyDomainOwnershipById } from '../../../utils/verifyDomainOwnership';
 import { ensureArticlesTables } from '../../../lib/ensureArticlesTables';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type JobAccessRow = {
   id: string;
@@ -26,7 +27,7 @@ async function canReadJob(userId: string | null, job: JobAccessRow): Promise<boo
   return false;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await ensureArticlesTables();
 
   // Auth: internal token (Python sidecar) or session cookie (browser polling).
@@ -242,3 +243,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ error: msg });
   }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -5,11 +5,12 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureCompetitorsTables } from '../../../../lib/ensureCompetitorsTables';
 import { scanCompetitors } from '../../../../lib/competitorScan';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 // Vercel: sidecar SERP scrape + DataForSEO can take up to ~a minute; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureCompetitorsTables();
    const authorized = await verifyUser(req, res);
@@ -27,3 +28,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    const competitors = await scanCompetitors(domainId, keyword);
    return res.status(200).json({ competitors });
 }
+
+export default withOrgPaymentAccess(handler);

@@ -5,6 +5,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureTopicResearchTables } from '../../../../lib/ensureTopicResearchTables';
 import { queryRows } from '../../../../lib/db/query';
 import type { TopicResearchCardDTO, TopicResearchStats, TopicResearchStatus } from '../../../../lib/topicResearchTypes';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ListRow = {
    id: number;
@@ -27,7 +28,7 @@ function parseStats(raw: ListRow['stats_json']): TopicResearchStats | null {
    }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureTopicResearchTables();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -60,3 +61,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    return res.status(200).json({ items });
 }
+
+export default withOrgPaymentAccess(handler);

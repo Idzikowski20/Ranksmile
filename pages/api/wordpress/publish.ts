@@ -13,6 +13,7 @@ import { wpRestFetch } from '../../../lib/wpRest';
 import { permalinkHash } from '../../../lib/wpDraft';
 import { cleanHtmlForWordPress } from '../../../lib/wpContentClean';
 import { logRun } from '../../../lib/optimizeLog';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type ArticleRow = {
    id: number; domain_id: number; title: string | null; content: string | null;
@@ -22,7 +23,7 @@ type ArticleRow = {
 
 type WpSelectField = { value?: string | number | null } | string | number | null | undefined;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -134,3 +135,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updated: !!existingPostId,
    });
 }
+
+export default withOrgPaymentAccess(handler);

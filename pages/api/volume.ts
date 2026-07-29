@@ -5,13 +5,14 @@ import Keyword from '../../database/models/keyword';
 import verifyUser from '../../utils/verifyUser';
 import parseKeywords from '../../utils/parseKeywords';
 import { getKeywordsVolume, updateKeywordsVolumeData } from '../../utils/adwords';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type KeywordsRefreshRes = {
    keywords?: KeywordType[]
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -64,3 +65,5 @@ const updatekeywordVolume = async (req: NextApiRequest, res: NextApiResponse<Key
       return res.status(400).json({ error: 'Error Updating Keywords Volume data' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

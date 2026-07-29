@@ -14,8 +14,9 @@ import { getArticleIdSql } from '../../../lib/articleSql';
 import { getErrorMessage } from '../../../lib/errors';
 import { queryOne, type ArticleRow } from '../../../lib/db/query';
 import type { SqlReplacements } from '../../../lib/types/db';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -278,3 +279,5 @@ async function deleteArticle(req: NextApiRequest, res: NextApiResponse, userId: 
       return res.status(500).json({ error: getErrorMessage(error) || 'DB error' });
    }
 }
+
+export default withOrgPaymentAccess(handler);

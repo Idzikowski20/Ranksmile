@@ -13,6 +13,7 @@ import { queryOne, ArticleRow } from '../../../lib/db/query';
 import { heuristicContentEffort, type ContentEffortInsight } from '../../../lib/contentEffort';
 import { safeJsonParse } from '../../../lib/safeJson';
 import type { ScoreData } from '../../../lib/contentScore';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 60 };
 
@@ -34,7 +35,7 @@ function normalizeInsight(raw: EffortBody, fallback: ContentEffortInsight): Cont
    };
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureArticlesTables();
    const authorized = await verifyUser(req, res);
@@ -114,3 +115,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: getErrorMessage(err) });
    }
 }
+
+export default withOrgPaymentAccess(handler);

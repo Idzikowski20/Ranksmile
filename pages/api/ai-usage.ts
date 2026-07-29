@@ -4,8 +4,9 @@ import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { ensureUserTenancy } from '../../lib/tenancy';
 import { getOrgUsage5h, AI_TOKEN_LIMIT_5H, AI_WINDOW_MS, windowStart } from '../../lib/aiTokenUsage';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
   try {
@@ -17,3 +18,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ used: 0, limit: AI_TOKEN_LIMIT_5H, resetsAt: windowStart() + AI_WINDOW_MS, over: false });
   }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -5,11 +5,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../../database/database';
 import { authPluginRequest } from '../../../../lib/wpConnection';
 import { readLocalSCData } from '../../../../utils/searchConsole';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 const cleanHost = (raw: string) => (raw || '')
    .replace(/^sc-domain:/i, '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);
    if (!conn) return res.status(401).json({ message: 'Invalid api-key.' });
 
@@ -43,3 +44,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    return res.status(200).json({ traffic_data: traffic });
 }
+
+export default withOrgPaymentAccess(handler);

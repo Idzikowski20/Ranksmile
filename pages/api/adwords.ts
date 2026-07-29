@@ -6,13 +6,14 @@ import getConfig from 'next/config';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../utils/adwords';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type adwordsValidateResp = {
    valid: boolean
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    // OAuth callback from Google — secured server-side, no session cookie needed.
    if (req.method === 'GET' && req.query.code) {
@@ -153,3 +154,5 @@ const buildRedirectUrl = (req: NextApiRequest): string => {
    const host = fwdHost || req.headers.host;
    return `${proto}://${host}/api/adwords`;
 };
+
+export default withOrgPaymentAccess(handler);

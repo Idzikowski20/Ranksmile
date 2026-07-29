@@ -10,6 +10,7 @@ import GscAccount from '../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../lib/gscAccounts';
 import { readLocalSCData, getSearchConsoleApiInfo, fetchDomainSCData, hasValidSCAuth } from '../../utils/searchConsole';
 import { getErrorMessage } from '../../lib/errors';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type GSCSite = {
   siteUrl: string;
@@ -44,7 +45,7 @@ async function getOAuthClientFromDomain(domainRecord: { search_console?: string 
   return oauth2;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<SitesResponse>) {
+async function handler(req: NextApiRequest, res: NextApiResponse<SitesResponse>) {
   await db.sync();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') {
@@ -172,3 +173,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(500).json({ error: 'Failed to fetch sites from Search Console.' });
   }
 }
+
+export default withOrgPaymentAccess(handler);

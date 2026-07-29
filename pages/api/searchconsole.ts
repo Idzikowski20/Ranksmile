@@ -6,6 +6,7 @@ import {
   cronRefreshSearchConsoleData,
   getDomainSearchConsoleData,
 } from '../../lib/gsc/domainSearchData';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 /**
  * Legacy alias — same handler as /api/gsc/search-data.
@@ -16,7 +17,7 @@ export const config = {
   maxDuration: 60,
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await db.sync();
   const authorized = await verifyUser(req, res);
   if (authorized !== 'authorized') {
@@ -31,3 +32,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   return res.status(502).json({ error: 'Unrecognized Route.' });
 }
+
+export default withOrgPaymentAccess(handler);

@@ -5,10 +5,11 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { queryOne } from '../../../../lib/db/query';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 // POST /api/audit-tool/[slug]/rerun { id } — re-queue one audit so it recomputes (e.g.
 // after the competitor selection changed). The client then kicks /run to process it.
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
@@ -38,3 +39,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    );
    return res.status(202).json({ ok: true, requeued: row.status === 'completed' || row.status === 'failed' });
 }
+
+export default withOrgPaymentAccess(handler);

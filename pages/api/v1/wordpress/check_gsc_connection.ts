@@ -6,11 +6,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authPluginRequest } from '../../../../lib/wpConnection';
 import { getAccountsForUser } from '../../../../lib/gscAccounts';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const conn = await authPluginRequest(req);
    if (!conn) return res.status(401).json({ message: 'Invalid api-key.' });
 
    const accounts = await getAccountsForUser(conn.user_id);
    return res.status(200).json({ gsc_connected: accounts.length > 0 });
 }
+
+export default withOrgPaymentAccess(handler);

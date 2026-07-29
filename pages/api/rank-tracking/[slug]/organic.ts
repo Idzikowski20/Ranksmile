@@ -13,6 +13,7 @@ import {
 import type { ExportFormat } from '../../../../lib/organicResearch/export';
 import type { KeywordState, SearchIntent } from '../../../../lib/organicResearch/types';
 import { resolveRankTrackingApi } from '../../../../lib/rankTracking/apiAuth';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 function numOrNull(v: string | string[] | undefined): number | null {
   if (v == null || Array.isArray(v)) return null;
@@ -48,7 +49,7 @@ function parseFilters(query: NextApiRequest['query']): OrganicFilters {
   };
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Search Intelligence organic is a shipped product surface — do not gate on
   // ENABLE_RANK_TRACKING_UI (that flag is for keyword-tracker APIs only).
   const ctx = await resolveRankTrackingApi(req, res, { requireUi: false });
@@ -114,3 +115,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: getErrorMessage(e) });
   }
 }
+
+export default withOrgPaymentAccess(handler);

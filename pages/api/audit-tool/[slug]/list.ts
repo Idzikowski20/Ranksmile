@@ -6,6 +6,7 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureAuditTables } from '../../../../lib/ensureAuditTables';
 import { queryRows } from '../../../../lib/db/query';
 import type { AuditCardDTO, AuditStatus } from '../../../../lib/auditTypes';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
 type ListRow = {
    id: number, url: string, keyword: string, status: string,
@@ -13,7 +14,7 @@ type ListRow = {
    created_at: string | null, finished_at: string | null, language: string | null,
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureAuditTables();
    const authorized = await verifyUser(req, res);
@@ -46,3 +47,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
    return res.status(200).json({ items });
 }
+
+export default withOrgPaymentAccess(handler);

@@ -100,7 +100,7 @@ async function runPaa(ctx: ProviderContext): Promise<ProviderResult> {
     if (!isUsefulCitationPrompt(text, ctx.keyword) && !isKeywordOnTopic(text, ctx.keyword)) continue;
     const sources: LlmCoverageSource[] = /reddit\.com/i.test(q.domain ?? '')
       ? ['reddit']
-      : ['ai_overview'];
+      : [];
     questions.push({ question: text, sources });
   }
 

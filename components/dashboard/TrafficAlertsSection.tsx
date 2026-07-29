@@ -60,7 +60,7 @@ const TrafficAlertsSection = () => {
           </Container>
         ) : (
           <Stack>
-            {drops.map((e, i) => (
+            {drops.slice(0, 3).map((e, i) => (
               <Flex
                 key={`${e.domain}-${e.page}-${i}`}
                 className="traffic-alert-row"

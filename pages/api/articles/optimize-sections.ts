@@ -4,9 +4,8 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { assertArticleAccess, ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens, AI_TOKEN_LIMIT_5H } from '../../../lib/aiTokenUsage';
 import { splitSections, normalizeHtmlForDiff } from '../../../lib/articleSections';
-import type { Section } from '../../../lib/articleSections';
-import { buildSectionEvent } from '../../../lib/optimizeSectionEvents';
-import { buildWholeArticlePrompt, WHOLE_ARTICLE_ID } from '../../../lib/optimizeWholeArticle';
+import { buildArticleSectionDiffEvents } from '../../../lib/optimizeSectionEvents';
+import { buildWholeArticlePrompt } from '../../../lib/optimizeWholeArticle';
 import {
    stripFences,
    isUsableEdit,
@@ -22,33 +21,49 @@ import { enrichNlpTermsIfNeeded, needsTermEnrichment } from '../../../lib/articl
 import { filterUsefulNlpTerms } from '../../../lib/competitorTermCalibration';
 import { termsForOptimize } from '../../../lib/mergeArticleTerms';
 import { liveCoverageItems } from '../../../lib/liveCoverage';
-import { collectUncoveredAiQuestions, buildFaqSectionPrompt, mergeFaqHtml } from '../../../lib/aoFaqSection';
+import {
+   collectUncoveredAiQuestions,
+   buildFaqSectionPrompt,
+   selectFaqQuestions,
+} from '../../../lib/aoFaqSection';
+import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
+import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
+import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
+import type { AoScores } from '../../../lib/ao/aoScoreDelta';
 import { structureIssues } from '../../../lib/validateArticleStructure';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { getArticleIdSql } from '../../../lib/articleSql';
 import db from '../../../database/database';
 import { buildGuidelines } from '../../../lib/recommendationEngine';
 import {
-  DEFAULT_MAX_ROUNDS,
-  selectOptimizeMode,
-  TARGET_AI,
-  TARGET_SEO,
+   DEFAULT_MAX_ROUNDS,
+   selectOptimizeMode,
+   shouldSkipOptimize,
+   TARGET_AI,
+   TARGET_SEO,
 } from '../../../lib/optimizeMode';
 import {
-  maxRoundsForPhase,
-  resolveOptimizePhase,
-  targetContentForPhase,
-  type AoMeta,
+   maxRoundsForPhase,
+   resolveOptimizePhase,
+   targetContentForPhase,
+   type AoMeta,
 } from '../../../lib/optimizeRunPhase';
 import { getErrorMessage } from '../../../lib/errors';
 import { throwIfAborted } from '../../../lib/abortSignal';
 import { queryOne } from '../../../lib/db/query';
 import { flushSse, flushHeaders } from '../../../lib/types/api';
 import { safeJsonParse } from '../../../lib/safeJson';
+import {
+   buildProfileFromContext,
+   resolveOptimizationStrategy,
+   resolveOptimizationPolicy,
+   runPrecisionOptimizeV4,
+} from '../../../lib/ao/runPrecisionOptimize';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 export const config = { maxDuration: 300, api: { responseLimit: '10mb' } };
 
-const PROMPT_VERSION = 'ao-whole-article-v3-human';
+const PROMPT_VERSION = 'ao-precision-v4.1';
 
 type ChatCompletion = {
    content: string;
@@ -182,19 +197,26 @@ function sse(res: NextApiResponse, event: string, data: object) {
    flushSse(res);
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-   const { content, articleId, scoreData, targetScore, maxRounds } = req.body as {
+   const { content, articleId, scoreData, targetScore, maxRounds, optimizationStrategy: strategyRaw } = req.body as {
       content: string;
       articleId?: number;
       scoreData?: ScoreData;
       targetScore?: number;
       maxRounds?: number;
+      optimizationStrategy?: string;
    };
    if (!content) return res.status(400).json({ error: 'content is required' });
+
+   const strategyFromBody = resolveOptimizationStrategy(
+      strategyRaw,
+      process.env.AO_WHOLE_ARTICLE_FALLBACK,
+   );
+   let optimizationStrategy = strategyFromBody;
 
    let userId: string | null = null;
    try { userId = await getCurrentUserId(req, res); } catch { userId = null; }
@@ -330,6 +352,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let finalAi = 0;
       let finalContent = 0;
       let trimmedMeta: { trimmed: boolean; ignoredLift: number } = { trimmed: false, ignoredLift: 0 };
+      let aoBaselinePayload: Record<string, unknown> | null = null;
+      let aoDeltasPayload: Record<string, unknown> | null = null;
+      let aoTraceSummary: Record<string, unknown> | null = null;
+      let runBaselineScores: AoScores = { seo: initialSeo, content: initialContent, ai: initialAi };
+      let runBaselineWordCount = countWordsFromHtml(workingHtml);
+
+      const originalHtml = content;
+
+      // P0 safety no-op: targets already met → zero LLM (before candidates / FAQ)
+      if (shouldSkipOptimize(initialSeo, initialAi)) {
+         sse(res, 'meta', {
+            total: MAX_ROUNDS,
+            targetSeo: TARGET_SEO_SCORE,
+            targetAi: TARGET_AI_SCORE,
+            targetContent: TARGET_CONTENT_SCORE,
+            maxRounds: MAX_ROUNDS,
+            phase,
+            wholeArticle: false,
+            optimizationStrategy: 'precision',
+         });
+         sse(res, 'done', {
+            changedCount: 0, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,
+            creditDeducted: false, rounds: 0, phase, outcome: 'already_optimal',
+            seo: initialSeo, ai: initialAi, content: initialContent,
+            targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
+            trimmed: false, ignoredLift: 0,
+            wholeArticle: false,
+            optimizationStrategy: 'precision',
+         });
+         return;
+      }
+
+      // Diagnose after baseline scores (skip already handled). Honor explicit body strategy.
+      const explicitStrategy = strategyRaw === 'precision'
+         || strategyRaw === 'enrichment'
+         || strategyRaw === 'deep_optimize'
+         || strategyRaw === 'whole_article_fallback';
+      let aoPolicy = resolveOptimizationPolicy({
+         strategy: explicitStrategy && strategyFromBody !== 'whole_article_fallback'
+            ? strategyFromBody
+            : undefined,
+         scores: { seo: initialSeo, content: initialContent, ai: initialAi },
+         html: workingHtml,
+         sectionCount: splitSections(workingHtml).length,
+         uncoveredCoverage: ctx?.coverage?.items?.filter((i) => !i.covered).length ?? 0,
+         keyword: ctx?.keyword || '',
+         plainText: workingHtml.replace(/<[^>]+>/g, ' '),
+      });
+      if (strategyFromBody === 'whole_article_fallback') {
+         optimizationStrategy = 'whole_article_fallback';
+      } else {
+         optimizationStrategy = aoPolicy.strategy;
+      }
 
       sse(res, 'meta', {
          total: MAX_ROUNDS,
@@ -338,157 +413,242 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          targetContent: TARGET_CONTENT_SCORE,
          maxRounds: MAX_ROUNDS,
          phase,
-         wholeArticle: true,
+         wholeArticle: optimizationStrategy === 'whole_article_fallback',
+         optimizationStrategy,
       });
 
-      const originalHtml = content;
-
       try {
-         for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
-            roundsRun = round;
-            const snapshot = ctx?.coverage ?? null;
-            const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
-            const seoScore = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-            const aiScore = ctx && articleId != null
-               ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
-               : 0;
-            const mode = selectOptimizeMode(seoScore, aiScore, phase);
+         if (
+            optimizationStrategy === 'precision'
+            || optimizationStrategy === 'enrichment'
+            || optimizationStrategy === 'deep_optimize'
+         ) {
+            roundsRun = 1;
+            const latestAi = articleId != null ? await readLatestAiScore(Number(articleId)) : 0;
+            const visibilityPrompts = articleId != null
+               ? await readWeakVisibilityPrompts(Number(articleId))
+               : [];
 
-            const promptPack = buildWholeArticlePrompt({
-               ctx,
+            const v4 = await runPrecisionOptimizeV4({
+               runId: `ao-${articleId ?? 'anon'}-${Date.now()}`,
                html: workingHtml,
-               guidelines,
-               seoScore,
-               aiScore,
-               phase,
-               mode,
-            });
-
-            let newHtml = workingHtml;
-            const MAX_ATTEMPTS = 3;
-            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-               try {
-                  const surgicalHint = attempt > 1
-                     ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
-                       + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
-                     : '';
+               ctx,
+               scoreData: ctx?.scoreData ?? scoreData,
+               keyword: ctx?.keyword || '',
+               latestAiFallback: latestAi,
+               visibilityPrompts,
+               policy: aoPolicy,
+               maxSteps: aoPolicy.maxSteps,
+               signal: controller.signal,
+               llmEdit: async (prompt) => {
                   const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
                      body: JSON.stringify({
                         model: 'deepseek-chat',
-                        max_tokens: 8000,
-                        temperature: 0.3,
+                        max_tokens: 4000,
+                        temperature: 0.2,
                         messages: [
-                           { role: 'system', content: promptPack.systemPrompt },
-                           { role: 'user', content: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}` },
+                           {
+                              role: 'system',
+                              content: 'You are a precision editor. Execute only the requested bounded operation. Return HTML only.',
+                           },
+                           { role: 'user', content: prompt },
                         ],
                      }),
                      signal: controller.signal,
                   });
                   if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
                   const data = parseChatCompletion(await aiRes.json());
-                  aiTokens += data.totalTokens;
-                  const cleaned = stripFences(data.content);
-                  if (!isUsableWholeArticleEdit(cleaned, workingHtml, data.finishReason)) {
-                     rejectedUnusable += 1;
-                     // Truncate / too-short: retry with surgical hint instead of accepting "no change".
-                     if (attempt < MAX_ATTEMPTS) continue;
-                     break;
-                  }
-                  newHtml = cleaned;
+                  return { html: stripFences(data.content), tokens: data.totalTokens };
+               },
+            });
 
-                  const issues = structureIssues(newHtml);
-                  if (issues.length > 0 && attempt === 1) {
-                     const retryPack = buildWholeArticlePrompt({
-                        ctx,
-                        html: newHtml,
-                        guidelines,
-                        seoScore,
-                        aiScore,
-                        phase,
-                        mode,
-                     });
-                     const structurePrompt = `${retryPack.systemPrompt}\n\nSTRUCTURE FIX REQUIRED:\n${issues.join('\n')}`;
-                     try {
-                        const retryRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                           method: 'POST',
-                           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-                           body: JSON.stringify({
-                              model: 'deepseek-chat',
-                              max_tokens: 8000,
-                              temperature: 0.3,
-                              messages: [
-                                 { role: 'system', content: structurePrompt },
-                                 { role: 'user', content: `Fix structure issues and return complete HTML.\n\n${newHtml}` },
-                              ],
-                           }),
-                           signal: controller.signal,
-                        });
-                        if (retryRes.ok) {
-                           const retryData = parseChatCompletion(await retryRes.json());
-                           aiTokens += retryData.totalTokens;
-                           const retryCleaned = stripFences(retryData.content);
-                           if (isUsableWholeArticleEdit(retryCleaned, workingHtml, retryData.finishReason)) {
-                              newHtml = retryCleaned;
-                           } else {
-                              rejectedUnusable += 1;
-                           }
-                        }
-                     } catch { /* non-fatal */ }
-                  }
-                  break;
-               } catch (error) {
-                  if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
-                  if (attempt === MAX_ATTEMPTS) newHtml = workingHtml;
-               }
+            aiTokens += v4.tokens;
+            rejectedUnusable += v4.rejected;
+            workingHtml = v4.html;
+            if (!v4.rolledBack && v4.changed > 0) {
+               changedCount += v4.changed;
             }
+            finalSeo = v4.finalScores.seo;
+            finalAi = v4.finalScores.ai;
+            finalContent = v4.finalScores.content;
+            runBaselineScores = v4.baseline.scores;
+            runBaselineWordCount = v4.baseline.wordCount;
+            aoBaselinePayload = {
+               runId: v4.baseline.runId,
+               documentHash: v4.baseline.documentHash,
+               scores: v4.baseline.scores,
+               wordCount: v4.baseline.wordCount,
+            };
+            aoDeltasPayload = v4.deltas as unknown as Record<string, unknown>;
+            aoTraceSummary = v4.trace.summary();
 
-            if (aborted) break;
-
-            const roundChanged = normalizeHtmlForDiff(workingHtml) !== normalizeHtmlForDiff(newHtml);
-            if (roundChanged) {
-               workingHtml = newHtml;
-               changedCount += 1;
-            }
-
-            finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-            finalAi = ctx && articleId != null
-               ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
-               : 0;
-            finalContent = computeOverallContentScore(finalSeo, finalAi);
             sse(res, 'progress', {
-               round,
-               processed: round,
+               round: 1,
+               processed: 1,
                seo: finalSeo,
                ai: finalAi,
                content: finalContent,
-               mode,
+               mode: selectOptimizeMode(finalSeo, finalAi, phase),
                phase,
                targetSeo: TARGET_SEO_SCORE,
                targetAi: TARGET_AI_SCORE,
                targetContent: TARGET_CONTENT_SCORE,
-               changed: roundChanged ? 1 : 0,
+               changed: v4.rolledBack ? 0 : v4.changed,
+               rolledBack: v4.rolledBack,
+               deltas: v4.deltas,
             });
+         } else {
+            // Controlled whole-article fallback (feature flag / body) — never auto from precision fail
+            for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
+               roundsRun = round;
+               const snapshot = ctx?.coverage ?? null;
+               const guidelines = snapshot ? buildGuidelines(snapshot, ctx ?? undefined) : [];
+               const seoScore = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+               const aiScore = ctx && articleId != null
+                  ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+                  : 0;
+               const mode = selectOptimizeMode(seoScore, aiScore, phase);
 
-            const hitContentTarget = finalContent >= TARGET_CONTENT_SCORE;
-            const hitSeoAi = finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE;
-            const plainForCov = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-            const liveItems = ctx?.coverage?.items?.length
-               ? liveCoverageItems(ctx.coverage.items, plainForCov, workingHtml)
-               : [];
-            const stillUncovered = collectUncoveredAiQuestions(liveItems).length;
-            if ((hitContentTarget || hitSeoAi) && stillUncovered === 0) break;
-            if ((hitContentTarget || hitSeoAi) && !roundChanged) break;
-            // One no-op is not "done" while still far from targets — the next round rebuilds
-            // the prompt (mode/focus can shift after a partial FAQ-less pass). Stop after 2.
-            if (!roundChanged && round >= 2) break;
-            if (!roundChanged && finalContent >= TARGET_CONTENT_SCORE - 5) break;
+               const promptPack = buildWholeArticlePrompt({
+                  ctx,
+                  html: workingHtml,
+                  guidelines,
+                  seoScore,
+                  aiScore,
+                  phase,
+                  mode,
+               });
+
+               let newHtml = workingHtml;
+               const MAX_ATTEMPTS = 3;
+               for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+                  try {
+                     const surgicalHint = attempt > 1
+                        ? '\n\nIMPORTANT: Previous reply was truncated or incomplete. Make SMALLER surgical edits only '
+                          + '(a few paragraphs or one section). Return the COMPLETE article HTML — do not omit later sections.'
+                        : '';
+                     const aiRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                           model: 'deepseek-chat',
+                           max_tokens: 8000,
+                           temperature: 0.3,
+                           messages: [
+                              { role: 'system', content: promptPack.systemPrompt },
+                              { role: 'user', content: `${promptPack.userInstruction}${surgicalHint}\n\n${workingHtml}` },
+                           ],
+                        }),
+                        signal: controller.signal,
+                     });
+                     if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}`);
+                     const data = parseChatCompletion(await aiRes.json());
+                     aiTokens += data.totalTokens;
+                     const cleaned = stripFences(data.content);
+                     if (!isUsableWholeArticleEdit(cleaned, workingHtml, data.finishReason)) {
+                        rejectedUnusable += 1;
+                        if (attempt < MAX_ATTEMPTS) continue;
+                        break;
+                     }
+                     newHtml = cleaned;
+
+                     const issues = structureIssues(newHtml);
+                     if (issues.length > 0 && attempt === 1) {
+                        const retryPack = buildWholeArticlePrompt({
+                           ctx,
+                           html: newHtml,
+                           guidelines,
+                           seoScore,
+                           aiScore,
+                           phase,
+                           mode,
+                        });
+                        const structurePrompt = `${retryPack.systemPrompt}\n\nSTRUCTURE FIX REQUIRED:\n${issues.join('\n')}`;
+                        try {
+                           const retryRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                              body: JSON.stringify({
+                                 model: 'deepseek-chat',
+                                 max_tokens: 8000,
+                                 temperature: 0.3,
+                                 messages: [
+                                    { role: 'system', content: structurePrompt },
+                                    { role: 'user', content: `Fix structure issues and return complete HTML.\n\n${newHtml}` },
+                                 ],
+                              }),
+                              signal: controller.signal,
+                           });
+                           if (retryRes.ok) {
+                              const retryData = parseChatCompletion(await retryRes.json());
+                              aiTokens += retryData.totalTokens;
+                              const retryCleaned = stripFences(retryData.content);
+                              if (isUsableWholeArticleEdit(retryCleaned, workingHtml, retryData.finishReason)) {
+                                 newHtml = retryCleaned;
+                              } else {
+                                 rejectedUnusable += 1;
+                              }
+                           }
+                        } catch { /* non-fatal */ }
+                     }
+                     break;
+                  } catch (error) {
+                     if (aborted || (error instanceof Error && error.name === 'AbortError')) break;
+                     if (attempt === MAX_ATTEMPTS) newHtml = workingHtml;
+                  }
+               }
+
+               if (aborted) break;
+
+               const roundChanged = normalizeHtmlForDiff(workingHtml) !== normalizeHtmlForDiff(newHtml);
+               if (roundChanged) {
+                  workingHtml = newHtml;
+                  changedCount += 1;
+               }
+
+               finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+               finalAi = ctx && articleId != null
+                  ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
+                  : 0;
+               finalContent = computeOverallContentScore(finalSeo, finalAi);
+               sse(res, 'progress', {
+                  round,
+                  processed: round,
+                  seo: finalSeo,
+                  ai: finalAi,
+                  content: finalContent,
+                  mode,
+                  phase,
+                  targetSeo: TARGET_SEO_SCORE,
+                  targetAi: TARGET_AI_SCORE,
+                  targetContent: TARGET_CONTENT_SCORE,
+                  changed: roundChanged ? 1 : 0,
+               });
+
+               const hitContentTarget = finalContent >= TARGET_CONTENT_SCORE;
+               const hitSeoAi = finalSeo >= TARGET_SEO_SCORE && finalAi >= TARGET_AI_SCORE;
+               const plainForCov = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+               const liveItems = ctx?.coverage?.items?.length
+                  ? liveCoverageItems(ctx.coverage.items, plainForCov, workingHtml)
+                  : [];
+               const stillUncovered = collectUncoveredAiQuestions(liveItems).length;
+               if ((hitContentTarget || hitSeoAi) && stillUncovered === 0) break;
+               if ((hitContentTarget || hitSeoAi) && !roundChanged) break;
+               if (!roundChanged && round >= 2) break;
+               if (!roundChanged && finalContent >= TARGET_CONTENT_SCORE - 5) break;
+            }
          }
 
-         // FAQ round — coverage items, else PAA, else weak visibility citation prompts
-         // (article 159: ai_info_to_cover null + paa empty → previously skipped FAQ entirely → no_change).
-         if (!aborted && ctx && articleId != null) {
+         // FAQ round — only remaining gaps after body; gated; Final vs ORIGINAL baseline
+         if (
+            !aborted
+            && ctx
+            && articleId != null
+            && !shouldSkipOptimize(finalSeo || initialSeo, finalAi || initialAi)
+            && aoPolicy.faq.enabled
+         ) {
             const plainForFaq = workingHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
             const liveForFaq = ctx.coverage?.items?.length
                ? liveCoverageItems(ctx.coverage.items, plainForFaq, workingHtml)
@@ -500,10 +660,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             if (uncovered.length === 0) {
                uncovered = await readWeakVisibilityPrompts(Number(articleId));
             }
-            if (uncovered.length > 0) {
+            const profile = buildProfileFromContext(ctx, workingHtml);
+            const gated = selectFaqQuestions({
+               questions: uncovered,
+               profile,
+               articlePlainText: plainForFaq,
+               // Ceiling: policy budget ∩ hard 5 ∩ relevant pool size
+               maxQuestions: Math.min(5, aoPolicy.faq.maxQuestions, uncovered.length),
+            });
+            if (gated.length > 0) {
                const faqPrompt = buildFaqSectionPrompt({
                   keyword: ctx.keyword || '',
-                  questions: uncovered.map((q) => q.label),
+                  questions: gated.map((q) => q.label),
                   articleExcerpt: plainForFaq,
                   language: ctx.language || 'pl',
                });
@@ -523,17 +691,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                      signal: controller.signal,
                   });
                   if (faqRes.ok) {
-                     const faqData = await faqRes.json();
-                     aiTokens += faqData.usage?.total_tokens || 0;
-                     const faqHtml = stripFences(faqData.choices?.[0]?.message?.content || '');
+                     const faqData = parseChatCompletion(await faqRes.json());
+                     aiTokens += faqData.totalTokens;
+                     const faqHtml = stripFences(faqData.content);
                      if (isUsableEdit(faqHtml)) {
-                        workingHtml = mergeFaqHtml(workingHtml, faqHtml);
-                        changedCount += 1;
-                        finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
-                        finalAi = articleId != null
-                           ? scoreAiFromContext(ctx, workingHtml, await readLatestAiScore(Number(articleId)))
-                           : 0;
-                        finalContent = computeOverallContentScore(finalSeo, finalAi);
+                        const workingScores: AoScores = {
+                           seo: finalSeo || initialSeo,
+                           content: finalContent || initialContent,
+                           ai: finalAi || initialAi,
+                        };
+                        const latestAi = await readLatestAiScore(Number(articleId));
+                        const critical = buildCriticalContentMap({
+                           html: originalHtml,
+                           profile,
+                           sectionIds: splitSections(originalHtml).map((s) => s.id),
+                        });
+                        const faqGate = applyGatedFaqMerge({
+                           originalHtml,
+                           workingHtml,
+                           faqHtml,
+                           baselineScores: runBaselineScores,
+                           workingScores,
+                           baselineWordCount: runBaselineWordCount,
+                           critical,
+                           policy: aoPolicy.gate,
+                           scoreHtml: (html) => {
+                              const seo = scoreSeo(html, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
+                              const ai = scoreAiFromContext(ctx, html, latestAi);
+                              return {
+                                 scores: {
+                                    seo,
+                                    content: computeOverallContentScore(seo, ai),
+                                    ai,
+                                 },
+                                 aiAvailability: 'available',
+                              };
+                           },
+                        });
+
+                        if (faqGate.rolledBack) {
+                           workingHtml = faqGate.html;
+                           changedCount = 0;
+                           rejectedUnusable += 1;
+                           finalSeo = faqGate.scores.seo;
+                           finalAi = faqGate.scores.ai;
+                           finalContent = faqGate.scores.content;
+                           aoDeltasPayload = faqGate.deltas as unknown as Record<string, unknown>;
+                        } else if (faqGate.accepted) {
+                           workingHtml = faqGate.html;
+                           changedCount += 1;
+                           finalSeo = faqGate.scores.seo;
+                           finalAi = faqGate.scores.ai;
+                           finalContent = faqGate.scores.content;
+                           aoDeltasPayload = faqGate.deltas as unknown as Record<string, unknown>;
+                        } else {
+                           rejectedUnusable += 1;
+                        }
+
                         sse(res, 'progress', {
                            round: roundsRun + 1,
                            processed: roundsRun + 1,
@@ -541,7 +755,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                            ai: finalAi,
                            content: finalContent,
                            phase: 'faq',
-                           changed: 1,
+                           changed: faqGate.accepted ? 1 : 0,
+                           rolledBack: faqGate.rolledBack,
+                           faqRejected: !faqGate.accepted && !faqGate.rolledBack,
+                           reason: faqGate.reason,
+                           deltas: faqGate.deltas,
                         });
                      }
                   }
@@ -550,30 +768,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          }
 
          if (!aborted && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
-            const pseudoSection = splitSections(workingHtml)[0] ?? {
-               id: WHOLE_ARTICLE_ID,
-               index: 0,
-               headingText: 'Article',
-               html: workingHtml,
-            };
-            sse(res, 'section', buildSectionEvent(
-               { ...pseudoSection, id: WHOLE_ARTICLE_ID, headingText: 'Article' },
-               { oldHtml: originalHtml, newHtml: workingHtml, changed: true },
-               {
-                  sectionId: WHOLE_ARTICLE_ID,
-                  index: 0,
-                  headingText: 'Article',
-                  html: workingHtml,
-                  focus: 'ai-coverage',
-                  systemPrompt: '',
-                  guidelines: [],
-                  missingTerms: [],
-                  estimatedTokens: 0,
-                  expectedLift: 0,
-                  reason: 'Whole-article optimization',
-                  mode: 'less',
-               },
-            ));
+            const sectionEvents = buildArticleSectionDiffEvents(originalHtml, workingHtml, {
+               focus: 'ai-coverage',
+               mode: 'less',
+               reason: optimizationStrategy === 'precision'
+                  ? 'Precision section optimization'
+                  : 'Whole-article optimization',
+            });
+            for (const ev of sectionEvents) {
+               sse(res, 'section', ev);
+            }
          }
 
       } finally {
@@ -602,7 +806,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          seo: finalSeo, ai: finalAi, content: finalContent,
          targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
          trimmed: trimmedMeta.trimmed, ignoredLift: trimmedMeta.ignoredLift,
-         wholeArticle: true,
+         wholeArticle: optimizationStrategy === 'whole_article_fallback',
+         optimizationStrategy,
+         baseline: aoBaselinePayload,
+         deltas: aoDeltasPayload,
+         traceSummary: aoTraceSummary,
       });
    } catch (error) {
       if (aborted || (error instanceof DOMException && error.name === 'AbortError')) return;
@@ -613,3 +821,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.end();
    }
 }
+
+export default withOrgPaymentAccess(handler);

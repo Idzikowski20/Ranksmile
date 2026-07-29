@@ -6,6 +6,7 @@ import db from '../../../database/database';
 import GscAccount from '../../../database/models/gscAccount';
 import { buildOAuthClientFromAccount } from '../../../lib/gscAccounts';
 import { getErrorMessage } from '../../../lib/errors';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
 type GscPage = {
    url: string;
@@ -18,7 +19,7 @@ type PagesResponse = {
    error?: string;
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<PagesResponse>) {
+async function handler(req: NextApiRequest, res: NextApiResponse<PagesResponse>) {
    await db.sync();
 
    const authorized = await verifyUser(req, res);
@@ -87,3 +88,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
    // All accounts failed or no data
    return res.status(200).json({ pages: [] });
 }
+
+export default withOrgPaymentAccess(handler);

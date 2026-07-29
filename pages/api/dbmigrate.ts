@@ -5,6 +5,7 @@ import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
 import { getCurrentUserId } from '../../utils/getUser';
 import { getCallerRole } from '../../lib/members';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type MigrationGetResponse = {
    hasMigrations: boolean,
@@ -34,7 +35,7 @@ function getSequelizeForMigrations(): Sequelize {
    });
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    if (req.method === 'GET') {
@@ -78,3 +79,5 @@ const migrateDatabase = async (req: NextApiRequest, res: NextApiResponse<Migrati
    console.log('[Updated] migrations :', migrations);
    return res.status(200).json({ migrated: true });
 };
+
+export default withOrgPaymentAccess(handler);

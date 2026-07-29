@@ -6,8 +6,9 @@ import { ensurePipelineTables } from '../../../../../lib/ensurePipelineTables';
 import { buildCrawledPagesReport } from '../../../../../lib/siteAudit/buildPageReport';
 import { resolveSiteAuditPageLimit } from '../../../../../lib/siteAudit/pageLimit';
 import type { CrawledPagesReport } from '../../../../../lib/siteAudit/types';
+import { withOrgPaymentAccess } from '../../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CrawledPagesReport | { error: string }>,
 ) {
@@ -31,3 +32,5 @@ export default async function handler(
   const payload = await buildCrawledPagesReport(req.query.slug as string, domainId, limitInfo);
   return res.status(200).json(payload);
 }
+
+export default withOrgPaymentAccess(handler);

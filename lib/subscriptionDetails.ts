@@ -1,6 +1,7 @@
 import type { BillingPeriod } from './billingPlans';
 import { getCheckoutPlan, getPlanPeriodPrice } from './billingPlans';
-import { getOrgBillingState, type OrgBillingState, type SubscriptionStatus } from './orgBilling';
+import { getLockedCheckoutPlanSlug } from './billingPlanLock';
+import { getOrgBillingState, type SubscriptionStatus } from './orgBilling';
 import { resolvePlanSlug } from './planLimits';
 import type { UpcomingPaymentDetails } from './subscriptionFormat';
 import { getStripe, isStripeConfigured } from './stripe';
@@ -14,9 +15,13 @@ export interface SubscriptionDetails {
   configured: boolean;
   hasStripeSubscription: boolean;
   planSlug: PlanSlug;
+  /** Set when the org has an active/trialing (etc.) subscription — do not re-checkout this plan. */
+  lockedPlanSlug: PlanSlug | null;
   planName: string;
   billingPeriod: BillingPeriod | null;
   subscriptionStatus: SubscriptionStatus | null;
+  paymentFailedLocked: boolean;
+  paymentFailedLockedAt: string | null;
   trialEndsAt: string | null;
   trialEndsAtLabel: string | null;
   currentPeriodEnd: string | null;
@@ -142,6 +147,8 @@ export async function getSubscriptionDetails(orgId: number): Promise<Subscriptio
     subscriptionStatus = billing?.subscriptionStatus ?? subscriptionStatus;
   }
 
+  const paymentFailedLockedAt = billing?.paymentFailedLockedAt ?? null;
+
   const isTrialing = subscriptionStatus === 'trialing';
   const trialEndsAt = billing?.trialEndsAt ?? null;
   const currentPeriodEnd = billing?.currentPeriodEnd ?? trialEndsAt;
@@ -164,9 +171,12 @@ export async function getSubscriptionDetails(orgId: number): Promise<Subscriptio
     configured: isStripeConfigured(),
     hasStripeSubscription: !!billing?.stripeSubscriptionId,
     planSlug,
+    lockedPlanSlug: getLockedCheckoutPlanSlug(billing),
     planName,
     billingPeriod: billing?.billingPeriod ?? null,
     subscriptionStatus,
+    paymentFailedLocked: paymentFailedLockedAt != null,
+    paymentFailedLockedAt,
     trialEndsAt,
     trialEndsAtLabel: formatDateLabel(trialEndsAt),
     currentPeriodEnd,

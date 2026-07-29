@@ -6,8 +6,9 @@ import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwner
 import { ensureKeywordResearchTables } from '../../../../lib/ensureKeywordResearchTables';
 import { queryOne, TopicResearchRunRow } from '../../../../lib/db/query';
 import type { TopicResearchResult } from '../../../../lib/topicResearchTypes';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await ensureKeywordResearchTables();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
@@ -53,3 +54,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       result,
    });
 }
+
+export default withOrgPaymentAccess(handler);

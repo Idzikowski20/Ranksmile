@@ -1,10 +1,12 @@
-import type { GetServerSideProps, NextPage } from 'next';
+import type { GetServerSideProps, NextApiRequest, NextApiResponse, NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';
 import toast from 'react-hot-toast';
 import posthog from 'posthog-js';
+import { useQuery } from 'react-query';
+import { loadStripe } from '@stripe/stripe-js';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/core';
 import {
@@ -15,6 +17,7 @@ import {
   type CheckoutStripeHandle,
   type CompanyState,
 } from '../../../components/billing/CheckoutStripeProvider';
+import { CheckoutPageSkeleton } from '../../../components/billing/CheckoutPageSkeleton';
 import type { CheckoutFieldErrors } from '../../../lib/checkoutValidation';
 import {
   BillingPeriod,
@@ -25,6 +28,12 @@ import {
   getPlanPeriodPrice,
   getTrialEndDateLabel,
 } from '../../../lib/billingPlans';
+import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
+import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billingUpgrade';
+import { getOrgBillingState } from '../../../lib/orgBilling';
+import type { SubscriptionDetails } from '../../../lib/subscriptionDetails';
+import { ensureUserTenancy } from '../../../lib/tenancy';
+import { getCurrentUser } from '../../../utils/getUser';
 import { isStripeCheckoutConfigured, type PlanSlug } from '../../../lib/stripePrices';
 
 const F = 'var(--font-family-primary)';
@@ -135,19 +144,61 @@ type CheckoutProps = {
   stripeCheckoutEnabled: boolean;
 };
 
+const formatEuroCents = (cents: number): string =>
+  formatEuro2(cents / 100);
+
 const CheckoutPage: NextPage<CheckoutProps> = ({
   plan, billing, mode, trialStartLabel, trialEndLabel, nextChargeLabel, stripeCheckoutEnabled,
 }) => {
-  const isUpfront = mode === 'upfront';
   const router = useRouter();
   const [countryOpen, setCountryOpen] = React.useState(false);
-  const [country, setCountry] = React.useState(isUpfront ? 'Poland' : '');
+  const [country, setCountry] = React.useState(mode === 'upfront' ? 'Poland' : '');
   const periodPrice = getPlanPeriodPrice(plan, billing);
   const monthlyPrice = getPlanMonthlyPrice(plan, billing);
   const originalYearPrice = plan.priceMonthly * 12;
   const isYearly = billing === 'yearly';
   const taxAmount = periodPrice * TAX_RATE;
   const totalToday = periodPrice + taxAmount;
+
+  const { data: subscriptionPayload, isLoading: subscriptionLoading } = useQuery(
+    'subscriptionDetails',
+    async () => {
+      const res = await fetch('/api/billing/subscription');
+      if (!res.ok) throw new Error('Failed to load subscription');
+      return res.json() as Promise<{ subscription: SubscriptionDetails }>;
+    },
+    { staleTime: 15 * 1000, retry: false },
+  );
+  const subscription = subscriptionPayload?.subscription ?? null;
+  const lockedSlug = subscription?.lockedPlanSlug ?? null;
+  const currentBilling = subscription?.billingPeriod ?? null;
+  const hasLiveSubscription = blocksNewPaidCheckout(subscription?.subscriptionStatus);
+
+  const checkoutFlow: 'subscribe' | 'upgrade' | 'blocked' | 'loading' = (() => {
+    if (subscriptionLoading) return 'loading';
+    if (!hasLiveSubscription || !lockedSlug || !currentBilling) return 'subscribe';
+    if (lockedSlug === plan.slug && currentBilling === billing) return 'blocked';
+    if (isAllowedSubscriptionChange(lockedSlug, currentBilling, plan.slug, billing)) return 'upgrade';
+    return 'blocked';
+  })();
+
+  const isUpgrade = checkoutFlow === 'upgrade';
+  const isUpfront = mode === 'upfront' || isUpgrade;
+
+  const { data: upgradePreview, isLoading: previewLoading, error: previewError } = useQuery(
+    ['upgradePreview', plan.slug, billing],
+    async () => {
+      const res = await fetch('/api/billing/upgrade-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planSlug: plan.slug, billing }),
+      });
+      const body = await res.json() as { preview?: UpgradePreview; error?: string };
+      if (!res.ok || !body.preview) throw new Error(body.error ?? 'Could not preview upgrade');
+      return body.preview;
+    },
+    { enabled: isUpgrade && stripeCheckoutEnabled, retry: false, staleTime: 30 * 1000 },
+  );
 
   const showWelcomeToast = (title: string, body: string, emoji = '🙌') => {
     toast.custom((t) => (
@@ -270,6 +321,10 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
       billing,
       mode: 'upfront',
     });
+    if (isUpgrade) {
+      await handleUpgradePurchase();
+      return;
+    }
     if (stripeCheckoutEnabled) {
       await stripeRef.current?.submit();
       return;
@@ -279,6 +334,60 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
       return;
     }
     goToDashboardWithPurchaseToast();
+  };
+
+  const handleUpgradePurchase = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch('/api/billing/upgrade-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planSlug: plan.slug,
+          billing,
+          ...(upgradePreview?.prorationDate ? { prorationDate: upgradePreview.prorationDate } : {}),
+        }),
+      });
+      const data = await res.json() as {
+        status?: 'upgraded' | 'requires_payment';
+        clientSecret?: string;
+        publishableKey?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not upgrade subscription');
+        return;
+      }
+      if (data.status === 'upgraded') {
+        goToDashboardWithPurchaseToast();
+        return;
+      }
+      if (data.status === 'requires_payment' && data.clientSecret && data.publishableKey) {
+        const stripe = await loadStripe(data.publishableKey);
+        if (!stripe) {
+          toast.error('Could not load Stripe');
+          return;
+        }
+        const result = await stripe.confirmPayment({
+          clientSecret: data.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/dashboard?checkout=success`,
+          },
+          redirect: 'if_required',
+        });
+        if (result.error) {
+          toast.error(result.error.message ?? 'Payment failed');
+          return;
+        }
+        goToDashboardWithPurchaseToast();
+        return;
+      }
+      toast.error('Could not complete upgrade');
+    } catch {
+      toast.error('Could not upgrade subscription');
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   const handleStripeSuccess = () => {
@@ -293,7 +402,11 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   const checkoutBody = (
     <>
           <h1 style={{ margin: '0 0 28px', textAlign: 'center', fontSize: 24, lineHeight: '32px', fontWeight: 700, letterSpacing: 0 }}>
-            {isUpfront ? `Finalize your order for the ${plan.name} plan` : 'Try Ranksmile free for 7 days'}
+            {isUpgrade
+              ? `Upgrade to ${plan.name}`
+              : isUpfront
+                ? `Finalize your order for the ${plan.name} plan`
+                : 'Try Ranksmile free for 7 days'}
           </h1>
 
           <div className="checkout-grid">
@@ -335,7 +448,11 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
               <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#fff' }}>
                 <h2 style={{ margin: '0 0 18px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Payment Details</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
-                  {stripeCheckoutEnabled ? (
+                  {isUpgrade ? (
+                    <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', color: '#3F3F47' }}>
+                      We&apos;ll charge the prorated difference to your card on file. Unused time on your current plan is credited automatically.
+                    </p>
+                  ) : stripeCheckoutEnabled ? (
                     <CheckoutStripePayment />
                   ) : isUpfront ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -452,7 +569,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 <h2 style={{ margin: 0, fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Company Information (Optional)</h2>
                 <p style={{ margin: '4px 0 16px', fontSize: 14, lineHeight: '20px', color: '#3F3F47' }}>If you&apos;d like your company details listed on your invoices, enter them here</p>
                 <div style={{ display: 'grid', gap: 14 }}>
-                  {stripeCheckoutEnabled ? (
+                  {stripeCheckoutEnabled && !isUpgrade ? (
                     <CheckoutCompanyFields
                       billingEmail={company.billingEmail}
                       taxId={company.taxId}
@@ -488,7 +605,59 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
             </div>
 
             <aside style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {isUpfront ? (
+              {isUpgrade ? (
+                <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
+                  <h2 style={{ margin: '0 0 16px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Upgrade summary</h2>
+                  {previewLoading || !upgradePreview ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div className="sentry-skeleton-block" style={{ height: 16, borderRadius: 6, width: '70%' }} />
+                      <div className="sentry-skeleton-block" style={{ height: 16, borderRadius: 6, width: '55%' }} />
+                      <div className="sentry-skeleton-block" style={{ height: 44, borderRadius: 8, width: '100%' }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 14 }}>{upgradePreview.targetPlanName} plan</span>
+                        <span style={{ fontSize: 16, fontWeight: 500 }}>{formatEuroCents(upgradePreview.targetPeriodPriceCents)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 14 }}>Credit from {upgradePreview.currentPlanName}</span>
+                        <span style={{ fontSize: 16, fontWeight: 500, color: '#008900' }}>
+                          −{formatEuroCents(upgradePreview.creditCents)}
+                        </span>
+                      </div>
+                      <div style={{ height: 1, background: '#F4F4F5' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 18, fontWeight: 500, textTransform: 'uppercase' }}>Due today</span>
+                        <span style={{ fontSize: 24, fontWeight: 500 }}>{formatEuroCents(upgradePreview.amountDueCents)}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="md"
+                        onClick={handleUpgradePurchase}
+                        disabled={checkoutLoading || Boolean(previewError)}
+                        style={{ width: '100%' }}
+                      >
+                        {checkoutLoading
+                          ? 'Upgrading…'
+                          : upgradePreview.amountDueCents > 0
+                            ? `Pay ${formatEuroCents(upgradePreview.amountDueCents)}`
+                            : `Upgrade to ${plan.name}`}
+                      </Button>
+                      {previewError instanceof Error && (
+                        <p style={{ margin: 0, fontSize: 13, color: '#FF6F77' }}>
+                          {previewError.message}
+                        </p>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, lineHeight: '20px', fontWeight: 600 }}>
+                        <InfoIcon />
+                        <span>Stripe prorates unused time on your current plan against the upgrade.</span>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              ) : isUpfront ? (
                 <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
                   <h2 style={{ margin: '0 0 16px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Order summary</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -578,7 +747,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
 
   return (
     <AppShell domains={[]} showAddModal={() => {}} showSettings={() => {}} showSidebar={false} hideMobileNav>
-      <Head><title>{isUpfront ? 'Complete your purchase' : 'Start your trial'} - Ranksmile</title></Head>
+      <Head><title>{isUpgrade ? `Upgrade to ${plan.name}` : isUpfront ? 'Complete your purchase' : 'Start your trial'} - Ranksmile</title></Head>
       <style>{`
         .checkout-grid { display: grid; grid-template-columns: minmax(0, 1fr) 328px; gap: 20px; align-items: start; }
         @media (max-width: 960px) { .checkout-grid { grid-template-columns: 1fr; } }
@@ -587,7 +756,22 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
       <div className="relative flex-1 overflow-auto rounded-xl bg-white-base [color-scheme:light] styled-scrollbar">
         <div className="checkout-page" style={{ color: '#18181B', fontFamily: F, padding: '48px 24px', boxSizing: 'border-box' }}>
           <div style={{ width: '100%', maxWidth: 1094, margin: '0 auto' }}>
-          {stripeCheckoutEnabled ? (
+          {checkoutFlow === 'loading' ? (
+            <CheckoutPageSkeleton />
+          ) : checkoutFlow === 'blocked' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480, margin: '0 auto' }}>
+              <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>
+                {lockedSlug === plan.slug && currentBilling === billing
+                  ? 'You are already on this plan.'
+                  : lockedSlug
+                    ? `You're currently on ${lockedSlug}${currentBilling ? ` (${currentBilling})` : ''}. Downgrades to a lower plan are not available here — pick a higher plan or manage billing from settings.`
+                    : 'Downgrades are not available on this page. Choose a higher plan or manage billing from settings.'}
+              </p>
+              <a href="/plans" style={{ fontSize: 14, color: '#18181B', fontFamily: F, fontWeight: 500 }}>
+                ← Back to plans
+              </a>
+            </div>
+          ) : stripeCheckoutEnabled && !isUpgrade ? (
             <CheckoutStripeProvider
               ref={stripeRef}
               planSlug={plan.slug}
@@ -619,6 +803,28 @@ export const getServerSideProps: GetServerSideProps<CheckoutProps> = async (ctx)
   const billing = ctx.query.billing === 'monthly' ? 'monthly' : 'yearly';
   const mode: CheckoutMode = ctx.query.mode === 'upfront' ? 'upfront' : 'trial';
   const now = new Date();
+
+  try {
+    const user = await getCurrentUser(
+      ctx.req as unknown as NextApiRequest,
+      ctx.res as unknown as NextApiResponse,
+    );
+    if (user) {
+      const { orgId } = await ensureUserTenancy(user.id);
+      const billingState = await getOrgBillingState(orgId);
+      const locked = getLockedCheckoutPlanSlug(billingState);
+      if (locked && locked === plan.slug) {
+        return {
+          redirect: {
+            destination: '/plans',
+            permanent: false,
+          },
+        };
+      }
+    }
+  } catch {
+    // Unauthenticated or tenancy errors — fall through to checkout UI.
+  }
 
   // Next renewal: one billing period from today (yearly → +1 year, monthly → +1 month).
   const nextCharge = new Date(now);

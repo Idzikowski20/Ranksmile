@@ -1,6 +1,9 @@
 /**
  * LLM-sourced questions for AI Search coverage — only from allowed engines:
  * ai_overview, chat_gpt, gemini, perplexity, reddit.
+ *
+ * Claude / Facebook are out of scope: DataForSEO has no Claude engine; Facebook
+ * is filtered as corpus noise (not an LLM citation source).
  */
 import { cached, TTL } from './cache/fileCache';
 import { getPeopleAlsoAsk, isDataForSeoConfigured } from './dataforseo';
@@ -28,12 +31,40 @@ function modelToSource(model: AiModel): LlmCoverageSource | null {
   return null;
 }
 
+/** Ask engines for questions — fan_out_queries alone are often empty (esp. ChatGPT/Perplexity). */
+export function coverageQuestionPrompt(seed: string): string {
+  const s = seed.replace(/\s+/g, ' ').trim().slice(0, 200);
+  return `List 6-8 short search questions people ask about: ${s}. One question per line, each ending with ?. No numbering, no answers, no intro.`;
+}
+
+/** Pull question lines from LLM answer text when fan_out_queries is empty. */
+export function extractQuestionsFromText(text: string): string[] {
+  if (!text) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of text.split(/\r?\n|(?<=[?？])\s+/)) {
+    let line = raw.replace(/^\s*[-*•\d.)]+\s*/, '').replace(/\s+/g, ' ').trim();
+    if (!line.includes('?') && !line.includes('？')) continue;
+    if (!/[?？]\s*$/.test(line)) {
+      const m = line.match(/^(.+?[?？])/);
+      if (!m) continue;
+      line = m[1].trim();
+    }
+    if (line.length < 10 || line.length > 180) continue;
+    const key = normalizeTerm(line);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(line);
+  }
+  return out;
+}
+
 type Acc = { text: string; sources: Set<LlmCoverageSource> };
 
 function addQuestion(
   map: Map<string, Acc>,
   raw: string,
-  source: LlmCoverageSource,
+  source: LlmCoverageSource | null,
   keyword: string,
 ): void {
   const text = raw.replace(/\s+/g, ' ').trim();
@@ -41,10 +72,10 @@ function addQuestion(
   const key = normalizeTerm(text);
   const prev = map.get(key);
   if (prev) {
-    prev.sources.add(source);
+    if (source) prev.sources.add(source);
     return;
   }
-  map.set(key, { text, sources: new Set([source]) });
+  map.set(key, { text, sources: new Set(source ? [source] : []) });
 }
 
 /** Build extra LLM prompt seeds from PAA + related searches (Ranksmile-style fan-out). */
@@ -80,12 +111,17 @@ async function collectFanOutFromModels(
   languageCode: string,
   models: AiModel[],
 ): Promise<void> {
+  const prompt = coverageQuestionPrompt(seed);
   await Promise.all(models.map(async (model) => {
     const source = modelToSource(model);
     if (!source) return;
     try {
-      const ans = await runModelPrompt(model, seed, countryIso, languageCode);
-      for (const q of ans.fanOutQueries) addQuestion(map, q, source, keyword);
+      const ans = await runModelPrompt(model, prompt, countryIso, languageCode);
+      const fromFanOut = ans.fanOutQueries;
+      const fromText = extractQuestionsFromText(ans.text);
+      // Prefer explicit fan-outs; always merge parsed answer lines (ChatGPT/Perplexity often omit fan_out).
+      const queries = fromFanOut.length ? [...fromFanOut, ...fromText] : fromText;
+      for (const q of queries) addQuestion(map, q, source, keyword);
     } catch {
       /* non-fatal per engine */
     }
@@ -116,14 +152,15 @@ async function fetchUncached(opts: {
     relatedSearches = paa.related;
     for (const q of paa.questions) {
       if (!q.question || !isKeywordOnTopic(q.question, keyword)) continue;
+      // Only Reddit gets engine provenance here — plain PAA is not AI Overviews.
       if (/reddit\.com/i.test(q.domain ?? '')) {
         addQuestion(map, q.question, 'reddit', keyword);
       } else {
-        addQuestion(map, q.question, 'ai_overview', keyword);
+        addQuestion(map, q.question, null, keyword);
       }
     }
     for (const related of paa.related) {
-      addQuestion(map, related, 'ai_overview', keyword);
+      addQuestion(map, related, null, keyword);
     }
   } catch {
     /* non-fatal */
@@ -153,7 +190,8 @@ export async function fetchLlmCoverageQuestions(opts: {
 
   return cached({
     namespace: 'llm-coverage-questions',
-    key: [keyword.toLowerCase(), opts.country || 'PL', opts.languageCode || 'pl', 'v2'],
+    // v3: question-list prompt + parse answer text (not fan_out only); no fake ai_overview on PAA
+    key: [keyword.toLowerCase(), opts.country || 'PL', opts.languageCode || 'pl', 'v3'],
     ttlMs: TTL.SERP,
     producer: () => fetchUncached(opts),
   });

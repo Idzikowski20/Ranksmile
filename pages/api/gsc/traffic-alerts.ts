@@ -6,8 +6,9 @@ import { getCurrentUserId } from '../../../utils/getUser';
 import { getAccessibleWorkspaceIds } from '../../../lib/tenancy';
 import { getSnapshot, weekStartFor, shiftWeek } from '../../../lib/gscSnapshots';
 import { computeDrops } from '../../../lib/gscDrops';
+import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
    const userId = await getCurrentUserId(req, res);
@@ -34,3 +35,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // collecting = we don't yet have two weeks of data to compare anywhere.
    return res.status(200).json({ collecting: !haveBaseline, domains });
 }
+
+export default withOrgPaymentAccess(handler);

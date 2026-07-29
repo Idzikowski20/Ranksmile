@@ -8,8 +8,9 @@ import { buildIssueDetail } from '../../../../../../lib/siteAudit/buildIssueDeta
 import { loadSiteAuditContext } from '../../../../../../lib/siteAudit/issues';
 import type { AuditRow } from '../../../../../../lib/siteAudit/issues';
 import type { SiteAuditIssueDetailPayload } from '../../../../../../lib/siteAudit/types';
+import { withOrgPaymentAccess } from '../../../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SiteAuditIssueDetailPayload | { error: string }>,
 ) {
@@ -62,3 +63,5 @@ export default async function handler(
 
   return res.status(200).json(payload);
 }
+
+export default withOrgPaymentAccess(handler);

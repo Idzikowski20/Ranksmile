@@ -9,6 +9,7 @@ import {
   syncSubscriptionToOrg,
 } from '../../../lib/stripeBillingSync';
 import { getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
+import db from '../../../database/database';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import { getAppOrigin } from '../../../lib/appOrigin';
 import { claimBillingEmailAndEnqueue } from '../../../lib/billingEmailClaim';
@@ -158,7 +159,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         break;
       }
-      case 'invoice.paid':
+      case 'invoice.paid': {
+        const invoice = event.data.object as Stripe.Invoice & {
+          subscription?: string | { id?: string } | null;
+        };
+        const subRef = invoice.subscription;
+        const subId = typeof subRef === 'string' ? subRef : subRef?.id;
+        if (subId) {
+          const subscription = await stripe.subscriptions.retrieve(subId);
+          const orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
+          if (orgId) {
+            await syncSubscriptionToOrg(orgId, subscription);
+
+            const customerId = customerIdOf(invoice.customer) ?? customerIdOf(subscription.customer);
+            if (customerId) {
+              const eventCreatedAtIso = new Date(event.created * 1000).toISOString();
+              const eventId = event.id;
+
+              await db.query(
+                `UPDATE organizations
+                   SET payment_failed_locked_at = NULL,
+                       payment_failed_invoice_id = NULL,
+                       payment_failed_subscription_id = NULL,
+                       payment_failed_customer_id = NULL,
+                       payment_lock_last_event_created_at = ?,
+                       payment_lock_last_event_id = ?
+                 WHERE id = ?
+                   AND payment_failed_locked_at IS NOT NULL
+                   AND payment_failed_subscription_id = ?
+                   AND payment_failed_customer_id = ?
+                   AND (
+                     payment_lock_last_event_created_at IS NULL
+                     OR payment_lock_last_event_created_at < ?
+                     OR (
+                       payment_lock_last_event_created_at = ?
+                       AND (payment_lock_last_event_id IS NULL OR payment_lock_last_event_id <> ?)
+                     )
+                   )`,
+                {
+                  replacements: [
+                    eventCreatedAtIso,
+                    eventId,
+                    orgId,
+                    subscription.id,
+                    customerId,
+                    eventCreatedAtIso,
+                    eventCreatedAtIso,
+                    eventId,
+                  ],
+                },
+              );
+            }
+          }
+        }
+        break;
+      }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice & {
           subscription?: string | { id?: string } | null;
@@ -182,8 +237,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const subId = typeof subRef === 'string' ? subRef : subRef?.id;
         let orgId: number | null = null;
         let planName = 'subscription';
+        let lockedSubscriptionId: string | null = null;
+        let customerId: string | null = customerIdOf(invoice.customer);
         if (subId) {
           const subscription = await stripe.subscriptions.retrieve(subId);
+          lockedSubscriptionId = subscription.id;
+          if (!customerId) customerId = customerIdOf(subscription.customer);
           orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
           if (orgId) await syncSubscriptionToOrg(orgId, subscription);
           const slug = subscription.metadata?.plan_slug;
@@ -194,12 +253,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         if (!orgId) break;
 
-        const to = await resolveCustomerEmail(stripe, invoice.customer_email, invoice.customer);
+        // Lock first — email is best-effort and must not gate the projection.
+        if (lockedSubscriptionId && customerId) {
+          const paymentFailedLockedAtIso = invoice.created
+            ? new Date(invoice.created * 1000).toISOString()
+            : new Date(event.created * 1000).toISOString();
+          const eventCreatedAtIso = new Date(event.created * 1000).toISOString();
+          const eventId = event.id;
+
+          await db.query(
+            `UPDATE organizations
+               SET payment_failed_locked_at = ?,
+                   payment_failed_invoice_id = ?,
+                   payment_failed_subscription_id = ?,
+                   payment_failed_customer_id = ?,
+                   payment_lock_last_event_created_at = ?,
+                   payment_lock_last_event_id = ?
+             WHERE id = ?
+               AND (
+                 payment_lock_last_event_created_at IS NULL
+                 OR payment_lock_last_event_created_at < ?
+                 OR (
+                   payment_lock_last_event_created_at = ?
+                   AND (payment_lock_last_event_id IS NULL OR payment_lock_last_event_id <> ?)
+                 )
+               )`,
+            {
+              replacements: [
+                paymentFailedLockedAtIso,
+                invoice.id,
+                lockedSubscriptionId,
+                customerId,
+                eventCreatedAtIso,
+                eventId,
+                orgId,
+                eventCreatedAtIso,
+                eventCreatedAtIso,
+                eventId,
+              ],
+            },
+          );
+        }
+
+        const to = await resolveCustomerEmail(stripe, invoice.customer_email, invoice.customer ?? customerId);
         if (!to) break;
 
         const origin = getAppOrigin();
         let updateUrl = `${origin}/settings/billing_subscription`;
-        const customerId = customerIdOf(invoice.customer);
         if (customerId) {
           try {
             const portal = await stripe.billingPortal.sessions.create({

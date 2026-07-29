@@ -5,8 +5,9 @@ import { exportRankRows } from '../../../../lib/rankTracking/exporter';
 import { getConfig, getResults } from '../../../../lib/rankTracking/service';
 import type { ComparePeriod, ExportFormat } from '../../../../lib/types/rankTracking';
 import { devicesList } from '../../../../lib/types/rankTracking';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ctx = await resolveRankTrackingApi(req, res);
   if (!ctx) return;
   if (req.method !== 'GET') {
@@ -38,3 +39,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: getErrorMessage(e) });
   }
 }
+
+export default withOrgPaymentAccess(handler);

@@ -10,6 +10,7 @@ import { getAccessibleWorkspaceIds, getActiveWorkspaceId, getScopedWorkspaceIds,
 import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 import { checkSerchConsoleIntegration, removeLocalSCData } from '../../utils/searchConsole';
 import { removeFromRetryQueue } from '../../utils/scraper';
+import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
 type DomainsGetRes = {
    domains: DomainType[]
@@ -33,7 +34,7 @@ type DomainsUpdateRes = {
    error?: string|null,
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
@@ -200,3 +201,5 @@ export const updateDomain = async (req: NextApiRequest, res: NextApiResponse<Dom
       return res.status(400).json({ domain: null, error: 'Error Updating Domain. An Unknown Error Occurred.' });
    }
 };
+
+export default withOrgPaymentAccess(handler);

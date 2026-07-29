@@ -31,6 +31,12 @@ async function runEnsureBillingTables(): Promise<void> {
     { sql: 'ALTER TABLE organizations ADD COLUMN cancel_at_period_end INTEGER DEFAULT 0', label: 'cancel_at_period_end' },
     { sql: 'ALTER TABLE organizations ADD COLUMN last_checkout_started_at TIMESTAMP', label: 'last_checkout_started_at' },
     { sql: 'ALTER TABLE organizations ADD COLUMN starter_nudge_sent_at TIMESTAMP', label: 'starter_nudge_sent_at' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN payment_failed_locked_at TIMESTAMP', label: 'payment_failed_locked_at' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN payment_failed_invoice_id TEXT', label: 'payment_failed_invoice_id' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN payment_failed_subscription_id TEXT', label: 'payment_failed_subscription_id' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN payment_failed_customer_id TEXT', label: 'payment_failed_customer_id' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN payment_lock_last_event_created_at TIMESTAMP', label: 'payment_lock_last_event_created_at' },
+    { sql: 'ALTER TABLE organizations ADD COLUMN payment_lock_last_event_id TEXT', label: 'payment_lock_last_event_id' },
   ];
 
   for (const column of columns) {

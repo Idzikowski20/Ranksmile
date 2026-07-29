@@ -3,6 +3,7 @@
 // current editor text/HTML between LLM judge passes, without mutating the graded snapshot.
 import type { CoverageItem, CoverageType, BucketScore } from './aiCoverage';
 import { countOccurrences } from './contentScore';
+import { livePresenceQualityCap } from './ao/coverageState';
 
 // `question` is what coverageEngine emits for PAA rows — must live-check like `paa`
 // or the UI shows Covered (judge) while live score never floors quality → AI gauge stuck at 0.
@@ -22,7 +23,9 @@ export function liveCoverageItems(
     const covered = presenceCovered(it, plainText, html);
     if (covered === it.covered && !(covered && it.quality === 0)) return it;
     if (!covered) return { ...it, covered: false };
-    const floor = it.importance === 'critical' ? 4 : it.importance === 'recommended' ? 3 : 2;
+    // Presence ≠ Coverage: live presence may only reach mentioned/partial (cap 1–2).
+    const signal = it.importance === 'critical' ? 'exact' : it.importance === 'recommended' ? 'partial' : 'weak';
+    const floor = livePresenceQualityCap(signal);
     return { ...it, covered: true, quality: Math.max(it.quality, floor) };
   });
 }

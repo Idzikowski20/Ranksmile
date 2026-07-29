@@ -5,8 +5,9 @@ import { getCurrentUserId } from '../../../../utils/getUser';
 import { verifyDomainOwnershipBySlug } from '../../../../utils/verifyDomainOwnership';
 import { ensureCompetitorsTables } from '../../../../lib/ensureCompetitorsTables';
 import { setSelection } from '../../../../lib/competitorScan';
+import { withOrgPaymentAccess } from '../../../../lib/requireOrgPaymentAccess';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
    await ensureCompetitorsTables();
    const authorized = await verifyUser(req, res);
@@ -27,3 +28,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    await setSelection(domainId, keyword, ids);
    return res.status(200).json({ ok: true });
 }
+
+export default withOrgPaymentAccess(handler);
