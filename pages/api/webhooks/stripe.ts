@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type Stripe from 'stripe';
 import { getStripe, getStripeWebhookSecret } from '../../../lib/stripe';
+import { getPostHogClient } from '../../../lib/posthog-server';
 import { readRawBody } from '../../../lib/readRawBody';
 import {
   orgIdFromMetadata,
@@ -93,6 +94,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const subscription = await stripe.subscriptions.retrieve(session.subscription);
             await syncSubscriptionToOrg(orgId, subscription);
           }
+          try {
+            const ph = getPostHogClient();
+            ph.capture({
+              distinctId: `org_${orgId}`,
+              event: 'subscription_activated',
+              properties: { plan_slug: session.metadata?.plan_slug, billing: session.metadata?.billing },
+            });
+            await ph.flush();
+          } catch { /* non-critical */ }
         }
         break;
       }
@@ -136,6 +146,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             cancelAtPeriodEnd: false,
             currentPeriodEnd: fresh.ended_at ? new Date(fresh.ended_at * 1000) : null,
           });
+          try {
+            const ph = getPostHogClient();
+            ph.capture({
+              distinctId: `org_${orgId}`,
+              event: 'subscription_cancelled',
+              properties: { plan_slug: fresh.metadata?.plan_slug },
+            });
+            await ph.flush();
+          } catch { /* non-critical */ }
         }
         break;
       }
@@ -204,6 +223,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             updateUrl,
           },
         });
+        try {
+          const ph = getPostHogClient();
+          ph.capture({
+            distinctId: `org_${orgId}`,
+            event: 'payment_failed',
+            properties: { plan_name: planName },
+          });
+          await ph.flush();
+        } catch { /* non-critical */ }
         break;
       }
       case 'checkout.session.expired': {

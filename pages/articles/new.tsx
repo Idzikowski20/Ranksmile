@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { useFetchDomains } from '../../services/domains';
 import KeywordSuggestInput from '../../components/articles/KeywordSuggestInput';
@@ -76,6 +77,10 @@ const NewContentPage: NextPage = () => {
   // ranking content (SERP) for the keyword and creates the draft article.
   const goNext = () => {
     if (!canNext) return;
+    posthog.capture('article_research_started', {
+      keyword_count: keywords.length,
+      language,
+    });
     const q = new URLSearchParams();
     q.set('domainId', String(domainId));
     q.set('keywords', keywords.join(','));

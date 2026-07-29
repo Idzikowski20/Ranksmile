@@ -17,5 +17,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     : undefined;
 
   const bootstrap = await getBootstrap(userId, { activeWorkspaceCookie: cookie });
-  return res.status(200).json(bootstrap);
+  return res.status(200).json({ ...bootstrap, userId });
 }
