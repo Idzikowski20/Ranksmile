@@ -2,25 +2,27 @@ import React, { useState } from 'react';
 import { useWorkspaces } from '../../services/workspaces';
 import { useWorkspaceMembers } from '../../services/workspaceMembers';
 import ManageMembersModal from './ManageMembersModal';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import {
-  SentrySettingsSection,
-  SentrySettingsRow,
-  SentryPanel,
+  KoalaSettingsSection,
+  KoalaSettingsRow,
+  KoalaPanel,
+  KoalaEmptyState,
+} from '../koala/layout';
+import {
   SentryTable,
   SentryTableHead,
   SentryTableBody,
   SentryTableRow,
   SentryTableCell,
   SentryTableHeaderCell,
-  SentryEmptyState,
-} from '../sentry-pages';
+} from '../koala/layout';
 
 const font = 'var(--font-family-primary)';
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
 const Avatar = ({ initial }: { initial: string }) => (
-  <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'rgba(242,153,100,0.12)', color: '#F29964', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
+  <div style={{ width: 32, height: 32, borderRadius: 9999, background: 'color-mix(in srgb, var(--koala-brand) 12%, transparent)', color: 'var(--koala-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0, fontFamily: font }}>
     {initial}
   </div>
 );
@@ -41,8 +43,9 @@ const WorkspaceMembersSettings = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
-      <SentrySettingsSection title="Access">
-        <SentrySettingsRow
+      <KoalaSettingsSection title="Access">
+        <KoalaSettingsRow
+          layout="stack"
           label="Workspace members"
           description={`Manage who has access to ${workspaceName} workspace.`}
         >
@@ -51,11 +54,11 @@ const WorkspaceMembersSettings = () => {
               Manage members
             </Button>
           )}
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
       {isLoading && (
-        <SentryPanel noPadding>
+        <KoalaPanel noPadding>
           <SentryTable>
             <SentryTableHead>
               <SentryTableRow>
@@ -70,11 +73,11 @@ const WorkspaceMembersSettings = () => {
               </SentryTableRow>
             </SentryTableBody>
           </SentryTable>
-        </SentryPanel>
+        </KoalaPanel>
       )}
 
       {isEmpty && (
-        <SentryEmptyState
+        <KoalaEmptyState
           title="No members yet"
           description="No one has access to this workspace yet."
           actions={(
@@ -86,7 +89,7 @@ const WorkspaceMembersSettings = () => {
       )}
 
       {hasMembers && (
-        <SentryPanel noPadding>
+        <KoalaPanel noPadding>
           <SentryTable>
             <SentryTableHead>
               <SentryTableRow>
@@ -103,7 +106,7 @@ const WorkspaceMembersSettings = () => {
                     <SentryTableCell>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar initial={(email[0] || '?').toUpperCase()} />
-                        <span style={{ fontSize: 14, color: '#18181B', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
+                        <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
                       </div>
                     </SentryTableCell>
                     <SentryTableCell>{cap(m.role)}</SentryTableCell>
@@ -113,7 +116,7 @@ const WorkspaceMembersSettings = () => {
               })}
             </SentryTableBody>
           </SentryTable>
-        </SentryPanel>
+        </KoalaPanel>
       )}
 
       {wsId !== null && (

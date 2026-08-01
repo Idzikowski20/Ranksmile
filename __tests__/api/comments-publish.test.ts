@@ -24,7 +24,7 @@ it('publishes a comment:create event to Ably after a successful POST', async () 
   const res = mockRes();
   await handler({
     method: 'POST', query: { id: '9' },
-    body: { quote: 'q', text: 'hello', author: 'Joe', color: '#F29964' },
+    body: { quote: 'q', text: 'hello', author: 'Joe', color: '#F84416' },
   } as any, res);
   expect(res.statusCode).toBe(200);
   expect(publishToArticle).toHaveBeenCalledWith('9', 'comment', expect.objectContaining({ type: 'create' }));

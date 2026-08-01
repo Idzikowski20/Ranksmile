@@ -1,6 +1,6 @@
 import React from 'react';
-import {Flex} from '../core/layout';
-import {Text} from '../core/text';
+import {Flex} from '../koala/core/layout';
+import {Text} from '../koala/core/text';
 
 interface Props {
   icon?: React.ReactNode;

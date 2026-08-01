@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import { resetPassword } from '../../lib/auth/fetchAuth';
-import { Button } from '../core';
+import Button from '../koala/primitives/Button';
+import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';
 import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import {
@@ -51,9 +52,7 @@ export default function ResetPasswordForm() {
     }
 
     setLoading(true);
-
     const result = await resetPassword({ newPassword: password, token });
-
     setLoading(false);
 
     if (!result.ok) {
@@ -68,56 +67,64 @@ export default function ResetPasswordForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Reset password</h1>
-      <p style={authSubtitleStyle}>Choose a new password for your account</p>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', width: '100%' }}
+    >
+      <AuthBrandMark />
+      <div style={{ textAlign: 'center', width: '100%', maxWidth: 384 }}>
+        <h1 style={authTitleStyle}>Reset password</h1>
+        <p style={authSubtitleStyle}>Choose a new password for your account</p>
+      </div>
 
-      {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
+      {error ? <div style={{ ...authErrorStyle, width: '100%' }} role="alert">{error}</div> : null}
       {success ? (
-        <div style={authSuccessStyle} role="status">
+        <div style={{ ...authSuccessStyle, width: '100%' }} role="status">
           Password updated. Redirecting to sign in…
         </div>
       ) : null}
 
-      <PasswordStrengthIndicator
-        id="reset-password"
-        label="New password"
-        value={password}
-        onChange={setPassword}
-        autoComplete="new-password"
-        disabled={loading || success}
-        placeholder="Enter a new password"
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+        <PasswordStrengthIndicator
+          id="reset-password"
+          label="New password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          disabled={loading || success}
+          placeholder="Enter a new password"
+        />
 
-      <AuthField
-        id="reset-password-confirm"
-        label="Confirm password"
-        type="password"
-        value={confirm}
-        onChange={setConfirm}
-        autoComplete="new-password"
-        disabled={loading || success}
-        revealable
-      />
+        <AuthField
+          id="reset-password-confirm"
+          label="Confirm password"
+          type="password"
+          value={confirm}
+          onChange={setConfirm}
+          autoComplete="new-password"
+          disabled={loading || success}
+          revealable
+          required
+        />
+      </div>
 
-      <div style={authFullWidthBtnStyle}>
+      <div style={{ ...authFullWidthBtnStyle, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
         <Button
           type="submit"
           variant="primary"
-          size="md"
+          size="lg"
           busy={loading}
           disabled={loading || success}
-          style={{ width: '100%' }}
+          style={{ width: '100%', borderRadius: 14 }}
         >
           {loading ? 'Saving…' : 'Reset password'}
         </Button>
+        <p style={authFooterStyle}>
+          <Link href="/auth/sign-in" style={{ ...authLinkStyle, textDecoration: 'underline' }}>
+            Back to Sign In
+          </Link>
+        </p>
       </div>
-
-      <p style={authFooterStyle}>
-        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
-          Back to Sign In
-        </Link>
-      </p>
     </form>
   );
 }

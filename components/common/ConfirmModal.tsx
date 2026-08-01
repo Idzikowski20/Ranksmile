@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import Modal, { ModalBody, ModalFooter, ModalHeader } from '../core/modal/modal';
-import Button from '../core/button/button';
-import Input from '../core/input/input';
-import { FormField } from '../core/form';
+import Modal, { ModalBody, ModalFooter, ModalHeader } from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
+import Input from '../koala/core/input/input';
+import { FormField } from '../koala/core/form';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -32,7 +32,7 @@ const ConfirmModal = ({
     <Modal onClose={loading ? () => {} : onClose} width={480} closeOnOverlayClick={!loading}>
       <ModalHeader title={title} onClose={loading ? undefined : onClose} closeButton />
       <ModalBody>
-        <p className="sentry-confirm-message">{message}</p>
+        <p className="koala-confirm-message">{message}</p>
         {confirmText && (
           <FormField
             label={confirmFieldLabel || <>Type <strong>{confirmText}</strong> to confirm</>}

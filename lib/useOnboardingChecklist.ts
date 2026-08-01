@@ -106,7 +106,6 @@ export function useOnboardingChecklist(): {
          { key: 'content', label: 'Create content that ranks in AI Search and SEO', done: hasArticle, time: '10m', href: ws('/articles'), cta: 'Open Content Editor' },
       ];
       const beyondSteps: OnboardingStep[] = [
-         { key: 'topical', label: 'Build a topical map for your niche', done: false, href: ws(slug ? `/sites/${slug}/topical-map` : '/dashboard') },
          { key: 'wordpress', label: 'Connect WordPress for publishing', done: false, href: '/settings/wordpress' },
          { key: 'api', label: 'Explore the API for custom workflows', done: false, href: '/settings/api' },
       ];

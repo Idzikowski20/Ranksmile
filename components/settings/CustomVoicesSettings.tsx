@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
-import { Button, Input, Textarea, Checkbox } from '../core';
-import Modal, { ModalBody, ModalFooter } from '../core/modal/modal';
+import { Button, Input, Textarea, Checkbox } from '../koala/core';
+import Modal, { ModalBody, ModalFooter } from '../koala/core/modal/modal';
 import {
-  SentryPanel,
-  SentryEmptyState,
-} from '../sentry-pages';
+  KoalaPanel,
+  KoalaEmptyState,
+} from '../koala/layout';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
 
@@ -22,7 +22,7 @@ const AddVoiceModal = ({ onSave, onClose }: { onSave: (v: { name: string; descri
       <ModalBody>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Name</label>
+            <label style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>Name</label>
             <Input
               type="text"
               value={name}
@@ -32,19 +32,19 @@ const AddVoiceModal = ({ onSave, onClose }: { onSave: (v: { name: string; descri
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Reference text</label>
-            <span style={{ fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+            <label style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>Reference text</label>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
               Paste content whose tone and style the AI should mirror, or describe the voice in your own words.
             </span>
             <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={12} style={{ width: '100%' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ fontSize: 14, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{words} words</span>
-              <span style={{ fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>The reference text should be at least 200 words long</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>{words} words</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>The reference text should be at least 200 words long</span>
             </div>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}>
             <Checkbox checked={isDefault} onChange={setIsDefault} />
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>Set the voice as default</span>
+            <span style={{ fontSize: 14, color: 'var(--koala-text-primary)' }}>Set the voice as default</span>
           </label>
         </div>
       </ModalBody>
@@ -100,7 +100,7 @@ const CustomVoicesSettings = () => {
       )}
 
       {voices.length === 0 ? (
-        <SentryEmptyState
+        <KoalaEmptyState
           title="No custom voices yet"
           description="You haven't created any custom voice yet."
           actions={(
@@ -110,7 +110,7 @@ const CustomVoicesSettings = () => {
           )}
         />
       ) : (
-        <SentryPanel noPadding>
+        <KoalaPanel noPadding>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
             {voices.map((v) => (
               <div
@@ -125,14 +125,14 @@ const CustomVoicesSettings = () => {
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{v.name}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>{v.name}</span>
                     {v.isDefault && (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#630DE3', background: 'rgba(242,153,100,0.1)', padding: '2px 8px', borderRadius: 9999 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--koala-text-brand)', background: 'color-mix(in srgb, var(--koala-brand) 10%, transparent)', padding: '2px 8px', borderRadius: 9999 }}>
                         Default
                       </span>
                     )}
                   </div>
-                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#52525C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 520, fontFamily: 'var(--font-family-primary)' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--koala-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 520, fontFamily: 'var(--font-family-primary)' }}>
                     {v.description}
                   </p>
                 </div>
@@ -142,7 +142,7 @@ const CustomVoicesSettings = () => {
               </div>
             ))}
             </div>
-        </SentryPanel>
+        </KoalaPanel>
       )}
 
       {open && <AddVoiceModal onSave={addVoice} onClose={() => setOpen(false)} />}

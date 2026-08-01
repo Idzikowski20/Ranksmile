@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import FanoutTable from '../../../../components/aiVisibility/FanoutTable';
 import { FanoutPageSkeleton } from '../../../../components/aiVisibility/SkeletonBlocks';
-import { SearchBar, SegmentedControl, Button } from '../../../../components/core';
+import { SearchBar, SegmentedControl, Button } from '../../../../components/koala/core';
 import { useAiVisData, useAiVisFanout, type FanoutByQueryRow, type FanoutByPromptRow } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useProfile, useUpdateProfile } from '../../services/profile';
-import { Switch } from '../core';
-import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
+import { Switch } from '../koala/core';
+import { KoalaSettingsSection, KoalaSettingsRow } from '../koala/layout';
 
 /** Your account → Notifications: a single per-user product-updates opt-in (Ranksmile parity). */
 const AccountNotificationSettings = () => {
@@ -16,8 +16,8 @@ const AccountNotificationSettings = () => {
   };
 
   return (
-    <SentrySettingsSection title="Product updates">
-      <SentrySettingsRow
+    <KoalaSettingsSection title="Product updates">
+      <KoalaSettingsRow
         label="Email notifications"
         description="Get product updates, educational resources, and live event info."
       >
@@ -26,8 +26,8 @@ const AccountNotificationSettings = () => {
           onChange={toggle}
           aria-label="Get product updates, educational resources, and live event info"
         />
-      </SentrySettingsRow>
-    </SentrySettingsSection>
+      </KoalaSettingsRow>
+    </KoalaSettingsSection>
   );
 };
 

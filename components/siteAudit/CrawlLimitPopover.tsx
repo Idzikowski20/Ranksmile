@@ -30,7 +30,7 @@ export default function CrawlLimitPopover({
       ref={ref}
       role="dialog"
       aria-label="Page crawl limit"
-      className="sentry-crawl-limit-popover"
+      className="koala-crawl-limit-popover"
       style={{
         position: 'fixed',
         top: anchorRect.bottom + 8,
@@ -90,7 +90,7 @@ export function CrawlLimitIndicator({
     <>
       <button
         type="button"
-        className={`sentry-crawl-limit-indicator ${showWarning ? 'sentry-crawl-limit-indicator--warn' : ''} ${clickable ? 'sentry-crawl-limit-indicator--clickable' : ''}`}
+        className={`koala-crawl-limit-indicator ${showWarning ? 'koala-crawl-limit-indicator--warn' : ''} ${clickable ? 'koala-crawl-limit-indicator--clickable' : ''}`}
         onClick={onClick}
         aria-expanded={open}
         aria-haspopup="dialog"

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
-import { Button } from '../core';
+import { Button } from '../koala/core';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import CountryFlag from './CountryFlag';
 
 const FONT = 'var(--font-family-primary)';
@@ -66,9 +67,10 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
    });
 
    return (
+      <ShellPortal>
       <div
          onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: overlayZ.modal, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       >
          <div style={{ position: 'relative', width: '100%', maxWidth: 680, background: '#fff', borderRadius: 16, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             <button
@@ -166,6 +168,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
             </div>
          </div>
       </div>
+      </ShellPortal>
    );
 };
 

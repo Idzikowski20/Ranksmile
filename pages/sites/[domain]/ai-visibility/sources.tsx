@@ -6,7 +6,7 @@ import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import SourcesTable, { SourceRow } from '../../../../components/aiVisibility/SourcesTable';
 import MentionGapCards from '../../../../components/aiVisibility/MentionGapCards';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/core';
+import { HoverTooltip, Toggle, SearchBar, Button } from '../../../../components/koala/core';
 import { useAiVisSources, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
@@ -191,7 +191,7 @@ const AiVisibilitySources: NextPage = () => {
 
                   {/* Table */}
                   {tablePending ? (
-                     <div style={{ ...CARD_3D, padding: 24 }}><SkeletonRows count={8} withIcon /></div>
+                     <div style={{ padding: 24 }}><SkeletonRows count={8} withIcon /></div>
                   ) : (
                      <SourcesTable
                         sources={filtered}

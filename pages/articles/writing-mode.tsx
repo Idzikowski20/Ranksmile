@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
-import { Switch } from '../../components/core';
+import { Switch } from '../../components/koala/core';
 import { saveWizardState, clearWizardState } from '../../lib/wizardState';
 import { useArticle } from '../../services/article';
 

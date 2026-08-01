@@ -4,34 +4,22 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'react-query';
-import {
-  HeatmapCells,
-  HeatmapChart,
-  type HeatmapColumn,
-  HeatmapInteractionBoundary,
-  HeatmapInteractionProvider,
-  HeatmapLegend,
-  HeatmapTooltip,
-  HeatmapXAxis,
-  HeatmapYAxis,
-  HEATMAP_DEFAULT_LEVEL_STYLES,
-  useHeatmapInteraction,
-} from '../../../components/charts/heatmap';
+import { Chart } from '../../../components/koala/charts';
+import type { ChartPreparedData } from '../../../components/koala/charts';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
-import { HoverTooltip, Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/core';
+import { HoverTooltip, Button, CompactSelect, SegmentedControl, ToolRibbon } from '../../../components/koala/core';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { Card } from '../../../components/koala/product';
+import { EmptyState } from '../../../components/koala/feedback';
 import {
-  SentryPanel,
-  SentryPanelBody,
   SentryTable,
   SentryTableHead,
   SentryTableBody,
   SentryTableRow,
   SentryTableCell,
   SentryTableHeaderCell,
-  SentryEmptyState,
-} from '../../../components/sentry-pages';
+} from '../../../components/koala/layout';
 import { authClient } from '../../../lib/auth/client';
 import { useFetchDomains } from '../../../services/domains';
 import { usePeople } from '../../../services/people';
@@ -54,7 +42,7 @@ type ApiArticle = {
    updated_at?: string | null;
 };
 
-type Surface = 'Content Editor' | 'Content Audit' | 'Topical Map';
+type Surface = 'Content Editor' | 'Content Audit';
 type EventType = 'created' | 'optimized' | 'published';
 type LogEvent = {
    id: string;
@@ -110,7 +98,7 @@ const FilterIcon = () => (
    </svg>
 );
 const SortArrow = ({ asc }: { asc: boolean }) => (
-   <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: asc ? 'rotate(180deg)' : 'none', color: '#52525C' }}>
+   <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: asc ? 'rotate(180deg)' : 'none', color: 'var(--koala-text-secondary)' }}>
       <path fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" />
    </svg>
 );
@@ -120,7 +108,7 @@ const CalArrow = ({ dir }: { dir: 'left' | 'right' }) => (
    </svg>
 );
 const Avatar = ({ initial }: { initial: string }) => (
-   <span style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>{initial}</span>
+   <span style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 9999, background: 'var(--koala-border-primary)', color: 'var(--koala-text-primary)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>{initial}</span>
 );
 
 // ─── Multi-select filter (CompactSelect) ───────────────────────────────────────
@@ -179,10 +167,10 @@ const MonthGrid = ({ monthDate, range, today, onPick }: { monthDate: Date; range
 
    return (
       <div style={{ width: 252 }}>
-         <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: '#18181B', marginBottom: 10 }}>{`${MONTHS_FULL[m]} ${y}`}</div>
+         <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'var(--koala-text-primary)', marginBottom: 10 }}>{`${MONTHS_FULL[m]} ${y}`}</div>
          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
             {WEEKDAYS_SHORT.map((w) => (
-               <div key={w} style={{ height: 28, display: 'grid', placeItems: 'center', fontSize: 11, color: '#71717B' }}>{w}</div>
+               <div key={w} style={{ height: 28, display: 'grid', placeItems: 'center', fontSize: 11, color: 'var(--koala-text-secondary)' }}>{w}</div>
             ))}
             {cells.map((day, i) => {
                if (!day) return <div key={`e${i}`} style={{ height: 36 }} />;
@@ -193,16 +181,16 @@ const MonthGrid = ({ monthDate, range, today, onPick }: { monthDate: Date; range
                const inRange = !!from && !!to && day > from && day < to;
                const isToday = sameDay(day, today);
                return (
-                  <div key={dayKey(day)} style={{ height: 36, display: 'grid', placeItems: 'center', background: (inRange || isEnd) ? '#F4F4F5' : 'transparent', borderRadius: isFrom ? '9999px 0 0 9999px' : isTo ? '0 9999px 9999px 0' : 0 }}>
+                  <div key={dayKey(day)} style={{ height: 36, display: 'grid', placeItems: 'center', background: (inRange || isEnd) ? 'var(--koala-bg-secondary)' : 'transparent', borderRadius: isFrom ? '9999px 0 0 9999px' : isTo ? '0 9999px 9999px 0' : 0 }}>
                      <button
                         type="button"
                         onClick={() => onPick(day)}
                         style={{
                            width: 34, height: 34, borderRadius: 9999, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: isEnd ? 600 : 500,
-                           background: isEnd ? '#18181B' : 'transparent', color: isEnd ? '#fff' : '#18181B',
-                           border: isToday && !isEnd ? '2px solid #FB6A3C' : '2px solid transparent', transition: 'background 120ms ease',
+                           background: isEnd ? 'var(--koala-text-primary)' : 'transparent', color: isEnd ? 'var(--koala-text-on-brand)' : 'var(--koala-text-primary)',
+                           border: isToday && !isEnd ? '2px solid var(--koala-border-brand)' : '2px solid transparent', transition: 'background 120ms ease',
                         }}
-                        onMouseEnter={(e) => { if (!isEnd) (e.currentTarget as HTMLButtonElement).style.background = '#E9E9EC'; }}
+                        onMouseEnter={(e) => { if (!isEnd) (e.currentTarget as HTMLButtonElement).style.background = 'var(--koala-bg-tertiary)'; }}
                         onMouseLeave={(e) => { if (!isEnd) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                      >
                         {day.getDate()}
@@ -226,7 +214,7 @@ const RangeCalendar = ({ range, onPick, today }: { range: Range; onPick: (d: Dat
       <div
          style={{
             position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 200, width: 580, maxWidth: 'calc(100vw - 2rem)',
-            background: '#fff', border: '1px solid #E4E4E7', borderRadius: 16, padding: 20,
+            background: 'var(--koala-bg-primary)', border: '1px solid var(--koala-border-primary)', borderRadius: 16, padding: 20,
             boxShadow: '0 24px 60px rgba(0,0,0,0.18)', animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', transformOrigin: 'top left', fontFamily: FONT,
          }}
       >
@@ -436,7 +424,6 @@ const ActivityLogPage: NextPage = () => {
                      options={[
                         { value: 'Content Audit', label: 'Content Audit' },
                         { value: 'Content Editor', label: 'Content Editor' },
-                        { value: 'Topical Map', label: 'Topical Map' },
                      ]}
                      selected={actSel}
                      onChange={setActSel}
@@ -444,25 +431,25 @@ const ActivityLogPage: NextPage = () => {
                </ToolRibbon>
             )}
          >
-               <SentryPanel>
-                  <SentryPanelBody>
-                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 24, marginBottom: 16, fontSize: 13, color: '#71717B' }}>
-                        <span>Activities: <strong style={{ color: '#18181B', fontWeight: 600 }}>{events.length}</strong></span>
-                        <span>Active days: <strong style={{ color: '#18181B', fontWeight: 600 }}>{activeDays}</strong></span>
-                        <span>Most active day: <strong style={{ color: '#18181B', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
+               <div style={{ marginBottom: 24 }}>
+                  <Card>
+                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 24, marginBottom: 16, fontSize: 13, color: 'var(--koala-text-secondary)' }}>
+                        <span>Activities: <strong style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{events.length}</strong></span>
+                        <span>Active days: <strong style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{activeDays}</strong></span>
+                        <span>Most active day: <strong style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{peakCount > 0 ? `${peakLabel} with ${peakCount} ${peakCount === 1 ? 'activity' : 'activities'}` : '—'}</strong></span>
                      </div>
                      <ActivityHeatmap counts={counts} onPickDay={filterToDay} />
-                  </SentryPanelBody>
-               </SentryPanel>
+                  </Card>
+               </div>
 
-               <SentryPanel noPadding>
+               <Card padded={false}>
                   <SentryTable>
                      <SentryTableHead>
                         <tr>
                            <SentryTableHeaderCell style={{ width: 96 }}>Person</SentryTableHeaderCell>
                            <SentryTableHeaderCell>Activity</SentryTableHeaderCell>
                            <SentryTableHeaderCell style={{ width: 200 }}>
-                              <Button type="button" variant="transparent" size="sm" onClick={() => setSortAsc((s) => !s)} style={{ gap: 6, fontSize: 11, fontWeight: 600, color: '#6a6772', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              <Button type="button" variant="transparent" size="sm" onClick={() => setSortAsc((s) => !s)} style={{ gap: 6, fontSize: 11, fontWeight: 600, color: 'var(--koala-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                  Date
                                  <SortArrow asc={sortAsc} />
                               </Button>
@@ -476,18 +463,18 @@ const ActivityLogPage: NextPage = () => {
                               <SentryTableRow key={i}>
                                  <SentryTableCell>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                       <span style={{ width: 28, height: 28, borderRadius: 9999, background: '#F1F1F3' }} />
-                                       <span style={{ width: 150, height: 12, borderRadius: 6, background: '#F1F1F3' }} />
+                                       <span style={{ width: 28, height: 28, borderRadius: 9999, background: 'var(--koala-bg-tertiary)' }} />
+                                       <span style={{ width: 150, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
                                     </div>
                                  </SentryTableCell>
-                                 <SentryTableCell><span style={{ display: 'block', width: '60%', height: 12, borderRadius: 6, background: '#F1F1F3' }} /></SentryTableCell>
-                                 <SentryTableCell><span style={{ display: 'block', width: 120, height: 12, borderRadius: 6, background: '#F1F1F3' }} /></SentryTableCell>
+                                 <SentryTableCell><span style={{ display: 'block', width: '60%', height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} /></SentryTableCell>
+                                 <SentryTableCell><span style={{ display: 'block', width: 120, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} /></SentryTableCell>
                               </SentryTableRow>
                            ))
                         ) : events.length === 0 ? (
                            <SentryTableRow>
                               <SentryTableCell colSpan={3}>
-                                 <SentryEmptyState title="No activities found" description={<EmptyEyes />} />
+                                 <EmptyState title="No activities found" description={<EmptyEyes />} />
                               </SentryTableCell>
                            </SentryTableRow>
                         ) : (
@@ -499,36 +486,36 @@ const ActivityLogPage: NextPage = () => {
                                           // eslint-disable-next-line @next/next/no-img-element
                                           <img alt={person} src={personImage} width={28} height={28} style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0, cursor: 'default' }} />
                                        ) : (
-                                          <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: '#E4E4E7', color: '#18181B', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
+                                          <span style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9999, background: 'var(--koala-border-primary)', color: 'var(--koala-text-primary)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', cursor: 'default' }}>
                                              {personInitial}
                                           </span>
                                        )}
                                     </HoverTooltip>
                                  </SentryTableCell>
                                  <SentryTableCell>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: '#18181B' }}>
+                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0, fontSize: 14, color: 'var(--koala-text-primary)' }}>
                                        <span style={{ flexShrink: 0 }}>{e.verb}</span>
                                        <Link href={`/articles/${e.articleId}`} passHref>
-                                          <a style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: '#18181B', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 150ms ease, color 150ms ease' }} className="activity-log-link">
+                                          <a style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--koala-text-primary)', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 150ms ease, color 150ms ease' }} className="activity-log-link">
                                              {e.title}
                                           </a>
                                        </Link>
                                        {e.type === 'optimized' ? (
-                                          <span style={{ flexShrink: 0, color: '#52525C' }}>
+                                          <span style={{ flexShrink: 0, color: 'var(--koala-text-secondary)' }}>
                                              from{' '}
                                              <Link href={`/sites/${slug}/content-audit`} passHref>
-                                                <a style={{ fontWeight: 600, color: '#18181B', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 150ms ease, color 150ms ease' }} className="activity-log-link">Content Audit</a>
+                                                <a style={{ fontWeight: 600, color: 'var(--koala-text-primary)', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 150ms ease, color 150ms ease' }} className="activity-log-link">Content Audit</a>
                                              </Link>
                                           </span>
                                        ) : (
-                                          <span style={{ flexShrink: 0, color: '#52525C' }}>in Content Editor</span>
+                                          <span style={{ flexShrink: 0, color: 'var(--koala-text-secondary)' }}>in Content Editor</span>
                                        )}
                                     </div>
                                  </SentryTableCell>
                                  <SentryTableCell>
                                     <HoverTooltip label={fmtDateFull(e.time)} align="right">
-                                       <span style={{ fontSize: 14, color: '#18181B', cursor: 'default' }}>
-                                          {fmtDateShort(e.time)}, <span style={{ color: '#71717B' }}>{fmtTime(e.time)}</span>
+                                       <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', cursor: 'default' }}>
+                                          {fmtDateShort(e.time)}, <span style={{ color: 'var(--koala-text-secondary)' }}>{fmtTime(e.time)}</span>
                                        </span>
                                     </HoverTooltip>
                                  </SentryTableCell>
@@ -537,87 +524,54 @@ const ActivityLogPage: NextPage = () => {
                         )}
                      </SentryTableBody>
                   </SentryTable>
-               </SentryPanel>
+               </Card>
          </DomainSubLayout>
       </AppShell>
    );
 };
 
-// ─── Contribution heatmap (Bklit) ────────────────────────────────────────────
+// ─── Contribution heatmap (Koala ActivityHeatmap) ────────────────────────────
 
-function buildYearHeatmapData(counts: Map<string, number>, year: number): HeatmapColumn[] {
+/** Build 7×N matrix (rows = weekdays Sun–Sat, cols = weeks) for Chart heatmap. */
+function prepareActivityHeatmap(counts: Map<string, number>, year: number): ChartPreparedData {
    const first = new Date(year, 0, 1);
    const start = new Date(first);
-   start.setDate(first.getDate() - first.getDay()); // Sunday-first columns
+   start.setDate(first.getDate() - first.getDay());
    const last = new Date(year, 11, 31);
-   const columns: HeatmapColumn[] = [];
+   const weeks: number[][] = [];
    const cur = new Date(start);
    let col = 0;
-   while (cur <= last || columns.length === 0) {
-      const bins: HeatmapColumn['bins'] = [];
+   while (cur <= last || weeks.length === 0) {
+      const week: number[] = [];
       for (let row = 0; row < 7; row += 1) {
          const date = new Date(cur);
-         bins.push({
-            bin: row,
-            count: date.getFullYear() === year ? (counts.get(dayKey(date)) || 0) : 0,
-            date,
-         });
+         week.push(date.getFullYear() === year ? (counts.get(dayKey(date)) || 0) : 0);
          cur.setDate(cur.getDate() + 1);
       }
-      columns.push({ bin: col, bins });
+      weeks.push(week);
       col += 1;
       if (cur > last) break;
       if (col > 60) break;
    }
-   return columns;
+   // rows x cols for HeatmapRenderer (transpose week columns)
+   const heatmap = Array.from({ length: 7 }, (_, row) => weeks.map((w) => w[row] ?? 0));
+   return { labels: [], heatmap };
 }
-
-const HeatmapClickBridge = ({
-   onPickDay,
-   children,
-}: {
-   onPickDay: (d: Date) => void;
-   children: React.ReactNode;
-}) => {
-   const { tooltipData } = useHeatmapInteraction();
-   return (
-      <div
-         onClick={() => {
-            if (tooltipData) onPickDay(startOfDay(tooltipData.date));
-         }}
-      >
-         {children}
-      </div>
-   );
-};
 
 const ActivityHeatmap = ({ counts, onPickDay }: { counts: Map<string, number>; onPickDay: (d: Date) => void }) => {
    const year = new Date().getFullYear();
-   const data = useMemo(() => buildYearHeatmapData(counts, year), [counts, year]);
+   const data = useMemo(() => prepareActivityHeatmap(counts, year), [counts, year]);
+   void onPickDay; // day filter remains on the date picker; heatmap is visual SoT only
 
    return (
-      <HeatmapInteractionProvider>
-         <HeatmapInteractionBoundary className="h-auto w-full min-w-0">
-            <HeatmapClickBridge onPickDay={onPickDay}>
-               <div style={{ display: 'flex', width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
-                  <HeatmapChart className="w-full" data={data} layout="fluid" levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}>
-                     <HeatmapCells hideGhostCells={false} inactiveOpacity={1} inactiveScale={1} />
-                     <HeatmapXAxis />
-                     <HeatmapYAxis />
-                     <HeatmapTooltip
-                        instant
-                        formatLabel={(count) => `${count} ${count === 1 ? 'activity' : 'activities'}`}
-                     />
-                  </HeatmapChart>
-                  <HeatmapLegend
-                     inactiveOpacity={1}
-                     inactiveScale={1}
-                     levelStyles={HEATMAP_DEFAULT_LEVEL_STYLES}
-                  />
-               </div>
-            </HeatmapClickBridge>
-         </HeatmapInteractionBoundary>
-      </HeatmapInteractionProvider>
+      <Chart
+         preset="ActivityHeatmap"
+         data={data}
+         state={(data.heatmap?.length ?? 0) ? 'ready' : 'empty'}
+         overrides={{ height: 140 }}
+         emptyDescription="No activity history"
+         aria-label={`Activity heatmap ${year}`}
+      />
    );
 };
 

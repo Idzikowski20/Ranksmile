@@ -11,6 +11,7 @@ import {
   RANKSMILE_VOICE_OPTIONS,
   ranksmilePresetVoice,
 } from '../../lib/ranksmileContextMenu';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import IconSmily from './IconSmily';
 
 const IconRanksmile = IconSmily;
@@ -145,7 +146,7 @@ function ToolButton({ editor, command, isActive, onClick, children }: {
         borderRadius: 4, minWidth: 28, width: 'max-content', height: 28,
         background: isActive ? '#F4F4F5' : 'transparent',
         border: 'none', cursor: 'pointer',
-        color: isActive ? '#F29964' : '#302E36',
+        color: isActive ? '#F84416' : '#302E36',
         padding: 0,
         transition: 'background-color 200ms ease-in-out',
       }}
@@ -218,12 +219,13 @@ export function RanksmileLinkModal({
   const canSave = Boolean(linkText.trim() && linkHref.trim());
 
   return (
+    <ShellPortal>
     <div
       data-ranksmile-link-modal
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 250,
+        zIndex: overlayZ.modal,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -419,6 +421,7 @@ export function RanksmileLinkModal({
         </div>
       </form>
     </div>
+    </ShellPortal>
   );
 }
 
@@ -587,7 +590,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
     cursor: 'pointer',
     padding: '0 6px',
     background: active ? '#F4F4F5' : 'transparent',
-    color: active ? '#F29964' : '#302E36',
+    color: active ? '#F84416' : '#302E36',
     fontFamily: 'var(--font-family-primary)',
     fontSize: 14,
     fontWeight: 500,
@@ -699,7 +702,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                       border: 'none',
                       borderRadius: 6,
                       background: active ? '#F4F4F5' : 'transparent',
-                      color: active ? '#F29964' : '#302E36',
+                      color: active ? '#F84416' : '#302E36',
                       cursor: 'pointer',
                       fontFamily: 'var(--font-family-primary)',
                       fontSize: 14,

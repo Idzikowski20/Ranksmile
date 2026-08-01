@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import { useEntrance } from '../../lib/motion/useEntrance';
 
 export interface OptimizeReviewBarProps {

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
-const ACCENT = '#F29964';
+const ACCENT = '#F84416';
 
 /**
  * Thin purple page-load bar pinned to the very top of the viewport (above the

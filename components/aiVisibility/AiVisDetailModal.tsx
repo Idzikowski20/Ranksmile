@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import TrendLineChart from './TrendLineChart';
 import { SkeletonBox } from './SkeletonBlocks';
 import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
 import { ModelIcon, isKnownModel } from './modelIcons';
 import { useAiVisPromptDetail, useAiVisFanoutDetail, type AiVisDetailPayload } from '../../services/aiVisibility';
+import { AiVisSlidePortal, aiVisOverlayZ } from './AiVisSlidePortal';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -38,30 +39,30 @@ const engineLabel = (e: string): string => AI_VIS_MODEL_LABEL[e] || e;
 /** Segmented pill toggle mirroring the overview page's icon-toggle chrome (F4F4F5 track,
  *  white active pill), but text-only for the Overview/Responses + metric switches. */
 const Segmented = <T extends string>({ options, value, onChange }: { options: Array<{ id: T; label: string }>; value: T; onChange: (v: T) => void }) => (
-   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: '#F4F4F5' }}>
+   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: 3, borderRadius: 10, background: 'var(--koala-bg-secondary)' }}>
       {options.map((o) => {
          const on = value === o.id;
          return (
-            <button key={o.id} type="button" onClick={() => onChange(o.id)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 28, padding: '0 12px', border: 'none', borderRadius: 7, background: on ? '#fff' : 'transparent', color: on ? '#18181B' : '#9F9FA9', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: FONT, transition: 'color 150ms ease', whiteSpace: 'nowrap' }}>{o.label}</button>
+            <button key={o.id} type="button" onClick={() => onChange(o.id)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 28, padding: '0 12px', border: 'none', borderRadius: 7, background: on ? 'var(--koala-bg-primary)' : 'transparent', color: on ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)', boxShadow: on ? '0 1px 2px rgba(0,0,0,0.10)' : 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: FONT, transition: 'color 150ms ease', whiteSpace: 'nowrap' }}>{o.label}</button>
          );
       })}
    </div>
 );
 
 const StatCard = ({ label, value, loading }: { label: string; value: React.ReactNode; loading: boolean }) => (
-   <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 13, color: '#71717B' }}>{label}</span>
-      <span style={{ fontSize: 24, fontWeight: 700, color: '#18181B' }}>{loading ? <SkeletonBox w={40} h={26} /> : value}</span>
+   <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>{label}</span>
+      <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--koala-text-primary)' }}>{loading ? <SkeletonBox w={40} h={26} /> : value}</span>
    </div>
 );
 
 /** Blinking-robot empty state — same copy/structure the AI Visibility tables use when a
  *  filter combination yields nothing. */
 const EmptyState = ({ title, hint }: { title: string; hint: string }) => (
-   <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
+   <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
       <span style={{ fontSize: 28 }} className="aiv-robot" aria-hidden>🤖</span>
-      <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>{title}</span>
-      <span style={{ fontSize: 13, color: '#9F9FA9' }}>{hint}</span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>{title}</span>
+      <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>{hint}</span>
    </div>
 );
 
@@ -71,10 +72,10 @@ const EnginePicker = ({ engines, value, onChange }: { engines: string[]; value: 
    const [open, setOpen] = useState(false);
    const label = value ? engineLabel(value) : 'All models';
    const item = (id: string, name: string, on: boolean, icon: React.ReactNode) => (
-      <button key={id || 'all'} type="button" onClick={() => { onChange(id); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: '#18181B', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F4F5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-         {icon ? <span style={{ display: 'inline-flex', color: '#18181B', flexShrink: 0 }}>{icon}</span> : null}
+      <button key={id || 'all'} type="button" onClick={() => { onChange(id); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--koala-text-primary)', textAlign: 'left', fontFamily: FONT }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+         {icon ? <span style={{ display: 'inline-flex', color: 'var(--koala-text-primary)', flexShrink: 0 }}>{icon}</span> : null}
          <span style={{ flex: 1 }}>{name}</span>
-         {on ? <span style={{ display: 'inline-flex', color: '#18181B' }}><Check /></span> : null}
+         {on ? <span style={{ display: 'inline-flex', color: 'var(--koala-text-primary)' }}><Check /></span> : null}
       </button>
    );
    return (
@@ -85,7 +86,7 @@ const EnginePicker = ({ engines, value, onChange }: { engines: string[]; value: 
             <ChevronDown />
          </Button>
          {open ? (
-            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 220, background: '#fff', borderRadius: 12, padding: 8, boxShadow: '0 18px 40px rgba(17,24,39,0.14), 0 8px 18px rgba(17,24,39,0.09)', zIndex: 320, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, minWidth: 220, background: 'var(--koala-bg-primary)', borderRadius: 12, padding: 8, boxShadow: '0 18px 40px rgba(17,24,39,0.14), 0 8px 18px rgba(17,24,39,0.09)', border: '1px solid var(--koala-border-primary)', zIndex: 320, fontFamily: FONT, animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                {item('', 'All models', value === '', null)}
                {engines.map((e) => item(e, engineLabel(e), value === e, isKnownModel(engineLabel(e)) ? <ModelIcon model={engineLabel(e)} size={16} /> : null))}
             </div>
@@ -147,8 +148,7 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
    const trendScans = useMemo(
       () => (payload?.series || []).map((p) => ({
          finishedAt: p.finishedAt,
-         series: { you: { visibilityScore: (p[metric] ?? 0) as number } },
-      })),
+         series: { you: { visibilityScore: (p[metric] ?? 0) as number } } })),
       [payload, metric],
    );
 
@@ -156,12 +156,12 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
    const title = payload?.title || active.title;
 
    return (
-      <>
+      <AiVisSlidePortal>
          <style>{'@keyframes aivRobotBlink{0%,92%,100%{opacity:1}96%{opacity:.35}}.aiv-robot{display:inline-block;animation:aivRobotBlink 2.4s ease-in-out infinite}'}</style>
-         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
-         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 800, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
+         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: aiVisOverlayZ.backdrop, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 800, maxWidth: 'calc(100vw - 16px)', zIndex: aiVisOverlayZ.panel, background: 'var(--koala-bg-primary)', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid var(--koala-border-primary)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
             {/* Header: nav arrows (left) · Overview/Responses toggle (center) · close (right) */}
-            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
+            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid var(--koala-border-primary)' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                      <Button type="button" variant="transparent" size="sm" aria-label="Previous" disabled={!canPrev} onClick={() => onNavigate(index - 1)} icon={<ArrowUp />} style={{ opacity: canPrev ? 1 : 0.35 }} />
@@ -170,10 +170,10 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
                   <Segmented options={[{ id: 'overview', label: 'Overview' }, { id: 'responses', label: 'Responses' }]} value={tab} onChange={setTab} />
                   <Button type="button" variant="transparent" size="sm" aria-label="Close" onClick={handleClose} icon={<CloseIcon />} />
                </div>
-               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{title}</h2>
+               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--koala-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{title}</h2>
                {/* Sub-row: Compare (placeholder) + functional engine picker */}
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <Button type="button" variant="secondary" size="sm" aria-label="Compare (coming soon)" style={{ color: '#52525C', fontFamily: FONT }}>Compare</Button>
+                  <Button type="button" variant="secondary" size="sm" aria-label="Compare (coming soon)" style={{ color: 'var(--koala-text-secondary)', fontFamily: FONT }}>Compare</Button>
                   <EnginePicker engines={engines} value={engine} onChange={setEngine} />
                </div>
             </div>
@@ -193,7 +193,7 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
                      {/* Metric trend */}
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                           <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B' }}>Trend</span>
+                           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Trend</span>
                            <Segmented options={METRICS} value={metric} onChange={setMetric} />
                         </div>
                         <div style={{ height: 320 }}>
@@ -201,57 +201,57 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
                         </div>
                      </div>
 
-                     <div role="separator" style={{ height: 1, background: '#E4E4E7' }} />
+                     <div role="separator" style={{ height: 1, background: 'var(--koala-border-primary)' }} />
 
                      {/* Brands */}
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B' }}>Brands <span style={{ color: '#9F9FA9', fontWeight: 400 }}>{brands.length}</span></span>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Brands <span style={{ color: 'var(--koala-text-secondary)', fontWeight: 400 }}>{brands.length}</span></span>
                         {loading ? (
                            <SkeletonBox w="100%" h={160} />
                         ) : brands.length === 0 ? (
                            <EmptyState title="No brands found" hint="Try changing the filters" />
                         ) : (
-                           <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden' }}>
-                              <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
+                           <div style={{ overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary)', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
                                  <div style={{ ...cell, flex: 1, minWidth: 0 }}>Brand</div>
-                                 <div style={{ ...cell, width: 150, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>Mentions</div>
-                                 <div style={{ ...cell, width: 130, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>Avg. position</div>
+                                 <div style={{ ...cell, width: 150, flexShrink: 0, justifyContent: 'flex-end' }}>Mentions</div>
+                                 <div style={{ ...cell, width: 130, flexShrink: 0, justifyContent: 'flex-end' }}>Avg. position</div>
                               </div>
                               {brands.map((b) => (
-                                 <div key={`${b.domain}-${b.brand}`} style={{ display: 'flex', borderTop: '1px solid #F4F4F5' }}>
+                                 <div key={`${b.domain}-${b.brand}`} style={{ display: 'flex', borderTop: '1px solid var(--koala-border-primary)' }}>
                                     <div style={{ ...cell, flex: 1, minWidth: 0, gap: 8 }}>
                                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          <span style={{ fontWeight: 500, color: '#18181B' }}>{b.brand}</span>
-                                          {b.domain ? <span style={{ color: '#9F9FA9' }}> · {b.domain}</span> : null}
+                                          <span style={{ fontWeight: 500, color: 'var(--koala-text-primary)' }}>{b.brand}</span>
+                                          {b.domain ? <span style={{ color: 'var(--koala-text-secondary)' }}> · {b.domain}</span> : null}
                                        </span>
                                     </div>
-                                    <div style={{ ...cell, width: 150, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5', fontWeight: 600, color: '#18181B' }}>{b.mentions}</div>
-                                    <div style={{ ...cell, width: 130, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5', color: b.avgPosition != null ? '#18181B' : '#9F9FA9' }}>{b.avgPosition != null ? b.avgPosition.toFixed(1) : '—'}</div>
+                                    <div style={{ ...cell, width: 150, flexShrink: 0, justifyContent: 'flex-end', fontWeight: 600, color: 'var(--koala-text-primary)' }}>{b.mentions}</div>
+                                    <div style={{ ...cell, width: 130, flexShrink: 0, justifyContent: 'flex-end', color: b.avgPosition != null ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)' }}>{b.avgPosition != null ? b.avgPosition.toFixed(1) : '—'}</div>
                                  </div>
                               ))}
                            </div>
                         )}
                      </div>
 
-                     <div role="separator" style={{ height: 1, background: '#E4E4E7' }} />
+                     <div role="separator" style={{ height: 1, background: 'var(--koala-border-primary)' }} />
 
                      {/* Fanout queries */}
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B' }}>Fanout Queries <span style={{ color: '#9F9FA9', fontWeight: 400 }}>{fanout.length}</span></span>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Fanout Queries <span style={{ color: 'var(--koala-text-secondary)', fontWeight: 400 }}>{fanout.length}</span></span>
                         {loading ? (
                            <SkeletonBox w="100%" h={160} />
                         ) : fanout.length === 0 ? (
                            <EmptyState title="No fanout queries found" hint="Try changing the filters" />
                         ) : (
-                           <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden' }}>
-                              <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
+                           <div style={{ overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary)', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
                                  <div style={{ ...cell, flex: 1, minWidth: 0 }}>Query</div>
-                                 <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>Count</div>
+                                 <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}>Count</div>
                               </div>
                               {fanout.map((f) => (
-                                 <div key={f.query} style={{ display: 'flex', borderTop: '1px solid #F4F4F5' }}>
-                                    <div style={{ ...cell, flex: 1, minWidth: 0, color: '#18181B', lineHeight: 1.5 }}>{f.query}</div>
-                                    <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5', fontWeight: 600, color: '#18181B' }}>{f.timesShown}</div>
+                                 <div key={f.query} style={{ display: 'flex', borderTop: '1px solid var(--koala-border-primary)' }}>
+                                    <div style={{ ...cell, flex: 1, minWidth: 0, color: 'var(--koala-text-primary)', lineHeight: 1.5 }}>{f.query}</div>
+                                    <div style={{ ...cell, width: 120, flexShrink: 0, justifyContent: 'flex-end', fontWeight: 600, color: 'var(--koala-text-primary)' }}>{f.timesShown}</div>
                                  </div>
                               ))}
                            </div>
@@ -261,7 +261,7 @@ const AiVisDetailModal = ({ slug, kind, items, index, onNavigate, onClose }: Pro
                )}
             </div>
          </div>
-      </>
+      </AiVisSlidePortal>
    );
 };
 

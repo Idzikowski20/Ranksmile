@@ -17,9 +17,9 @@ import {
   promptSliderIndex,
   promptSliderValueAt,
 } from '../../lib/pricing/planRecommender';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 
-const Check = ({ color = '#F29964' }: { color?: string }) => (
+const Check = ({ color = '#F84416' }: { color?: string }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
     <path
       d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207"
@@ -37,7 +37,7 @@ const TogglePill = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
       width: 32,
       height: 16,
       borderRadius: 9999,
-      background: on ? '#F29964' : '#E4E4E7',
+      background: on ? '#F84416' : '#E4E4E7',
       position: 'relative',
       flexShrink: 0,
       cursor: 'pointer',
@@ -70,13 +70,13 @@ const Starfield = () => (
     height="100%"
     style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.55 }}
   >
-    <circle cx="8%" cy="18%" r="1.2" fill="#F29964" opacity="0.45" />
+    <circle cx="8%" cy="18%" r="1.2" fill="#F84416" opacity="0.45" />
     <circle cx="22%" cy="72%" r="1" fill="#181225" opacity="0.2" />
-    <circle cx="41%" cy="28%" r="1.4" fill="#F29964" opacity="0.3" />
+    <circle cx="41%" cy="28%" r="1.4" fill="#F84416" opacity="0.3" />
     <circle cx="58%" cy="14%" r="1" fill="#181225" opacity="0.18" />
-    <circle cx="73%" cy="62%" r="1.2" fill="#F29964" opacity="0.35" />
+    <circle cx="73%" cy="62%" r="1.2" fill="#F84416" opacity="0.35" />
     <circle cx="88%" cy="34%" r="1" fill="#181225" opacity="0.22" />
-    <circle cx="15%" cy="48%" r="0.8" fill="#F29964" opacity="0.25" />
+    <circle cx="15%" cy="48%" r="0.8" fill="#F84416" opacity="0.25" />
     <circle cx="66%" cy="80%" r="1.1" fill="#181225" opacity="0.16" />
   </svg>
 );
@@ -188,7 +188,7 @@ const PlanRecommenderBanner = ({
                   bottom: 0,
                   width: `${thumbPercent}%`,
                   borderRadius: 9999,
-                  background: '#F29964',
+                  background: '#F84416',
                   transition: 'width 160ms ease',
                 }}
               />
@@ -221,7 +221,7 @@ const PlanRecommenderBanner = ({
                   marginLeft: -9,
                   borderRadius: 9999,
                   background: '#fff',
-                  border: '2px solid #F29964',
+                  border: '2px solid #F84416',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
                   pointerEvents: 'none',
                   transition: 'left 160ms ease',

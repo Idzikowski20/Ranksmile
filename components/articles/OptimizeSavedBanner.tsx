@@ -74,7 +74,7 @@ const OptimizeSavedBanner: React.FC<OptimizeSavedBannerProps> = ({ open, onOpenH
                      padding: '6px 14px',
                      transition: 'background 0.15s ease',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
                >
                   Version History

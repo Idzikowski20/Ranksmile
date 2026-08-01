@@ -8,7 +8,7 @@ import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
-import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/core';
+import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
@@ -47,21 +47,17 @@ const Spinner = ({ size = 16 }: { size?: number }) => (
 );
 
 const ProcessingPill = ({ status }: { status: PendingStatus }) => {
-   const map: Record<PendingStatus, { bg: string; color: string; label: string }> = {
-      processing: { bg: '#FFFBEB', color: '#B45309', label: 'Processing' },
-      done: { bg: '#F0FDF4', color: '#15803D', label: 'Analyzed' },
-      error: { bg: '#FEF2F2', color: '#DC2626', label: 'Failed' },
-   };
-   const s = map[status];
+   const variant = status === 'processing' ? 'warning' as const : status === 'done' ? 'success' as const : 'danger' as const;
+   const label = status === 'processing' ? 'Processing' : status === 'done' ? 'Analyzed' : 'Failed';
    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: s.bg, color: s.color, fontFamily: FONT }}>
-         {status === 'processing' && <Spinner size={11} />}{s.label}
-      </span>
+      <Badge variant={variant} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: FONT }}>
+         {status === 'processing' && <Spinner size={11} />}{label}
+      </Badge>
    );
 };
 
-const CELL_FONT = { fontFamily: FONT, fontSize: 13, color: '#09090B' };
-const CELL_MUTED = { fontFamily: FONT, fontSize: 13, color: '#9F9FA9' };
+const CELL_FONT = { fontFamily: FONT, fontSize: 13, color: 'var(--koala-text-primary)' };
+const CELL_MUTED = { fontFamily: FONT, fontSize: 13, color: 'var(--koala-text-tertiary)' };
 
 type DomainArticle = {
    id: number | string;
@@ -184,8 +180,7 @@ const ContentAuditPage: NextPage = () => {
             impressions: m?.impressions ?? 0,
             status: a.status || '',
             created_at: a.created_at,
-            updatedAt: a.updated_at || a.created_at,
-         };
+            updatedAt: a.updated_at || a.created_at };
       });
    }, [articlesData, scData]);
 
@@ -219,8 +214,7 @@ const ContentAuditPage: NextPage = () => {
       const body: Record<string, unknown> = { url: opts.url, domainId: activeDomain?.ID, keywords: opts.keyword ? [opts.keyword] : [] };
       if (opts.articleId !== undefined) body.articleId = opts.articleId;
       const res = await fetch('/api/articles/deep-analysis', {
-         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      });
+         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       let errored = !res.ok;
       if (res.body) {
          const reader = res.body.getReader();
@@ -292,8 +286,7 @@ const ContentAuditPage: NextPage = () => {
       await fetch(`/api/articles/${kwModalRow.id}`, {
          method: 'PUT',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ target_keyword: newKeyword }),
-      });
+         body: JSON.stringify({ target_keyword: newKeyword }) });
       queryClient.invalidateQueries(['articles', activeDomain?.ID]);
    };
 
@@ -314,8 +307,7 @@ const ContentAuditPage: NextPage = () => {
 
    const auditChunk = useTableLoadMore(filtered, {
       pageSize: 20,
-      resetKey: `ca-${sortKey}-${sortDir}-${search}-${filtered.length}`,
-   });
+      resetKey: `ca-${sortKey}-${sortDir}-${search}-${filtered.length}` });
 
    const portfolioInsight = useMemo(
       () => computePortfolioPruning(rows.map((r) => ({
@@ -325,8 +317,7 @@ const ContentAuditPage: NextPage = () => {
          content_score: r.content_score,
          clicks: r.clicks,
          impressions: r.impressions,
-         created_at: r.created_at,
-      }))),
+         created_at: r.created_at }))),
       [rows],
    );
 
@@ -383,9 +374,9 @@ const ContentAuditPage: NextPage = () => {
          <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%" fillHeight
             filters={(
                <ToolRibbon>
-                  <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
+                  <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
-                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: FONT }}>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>
                         <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
                         Show URLs
                      </label>
@@ -399,47 +390,37 @@ const ContentAuditPage: NextPage = () => {
                   marginBottom: 16,
                   padding: 16,
                   borderRadius: 8,
-                  border: '1px solid #dbded4',
-                  background: '#fff',
-                  fontFamily: FONT,
-               }}
+                  border: '1px solid var(--koala-border-primary)',
+                  background: 'var(--koala-bg-primary)',
+                  fontFamily: FONT }}
                >
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                     <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>Portfolio quality</span>
-                     <span style={{ fontSize: 12, color: '#71717B' }}>
+                     <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Portfolio quality</span>
+                     <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)' }}>
                         avg score {portfolioInsight.avgScore}
                         {portfolioInsight.scoreStdDev > 0 ? ` · spread ±${portfolioInsight.scoreStdDev}` : ''}
                      </span>
                   </div>
                   {portfolioInsight.warning && (
-                     <p style={{ margin: '0 0 10px', fontSize: 13, color: '#B45309', lineHeight: 1.45 }}>
+                     <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--koala-status-warning)', lineHeight: 1.45 }}>
                         {portfolioInsight.warning}
                      </p>
                   )}
                   {portfolioInsight.pruneCandidates.length > 0 && (
                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#52525C', marginBottom: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--koala-text-secondary)', marginBottom: 6 }}>
                            Prune / rewrite candidates ({portfolioInsight.pruneCandidates.length})
                         </div>
                         <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
                            {portfolioInsight.pruneCandidates.slice(0, 8).map((c) => (
                               <li key={String(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-                                 <span style={{
-                                    flexShrink: 0,
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    padding: '2px 7px',
-                                    borderRadius: 9999,
-                                    background: c.severity === 'high' ? '#FEF2F2' : '#FFFBEB',
-                                    color: c.severity === 'high' ? '#B91C1C' : '#B45309',
-                                 }}
-                                 >
+                                 <Badge variant={c.severity === 'high' ? 'danger' : 'warning'} size="sm" style={{ flexShrink: 0, fontSize: 10, fontWeight: 700 }}>
                                     {c.severity === 'high' ? 'Prune' : 'Rewrite'}
-                                 </span>
-                                 <Link href={`/articles/${c.id}`} style={{ color: '#18181B', fontWeight: 500, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                 </Badge>
+                                 <Link href={`/articles/${c.id}`} style={{ color: 'var(--koala-text-primary)', fontWeight: 500, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {c.title || c.url}
                                  </Link>
-                                 <span style={{ marginLeft: 'auto', flexShrink: 0, color: '#9F9FA9', fontVariantNumeric: 'tabular-nums' }}>
+                                 <span style={{ marginLeft: 'auto', flexShrink: 0, color: 'var(--koala-text-tertiary)', fontVariantNumeric: 'tabular-nums' }}>
                                     score {c.content_score} · {c.clicks} clicks
                                  </span>
                               </li>
@@ -453,13 +434,13 @@ const ContentAuditPage: NextPage = () => {
             <DataTableScroll ref={scrollRef}>
                <DataTableContent minWidth={780} aria-label="Content audit">
                <DataTableHeader>
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #E4E4E7' }}>
+                  <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center' }}>
                      <Checkbox checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
                   </div>
-                  <div style={{ padding: '10px 12px', flexGrow: 1, minWidth: 256, display: 'flex', gap: 8, alignItems: 'center' }}>
-                     <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)', textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Page</span>
-                     <span style={{ color: '#D4D4D8', fontSize: 12 }}>/</span>
-                     <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)', textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Main keyword</span>
+                  <div style={{ padding: '8px 16px', flexGrow: 1, minWidth: 256, display: 'flex', gap: 8, alignItems: 'center' }}>
+                     <span style={{ fontSize: 14, color: 'var(--koala-text-secondary, #575757)', fontWeight: 500, letterSpacing: '-0.4px', fontFamily: 'var(--font-family-primary)' }}>Page</span>
+                     <span style={{ color: 'var(--koala-border-primary, #e5e5e5)', fontSize: 14 }}>/</span>
+                     <span style={{ fontSize: 14, color: 'var(--koala-text-secondary, #575757)', fontWeight: 500, letterSpacing: '-0.4px', fontFamily: 'var(--font-family-primary)' }}>Main keyword</span>
                   </div>
                   <SortableHeader label="Content Score" sortKey="content_score" activeKey={sortKey} dir={sortDir} width={150} onSort={(k) => handleSort(k as SortKey)} />
                   <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
@@ -469,23 +450,23 @@ const ContentAuditPage: NextPage = () => {
 
                <DataTableBody>
                {pending.map((p) => (
-                  <DataTableRow key={`pending-${p.path}`} style={{ minHeight: 64, background: '#FCFCFD' }}>
-                     <div style={{ padding: '12px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44 }}>
+                  <DataTableRow key={`pending-${p.path}`} style={{ minHeight: 64, background: 'var(--koala-bg-tertiary)' }}>
+                     <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44 }}>
                         {p.status === 'processing' ? <Spinner /> : <span style={{ width: 16, height: 16 }} />}
                      </div>
                      <div style={{ padding: '12px', flexGrow: 1, minWidth: 256, display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                           <span style={{ fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.path}</span>
+                           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.path}</span>
                            <ProcessingPill status={p.status} />
                         </div>
-                        {p.keyword && <span style={{ fontSize: 12, color: '#71717B', fontFamily: FONT }}>{p.keyword}</span>}
+                        {p.keyword && <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>{p.keyword}</span>}
                      </div>
-                     <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', width: 150, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        {p.status === 'processing' ? <Spinner /> : <span style={{ fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>—</span>}
+                     <div style={{ padding: '12px', width: 150, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {p.status === 'processing' ? <Spinner /> : <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: FONT }}>—</span>}
                      </div>
-                     <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>—</div>
-                     <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT }}>{p.clicks > 0 ? p.clicks : '—'}</div>
-                     <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT }}>{p.impressions > 0 ? p.impressions : '—'}</div>
+                     <div style={{ padding: '12px', minWidth: 108, textAlign: 'right', fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: FONT }}>—</div>
+                     <div style={{ padding: '12px', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: FONT }}>{p.clicks > 0 ? p.clicks : '—'}</div>
+                     <div style={{ padding: '12px', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: FONT }}>{p.impressions > 0 ? p.impressions : '—'}</div>
                   </DataTableRow>
                ))}
                {isLoading ? (
@@ -495,8 +476,8 @@ const ContentAuditPage: NextPage = () => {
                      <DataTableEmpty>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '32px 24px', textAlign: 'center' }}>
                            <EmptyEyes />
-                           <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>You haven&apos;t added any pages yet</span>
-                           <p style={{ margin: 0, maxWidth: 408, color: '#3F3F47', fontSize: 14, lineHeight: '20px', fontFamily: FONT }}>Add existing pages you want to audit, get recommendations, and keep an eye out for. Modify anytime.</p>
+                           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>You haven&apos;t added any pages yet</span>
+                           <p style={{ margin: 0, maxWidth: 408, color: 'var(--koala-text-secondary)', fontSize: 14, lineHeight: '20px', fontFamily: FONT }}>Add existing pages you want to audit, get recommendations, and keep an eye out for. Modify anytime.</p>
                            <Button variant="primary" onClick={() => setAddOpen(true)}>
                               Add Page
                            </Button>
@@ -512,22 +493,22 @@ const ContentAuditPage: NextPage = () => {
                            selected={selected.has(row.id)}
                            style={{ minHeight: 64 }}
                         >
-                           <div style={{ padding: '12px', borderRight: '1px solid #F4F4F5' }}>
+                           <div style={{ padding: '12px' }}>
                               <Checkbox checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
                            </div>
                            <div style={{ padding: '12px', flexGrow: 1, minWidth: 256, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, overflow: 'hidden' }}>
                               <div onClick={() => setPanelRow(row)} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                        {row.title}
                                     </span>
                                     <StatusBadge status={row.status} />
                                     {row.url && droppedPaths.has(toPath(row.url)) && (
-                                       <span style={{ fontSize: 11, fontWeight: 600, color: '#B91C1C', background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 9999, padding: '1px 8px', whiteSpace: 'nowrap', fontFamily: FONT }}>Traffic drop</span>
+                                       <Badge variant="danger" size="sm">Traffic drop</Badge>
                                     )}
                                  </div>
                                  {row.keyword ? (
-                                    <Button type="button" variant="link" size="xs" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={<PencilIcon />} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0, color: '#71717B' }}>
+                                    <Button type="button" variant="link" size="xs" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={<PencilIcon />} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0, color: 'var(--koala-text-secondary)' }}>
                                        <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword}</span>
                                     </Button>
                                  ) : (
@@ -535,7 +516,7 @@ const ContentAuditPage: NextPage = () => {
                                        + Add keyword
                                     </Button>
                                  )}
-                                 {showUrls && row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
+                                 {showUrls && row.url && <span style={{ fontSize: 11, color: 'var(--koala-text-tertiary)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
                               </div>
                               <div>
                                  {row.status === 'error' ? (
@@ -556,16 +537,16 @@ const ContentAuditPage: NextPage = () => {
                                  )}
                               </div>
                            </div>
-                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', width: 150, display: 'flex', justifyContent: 'flex-end' }}>
+                           <div style={{ padding: '12px', width: 150, display: 'flex', justifyContent: 'flex-end' }}>
                               <Gauge score={row.content_score} size="sm" />
                            </div>
-                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+                           <div style={{ padding: '12px', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                               {row.position > 0 ? row.position.toFixed(1) : '—'}
                            </div>
-                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+                           <div style={{ padding: '12px', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                               {row.clicks > 0 ? row.clicks : '—'}
                            </div>
-                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+                           <div style={{ padding: '12px', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                               {row.impressions > 0 ? row.impressions : '—'}
                            </div>
                         </DataTableRow>
@@ -579,10 +560,10 @@ const ContentAuditPage: NextPage = () => {
             </DataTable>
 
             <style dangerouslySetInnerHTML={{ __html: `
-               .audit-row:hover { background: #fafafa !important; }
-               .addpage-row:hover { background: #f3f4f0 !important; }
+               .audit-row:hover { background: var(--koala-bg-secondary) !important; }
+               .addpage-row:hover { background: var(--koala-bg-secondary) !important; }
                .audit-row:hover .ca-row-actions { opacity: 1 !important; }
-               .ca-kw-btn:hover .ca-kw-text { text-decoration-color: #D4D4D8 !important; }
+               .ca-kw-btn:hover .ca-kw-text { text-decoration-color: var(--koala-border-primary) !important; }
             ` }} />
 
             <SlidePanel

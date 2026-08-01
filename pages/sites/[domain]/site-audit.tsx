@@ -14,7 +14,7 @@ import SiteAuditCrawledPages from '../../../components/siteAudit/SiteAuditCrawle
 import SiteAuditCompareCrawls from '../../../components/siteAudit/SiteAuditCompareCrawls';
 import { CrawlLimitIndicator } from '../../../components/siteAudit/CrawlLimitPopover';
 import CrawlLimitUpgradeBanner from '../../../components/siteAudit/CrawlLimitUpgradeBanner';
-import { Button, Tabs } from '../../../components/core';
+import { Button, Tabs } from '../../../components/koala/core';
 import { AUDIT_URL_PATH, sitePath } from '../../../lib/navigation';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';
@@ -123,7 +123,7 @@ const SiteAuditPage: NextPage = () => {
       : 'Rerun campaign';
 
   const filters = (
-    <div className="sentry-page-filters" style={{ marginBottom: 16 }}>
+    <div className="koala-page-filters" style={{ marginBottom: 16 }}>
       <Tabs items={tabItems} value={tab} onChange={onTabChange} />
     </div>
   );
@@ -201,7 +201,7 @@ const SiteAuditPage: NextPage = () => {
                 width: 14,
                 height: 14,
                 border: '2px solid #dbded4',
-                borderTopColor: '#F29964',
+                borderTopColor: '#F84416',
                 borderRadius: '50%',
                 animation: 'spin 0.7s linear infinite',
                 flexShrink: 0,
@@ -231,7 +231,6 @@ const SiteAuditPage: NextPage = () => {
         )}
         {data && !data.hasData && (
           <div
-            className="perf-3d-card"
             style={{
               borderRadius: 12,
               background: '#FFFFFF',

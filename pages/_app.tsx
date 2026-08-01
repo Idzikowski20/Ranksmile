@@ -1,12 +1,12 @@
 /* eslint-disable import/no-unresolved */
 import '../styles/globals.css';
+import '../styles/cursors.css';
 import React from 'react';
 import type { AppProps } from 'next/app';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { QueryClient, QueryClientProvider, useQuery } from 'react-query';
 import { Hydrate } from 'react-query/hydration';
-import { ThemeProvider } from '@emotion/react';
 import posthog from 'posthog-js';
 import { fetchBootstrapOrNull } from '../lib/fetchBootstrap';
 import { isPublicPath } from '../lib/isPublicPath';
@@ -18,8 +18,8 @@ import TopProgressBar from '../components/common/TopProgressBar';
 import { OnboardingStatusContext } from '../lib/onboardingStatus';
 import { EmailConfirmedStatusContext } from '../lib/emailConfirmedStatus';
 import { parseWorkspaceId } from '../lib/activeWorkspace';
-import { theme } from '../components/core/theme';
-import { IconDefaultsProvider } from '../components/core/IconDefaultsProvider';
+import { IconDefaultsProvider } from '../components/koala/core/IconDefaultsProvider';
+import { KoalaThemeProvider } from '../components/koala/theme';
 
 if (typeof window !== 'undefined') {
   const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
@@ -216,7 +216,7 @@ function PaymentFailedLockGuard({ children }: { children: React.ReactNode }) {
     if (isPublic) return;
     if (!paymentFailedLocked) return;
     const allowed = isFrontendRouteAllowedDuringPaymentLock(router.asPath);
-    if (!allowed) router.replace('/plans?reason=payment_failed');
+    if (!allowed) router.replace('/billing/confirmation/failed');
   }, [isPublic, paymentFailedLocked, router, router.asPath]);
 
   return <>{children}</>;
@@ -245,7 +245,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     return (
        <QueryClientProvider client={queryClient}>
           <Hydrate state={dehydratedState}>
-             <ThemeProvider theme={theme}>
+             <KoalaThemeProvider>
                 <IconDefaultsProvider size="sm">
                    <TopProgressBar />
                    <WorkspaceCookieSync />
@@ -257,7 +257,7 @@ function MyApp({ Component, pageProps }: AppProps) {
                    <AppToaster />
                    <GlobalSmoothCaret />
                 </IconDefaultsProvider>
-             </ThemeProvider>
+             </KoalaThemeProvider>
           </Hydrate>
        </QueryClientProvider>
     );

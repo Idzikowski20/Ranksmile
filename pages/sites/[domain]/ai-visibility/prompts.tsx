@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import PromptTopicsTable, { TopicRow } from '../../../../components/aiVisibility/PromptTopicsTable';
 import { SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
-import { HoverTooltip, Button } from '../../../../components/core';
+import { HoverTooltip, Button } from '../../../../components/koala/core';
 import { useAiVisPromptTopics, useAiVisData } from '../../../../services/aiVisibility';
 import { AI_VIS_MODEL_LABEL } from '../../../../lib/aiVisibility';
 
@@ -79,7 +79,7 @@ const AiVisibilityPrompts: NextPage = () => {
                   </div>
 
                   {pending ? (
-                     <div style={{ ...CARD_3D, padding: 24 }}><SkeletonRows count={6} /></div>
+                     <div style={{ padding: 24 }}><SkeletonRows count={6} /></div>
                   ) : (
                      <>
                         <PromptTopicsTable topics={topics} />

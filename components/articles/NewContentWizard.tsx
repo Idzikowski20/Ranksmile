@@ -36,7 +36,7 @@ export function WizardStepper({ current }: { current: WizardStepKey }) {
                 style={{
                   width: 16,
                   height: 1,
-                  background: done || active ? '#783AFB' : '#E4E4E7',
+                  background: done || active ? 'var(--koala-bg-brand)' : '#E4E4E7',
                 }}
               />
             )}
@@ -47,7 +47,7 @@ export function WizardStepper({ current }: { current: WizardStepKey }) {
                 gap: 6,
                 fontSize: 13,
                 fontWeight: active ? 600 : 500,
-                color: active ? '#18181B' : done ? '#783AFB' : '#A1A1AA',
+                color: active ? '#18181B' : done ? 'var(--koala-text-brand)' : '#A1A1AA',
               }}
             >
               <span
@@ -60,7 +60,7 @@ export function WizardStepper({ current }: { current: WizardStepKey }) {
                   justifyContent: 'center',
                   fontSize: 11,
                   fontWeight: 600,
-                  background: active || done ? '#783AFB' : '#F4F4F5',
+                  background: active || done ? 'var(--koala-bg-brand)' : '#F4F4F5',
                   color: active || done ? '#FFFFFF' : '#71717A',
                 }}
               >

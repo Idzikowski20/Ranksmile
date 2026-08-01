@@ -4,19 +4,21 @@ import {
   CompactSelect,
   Pagination,
   getPaginationCaption,
-} from '../core';
+} from '../koala/core';
 import {
-  SentryEmptyState,
-  SentryPanel,
-  SentryPanelBody,
-  SentryPanelHeader,
+  KoalaEmptyState,
+  KoalaPanel,
+  KoalaPanelBody,
+  KoalaPanelHeader,
+} from '../koala/layout';
+import {
   SentryTable,
   SentryTableBody,
   SentryTableCell,
   SentryTableHead,
   SentryTableHeaderCell,
   SentryTableRow,
-} from '../sentry-pages';
+} from '../koala/layout';
 import CrawledPagesManageColumns, {
   DEFAULT_CRAWLED_PAGE_VISIBLE,
   type CrawledPageColumnKey,
@@ -36,7 +38,7 @@ const PAGE_SIZE = 50;
 
 function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" className={active ? 'sentry-crawled-pages-sort--active' : 'sentry-crawled-pages-sort'}>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" className={active ? 'koala-crawled-pages-sort--active' : 'koala-crawled-pages-sort'}>
       <path d="M13 3a1 1 0 1 1 0 2H3a1 1 0 0 1 0-2h10ZM10 8a1 1 0 0 0-1-1H3a1 1 0 1 0 0 2h6a1 1 0 0 0 1-1ZM6 12a1 1 0 0 0-1-1H3a1 1 0 1 0 0 2h2a1 1 0 0 0 1-1Z" opacity={active && dir === 'asc' ? 0.35 : 1} />
     </svg>
   );
@@ -72,14 +74,14 @@ function compareRows(a: CrawledPageRow, b: CrawledPageRow, key: SortKey, dir: 'a
 }
 
 function IssuesCell({ row }: { row: CrawledPageRow }) {
-  if (row.issueCount <= 0) return <span className="sentry-crawled-pages-muted">0</span>;
+  if (row.issueCount <= 0) return <span className="koala-crawled-pages-muted">0</span>;
   return (
-    <div className="sentry-crawled-pages-issues">
+    <div className="koala-crawled-pages-issues">
       {row.issueErrors > 0 && (
-        <span className="sentry-crawled-pages-issues-error">{row.issueErrors}</span>
+        <span className="koala-crawled-pages-issues-error">{row.issueErrors}</span>
       )}
       {row.issueWarnings > 0 && (
-        <span className="sentry-crawled-pages-issues-warning">{row.issueWarnings}</span>
+        <span className="koala-crawled-pages-issues-warning">{row.issueWarnings}</span>
       )}
       {row.issueErrors === 0 && row.issueWarnings === 0 && (
         <span>{row.issueCount}</span>
@@ -91,7 +93,7 @@ function IssuesCell({ row }: { row: CrawledPageRow }) {
 function AiBotsCell({ row }: { row: CrawledPageRow }) {
   if (row.blockedAiBots > 0) {
     return (
-      <span className="sentry-crawled-pages-ai-blocked">
+      <span className="koala-crawled-pages-ai-blocked">
         {row.blockedAiBots}
         /
         {row.totalAiBots}
@@ -101,7 +103,7 @@ function AiBotsCell({ row }: { row: CrawledPageRow }) {
     );
   }
   return (
-    <div className="sentry-crawled-pages-ai-good" title="All AI bots allowed">
+    <div className="koala-crawled-pages-ai-good" title="All AI bots allowed">
       {PRIMARY_BOTS.slice(0, 3).map((bot) => (
         <BotIcon key={bot.id} botId={bot.id} size={14} />
       ))}
@@ -128,8 +130,8 @@ function SortableTh({
 }) {
   const active = activeKey === sortKey;
   return (
-    <SentryTableHeaderCell align={align} className={`sentry-crawled-pages-th ${className}`}>
-      <button type="button" className="sentry-crawled-pages-th-btn" onClick={() => onSort(sortKey)}>
+    <SentryTableHeaderCell align={align} className={`koala-crawled-pages-th ${className}`}>
+      <button type="button" className="koala-crawled-pages-th-btn" onClick={() => onSort(sortKey)}>
         <span>{label}</span>
         <SortIcon active={active} dir={dir} />
       </button>
@@ -166,9 +168,9 @@ export default function SiteAuditCrawledPages({ report }: Props) {
   const pageRows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <div className="sentry-crawled-pages">
-      <SentryPanel className="sentry-crawled-pages-filters-panel perf-3d-card">
-        <SentryPanelBody className="sentry-crawled-pages-filters">
+    <div className="koala-crawled-pages">
+      <KoalaPanel className="koala-crawled-pages-filters-panel">
+        <KoalaPanelBody className="koala-crawled-pages-filters">
           <CompactSelect
             size="sm"
             align="left"
@@ -187,29 +189,29 @@ export default function SiteAuditCrawledPages({ report }: Props) {
             triggerLabel="Advanced filters"
             disabled
           />
-        </SentryPanelBody>
-      </SentryPanel>
+        </KoalaPanelBody>
+      </KoalaPanel>
 
-      <SentryPanel noPadding className="sentry-crawled-pages-table-panel perf-3d-card">
-        <SentryPanelHeader
+      <KoalaPanel noPadding className="koala-crawled-pages-table-panel">
+        <KoalaPanelHeader
           title="Crawled Pages"
           actions={<CrawledPagesManageColumns visible={visibleColumns} onChange={setVisibleColumns} />}
         />
 
         {sorted.length === 0 ? (
-          <SentryPanelBody>
-            <SentryEmptyState title="No matching pages" description="Try adjusting your filters." />
-          </SentryPanelBody>
+          <KoalaPanelBody>
+            <KoalaEmptyState title="No matching pages" description="Try adjusting your filters." />
+          </KoalaPanelBody>
         ) : (
           <>
-            <SentryTable className="sentry-crawled-pages-table">
+            <SentryTable className="koala-crawled-pages-table">
               <SentryTableHead>
                 <SentryTableRow>
                   {showCol('ilr') && (
-                    <SortableTh label="ILR" sortKey="score" activeKey={sortKey} dir={sortDir} onSort={onSort} align="right" className="sentry-crawled-pages-th--score" />
+                    <SortableTh label="ILR" sortKey="score" activeKey={sortKey} dir={sortDir} onSort={onSort} align="right" className="koala-crawled-pages-th--score" />
                   )}
                   {showCol('url') && (
-                    <SortableTh label="Page URL" sortKey="url" activeKey={sortKey} dir={sortDir} onSort={onSort} className="sentry-crawled-pages-th--url" />
+                    <SortableTh label="Page URL" sortKey="url" activeKey={sortKey} dir={sortDir} onSort={onSort} className="koala-crawled-pages-th--url" />
                   )}
                   {showCol('title') && (
                     <SortableTh label="Title" sortKey="title" activeKey={sortKey} dir={sortDir} onSort={onSort} />
@@ -221,13 +223,13 @@ export default function SiteAuditCrawledPages({ report }: Props) {
                     <SortableTh label="Issues" sortKey="issues" activeKey={sortKey} dir={sortDir} onSort={onSort} align="right" />
                   )}
                   {showCol('aiSearch') && (
-                    <SentryTableHeaderCell className="sentry-crawled-pages-th">AI Search</SentryTableHeaderCell>
+                    <SentryTableHeaderCell className="koala-crawled-pages-th">AI Search</SentryTableHeaderCell>
                   )}
                   {showCol('depth') && (
                     <SortableTh label="Depth" sortKey="depth" activeKey={sortKey} dir={sortDir} onSort={onSort} align="right" />
                   )}
                   {showCol('reaudit') && (
-                    <SentryTableHeaderCell align="right" className="sentry-crawled-pages-th">Reaudit</SentryTableHeaderCell>
+                    <SentryTableHeaderCell align="right" className="koala-crawled-pages-th">Reaudit</SentryTableHeaderCell>
                   )}
                 </SentryTableRow>
               </SentryTableHead>
@@ -237,31 +239,31 @@ export default function SiteAuditCrawledPages({ report }: Props) {
                   return (
                     <SentryTableRow key={row.id}>
                       {showCol('ilr') && (
-                        <SentryTableCell align="right" className="sentry-crawled-pages-cell--score">
+                        <SentryTableCell align="right" className="koala-crawled-pages-cell--score">
                           {row.score !== null ? (
                             <span style={{ color: scoreColor(row.score), fontWeight: 600 }}>{row.score}</span>
                           ) : (
-                            <span className="sentry-crawled-pages-muted">—</span>
+                            <span className="koala-crawled-pages-muted">—</span>
                           )}
                         </SentryTableCell>
                       )}
                       {showCol('url') && (
-                        <SentryTableCell className="sentry-crawled-pages-cell--url">
-                          <UrlCell url={row.url} classPrefix="sentry-crawled-pages" />
+                        <SentryTableCell className="koala-crawled-pages-cell--url">
+                          <UrlCell url={row.url} classPrefix="koala-crawled-pages" />
                         </SentryTableCell>
                       )}
                       {showCol('title') && (
-                        <SentryTableCell className="sentry-crawled-pages-cell--title">
+                        <SentryTableCell className="koala-crawled-pages-cell--title">
                           {row.title ? (
-                            <span className="sentry-crawled-pages-title" title={row.title}>{row.title}</span>
+                            <span className="koala-crawled-pages-title" title={row.title}>{row.title}</span>
                           ) : (
-                            <span className="sentry-crawled-pages-muted">—</span>
+                            <span className="koala-crawled-pages-muted">—</span>
                           )}
                         </SentryTableCell>
                       )}
                       {showCol('statusCode') && (
                         <SentryTableCell>
-                          <span className={`sentry-crawled-pages-status sentry-crawled-pages-status--${tone}`}>
+                          <span className={`koala-crawled-pages-status koala-crawled-pages-status--${tone}`}>
                             {row.statusLabel}
                           </span>
                         </SentryTableCell>
@@ -292,7 +294,7 @@ export default function SiteAuditCrawledPages({ report }: Props) {
               </SentryTableBody>
             </SentryTable>
 
-            <div className="sentry-crawled-pages-pagination">
+            <div className="koala-crawled-pages-pagination">
               <Pagination
                 page={safePage}
                 pageCount={pageCount}
@@ -306,7 +308,7 @@ export default function SiteAuditCrawledPages({ report }: Props) {
             </div>
           </>
         )}
-      </SentryPanel>
+      </KoalaPanel>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { StatusIndicator } from '../core';
-import { SentryPanel, SentryPanelHeader } from '../sentry-pages';
-import { Flex, Stack, Container } from '../core/layout';
-import { Text } from '../core/text';
+import { StatusIndicator } from '../koala/core';
+import { ListWidget } from '../koala/product';
+import { Flex } from '../koala/core/layout';
+import { Text } from '../koala/core/text';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId } from '../../lib/activeWorkspace';
 import DomainFavicon from '../common/DomainFavicon';
@@ -44,55 +44,58 @@ const TrafficAlertsSection = () => {
     ...d.tiers.outOfIndex.map((e) => ({ ...e, domain: d.domain, label: 'Out of index' })),
   ]);
 
+  if (state.collecting) {
+    return (
+      <ListWidget
+        title="Traffic alerts"
+        items={[
+          <Text key="collecting" as="p" size="md" variant="muted">
+            Collecting Search Console data — your first weekly report needs two weeks of history.
+          </Text>,
+        ]}
+      />
+    );
+  }
+
+  if (drops.length === 0) {
+    return (
+      <ListWidget
+        title="Traffic alerts"
+        items={[<Text key="none" as="p" size="md" variant="muted">No ranking drops this week.</Text>]}
+      />
+    );
+  }
+
   return (
-    <SentryPanel noPadding>
-      <SentryPanelHeader title="Traffic alerts" />
-      {/* eslint-disable-next-line no-nested-ternary */}
-        {state.collecting ? (
-          <Container padding="2xl">
-            <Text as="p" size="md" variant="muted">
-              Collecting Search Console data — your first weekly report needs two weeks of history.
+    <ListWidget
+      title="Traffic alerts"
+      items={drops.slice(0, 3).map((e, i) => (
+        <Flex
+          key={`${e.domain}-${e.page}-${i}`}
+          className="traffic-alert-row"
+          align="center"
+          justify="between"
+          gap="xl"
+          style={{ width: '100%' }}
+        >
+          <Flex align="center" gap="md" minWidth={0}>
+            <DomainFavicon domain={e.domain} size={16} />
+            <Text as="span" size="md" ellipsis>{e.page}</Text>
+          </Flex>
+          <Flex align="center" gap="lg" flexShrink={0}>
+            <Text as="span" size="sm" variant="muted" tabular wrap="nowrap">
+              {e.prevPos == null ? '—' : Math.round(e.prevPos)}
+              <span className="text-gray-40 mx-1">→</span>
+              {e.nowPos == null ? 'out' : Math.round(e.nowPos)}
             </Text>
-          </Container>
-        ) : drops.length === 0 ? (
-          <Container padding="2xl">
-            <Text as="p" size="md" variant="muted">No ranking drops this week.</Text>
-          </Container>
-        ) : (
-          <Stack>
-            {drops.slice(0, 3).map((e, i) => (
-              <Flex
-                key={`${e.domain}-${e.page}-${i}`}
-                className="traffic-alert-row"
-                align="center"
-                justify="between"
-                gap="xl"
-                paddingTop="lg"
-                paddingBottom="lg"
-                paddingLeft="xl"
-                paddingRight="xl"
-                borderTop={i === 0 ? undefined : 'md'}
-              >
-                <Flex align="center" gap="md" minWidth={0}>
-                  <DomainFavicon domain={e.domain} size={16} />
-                  <Text as="span" size="md" ellipsis>{e.page}</Text>
-                </Flex>
-                <Flex align="center" gap="lg" flexShrink={0}>
-                  <Text as="span" size="sm" variant="muted" tabular wrap="nowrap">
-                    {e.prevPos == null ? '—' : Math.round(e.prevPos)}
-                    <span className="text-gray-40 mx-1">→</span>
-                    {e.nowPos == null ? 'out' : Math.round(e.nowPos)}
-                  </Text>
-                  <Flex align="center" gap="sm">
-                    <StatusIndicator variant={dropSeverityVariant(e.label)} aria-label={e.label} />
-                    <Text as="span" size="sm" wrap="nowrap">{e.label}</Text>
-                  </Flex>
-                </Flex>
-              </Flex>
-            ))}
-          </Stack>
-        )}
-    </SentryPanel>
+            <Flex align="center" gap="sm">
+              <StatusIndicator variant={dropSeverityVariant(e.label)} aria-label={e.label} />
+              <Text as="span" size="sm" wrap="nowrap">{e.label}</Text>
+            </Flex>
+          </Flex>
+        </Flex>
+      ))}
+    />
   );
 };
 

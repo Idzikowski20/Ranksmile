@@ -1,117 +1,234 @@
-import React from 'react';
-import { SentryPanel, SentryPanelBody } from '../sentry-pages';
+import React, { useEffect, useState } from 'react';
+import { useQuery } from 'react-query';
+import fetchJson from '../../lib/fetchJson';
+import {
+  formatTrialCountdown,
+  type PlanLimitMetric,
+  type PlanSummaryData,
+} from '../../lib/planLimits';
+import { Icon } from '../koala/icons/Icon';
+import { Card, CardHeader } from '../koala/product/Card';
+import { brandMain } from '../koala/tokens/colors';
 
-interface UsageRow {
-  label: string;
-  value: string;
-}
+type PlanSummaryResponse = {
+  summary: PlanSummaryData;
+  statusLine: string;
+};
 
-interface UsageBlock {
-  name: string;
-  limit: string;
-  rows: UsageRow[];
-}
-
-const CARD_EDITOR: UsageBlock[] = [
-  {
-    name: 'Content Editor',
-    limit: 'Monthly limit: 30',
-    rows: [
-      { label: 'Available from subscription', value: '30' },
-      { label: 'Used', value: '0' },
-    ],
+const FALLBACK: PlanSummaryResponse = {
+  summary: {
+    planSlug: 'starter',
+    planName: 'Starter',
+    billingPeriod: null,
+    subscriptionStatus: null,
+    trialEndsAt: null,
+    currentPeriodEnd: null,
+    metrics: [],
+    overallPct: 0,
   },
-  {
-    name: 'Auto-optimize',
-    limit: 'Monthly limit',
-    rows: [{ label: 'Available', value: '100' }],
-  },
-];
-
-const CARD_CONTENT_AUDIT: UsageBlock[] = [
-  {
-    name: 'Content Audit',
-    limit: 'Pages limit: 200',
-    rows: [
-      { label: 'Available', value: '188' },
-      { label: 'Used', value: '12' },
-    ],
-  },
-];
-
-const CARD_AUDIT: UsageBlock[] = [
-  {
-    name: 'Audit',
-    limit: 'Monthly limit: 100',
-    rows: [
-      { label: 'Available', value: '100' },
-      { label: 'Used', value: '0' },
-    ],
-  },
-];
+  statusLine: '',
+};
 
 const font = 'var(--font-family-primary)';
-const numeric: React.CSSProperties = { fontVariantNumeric: 'tabular-nums slashed-zero' };
 
-const Row = ({ label, value }: UsageRow) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-    <span style={{ fontFamily: font, fontSize: 13, fontWeight: 500, color: '#3F3F47' }}>{label}</span>
-    <span style={{ ...numeric, fontFamily: font, fontSize: 13, fontWeight: 600, color: '#18181B' }}>{value}</span>
-  </div>
-);
+function formatCount(n: number): string {
+  return n.toLocaleString('en-US');
+}
 
-const Block = ({ block }: { block: UsageBlock }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-      <span style={{ fontFamily: font, fontSize: 16, fontWeight: 500, color: '#09090B' }}>{block.name}</span>
-      <span style={{ ...numeric, fontFamily: font, fontSize: 13, color: '#52525C' }}>{block.limit}</span>
-    </div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {block.rows.map((r) => (
-        <Row key={r.label} label={r.label} value={r.value} />
-      ))}
-    </div>
-  </div>
-);
+function periodCaption(summary: PlanSummaryData, nowMs: number): string {
+  if (summary.subscriptionStatus === 'trialing' && summary.trialEndsAt) {
+    const left = formatTrialCountdown(summary.trialEndsAt, nowMs);
+    return left ? `Trial · ${left} left` : 'Trial';
+  }
+  if (summary.currentPeriodEnd) {
+    const end = new Date(summary.currentPeriodEnd);
+    if (!Number.isNaN(end.getTime())) {
+      const days = Math.max(0, Math.ceil((end.getTime() - nowMs) / 86_400_000));
+      if (days === 0) return 'Renews today';
+      if (days === 1) return 'Renews in 1 day';
+      return `Renews in ${days} days`;
+    }
+  }
+  return summary.planName;
+}
 
-const UsageCard = ({ blocks }: { blocks: UsageBlock[] }) => (
-  <SentryPanel>
-    <SentryPanelBody>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {blocks.map((b) => (
-          <Block key={b.name} block={b} />
-        ))}
+function MetricCard({ metric }: { metric: PlanLimitMetric }) {
+  const over = metric.limit != null && metric.used > metric.limit;
+  const warn = over || (metric.pct ?? 0) >= 85;
+  const fillPct = metric.limit == null
+    ? 0
+    : Math.min(100, Math.round((metric.used / metric.limit) * 100));
+  const available = metric.limit == null ? null : Math.max(0, metric.limit - metric.used);
+  const limitLabel = metric.limit == null
+    ? 'Unlimited'
+    : metric.key === 'keywordResearch'
+      ? `Period limit: ${formatCount(metric.limit)}`
+      : metric.key === 'siteAuditPages'
+        ? `Per crawl: ${formatCount(metric.limit)}`
+        : `Plan limit: ${formatCount(metric.limit)}`;
+  const usageLabel = metric.limit == null
+    ? `${formatCount(metric.used)} · Unlimited`
+    : `${formatCount(metric.used)} / ${formatCount(metric.limit)}`;
+
+  return (
+    <Card>
+      <CardHeader
+        title={metric.label}
+        action={(
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'var(--koala-text-secondary)',
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {limitLabel}
+          </span>
+        )}
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: font }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div
+            className="koala-plan-limits__track"
+            role="progressbar"
+            aria-valuenow={fillPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`${metric.label} usage`}
+            style={{ width: '100%' }}
+          >
+            <div
+              className={`koala-plan-limits__fill${warn ? ' koala-plan-limits__fill--warn' : ''}${over ? ' koala-plan-limits__fill--over' : ''}`}
+              style={{ width: `${over ? 100 : fillPct}%` }}
+            />
+          </div>
+          <span
+            className={warn ? 'koala-plan-limits__warn' : undefined}
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: warn ? undefined : 'var(--koala-text-secondary)',
+              fontVariantNumeric: 'tabular-nums',
+              textAlign: 'right',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {usageLabel}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)' }}>
+              {metric.limit == null ? 'Used' : 'Available'}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+              {metric.limit == null ? formatCount(metric.used) : formatCount(available ?? 0)}
+            </span>
+          </div>
+          {metric.limit != null ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)' }}>Used</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                {formatCount(metric.used)}
+              </span>
+            </div>
+          ) : null}
+        </div>
       </div>
-    </SentryPanelBody>
-  </SentryPanel>
-);
+    </Card>
+  );
+}
 
-const UsageSettings = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', fontFamily: font }}>
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 }}>
-      <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Plan</span>
-      <span style={{ fontSize: 14, color: '#52525C' }}>Renews in 7 days</span>
-    </div>
+const UsageSettings = () => {
+  const { data, isLoading, isFetching } = useQuery(
+    ['plan-summary-usage'],
+    () => fetchJson<PlanSummaryResponse>('/api/billing/plan-summary', FALLBACK),
+    {
+      staleTime: 15_000,
+      refetchInterval: 30_000,
+      refetchOnWindowFocus: true,
+      retry: false,
+    },
+  );
 
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        gridTemplateRows: 'repeat(2, auto)',
-        gap: 16,
-      }}
-    >
-      <div style={{ gridColumn: 1, gridRow: '1 / 3' }}>
-        <UsageCard blocks={CARD_EDITOR} />
+  const summary = data?.summary ?? FALLBACK.summary;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const totalUsed = summary.metrics.reduce((sum, m) => sum + m.used, 0);
+  const caption = periodCaption(summary, now);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', fontFamily: font, minWidth: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="BatteryMedium" size={20} weight="bold" color={brandMain} />
+            <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>
+              {summary.planName}
+            </span>
+            {isFetching && !isLoading ? (
+              <span style={{ fontSize: 12, color: 'var(--koala-text-tertiary)' }}>Updating…</span>
+            ) : null}
+          </div>
+          <span
+            style={{
+              fontSize: 32,
+              fontWeight: 700,
+              letterSpacing: '-0.5px',
+              color: 'var(--koala-text-primary)',
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1.1,
+            }}
+          >
+            {isLoading ? '—' : formatCount(totalUsed)}
+          </span>
+        </div>
+        <span
+          className="koala-plan-limits__period"
+          style={{ whiteSpace: 'nowrap', maxWidth: 'none', height: 'auto', minHeight: 28 }}
+          title={caption}
+        >
+          {caption}
+        </span>
       </div>
-      <div style={{ gridColumn: 2, gridRow: 1 }}>
-        <UsageCard blocks={CARD_CONTENT_AUDIT} />
-      </div>
-      <div style={{ gridColumn: 2, gridRow: 2 }}>
-        <UsageCard blocks={CARD_AUDIT} />
-      </div>
+
+      {isLoading && summary.metrics.length === 0 ? (
+        <Card>
+          <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>Loading plan usage…</span>
+        </Card>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 16,
+          }}
+        >
+          {summary.metrics.map((metric) => (
+            <MetricCard key={metric.key} metric={metric} />
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 export default UsageSettings;

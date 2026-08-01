@@ -7,8 +7,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { SentryPanel, SentryPanelHeader } from '../../../components/sentry-pages';
-import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter } from '../../../components/core';
+import { KoalaPanelHeader, PageHeader } from '../../../components/koala/layout';
+import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter } from '../../../components/koala/core';
+import { Card, MetricWidget, ChartWidget, FeedbackPopover } from '../../../components/koala/product';
 import PerformanceLineChart from '../../../components/performance/PerformanceLineChart';
 import { useFetchDomains } from '../../../services/domains';
 import countries from '../../../utils/countries';
@@ -21,7 +22,6 @@ import {
   type DateRangeValue,
   type Delta,
   type DeviceFilter,
-  type GoalPeriod,
   type KeywordMode,
   type KeywordOperator,
   type KeywordRule,
@@ -30,7 +30,6 @@ import {
   type SortMetric,
   type SortOrder,
   type TableRow,
-  type TrafficGoal,
 } from '../../../lib/performance/types';
 import {
   addDays,
@@ -50,10 +49,9 @@ import {
 } from '../../../lib/performance/formatters';
 import { slugToDomain } from '../../../utils/slugToDomain';
 
-const TrafficGoalModal = dynamic(() => import('../../../components/performance/TrafficGoalModal'), { ssr: false });
 const KeywordFilterModal = dynamic(() => import('../../../components/performance/KeywordFilterModal'), { ssr: false });
 const DateRangePicker = dynamic(
-  () => import('../../../components/core/calendar/dateRangePicker').then((m) => m.DateRangePicker),
+  () => import('../../../components/koala/core/calendar/dateRangePicker').then((m) => m.DateRangePicker),
   { ssr: false },
 );
 
@@ -61,18 +59,18 @@ const ROW_COLUMNS = [60, 50, 40, 40] as const;
 
 function TableSkeleton({ headerLabelWidth }: { headerLabelWidth: number }) {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 12, background: '#FFFFFF', padding: 20 }}>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 12, background: 'var(--koala-bg-primary)', padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: headerLabelWidth, height: 20, borderRadius: 6, background: '#E0E0E6' }} />
+        <div style={{ width: headerLabelWidth, height: 20, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
         {ROW_COLUMNS.map((w, i) => (
-          <div key={i} style={{ width: w, height: 20, borderRadius: 6, background: '#E8E8ED' }} />
+          <div key={i} style={{ width: w, height: 20, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
         ))}
       </div>
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} style={{ display: 'flex', gap: 16, borderBottom: i < 4 ? '1px solid #F4F4F5' : 'none', paddingBottom: i < 4 ? 14 : 0, alignItems: 'center' }}>
-          <div style={{ flex: 1, height: 14, borderRadius: 6, background: '#E8E8ED' }} />
+        <div key={i} style={{ display: 'flex', gap: 16, borderBottom: i < 4 ? '1px solid var(--koala-bg-secondary)' : 'none', paddingBottom: i < 4 ? 14 : 0, alignItems: 'center' }}>
+          <div style={{ flex: 1, height: 14, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
           {ROW_COLUMNS.map((w, j) => (
-            <div key={j} style={{ width: w, height: 14, borderRadius: 6, background: '#E8E8ED' }} />
+            <div key={j} style={{ width: w, height: 14, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
           ))}
         </div>
       ))}
@@ -104,13 +102,6 @@ function ChevronRight() {
   );
 }
 
-function InfoIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-      <path d="m11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0m-9-3.75h.008v.008H12z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  );
-}
 
 function FeedbackIcon() {
   return (
@@ -208,16 +199,16 @@ function EyeIcon({ muted = false }: { muted?: boolean }) {
 
 function DeltaIcon({ direction }: { direction: Delta }) {
   if (direction === 'neutral') {
-    return <div style={{ width: 6, height: 6, borderRadius: 9999, background: '#D4D4D8', flexShrink: 0 }} />;
+    return <div style={{ width: 6, height: 6, borderRadius: 9999, background: 'var(--koala-border-primary)', flexShrink: 0 }} />;
   }
 
   return direction === 'up' ? (
     <svg xmlns="http://www.w3.org/2000/svg" width="8" height="6" viewBox="0 0 8 6" fill="none" className="inline-block shrink-0 align-sub">
-      <path d="M3.29289 1.20711L0.707107 3.79289C0.077142 4.42286 0.523309 5.5 1.41421 5.5H6.58579C7.47669 5.5 7.92286 4.42286 7.2929 3.79289L4.70711 1.20711C4.31658 0.816583 3.68342 0.816582 3.29289 1.20711Z" fill="#1AB25E" />
+      <path d="M3.29289 1.20711L0.707107 3.79289C0.077142 4.42286 0.523309 5.5 1.41421 5.5H6.58579C7.47669 5.5 7.92286 4.42286 7.2929 3.79289L4.70711 1.20711C4.31658 0.816583 3.68342 0.816582 3.29289 1.20711Z" fill="var(--koala-status-success)" />
     </svg>
   ) : (
     <svg xmlns="http://www.w3.org/2000/svg" width="8" height="6" viewBox="0 0 8 6" fill="none" className="inline-block shrink-0 align-sub">
-      <path d="M3.29289 4.79289L0.707107 2.20711C0.077142 1.57714 0.523309 0.5 1.41421 0.5H6.58579C7.47669 0.5 7.92286 1.57714 7.2929 2.20711L4.70711 4.79289C4.31658 5.18342 3.68342 5.18342 3.29289 4.79289Z" fill="#FF6F77" />
+      <path d="M3.29289 4.79289L0.707107 2.20711C0.077142 1.57714 0.523309 0.5 1.41421 0.5H6.58579C7.47669 0.5 7.92286 1.57714 7.2929 2.20711L4.70711 4.79289C4.31658 5.18342 3.68342 5.18342 3.29289 4.79289Z" fill="var(--koala-status-danger)" />
     </svg>
   );
 }
@@ -253,7 +244,7 @@ function TableSortButton({
       variant="secondary"
       size="sm"
       onClick={onClick}
-      style={{ borderRadius: 8, border: '1px solid #dbded4', background: 'transparent', color: '#18181B' }}
+      style={{ borderRadius: 8, border: '1px solid var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-primary)' }}
     >
       <span style={{ textTransform: 'lowercase' }}>{value}</span>
       <ChevronDown size={18} />
@@ -267,7 +258,6 @@ function MetricCard({
   change,
   accentBg,
   accentColor,
-  gradientColor,
   muted = false,
   onToggle,
 }: {
@@ -280,51 +270,26 @@ function MetricCard({
   muted?: boolean;
   onToggle?: () => void;
 }) {
+  const deltaText = change === null
+    ? '- vs previous period'
+    : `${change >= 0 ? '+' : ''}${Math.round(change)}% vs previous period`;
+
   return (
-    <div
-      className="perf-3d-card performance-metric-card"
-      style={{
-      borderRadius: 12,
-      padding: 16,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: gradientColor
-          ? `linear-gradient(to right, color-mix(in oklab, ${gradientColor} 5%, transparent), transparent)`
-          : '#FFFFFF',
-        minHeight: 110,
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{value}</span>
-          <span style={{ fontSize: 12, lineHeight: '16px', fontFamily: 'var(--font-family-primary)' }}>
-            {change === null ? (
-              <>
-                <span style={{ color: '#52525C' }}>-</span>
-                <span style={{ color: '#52525C' }}> vs previous period</span>
-              </>
-            ) : (
-              <>
-                <span style={{ color: change >= 0 ? '#1AB25E' : '#FF6F77', fontWeight: 600 }}>
-                  {change >= 0 ? '+' : ''}
-                  {Math.round(change)}%
-                </span>
-                <span style={{ color: '#52525C' }}> vs previous period</span>
-              </>
-            )}
-          </span>
-        </div>
-      </div>
-      <Button
-        variant="secondary"
-        size="zero"
-        onClick={onToggle}
-        style={{ padding: 8, borderRadius: 8, background: accentBg, color: accentColor, border: 'none', flexShrink: 0, opacity: muted ? 0.5 : 1, transition: 'opacity 150ms ease' }}
-        icon={<EyeIcon muted={muted} />}
-      />
-    </div>
+    <MetricWidget
+      title={label}
+      value={value}
+      delta={deltaText}
+      deltaPositive={change === null ? undefined : change >= 0}
+      action={(
+        <Button
+          variant="secondary"
+          size="zero"
+          onClick={onToggle}
+          style={{ padding: 8, borderRadius: 8, background: accentBg, color: accentColor, border: 'none', flexShrink: 0, opacity: muted ? 0.5 : 1, transition: 'opacity 150ms ease' }}
+          icon={<EyeIcon muted={muted} />}
+        />
+      )}
+    />
   );
 }
 
@@ -338,16 +303,15 @@ function SummaryCard({
   direction?: Delta;
 }) {
   return (
-    <div className="perf-3d-card" style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: 8, borderRadius: 12, background: '#FFFFFF', padding: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
-        <span style={{ color: '#52525C', display: 'inline-flex' }}><InfoIcon /></span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 24, lineHeight: '32px', fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{value}</span>
-        {direction ? <DeltaIcon direction={direction} /> : null}
-      </div>
-    </div>
+    <MetricWidget
+      title={label}
+      value={(
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {value}
+          {direction ? <DeltaIcon direction={direction} /> : null}
+        </span>
+      )}
+    />
   );
 }
 
@@ -382,12 +346,7 @@ const PerformancePage: NextPage = () => {
   const [keywordSortMetric, setKeywordSortMetric] = useState<SortMetric>('clicks');
   const [keywordSortOrder, setKeywordSortOrder] = useState<SortOrder>('highest');
 
-  const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [filtersModalOpen, setFiltersModalOpen] = useState(false);
-  const [goalPercentage, setGoalPercentage] = useState(10);
-  const [goalPeriod, setGoalPeriod] = useState<GoalPeriod>('MONTH');
-  const [trafficGoal, setTrafficGoal] = useState<TrafficGoal | null>(null);
-  const [goalSaving, setGoalSaving] = useState(false);
   const [visibleMetrics, setVisibleMetrics] = useState({ clicks: true, impressions: true, ctr: false, position: false });
 
   const defaultBrandTerms = useMemo(() => getDomainTokens(domain), [domain]);
@@ -454,21 +413,6 @@ const PerformancePage: NextPage = () => {
       return response.json();
     },
     { enabled: !!slug, staleTime: 5 * 60 * 1000 },
-  );
-
-  const { refetch: refetchGoal } = useQuery(
-    ['domain-traffic-goal', slug],
-    async () => {
-      const response = await fetch(`/api/domains/goal?domain=${slug}`);
-      return response.json();
-    },
-    {
-      enabled: !!slug,
-      staleTime: 60 * 1000,
-      onSuccess: (data) => {
-        if (data?.goal) setTrafficGoal(data.goal);
-      },
-    },
   );
 
   const currentRangeItems: SearchAnalyticsItem[] = scData?.data?.selectedRange || scData?.data?.thirtyDays || [];
@@ -572,8 +516,8 @@ const PerformancePage: NextPage = () => {
         label: 'Clicks',
         value: compactNumber(statsTotals.clicks),
         change: getChangePercent(statsTotals.clicks, previousTotals.clicks),
-        accentBg: '#F4F4F5',
-        accentColor: '#2F2F34',
+        accentBg: 'var(--koala-bg-secondary)',
+        accentColor: 'var(--koala-text-primary)',
         gradientColor: '#74A9FF',
         muted: false,
       },
@@ -582,9 +526,9 @@ const PerformancePage: NextPage = () => {
         label: 'Impressions',
         value: compactNumber(statsTotals.impressions),
         change: getChangePercent(statsTotals.impressions, previousTotals.impressions),
-        accentBg: '#F4F4F5',
-        accentColor: '#2F2F34',
-        gradientColor: '#F29964',
+        accentBg: 'var(--koala-bg-secondary)',
+        accentColor: 'var(--koala-text-primary)',
+        gradientColor: 'var(--koala-text-brand)',
         muted: false,
       },
       {
@@ -592,8 +536,8 @@ const PerformancePage: NextPage = () => {
         label: 'Avg. CTR',
         value: formatPercent(avgCtr),
         change: getChangePercent(avgCtr, previousAvgCtr),
-        accentBg: '#F4F4F5',
-        accentColor: '#2F2F34',
+        accentBg: 'var(--koala-bg-secondary)',
+        accentColor: 'var(--koala-text-primary)',
         gradientColor: '#22C55E',
         muted: true,
       },
@@ -602,8 +546,8 @@ const PerformancePage: NextPage = () => {
         label: 'Avg. position',
         value: avgPosition > 0 ? avgPosition.toFixed(1) : '0.0',
         change: getChangePercent(previousAvgPosition, avgPosition),
-        accentBg: '#F4F4F5',
-        accentColor: '#2F2F34',
+        accentBg: 'var(--koala-bg-secondary)',
+        accentColor: 'var(--koala-text-primary)',
         gradientColor: '#F97316',
         muted: true,
       },
@@ -855,74 +799,6 @@ const PerformancePage: NextPage = () => {
     closeKeywordModal();
   };
 
-  const currentClicks = computed.statsCards.find((c) => c.key === 'clicks')
-    ? computed.statsCards[0]?.value
-    : '0';
-
-  const handleSaveGoal = async () => {
-    if (!slug) return;
-    setGoalSaving(true);
-    const baseClicks = parseInt(String(currentClicks).replace(/[^0-9]/g, ''), 10) || 0;
-    try {
-      const response = await fetch(`/api/domains/goal?domain=${slug}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ percentage: goalPercentage, period: goalPeriod, baseClicks }),
-      });
-      const data = await response.json();
-      if (data.goal) {
-        setTrafficGoal(data.goal);
-        setGoalModalOpen(false);
-        refetchGoal();
-      }
-    } catch (error) {
-      console.error('Error saving goal:', error);
-    }
-    setGoalSaving(false);
-  };
-
-  const handleDeleteGoal = async () => {
-    if (!slug) return;
-    try {
-      await fetch(`/api/domains/goal?domain=${slug}`, { method: 'DELETE' });
-      setTrafficGoal(null);
-      setGoalModalOpen(false);
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-    }
-  };
-
-  const goalProjectionData = useMemo(() => {
-    if (!trafficGoal) return [];
-    const base = trafficGoal.baseClicks || 0;
-    const rate = trafficGoal.period === 'MONTH' ? trafficGoal.percentage / 100 : (trafficGoal.percentage / 100) / 3;
-    const start = new Date(trafficGoal.startDate);
-    const months = 12;
-    const data: Array<{ label: string; projected: number; actual?: number }> = [];
-    for (let i = 0; i < months; i += 1) {
-      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
-      const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: d.getFullYear() !== start.getFullYear() ? 'numeric' : undefined });
-      data.push({ label: monthLabel, projected: Math.round(base * (1 + rate) ** i) });
-    }
-    return data;
-  }, [trafficGoal]);
-
-  const goalStats = useMemo(() => {
-    if (!trafficGoal) return null;
-    const base = trafficGoal.baseClicks || 0;
-    const rate = trafficGoal.period === 'MONTH' ? trafficGoal.percentage / 100 : (trafficGoal.percentage / 100) / 3;
-    const today = new Date();
-    const start = new Date(trafficGoal.startDate);
-    const daysElapsed = Math.max(0, Math.floor((today.getTime() - start.getTime()) / 86400000));
-    const periodDays = trafficGoal.period === 'MONTH' ? 30 : 90;
-    const daysRemaining = Math.max(0, periodDays - (daysElapsed % periodDays));
-    const targetClicks = Math.round(base * (1 + rate));
-    const totalCurrentClicks = parseInt(String(currentClicks).replace(/[^0-9]/g, ''), 10) || 0;
-    const progressPct = targetClicks > 0 ? Math.min(100, Math.round((totalCurrentClicks / targetClicks) * 100)) : 0;
-    const avgNeeded = daysRemaining > 0 ? Math.max(0, Math.round((targetClicks - totalCurrentClicks) / daysRemaining)) : 0;
-    return { progressPct, targetClicks, totalCurrentClicks, daysRemaining, avgNeeded };
-  }, [trafficGoal, currentClicks]);
-
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (datePreset !== '30') n += 1;
@@ -1043,9 +919,21 @@ const PerformancePage: NextPage = () => {
   );
 
   const feedbackAction = (
-    <Button variant="link" size="sm" icon={<FeedbackIcon />} style={{ padding: 0, color: '#3F3F47' }}>
-      Leave feedback
-    </Button>
+    <FeedbackPopover context="performance">
+      {({ open, anchorRef }) => (
+        <span ref={anchorRef as React.RefObject<HTMLSpanElement>} style={{ display: 'inline-flex' }}>
+          <Button
+            variant="link"
+            size="sm"
+            icon={<FeedbackIcon />}
+            style={{ padding: 0, color: 'var(--koala-text-secondary)' }}
+            onClick={open}
+          >
+            Leave feedback
+          </Button>
+        </span>
+      )}
+    </FeedbackPopover>
   );
 
   return (
@@ -1057,36 +945,37 @@ const PerformancePage: NextPage = () => {
       <DomainSubLayout domain={domain} slug={slug || ''} section="Performance" heading="Performance" actions={feedbackAction} contentMaxWidth="unset">
         {isLoading && !scData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 12, background: '#FFFFFF', padding: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRadius: 12, background: 'var(--koala-bg-primary)', padding: 20 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 {[120, 140, 100, 90, 130].map((w, i) => (
-                  <div key={i} style={{ height: 36, width: w, borderRadius: 9999, background: '#E8E8ED' }} />
+                  <div key={i} style={{ height: 36, width: w, borderRadius: 9999, background: 'var(--koala-bg-tertiary)' }} />
                 ))}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{ borderRadius: 12, padding: 16, background: '#f3f4f0', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ width: 60, height: 14, borderRadius: 6, background: '#E8E8ED' }} />
-                    <div style={{ width: 80, height: 24, borderRadius: 6, background: '#E0E0E6' }} />
-                    <div style={{ width: 100, height: 12, borderRadius: 6, background: '#E8E8ED' }} />
+                  <div key={i} style={{ borderRadius: 12, padding: 16, background: 'var(--koala-bg-secondary)', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ width: 60, height: 14, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
+                    <div style={{ width: 80, height: 24, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
+                    <div style={{ width: 100, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
                   </div>
                 ))}
               </div>
-              <div style={{ borderRadius: 12, background: '#f3f4f0', padding: 16 }}>
-                <div style={{ height: 220, borderRadius: 6, background: '#E8E8ED' }} />
+              <div style={{ borderRadius: 12, background: 'var(--koala-bg-secondary)', padding: 16 }}>
+                <div style={{ height: 220, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
               </div>
             </div>
             <TableSkeleton headerLabelWidth={80} />
             <TableSkeleton headerLabelWidth={90} />
           </div>
         ) : scData?.error ? (
-          <div style={{ padding: 16, borderRadius: 12, border: '1px solid #FECACA', background: '#FFF1F2', color: '#B91C1C', fontSize: 14, fontFamily: 'var(--font-family-primary)' }}>
+          <div style={{ padding: 16, borderRadius: 12, border: '1px solid var(--koala-status-danger-bg)', background: 'var(--koala-status-danger-bg)', color: 'var(--koala-status-danger)', fontSize: 14, fontFamily: 'var(--font-family-primary)' }}>
             {scData.error}
           </div>
         ) : (
           <>
-              <SentryPanel noPadding>
-                <div className="performance-panel-body">
+              <Card padded={false} elevated>
+                <div className="performance-panel-body" style={{ padding: 20 }}>
+                <PageHeader title="Performance overview" subtitle={domain} />
                 <div className="performance-filters-desktop">
                   <PageFilterBar condensed className="performance-filter-bar">
                     <div className="performance-filters" style={{ display: 'contents' }}>
@@ -1128,71 +1017,11 @@ const PerformancePage: NextPage = () => {
                     ))}
                   </div>
 
-                  <PerformanceLineChart data={computed.chart} visibleMetrics={visibleMetrics} />
-
-                  <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14, borderTop: '1px solid #F4F4F5', paddingTop: 20, marginTop: 4 }}>
-                  {trafficGoal ? (
-                    <>
-                      <div className="performance-goal-row performance-goal-row--title">
-                        <div className="performance-goal-row-label">Goal</div>
-                        <div className="performance-goal-row-value">
-                          <span>Increase clicks by {trafficGoal.percentage}% each {trafficGoal.period === 'MONTH' ? 'month' : 'quarter'}</span>
-                          <Button
-                            type="button"
-                            variant="transparent"
-                            size="sm"
-                            onClick={() => { setGoalPercentage(trafficGoal.percentage); setGoalPeriod(trafficGoal.period); setGoalModalOpen(true); }}
-                            aria-label="Edit goal"
-                            icon={(
-                              <svg viewBox="0 0 20 20" width="20" height="20" fill="currentColor" aria-hidden="true" style={{ display: 'inline-block', flexShrink: 0, verticalAlign: 'sub' }}>
-                                <g fill="currentColor">
-                                  <path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" />
-                                  <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" />
-                                </g>
-                              </svg>
-                            )}
-                          />
-                        </div>
-                      </div>
-                      <div className="performance-goal-row">
-                        <div className="performance-goal-row-label">Current progress</div>
-                        <div className="performance-goal-row-value">{goalStats?.progressPct ?? 0}%</div>
-                      </div>
-                      <div className="performance-goal-row">
-                        <div className="performance-goal-row-label">Days remaining</div>
-                        <div className="performance-goal-row-value">{goalStats?.daysRemaining ?? '-'}</div>
-                      </div>
-                      <div className="performance-goal-row">
-                        <div className="performance-goal-row-label">Avg. clicks to meet goal</div>
-                        <div className="performance-goal-row-value">{goalStats?.avgNeeded ?? 0}/day</div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="link" size="sm" onClick={() => setGoalModalOpen(true)} icon={
-                        <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
-                          <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
-                        </svg>
-                      } style={{ padding: 0, color: '#3F3F47' }}>
-                        Set up traffic goal
-                      </Button>
-                      <div className="performance-goal-row">
-                        <span className="performance-goal-row-label">Current progress</span>
-                        <span className="performance-goal-row-value">-</span>
-                      </div>
-                      <div className="performance-goal-row">
-                        <span className="performance-goal-row-label">Days remaining</span>
-                        <span className="performance-goal-row-value">-</span>
-                      </div>
-                      <div className="performance-goal-row">
-                        <span className="performance-goal-row-label">Avg. clicks to meet goal</span>
-                        <span className="performance-goal-row-value">-</span>
-                      </div>
-                    </>
-                  )}
-                  </div>
+                  <ChartWidget title="Traffic trend">
+                    <PerformanceLineChart data={computed.chart} visibleMetrics={visibleMetrics} />
+                  </ChartWidget>
                 </div>
-              </SentryPanel>
+              </Card>
 
               <section className="performance-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 <SummaryCard label="All Keywords" value={String(computed.keywordSummary.allKeywords)} />
@@ -1201,13 +1030,13 @@ const PerformancePage: NextPage = () => {
                 <SummaryCard label="Position 11-20" value={String(computed.keywordSummary.pos11to20)} direction={computed.keywordSummary.pos11to20Direction} />
               </section>
 
-              <SentryPanel noPadding>
-                <SentryPanelHeader
+              <Card padded={false} elevated>
+                <KoalaPanelHeader
                   title={(
                     <div className="performance-table-header-title">
                       <span>Pages</span>
                       <span className="performance-table-header-sorts">
-                        <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                        <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--koala-text-secondary)' }}>with</span>
                         <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
                         <TableSortButton
                           value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
@@ -1225,32 +1054,32 @@ const PerformancePage: NextPage = () => {
                 <div className="performance-data-table-wrap">
                   <table className="performance-data-table">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
-                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Page</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Position</th>
+                      <tr style={{ borderBottom: '1px solid var(--koala-bg-secondary)' }}>
+                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Page</th>
+                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
+                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Position</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedPageRows.map((row, index) => (
-                        <tr key={row.key} style={{ borderBottom: index < sortedPageRows.length - 1 ? '1px solid #F4F4F5' : 'none' }}>
-                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
+                        <tr key={row.key} style={{ borderBottom: index < sortedPageRows.length - 1 ? '1px solid var(--koala-bg-secondary)' : 'none' }}>
+                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
                             <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.label}>
-                              <a href={row.href} target="_blank" rel="noreferrer" style={{ color: '#18181B', textDecoration: 'none' }}>{row.label}</a>
+                              <a href={row.href} target="_blank" rel="noreferrer" style={{ color: 'var(--koala-text-primary)', textDecoration: 'none' }}>{row.label}</a>
                             </span>
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={compactNumber(row.clicks)} direction={row.clickDir} />
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
                           </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
                           </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={row.position.toFixed(1).replace('.0', '')} direction={row.positionDir} />
                           </td>
                         </tr>
@@ -1258,15 +1087,15 @@ const PerformancePage: NextPage = () => {
                     </tbody>
                   </table>
                 </div>
-              </SentryPanel>
+              </Card>
 
-              <SentryPanel noPadding>
-                <SentryPanelHeader
+              <Card padded={false} elevated>
+                <KoalaPanelHeader
                   title={(
                     <div className="performance-table-header-title">
                       <span>Keywords</span>
                       <span className="performance-table-header-sorts">
-                        <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                        <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--koala-text-secondary)' }}>with</span>
                         <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
                         <TableSortButton
                           value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
@@ -1284,32 +1113,32 @@ const PerformancePage: NextPage = () => {
                 <div className="performance-data-table-wrap">
                   <table className="performance-data-table">
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
-                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Keyword</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
-                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Position</th>
+                      <tr style={{ borderBottom: '1px solid var(--koala-bg-secondary)' }}>
+                        <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Keyword</th>
+                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
+                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Position</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedKeywordRows.map((row, index) => (
-                        <tr key={row.key} style={{ borderBottom: index < sortedKeywordRows.length - 1 ? '1px solid #F4F4F5' : 'none' }}>
-                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
+                        <tr key={row.key} style={{ borderBottom: index < sortedKeywordRows.length - 1 ? '1px solid var(--koala-bg-secondary)' : 'none' }}>
+                          <td style={{ maxWidth: 496, padding: '14px 16px 14px 24px', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', verticalAlign: 'middle' }}>
                             <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.label}>
                               {row.label}
                             </span>
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={compactNumber(row.clicks)} direction={row.clickDir} />
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
                           </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
                           </td>
-                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={row.position.toFixed(1).replace('.0', '')} direction={row.positionDir} />
                           </td>
                         </tr>
@@ -1317,24 +1146,9 @@ const PerformancePage: NextPage = () => {
                     </tbody>
                   </table>
                 </div>
-              </SentryPanel>
+              </Card>
           </>
         )}
-
-        {goalModalOpen ? (
-          <TrafficGoalModal
-            onClose={() => setGoalModalOpen(false)}
-            goalPercentage={goalPercentage}
-            onGoalPercentageChange={setGoalPercentage}
-            goalPeriod={goalPeriod}
-            onGoalPeriodChange={setGoalPeriod}
-            currentClicks={currentClicks}
-            trafficGoal={trafficGoal}
-            onDeleteGoal={handleDeleteGoal}
-            onSaveGoal={handleSaveGoal}
-            goalSaving={goalSaving}
-          />
-        ) : null}
 
         {filtersModalOpen ? (
           <Modal
@@ -1378,14 +1192,6 @@ const PerformancePage: NextPage = () => {
             100% {
               opacity: 1;
               transform: scale(1);
-            }
-          }
-
-          @media (min-width: 1024px) {
-            .performance-goal-bar {
-              display: flex !important;
-              align-items: center;
-              justify-content: space-between;
             }
           }
 

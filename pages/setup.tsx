@@ -6,7 +6,7 @@ import { parseWorkspaceId } from '../lib/activeWorkspace';
 import { SETUP_LOCATIONS, type SetupLocation } from '../lib/setupLocations';
 import BlogPathsField from '../components/domains/BlogPathsField';
 import DomainFavicon from '../components/common/DomainFavicon';
-import { Button, Input, Textarea } from '../components/core';
+import { Button, Input, Textarea } from '../components/koala/core';
 import {
   SetupShell,
   SetupWizardCard,
@@ -371,7 +371,7 @@ const SetupPage: NextPage = () => {
                               <button
                                  type="button"
                                  aria-expanded={comboOpen}
-                                 className="sentry-setup-trigger"
+                                 className="koala-setup-trigger"
                                  onClick={() => {
                                     if (availableGscSites.length > 0) setComboOpen((o) => !o);
                                     else { setDomain(null); setSelectedSite(''); setLocation(null); setStep1Error(''); }
@@ -386,9 +386,9 @@ const SetupPage: NextPage = () => {
                      ) : !urlMode ? (
                         // eslint-disable-next-line no-nested-ternary
                         !gscLoaded ? (
-                           <div className="sentry-setup-trigger" style={{ cursor: 'default' }}>
+                           <div className="koala-setup-trigger" style={{ cursor: 'default' }}>
                               <Spinner />
-                              <span className="sentry-setup-trigger-placeholder">Loading sites…</span>
+                              <span className="koala-setup-trigger-placeholder">Loading sites…</span>
                            </div>
                         ) : availableGscSites.length > 0 ? (
                            <SetupField label="Select Search Console site">
@@ -398,20 +398,20 @@ const SetupPage: NextPage = () => {
                                     role="combobox"
                                     aria-expanded={comboOpen}
                                     aria-haspopup="listbox"
-                                    className="sentry-setup-trigger"
+                                    className="koala-setup-trigger"
                                     onClick={() => setComboOpen((o) => !o)}
                                     disabled={configuring}
                                  >
                                     <GoogleIcon />
                                     <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                       {selectedSite ? normalizeDomain(selectedSite) : <span className="sentry-setup-trigger-placeholder">Select site</span>}
+                                       {selectedSite ? normalizeDomain(selectedSite) : <span className="koala-setup-trigger-placeholder">Select site</span>}
                                     </span>
                                     <ChevronDown open={comboOpen} />
                                  </button>
                               </div>
                            </SetupField>
                         ) : gscSites.length > 0 ? (
-                           <div className="sentry-setup-gsc-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                           <div className="koala-setup-gsc-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                               <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: '#52525C', fontFamily: FONT }}>
                                  All Search Console sites linked to your account are already configured as workspaces.
                               </p>
@@ -420,13 +420,13 @@ const SetupPage: NextPage = () => {
                               </Button>
                            </div>
                         ) : (
-                           <div className="sentry-setup-gsc-card">
+                           <div className="koala-setup-gsc-card">
                               <Button type="button" variant="primary" size="md" icon={<GoogleIcon />} onClick={connectGsc} style={{ width: '100%' }}>
                                  Connect Search Console
                               </Button>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                  {['Automatic keyword selection', 'Access real traffic and performance data', 'Content ideas based on deep topical analysis'].map((t) => (
-                                    <div key={t} className="sentry-setup-benefit">
+                                    <div key={t} className="koala-setup-benefit">
                                        <CheckCircle />
                                        <span>{t}</span>
                                     </div>
@@ -462,7 +462,7 @@ const SetupPage: NextPage = () => {
                            return (
                               <button
                                  type="button"
-                                 className="sentry-setup-menu-item"
+                                 className="koala-setup-menu-item"
                                  onClick={() => handleSiteSelect(site.siteUrl)}
                               >
                                  <SiteFavicon domain={dom} />
@@ -471,7 +471,7 @@ const SetupPage: NextPage = () => {
                            );
                         }}
                         footer={(
-                           <button type="button" className="sentry-setup-menu-footer" onClick={connectGsc}>
+                           <button type="button" className="koala-setup-menu-footer" onClick={connectGsc}>
                               <GoogleIcon />
                               <span>Add another Search Console account</span>
                            </button>
@@ -490,7 +490,7 @@ const SetupPage: NextPage = () => {
                                  <button
                                     type="button"
                                     aria-expanded={locOpen}
-                                    className="sentry-setup-trigger"
+                                    className="koala-setup-trigger"
                                     onClick={() => setLocOpen((o) => !o)}
                                  >
                                     <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -500,7 +500,7 @@ const SetupPage: NextPage = () => {
                                              <span>{location.country} - {location.language}</span>
                                           </span>
                                        ) : (
-                                          <span className="sentry-setup-trigger-placeholder">Select location</span>
+                                          <span className="koala-setup-trigger-placeholder">Select location</span>
                                        )}
                                     </span>
                                     <ChevronDown open={locOpen} />
@@ -521,7 +521,7 @@ const SetupPage: NextPage = () => {
                               renderItem={(l) => (
                                  <button
                                     type="button"
-                                    className="sentry-setup-menu-item"
+                                    className="koala-setup-menu-item"
                                     onClick={() => { setLocation(l); setLocOpen(false); setLocFilter(''); }}
                                  >
                                     <Flag cc={l.cc} />
@@ -597,10 +597,10 @@ const SetupPage: NextPage = () => {
                style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
                onSubmit={(e) => { e.preventDefault(); void handleFinish(); }}
             >
-               <div className="sentry-setup-brand-block">
+               <div className="koala-setup-brand-block">
                   <div>
-                     <p className="sentry-setup-brand-block-title">Brand name</p>
-                     <p className="sentry-setup-brand-block-desc">What is your brand called?</p>
+                     <p className="koala-setup-brand-block-title">Brand name</p>
+                     <p className="koala-setup-brand-block-desc">What is your brand called?</p>
                   </div>
                   {loadingBrand ? (
                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6a6772', fontFamily: FONT }}>
@@ -619,10 +619,10 @@ const SetupPage: NextPage = () => {
                   )}
                </div>
 
-               <div className="sentry-setup-brand-block">
+               <div className="koala-setup-brand-block">
                   <div>
-                     <p className="sentry-setup-brand-block-title">Brand details</p>
-                     <p className="sentry-setup-brand-block-desc">
+                     <p className="koala-setup-brand-block-title">Brand details</p>
+                     <p className="koala-setup-brand-block-desc">
                         Tell us more about your business, so we have enough context to prepare personalized recommendations and generate relevant content.
                      </p>
                   </div>
@@ -644,7 +644,7 @@ const SetupPage: NextPage = () => {
 
                {step2Error && <SetupError message={step2Error} />}
 
-               <div className="sentry-setup-actions">
+               <div className="koala-setup-actions">
                   <Button type="button" variant="link" size="md" disabled={submitting} onClick={() => router.push('/')}>
                      Cancel
                   </Button>

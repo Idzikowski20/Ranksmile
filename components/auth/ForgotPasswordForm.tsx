@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import React, { useState } from 'react';
 import { requestPasswordReset } from '../../lib/auth/fetchAuth';
-import { Button } from '../core';
+import Button from '../koala/primitives/Button';
+import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
@@ -46,40 +47,49 @@ export default function ForgotPasswordForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Forgot password</h1>
-      <p style={authSubtitleStyle}>
-        Enter your email and we&apos;ll send you a reset link
-      </p>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', width: '100%' }}
+    >
+      <AuthBrandMark />
+      <div style={{ textAlign: 'center', width: '100%', maxWidth: 384 }}>
+        <h1 style={authTitleStyle}>Forgot password?</h1>
+        <p style={authSubtitleStyle}>
+          Enter your email and we&apos;ll send you a reset link.
+        </p>
+      </div>
 
-      {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
+      {error ? <div style={{ ...authErrorStyle, width: '100%' }} role="alert">{error}</div> : null}
       {success ? (
-        <div style={authSuccessStyle} role="status">
+        <div style={{ ...authSuccessStyle, width: '100%' }} role="status">
           If an account exists for this email, a reset link has been sent.
         </div>
       ) : null}
 
-      <AuthField
-        id="forgot-email"
-        label="Email"
-        type="email"
-        value={email}
-        onChange={setEmail}
-        autoComplete="email"
-        disabled={loading}
-      />
-
-      <div style={authFullWidthBtnStyle}>
-        <Button type="submit" variant="primary" size="md" busy={loading} disabled={loading} style={{ width: '100%' }}>
-          {loading ? 'Sending…' : 'Send reset link'}
-        </Button>
+      <div style={{ width: '100%' }}>
+        <AuthField
+          id="forgot-email"
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          autoComplete="email"
+          disabled={loading}
+          placeholder="Enter your email"
+          required
+        />
       </div>
 
-      <p style={authFooterStyle}>
-        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
-          Back to Sign In
-        </Link>
-      </p>
+      <div style={{ ...authFullWidthBtnStyle, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+        <Button type="submit" variant="primary" size="lg" busy={loading} disabled={loading} style={{ width: '100%', borderRadius: 14 }}>
+          {loading ? 'Sending…' : 'Send reset link'}
+        </Button>
+        <p style={authFooterStyle}>
+          <Link href="/auth/sign-in" style={{ ...authLinkStyle, textDecoration: 'underline' }}>
+            Back to Sign In
+          </Link>
+        </p>
+      </div>
     </form>
   );
 }

@@ -4,30 +4,43 @@ import {
   Checkbox,
   DataTable,
   DataTableBody,
+  DataTableCell,
   DataTableContent,
   DataTableEmpty,
+  DataTableHeadCell,
   DataTableHeader,
   DataTableRow,
-} from '../core';
+} from '../koala/core';
+import { Icon } from '../koala/icons';
+import { KeywordDifficultyDot } from '../koala/product/helpers/KeywordDifficultyDot';
+import { StatusBadge } from '../koala/primitives/StatusBadge';
+import type { StatusTone } from '../koala/primitives/StatusBadge';
+import { TablePattern } from '../koala/product';
 import type { RankKeywordStatus, RankTrackingConfigRow, RankTrackingRow } from '../../lib/types/rankTracking';
 import AddKeywordsModal from './AddKeywordsModal';
 import Chart from '../common/Chart';
 
 const FONT = 'var(--font-family-primary)';
-const ACCENT = '#F29964';
+const ACCENT = 'var(--koala-text-brand, #F84416)';
 
-function statusLabel(
+function rankStatusBadge(
   status: RankKeywordStatus | undefined,
   hasSnapshot: boolean,
+): { tone: StatusTone; label?: string; sub?: string } | null {
+  if (status === 'failed') return { tone: 'failed', label: 'Failed', sub: 'Check failed' };
+  if (status === 'paused') return { tone: 'cancelled', label: 'Paused' };
+  if (status === 'queued') return { tone: 'queued', sub: 'Waiting for run' };
+  if (status === 'running') return { tone: 'running', sub: 'Updating…' };
+  if (!hasSnapshot) return { tone: 'queued', label: 'Queued', sub: 'Waiting for first check' };
+  return null;
+}
+
+function statusRelativeLabel(
   relative: string | null,
-): { title: string; sub?: string } {
-  if (status === 'failed') return { title: 'Failed', sub: 'Check failed' };
-  if (status === 'paused') return { title: 'Paused' };
-  if (status === 'queued') return { title: 'Queued', sub: 'Waiting for run' };
-  if (status === 'running') return { title: 'Running', sub: 'Updating…' };
-  if (!hasSnapshot) return { title: 'Queued', sub: 'Waiting for first check' };
-  if (relative && status === 'active') return { title: relative };
-  return { title: 'Active' };
+  status: RankKeywordStatus | undefined,
+): string | null {
+  if (relative && status === 'active') return relative;
+  return null;
 }
 
 function formatRelative(iso: string | null | undefined): string | null {
@@ -39,28 +52,6 @@ function formatRelative(iso: string | null | undefined): string | null {
   if (h < 48) return `Updated ${h}h ago`;
   return `Updated ${Math.floor(h / 24)}d ago`;
 }
-
-const cellPad: React.CSSProperties = {
-  padding: '12px',
-  fontSize: 13,
-  color: '#302E36',
-  fontFamily: FONT,
-  display: 'flex',
-  alignItems: 'center',
-  borderLeft: '1px solid #F4F4F5',
-};
-
-const headPad: React.CSSProperties = {
-  padding: '10px 12px',
-  fontSize: 11,
-  fontWeight: 600,
-  color: '#6A6772',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  fontFamily: FONT,
-  display: 'flex',
-  alignItems: 'center',
-};
 
 type Props = {
   rows: RankTrackingRow[];
@@ -107,7 +98,6 @@ export default function TrackedKeywordsTable({
 }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
-  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.trackingKeywordId));
   const localeLabel = config
@@ -116,217 +106,211 @@ export default function TrackedKeywordsTable({
   const relative = formatRelative(lastCheckedAt);
 
   return (
-    <div>
-      <h3 style={{ margin: '32px 0 0', fontFamily: FONT, fontSize: 18, color: '#181225', fontWeight: 600 }}>
-        Tracked Keywords
-        <span style={{ fontSize: 16, color: 'rgba(32,32,32,0.5)', marginLeft: 4, fontWeight: 400 }}>
-          ({total}/{limit})
-        </span>
-      </h3>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '20px 0 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <Button type="button" variant="primary" onClick={() => setAddOpen(true)}>
-            + Add Keywords
-          </Button>
-          {exportHref && (
-            <a href={exportHref} style={{ textDecoration: 'none' }}>
-              <Button type="button" variant="primary">
-                Export to CSV
-              </Button>
-            </a>
-          )}
-          {onRefreshMetrics && (
-            <Button type="button" variant="secondary" onClick={onRefreshMetrics} busy={metricsBusy}>
-              Update SEO Difficulty
+    <TablePattern
+      title="Tracked Keywords"
+      titleMeta={`(${total}/${limit})`}
+      toolbar={{
+        searchValue: search,
+        onSearchChange,
+        searchPlaceholder: 'Search by keyword or URL',
+        selectionCount: selected.size,
+        selectionActions: (
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={selected.size === 0 || archiving}
+              busy={archiving}
+              onClick={() => onArchive([...selected])}
+              icon={<Icon name="Trash" size={16} />}
+            >
+              Delete
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={selected.size === 0 || archiving}
-            busy={archiving}
-            onClick={() => onArchive([...selected])}
-          >
-            Delete
-          </Button>
-          <span style={{ fontSize: 14, color: '#D1D7D9', fontFamily: FONT }}>
-            {selected.size} of {rows.length} Selected
-          </span>
-        </div>
-        <Button type="button" variant="transparent" onClick={() => setFiltersOpen((v) => !v)}>
-          Filters
-        </Button>
-      </div>
+          </>
+        ),
+        actions: (
+          <>
+            {exportHref ? (
+              <a href={exportHref} style={{ textDecoration: 'none' }}>
+                <Button type="button" variant="secondary" size="sm" icon={<Icon name="Export" size={16} />}>
+                  Export
+                </Button>
+              </a>
+            ) : null}
+            {onRefreshMetrics ? (
+              <Button type="button" variant="secondary" size="sm" onClick={onRefreshMetrics} busy={metricsBusy}>
+                Update SEO Difficulty
+              </Button>
+            ) : null}
+            <Button type="button" variant="primary" size="sm" onClick={() => setAddOpen(true)}>
+              + Add Keywords
+            </Button>
+          </>
+        ),
+      }}
+    >
+      <DataTable>
+        <DataTableContent minWidth={960} aria-label="Tracked keywords">
+          <DataTableHeader>
+            <DataTableHeadCell width={44}>
+              <Checkbox
+                checked={allSelected}
+                onChange={(checked) => {
+                  if (checked) setSelected(new Set(rows.map((r) => r.trackingKeywordId)));
+                  else setSelected(new Set());
+                }}
+              />
+            </DataTableHeadCell>
+            <DataTableHeadCell width={110}>Position</DataTableHeadCell>
+            <DataTableHeadCell flex={1} minWidth={180}>Keyword</DataTableHeadCell>
+            <DataTableHeadCell width={140}>Change</DataTableHeadCell>
+            <DataTableHeadCell width={80}>Vol</DataTableHeadCell>
+            <DataTableHeadCell width={100}>SEO Diff.</DataTableHeadCell>
+            <DataTableHeadCell flex={1} minWidth={160}>URL</DataTableHeadCell>
+            <DataTableHeadCell width={44} align="center" />
+          </DataTableHeader>
 
-      {filtersOpen && (
-        <div style={{ padding: '12px 0 20px', borderBottom: '1px solid #bebebe', marginBottom: 8 }}>
-          <div style={{ fontSize: 12, color: '#6A6772', marginBottom: 6, fontFamily: FONT }}>Search by keyword or URL</div>
-          <input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Enter a keyword or URL"
-            style={{
-              width: '100%',
-              maxWidth: 420,
-              height: 40,
-              border: '1px solid #bebebe',
-              borderRadius: 8,
-              padding: '0 12px',
-              fontFamily: FONT,
-              fontSize: 14,
-            }}
-          />
-        </div>
-      )}
+          <DataTableBody>
+            {loading && rows.length === 0 ? (
+              <DataTableEmpty>Loading…</DataTableEmpty>
+            ) : rows.length === 0 ? (
+              <DataTableEmpty>
+                No tracked keywords yet. Add keywords from Keyword list or use Add Keywords.
+              </DataTableEmpty>
+            ) : (
+              rows.map((row) => {
+                const status = statusById.get(row.trackingKeywordId);
+                const dev = row.desktop;
+                const badge = rankStatusBadge(status, dev.hasSnapshot);
+                const relativeLabel = statusRelativeLabel(relative, status);
+                const selectedRow = selected.has(row.trackingKeywordId);
+                const expanded = expandedId === row.trackingKeywordId;
+                const trend = trendById.get(row.trackingKeywordId);
 
-      <DataTable style={{ borderColor: '#bebebe' }}>
-        <DataTableContent minWidth={960} aria-label="Tracked keywords" style={{ overflow: 'visible' }}>
-            <DataTableHeader style={{ position: 'static' }}>
-              <div style={{ ...headPad, width: 44, borderLeft: 'none' }}>
-                <Checkbox
-                  checked={allSelected}
-                  onChange={(checked) => {
-                    if (checked) setSelected(new Set(rows.map((r) => r.trackingKeywordId)));
-                    else setSelected(new Set());
-                  }}
-                />
-              </div>
-              <div style={{ ...headPad, width: 110 }}>Position</div>
-              <div style={{ ...headPad, flex: 1, minWidth: 180 }}>Keyword</div>
-              <div style={{ ...headPad, width: 140 }}>Change</div>
-              <div style={{ ...headPad, width: 80 }}>Vol</div>
-              <div style={{ ...headPad, width: 100 }}>SEO Diff.</div>
-              <div style={{ ...headPad, flex: 1, minWidth: 160 }}>URL</div>
-              <div style={{ ...headPad, width: 40 }} />
-            </DataTableHeader>
-
-            <DataTableBody>
-              {loading && rows.length === 0 ? (
-                <DataTableEmpty>Loading…</DataTableEmpty>
-              ) : rows.length === 0 ? (
-                <DataTableEmpty>
-                  No tracked keywords yet. Add keywords from Keyword list or use Add Keywords.
-                </DataTableEmpty>
-              ) : (
-                rows.map((row) => {
-                  const status = statusById.get(row.trackingKeywordId);
-                  const dev = row.desktop;
-                  const posLabel = statusLabel(status, dev.hasSnapshot, relative);
-                  const selectedRow = selected.has(row.trackingKeywordId);
-                  const expanded = expandedId === row.trackingKeywordId;
-                  const trend = trendById.get(row.trackingKeywordId);
-
-                  return (
-                    <React.Fragment key={row.trackingKeywordId}>
-                      <DataTableRow selected={selectedRow} style={{ minHeight: 56, flexWrap: 'wrap' }}>
-                        <div style={{ ...cellPad, width: 44, borderLeft: 'none' }}>
-                          <Checkbox
-                            checked={selectedRow}
-                            onChange={(checked) => {
-                              setSelected((prev) => {
-                                const next = new Set(prev);
-                                if (checked) next.add(row.trackingKeywordId);
-                                else next.delete(row.trackingKeywordId);
-                                return next;
-                              });
-                            }}
-                          />
-                        </div>
-                        <div style={{ ...cellPad, width: 110, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-                          {dev.hasSnapshot && dev.position != null ? (
-                            <span style={{ fontWeight: 600 }}>{dev.position}</span>
-                          ) : (
-                            <>
-                              <span style={{ fontWeight: 600 }}>{posLabel.title}</span>
-                              {posLabel.sub && <span style={{ fontSize: 12, color: '#A3B0B3' }}>{posLabel.sub}</span>}
-                            </>
-                          )}
-                        </div>
-                        <div style={{ ...cellPad, flex: 1, minWidth: 180, flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-                          <span style={{ color: ACCENT, fontWeight: 600 }}>{row.keyword}</span>
-                          <span style={{ fontSize: 12, color: '#6A6772' }}>{localeLabel}</span>
-                        </div>
-                        <div style={{ ...cellPad, width: 140, flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                          {dev.hasSnapshot && dev.previousPosition != null && dev.position != null ? (
-                            <>
-                              <div style={{ display: 'flex', gap: 6, color: '#A3B0B3', fontSize: 14 }}>
-                                <span>{dev.previousPosition}</span>
-                                <span>→</span>
-                                <span style={{ color: '#181225', fontWeight: 600 }}>{dev.position}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => onToggleTrend(row.trackingKeywordId)}
-                                style={{
-                                  border: '1px solid #c97e52',
-                                  background: expanded ? ACCENT : '#fff',
-                                  color: expanded ? '#fff' : ACCENT,
-                                  borderRadius: 6,
-                                  padding: '4px 10px',
-                                  fontSize: 12,
-                                  cursor: 'pointer',
-                                  fontFamily: FONT,
-                                }}
-                              >
-                                See Trend
-                              </button>
-                            </>
-                          ) : (
-                            <span>—</span>
-                          )}
-                        </div>
-                        <div style={{ ...cellPad, width: 80 }}>
-                          {row.searchVolume != null ? row.searchVolume.toLocaleString() : '—'}
-                        </div>
-                        <div style={{ ...cellPad, width: 100 }}>
-                          {row.keywordDifficulty != null ? row.keywordDifficulty : '—'}
-                        </div>
-                        <div style={{ ...cellPad, flex: 1, minWidth: 160, overflow: 'hidden' }}>
-                          {dev.rankingUrl ? (
-                            <a
-                              href={dev.rankingUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: ACCENT, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%' }}
-                              title={dev.rankingUrl}
-                            >
-                              {dev.rankingUrl}
-                            </a>
-                          ) : (
-                            <span>—</span>
-                          )}
-                        </div>
-                        <div style={{ ...cellPad, width: 40, justifyContent: 'center' }}>
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-label="Desktop">
-                            <path d="M1.5.5h13c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1h-13c-.55 0-1-.45-1-1v-10c0-.55.45-1 1-1z" stroke="#444" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M.5 9.5h15M3.5 15.5h9M6.5 12.5v3M9.5 12.5v3" stroke="#444" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                        {expanded && (
-                          <div style={{ width: '100%', padding: 16, background: '#fafaf8', borderTop: '1px solid #bebebe' }}>
-                            <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                              History of {row.keyword}
-                            </div>
-                            <div style={{ height: 160 }}>
-                              {trend && trend.length > 0 ? (
-                                <Chart
-                                  labels={trend.map((p) => p.date)}
-                                  series={trend.map((p) => p.position ?? 0)}
-                                  reverse
-                                />
-                              ) : (
-                                <div style={{ color: '#6A6772', fontSize: 13 }}>Loading trend…</div>
-                              )}
-                            </div>
-                          </div>
+                return (
+                  <React.Fragment key={row.trackingKeywordId}>
+                    <DataTableRow selected={selectedRow} style={{ flexWrap: 'wrap' }}>
+                      <DataTableCell width={44}>
+                        <Checkbox
+                          checked={selectedRow}
+                          onChange={(checked) => {
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              if (checked) next.add(row.trackingKeywordId);
+                              else next.delete(row.trackingKeywordId);
+                              return next;
+                            });
+                          }}
+                        />
+                      </DataTableCell>
+                      <DataTableCell width={110} stack>
+                        {dev.hasSnapshot && dev.position != null ? (
+                          <span style={{ fontWeight: 600 }}>{dev.position}</span>
+                        ) : badge ? (
+                          <>
+                            <StatusBadge status={badge.tone} label={badge.label} />
+                            {badge.sub ? (
+                              <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)' }}>{badge.sub}</span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>{relativeLabel ?? 'Active'}</span>
                         )}
-                      </DataTableRow>
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </DataTableBody>
+                      </DataTableCell>
+                      <DataTableCell flex={1} minWidth={180} stack>
+                        <span style={{ color: ACCENT, fontWeight: 600 }}>{row.keyword}</span>
+                        <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)' }}>{localeLabel}</span>
+                      </DataTableCell>
+                      <DataTableCell width={140} stack style={{ gap: 6 }}>
+                        {dev.hasSnapshot && dev.previousPosition != null && dev.position != null ? (
+                          <>
+                            <div style={{ display: 'flex', gap: 6, color: 'var(--koala-text-secondary)', fontSize: 14 }}>
+                              <span>{dev.previousPosition}</span>
+                              <span>→</span>
+                              <span style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{dev.position}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant={expanded ? 'primary' : 'secondary'}
+                              size="xs"
+                              onClick={() => onToggleTrend(row.trackingKeywordId)}
+                              style={
+                                expanded
+                                  ? undefined
+                                  : { borderColor: 'var(--koala-border-brand)', color: ACCENT }
+                              }
+                            >
+                              See Trend
+                            </Button>
+                          </>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </DataTableCell>
+                      <DataTableCell width={80}>
+                        {row.searchVolume != null ? row.searchVolume.toLocaleString() : '—'}
+                      </DataTableCell>
+                      <DataTableCell width={100}>
+                        <KeywordDifficultyDot kd={row.keywordDifficulty} />
+                      </DataTableCell>
+                      <DataTableCell flex={1} minWidth={160} style={{ overflow: 'hidden' }}>
+                        {dev.rankingUrl ? (
+                          <a
+                            href={dev.rankingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              color: ACCENT,
+                              textDecoration: 'none',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'block',
+                              maxWidth: '100%',
+                            }}
+                            title={dev.rankingUrl}
+                          >
+                            {dev.rankingUrl}
+                          </a>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </DataTableCell>
+                      <DataTableCell width={44} align="center">
+                        <Icon name="Monitor" size={16} color="var(--koala-text-secondary)" />
+                      </DataTableCell>
+                      {expanded ? (
+                        <div
+                          style={{
+                            width: '100%',
+                            padding: 16,
+                            background: 'var(--koala-bg-secondary)',
+                            borderTop: '1px solid var(--koala-border-primary)',
+                          }}
+                        >
+                          <div style={{ fontFamily: FONT, fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                            History of {row.keyword}
+                          </div>
+                          <div style={{ height: 160 }}>
+                            {trend && trend.length > 0 ? (
+                              <Chart
+                                labels={trend.map((p) => p.date)}
+                                series={trend.map((p) => p.position ?? 0)}
+                                reverse
+                              />
+                            ) : (
+                              <div style={{ color: 'var(--koala-text-secondary)', fontSize: 13 }}>Loading trend…</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </DataTableRow>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </DataTableBody>
         </DataTableContent>
       </DataTable>
 
@@ -336,6 +320,6 @@ export default function TrackedKeywordsTable({
         onAdd={onAdd}
         loading={adding}
       />
-    </div>
+    </TablePattern>
   );
 }

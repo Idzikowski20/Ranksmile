@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { CompactSelect } from '../core';
-import { SentryEmptyState, SentryPanel, SentryPanelBody } from '../sentry-pages';
+import { CompactSelect } from '../koala/core';
+import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import InfoPopper, { dashedLinkStyle } from './InfoPopper';
 import HowToFixPopper from './HowToFixPopper';
 import { getCatalogEntry } from '../../lib/siteAudit/issueCatalog';
@@ -119,13 +119,13 @@ function CrawlSelect({
         <button
           {...triggerProps}
           type="button"
-          className="sentry-compare-crawls-select-trigger"
+          className="koala-compare-crawls-select-trigger"
           aria-label={ariaLabel}
         >
-          <span className="sentry-compare-crawls-select-text">
+          <span className="koala-compare-crawls-select-text">
             {options.find((o) => o.value === value)?.label ?? 'Select crawl'}
           </span>
-          <span className="sentry-compare-crawls-select-addon" aria-hidden="true">
+          <span className="koala-compare-crawls-select-addon" aria-hidden="true">
             <ChevronDownIcon />
           </span>
         </button>
@@ -178,14 +178,14 @@ export default function SiteAuditCompareCrawls({
 
   if (!report.hasData || !report.crawls.length) {
     return (
-      <SentryPanel>
-        <SentryPanelBody>
-          <SentryEmptyState
+      <KoalaPanel>
+        <KoalaPanelBody>
+          <KoalaEmptyState
             title="No crawl history yet"
             description="Run at least one site audit crawl to compare results over time."
           />
-        </SentryPanelBody>
-      </SentryPanel>
+        </KoalaPanelBody>
+      </KoalaPanel>
     );
   }
 
@@ -208,35 +208,35 @@ export default function SiteAuditCompareCrawls({
   };
 
   return (
-    <section className="sentry-compare-crawls" aria-label="Compare crawls">
-      <div className="perf-3d-card sentry-compare-crawls-card">
-        <div className="sentry-compare-crawls-table-wrap">
-          <table className="sentry-compare-crawls-table">
+    <section className="koala-compare-crawls" aria-label="Compare crawls">
+      <div className="koala-compare-crawls-card">
+        <div className="koala-compare-crawls-table-wrap">
+          <table className="koala-compare-crawls-table">
             <tbody>
-              <tr className="sentry-compare-crawls-header-row">
-                <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--label">
-                  <h2 className="sentry-compare-crawls-section-title">General</h2>
+              <tr className="koala-compare-crawls-header-row">
+                <td className="koala-compare-crawls-cell koala-compare-crawls-cell--label">
+                  <h2 className="koala-compare-crawls-section-title">General</h2>
                   <button
                     type="button"
-                    className="sentry-compare-crawls-info-btn"
+                    className="koala-compare-crawls-info-btn"
                     aria-label="About general metrics"
                     onClick={(e) => openInfo('general', e.currentTarget)}
                   >
                     <InfoIcon />
                   </button>
                 </td>
-                <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--crawl">
-                  <div className="sentry-compare-crawls-crawl-picker">
+                <td className="koala-compare-crawls-cell koala-compare-crawls-cell--crawl">
+                  <div className="koala-compare-crawls-crawl-picker">
                     <CrawlSelect
                       value={olderId}
                       options={crawlOptions}
                       onChange={onOlderChange}
                       ariaLabel="Select the earlier crawl date to compare"
                     />
-                    <span className="sentry-compare-crawls-vs">vs</span>
+                    <span className="koala-compare-crawls-vs">vs</span>
                   </div>
                 </td>
-                <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--crawl">
+                <td className="koala-compare-crawls-cell koala-compare-crawls-cell--crawl">
                   <CrawlSelect
                     value={newerId}
                     options={crawlOptions}
@@ -244,11 +244,11 @@ export default function SiteAuditCompareCrawls({
                     ariaLabel="Select the later crawl date to compare"
                   />
                 </td>
-                <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--diff">
-                  <span className="sentry-compare-crawls-diff-title">Fixed</span>
+                <td className="koala-compare-crawls-cell koala-compare-crawls-cell--diff">
+                  <span className="koala-compare-crawls-diff-title">Fixed</span>
                 </td>
-                <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--diff">
-                  <span className="sentry-compare-crawls-diff-title">New</span>
+                <td className="koala-compare-crawls-cell koala-compare-crawls-cell--diff">
+                  <span className="koala-compare-crawls-diff-title">New</span>
                 </td>
               </tr>
 
@@ -256,13 +256,13 @@ export default function SiteAuditCompareCrawls({
                 if (row.kind === 'section') {
                   const sectionInfoKey = row.id;
                   return (
-                    <tr key={row.id} className="sentry-compare-crawls-section-row">
-                      <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--label" colSpan={1}>
-                        <h2 className="sentry-compare-crawls-section-title">{row.label}</h2>
+                    <tr key={row.id} className="koala-compare-crawls-section-row">
+                      <td className="koala-compare-crawls-cell koala-compare-crawls-cell--label" colSpan={1}>
+                        <h2 className="koala-compare-crawls-section-title">{row.label}</h2>
                         {row.severity && (
                           <button
                             type="button"
-                            className="sentry-compare-crawls-info-btn"
+                            className="koala-compare-crawls-info-btn"
                             aria-label={`About ${row.label}`}
                             onClick={(e) => openInfo(sectionInfoKey, e.currentTarget)}
                           >
@@ -270,7 +270,7 @@ export default function SiteAuditCompareCrawls({
                           </button>
                         )}
                       </td>
-                      <td className="sentry-compare-crawls-cell" colSpan={4} />
+                      <td className="koala-compare-crawls-cell" colSpan={4} />
                     </tr>
                   );
                 }
@@ -278,13 +278,13 @@ export default function SiteAuditCompareCrawls({
                 const issueSummary = row.kind === 'issue' ? issueSummaryFromRow(row) : null;
 
                 return (
-                  <tr key={row.id} className="sentry-compare-crawls-data-row">
-                    <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--label">
-                      <div className="sentry-compare-crawls-label-wrap">
+                  <tr key={row.id} className="koala-compare-crawls-data-row">
+                    <td className="koala-compare-crawls-cell koala-compare-crawls-cell--label">
+                      <div className="koala-compare-crawls-label-wrap">
                         {row.kind === 'issue' ? (
                           <button
                             type="button"
-                            className="sentry-compare-crawls-link"
+                            className="koala-compare-crawls-link"
                             onClick={() => onOpenIssue?.(row.issueId ?? row.id)}
                           >
                             {row.label}
@@ -292,7 +292,7 @@ export default function SiteAuditCompareCrawls({
                         ) : (
                           <button
                             type="button"
-                            className="sentry-compare-crawls-link"
+                            className="koala-compare-crawls-link"
                             onClick={() => handleGeneralLink(row.id)}
                           >
                             {row.label}
@@ -301,7 +301,7 @@ export default function SiteAuditCompareCrawls({
                         {row.kind === 'general' && GENERAL_INFO[row.id] && (
                           <button
                             type="button"
-                            className="sentry-compare-crawls-info-btn"
+                            className="koala-compare-crawls-info-btn"
                             aria-label={`About ${row.label}`}
                             onClick={(e) => openInfo(row.id, e.currentTarget)}
                           >
@@ -319,7 +319,7 @@ export default function SiteAuditCompareCrawls({
                         )}
                         <button
                           type="button"
-                          className="sentry-compare-crawls-progress-btn"
+                          className="koala-compare-crawls-progress-btn"
                           aria-label="Open the Progress report"
                           title="Go to Progress"
                           disabled
@@ -328,17 +328,17 @@ export default function SiteAuditCompareCrawls({
                         </button>
                       </div>
                     </td>
-                    <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--value">
-                      <span className="sentry-compare-crawls-value">{formatCellValue(row.olderValue)}</span>
+                    <td className="koala-compare-crawls-cell koala-compare-crawls-cell--value">
+                      <span className="koala-compare-crawls-value">{formatCellValue(row.olderValue)}</span>
                     </td>
-                    <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--value">
-                      <span className="sentry-compare-crawls-value">{formatCellValue(row.newerValue)}</span>
+                    <td className="koala-compare-crawls-cell koala-compare-crawls-cell--value">
+                      <span className="koala-compare-crawls-value">{formatCellValue(row.newerValue)}</span>
                     </td>
-                    <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--value">
-                      <span className="sentry-compare-crawls-diff">{formatDiffValue(row.fixed)}</span>
+                    <td className="koala-compare-crawls-cell koala-compare-crawls-cell--value">
+                      <span className="koala-compare-crawls-diff">{formatDiffValue(row.fixed)}</span>
                     </td>
-                    <td className="sentry-compare-crawls-cell sentry-compare-crawls-cell--value">
-                      <span className="sentry-compare-crawls-diff">{formatDiffValue(row.newCount)}</span>
+                    <td className="koala-compare-crawls-cell koala-compare-crawls-cell--value">
+                      <span className="koala-compare-crawls-diff">{formatDiffValue(row.newCount)}</span>
                     </td>
                   </tr>
                 );

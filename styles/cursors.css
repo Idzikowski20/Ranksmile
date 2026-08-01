@@ -1,0 +1,183 @@
+/**
+ * Koala UI v11 custom cursors — Figma `3950:57573`.
+ * Assets: /public/cursors/*.svg
+ *
+ * Semantic classes (use on interactive surfaces):
+ *   .koala-cursor-pointer | -grab | -grabbing | -move | -text | -wait | -progress
+ *   .koala-cursor-copy | -help | -cross | -zoom-in | -zoom-out | -not-allowed
+ *   .koala-cursor-col-resize | -row-resize | -n/s/e/w-resize
+ */
+
+:root {
+  --koala-cursor-default: url("/cursors/default.svg") 4 2, auto;
+  --koala-cursor-pointing: url("/cursors/pointing.svg") 8 4, pointer;
+  --koala-cursor-dragging: url("/cursors/dragging.svg") 10 10, grab;
+  --koala-cursor-grabbing: url("/cursors/dragging.svg") 10 10, grabbing;
+  --koala-cursor-beachball: url("/cursors/beachball.svg") 10 10, wait;
+  --koala-cursor-busy: url("/cursors/busy.svg") 4 2, progress;
+  --koala-cursor-copy: url("/cursors/copy.svg") 4 2, copy;
+  --koala-cursor-cross: url("/cursors/cross.svg") 8 8, crosshair;
+  --koala-cursor-help: url("/cursors/help.svg") 8 8, help;
+  --koala-cursor-move: url("/cursors/move.svg") 12 12, move;
+  --koala-cursor-resize-down: url("/cursors/resize-down.svg") 8 6, s-resize;
+  --koala-cursor-resize-left: url("/cursors/resize-left.svg") 6 8, w-resize;
+  --koala-cursor-resize-ew: url("/cursors/resize-ew.svg") 10 8, ew-resize;
+  --koala-cursor-resize-right: url("/cursors/resize-right.svg") 6 8, e-resize;
+  --koala-cursor-resize-up: url("/cursors/resize-up.svg") 8 6, n-resize;
+  --koala-cursor-resize-ns: url("/cursors/resize-ns.svg") 8 10, ns-resize;
+  --koala-cursor-text: url("/cursors/text.svg") 6 10, text;
+  --koala-cursor-zoom-in: url("/cursors/zoom-in.svg") 10 10, zoom-in;
+  --koala-cursor-zoom-out: url("/cursors/zoom-out.svg") 10 10, zoom-out;
+  --koala-cursor-not-allowed: url("/cursors/not-allowed.svg") 4 2, not-allowed;
+}
+
+/* ── Global defaults ─────────────────────────────────────────────────────── */
+
+html,
+body {
+  cursor: var(--koala-cursor-default);
+}
+
+/* Click / hover targets → pointing hand */
+a[href],
+button:not(:disabled):not([aria-disabled="true"]),
+[role="button"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]),
+[role="option"]:not([aria-disabled="true"]),
+[role="tab"]:not([aria-disabled="true"]),
+[role="switch"]:not([aria-disabled="true"]),
+[role="checkbox"]:not([aria-disabled="true"]),
+[role="radio"]:not([aria-disabled="true"]),
+[role="link"],
+summary,
+label[for],
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="file"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+.koala-cursor-pointer {
+  cursor: var(--koala-cursor-pointing);
+}
+
+/* Text selection / typing */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not(:disabled),
+textarea:not(:disabled),
+[contenteditable="true"],
+[contenteditable=""],
+.ProseMirror,
+.koala-cursor-text {
+  cursor: var(--koala-cursor-text);
+}
+
+/* Disabled / blocked */
+:disabled,
+[aria-disabled="true"],
+.koala-cursor-not-allowed {
+  cursor: var(--koala-cursor-not-allowed) !important;
+}
+
+/* Busy / wait */
+[aria-busy="true"],
+.koala-cursor-wait {
+  cursor: var(--koala-cursor-beachball);
+}
+
+.koala-cursor-progress,
+[data-busy="true"] {
+  cursor: var(--koala-cursor-busy);
+}
+
+/* Drag / pan */
+.koala-cursor-grab,
+[data-cursor="grab"] {
+  cursor: var(--koala-cursor-dragging);
+}
+
+.koala-cursor-grabbing,
+[data-cursor="grabbing"],
+.koala-cursor-grab:active,
+[data-cursor="grab"]:active {
+  cursor: var(--koala-cursor-grabbing);
+}
+
+/* Move / select / zoom / help / copy */
+.koala-cursor-move,
+[data-cursor="move"] {
+  cursor: var(--koala-cursor-move);
+}
+
+.koala-cursor-cross,
+[data-cursor="cross"] {
+  cursor: var(--koala-cursor-cross);
+}
+
+.koala-cursor-copy,
+[data-cursor="copy"] {
+  cursor: var(--koala-cursor-copy);
+}
+
+.koala-cursor-help,
+[data-cursor="help"],
+[data-help] {
+  cursor: var(--koala-cursor-help);
+}
+
+.koala-cursor-zoom-in,
+[data-cursor="zoom-in"] {
+  cursor: var(--koala-cursor-zoom-in);
+}
+
+.koala-cursor-zoom-out,
+[data-cursor="zoom-out"] {
+  cursor: var(--koala-cursor-zoom-out);
+}
+
+/* Resize edges */
+.koala-cursor-col-resize,
+[data-cursor="col-resize"] {
+  cursor: var(--koala-cursor-resize-ew);
+}
+
+.koala-cursor-row-resize,
+[data-cursor="row-resize"] {
+  cursor: var(--koala-cursor-resize-ns);
+}
+
+.koala-cursor-n-resize,
+[data-cursor="n-resize"] {
+  cursor: var(--koala-cursor-resize-up);
+}
+
+.koala-cursor-s-resize,
+[data-cursor="s-resize"] {
+  cursor: var(--koala-cursor-resize-down);
+}
+
+.koala-cursor-e-resize,
+[data-cursor="e-resize"] {
+  cursor: var(--koala-cursor-resize-right);
+}
+
+.koala-cursor-w-resize,
+[data-cursor="w-resize"] {
+  cursor: var(--koala-cursor-resize-left);
+}
+
+/* Chart / vis interactive marks inherit pointing when clickable */
+.rs-data-table__sort,
+.rs-data-table__row[role="button"],
+[data-interactive="true"] {
+  cursor: var(--koala-cursor-pointing);
+}
+
+/* Prefer reduced motion / print: fall back to system (assets still fine) */
+@media print {
+  *,
+  *::before,
+  *::after {
+    cursor: auto !important;
+  }
+}

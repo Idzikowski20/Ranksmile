@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ShellPortal, overlayZ } from '../../koala/overlay/ShellPortal';
 
 const F = 'var(--font-family-primary)';
 
@@ -18,8 +19,9 @@ const PreviewNameGate = ({ onSubmit }: { onSubmit: (name: string) => void }) => 
   };
 
   return (
+    <ShellPortal>
     <div role="dialog" aria-modal="true" aria-label="Enter your name"
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(9,9,11,0.5)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', fontFamily: F, animation: 'pngFade 0.2s ease-out' }}
+      style={{ position: 'fixed', inset: 0, zIndex: overlayZ.modal, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(9,9,11,0.5)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', fontFamily: F, animation: 'pngFade 0.2s ease-out' }}
       onMouseDown={(e) => e.stopPropagation()}>
       <style>{`
         @keyframes pngFade { from { opacity: 0; } to { opacity: 1; } }
@@ -58,7 +60,7 @@ const PreviewNameGate = ({ onSubmit }: { onSubmit: (name: string) => void }) => 
 
           <button type="submit" disabled={!valid}
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46, border: 'none', borderRadius: 10, background: valid ? '#2F2F34' : '#E4E4E7', color: valid ? '#fff' : '#A1A1AA', fontSize: 15, fontWeight: 600, fontFamily: F, cursor: valid ? 'pointer' : 'not-allowed', transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { if (valid) e.currentTarget.style.background = '#F29964'; }}
+            onMouseEnter={(e) => { if (valid) e.currentTarget.style.background = '#F84416'; }}
             onMouseLeave={(e) => { if (valid) e.currentTarget.style.background = '#2F2F34'; }}>
             Continue
             <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
@@ -70,6 +72,7 @@ const PreviewNameGate = ({ onSubmit }: { onSubmit: (name: string) => void }) => 
         </div>
       </form>
     </div>
+    </ShellPortal>
   );
 };
 

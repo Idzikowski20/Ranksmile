@@ -26,7 +26,7 @@ export const PLATFORM_CAPABILITIES: Capability[] = [
   {
     id: 'cluster_entities',
     label: 'Cluster Entities',
-    description: 'Group entities for coverage / topical map (fill in Q2)',
+    description: 'Group entities for coverage (fill in Q2)',
     actionTypes: ['add_entity', 'cluster_entities'],
     available: false,
   },

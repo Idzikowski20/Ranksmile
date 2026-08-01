@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import WpConnectionsTable from '../wordpress/WpConnectionsTable';
-import { SentryPanel, SentryPanelBody, SentryEmptyState } from '../sentry-pages';
+import { KoalaPanel, KoalaPanelBody, KoalaEmptyState } from '../koala/layout';
 
 const DOCS_URL = 'https://ranksmile.pl';
 
@@ -8,7 +8,7 @@ const WordPressSettings = () => {
   const [hover, setHover] = useState(false);
 
   const emptyState = (
-    <SentryEmptyState
+    <KoalaEmptyState
       title="No WordPress accounts"
       description="You haven't connected any accounts yet."
     />
@@ -17,11 +17,11 @@ const WordPressSettings = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 24, width: '100%' }}>
       <div style={{ width: '100%' }}>
-        <SentryPanel noPadding>
-          <SentryPanelBody>
+        <KoalaPanel noPadding>
+          <KoalaPanelBody>
             <WpConnectionsTable emptyState={emptyState} />
-          </SentryPanelBody>
-        </SentryPanel>
+          </KoalaPanelBody>
+        </KoalaPanel>
       </div>
 
       <a
@@ -36,7 +36,7 @@ const WordPressSettings = () => {
           gap: 2,
           fontSize: 14,
           fontWeight: 500,
-          color: hover ? '#F29964' : '#18181B',
+          color: hover ? '#F84416' : '#18181B',
           textDecoration: 'none',
           transition: 'color 150ms ease',
           fontFamily: 'var(--font-family-primary)',

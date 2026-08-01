@@ -5,7 +5,9 @@ import { useRouter } from 'next/router';
 import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
-import { SentryPage } from '../../components/sentry-pages';
+import { KoalaPage, DashboardLayout as KoalaDashboardLayout } from '../../components/koala/layout';
+import { MetricWidget, FeedbackPopover } from '../../components/koala/product';
+import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
 import { deriveActiveId, resolveActiveDomain, workspaceHref } from '../../lib/activeWorkspace';
@@ -16,11 +18,13 @@ import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
 import GetStartedCard from '../../components/dashboard/GetStartedCard';
 import BrandPerformance from '../../components/dashboard/BrandPerformance';
+import AiVisibilityPerformance from '../../components/dashboard/AiVisibilityPerformance';
 import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
 import RecentlyEdited, { RecentlyEditedItem } from '../../components/dashboard/RecentlyEdited';
 import LearnSection from '../../components/dashboard/LearnSection';
 import SetupPipeline from '../../components/dashboard/SetupPipeline';
 import { useSetupStatus, useRunSetup } from '../../services/domainPipeline';
+import { useAiVisHistory } from '../../services/aiVisibility';
 import fetchJson from '../../lib/fetchJson';
 import { isActionableRecommendation } from '../../lib/recommendations';
 
@@ -103,8 +107,26 @@ const DashboardPage: NextPage = () => {
   const hasData = recent30.length > 0;
 
   const clicksHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
+  const aiVisHref = workspaceHref(
+    activeWsId,
+    primaryDomain ? `/sites/${primaryDomain.slug}/ai-visibility/overview` : '/dashboard',
+  );
   const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/dashboard');
   const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
+
+  const { data: aiHistory, isLoading: aiHistoryLoading } = useAiVisHistory(activeDomainSlug ?? undefined);
+  const aiScans = useMemo(
+    () => [...(aiHistory?.scans ?? [])].reverse(),
+    [aiHistory],
+  );
+  const aiPoints = aiScans.map((s) => s.series.you?.visibilityScore ?? 0);
+  const aiScore = aiPoints[aiPoints.length - 1] ?? 0;
+  const aiPrev = aiPoints.length >= 2 ? aiPoints[aiPoints.length - 2]! : 0;
+  const aiDeltaPct = aiPrev > 0
+    ? Math.round(((aiScore - aiPrev) / aiPrev) * 100)
+    : (aiScore > 0 && aiPoints.length >= 2 ? 100 : 0);
+  const aiStartLabel = formatShortDate(aiScans[0]?.finishedAt || '');
+  const aiEndLabel = formatShortDate(aiScans[aiScans.length - 1]?.finishedAt || '');
 
   // Domain-level recommendations produced by the setup pipeline (the scan output).
   const { data: domainRecsData, isLoading: domainRecsLoading } = useQuery(
@@ -226,44 +248,123 @@ const DashboardPage: NextPage = () => {
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <SentryPage maxWidth={880}>
-          <div ref={revealRef} style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-            <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
-            <GetStartedCard />
-            <BrandPerformance
-              total={clicksTotal}
-              deltaPct={deltaPct}
-              points={points}
-              startLabel={startLabel}
-              endLabel={endLabel}
-              clicksHref={clicksHref}
-              loading={sitesLoading}
+        <KoalaPage maxWidth={880}>
+          <div ref={revealRef}>
+            <KoalaDashboardLayout
+              slots={[
+                {
+                  key: 'overview',
+                  span: 12,
+                  content: (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }} data-testid="dashboard-widget-row">
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                        <DashboardGreeting clicksTotal={clicksTotal} deltaPct={deltaPct} hasData={hasData} loading={sitesLoading} clicksHref={clicksHref} />
+                        <FeedbackPopover context="dashboard">
+                          {({ open, anchorRef }) => (
+                            <span ref={anchorRef as React.RefObject<HTMLSpanElement>}>
+                              <Button type="button" variant="secondary" size="sm" onClick={open}>
+                                Leave feedback
+                              </Button>
+                            </span>
+                          )}
+                        </FeedbackPopover>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
+                        <MetricWidget
+                          title="Clicks (30d)"
+                          value={sitesLoading ? '—' : clicksTotal}
+                          delta={sitesLoading ? undefined : `${deltaPct >= 0 ? '+' : ''}${deltaPct}%`}
+                          deltaPositive={deltaPct >= 0}
+                          state={sitesLoading ? 'loading' : 'success'}
+                        />
+                        <MetricWidget
+                          title="Recommendations"
+                          value={recommendationsLoading ? '—' : recommendations.length}
+                          state={recommendationsLoading ? 'loading' : 'success'}
+                        />
+                        <MetricWidget
+                          title="Recent articles"
+                          value={articlesLoading ? '—' : recentlyEdited.length}
+                          state={articlesLoading ? 'loading' : 'success'}
+                        />
+                      </div>
+                      <GetStartedCard />
+                    </div>
+                  ),
+                },
+                {
+                  key: 'traffic',
+                  span: 6,
+                  content: (
+                    <BrandPerformance
+                      total={clicksTotal}
+                      deltaPct={deltaPct}
+                      points={points}
+                      startLabel={startLabel}
+                      endLabel={endLabel}
+                      clicksHref={clicksHref}
+                      loading={sitesLoading}
+                    />
+                  ),
+                },
+                {
+                  key: 'ai',
+                  span: 6,
+                  content: (
+                    <AiVisibilityPerformance
+                      score={aiScore}
+                      deltaPct={aiDeltaPct}
+                      points={aiPoints}
+                      startLabel={aiStartLabel}
+                      endLabel={aiEndLabel}
+                      href={aiVisHref}
+                      loading={aiHistoryLoading}
+                    />
+                  ),
+                },
+                {
+                  key: 'seo',
+                  span: 12,
+                  content: (
+                    <RecommendationsSection
+                      items={recommendations.slice(0, 3)}
+                      total={recommendations.length}
+                      faviconDomain={primaryDomain?.domain || ''}
+                      viewHref={recommendationsHref}
+                      loading={recommendationsLoading}
+                      coverage={setup?.auditCounts}
+                      hasBlogPath={hasBlogPath}
+                      settingsHref={settingsHref}
+                      pipeline={pipelineActive && setup ? (
+                        <SetupPipeline
+                          stages={setup.stages}
+                          status={setup.status}
+                          error={setup.error}
+                          onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
+                        />
+                      ) : undefined}
+                    />
+                  ),
+                },
+                {
+                  key: 'keywords',
+                  span: 12,
+                  content: <RecentlyEdited items={recentlyEdited} loading={articlesLoading} />,
+                },
+                {
+                  key: 'tasks',
+                  span: 12,
+                  content: (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                      <TrafficAlertsSection />
+                      <LearnSection />
+                    </div>
+                  ),
+                },
+              ]}
             />
-            <RecentlyEdited items={recentlyEdited} loading={articlesLoading} />
-            {/* The domain pipeline renders INSIDE the Recommendations section (its output
-                IS the recommendations) — never a takeover of the whole dashboard. */}
-            <RecommendationsSection
-              items={recommendations.slice(0, 3)}
-              total={recommendations.length}
-              faviconDomain={primaryDomain?.domain || ''}
-              viewHref={recommendationsHref}
-              loading={recommendationsLoading}
-              coverage={setup?.auditCounts}
-              hasBlogPath={hasBlogPath}
-              settingsHref={settingsHref}
-              pipeline={pipelineActive && setup ? (
-                <SetupPipeline
-                  stages={setup.stages}
-                  status={setup.status}
-                  error={setup.error}
-                  onRetry={() => { if (activeDomainSlug) runSetup.mutate(activeDomainSlug); }}
-                />
-              ) : undefined}
-            />
-            <TrafficAlertsSection />
-            <LearnSection />
           </div>
-        </SentryPage>
+        </KoalaPage>
 
         {showAddDomain && (
           <AddDomain domains={domains} closeModal={() => setShowAddDomain(false)} />

@@ -4,20 +4,17 @@ import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
-import TopicalMapCanvas from '../../../../components/domains/TopicalMapCanvas';
 import TopicResearchIdeaDrawer, { DrawerIdea } from '../../../../components/topicResearch/TopicResearchIdeaDrawer';
-import { SearchBar, Toggle, Button, SegmentedControl, Checkbox } from '../../../../components/core';
+import { SearchBar, Toggle, Button, SegmentedControl, Checkbox } from '../../../../components/koala/core';
 import { useTopicResearchRun } from '../../../../services/topicResearch';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { langForCountry } from '../../../../lib/countryLang';
-import type { TopicCluster, TopicIdea, TopicResearchResult } from '../../../../lib/topicResearchTypes';
-import { type TopicCluster as MapCluster, type TopicKeyword as MapKeyword } from '../../../../lib/topicalMap';
-import { honeycombOffsets } from '../../../../lib/topicalMapGeometry';
+import type { TopicCluster, TopicIdea } from '../../../../lib/topicResearchTypes';
 
 const FONT = 'var(--font-family-primary)';
 
-type Tab = 'all' | 'recommendations' | 'map';
+type Tab = 'all' | 'recommendations';
 
 const fmtVol = (v: number | null | undefined): string => {
    if (v == null) return '—';
@@ -36,9 +33,6 @@ const CheckIcon = ({ color }: { color: string }) => (
 );
 const FireIcon = () => (
    <svg viewBox="0 0 20 20" width={18} height={18} style={{ flexShrink: 0, color: '#FF6F77' }}><path fill="currentColor" fillRule="evenodd" d="M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039q.418.53.943.954c.332.269.786-.049.773-.476L7 7c0-.919.206-1.789.575-2.567a6.03 6.03 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.97 6.97 0 0 0 13.5 4.938M14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182c-.093-.429.44-.643.814-.413a4 4 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.98 5.98 0 0 1 1.315-4.192a.45.45 0 0 1 .431-.16A4 4 0 0 1 14 12" clipRule="evenodd" /></svg>
-);
-const CubeIcon = () => (
-   <svg viewBox="0 0 256 256" width={18} height={18} style={{ flexShrink: 0, color: '#F29964' }}><g fill="currentColor"><path d="M224 80.18v95.64a8 8 0 0 1-4.16 7l-88 48.18a8 8 0 0 1-7.68 0l-88-48.18a8 8 0 0 1-4.16-7V80.18a8 8 0 0 1 4.16-7l88-48.18a8 8 0 0 1 7.68 0l88 48.18a8 8 0 0 1 4.16 7" opacity=".2" /><path d="m223.68 66.15l-88-48.15a15.88 15.88 0 0 0-15.36 0l-88 48.17a16 16 0 0 0-8.32 14v95.64a16 16 0 0 0 8.32 14l88 48.17a15.88 15.88 0 0 0 15.36 0l88-48.17a16 16 0 0 0 8.32-14V80.18a16 16 0 0 0-8.32-14.03M216 175.82L128 224l-88-48.18V80.18L128 32l88 48.17Z" /></g></svg>
 );
 const KebabIcon = () => (
    <svg viewBox="0 0 24 24" width={16} height={16}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6.75 12a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0m6 0a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0m6 0a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0" /></svg>
@@ -68,69 +62,19 @@ const ClusterStat = ({ label, value }: { label: string; value: React.ReactNode }
 );
 
 const HeadCell = ({ width, grow, align, sortable, active, children }: { width: number; grow?: boolean; align?: 'right'; sortable?: boolean; active?: boolean; children: React.ReactNode }) => (
-   <div style={{ width, flexGrow: grow ? 1 : 0, flexShrink: 0, borderLeft: `1px solid ${BORDER}`, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: align === 'right' ? 'flex-end' : 'flex-start', gap: 4 }}>
-      <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: TEXT2, textDecorationLine: sortable ? 'underline' : 'none', textDecorationStyle: 'dotted', textDecorationColor: '#B4B4BB', textUnderlineOffset: 4 }}>{children}</span>
+   <div style={{ width, flexGrow: grow ? 1 : 0, flexShrink: 0, padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: align === 'right' ? 'flex-end' : 'flex-start', gap: 4 }}>
+      <span style={{ fontSize: 14, fontWeight: active ? 700 : 500, letterSpacing: '-0.4px', color: active ? TEXT : 'var(--koala-text-secondary, #575757)' }}>{children}</span>
       {sortable && <SortArrow active={active} />}
    </div>
 );
 
 const BodyCell = ({ width, color, children }: { width: number; color?: string; children: React.ReactNode }) => (
-   <div style={{ width, flexShrink: 0, borderLeft: `1px solid ${BORDER}`, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+   <div style={{ width, flexShrink: 0, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
       <span style={{ fontSize: 14, color: color || TEXT }}>{children}</span>
    </div>
 );
 
 type FlatIdea = { idea: TopicIdea; cluster: TopicCluster; clusterIdx: number; ideaIdx: number };
-
-/** Adapt Topic Research clusters into the radar-canvas shape used by the Topical Map page.
- *  One node per cluster; each idea becomes a satellite keyword. `id` = cluster index so a
- *  node click can open that cluster's ideas in the drawer. Fields the canvas never reads are
- *  filled with inert defaults.
- *
- *  Ranksmile-style radial layout: clusters are ranked by search volume; only the top one sits
- *  in the central HIGH zone, the rest fan outward into MEDIUM/LOW rings, spread by the golden
- *  angle so blobs don't collide. */
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-const toMapClusters = (result: TopicResearchResult): MapCluster[] => {
-   const n = result.clusters.length;
-   const rankOf = new Map<number, number>();
-   result.clusters
-      .map((c, idx) => ({ idx, vol: c.volume }))
-      .sort((a, b) => b.vol - a.vol)
-      .forEach((r, rank) => rankOf.set(r.idx, rank));
-
-   return result.clusters.map((c, idx) => {
-      const rank = rankOf.get(idx) ?? 0;
-      // Rank 0 → center (HIGH); others pushed out to 0.42–0.92 of the radar radius.
-      const mag = rank === 0 ? 0.05 : 0.42 + 0.5 * ((rank - 1) / Math.max(1, n - 2));
-      const angle = rank * GOLDEN_ANGLE;
-      const status: MapCluster['status'] = c.covered > 0 ? 'covered' : (c.ideas.some((i) => i.recommended) ? 'recommended' : 'not_covered');
-      const keywords: MapKeyword[] = [
-         { text: c.title, isMain: true, covered: c.covered > 0, position: null, kd: c.kd, impressions: null, vol: c.volume },
-         ...c.ideas.map((i) => ({ text: i.main, isMain: false, covered: i.position != null, position: i.position, kd: i.kd ?? 0, impressions: null, vol: i.volume ?? 0 })),
-      ];
-      return {
-         id: idx,
-         name: c.title,
-         mainKeyword: c.ideas[0]?.main ?? c.title,
-         keywords,
-         groups: [],
-         competitors: [],
-         kd: c.kd,
-         vol: c.volume,
-         position: null,
-         impressions: 0,
-         covRatio: `${c.covered}/${c.total}`,
-         status,
-         articleStatus: 'Not started',
-         dims: [],
-         aiGap: [],
-         opportunity: { score: 0, tier: 'Low', estGainClicks: 0, difficulty: 'Medium', priority: 'Low' },
-         aiAuthority: { score: 0, subs: [] },
-         map: { x: Math.cos(angle) * mag, y: Math.sin(angle) * mag, size: 1 },
-      };
-   });
-};
 
 const TopicResearchDetailPage: NextPage = () => {
    const router = useRouter();
@@ -187,12 +131,6 @@ const TopicResearchDetailPage: NextPage = () => {
       return list.sort((a, b) => (b.idea.volume ?? 0) - (a.idea.volume ?? 0));
    }, [flatIdeas, tab, selectedClusterIdx, query, showTitles]);
 
-   const mapClusters = useMemo(() => (result ? toMapClusters(result) : []), [result]);
-   const satOffsets = useMemo(() => {
-      const maxIdeas = mapClusters.reduce((m, c) => Math.max(m, c.keywords.length - 1), 0);
-      return honeycombOffsets(maxIdeas);
-   }, [mapClusters]);
-
    const goCreate = (keyword: string) => {
       if (!domainId || !run?.country) return;
       const q = new URLSearchParams();
@@ -207,10 +145,6 @@ const TopicResearchDetailPage: NextPage = () => {
    const openDrawerFrom = (list: FlatIdea[], pos: number) => {
       setDrawerItems(list.map((x) => ({ idea: x.idea, clusterTitle: showTitles ? x.cluster.title : `Cluster ${x.clusterIdx + 1}` })));
       setDrawerIndex(pos);
-   };
-   const openClusterDrawer = (clusterIdx: number) => {
-      const list = flatIdeas.filter((x) => x.clusterIdx === clusterIdx);
-      if (list.length) openDrawerFrom(list, 0);
    };
    const closeDrawer = () => setDrawerIndex(null);
 
@@ -267,10 +201,9 @@ const TopicResearchDetailPage: NextPage = () => {
                )}
 
                {!failed && !busy && result && (() => {
-                  const TABS: { id: Tab; label: string; icon?: 'fire' | 'cube'; count: number | null }[] = [
+                  const TABS: { id: Tab; label: string; icon?: 'fire'; count: number | null }[] = [
                      { id: 'all', label: 'All topics', count: result.stats.clusterCount },
                      { id: 'recommendations', label: 'Recommendations', icon: 'fire', count: result.stats.recommendationCount },
-                     { id: 'map', label: 'Map', icon: 'cube', count: null },
                   ];
                   return (
                   <>
@@ -292,7 +225,7 @@ const TopicResearchDetailPage: NextPage = () => {
                            {typeof result.stats.siteRadius === 'number' && (
                               <> · site radius {Math.round(result.stats.siteRadius * 100)}% (spread)</>
                            )}
-                           {' '}— higher focus / lower radius = tighter topical map
+                           {' '}— higher focus / lower radius = tighter topic coverage
                         </div>
                      )}
 
@@ -304,9 +237,8 @@ const TopicResearchDetailPage: NextPage = () => {
                            onChange={(v) => setTab(v as Tab)}
                            options={TABS.map((t) => ({
                               value: t.id,
-                              icon: t.icon === 'fire' ? <FireIcon /> : t.icon === 'cube' ? <CubeIcon /> : <CheckIcon color="currentColor" />,
-                              label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{t.label}{t.count != null && <span style={{ fontWeight: 400, opacity: 0.6 }}>{t.count}</span>}</span>,
-                           }))}
+                              icon: t.icon === 'fire' ? <FireIcon /> : <CheckIcon color="currentColor" />,
+                              label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{t.label}{t.count != null && <span style={{ fontWeight: 400, opacity: 0.6 }}>{t.count}</span>}</span> }))}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -323,23 +255,12 @@ const TopicResearchDetailPage: NextPage = () => {
                         </div>
                      </div>
 
-                     {tab === 'map' ? (
-                        <div style={{ flex: 1, minHeight: 0 }}>
-                           <TopicalMapCanvas
-                              clusters={mapClusters}
-                              showTitles={false}
-                              satelliteOffsets={satOffsets}
-                              onNodeClick={(c) => openClusterDrawer(c.id)}
-                              onKeywordClick={(c) => openClusterDrawer(c.id)}
-                           />
-                        </div>
-                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: 12, flex: 1, minHeight: 0 }}>
+                     <div style={{ display: 'flex', flexDirection: 'row', gap: 12, flex: 1, minHeight: 0 }}>
                            {/* Left: clusters */}
-                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0, border: '1px solid #dbded4', borderRadius: 12 }}>
+                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0 }}>
                               <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', borderBottom: `1px solid ${BORDER}`, fontSize: 13, color: TEXT2 }}>
                                  <div style={{ width: 280, padding: '12px 16px' }}>Topic cluster</div>
-                                 <div style={{ width: 50, padding: '12px 16px', borderLeft: `1px solid ${BORDER}` }} />
+                                 <div style={{ width: 50, padding: '12px 16px' }} />
                               </div>
                               {result.clusters.map((c, idx) => {
                                  const selected = selectedClusterIdx === idx;
@@ -356,7 +277,7 @@ const TopicResearchDetailPage: NextPage = () => {
                                              <ClusterStat label="Cov." value={`${c.covered}/${c.total}`} />
                                           </div>
                                        </div>
-                                       <div style={{ width: 50, borderLeft: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>
+                                       <div style={{ width: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>
                                           <button type="button" onClick={(e) => e.stopPropagation()} aria-label="Cluster actions" style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', display: 'inline-flex', padding: 4 }}><KebabIcon /></button>
                                        </div>
                                     </div>
@@ -365,14 +286,14 @@ const TopicResearchDetailPage: NextPage = () => {
                            </div>
 
                            {/* Right: ideas */}
-                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexGrow: 1, minWidth: 0, border: '1px solid #dbded4', borderRadius: 12 }}>
+                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexGrow: 1, minWidth: 0 }}>
                               <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'stretch', background: '#fff', borderBottom: `1px solid ${BORDER}`, minWidth: 860 }}>
                                  <div style={{ width: 50, flexShrink: 0 }} />
                                  <HeadCell width={450} grow>Main keyword</HeadCell>
                                  <HeadCell width={100} align="right" sortable>KD</HeadCell>
                                  <HeadCell width={100} align="right" sortable active>Vol.</HeadCell>
                                  <HeadCell width={100} align="right" sortable>Position</HeadCell>
-                                 <div style={{ width: 50, flexShrink: 0, borderLeft: `1px solid ${BORDER}` }} />
+                                 <div style={{ width: 50, flexShrink: 0 }} />
                               </div>
                               {filteredIdeas.length === 0 && (
                                  <div style={{ padding: 32, textAlign: 'center', fontSize: 14, color: '#9F9FA9' }}>No ideas match your filters.</div>
@@ -385,7 +306,7 @@ const TopicResearchDetailPage: NextPage = () => {
                                     <div onClick={(e) => e.stopPropagation()} style={{ width: 50, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                        <Checkbox size="sm" checked={selectedRows.has(`${row.clusterIdx}-${row.idea.main}`)} onChange={() => toggleRow(`${row.clusterIdx}-${row.idea.main}`)} />
                                     </div>
-                                    <div style={{ width: 450, flexGrow: 1, borderLeft: `1px solid ${BORDER}`, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                                    <div style={{ width: 450, flexGrow: 1, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                                           <span style={{ fontSize: 14, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.idea.main}</span>
                                           <span style={{ fontSize: 13, color: TEXT2 }}>incl. {row.idea.keywords.length} keyword{row.idea.keywords.length === 1 ? '' : 's'}</span>
@@ -397,14 +318,13 @@ const TopicResearchDetailPage: NextPage = () => {
                                     <BodyCell width={100}>{row.idea.kd ?? '—'}</BodyCell>
                                     <BodyCell width={100}>{fmtVol(row.idea.volume)}</BodyCell>
                                     <BodyCell width={100} color={row.idea.position != null && row.idea.position <= 10 ? '#1AB25E' : TEXT}>{row.idea.position ?? ''}</BodyCell>
-                                    <div style={{ width: 50, flexShrink: 0, borderLeft: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>
+                                    <div style={{ width: 50, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>
                                        <button type="button" onClick={(e) => e.stopPropagation()} aria-label="Idea actions" style={{ border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', display: 'inline-flex', padding: 4 }}><KebabIcon /></button>
                                     </div>
                                  </div>
                               ))}
                            </div>
                         </div>
-                     )}
                   </>
                   );
                })()}

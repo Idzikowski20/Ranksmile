@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import type { FanoutByQueryRow, FanoutByPromptRow } from '../../services/aiVisibility';
 import { ModelIcon, isKnownModel } from './modelIcons';
 
 const FONT = 'var(--font-family-primary)';
 
 const MODEL_LABEL: Record<string, string> = {
-   ai_overview: 'AI Overviews', ai_mode: 'AI Mode', chat_gpt: 'ChatGPT', perplexity: 'Perplexity', gemini: 'Gemini',
-};
+   ai_overview: 'AI Overviews', ai_mode: 'AI Mode', chat_gpt: 'ChatGPT', perplexity: 'Perplexity', gemini: 'Gemini' };
 
 const ModelStack = ({ models }: { models: string[] }) => {
    const known = models.filter((m) => isKnownModel(m));
@@ -30,9 +29,9 @@ const SortArrow = ({ dir }: { dir: 'asc' | 'desc' | null }) => (
    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ opacity: dir ? 1 : 0.45, transform: dir === 'asc' ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M12 5v14m0 0l-5-5m5 5l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
 
-const headCell: React.CSSProperties = { padding: '10px 16px', fontSize: 13, fontWeight: 500, color: '#71717B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
-const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box', color: '#18181B' };
-const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid #F4F4F5', background: '#fff', transition: 'background 100ms ease' };
+const headCell: React.CSSProperties = { padding: '8px 16px', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary, #575757)', fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
+const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box', color: 'var(--koala-text-primary, #1a1a1a)' };
+const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)', background: 'var(--koala-bg-primary, #fff)', transition: 'background 100ms ease' };
 
 const SortHead = ({ label, dir, onClick }: { label: string; dir: 'asc' | 'desc'; onClick: () => void }) => (
    <Button type="button" variant="transparent" size="sm" onClick={onClick} style={{ gap: 4, fontWeight: 600, color: '#18181B' }}>
@@ -74,9 +73,9 @@ const FanoutTable = ({ group, rows, dir, onToggleSort, onOpenRow }: Props) => {
    const secondLabel = group === 'fanout' ? 'Prompts' : 'Fanout Queries';
 
    return (
-      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
-         <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
-            <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>{firstLabel}</div>
+      <div style={{ background: 'var(--koala-bg-primary, #fff)', overflow: 'hidden' }}>
+         <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
+            <div style={{ ...headCell, flex: 1, minWidth: 0 }}>{firstLabel}</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}>{secondLabel}</div>
             <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}>Models</div>
             <div style={{ ...headCell, width: 140, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Times shown" dir={dir} onClick={onToggleSort} /></div>
@@ -93,13 +92,13 @@ const FanoutTable = ({ group, rows, dir, onToggleSort, onOpenRow }: Props) => {
                   <div
                      style={{ ...rowStyle, cursor: 'pointer' }}
                      onClick={() => onOpenRow(i)}
-                     onMouseEnter={(e) => { e.currentTarget.style.background = '#FBFAFF'; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary, #f5f5f5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-primary, #fff)'; }}
                      role="button"
                      tabIndex={0}
                      onKeyDown={(e) => { if (e.key === 'Enter') onOpenRow(i); }}
                   >
-                     <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, gap: 8, position: 'relative' }}>
+                     <div style={{ ...bodyCell, flex: 1, minWidth: 0, gap: 8, position: 'relative' }}>
                         <TimesBar pct={pct} />
                         <button
                            type="button"
@@ -117,8 +116,8 @@ const FanoutTable = ({ group, rows, dir, onToggleSort, onOpenRow }: Props) => {
                   </div>
 
                   {isOpen && isFanout(r) && r.prompts.map((child) => (
-                     <div key={child.id} style={{ ...rowStyle, background: '#FCFCFD' }}>
-                        <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, paddingLeft: 48, color: '#3F3F47' }}>
+                     <div key={child.id} style={{ ...rowStyle, background: 'var(--koala-bg-secondary, #f5f5f5)' }}>
+                        <div style={{ ...bodyCell, flex: 1, minWidth: 0, paddingLeft: 48, color: '#3F3F47' }}>
                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{child.text}</span>
                         </div>
                         <div style={{ ...bodyCell, width: 120, flexShrink: 0 }} />
@@ -127,8 +126,8 @@ const FanoutTable = ({ group, rows, dir, onToggleSort, onOpenRow }: Props) => {
                      </div>
                   ))}
                   {isOpen && !isFanout(r) && r.queries.map((child) => (
-                     <div key={child.query} style={{ ...rowStyle, background: '#FCFCFD' }}>
-                        <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, paddingLeft: 48, color: '#3F3F47' }}>
+                     <div key={child.query} style={{ ...rowStyle, background: 'var(--koala-bg-secondary, #f5f5f5)' }}>
+                        <div style={{ ...bodyCell, flex: 1, minWidth: 0, paddingLeft: 48, color: '#3F3F47' }}>
                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{child.query}</span>
                         </div>
                         <div style={{ ...bodyCell, width: 120, flexShrink: 0 }} />

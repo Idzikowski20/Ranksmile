@@ -5,8 +5,8 @@ import { authClient } from '../../lib/auth/client';
 import { useOrganization } from '../../services/organization';
 import { useGscAccount } from '../../services/gscAccount';
 import { useProfile } from '../../services/profile';
-import { Avatar } from '../core/avatar';
-import MenuListItem from '../core/menuListItem';
+import { Avatar } from '../koala/core/avatar';
+import MenuListItem from '../koala/core/menuListItem';
 
 const font = 'var(--font-family-primary)';
 

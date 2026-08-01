@@ -10,6 +10,8 @@ const BUDGETS = {
   'pages/_app': 600_000,
   'pages/sites/[domain]/performance': 650_000,
   'pages/articles/[id]': 1_100_000,
+  // Dashboard composition budget (plan v3.1 ~250kB gzip ≈ ~750kB raw conservative)
+  'pages/dashboard': 750_000,
 };
 
 const baselinePath = path.join('scripts', 'bundle-baseline.json');

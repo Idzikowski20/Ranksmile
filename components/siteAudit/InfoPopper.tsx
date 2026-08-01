@@ -76,7 +76,7 @@ export function PopperLink({ href, children }: { href: string; children: React.R
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      style={{ color: '#783AFB', textDecoration: 'underline', textUnderlineOffset: 2 }}
+      style={{ color: 'var(--koala-text-brand)', textDecoration: 'underline', textUnderlineOffset: 2 }}
     >
       {children}
     </a>

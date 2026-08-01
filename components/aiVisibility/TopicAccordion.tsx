@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import PromptRow from './PromptRow';
 import AddPromptRow from './AddPromptRow';
 import { SourceBadge, topicSources } from './sourceIcons';

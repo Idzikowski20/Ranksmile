@@ -3,114 +3,42 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAddRankKeywords, useRankConfigs, useRankKeywordsList, useRemoveRankKeywords } from '../../../services/rankTracking';
 import { normalizeKeyword } from '../../../lib/types/rankTracking';
-import { Button, Checkbox } from '../../core';
-import type { OrganicKeyword, SearchIntent } from '../../../lib/organicResearch/types';
+import { Button, Checkbox } from '../../koala/core';
+import { KeywordDifficultyDot } from '../../koala/product/helpers/KeywordDifficultyDot';
+import { KeywordIntentBadge } from '../../koala/product/helpers/KeywordIntentBadge';
+import { TrendDeltaBadge } from '../../koala/product/helpers/TrendDeltaBadge';
+import type { OrganicKeyword } from '../../../lib/organicResearch/types';
 import { formatCompact } from './OrganicKpiRow';
 import { DEFAULT_VISIBLE, OrganicColumnMenu, type ColumnId } from './OrganicColumnMenu';
 import { ExpandedPanel } from './OrganicKeywordExpand';
 import { absoluteUrl, SerpMiniIcon } from './organicSerp';
 
 const FONT = 'var(--font-family-primary)';
-/** Semrush Intergalactic text-link */
-const LINK_COLOR = 'rgb(35, 95, 226)';
-
-const INTENT_META: Record<NonNullable<SearchIntent>, { letter: string; bg: string; color: string; title: string }> = {
-  // Soft / faded Semrush-style intent chips
-  informational: {
-    letter: 'I',
-    bg: '#a6b8f9',
-    color: '#FFFFFF',
-    title: 'Informational\nThe user wants to find an answer to a specific question',
-  },
-  commercial: {
-    letter: 'C',
-    bg: '#c9b0e8',
-    color: '#FFFFFF',
-    title: 'Commercial\nThe user wants to investigate brands or services',
-  },
-  transactional: {
-    letter: 'T',
-    bg: '#9dd4b8',
-    color: '#FFFFFF',
-    title: 'Transactional\nThe user wants to complete an action (conversion)',
-  },
-  navigational: {
-    letter: 'N',
-    bg: '#f5c89a',
-    color: '#FFFFFF',
-    title: 'Navigational\nThe user wants to find a specific page or site',
-  },
-};
-
-
-function kdDotColor(kd: number | null): string {
-  if (kd == null) return '#dbded4';
-  if (kd <= 14) return '#22C55E';
-  if (kd <= 29) return '#84CC16';
-  if (kd <= 49) return '#EAB308';
-  if (kd <= 69) return '#F97316';
-  if (kd <= 84) return '#EF4444';
-  return '#DC2626';
-}
-
-function IntentBadge({ intent }: { intent: SearchIntent }) {
-  if (!intent) return <span style={{ color: '#878490' }}>—</span>;
-  const m = INTENT_META[intent];
-  return (
-    <span
-      role="img"
-      aria-label={m.title.replace('\n', ': ')}
-      title={m.title}
-      style={{
-        display: 'inline-flex',
-        width: 16,
-        height: 16,
-        borderRadius: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: m.bg,
-        color: m.color,
-        fontSize: 12,
-        lineHeight: '16px',
-        fontWeight: 700,
-        fontFamily: FONT,
-        flexShrink: 0,
-      }}
-    >
-      {m.letter}
-    </span>
-  );
-}
+/** Koala brand link (Figma Table). */
+const LINK_COLOR = 'var(--koala-text-brand)';
 
 function TrendCell({ kw }: { kw: OrganicKeyword }) {
   const ch = kw.change30d;
   if (ch == null || ch === 0) {
-    return <span style={{ color: '#6A6772', fontSize: 12 }}>=</span>;
+    return <TrendDeltaBadge delta="=" positive={null} size="sm" showIcon={false} />;
   }
-  const up = ch > 0;
   return (
-    <span style={{
-      color: up ? '#008900' : '#D50000',
-      fontSize: 12,
-      fontWeight: 600,
-      fontFamily: FONT,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 2,
-    }}
-    >
-      {up ? '▲' : '▼'}{Math.abs(ch)}
-    </span>
+    <TrendDeltaBadge
+      delta={`${ch > 0 ? '▲' : '▼'}${Math.abs(ch)}`}
+      positive={ch > 0}
+      size="sm"
+      showIcon={false}
+    />
   );
 }
 
 function SerpIcons({ features }: { features: string[] }) {
-  if (!features.length) return <span style={{ color: '#878490' }}>—</span>;
+  if (!features.length) return <span style={{ color: 'var(--koala-text-tertiary)' }}>—</span>;
   const shown = features.slice(0, 4);
   const rest = features.length - shown.length;
   return (
     <span
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#6A6772' }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--koala-text-secondary)' }}
       title={features.join(', ')}
     >
       {shown.map((f) => (
@@ -120,18 +48,17 @@ function SerpIcons({ features }: { features: string[] }) {
             width: 18,
             height: 18,
             borderRadius: 3,
-            background: '#F0F0F2',
+            background: 'var(--koala-bg-secondary)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0,
-          }}
+            flexShrink: 0 }}
         >
           <SerpMiniIcon name={f} />
         </span>
       ))}
       {rest > 0 && (
-        <span style={{ fontSize: 11, fontFamily: FONT, color: '#6A6772' }}>+{rest}</span>
+        <span style={{ fontSize: 11, fontFamily: FONT, color: 'var(--koala-text-secondary)' }}>+{rest}</span>
       )}
     </span>
   );
@@ -168,36 +95,32 @@ const ghostIconBtn: React.CSSProperties = {
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
-  flexShrink: 0,
-};
+  flexShrink: 0 };
 
 const dropdownPanel: React.CSSProperties = {
   position: 'absolute',
   right: 0,
-  background: '#fff',
-  border: '1px solid #dbded4',
+  background: 'var(--koala-bg-primary)',
+  border: '1px solid var(--koala-border-primary)',
   borderRadius: 8,
   boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
   zIndex: 30,
-  fontFamily: FONT,
-};
+  fontFamily: FONT };
 
 const exportLinkStyle: React.CSSProperties = {
   display: 'block',
   padding: '8px 12px',
   fontSize: 13,
-  color: '#302E36',
+  color: 'var(--koala-text-primary)',
   textDecoration: 'none',
-  fontFamily: FONT,
-};
+  fontFamily: FONT };
 
 function FilledIcon({
   size = 16,
   width,
   height,
   viewBox = '0 0 16 16',
-  children,
-}: {
+  children }: {
   size?: number;
   width?: number;
   height?: number;
@@ -275,8 +198,7 @@ function IconExport() {
 function TrackerToggleButton({
   tracked,
   busy,
-  onToggle,
-}: {
+  onToggle }: {
   tracked: boolean;
   busy: boolean;
   onToggle: () => void;
@@ -295,9 +217,8 @@ function TrackerToggleButton({
       style={{
         ...ghostIconBtn,
         cursor: busy ? 'default' : 'pointer',
-        color: tracked ? '#2E7D4F' : '#6A6772',
-        opacity: busy ? 0.6 : 1,
-      }}
+        color: tracked ? 'var(--koala-status-success)' : 'var(--koala-text-secondary)',
+        opacity: busy ? 0.6 : 1 }}
     >
       {tracked ? <IconCheckAlt /> : <IconPlusAlt />}
     </button>
@@ -312,9 +233,9 @@ function Chevron({ open }: { open: boolean }) {
       viewBox="0 0 12 12"
       fill="none"
       aria-hidden
-      style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms ease' }}
+      style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms ease', color: 'var(--koala-text-secondary)' }}
     >
-      <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="#6A6772" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.5 2.5L8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -336,8 +257,7 @@ type Props = {
 };
 
 function Th({
-  label, sortKey, active, dir, onSort, align = 'left',
-}: {
+  label, sortKey, active, dir, onSort, align = 'left' }: {
   label: string;
   sortKey?: string;
   active?: boolean;
@@ -354,16 +274,15 @@ function Th({
         padding: '10px 12px',
         fontSize: 11,
         fontWeight: 600,
-        color: '#6A6772',
+        color: 'var(--koala-text-secondary)',
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
-        borderBottom: '1px solid #dbded4',
+        borderBottom: '1px solid var(--koala-border-primary)',
         fontFamily: FONT,
         cursor: clickable ? 'pointer' : 'default',
         whiteSpace: 'nowrap',
         userSelect: 'none',
-        background: '#fff',
-      }}
+        background: 'var(--koala-bg-primary)' }}
     >
       {label}{active ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}
     </th>
@@ -383,8 +302,7 @@ export default function OrganicKeywordsTable({
   exportCsvHref,
   exportJsonHref,
   updatedAtLabel,
-  footer,
-}: Props) {
+  footer }: Props) {
   const router = useRouter();
   const slug = typeof router.query.domain === 'string' ? router.query.domain : '';
   const configsQ = useRankConfigs(slug || undefined);
@@ -464,8 +382,7 @@ export default function OrganicKeywordsTable({
           setSelected(new Set());
           clearSelectionAfterAddRef.current = false;
         }
-      },
-    });
+      } });
   };
 
   const removeKeywordFromTracker = (keyword: string) => {
@@ -491,29 +408,27 @@ export default function OrganicKeywordsTable({
   const colCount = 2 + visibleCols.length;
 
   return (
-    <div style={{
-      background: '#fff',
-      border: '1px solid #dbded4',
-      borderRadius: 8,
-      overflow: 'hidden',
-    }}
+    <div
+      style={{
+        background: 'var(--koala-bg-primary)',
+        overflow: 'hidden',
+      }}
     >
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 16px',
-        borderBottom: '1px solid #dbded4',
+        borderBottom: '1px solid var(--koala-border-primary)',
         gap: 12,
-        flexWrap: 'wrap',
-      }}
+        flexWrap: 'wrap' }}
       >
-        <div style={{ fontSize: 15, color: '#181225', fontFamily: FONT }}>
+        <div style={{ fontSize: 15, color: 'var(--koala-text-primary)', fontFamily: FONT }}>
           <span style={{ fontWeight: 400 }}>Organic Search Positions:</span>
           {' '}
           <span style={{ fontWeight: 700 }}>{total.toLocaleString()}</span>
           {updatedAtLabel && (
-            <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 400, color: '#6A6772' }}>
+            <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 400, color: 'var(--koala-text-secondary)' }}>
               {updatedAtLabel}
             </span>
           )}
@@ -567,8 +482,7 @@ export default function OrganicKeywordsTable({
                 boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
                 zIndex: 20,
                 minWidth: 160,
-                padding: 4,
-              }}
+                padding: 4 }}
               >
                 {exportCsvHref && (
                   <a
@@ -595,9 +509,9 @@ export default function OrganicKeywordsTable({
       </div>
 
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT, minWidth: 960 }}>
-          <thead>
+      <div className="koala-table-wrap">
+        <table className="koala-table" style={{ minWidth: 960 }}>
+          <thead className="koala-table-head">
             <tr>
               <th style={{ ...thBase, width: 44, paddingLeft: 12 }}>
                 <span style={{ display: 'inline-block', width: 12 }} />
@@ -647,7 +561,7 @@ export default function OrganicKeywordsTable({
               const tracked = isKeywordTracked(k.keyword);
               return (
                 <React.Fragment key={k.id}>
-                  <tr className="si-organic-row" style={{ background: open ? '#f3f4f0' : undefined }}>
+                  <tr className="si-organic-row" style={{ background: open ? 'var(--koala-bg-secondary)' : undefined }}>
                     <td style={{ ...td, width: 44, paddingLeft: 12 }}>
                       <button
                         type="button"
@@ -660,8 +574,7 @@ export default function OrganicKeywordsTable({
                           padding: 4,
                           cursor: 'pointer',
                           display: 'inline-flex',
-                          alignItems: 'center',
-                        }}
+                          alignItems: 'center' }}
                       >
                         <Chevron open={open} />
                       </button>
@@ -681,8 +594,7 @@ export default function OrganicKeywordsTable({
                           fontWeight: 600,
                           color: LINK_COLOR,
                           fontFamily: 'inherit',
-                          cursor: 'pointer',
-                        }}
+                          cursor: 'pointer' }}
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           <TrackerToggleButton
@@ -711,7 +623,7 @@ export default function OrganicKeywordsTable({
                       </td>
                     )}
                     {visible.has('intent') && (
-                      <td style={{ ...td, textAlign: 'center' }}><IntentBadge intent={k.intent} /></td>
+                      <td style={{ ...td, textAlign: 'center' }}><KeywordIntentBadge intent={k.intent} /></td>
                     )}
                     {visible.has('position') && (
                       <td style={{ ...td, textAlign: 'right', fontWeight: 500 }}>{k.position ?? '—'}</td>
@@ -730,19 +642,7 @@ export default function OrganicKeywordsTable({
                     )}
                     {visible.has('difficulty') && (
                       <td style={{ ...td, textAlign: 'right' }}>
-                        {k.difficulty != null ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                            <span style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              background: kdDotColor(k.difficulty),
-                              flexShrink: 0,
-                            }}
-                            />
-                            {k.difficulty}
-                          </span>
-                        ) : '—'}
+                        <KeywordDifficultyDot kd={k.difficulty} />
                       </td>
                     )}
                     {visible.has('url') && (
@@ -760,8 +660,7 @@ export default function OrganicKeywordsTable({
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: 4,
-                              maxWidth: 220,
-                            }}
+                              maxWidth: 220 }}
                           >
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {pagePath(k.url)}
@@ -772,7 +671,7 @@ export default function OrganicKeywordsTable({
                       </td>
                     )}
                     {visible.has('updatedAt') && (
-                      <td style={{ ...td, color: '#6A6772', fontSize: 12 }}>{formatUpdated(k.updatedAt)}</td>
+                      <td style={{ ...td, color: 'var(--koala-text-secondary)', fontSize: 12 }}>{formatUpdated(k.updatedAt)}</td>
                     )}
                     {visible.has('topic') && (
                       <td style={td}>{topicLabel(k.topicId)}</td>
@@ -781,7 +680,7 @@ export default function OrganicKeywordsTable({
                       <td style={{ ...td, textAlign: 'center' }}><TrendCell kw={k} /></td>
                     )}
                     {visible.has('opportunityScore') && (
-                      <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: '#E07D42' }}>
+                      <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: 'var(--koala-text-brand)' }}>
                         {k.opportunityScore ?? '—'}
                       </td>
                     )}
@@ -789,7 +688,12 @@ export default function OrganicKeywordsTable({
                   {open && (
                     <tr>
                       <td colSpan={colCount} style={{ padding: 0, borderBottom: 'none' }}>
-                        <ExpandedPanel kw={k} onFilterKeyword={onFilterKeyword} />
+                        <ExpandedPanel
+                          kw={k}
+                          onFilterKeyword={onFilterKeyword}
+                          trackingKeywordId={trackedIdByKey.get(normalizeKeyword(k.keyword)) ?? null}
+                          rankConfigId={configId ?? null}
+                        />
                       </td>
                     </tr>
                   )}
@@ -798,7 +702,7 @@ export default function OrganicKeywordsTable({
             })}
             {!rows.length && (
               <tr>
-                <td colSpan={colCount} style={{ ...td, textAlign: 'center', color: '#6A6772', padding: 32 }}>
+                <td colSpan={colCount} style={{ ...td, textAlign: 'center', color: 'var(--koala-text-secondary)', padding: 32 }}>
                   No keywords match current filters
                 </td>
               </tr>
@@ -810,12 +714,12 @@ export default function OrganicKeywordsTable({
       {footer && (
         <div style={{
           padding: '12px 16px',
-          borderTop: '1px solid #dbded4',
+          borderTop: '1px solid var(--koala-border-primary)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: 12,
-        }}
+          borderRadius: 0 }}
         >
           {footer}
         </div>
@@ -827,21 +731,18 @@ export default function OrganicKeywordsTable({
 
 const thBase: React.CSSProperties = {
   textAlign: 'left',
-  padding: '10px 8px',
-  fontSize: 11,
-  fontWeight: 600,
-  color: '#6A6772',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  borderBottom: '1px solid #dbded4',
+  padding: '10px 14px',
+  fontSize: 13,
+  fontWeight: 500,
+  color: 'var(--koala-text-secondary)',
+  letterSpacing: '-0.4px',
+  borderBottom: '1px solid var(--koala-border-primary)',
   fontFamily: FONT,
-  background: '#fff',
-};
+  background: 'var(--koala-bg-secondary)' };
 
 const td: React.CSSProperties = {
-  padding: '10px 12px',
-  borderBottom: '1px solid #F0F0F2',
-  fontSize: 13,
-  color: '#302E36',
-  verticalAlign: 'middle',
-};
+  padding: '14px',
+  borderBottom: '1px solid var(--koala-border-primary)',
+  fontSize: 14,
+  color: 'var(--koala-text-primary)',
+  verticalAlign: 'middle' };

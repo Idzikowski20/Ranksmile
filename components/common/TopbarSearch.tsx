@@ -9,8 +9,9 @@ import {
   IconDashboard, IconIssues, IconCompass, IconSiren, IconSettings,
   IconFire, IconGlobe, IconBuilding, IconDocs, IconTools,
 } from './nav/sentryIcons';
+import { Icon } from '../koala/icons/Icon';
 
-const ICO = 14;
+const ICO = 20;
 
 const SearchIcon = ({ size = 16 }: { size?: number }) => (
   <svg viewBox="0 0 20 20" width={size} height={size} fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -104,6 +105,15 @@ const Kbd = ({ children }: { children: React.ReactNode }) => (
   <kbd className="command-palette-kbd">{children}</kbd>
 );
 
+const useModKLabel = () => {
+  const [label, setLabel] = useState('Ctrl K');
+  useEffect(() => {
+    const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+    setLabel(mac ? '⌘K' : 'Ctrl K');
+  }, []);
+  return label;
+};
+
 const CommandMenu = ({ open, onClose, sections }: {
   open: boolean; onClose: () => void; sections: PaletteSection[];
 }) => {
@@ -112,6 +122,7 @@ const CommandMenu = ({ open, onClose, sections }: {
   const [sel, setSel] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const modK = useModKLabel();
 
   const filteredSections = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -155,7 +166,9 @@ const CommandMenu = ({ open, onClose, sections }: {
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="command-palette-input-row">
-          <span className="command-palette-input-icon" aria-hidden="true"><SearchIcon size={14} /></span>
+          <span className="command-palette-input-icon" aria-hidden="true">
+            <Icon name="MagnifyingGlass" size={20} weight="bold" />
+          </span>
           <input
             ref={inputRef}
             aria-label="Search commands"
@@ -167,11 +180,12 @@ const CommandMenu = ({ open, onClose, sections }: {
               else if (e.key === 'Enter') { e.preventDefault(); go(flatItems[sel], e.shiftKey); }
               else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
             }}
-            placeholder="Search for commands..."
+            placeholder="Type a command or search..."
             autoComplete="off"
             spellCheck={false}
             className="command-palette-input"
           />
+          <Kbd>{modK}</Kbd>
         </div>
 
         <div ref={listRef} className="command-palette-results styled-scrollbar" role="listbox" aria-label="Search results">
@@ -212,12 +226,30 @@ const CommandMenu = ({ open, onClose, sections }: {
 
         <div className="command-palette-footer">
           <div className="command-palette-footer-hints">
-            <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> Move</span>
-            <span><Kbd>↵</Kbd> Select</span>
-            <span><Kbd>⇧</Kbd> <Kbd>↵</Kbd> New tab</span>
+            <span className="command-palette-footer-hint">
+              <Kbd>↑</Kbd>
+              <Kbd>↓</Kbd>
+              <span>Navigate</span>
+            </span>
+            <span className="command-palette-footer-hint">
+              <Kbd>{modK}</Kbd>
+              <span>to close</span>
+            </span>
+            <button
+              type="button"
+              className="command-palette-footer-settings"
+              onClick={() => {
+                onClose();
+                void router.push('/settings/general');
+              }}
+            >
+              <Icon name="Gear" size={16} weight="bold" />
+              Settings
+            </button>
           </div>
-          <span className="command-palette-footer-toggle">
-            Toggle Command Palette <Kbd>Ctrl</Kbd> <Kbd>K</Kbd>
+          <span className="command-palette-footer-hint command-palette-footer-select">
+            <Kbd>↵</Kbd>
+            <span>select</span>
           </span>
         </div>
       </div>
@@ -226,9 +258,15 @@ const CommandMenu = ({ open, onClose, sections }: {
   );
 };
 
-const TopbarSearch = () => {
+type TopbarSearchProps = {
+  /** `koala` = sidebar field; `icon` = icon only; `header` = Product Header search. */
+  variant?: 'default' | 'koala' | 'icon' | 'header';
+};
+
+const TopbarSearch = ({ variant = 'default' }: TopbarSearchProps) => {
   const [open, setOpen] = useState(false);
   const sections = useCommandSections();
+  const modK = useModKLabel();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -238,18 +276,57 @@ const TopbarSearch = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const btnClass =
+    variant === 'icon'
+      ? 'koala-sidebar__icon-btn'
+      : variant === 'koala'
+        ? 'koala-sidebar-search-btn'
+        : variant === 'header'
+          ? 'koala-header-search'
+          : 'koala-nav-utilbtn global-topbar-search-btn';
+
   return (
     <>
       <button
         type="button"
-        className="sentry-nav-utilbtn global-topbar-search-btn"
+        className={btnClass}
         aria-label="Search"
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <SearchIcon />
-        <span className="global-topbar-search-label">Search</span>
-        <span className="global-topbar-search-kbd">Ctrl K</span>
+        {variant === 'icon' ? (
+          <Icon name="MagnifyingGlass" size={20} weight="bold" />
+        ) : (
+          <>
+            {variant === 'header' ? (
+              <Icon name="MagnifyingGlass" size={20} weight="bold" />
+            ) : (
+              <SearchIcon />
+            )}
+            <span
+              className={
+                variant === 'header'
+                  ? 'koala-header-search__label'
+                  : variant === 'koala'
+                    ? 'koala-sidebar-search-btn__label'
+                    : 'global-topbar-search-label'
+              }
+            >
+              {variant === 'header' ? 'Search for anything' : 'Search'}
+            </span>
+            <span
+              className={
+                variant === 'header'
+                  ? 'koala-header-search__kbd'
+                  : variant === 'koala'
+                    ? 'koala-sidebar-search-btn__kbd'
+                    : 'global-topbar-search-kbd'
+              }
+            >
+              {modK}
+            </span>
+          </>
+        )}
       </button>
 
       <CommandMenu open={open} onClose={() => setOpen(false)} sections={sections} />

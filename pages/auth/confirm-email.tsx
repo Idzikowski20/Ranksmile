@@ -2,22 +2,15 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
+import AuthPageLayout from '../../components/auth/AuthPageLayout';
+import AuthShell from '../../components/auth/AuthShell';
 import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
-
-const F = 'var(--font-family-primary)';
+import { Card } from '../../components/koala/product';
+import Button from '../../components/koala/primitives/Button';
+import { ErrorState, LoadingState } from '../../components/koala/feedback';
 
 type ConfirmResult = { ok: boolean };
 type Status = 'verifying' | 'error' | 'success';
-
-const cardStyle: React.CSSProperties = {
-   background: '#fff',
-   border: '1px solid #F4F4F5',
-   borderRadius: 12,
-   padding: 32,
-   maxWidth: 420,
-   width: '100%',
-   textAlign: 'center',
-};
 
 const ConfirmEmail: NextPage = () => {
    const router = useRouter();
@@ -45,9 +38,6 @@ const ConfirmEmail: NextPage = () => {
             const data: ConfirmResult = await res.json();
             if (data.ok) {
                setStatus('success');
-               // Update the guard's cached confirmed flag BEFORE navigating — otherwise the
-               // guard's stale confirmed=false bounces this replace() straight back to
-               // /auth/confirm-account (same class of bug useMarkOnboardingComplete exists for).
                markConfirmed(true);
                router.replace('/onboarding');
             } else {
@@ -58,58 +48,36 @@ const ConfirmEmail: NextPage = () => {
          }
       };
 
-      verify();
+      void verify();
    }, [router.isReady, router.query, router, markConfirmed]);
 
    if (status === 'success') return null;
 
    return (
-      <>
+      <AuthShell>
          <Head><title>Confirm your e-mail - Ranksmile</title></Head>
-         <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-            fontFamily: F,
-         }}
-         >
-            <div style={cardStyle}>
-               {status === 'verifying' && (
-                  <p style={{ margin: 0, fontSize: 15, color: '#52525C' }}>Confirming…</p>
-               )}
+         <AuthPageLayout>
+            <Card elevated>
+               {status === 'verifying' && <LoadingState label="Confirming…" />}
                {status === 'error' && (
-                  <>
-                     <p style={{ margin: 0, fontSize: 15, color: '#18181B', lineHeight: 1.6 }}>
-                        This confirmation link is invalid or has expired.
-                     </p>
-                     <button
-                        type="button"
-                        onClick={() => router.push('/auth/confirm-account')}
-                        style={{
-                           marginTop: 20,
-                           background: '#2F2F34',
-                           color: '#fff',
-                           border: 'none',
-                           borderRadius: 8,
-                           padding: '10px 20px',
-                           fontSize: 14,
-                           fontWeight: 600,
-                           fontFamily: F,
-                           cursor: 'pointer',
-                           transition: 'background 150ms ease',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-                     >
-                        Send a new link
-                     </button>
-                  </>
+                  <ErrorState
+                     title="Link expired"
+                     description="This confirmation link is invalid or has expired."
+                     action={(
+                        <Button
+                           type="button"
+                           variant="primary"
+                           size="md"
+                           onClick={() => router.push('/auth/confirm-account')}
+                        >
+                           Send a new link
+                        </Button>
+                     )}
+                  />
                )}
-            </div>
-         </div>
-      </>
+            </Card>
+         </AuthPageLayout>
+      </AuthShell>
    );
 };
 

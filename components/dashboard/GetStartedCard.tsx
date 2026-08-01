@@ -1,9 +1,9 @@
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Flex, Stack } from '../core/layout';
-import { Text } from '../core/text';
-import { Button } from '../core';
-import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
+import { Flex, Stack } from '../koala/core/layout';
+import { Text } from '../koala/core/text';
+import { Button } from '../koala/core';
+import { ActionWidget } from '../koala/product';
 import { useOnboardingChecklist } from '../../lib/useOnboardingChecklist';
 
 const Chevron = () => (
@@ -24,8 +24,8 @@ const Ring = ({pct}: {pct: number}) => {
   return (
     <span className="relative grid place-items-center size-11 shrink-0">
       <svg viewBox="0 0 44 44" className="absolute inset-0 size-full -rotate-90">
-        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="6" stroke="#E4E4E7" />
-        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="6" strokeLinecap="round" stroke="#1AB25E" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} className="transition-[stroke-dashoffset] duration-500" />
+        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="6" stroke="var(--koala-border-primary)" />
+        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="6" strokeLinecap="round" stroke="var(--koala-status-success)" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} className="transition-[stroke-dashoffset] duration-500" />
       </svg>
       <Text size="xs" bold tabular>{pct}%</Text>
     </span>
@@ -40,50 +40,37 @@ const GetStartedCard = () => {
   const href = nextStep.href || '';
 
   return (
-    <SentryPanel>
-      <SentryPanelHeader title="Get started" />
-      <SentryPanelBody>
-      <Flex
-        align="center"
-        justify="between"
-        wrap="wrap"
-        gap="lg"
-        paddingTop="lg"
-        paddingRight="2xl"
-        paddingBottom="lg"
-        paddingLeft="2xl"
-        radius="2xl"
-        border="md"
-        className="dashboard-getstarted-card"
-      >
-        <Flex align="center" gap="lg" flex="1" className="min-w-0">
-          <Ring pct={pct} />
-          <Stack className="min-w-0">
-            <Text size="xs" bold uppercase variant="muted">Next step</Text>
-            <Flex align="center" gap="sm" className="mt-0.5">
-              <Text size="lg" bold>{nextStep.label}</Text>
-              <Chevron />
-              {nextStep.time && (
-                <Flex align="center" gap="xs">
-                  <ClockIcon />
-                  <Text size="md" variant="muted">{nextStep.time}</Text>
-                </Flex>
-              )}
-            </Flex>
-          </Stack>
-        </Flex>
-        {href && (
-          <Button
-            variant="primary"
-            onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(href); }}
-          >
-            {nextStep.cta || 'Continue'}
+    <ActionWidget
+      title="Get started"
+      description={(
+        <Stack className="min-w-0">
+          <Text size="xs" bold uppercase variant="muted">Next step</Text>
+          <Flex align="center" gap="sm" className="mt-0.5">
+            <Text size="lg" bold>{nextStep.label}</Text>
             <Chevron />
-          </Button>
-        )}
+            {nextStep.time && (
+              <Flex align="center" gap="xs">
+                <ClockIcon />
+                <Text size="md" variant="muted">{nextStep.time}</Text>
+              </Flex>
+            )}
+          </Flex>
+        </Stack>
+      )}
+      action={href ? (
+        <Button
+          variant="primary"
+          onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(href); }}
+        >
+          {nextStep.cta || 'Continue'}
+          <Chevron />
+        </Button>
+      ) : undefined}
+    >
+      <Flex align="center" gap="lg">
+        <Ring pct={pct} />
       </Flex>
-      </SentryPanelBody>
-    </SentryPanel>
+    </ActionWidget>
   );
 };
 

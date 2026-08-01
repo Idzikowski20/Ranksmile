@@ -35,11 +35,10 @@ type DfsApiResponse = {
   }>;
 };
 
-/** POST a live task; returns the first task result object (not only items). */
-export async function dfsPostResult<T extends Record<string, unknown>>(
+async function dfsPostTask(
   path: string,
   task: Record<string, unknown>,
-): Promise<T> {
+): Promise<NonNullable<DfsApiResponse['tasks']>[number]> {
   if (!isDataForSeoConfigured()) {
     throw new Error('DataForSEO not configured — set DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD.');
   }
@@ -52,14 +51,36 @@ export async function dfsPostResult<T extends Record<string, unknown>>(
     throw new Error(`DataForSEO API ${res.data?.status_code}: ${res.data?.status_message}`);
   }
   const taskData = res.data?.tasks?.[0];
-  if (taskData?.status_code !== 20000) {
-    throw new Error(`DataForSEO task ${taskData?.status_code}: ${taskData?.status_message}`);
+  if (!taskData) {
+    throw new Error('DataForSEO task missing');
   }
-  const result = taskData?.result?.[0];
+  if (taskData.status_code !== 20000) {
+    throw new Error(`DataForSEO task ${taskData.status_code}: ${taskData.status_message}`);
+  }
+  return taskData;
+}
+
+/** POST a live task; returns the first task result object (not only items). */
+export async function dfsPostResult<T extends Record<string, unknown>>(
+  path: string,
+  task: Record<string, unknown>,
+): Promise<T> {
+  const taskData = await dfsPostTask(path, task);
+  const result = taskData.result?.[0];
   if (!result || typeof result !== 'object') {
     return {} as T;
   }
   return result as T;
+}
+
+/** POST a live task; returns all task result objects (e.g. monthly historical SERPs). */
+export async function dfsPostResultList<T extends Record<string, unknown>>(
+  path: string,
+  task: Record<string, unknown>,
+): Promise<T[]> {
+  const taskData = await dfsPostTask(path, task);
+  const list = taskData.result ?? [];
+  return list.filter((row): row is T => !!row && typeof row === 'object') as T[];
 }
 
 export function normalizeTargetDomain(target: string): string {

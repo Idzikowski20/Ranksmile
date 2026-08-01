@@ -1,25 +1,21 @@
 import React, { useMemo } from 'react';
-import { Bar } from '../../charts/bar';
-import { BarChart } from '../../charts/bar-chart';
-import { BarXAxis } from '../../charts/bar-x-axis';
-import { Grid } from '../../charts/grid';
-import { ChartTooltip } from '../../charts/tooltip';
-import { YAxis } from '../../charts/y-axis';
-import { Checkbox } from '../../core';
+import { Chart } from '../../koala/charts';
+import type { ChartPreparedData, ChartStackSeries } from '../../koala/charts';
+import { chartBucketColors } from '../../koala/tokens/chart';
+import { Checkbox } from '../../koala/core';
 import type { ChartPoint } from '../../../lib/organicResearch/types';
 
 const FONT = 'var(--font-family-primary)';
 
 type SeriesKey = 'top3' | 'pos4_10' | 'pos11_20' | 'pos21_50' | 'pos51_100' | 'serpFeatures';
 
-/** Semrush Organic Research palette */
 const SERIES: { key: SeriesKey; label: string; color: string }[] = [
-  { key: 'top3', label: 'Top 3', color: '#F5C518' },
-  { key: 'pos4_10', label: '4-10', color: '#3B3FA0' },
-  { key: 'pos11_20', label: '11-20', color: '#6B5BCC' },
-  { key: 'pos21_50', label: '21-50', color: '#9B8FE0' },
-  { key: 'pos51_100', label: '51-100', color: '#C5BDF0' },
-  { key: 'serpFeatures', label: 'SERP Features', color: '#6BCB77' },
+  { key: 'top3', label: 'Top 3', color: chartBucketColors.top3 },
+  { key: 'pos4_10', label: '4-10', color: chartBucketColors.pos4_10 },
+  { key: 'pos11_20', label: '11-20', color: chartBucketColors.pos11_20 },
+  { key: 'pos21_50', label: '21-50', color: chartBucketColors.pos21_50 },
+  { key: 'pos51_100', label: '51-100', color: chartBucketColors.pos51_100 },
+  { key: 'serpFeatures', label: 'SERP Features', color: chartBucketColors.serpFeatures },
 ];
 
 type Props = {
@@ -34,10 +30,6 @@ type Props = {
   loading?: boolean;
 };
 
-/**
- * Chart points are daily (monthly Labs snapshots expanded day-by-day).
- * Ranges map to day counts like Semrush Organic Research.
- */
 function sliceChart(chart: ChartPoint[], range: Props['range']): ChartPoint[] {
   if (range === 'all' || !chart.length) return chart;
   const days = range === '1m' ? 31 : range === '6m' ? 183 : range === '1y' ? 365 : 730;
@@ -79,27 +71,22 @@ export default function OrganicPositionChart({
   loading = false,
 }: Props) {
   const points = useMemo(() => sliceChart(chart, range), [chart, range]);
-
   const activeSeries = useMemo(
     () => SERIES.filter((s) => visible[s.key] !== false),
     [visible],
   );
-
   const includeYear = range === '1y' || range === '2y' || range === 'all';
 
-  const barData = useMemo(
-    () => points.map((p) => {
-      const row: Record<string, string | number> = {
-        label: formatAxisLabel(p.date, includeYear),
-        date: p.date,
-      };
-      for (const s of SERIES) {
-        row[s.key] = valueOf(p, s.key);
-      }
-      return row;
-    }),
-    [points, includeYear],
-  );
+  const prepared: ChartPreparedData = useMemo(() => {
+    const labels = points.map((p) => formatAxisLabel(p.date, includeYear));
+    const stacks: ChartStackSeries[] = activeSeries.map((s) => ({
+      key: s.key,
+      label: s.label,
+      color: s.color,
+      values: points.map((p) => valueOf(p, s.key)),
+    }));
+    return { labels, stacks };
+  }, [points, includeYear, activeSeries]);
 
   const ranges: { id: Props['range']; label: string }[] = [
     { id: '1m', label: '1M' },
@@ -109,16 +96,14 @@ export default function OrganicPositionChart({
     { id: 'all', label: 'All time' },
   ];
 
-  const chartStatus = loading ? 'loading' : 'ready';
-  const hasPoints = barData.length > 0;
-  const maxLabels = range === '1m' ? 10 : range === '6m' ? 8 : 12;
+  const chartState = loading ? 'loading' : points.length ? 'ready' : 'empty';
 
   return (
     <div style={{
-      background: '#fff',
-      border: '1px solid #dbded4',
-      borderRadius: connectedAbove ? '0 0 8px 8px' : 8,
-      borderTop: connectedAbove ? 'none' : '1px solid #dbded4',
+      background: 'var(--koala-bg-primary, #fff)',
+      border: '1px solid var(--koala-border-primary, #e5e5e5)',
+      borderRadius: connectedAbove ? '0 0 16px 16px' : 16,
+      borderTop: connectedAbove ? 'none' : '1px solid var(--koala-border-primary, #e5e5e5)',
       padding: '20px',
     }}
     >
@@ -248,7 +233,7 @@ export default function OrganicPositionChart({
                     cursor: 'pointer',
                     color: selected ? '#181225' : '#6A6772',
                     fontWeight: selected ? 600 : 400,
-                    borderBottom: selected ? '2px solid #F29964' : '2px solid transparent',
+                    borderBottom: selected ? '2px solid #F84416' : '2px solid transparent',
                   }}
                 >
                   {r.label}
@@ -262,69 +247,16 @@ export default function OrganicPositionChart({
         </div>
       </div>
 
-      {!loading && !hasPoints ? (
-        <div style={{
-          height: 220,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#6A6772',
-          fontSize: 13,
-          fontFamily: FONT,
-        }}
-        >
-          No historical data yet
-        </div>
-      ) : (
-        <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-          <BarChart
-            className="w-full"
-            data={hasPoints ? barData : []}
-            xDataKey="label"
-            stacked
-            stackGap={1}
-            // Semrush: bars are wider; keep visible spacing without thinning columns too much.
-            barGap={barData.length > 180 ? 0.12 : barData.length > 60 ? 0.2 : 0.3}
-            // Lower chart height vs width (flatter panel like Semrush).
-            aspectRatio="6 / 1"
-            margin={{ top: 12, right: 12, bottom: 32, left: 44 }}
-            animationDuration={1100}
-            revealSignature={`${range}-${activeSeries.map((s) => s.key).join(',')}`}
-            status={chartStatus}
-          >
-            <Grid horizontal fadeHorizontal />
-            <YAxis numTicks={3} formatLargeNumbers />
-            {activeSeries.map((s) => (
-              <Bar
-                key={s.key}
-                dataKey={s.key}
-                fill={s.color}
-                stroke={s.color}
-                lineCap={2}
-                animationType="grow"
-                stackGap={1}
-              />
-            ))}
-            <BarXAxis maxLabels={maxLabels} />
-            <ChartTooltip
-              showDatePill={false}
-              showDots={false}
-              rows={(point) => {
-                const rows = activeSeries.map((s) => ({
-                  color: s.color,
-                  label: s.label,
-                  value: Number(point[s.key] || 0),
-                }));
-                const total = rows.reduce((sum, r) => sum + Number(r.value), 0);
-                return [
-                  ...rows,
-                  { color: '#181225', label: 'Total', value: total },
-                ];
-              }}
-            />
-          </BarChart>
-        </div>
-      )}
+      <div style={{ width: '100%', minWidth: 0, overflow: 'hidden', minHeight: 220 }}>
+        <Chart
+          preset="StackedPositions"
+          data={prepared}
+          state={chartState}
+          emptyDescription="No historical data yet"
+          overrides={{ height: 280, legend: false }}
+          aria-label={title}
+        />
+      </div>
     </div>
   );
 }

@@ -1,122 +1,9 @@
-import React from 'react';
-import { Button } from '../core';
-import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
-import Skeleton from './Skeleton';
+import React, { useMemo } from 'react';
+import Link from 'next/link';
+import { ChartWidget } from '../koala/product';
+import type { ChartPreparedData } from '../koala/charts';
 
 const font = 'var(--font-family-primary)';
-
-// ─── Live clicks sparkline ────────────────────────────────────────────────────
-
-const Sparkline = ({ points }: { points: number[] }) => {
-  const W = 400;
-  const H = 130;
-  const baseline = 106;
-  const top = 5;
-  const n = points.length;
-  const max = Math.max(1, ...points);
-  const xAt = (i: number) => (n <= 1 ? W : 5 + ((W - 11) * i) / (n - 1));
-  const yAt = (v: number) => baseline - (baseline - top) * (v / max);
-
-  let line = '';
-  if (n === 0) {
-    line = `M5,${baseline}L${W},${baseline}`;
-  } else if (n === 1) {
-    line = `M5,${yAt(points[0])}L${W},${yAt(points[0])}`;
-  } else {
-    line = points.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
-  }
-  const area = `${line}L${W},${baseline}L5,${baseline}Z`;
-
-  return (
-    <svg height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block', width: '100%' }}>
-      <defs>
-        <linearGradient id="clicksGradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--gray-10)" stopOpacity="1" />
-          <stop offset="100%" stopColor="var(--gray-10)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <line x1="5" x2={W} y1={baseline} y2={baseline} stroke="var(--gray-20)" strokeWidth="1" />
-      <path fill="url(#clicksGradient)" d={area} />
-      <path fill="none" stroke="var(--gray-60)" strokeWidth="1" d={line} />
-    </svg>
-  );
-};
-
-// ─── Clicks card (live) ───────────────────────────────────────────────────────
-
-const ClicksCard = ({ total, deltaPct, points, startLabel, endLabel, href }: {
-  total: number; deltaPct: number; points: number[]; startLabel: string; endLabel: string; href: string;
-}) => {
-  const up = deltaPct >= 0;
-  return (
-    <div style={{ border: '1px solid #E4E4E7', background: 'transparent', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
-      <a href={href} style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 188, color: '#18181B', textDecoration: 'none' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', padding: '8px 8px 0' }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: '#9F9FA9', fontFamily: font }}>Clicks</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 4 }}>
-            <div style={{ fontSize: 20, fontWeight: 600, fontFamily: font, fontVariantNumeric: 'tabular-nums slashed-zero' }}>{total}</div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', padding: '0 4px', borderRadius: 4, background: up ? '#E0FAE5' : '#FDECEC' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: up ? '#1AB25E' : '#DC2626', fontFamily: font }}>{up ? '+' : ''}{deltaPct}%</span>
-            </div>
-            <div style={{ fontSize: 14, color: '#9F9FA9', fontFamily: font }}>last 30d</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 'auto', display: 'flex', width: '100%', alignItems: 'flex-end', overflow: 'hidden' }}>
-          <Sparkline points={points} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px 2px' }}>
-          <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: font }}>{startLabel}</span>
-          <span style={{ fontSize: 12, color: '#9F9FA9', fontFamily: font }}>{endLabel}</span>
-        </div>
-      </a>
-    </div>
-  );
-};
-
-// ─── AI Visibility card (mockup) ──────────────────────────────────────────────
-
-const AiVisibilityCard = () => (
-  <div style={{ border: '1px solid #E4E4E7', background: 'transparent', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
-    <div style={{ position: 'relative', display: 'flex', height: '100%', minHeight: 188, flexDirection: 'column' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 8px 0', marginBottom: 'auto' }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#9F9FA9', fontFamily: font }}>AI Visibility</div>
-      </div>
-      <div style={{ marginBottom: 16, opacity: 0.8 }}>
-        <svg width="100%" height="75" viewBox="0 0 422 75" fill="none" preserveAspectRatio="none">
-          <path d="M1 50.4859L7.57459 32.4411L14.1492 36.05L20.7238 50.4859L27.2983 57.583L33.8729 34.2455L40.4475 30.6366L47.0221 46.8769L53.5967 57.583L60.1713 34.2455H66.7459L73.3204 39.659L79.895 57.583L86.4213 41.4635L92.9475 37.8545L99.4738 36.05L106 52.1695M211 56.3799L204.474 40.2604L197.947 42.0649L191.421 45.6738L184.895 61.7934L178.32 43.8693L171.746 38.4559H165.171L158.597 61.7934L152.022 51.0873L145.447 34.8469L138.873 38.4559L132.298 61.7934L125.724 54.6962L119.149 40.2604L112.575 36.6514L106 52.1685M316 39.5356L309.474 23.4171L302.948 25.2216L296.421 28.8305L289.895 44.9501L283.32 27.0261L276.746 21.6126H270.171L263.597 44.9501L257.022 34.244L250.447 18.0036L243.873 21.6126L237.298 44.9501L230.724 37.853L224.149 23.4171L217.575 19.8081L211 56.3768M316 39.5356L322.575 15.5979L329.149 19.2068L335.724 33.6427L342.298 40.7398L348.873 17.4023L355.447 13.7934L362.022 30.0337L368.597 24.7398L375.171 1.40234H381.746L388.32 6.8158L394.895 24.7398L401.421 8.62028L407.947 5.01132L414.474 3.20683L421 19.3264" stroke="var(--gray-40)" />
-          <path d="M99.4738 36.05L92.9475 37.8545L86.4213 41.4635L79.895 57.583L73.3204 39.659L66.7459 34.2455H60.1713L53.5967 57.583L47.0221 46.8769L40.4475 30.6366L33.8729 34.2455L27.2983 57.583L20.7238 50.4859L14.1492 36.05L7.57459 32.4411L1 50.4859V74.5977H421V19.3264L414.474 3.20683L407.947 5.01132L401.421 8.62028L394.895 24.7398L388.32 6.8158L381.746 1.40234H375.171L368.597 24.7398L362.022 30.0337L355.447 13.7934L348.873 17.4023L342.298 40.7398L335.724 33.6427L329.149 19.2068L322.575 15.5979L316 39.5356L309.474 23.4171L302.948 25.2216L296.421 28.8305L289.895 44.9501L283.32 27.0261L276.746 21.6126H270.171L263.597 44.9501L257.022 34.244L250.447 18.0036L243.873 21.6126L237.298 44.9501L230.724 37.853L224.149 23.4171L217.575 19.8081L211 56.3768L204.474 40.2604L197.947 42.0649L191.421 45.6738L184.895 61.7934L178.32 43.8693L171.746 38.4559H165.171L158.597 61.7934L152.022 51.0873L145.447 34.8469L138.873 38.4559L132.298 61.7934L125.724 54.6962L119.149 40.2604L112.575 36.6514L106 52.1685L99.4738 36.05Z" fill="url(#aivis_grad)" />
-          <defs>
-            <linearGradient id="aivis_grad" x1="211" y1="1.40234" x2="211" y2="74.5977" gradientUnits="userSpaceOnUse">
-              <stop stopColor="var(--gray-10)" />
-              <stop offset="1" stopColor="white" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
-        <Button variant="secondary" size="sm" onClick={() => { /* mockup */ }}>
-          Add prompts
-        </Button>
-      </div>
-    </div>
-  </div>
-);
-
-// ─── Loading skeleton ─────────────────────────────────────────────────────────
-
-const CardSkeleton = () => (
-  <div style={{ border: '1px solid #E4E4E7', background: 'transparent', padding: 16, minWidth: 0, flex: 1, borderRadius: 12 }}>
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 188 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 8px 0' }}>
-        <Skeleton width={72} height={12} />
-        <Skeleton width={120} height={22} />
-      </div>
-      <Skeleton width="100%" height={90} radius={8} style={{ marginTop: 'auto' }} />
-    </div>
-  </div>
-);
-
-// ─── Section ──────────────────────────────────────────────────────────────────
 
 interface Props {
   total: number;
@@ -128,25 +15,50 @@ interface Props {
   loading: boolean;
 }
 
-const BrandPerformance = ({ total, deltaPct, points, startLabel, endLabel, clicksHref, loading }: Props) => (
-  <SentryPanel>
-    <SentryPanelHeader title="Brand performance" />
-    <SentryPanelBody>
-      <div className="dashboard-perf-grid" style={{ display: 'flex', width: '100%', gap: 16, flexDirection: 'column' }}>
-        {loading ? (
-          <>
-            <CardSkeleton />
-            <CardSkeleton />
-          </>
-        ) : (
-          <>
-            <ClicksCard total={total} deltaPct={deltaPct} points={points} startLabel={startLabel} endLabel={endLabel} href={clicksHref} />
-            <AiVisibilityCard />
-          </>
-        )}
-      </div>
-    </SentryPanelBody>
-  </SentryPanel>
-);
+/** Traffic chart widget — Chart lives inside ChartWidget (pages never import koala/charts). */
+const BrandPerformance = ({
+  total, deltaPct, points, startLabel, endLabel, clicksHref, loading,
+}: Props) => {
+  const up = deltaPct >= 0;
+  const chartData: ChartPreparedData = useMemo(
+    () => ({
+      labels: points.map((_, i) => String(i)),
+      points: points.map((value, i) => ({ label: String(i), value })),
+    }),
+    [points],
+  );
+
+  return (
+    <ChartWidget
+      title="Clicks"
+      subtitle="Last 30 days"
+      state={loading ? 'loading' : points.length ? 'success' : 'empty'}
+      emptyDescription="No click data yet."
+      actions={(
+        <Link href={clicksHref} passHref>
+          <a style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-brand)', textDecoration: 'none', fontFamily: font }}>
+            View
+          </a>
+        </Link>
+      )}
+      footer={!loading && points.length ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontFamily: font, fontSize: 12, color: 'var(--koala-text-secondary)' }}>
+          <span style={{ fontWeight: 700, fontSize: 20, color: 'var(--koala-text-primary)' }}>{total}</span>
+          <span style={{ color: up ? 'var(--koala-status-success)' : 'var(--koala-status-danger)', fontWeight: 600 }}>
+            {up ? '+' : ''}{deltaPct}%
+          </span>
+          <span>{startLabel}</span>
+          <span>{endLabel}</span>
+        </div>
+      ) : undefined}
+      chart={loading || !points.length ? undefined : {
+        preset: 'TrafficTrend',
+        data: chartData,
+        overrides: { height: 130, legend: false },
+        'aria-label': 'Clicks last 30 days',
+      }}
+    />
+  );
+};
 
 export default BrandPerformance;

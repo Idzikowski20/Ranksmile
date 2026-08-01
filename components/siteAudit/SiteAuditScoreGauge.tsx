@@ -71,8 +71,8 @@ function CompactGauge({ score, size }: { score: number; size: number }) {
   const numberFont = size <= 64 ? 16 : 24;
 
   return (
-    <div className="sentry-audit-gauge-compact" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 100 100" aria-hidden="true" className="sentry-audit-gauge-compact-svg">
+    <div className="koala-audit-gauge-compact" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" aria-hidden="true" className="koala-audit-gauge-compact-svg">
         <g>
           <path fill="none" strokeWidth={12} strokeLinecap="round" d={COMPACT_LEFT} stroke="#E4E4E7" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
           <path fill="none" strokeWidth={12} strokeLinecap="round" d={COMPACT_LEFT} stroke={color} strokeDasharray="111.70107212763709 9999" strokeDashoffset={offset} />
@@ -83,7 +83,7 @@ function CompactGauge({ score, size }: { score: number; size: number }) {
           <path key={d} d={d} stroke="black" strokeOpacity={0.3} strokeWidth={1.5} strokeLinecap="butt" />
         ))}
       </svg>
-      <div className="sentry-audit-gauge-compact-value" style={{ fontSize: numberFont }}>{s}</div>
+      <div className="koala-audit-gauge-compact-value" style={{ fontSize: numberFont }}>{s}</div>
     </div>
   );
 }
@@ -109,11 +109,11 @@ function WatchtowerGauge({
 
   return (
     <aside
-      className="sentry-audit-watchtower"
+      className="koala-audit-watchtower"
       style={{ width, height }}
       aria-label={`Site health score: ${s} which is ${label}`}
     >
-      <svg viewBox="0 0 188 148" xmlns="http://www.w3.org/2000/svg" className="sentry-audit-watchtower-svg" role="img">
+      <svg viewBox="0 0 188 148" xmlns="http://www.w3.org/2000/svg" className="koala-audit-watchtower-svg" role="img">
         <title>{`Site health score: ${s} which is ${label}`}</title>
         <defs>
           <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="23" y1="94" x2="165" y2="94">
@@ -173,9 +173,9 @@ function WatchtowerGauge({
 
         {/* Score + label */}
         <foreignObject width="118" height="76" x="35" y="61">
-          <div className="sentry-audit-watchtower-center" aria-hidden="true">
-            <div className="sentry-audit-watchtower-score">{s}</div>
-            {showLabel ? <div className="sentry-audit-watchtower-label">{label}</div> : null}
+          <div className="koala-audit-watchtower-center" aria-hidden="true">
+            <div className="koala-audit-watchtower-score">{s}</div>
+            {showLabel ? <div className="koala-audit-watchtower-label">{label}</div> : null}
           </div>
         </foreignObject>
       </svg>

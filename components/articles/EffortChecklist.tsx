@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge } from '../core';
+import { Badge } from '../koala/core';
 import type { EffortChecklistItem, EffortSignalStatus } from '../../lib/contentEffort';
 
 const F = 'var(--font-family-primary)';

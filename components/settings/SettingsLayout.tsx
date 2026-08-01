@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import AppShell from '../common/AppShell';
-import { SentryPage, SentryPageHeader } from '../sentry-pages';
+import SettingsNav, { type SettingsPageSlug } from './SettingsNav';
 import AccountNotificationSettings from './AccountNotificationSettings';
 import OrganizationGeneralSettings from './OrganizationGeneralSettings';
 import PeopleSettings from './PeopleSettings';
@@ -10,6 +10,7 @@ import SearchConsoleSettings from './SearchConsoleSettings';
 import SubscriptionSettings from './SubscriptionSettings';
 import UsageSettings from './UsageSettings';
 import BillingDetailsSettings from './BillingDetailsSettings';
+import BillingHistorySettings from './BillingHistorySettings';
 import WordPressSettings from './WordPressSettings';
 import ApiSettings from './ApiSettings';
 import ProfileSettings from './ProfileSettings';
@@ -20,23 +21,7 @@ import WorkspaceMembersSettings from './WorkspaceMembersSettings';
 import { useFetchSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 
-export type SettingsPageSlug =
-  | 'general'
-  | 'people'
-  | 'brand_knowledge'
-  | 'google_search_console'
-  | 'wordpress'
-  | 'api'
-  | 'billing_subscription'
-  | 'billing_usage'
-  | 'billing_invoices'
-  | 'billing_details'
-  | 'members'
-  | 'workspace_general'
-  | 'custom_voices'
-  | 'profile'
-  | 'notifications'
-  | 'masterclass';
+export type { SettingsPageSlug } from './SettingsNav';
 
 type SettingsError = {
   type: string;
@@ -51,6 +36,8 @@ const PAGE_ALIASES: Record<string, SettingsPageSlug> = {
   workspace_voices: 'custom_voices',
   account_profile: 'profile',
   account_notifications: 'notifications',
+  billing_history: 'billing_invoices',
+  invoices: 'billing_invoices',
 };
 
 const PAGE_TITLES: Record<SettingsPageSlug, string> = {
@@ -60,26 +47,34 @@ const PAGE_TITLES: Record<SettingsPageSlug, string> = {
   google_search_console: 'Search Console',
   wordpress: 'WordPress',
   api: 'API',
-  billing_subscription: 'Your subscription',
+  billing_subscription: 'Subscription',
   billing_usage: 'Usage',
-  billing_invoices: 'Invoices',
-  billing_details: 'Billing details',
+  billing_invoices: 'Billing History',
+  billing_details: 'Payment methods',
   members: 'Members',
-  workspace_general: 'General',
+  workspace_general: 'Workspace',
   custom_voices: 'Custom Voices',
-  profile: 'Profile',
+  profile: 'Account',
   notifications: 'Notifications',
   masterclass: 'Masterclass',
 };
 
 const PAGE_SUBTITLES: Partial<Record<SettingsPageSlug, string>> = {
-  notifications: 'Manage notifications from Ranksmile or other organization members',
-  brand_knowledge: 'Manage what we know about your brand',
-  custom_voices: 'Manage Custom Voices to be used in Content Editor, Humanizer, and Ranksmile AI',
-  billing_details: 'Manage your billing information',
-  wordpress: 'Interact with your WordPress domains straight from Ranksmile',
-  api: 'Scale your workflows with powerful API access',
-  profile: 'Manage your Ranksmile profile',
+  notifications: 'Manage notifications from Ranksmile or other organization members.',
+  brand_knowledge: 'Manage what we know about your brand.',
+  custom_voices: 'Manage Custom Voices for Content Editor, Humanizer, and Ranksmile AI.',
+  billing_details: 'Manage your billing information and payment methods.',
+  billing_subscription: 'View and change your Ranksmile plan.',
+  billing_usage: 'See how your workspace is using plan limits.',
+  billing_invoices: 'Track and manage your past invoices.',
+  wordpress: 'Connect WordPress sites to publish from Ranksmile.',
+  api: 'Scale your workflows with API access.',
+  profile: 'Manage your Ranksmile profile and security.',
+  general: 'Organization name and defaults.',
+  people: 'Invite and manage organization members.',
+  members: 'Manage workspace members and roles.',
+  workspace_general: 'Workspace defaults for this project.',
+  google_search_console: 'Connect Google Search Console for traffic data.',
 };
 
 type SettingsLayoutProps = {
@@ -87,14 +82,18 @@ type SettingsLayoutProps = {
 };
 
 export const normalizeSettingsPage = (page?: string): SettingsPageSlug => {
-  if (!page) return 'google_search_console';
+  if (!page) return 'profile';
   if (PAGE_ALIASES[page]) return PAGE_ALIASES[page];
   if (Object.prototype.hasOwnProperty.call(PAGE_TITLES, page)) {
     return page as SettingsPageSlug;
   }
-  return 'google_search_console';
+  return 'profile';
 };
 
+/**
+ * Koala Settings shell — Figma `6343:27909`:
+ * primary AppShell sidebar + secondary Settings nav + main content.
+ */
 const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const router = useRouter();
   const currentPage = normalizeSettingsPage(page);
@@ -137,9 +136,7 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
   const renderPageContent = () => {
     if (isLoading) {
       return (
-        <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 14, color: '#6a6772' }}>
-          Loading settings…
-        </div>
+        <div className="koala-settings-loading">Loading settings…</div>
       );
     }
 
@@ -161,16 +158,13 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
     }
     if (currentPage === 'billing_subscription') return <SubscriptionSettings />;
     if (currentPage === 'billing_usage') return <UsageSettings />;
+    if (currentPage === 'billing_invoices') return <BillingHistorySettings />;
     if (currentPage === 'billing_details') return <BillingDetailsSettings />;
     if (currentPage === 'wordpress') return <WordPressSettings />;
     if (currentPage === 'api') return <ApiSettings />;
     if (currentPage === 'profile') return <ProfileSettings />;
 
-    return (
-      <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 14, color: '#6a6772' }}>
-        Coming soon
-      </div>
-    );
+    return <div className="koala-settings-loading">Coming soon</div>;
   };
 
   return (
@@ -179,27 +173,25 @@ const SettingsLayout = ({ page }: SettingsLayoutProps) => {
         <title>{`${pageTitle} — Ranksmile`}</title>
       </Head>
 
-      <SentryPage maxWidth={880} className="sentry-page--settings">
-        <SentryPageHeader title={pageTitle} subtitle={pageSubtitle} borderless />
-        <div className="sentry-settings-content">
-          {renderPageContent()}
-          {settingsError?.msg && (
-            <div
-              role="alert"
-              style={{
-                padding: '12px 16px',
-                borderRadius: 8,
-                border: '1px solid #f5c6cb',
-                background: '#fdf0f0',
-                fontSize: 13,
-                color: '#c62828',
-              }}
-            >
-              {settingsError.msg}
-            </div>
-          )}
+      <div className="koala-settings-shell">
+        <SettingsNav current={currentPage} />
+        <div className="koala-settings-main styled-scrollbar">
+          <header className="koala-settings-header">
+            <h1 className="koala-settings-header__title">{pageTitle}</h1>
+            {pageSubtitle ? (
+              <p className="koala-settings-header__subtitle">{pageSubtitle}</p>
+            ) : null}
+          </header>
+          <div className="koala-settings-body">
+            {renderPageContent()}
+            {settingsError?.msg ? (
+              <div className="koala-settings-alert" role="alert">
+                {settingsError.msg}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </SentryPage>
+      </div>
     </AppShell>
   );
 };

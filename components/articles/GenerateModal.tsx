@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import KeywordSuggestInput from './KeywordSuggestInput';
 
 interface Domain {
@@ -122,6 +123,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
   const hasTracked = trackedKeywords.length > 0;
 
   return (
+    <ShellPortal>
     <div
       style={{
         position: 'fixed',
@@ -130,7 +132,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 50,
+        zIndex: overlayZ.modal,
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -138,7 +140,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
     >
       <div
         style={{
-          background: '#fff',
+          background: 'var(--koala-bg-primary)',
           borderRadius: 12,
           boxShadow: '0px 4px 24px rgba(0,0,0,0.12), 0px 1px 4px rgba(0,0,0,0.08)',
           width: '100%',
@@ -157,7 +159,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '20px 24px 16px',
-            borderBottom: '1px solid #F4F4F5',
+            borderBottom: '1px solid var(--koala-border-primary)',
           }}
         >
           <h2
@@ -221,7 +223,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                   padding: '0 12px',
                   border: '1px solid #D4D4D8',
                   borderRadius: 8,
-                  background: '#fff',
+                  background: 'var(--koala-bg-primary)',
                   fontSize: 14,
                   lineHeight: '20px',
                   color: '#2F2F34',
@@ -263,8 +265,8 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                     left: 0,
                     right: 0,
                     marginTop: 4,
-                    background: '#fff',
-                    border: '1px solid #E4E4E7',
+                    background: 'var(--koala-bg-primary)',
+                    border: '1px solid var(--koala-border-primary)',
                     borderRadius: 8,
                     boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
                     zIndex: 60,
@@ -286,7 +288,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                         display: 'flex',
                         alignItems: 'center',
                         fontSize: 14,
-                        color: d.ID === domainId ? '#F29964' : '#2F2F34',
+                        color: d.ID === domainId ? '#F84416' : '#2F2F34',
                         fontWeight: d.ID === domainId ? 600 : 400,
                         fontFamily: 'var(--font-family-primary)',
                         cursor: 'pointer',
@@ -361,8 +363,8 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                       gap: 4,
                       padding: '2px 10px',
                       borderRadius: 6,
-                      border: '1px solid #E4E4E7',
-                      background: '#fff',
+                      border: '1px solid var(--koala-border-primary)',
+                      background: 'var(--koala-bg-primary)',
                       fontSize: 12,
                       lineHeight: '18px',
                       color: '#52525C',
@@ -387,8 +389,8 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                       gap: 4,
                       padding: '2px 10px',
                       borderRadius: 6,
-                      border: '1px solid #E4E4E7',
-                      background: '#fff',
+                      border: '1px solid var(--koala-border-primary)',
+                      background: 'var(--koala-bg-primary)',
                       fontSize: 12,
                       lineHeight: '18px',
                       color: '#52525C',
@@ -467,8 +469,8 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                       gap: 4,
                       padding: '4px 10px',
                       borderRadius: 6,
-                      border: '1px solid #E4E4E7',
-                      background: '#fff',
+                      border: '1px solid var(--koala-border-primary)',
+                      background: 'var(--koala-bg-primary)',
                       fontSize: 13,
                       lineHeight: '18px',
                       color: '#2F2F34',
@@ -480,7 +482,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLButtonElement).style.background = '#FFF5EE';
                       (e.currentTarget as HTMLButtonElement).style.borderColor = '#F5C4A0';
-                      (e.currentTarget as HTMLButtonElement).style.color = '#F29964';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#F84416';
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLButtonElement).style.background = '#fff';
@@ -525,7 +527,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                   padding: '0 12px',
                   border: '1px solid #D4D4D8',
                   borderRadius: 8,
-                  background: '#fff',
+                  background: 'var(--koala-bg-primary)',
                   fontSize: 14,
                   lineHeight: '20px',
                   color: '#2F2F34',
@@ -565,8 +567,8 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                     left: 0,
                     right: 0,
                     marginTop: 4,
-                    background: '#fff',
-                    border: '1px solid #E4E4E7',
+                    background: 'var(--koala-bg-primary)',
+                    border: '1px solid var(--koala-border-primary)',
                     borderRadius: 8,
                     boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
                     zIndex: 60,
@@ -587,7 +589,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                         display: 'flex',
                         alignItems: 'center',
                         fontSize: 14,
-                        color: l.value === language ? '#F29964' : '#2F2F34',
+                        color: l.value === language ? '#F84416' : '#2F2F34',
                         fontWeight: l.value === language ? 600 : 400,
                         fontFamily: 'var(--font-family-primary)',
                         cursor: 'pointer',
@@ -621,7 +623,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
               justifyContent: 'flex-end',
               gap: 12,
               paddingTop: 8,
-              borderTop: '1px solid #F4F4F5',
+              borderTop: '1px solid var(--koala-border-primary)',
             }}
           >
             <button
@@ -635,7 +637,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
                 padding: '0 20px',
                 borderRadius: 8,
                 border: '1px solid #D4D4D8',
-                background: '#fff',
+                background: 'var(--koala-bg-primary)',
                 fontSize: 14,
                 lineHeight: '20px',
                 fontWeight: 600,
@@ -673,7 +675,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
               }}
               onMouseEnter={(e) => {
                 if (keywords.length > 0) {
-                  (e.currentTarget as HTMLButtonElement).style.background = '#F29964';
+                  (e.currentTarget as HTMLButtonElement).style.background = '#F84416';
                 }
               }}
               onMouseLeave={(e) => {
@@ -702,6 +704,7 @@ const GenerateModal = ({ domains, onGenerate, onClose, isGenerating }: Props) =>
         </form>
       </div>
     </div>
+    </ShellPortal>
   );
 };
 

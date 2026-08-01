@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 import { getErrorMessage } from '../../lib/errors';
-import { Button, Input, Textarea } from '../core';
-import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
+import { Button, Input, Textarea } from '../koala/core';
+import { KoalaSettingsSection, KoalaSettingsRow } from '../koala/layout';
 
 const PLACEHOLDER = `Business Type
 …
@@ -66,23 +66,23 @@ const BrandKnowledgeSettings = () => {
     } catch (e) { toast.error(getErrorMessage(e) || 'Analysis failed'); } finally { setAnalyzing(false); }
   };
 
-  const fieldBorder = (key: string) => (focused === key ? '#F5C4A0' : '#D4D4D8');
+  const fieldBorder = (key: string) => (focused === key ? 'var(--koala-input-border-focus)' : 'var(--koala-border-primary)');
 
   return (
     <form onSubmit={save} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
-      <SentrySettingsSection title="Source">
-        <SentrySettingsRow
+      <KoalaSettingsSection title="Source">
+        <KoalaSettingsRow
           label="Generation mode"
           description={mode === 'auto'
             ? 'We scrape the page and let AI draft your brand knowledge — then review & edit below.'
             : 'Fill in the fields below manually.'}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
-            <div style={{ display: 'inline-flex', background: '#F4F4F5', borderRadius: 8, padding: 3, width: 'fit-content' }}>
+            <div style={{ display: 'inline-flex', background: 'var(--koala-bg-secondary)', borderRadius: 8, padding: 3, width: 'fit-content' }}>
               {([['auto', 'Auto from website'], ['manual', 'Write manually']] as const).map(([m, lbl]) => (
                 <button
                   key={m} type="button" onClick={() => setMode(m)}
-                  style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 600, background: mode === m ? '#fff' : 'transparent', color: mode === m ? '#18181B' : '#52525C', boxShadow: mode === m ? '0 1px 2px rgba(0,0,0,0.08)' : 'none', transition: 'background 0.15s' }}
+                  style={{ padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 600, background: mode === m ? 'var(--koala-bg-primary)' : 'transparent', color: mode === m ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)', boxShadow: mode === m ? '0 1px 2px rgba(0,0,0,0.08)' : 'none', transition: 'background 0.15s' }}
                 >
                   {lbl}
                 </button>
@@ -109,11 +109,11 @@ const BrandKnowledgeSettings = () => {
               </div>
             )}
           </div>
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
-      <SentrySettingsSection title="Brand profile">
-        <SentrySettingsRow label="Brand name" description="The name used in generated content.">
+      <KoalaSettingsSection title="Brand profile">
+        <KoalaSettingsRow label="Brand name" description="The name used in generated content.">
           <Input
             type="text"
             value={brandName}
@@ -123,8 +123,8 @@ const BrandKnowledgeSettings = () => {
             placeholder="e.g. IDZTECH"
             style={{ width: '100%', maxWidth: 320, borderColor: fieldBorder('name') }}
           />
-        </SentrySettingsRow>
-        <SentrySettingsRow label="Knowledge" description="Used as context across the Content Editor and New Content generation.">
+        </KoalaSettingsRow>
+        <KoalaSettingsRow label="Knowledge" description="Used as context across the Content Editor and New Content generation.">
           <Textarea
             value={knowledge}
             onChange={(e) => setKnowledge(e.target.value)}
@@ -134,8 +134,8 @@ const BrandKnowledgeSettings = () => {
             rows={16}
             style={{ width: '100%', maxWidth: 560, borderColor: fieldBorder('knowledge') }}
           />
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
       <div>
         <Button type="submit" variant="primary" disabled={saving}>

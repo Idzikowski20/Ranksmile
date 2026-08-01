@@ -26,7 +26,9 @@ if (DATABASE_URL) {
             rejectUnauthorized: false,
          },
       },
-      pool: { max: 5, min: 0, idle: 10000 },
+      // Neon cold-start + DNS blips: default acquire is too tight under pool pressure
+      // (email-outbox / pipeline-workers then log ConnectionAcquireTimeoutError).
+      pool: { max: 5, min: 0, idle: 10000, acquire: 60000, evict: 10000 },
       logging: false,
       models: [Domain, Keyword, GscAccount, ArticleKeyword],
    });

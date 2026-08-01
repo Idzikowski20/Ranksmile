@@ -1,5 +1,5 @@
 import React from 'react';
-import { Checkbox } from '../core';
+import { Checkbox } from '../koala/core';
 import { SourceInlineIcon } from './sourceIcons';
 import type { WizardPrompt } from './wizardTypes';
 

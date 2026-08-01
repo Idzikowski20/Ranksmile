@@ -67,7 +67,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/billing/confirmation/success?session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.slug)}&billing=${billing}`,
       cancel_url: `${origin}/billing/checkout/${plan.slug}?billing=${billing}&mode=${mode}`,
       customer: billingState?.stripeCustomerId ?? undefined,
       customer_email: billingState?.stripeCustomerId ? undefined : user.email ?? undefined,

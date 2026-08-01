@@ -3,14 +3,16 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../../components/common/DashboardLayout';
-import { Alert, Button } from '../../components/core';
+import { Alert, Button } from '../../components/koala/core';
+import { Icon } from '../../components/koala/icons';
 import {
-  SentryPage,
-  SentryPageHeader,
-  SentryPanel,
-  SentryPanelBody,
-  SentryPanelHeader,
-} from '../../components/sentry-pages';
+  KoalaPage,
+  KoalaPageHeader,
+  KoalaPanel,
+  KoalaPanelBody,
+  KoalaPanelHeader,
+} from '../../components/koala/layout';
+import { Spinner, StatusBadge } from '../../components/koala/primitives';
 import AnalysisCircuitBoard from '../../components/ranksmile/AnalysisCircuitBoard';
 import type { DeepAnalysisUiState, StepVisualStatus } from '../../lib/deepAnalysisProgress';
 import { useFetchDomains } from '../../services/domains';
@@ -113,13 +115,13 @@ const SearchEngineIcons = () => (
     </div>
     <div className="deep-analysis-engine-icon">
       <svg width="14" height="14" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M14.1461 8.6792C13.1338 8.24322 12.2484 7.64599 11.4884 6.88676C10.7292 6.12753 10.1312 5.24138 9.696 4.22907C9.52952 3.84162 9.3944 3.44222 9.29138 3.03311C9.25778 2.89948 9.13834 2.80542 9.00023 2.80542C8.86211 2.80542 8.74267 2.89948 8.70907 3.03311C8.60605 3.44222 8.47167 3.84013 8.30445 4.22907C7.86847 5.24138 7.27124 6.12753 6.512 6.88676C5.75277 7.64525 4.86663 8.24322 3.85432 8.6792C3.46686 8.84568 3.06746 8.98081 2.65836 9.08383C2.52473 9.11742 2.43066 9.23687 2.43066 9.37498C2.43066 9.51309 2.52473 9.63254 2.65836 9.66613C3.06746 9.76915 3.46537 9.90353 3.85432 10.0708C4.86663 10.5067 5.75202 11.104 6.512 11.8632C7.27124 12.6224 7.86922 13.5086 8.30445 14.5209C8.47167 14.9091 8.60605 15.3077 8.70907 15.7168C8.72535 15.7818 8.76283 15.8394 8.81556 15.8807C8.8683 15.9219 8.93328 15.9444 9.00023 15.9445C9.13834 15.9445 9.25778 15.8505 9.29138 15.7168C9.3944 15.3077 9.52878 14.9098 9.696 14.5209C10.132 13.5086 10.7292 12.6232 11.4884 11.8632C12.2477 11.104 13.1338 10.506 14.1461 10.0708C14.5343 9.90353 14.933 9.76915 15.3421 9.66613C15.407 9.64985 15.4647 9.61238 15.5059 9.55964C15.5472 9.50691 15.5696 9.44193 15.5698 9.37498C15.5698 9.23687 15.4757 9.11742 15.3421 9.08383C14.933 8.98081 14.5351 8.84643 14.1461 8.6792Z" fill="#f29964" />
+        <path d="M14.1461 8.6792C13.1338 8.24322 12.2484 7.64599 11.4884 6.88676C10.7292 6.12753 10.1312 5.24138 9.696 4.22907C9.52952 3.84162 9.3944 3.44222 9.29138 3.03311C9.25778 2.89948 9.13834 2.80542 9.00023 2.80542C8.86211 2.80542 8.74267 2.89948 8.70907 3.03311C8.60605 3.44222 8.47167 3.84013 8.30445 4.22907C7.86847 5.24138 7.27124 6.12753 6.512 6.88676C5.75277 7.64525 4.86663 8.24322 3.85432 8.6792C3.46686 8.84568 3.06746 8.98081 2.65836 9.08383C2.52473 9.11742 2.43066 9.23687 2.43066 9.37498C2.43066 9.51309 2.52473 9.63254 2.65836 9.66613C3.06746 9.76915 3.46537 9.90353 3.85432 10.0708C4.86663 10.5067 5.75202 11.104 6.512 11.8632C7.27124 12.6224 7.86922 13.5086 8.30445 14.5209C8.47167 14.9091 8.60605 15.3077 8.70907 15.7168C8.72535 15.7818 8.76283 15.8394 8.81556 15.8807C8.8683 15.9219 8.93328 15.9444 9.00023 15.9445C9.13834 15.9445 9.25778 15.8505 9.29138 15.7168C9.3944 15.3077 9.52878 14.9098 9.696 14.5209C10.132 13.5086 10.7292 12.6232 11.4884 11.8632C12.2477 11.104 13.1338 10.506 14.1461 10.0708C14.5343 9.90353 14.933 9.76915 15.3421 9.66613C15.407 9.64985 15.4647 9.61238 15.5059 9.55964C15.5472 9.50691 15.5696 9.44193 15.5698 9.37498C15.5698 9.23687 15.4757 9.11742 15.3421 9.08383C14.933 8.98081 14.5351 8.84643 14.1461 8.6792Z" fill="#F84416" />
       </svg>
     </div>
     <div className="deep-analysis-engine-icon">
       <svg width="12" height="12" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="9" cy="9" r="6" stroke="#9f9fa9" strokeWidth="1.5" fill="none" />
-        <path d="M14 14l4 4" stroke="#9f9fa9" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="9" cy="9" r="6" className="deep-analysis-engine-icon__muted" strokeWidth="1.5" fill="none" />
+        <path d="M14 14l4 4" className="deep-analysis-engine-icon__muted" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     </div>
   </div>
@@ -128,32 +130,37 @@ const SearchEngineIcons = () => (
 const StepIcon = ({ status }: { status: StepStatus }) => {
   if (status === 'done') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" fill="#f0fdf4" stroke="#1ab25e" strokeWidth="1.5" />
-        <path d="M8 12.5l2.5 2.5 5.5-5.5" stroke="#1ab25e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      <Icon
+        name="CheckCircle"
+        size={20}
+        weight="fill"
+        color="var(--koala-status-success)"
+        className="deep-analysis-step-icon__done"
+      />
     );
   }
   if (status === 'error') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" fill="#fff1f2" stroke="#ff6f77" strokeWidth="1.5" />
-        <path d="M9 9l6 6M15 9l-6 6" stroke="#ff6f77" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
+      <Icon
+        name="XCircle"
+        size={20}
+        weight="fill"
+        color="var(--koala-status-danger)"
+        className="deep-analysis-step-icon__error"
+      />
     );
   }
   if (status === 'running') {
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }} aria-hidden="true">
-        <circle cx="12" cy="12" r="9" fill="none" stroke="#e4e4e7" strokeWidth="2" />
-        <path d="M12 3a9 9 0 0 1 8.5 5.5" fill="none" stroke="#f29964" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
+    return <Spinner size={18} label="Running" />;
   }
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" fill="none" stroke="#d4d4d8" strokeWidth="2" />
-    </svg>
+    <Icon
+      name="Circle"
+      size={18}
+      weight="bold"
+      color="var(--koala-border-strong)"
+      className="deep-analysis-step-icon__pending"
+    />
   );
 };
 
@@ -406,11 +413,11 @@ const DeepAnalysisPage: NextPage = () => {
   };
 
   const statusBadge = overallError ? (
-    <span className="deep-analysis-meta-badge deep-analysis-meta-badge--error">Failed</span>
+    <StatusBadge status="failed" label="Failed" />
   ) : allDone ? (
-    <span className="deep-analysis-meta-badge deep-analysis-meta-badge--success">Complete</span>
+    <StatusBadge status="completed" label="Complete" />
   ) : (
-    <span className="deep-analysis-meta-badge">{completedCount}/{STEPS.length} steps</span>
+    <StatusBadge status="running" label={`${completedCount}/${STEPS.length} steps`} />
   );
 
   useEffect(() => {
@@ -425,18 +432,18 @@ const DeepAnalysisPage: NextPage = () => {
         <title>Deep Analysis — Ranksmile</title>
       </Head>
 
-      <SentryPage maxWidth={560} className="nc-wizard-page">
-        <SentryPageHeader
+      <KoalaPage maxWidth={560} className="nc-wizard-page">
+        <KoalaPageHeader
           borderless
           title="Deep analysis"
           subtitle={subtitle}
           meta={statusBadge}
         />
 
-        <div className="sentry-page-content">
-          <SentryPanel>
-            <SentryPanelHeader title="Analysis engines" />
-            <SentryPanelBody>
+        <div className="koala-page-content">
+          <KoalaPanel>
+            <KoalaPanelHeader title="Analysis engines" />
+            <KoalaPanelBody>
               <div className="deep-analysis-engines">
                 <div className="deep-analysis-engine-row">
                   <p className="deep-analysis-engine-label">AI Search</p>
@@ -447,44 +454,45 @@ const DeepAnalysisPage: NextPage = () => {
                   <SearchEngineIcons />
                 </div>
               </div>
-            </SentryPanelBody>
-          </SentryPanel>
+            </KoalaPanelBody>
+          </KoalaPanel>
 
-          <SentryPanel>
-            <SentryPanelHeader
+          <KoalaPanel>
+            <KoalaPanelHeader
               title="Pipeline progress"
-              actions={!overallError && !allDone ? (
-                <span style={{ fontSize: 13, color: '#6a6772', fontFamily: 'var(--font-family-primary)' }}>
-                  {progressPct}%
-                </span>
+              actions={!overallError ? (
+                <span className="deep-analysis-pct">{allDone ? 100 : progressPct}%</span>
               ) : undefined}
             />
-            <SentryPanelBody>
+            <KoalaPanelBody>
               {!overallError && !allDone && (
-                <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+                <div className="deep-analysis-pipeline-live">
                   <AnalysisCircuitBoard
                     variant="deep-analysis"
                     state={circuitState}
                     width={420}
                     height={200}
                   />
-                  <p style={{ margin: 0, fontSize: 13, color: '#6A6772', fontFamily: 'var(--font-family-primary)', textAlign: 'center' }} aria-live="polite">
+                  <p className="deep-analysis-pipeline-status" aria-live="polite">
                     {steps.find((s) => s.status === 'running')?.label || 'Analyzing content…'}
                   </p>
                 </div>
               )}
-              <div className="deep-analysis-steps">
+              <div className={`deep-analysis-steps${allDone ? ' deep-analysis-steps--complete' : ''}`}>
                 {steps.map((step) => (
                   <StepRow key={step.key} step={step} />
                 ))}
               </div>
-              {!overallError && !allDone && (
+              {!overallError && (
                 <div className="deep-analysis-progress" aria-hidden="true">
-                  <div className="deep-analysis-progress-fill" style={{ width: `${progressPct}%` }} />
+                  <div
+                    className="deep-analysis-progress-fill"
+                    style={{ width: `${allDone ? 100 : progressPct}%` }}
+                  />
                 </div>
               )}
-            </SentryPanelBody>
-          </SentryPanel>
+            </KoalaPanelBody>
+          </KoalaPanel>
 
           {overallError && (
             <Alert variant="error" title="Analysis failed">
@@ -506,12 +514,12 @@ const DeepAnalysisPage: NextPage = () => {
           )}
 
           {allDone && (
-            <Alert variant="success" title="All steps completed">
+            <Alert variant="success" title="All steps completed" className="deep-analysis-complete-alert">
               Redirecting to content setup…
             </Alert>
           )}
         </div>
-      </SentryPage>
+      </KoalaPage>
     </DashboardLayout>
   );
 };

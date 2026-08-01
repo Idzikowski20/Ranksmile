@@ -7,7 +7,7 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import CreateAuditModal from '../../../components/audit/CreateAuditModal';
 import AuditCard from '../../../components/audit/AuditCard';
-import { Button } from '../../../components/core';
+import { Button } from '../../../components/koala/core';
 import { useAuditList, useAuditStatus, useCreateAudit, useRunAudits, useDeleteAudit } from '../../../services/auditTool';
 import { useFetchDomains } from '../../../services/domains';
 import { slugToDomain } from '../../../utils/slugToDomain';

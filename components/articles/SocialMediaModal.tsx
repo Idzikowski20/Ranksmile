@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
-import Modal from '../core/modal/modal';
-import Button from '../core/button/button';
+import Modal from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
 
 const F = 'var(--font-family-primary)';
 

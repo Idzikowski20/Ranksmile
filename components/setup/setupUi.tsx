@@ -1,9 +1,9 @@
 import Head from 'next/head';
 import { createPortal } from 'react-dom';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import GlobalTopbar from '../common/GlobalTopbar';
-import { SentryPage, SentryPanel, SentryPanelBody } from '../sentry-pages';
-import { Input } from '../core';
+import KoalaHeader from '../koala/shell/Header';
+import { KoalaPage, KoalaPanel, KoalaPanelBody } from '../koala/layout';
+import Input from '../koala/primitives/Input';
 
 const SETUP_WIZARD_WIDTH_NARROW = 480;
 const SETUP_WIZARD_WIDTH_WIDE = 880;
@@ -19,7 +19,7 @@ export const SetupLogo = () => (
   <a href="/" aria-label="Home" style={{ display: 'inline-flex', alignItems: 'center' }}>
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 28, height: 28, borderRadius: 7, background: '#F29964', flexShrink: 0,
+      width: 28, height: 28, borderRadius: 7, background: '#F84416', flexShrink: 0,
     }}
     >
       <svg width="17" height="17" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
@@ -37,10 +37,10 @@ export function SetupShell({ title, children, layout = 'narrow' }: { title: stri
         <meta name="robots" content="noindex" />
       </Head>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
-        <GlobalTopbar breadcrumb={<SetupLogo />} />
-        <SentryPage maxWidth={layoutMaxWidth(layout)}>
-          <div className={`sentry-setup-center sentry-setup-center--${layout}`}>{children}</div>
-        </SentryPage>
+        <KoalaHeader breadcrumb={<SetupLogo />} />
+        <KoalaPage maxWidth={layoutMaxWidth(layout)}>
+          <div className={`koala-setup-center koala-setup-center--${layout}`}>{children}</div>
+        </KoalaPage>
       </div>
     </>
   );
@@ -48,10 +48,10 @@ export function SetupShell({ title, children, layout = 'narrow' }: { title: stri
 
 export function SetupWizardCard({ children, layout = 'narrow' }: { children: ReactNode; layout?: SetupLayout }) {
   return (
-    <div className={`sentry-setup-card sentry-setup-card--${layout}`} style={{ width: '100%' }}>
-      <SentryPanel className="sentry-panel--setup">
-        <SentryPanelBody>{children}</SentryPanelBody>
-      </SentryPanel>
+    <div className={`koala-setup-card koala-setup-card--${layout}`} style={{ width: '100%' }}>
+      <KoalaPanel className="koala-panel--setup">
+        <KoalaPanelBody>{children}</KoalaPanelBody>
+      </KoalaPanel>
     </div>
   );
 }
@@ -64,7 +64,7 @@ type SetupDropdownMenuProps = {
   id?: string;
 };
 
-/** Portal dropdown — avoids clipping by SentryPanel overflow and scroll parents. */
+/** Portal dropdown — avoids clipping by KoalaPanel overflow and scroll parents. */
 export function SetupDropdownMenu({ open, anchorRef, onClose, children, id }: SetupDropdownMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -111,7 +111,7 @@ export function SetupDropdownMenu({ open, anchorRef, onClose, children, id }: Se
     <div
       ref={menuRef}
       id={id}
-      className="sentry-setup-menu sentry-setup-menu--portal"
+      className="koala-setup-menu koala-setup-menu--portal"
       style={{ top: pos.top, left: pos.left, width: pos.width }}
       role="listbox"
     >
@@ -156,7 +156,7 @@ export function SetupSearchableMenu<T>({
 
   return (
     <SetupDropdownMenu open={open} anchorRef={anchorRef} onClose={onClose}>
-      <div className="sentry-setup-menu-search">
+      <div className="koala-setup-menu-search">
         <Input
           autoFocus
           value={filter}
@@ -165,7 +165,7 @@ export function SetupSearchableMenu<T>({
           size="sm"
         />
       </div>
-      <div className="sentry-setup-menu-list" style={listMaxHeight ? { maxHeight: listMaxHeight } : undefined}>
+      <div className="koala-setup-menu-list" style={listMaxHeight ? { maxHeight: listMaxHeight } : undefined}>
         {visible.map((item) => (
           <Fragment key={getKey(item)}>{renderItem(item)}</Fragment>
         ))}
@@ -177,9 +177,9 @@ export function SetupSearchableMenu<T>({
 
 export function SetupStepProgress({ step }: { step: 1 | 2 }) {
   return (
-    <div className="sentry-setup-progress" aria-label={`Step ${step} of 2`}>
-      <div className={`sentry-setup-progress-seg${step >= 1 ? ' sentry-setup-progress-seg--active' : ''}${step > 1 ? ' sentry-setup-progress-seg--complete' : ''}`} />
-      <div className={`sentry-setup-progress-seg${step === 2 ? ' sentry-setup-progress-seg--active' : ''}`} />
+    <div className="koala-setup-progress" aria-label={`Step ${step} of 2`}>
+      <div className={`koala-setup-progress-seg${step >= 1 ? ' koala-setup-progress-seg--active' : ''}${step > 1 ? ' koala-setup-progress-seg--complete' : ''}`} />
+      <div className={`koala-setup-progress-seg${step === 2 ? ' koala-setup-progress-seg--active' : ''}`} />
     </div>
   );
 }
@@ -206,11 +206,11 @@ export function SetupField({
 }: { label: string; hint?: string; optional?: boolean; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      <label className="sentry-setup-field-label">
+      <label className="koala-setup-field-label">
         {label}
         {optional && <span style={{ fontWeight: 400, color: '#6a6772' }}> (optional)</span>}
       </label>
-      {hint && <p className="sentry-setup-field-hint">{hint}</p>}
+      {hint && <p className="koala-setup-field-hint">{hint}</p>}
       {children}
     </div>
   );
@@ -236,14 +236,14 @@ export const Spinner = ({ size = 14 }: { size?: number }) => (
     aria-hidden="true"
     style={{
       display: 'inline-block', width: size, height: size, flexShrink: 0,
-      border: '2px solid #dbded4', borderTopColor: '#F29964', borderRadius: '50%',
-          animation: 'sentry-setup-spin 0.7s linear infinite',
+      border: '2px solid #e5e5e5', borderTopColor: '#F84416', borderRadius: '50%',
+          animation: 'koala-setup-spin 0.7s linear infinite',
     }}
   />
 );
 
 export const CheckCircle = () => (
-  <span className="sentry-setup-benefit-check" aria-hidden="true">
+  <span className="koala-setup-benefit-check" aria-hidden="true">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
       <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -251,7 +251,7 @@ export const CheckCircle = () => (
 );
 
 export function OrDivider() {
-  return <div className="sentry-setup-or">or</div>;
+  return <div className="koala-setup-or">or</div>;
 }
 
 export function SetupError({ message }: { message: string }) {

@@ -34,7 +34,6 @@ export type ObservationSource =
   | 'audit'
   | 'competitors'
   | 'internal_links'
-  | 'topical_map'
   | 'backlinks'
   | 'entity_graph'
   | string;

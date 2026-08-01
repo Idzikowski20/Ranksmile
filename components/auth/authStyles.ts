@@ -2,51 +2,28 @@ import type { CSSProperties } from 'react';
 
 export const AUTH_FONT = 'var(--font-family-primary)';
 
-/** Soft mesh stage base — matches auth-mesh.png (blue → lavender). */
-export const AUTH_SHELL_BG = '#C5D4F0';
+/** Koala Product Template — centered minimal light (Sign In `3779:205052` / Login Minimal). */
+export const AUTH_SHELL_BG = '#ffffff';
 
 export const authPageStyle: CSSProperties = {
   position: 'relative',
   flex: 1,
   width: '100%',
   height: '100%',
-  minHeight: 0,
+  minHeight: '100vh',
   display: 'flex',
   flexDirection: 'column',
   background: AUTH_SHELL_BG,
   fontFamily: AUTH_FONT,
-  overflow: 'hidden',
-  borderRadius: 12,
+  overflow: 'auto',
 };
 
-/**
- * Full-bleed mesh gradient plane (auth-mesh.png).
- * Covers the stage edge-to-edge; slight overscale avoids letterboxing on wide screens.
- */
 export const authGradientImageStyle: CSSProperties = {
-  position: 'absolute',
-  zIndex: 0,
-  inset: 0,
-  width: '100%',
-  height: '100%',
-  maxWidth: 'none',
-  pointerEvents: 'none',
-  userSelect: 'none',
-  objectFit: 'cover',
-  objectPosition: 'center center',
+  display: 'none',
 };
 
-/** Film grain — Relume `noise.webp` tile @ 250px, mix-blend overlay. */
 export const authNoiseStyle: CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  pointerEvents: 'none',
-  zIndex: 1,
-  mixBlendMode: 'overlay',
-  backgroundImage: 'url(/textures/noise.webp)',
-  backgroundRepeat: 'repeat',
-  backgroundPosition: '0 0',
-  backgroundSize: '250px',
+  display: 'none',
 };
 
 export const authTopBarStyle: CSSProperties = {
@@ -66,100 +43,90 @@ export const authMainStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '16px 16px 40px',
+  padding: '48px 16px',
 };
 
-/** Sentry panel card — white surface + frosted white rim against mesh. */
 export const authCardStyle: CSSProperties = {
   width: '100%',
-  maxWidth: 400,
+  maxWidth: 420,
   background: '#FFFFFF',
-  border: '1px solid rgba(255, 255, 255, 0.95)',
+  border: 'none',
   borderRadius: 16,
-  padding: '32px 28px 28px',
+  padding: '0',
   boxSizing: 'border-box',
-  /* Crisp inner edge + thick semi-transparent white rim (no blur) + soft lift */
-  boxShadow: [
-    '0 0 0 1px rgba(255, 255, 255, 0.9)',
-    '0 0 0 8px rgba(255, 255, 255, 0.35)',
-    '0 12px 40px rgba(37, 99, 235, 0.10)',
-    '0 4px 16px rgba(24, 18, 37, 0.06)',
-  ].join(', '),
+  boxShadow: 'none',
 };
 
 export const authBottomBarStyle: CSSProperties = {
-  position: 'relative',
-  zIndex: 2,
-  textAlign: 'center',
-  padding: '0 24px 32px',
-  fontSize: 13,
-  lineHeight: 1.45,
-  color: 'rgba(24, 18, 37, 0.55)',
-  flexShrink: 0,
+  display: 'none',
 };
 
 export const authTitleStyle: CSSProperties = {
   margin: 0,
-  fontSize: 22,
+  fontSize: 24,
   fontWeight: 700,
-  letterSpacing: '-0.02em',
-  color: '#181225',
+  letterSpacing: '-1px',
+  lineHeight: '30px',
+  color: '#1a1a1a',
   textAlign: 'center',
 };
 
 export const authSubtitleStyle: CSSProperties = {
-  margin: '8px 0 24px',
-  fontSize: 14,
-  color: '#6A6772',
+  margin: '4px 0 0',
+  fontSize: 16,
+  color: '#575757',
   textAlign: 'center',
-  lineHeight: 1.45,
+  lineHeight: '24px',
+  letterSpacing: '-0.25px',
 };
 
 export const authLabelStyle: CSSProperties = {
   display: 'block',
-  marginBottom: 6,
-  fontSize: 13,
-  fontWeight: 600,
-  color: '#181225',
+  marginBottom: 8,
+  fontSize: 14,
+  fontWeight: 500,
+  color: '#1a1a1a',
+  letterSpacing: '-0.4px',
 };
 
-/** Sentry input: white surface, radius 8px. */
 export const authInputStyle: CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
-  height: 36,
-  minHeight: 36,
-  padding: '0 16px',
+  height: 40,
+  minHeight: 40,
+  padding: '8px 12px',
   fontSize: 14,
-  lineHeight: '16px',
+  lineHeight: '20px',
   fontFamily: AUTH_FONT,
   fontWeight: 400,
-  color: '#302E36',
+  color: '#1a1a1a',
   background: '#FFFFFF',
-  border: '1px solid #dbded4',
-  borderRadius: 8,
-  boxShadow: 'none',
+  border: '1px solid #e5e5e5',
+  borderRadius: 14,
+  boxShadow: '0px 1px 2px rgba(0,0,0,0.04)',
   outline: 'none',
-  transition: 'border-color 120ms cubic-bezier(0.72, 0, 0.16, 1), box-shadow 120ms cubic-bezier(0.72, 0, 0.16, 1)',
+  letterSpacing: '-0.4px',
+  transition: 'border-color 120ms ease, box-shadow 120ms ease',
 };
 
 export const authInputFocusStyle: CSSProperties = {
-  borderColor: '#F29964',
-  boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #F29964',
+  borderColor: '#F84416',
+  boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #F84416',
 };
 
 export const authFieldWrapStyle: CSSProperties = {
   marginBottom: 16,
+  width: '100%',
 };
 
 export const authErrorStyle: CSSProperties = {
   marginBottom: 16,
   padding: '10px 12px',
   fontSize: 13,
-  color: '#D92D20',
-  background: 'rgba(217, 45, 32, 0.06)',
-  border: '1px solid rgba(217, 45, 32, 0.18)',
-  borderRadius: 8,
+  color: '#dc2626',
+  background: '#fef2f2',
+  border: '1px solid #fecaca',
+  borderRadius: 12,
   lineHeight: 1.4,
 };
 
@@ -167,10 +134,10 @@ export const authSuccessStyle: CSSProperties = {
   marginBottom: 16,
   padding: '10px 12px',
   fontSize: 13,
-  color: '#008900',
-  background: 'rgba(0, 137, 0, 0.06)',
-  border: '1px solid rgba(0, 137, 0, 0.16)',
-  borderRadius: 8,
+  color: '#15803d',
+  background: '#f0fdf4',
+  border: '1px solid #bbf7d0',
+  borderRadius: 12,
   lineHeight: 1.4,
 };
 
@@ -178,40 +145,43 @@ export const authDividerWrapStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 12,
-  margin: '20px 0 16px',
+  margin: '0',
+  width: '100%',
 };
 
 export const authDividerLineStyle: CSSProperties = {
   flex: 1,
   height: 1,
-  background: '#dbded4',
+  background: '#e5e5e5',
 };
 
 export const authDividerTextStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 500,
-  color: '#878490',
+  color: '#575757',
   whiteSpace: 'nowrap',
+  letterSpacing: '-0.4px',
 };
 
 export const authLinkStyle: CSSProperties = {
-  color: '#6A6772',
-  fontSize: 13,
+  color: '#F84416',
+  fontSize: 14,
   fontWeight: 500,
   textDecoration: 'none',
+  letterSpacing: '-0.25px',
   transition: 'color 150ms ease',
 };
 
 export const authFooterStyle: CSSProperties = {
-  marginTop: 24,
+  marginTop: 12,
   textAlign: 'center',
   fontSize: 14,
-  color: '#6A6772',
+  color: '#575757',
+  letterSpacing: '-0.4px',
 };
 
 export const authFullWidthBtnStyle: CSSProperties = {
   width: '100%',
-  marginTop: 8,
 };
 
 export const authPillLinkStyle: CSSProperties = {
@@ -219,13 +189,12 @@ export const authPillLinkStyle: CSSProperties = {
   alignItems: 'center',
   gap: 4,
   padding: '8px 14px',
-  borderRadius: 8,
-  border: '1px solid rgba(24, 18, 37, 0.12)',
-  background: 'rgba(255, 255, 255, 0.55)',
-  color: '#302E36',
+  borderRadius: 12,
+  border: '1px solid #e5e5e5',
+  background: '#FFFFFF',
+  color: '#1a1a1a',
   fontSize: 13,
   fontWeight: 500,
   textDecoration: 'none',
   fontFamily: AUTH_FONT,
-  transition: 'background 150ms ease, border-color 150ms ease',
 };

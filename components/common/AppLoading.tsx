@@ -1,7 +1,7 @@
 import React from 'react';
 import Loader from './Loader';
 
-/** Full-screen bootstrap loader — no AppShell so we do not pull SentryNav/auth on "/". */
+/** Full-screen bootstrap loader — no AppShell so we do not pull sidebar/auth on "/". */
 const AppLoading = ({
   title,
   subtitle = 'Please wait while we prepare everything for you',

@@ -6,7 +6,7 @@ import {
   PageFilterBar,
   SearchBar,
   type SelectOptionOrSection,
-} from '../../core';
+} from '../../koala/core';
 import type { OrganicFilters } from '../../../lib/organicResearch/filter';
 import {
   kdFilterFromValue,
@@ -133,7 +133,7 @@ function triggerLabel(base: string, active: boolean, detail?: string): React.Rea
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <span>{detail || base}</span>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F29964', flexShrink: 0 }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F84416', flexShrink: 0 }} />
     </span>
   );
 }
@@ -172,7 +172,7 @@ export default function OrganicFilterBar({ filters, onChange, serpFeatureOptions
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, width: '100%' }}>
       <div style={{ minWidth: 220, maxWidth: 320 }}>
         <SearchBar
           value={filters.q || ''}
@@ -182,6 +182,7 @@ export default function OrganicFilterBar({ filters, onChange, serpFeatureOptions
         />
       </div>
 
+      <div style={{ maxWidth: '100%', minWidth: 0 }}>
       <PageFilterBar condensed>
         <CompactSelect
           size="sm"
@@ -308,6 +309,7 @@ export default function OrganicFilterBar({ filters, onChange, serpFeatureOptions
           })}
         />
       </PageFilterBar>
+      </div>
     </div>
   );
 }

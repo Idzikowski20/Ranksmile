@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { computeSerpInsights, classifyHeadingStatus, isPaaCovered } from '../../lib/researchUtils';
 import { getErrorMessage } from '../../lib/errors';
-import { Gauge } from '../core';
+import { Gauge } from '../koala/core';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 export interface CompetitorOutline {
@@ -242,7 +242,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#52525c'; }}
               >
                 {isGenerating ? (
-                  <div style={{ width: 14, height: 14, border: '2px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                  <div style={{ width: 14, height: 14, border: '2px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
                 ) : (
                   <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
                     <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5" clipRule="evenodd" />
@@ -280,7 +280,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#52525c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       Generated outline · {generatedHeadings.length} headings
                       {usedBrand && (
-                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: '#f29964', textTransform: 'none', letterSpacing: 0 }}>
+                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: '#F84416', textTransform: 'none', letterSpacing: 0 }}>
                           Brand voice
                         </span>
                       )}
@@ -451,7 +451,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
               {/* Loading */}
               {loading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '24px 0', alignItems: 'center' }}>
-                  <div style={{ width: 20, height: 20, border: '2px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                  <div style={{ width: 20, height: 20, border: '2px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
                   <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)' }}>Analyzing SERP…</span>
                 </div>
               )}
@@ -513,7 +513,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              style={{ fontSize: 13, color: '#f29964', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              style={{ fontSize: 13, color: '#F84416', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                             >
                               {comp.url.length > 50 ? comp.url.slice(0, 50) + '…' : comp.url}
                             </a>

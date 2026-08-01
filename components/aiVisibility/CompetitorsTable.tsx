@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -14,9 +14,9 @@ const OpenDetailsIcon = () => (
    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 17H16.75C17.99 17 19 15.99 19 14.75V5.25C19 4.01 17.99 3 16.75 3H13V17Z" fill="currentColor" /><path d="M11 3.5V16.5H3.25C2.28 16.5 1.5 15.72 1.5 14.75V5.25C1.5 4.28 2.28 3.5 3.25 3.5H11Z" stroke="currentColor" /></svg>
 );
 
-const headCell: React.CSSProperties = { padding: '10px 16px', fontSize: 13, fontWeight: 500, color: '#71717B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
-const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box', color: '#18181B' };
-const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: '#fff', transition: 'background 100ms ease' };
+const headCell: React.CSSProperties = { padding: '8px 16px', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary, #575757)', fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
+const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box', color: 'var(--koala-text-primary, #1a1a1a)' };
+const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)', cursor: 'pointer', background: 'var(--koala-bg-primary, #fff)', transition: 'background 100ms ease' };
 
 const SortHead = ({ label, active, dir, onClick, bold }: { label: string; active: boolean; dir: 'asc' | 'desc'; onClick: () => void; bold?: boolean }) => (
    <Button type="button" variant="transparent" size="sm" onClick={onClick} style={{ gap: 4, fontWeight: bold || active ? 600 : 500, color: active ? '#18181B' : '#52525C' }}>
@@ -25,8 +25,8 @@ const SortHead = ({ label, active, dir, onClick, bold }: { label: string; active
 );
 
 const setOpenIcon = (el: HTMLElement, on: boolean) => { const ic = el.querySelector('[data-open]') as HTMLElement | null; if (ic) ic.style.opacity = on ? '1' : '0'; };
-const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FBFAFF'; setOpenIcon(e.currentTarget, true); };
-const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#fff'; setOpenIcon(e.currentTarget, false); };
+const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = 'var(--koala-bg-secondary, #f5f5f5)'; setOpenIcon(e.currentTarget, true); };
+const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = 'var(--koala-bg-primary, #fff)'; setOpenIcon(e.currentTarget, false); };
 
 const PAGE = 50;
 
@@ -51,13 +51,13 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
    const toggle = (k: SortKey, def: 'asc' | 'desc') => { if (sort === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc')); else { setSort(k); setDir(def); } };
 
    if (!competitors.length) {
-      return <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
+      return <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
    }
 
    return (
-      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
-         <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
-            <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Competitor</div>
+      <div style={{ background: 'var(--koala-bg-primary, #fff)' }}>
+         <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
+            <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Competitor</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Avg. pos." active={sort === 'avgPosition'} dir={dir} onClick={() => toggle('avgPosition', 'asc')} /></div>
             <div style={{ ...headCell, width: 140, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Mention rate" active={sort === 'mentionRate'} dir={dir} onClick={() => toggle('mentionRate', 'desc')} /></div>
             <div style={{ ...headCell, width: 160, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Visibility score" active={sort === 'visibilityScore'} dir={dir} onClick={() => toggle('visibilityScore', 'desc')} bold /></div>
@@ -65,7 +65,7 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
 
          {sorted.slice(0, visible).map((c) => (
             <div key={c.domain} style={rowStyle} onClick={() => onSelect(c.domain)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(c.domain); }}>
-               <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, position: 'relative', gap: 8, justifyContent: 'space-between' }}>
+               <div style={{ ...bodyCell, flex: 1, minWidth: 0, position: 'relative', gap: 8, justifyContent: 'space-between' }}>
                   <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${(c.visibilityScore / maxVis) * 100}%`, background: 'linear-gradient(to right, rgba(244,244,245,0), #F0F0F2)', pointerEvents: 'none' }} />
                   <span style={{ zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                      <DomainFavicon domain={c.domain} size={20} />

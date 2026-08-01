@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import Button from '../core/button/button';
+import Button from '../koala/core/button/button';
+import { overlayZ } from '../koala/overlay/ShellPortal';
 
 const F = 'var(--font-family-primary)';
 
@@ -11,7 +12,7 @@ const Bar = ({ w, light }: { w: string; light?: boolean }) => (
 // Full-screen "scanning" overlay shown while the plagiarism check runs (Ranksmile-style):
 // an animated magnifying glass sweeping over two document cards + an indeterminate bar.
 const PlagiarismScanningModal = ({ onCancel }: { onCancel: () => void }) => createPortal(
-  <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(9,9,11,0.72)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28, padding: 24, fontFamily: F }}>
+  <div style={{ position: 'fixed', inset: 0, zIndex: overlayZ.modal, background: 'rgba(9,9,11,0.72)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28, padding: 24, fontFamily: F }}>
     <style>{`
       @keyframes plagMag {
         0%   { transform: translate(110px, -40px) rotate(0deg); }
@@ -50,7 +51,7 @@ const PlagiarismScanningModal = ({ onCancel }: { onCancel: () => void }) => crea
 
     {/* indeterminate progress bar */}
     <div style={{ position: 'relative', width: 450, maxWidth: 'calc(100vw - 48px)', height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
-      <span style={{ position: 'absolute', top: 0, bottom: 0, width: '35%', borderRadius: 999, background: '#f29964', animation: 'plagBar 1.4s ease-in-out infinite' }} />
+      <span style={{ position: 'absolute', top: 0, bottom: 0, width: '35%', borderRadius: 999, background: '#F84416', animation: 'plagBar 1.4s ease-in-out infinite' }} />
     </div>
 
     <Button

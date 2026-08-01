@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Checkbox } from '../../core';
+import { Button, Checkbox } from '../../koala/core';
 
 const FONT = 'var(--font-family-primary)';
 const LINK_COLOR = 'rgb(35, 95, 226)';

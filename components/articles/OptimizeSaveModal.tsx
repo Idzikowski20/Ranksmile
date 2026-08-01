@@ -1,6 +1,6 @@
 import React from 'react';
-import Modal, { ModalBody, ModalFooter, ModalHeader } from '../core/modal/modal';
-import Button from '../core/button/button';
+import Modal, { ModalBody, ModalFooter, ModalHeader } from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
 
 // AO-8a: confirmation modal shown when the user clicks Save on an Auto-Optimize
 // review. Mirrors OptimizeCancelModal structurally (420px card, growOut, same

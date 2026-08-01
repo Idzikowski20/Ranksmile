@@ -1,6 +1,6 @@
 import React from 'react';
-import Input from '../core/input/input';
-import { FormField } from '../core/form';
+import Input from '../koala/core/input/input';
+import { FormField } from '../koala/core/form';
 
 type InputFieldProps = {
    label: string;

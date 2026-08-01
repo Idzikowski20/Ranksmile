@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -24,7 +24,7 @@ const TopCompetitorsList = ({ competitors, selected, onSelect }: { competitors: 
                      <span style={{ width: 22, fontSize: 13, color: '#9F9FA9', fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0 }}>{`#${c.rank}`}</span>
                      <DomainFavicon domain={c.domain} size={16} style={{ borderRadius: 3 }} />
                      <span title={c.domain} style={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: 14, fontWeight: isSel ? 600 : 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.domain}</span>
-                     {isSel ? <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F29964', flexShrink: 0 }} /> : null}
+                     {isSel ? <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F84416', flexShrink: 0 }} /> : null}
                      <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', flexShrink: 0 }}>{c.score}</span>
                   </Button>
                </React.Fragment>

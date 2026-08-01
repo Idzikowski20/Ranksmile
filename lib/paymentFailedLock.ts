@@ -8,7 +8,10 @@ export function isFrontendRouteAllowedDuringPaymentLock(url: string): boolean {
   const pathname = url.split('?')[0]?.split('#')[0] ?? '';
   if (pathname === '/plans') return true;
   if (pathname.startsWith('/billing/checkout/')) return true;
+  if (pathname === '/billing/confirmation/failed') return true;
+  if (pathname === '/billing/confirmation/success') return true;
   if (pathname === '/settings/billing_subscription') return true;
+  if (pathname === '/settings/billing_invoices' || pathname === '/settings/billing_history') return true;
   return false;
 }
 
@@ -19,6 +22,8 @@ const ALLOWED_API = new Set([
   'GET:/api/billing/subscription',
   'GET:/api/billing/status',
   'GET:/api/billing/plan-summary',
+  'GET:/api/billing/invoices',
+  'GET:/api/billing/confirmation',
   'POST:/api/billing/upgrade-preview',
   'POST:/api/billing/create-subscription',
   'POST:/api/billing/checkout-session',

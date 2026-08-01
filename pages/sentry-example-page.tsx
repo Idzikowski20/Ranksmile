@@ -33,7 +33,7 @@ export default function Page() {
   return (
     <div>
       <Head>
-        <title>sentry-example-page</title>
+        <title>koala-example-page</title>
         <meta name="description" content="Test Sentry for your Next.js app!" />
       </Head>
 
@@ -52,7 +52,7 @@ export default function Page() {
             fill="currentcolor"
           />
         </svg>
-        <h1>sentry-example-page</h1>
+        <h1>koala-example-page</h1>
 
         <p className="description">
           Click the button below, and view the sample error on the Sentry{" "}
@@ -84,7 +84,7 @@ export default function Page() {
                 op: "test",
               },
               async () => {
-                const res = await fetch("/api/sentry-example-api");
+                const res = await fetch("/api/koala-example-api");
                 if (!res.ok) {
                   setHasSentError(true);
                 }

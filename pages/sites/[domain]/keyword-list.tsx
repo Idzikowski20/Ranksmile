@@ -2,20 +2,28 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import OrganicFilterBar from '../../../components/searchIntelligence/organic/OrganicFilterBar';
 import OrganicKpiRow from '../../../components/searchIntelligence/organic/OrganicKpiRow';
 import OrganicKeywordsTable from '../../../components/searchIntelligence/organic/OrganicKeywordsTable';
-import { OrganicPageHeaderInfo, OrganicPageTitle } from '../../../components/searchIntelligence/organic/OrganicPageHeader';
+import {
+  OrganicPageHeaderInfo,
+  OrganicPageTitle,
+  type OrganicCurrency,
+  type OrganicDevice,
+} from '../../../components/searchIntelligence/organic/OrganicPageHeader';
+import { AUDIT_COUNTRIES } from '../../../lib/countryLang';
 import OrganicPositionChart from '../../../components/searchIntelligence/organic/OrganicPositionChart';
 import {
   Button,
   Pagination,
   Skeleton,
   getPaginationCaption,
-} from '../../../components/core';
+} from '../../../components/koala/core';
+import { PageHeader } from '../../../components/koala/layout';
+import { DataToolbar } from '../../../components/koala/product';
 import type { OrganicFilters } from '../../../lib/organicResearch/filter';
 import { filterKeywords, paginateKeywords, sortKeywords, type OrganicSortKey } from '../../../lib/organicResearch/filter';
 import { useFetchDomains } from '../../../services/domains';
@@ -47,7 +55,16 @@ const KeywordListPage: NextPage = () => {
   const [seriesVisible, setSeriesVisible] = useState<Record<string, boolean>>({
     top3: true, pos4_10: true, pos11_20: true, pos21_50: true, pos51_100: true, serpFeatures: false,
   });
+  const [countryCode, setCountryCode] = useState('US');
+  const [device, setDevice] = useState<OrganicDevice>('desktop');
+  const [currency, setCurrency] = useState<OrganicCurrency>('USD');
   const pageSize = 50;
+
+  useEffect(() => {
+    const fromMeta = (dataset?.meta?.locale?.country ?? '').toUpperCase().slice(0, 2);
+    if (!fromMeta) return;
+    if (AUDIT_COUNTRIES.some((c) => c.code === fromMeta)) setCountryCode(fromMeta);
+  }, [dataset?.meta?.locale?.country]);
 
   const topicMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -98,8 +115,6 @@ const KeywordListPage: NextPage = () => {
     }
   };
 
-  const activeCountry = (dataset?.meta?.locale?.country ?? 'US').toUpperCase().slice(0, 2);
-
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head><title>{`Keyword list — ${domain} — Ranksmile`}</title></Head>
@@ -111,16 +126,23 @@ const KeywordListPage: NextPage = () => {
         domain={domain}
         slug={slug || ''}
         section="Keyword list"
-        heading={<OrganicPageTitle domain={domain} />}
-        subtitle={(
-          <OrganicPageHeaderInfo
-            countryCode={activeCountry}
-            keywordCount={dataset?.metrics.keywordCount ?? 0}
-            fetchedAt={dataset?.meta?.fetchedAt ?? null}
-          />
-        )}
         contentMaxWidth="100%"
       >
+        <PageHeader
+          title={<OrganicPageTitle domain={domain} />}
+          subtitle={(
+            <OrganicPageHeaderInfo
+              countryCode={countryCode}
+              onCountryChange={setCountryCode}
+              device={device}
+              onDeviceChange={setDevice}
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              keywordCount={dataset?.metrics.keywordCount ?? 0}
+              fetchedAt={dataset?.meta?.fetchedAt ?? null}
+            />
+          )}
+        />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {organicQ.isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -205,14 +227,18 @@ const KeywordListPage: NextPage = () => {
                 </div>
               )}
 
-              <OrganicFilterBar
-                mode="labs"
-                filters={filters}
-                serpFeatureOptions={serpFeatureOptions}
-                onChange={(next) => {
-                  setFilters(next);
-                  setPage(1);
-                }}
+              <DataToolbar
+                filters={(
+                  <OrganicFilterBar
+                    mode="labs"
+                    filters={filters}
+                    serpFeatureOptions={serpFeatureOptions}
+                    onChange={(next) => {
+                      setFilters(next);
+                      setPage(1);
+                    }}
+                  />
+                )}
               />
 
               <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 0 }}>
@@ -222,6 +248,7 @@ const KeywordListPage: NextPage = () => {
                   trafficSeries={trafficSeries.slice(-12)}
                   selected={summaryMetric}
                   connectedBelow={trendOpen}
+                  currency={currency}
                   onSelect={(m) => setSummaryMetric((prev) => (prev === m ? null : m))}
                 />
                 {trendOpen && (

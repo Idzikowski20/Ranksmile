@@ -57,7 +57,7 @@ const CommentsPanel = ({ articleId, onCountChange, style, reloadSignal }: { arti
                   </button>
                 </div>
                 {c.quote && (
-                  <div style={{ borderLeft: '2px solid #F29964', padding: '2px 0 2px 8px', margin: '0 0 6px', fontSize: 12, color: '#71717b', fontStyle: 'italic', lineHeight: '17px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.quote}</div>
+                  <div style={{ borderLeft: '2px solid #F84416', padding: '2px 0 2px 8px', margin: '0 0 6px', fontSize: 12, color: '#71717b', fontStyle: 'italic', lineHeight: '17px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.quote}</div>
                 )}
                 {c.text && <div style={{ fontSize: 14, color: '#27272a', lineHeight: '19px', wordBreak: 'break-word' }}>{c.text}</div>}
                 {c.images.length > 0 && (

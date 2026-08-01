@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CompactSelect } from '../core';
+import { CompactSelect } from '../koala/core';
 
 const OPTIONS = [
   { value: 'sources', label: 'Sources CSV' },

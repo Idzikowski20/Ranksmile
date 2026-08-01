@@ -63,6 +63,11 @@ describe('frontend route allowlist', () => {
     expect(isFrontendRouteAllowedDuringPaymentLock('/settings/billing_subscription')).toBe(true);
   });
 
+  it('allows billing confirmation routes', () => {
+    expect(isFrontendRouteAllowedDuringPaymentLock('/billing/confirmation/failed')).toBe(true);
+    expect(isFrontendRouteAllowedDuringPaymentLock('/billing/confirmation/success')).toBe(true);
+  });
+
   it('defaults to deny for unknown routes', () => {
     expect(isFrontendRouteAllowedDuringPaymentLock('/dashboard')).toBe(false);
     expect(isFrontendRouteAllowedDuringPaymentLock('/workspace/123')).toBe(false);
@@ -75,6 +80,8 @@ describe('API route allowlist', () => {
     expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/subscription')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/status')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/plan-summary')).toBe(true);
+    expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/invoices')).toBe(true);
+    expect(isApiRouteAllowedDuringPaymentLock('GET:/api/billing/confirmation')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/checkout-session')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/upgrade-subscription')).toBe(true);
     expect(isApiRouteAllowedDuringPaymentLock('POST:/api/billing/portal')).toBe(true);

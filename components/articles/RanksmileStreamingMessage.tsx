@@ -25,7 +25,7 @@ const CARET_CSS = `
   height: 14px;
   margin-left: 3px;
   vertical-align: -2px;
-  background: #F29964;
+  background: #F84416;
   border-radius: 1px;
   animation: ranksmile-stream-caret 1s steps(1) infinite;
 }

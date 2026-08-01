@@ -79,10 +79,6 @@ class Domain extends Model {
    @Column({ type: DataType.INTEGER, allowNull: true, defaultValue: null })
    workspace_id!: number | null;
 
-   // Traffic goal JSON: { percentage, period, startDate, baseClicks }
-   @Column({ type: DataType.TEXT, allowNull: true, defaultValue: null })
-   traffic_goal!: string | null;
-
    // Blog-path segments (JSON array string, e.g. ["blog","poradnik"]) for blog-audit (P3d)
    @Column({ type: DataType.TEXT, allowNull: true })
    blog_paths!: string | null;

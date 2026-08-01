@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Badge, Button, CompactSelect, SegmentedControl } from '../core';
-import { SentryEmptyState, SentryPanel, SentryPanelBody } from '../sentry-pages';
+import { Badge, Button, CompactSelect, SegmentedControl } from '../koala/core';
+import { KoalaEmptyState, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 import InfoPopper, { dashedLinkStyle, PopperParagraph } from './InfoPopper';
 import HowToFixPopper from './HowToFixPopper';
 import {
@@ -70,16 +70,8 @@ function InfoIcon() {
   );
 }
 
-function MoreIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-      <path d="M4 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm12 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-8 2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-    </svg>
-  );
-}
-
 function CountBadge({ value }: { value: number }) {
-  return <span className="sentry-issues-count">{value}</span>;
+  return <span className="koala-issues-count">{value}</span>;
 }
 
 function IssueRow({
@@ -96,11 +88,11 @@ function IssueRow({
   const newLabel = issue.newCount === 1 ? '1 new issue' : `${issue.newCount} new issues`;
 
   return (
-    <li className="sentry-issues-row">
-      <div className="sentry-issues-row-main">
+    <li className="koala-issues-row">
+      <div className="koala-issues-row-main">
         {issue.isNew && <Badge variant="new">NEW</Badge>}
-        <span className="sentry-issues-row-title">
-          <button type="button" onClick={onSelect} className="sentry-issues-row-link">
+        <span className="koala-issues-row-title">
+          <button type="button" onClick={onSelect} className="koala-issues-row-link">
             {issue.linkText}
           </button>
           {' '}
@@ -110,19 +102,19 @@ function IssueRow({
           type="button"
           aria-expanded={howToFixOpen}
           onClick={onHowToFix}
-          className="sentry-issues-how-to-fix"
+          className="koala-issues-how-to-fix"
           style={dashedLinkStyle}
         >
           How to fix
         </button>
-        <button type="button" onClick={onSelect} className="sentry-issues-new-count">
+        <button type="button" onClick={onSelect} className="koala-issues-new-count">
           {newLabel}
         </button>
       </div>
-      <div className="sentry-issues-row-trend">
+      <div className="koala-issues-row-trend">
         <EmptyTrend />
       </div>
-      <div className="sentry-issues-row-actions">
+      <div className="koala-issues-row-actions">
         <Button variant="secondary" size="sm" disabled icon={<ShareIcon />}>
           Send to...
         </Button>
@@ -151,11 +143,11 @@ function SeverityGroup({
   if (!issues.length) return null;
 
   return (
-    <section className={`sentry-issues-severity sentry-issues-severity--${severity}`}>
-      <div className="sentry-issues-severity-header">
-        <div className="sentry-issues-severity-title">
+    <section className={`koala-issues-severity koala-issues-severity--${severity}`}>
+      <div className="koala-issues-severity-header">
+        <div className="koala-issues-severity-title">
           <h2>{SEVERITY_LABELS[severity]}</h2>
-          <span className="sentry-issues-severity-count">({issues.length})</span>
+          <span className="koala-issues-severity-count">({issues.length})</span>
           <button
             type="button"
             aria-expanded={infoOpen}
@@ -163,17 +155,17 @@ function SeverityGroup({
               setInfoRect(e.currentTarget.getBoundingClientRect());
               setInfoOpen((v) => !v);
             }}
-            className="sentry-issues-info-btn"
+            className="koala-issues-info-btn"
           >
             <InfoIcon />
           </button>
         </div>
-        <div className="sentry-issues-row-trend">
+        <div className="koala-issues-row-trend">
           <EmptyTrend />
         </div>
         <div />
       </div>
-      <ul className="sentry-issues-list">
+      <ul className="koala-issues-list">
         {issues.map((issue) => (
           <IssueRow
             key={issue.id}
@@ -249,7 +241,7 @@ export default function SiteAuditIssues({ report, onSelectIssue }: Props) {
     () => EXTRA_CATEGORIES.map((cat) => ({
       value: cat,
       label: CATEGORY_LABELS[cat],
-      trailingItems: <span className="sentry-issues-menu-count">{report.categoryCounts[cat]}</span>,
+      trailingItems: <span className="koala-issues-menu-count">{report.categoryCounts[cat]}</span>,
     })),
     [report.categoryCounts],
   );
@@ -273,23 +265,23 @@ export default function SiteAuditIssues({ report, onSelectIssue }: Props) {
     {
       value: 'with_issues' as TriggeredFilter,
       label: 'With issues',
-      trailingItems: <span className="sentry-issues-menu-count">{report.issues.length}</span>,
+      trailingItems: <span className="koala-issues-menu-count">{report.issues.length}</span>,
     },
     {
       value: 'with_new_issues' as TriggeredFilter,
       label: 'With new issues',
-      trailingItems: <span className="sentry-issues-menu-count">{newIssuesCount}</span>,
+      trailingItems: <span className="koala-issues-menu-count">{newIssuesCount}</span>,
     },
   ], [report.issues.length, newIssuesCount]);
 
   const activeTriggeredLabel = triggered === 'with_new_issues' ? 'With new issues' : 'With issues';
 
   return (
-    <div className="sentry-issues-page">
-      <SentryPanel className="sentry-issues-filters-panel">
-        <SentryPanelBody className="sentry-issues-filters">
-          <div className="sentry-issues-filter-row">
-            <div className="sentry-issues-category-group">
+    <div className="koala-issues-page">
+      <KoalaPanel className="koala-issues-filters-panel">
+        <KoalaPanelBody className="koala-issues-filters">
+          <div className="koala-issues-filter-row">
+            <div className="koala-issues-category-group">
               <SegmentedControl
                 value={category}
                 size="sm"
@@ -304,16 +296,7 @@ export default function SiteAuditIssues({ report, onSelectIssue }: Props) {
                 menuMinWidth={220}
                 options={overflowCategoryOptions}
                 onChange={(opt) => setCategory(opt.value)}
-                trigger={(props, isOpen) => (
-                  <button
-                    type="button"
-                    {...props}
-                    className={`sentry-issues-more-cats ${isOpen ? 'sentry-issues-more-cats--open' : ''} ${extraCategoryActive ? 'sentry-issues-more-cats--active' : ''}`}
-                    aria-label="More categories"
-                  >
-                    <MoreIcon />
-                  </button>
-                )}
+                triggerLabel="More"
               />
             </div>
             <SegmentedControl
@@ -324,13 +307,13 @@ export default function SiteAuditIssues({ report, onSelectIssue }: Props) {
               options={severityOptions}
             />
           </div>
-          <div className="sentry-issues-triggered-wrap">
+          <div className="koala-issues-triggered-wrap">
             {triggered ? (
-              <div className="sentry-issues-active-filter sentry-issues-active-filter--selected">
-                <span className="sentry-issues-active-filter-label">{activeTriggeredLabel}</span>
+              <div className="koala-issues-active-filter koala-issues-active-filter--selected">
+                <span className="koala-issues-active-filter-label">{activeTriggeredLabel}</span>
                 <button
                   type="button"
-                  className="sentry-issues-active-filter-clear"
+                  className="koala-issues-active-filter-clear"
                   aria-label="Clear triggered filter"
                   onClick={() => setTriggered(null)}
                 >
@@ -348,14 +331,14 @@ export default function SiteAuditIssues({ report, onSelectIssue }: Props) {
               />
             )}
           </div>
-        </SentryPanelBody>
-      </SentryPanel>
+        </KoalaPanelBody>
+      </KoalaPanel>
 
-      <SentryPanel noPadding className="sentry-issues-list-panel">
+      <KoalaPanel noPadding className="koala-issues-list-panel">
         {filtered.length === 0 ? (
-          <SentryPanelBody>
-            <SentryEmptyState title="No matching issues" description="Try adjusting your filters." />
-          </SentryPanelBody>
+          <KoalaPanelBody>
+            <KoalaEmptyState title="No matching issues" description="Try adjusting your filters." />
+          </KoalaPanelBody>
         ) : (
           <>
             <SeverityGroup
@@ -381,7 +364,7 @@ export default function SiteAuditIssues({ report, onSelectIssue }: Props) {
             />
           </>
         )}
-      </SentryPanel>
+      </KoalaPanel>
 
       {fixPopper && (
         <HowToFixPopper

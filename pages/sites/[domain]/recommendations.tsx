@@ -15,7 +15,7 @@ import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import toast from 'react-hot-toast';
-import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/core';
+import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/koala/core';
 import { useSortState } from '../../../lib/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
@@ -133,8 +133,7 @@ const DEFAULT_FILTERS: FilterState = {
    positionMin: '', positionMax: '',
    trafficMin: '', trafficMax: '',
    impressionsMin: '', impressionsMax: '',
-   status: '',
-};
+   status: '' };
 
 function countActiveFilters(f: FilterState): number {
    let n = 0;
@@ -153,14 +152,14 @@ function FiltersPanel({ filters, onChange }: {
 }) {
    const set = (key: keyof FilterState, val: FilterState[keyof FilterState]) => onChange({ ...filters, [key]: val });
 
-   const inputStyle: React.CSSProperties = { width: 76, height: 30, padding: '0 8px', border: '1px solid #D4D4D8', borderRadius: 6, fontSize: 12, fontFamily: 'var(--font-family-primary)', color: '#18181B', outline: 'none', background: '#fff' };
+   const inputStyle: React.CSSProperties = { width: 76, height: 30, padding: '0 8px', border: '1px solid var(--koala-border-primary)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)', outline: 'none', background: 'var(--koala-bg-primary)' };
 
    const RangeRow = ({ label, minKey, maxKey }: { label: string; minKey: keyof FilterState; maxKey: keyof FilterState }) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-         <span style={{ fontSize: 12, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
+         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>{label}</span>
          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="number" placeholder="Min" value={filters[minKey] as string} onChange={(e) => set(minKey, e.target.value)} style={inputStyle} />
-            <span style={{ color: '#D4D4D8', fontSize: 12 }}>—</span>
+            <span style={{ color: 'var(--koala-border-primary)', fontSize: 12 }}>—</span>
             <input type="number" placeholder="Max" value={filters[maxKey] as string} onChange={(e) => set(maxKey, e.target.value)} style={inputStyle} />
          </div>
       </div>
@@ -170,14 +169,14 @@ function FiltersPanel({ filters, onChange }: {
       <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <Checkbox checked={filters.rankDropsOnly} onChange={(v) => set('rankDropsOnly', v)} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>Rank drops only</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>Rank drops only</span>
          </label>
-         <div style={{ height: 1, background: '#F4F4F5' }} />
+         <div style={{ height: 1, background: 'var(--koala-bg-secondary)' }} />
          <RangeRow label="Content Score" minKey="contentScoreMin" maxKey="contentScoreMax" />
          <RangeRow label="Position" minKey="positionMin" maxKey="positionMax" />
          <RangeRow label="Clicks" minKey="trafficMin" maxKey="trafficMax" />
          <RangeRow label="Impressions" minKey="impressionsMin" maxKey="impressionsMax" />
-         <div style={{ height: 1, background: '#F4F4F5' }} />
+         <div style={{ height: 1, background: 'var(--koala-bg-secondary)' }} />
          <CompactSelect
             prefix="Status"
             size="sm"
@@ -283,8 +282,7 @@ const RecommendationsPage: NextPage = () => {
          fetch('/api/articles/backfill', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domainId: activeDomain.ID }),
-         }).then(() => {
+            body: JSON.stringify({ domainId: activeDomain.ID }) }).then(() => {
             queryClient.invalidateQueries(['articles', slug]);
          }).catch(() => {});
       }
@@ -305,8 +303,7 @@ const RecommendationsPage: NextPage = () => {
                   keyword: fromUrl.keyword,
                   position: fromUrl.position ?? 0,
                   clicks: fromUrl.clicks ?? 0,
-                  impressions: fromUrl.impressions ?? 0,
-               };
+                  impressions: fromUrl.impressions ?? 0 };
             }
          }
          if (!sc && a.target_keyword) {
@@ -327,8 +324,7 @@ const RecommendationsPage: NextPage = () => {
             source: a.source || 'article',
             meta_title: a.meta_title || null,
             word_count: a.word_count || 0,
-            updatedAt: a.updated_at || null,
-         };
+            updatedAt: a.updated_at || null };
       });
    }, [articlesData, allGscKeywords, urlKeywordMap]);
 
@@ -353,8 +349,7 @@ const RecommendationsPage: NextPage = () => {
                source: 'audit',
                meta_title: null,
                word_count: r.word_count ?? 0,
-               updatedAt: null,
-            };
+               updatedAt: null };
          });
    }, [recsData, urlKeywordMap]);
 
@@ -409,12 +404,10 @@ const RecommendationsPage: NextPage = () => {
 
    const optimizeChunk = useTableLoadMore(filtered, {
       pageSize: 20,
-      resetKey: `opt-${sortKey}-${sortDir}-${search}-${filtered.length}-${JSON.stringify(filters)}`,
-   });
+      resetKey: `opt-${sortKey}-${sortDir}-${search}-${filtered.length}-${JSON.stringify(filters)}` });
    const ideasChunk = useTableLoadMore(filteredGapRows, {
       pageSize: 20,
-      resetKey: `ideas-${search}-${filteredGapRows.length}`,
-   });
+      resetKey: `ideas-${search}-${filteredGapRows.length}` });
 
    // Optimize → same path as Articles → Import content: scrape URL, startAnalysis, editor + deep analysis.
    const handleOptimize = async (row: RecommRow, e: React.MouseEvent) => {
@@ -432,8 +425,7 @@ const RecommendationsPage: NextPage = () => {
          pageUrl,
          title: row.title,
          userKeywords: row.keyword ? [row.keyword] : [],
-         gscRows,
-      });
+         gscRows });
       if (!primaryKeyword && !keywords.length) {
          toast.error('Brak słów kluczowych dla tej strony — ustaw keyword w GSC lub ręcznie.');
          return;
@@ -445,8 +437,7 @@ const RecommendationsPage: NextPage = () => {
          void fetch(`/api/articles/${row.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'analyzing' }),
-         }).catch(() => {});
+            body: JSON.stringify({ status: 'analyzing' }) }).catch(() => {});
          router.push(workspaceHref(wsId, `/articles/${row.id}`));
          return;
       }
@@ -461,9 +452,7 @@ const RecommendationsPage: NextPage = () => {
                keywords,
                country: IMPORT_COUNTRY,
                domainId: activeDomain.ID,
-               startAnalysis: true,
-            }),
-         });
+               startAnalysis: true }) });
          const data = await res.json() as { articleId?: number; error?: string };
          if (!res.ok) {
             toast.error(data.error || 'Import failed');
@@ -494,9 +483,7 @@ const RecommendationsPage: NextPage = () => {
             body: JSON.stringify({
                domain_id: activeDomain.ID,
                title: keyword,
-               target_keyword: keyword,
-            }),
-         });
+               target_keyword: keyword }) });
          const data = await res.json() as { articleId?: number; error?: string };
          if (!res.ok || !data.articleId) {
             toast.error(data.error || 'Could not create article');
@@ -521,8 +508,7 @@ const RecommendationsPage: NextPage = () => {
             url: row.url,
             domainId: activeDomain!.ID,
             // Sidecar requires a keyword in the payload — send the page's main keyword.
-            keywords: row.keyword ? [row.keyword] : [],
-         };
+            keywords: row.keyword ? [row.keyword] : [] };
          // If it's a real article (not site_context), pass articleId to reuse it
          if (typeof id === 'number' || (typeof id === 'string' && !String(id).startsWith('sc_'))) {
             body.articleId = id;
@@ -530,8 +516,7 @@ const RecommendationsPage: NextPage = () => {
          const res = await fetch('/api/articles/deep-analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-         });
+            body: JSON.stringify(body) });
          // This endpoint streams SSE and stays open until the sidecar finishes;
          // fetch() resolves on the headers, so read the stream until the
          // done/error event to keep the spinner up for the whole analysis.
@@ -584,8 +569,7 @@ const RecommendationsPage: NextPage = () => {
       await fetch(`/api/articles/${kwModalRow.id}`, {
          method: 'PUT',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ target_keyword: newKeyword }),
-      });
+         body: JSON.stringify({ target_keyword: newKeyword }) });
       // Refresh articles data
       queryClient.invalidateQueries(['articles', slug]);
    };
@@ -610,6 +594,7 @@ const RecommendationsPage: NextPage = () => {
             slug={slug || ''}
             section="Recommendations"
             heading="Recommendations"
+            subtitle="Pages and keywords worth optimizing for this site"
             contentMaxWidth="100%"
             fillHeight
             filters={(
@@ -625,7 +610,7 @@ const RecommendationsPage: NextPage = () => {
                   <div className="rec-tool-controls" style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
                         <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Show URLs</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>Show URLs</span>
                      </label>
                      <CompactSelect
                         size="sm"
@@ -638,7 +623,7 @@ const RecommendationsPage: NextPage = () => {
                               <SlidersIcon />
                               Filters
                               {activeFilterCount > 0 && (
-                                 <span className="sentry-compact-select-badge">{activeFilterCount}</span>
+                                 <span className="koala-compact-select-badge">{activeFilterCount}</span>
                               )}
                            </span>
                         )}
@@ -655,10 +640,10 @@ const RecommendationsPage: NextPage = () => {
                {tab === 'ideas' && (
                   <DataTableContent minWidth={560} aria-label="Content ideas">
                      <DataTableHeader>
-                        <div style={{ padding: '10px 16px', flex: '1 1 0', minWidth: 160, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Keyword (not yet covered)</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #E4E4E7', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Impressions</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #E4E4E7', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Avg Position</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #E4E4E7', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Action</div>
+                        <div style={{ padding: '8px 16px', flex: '1 1 0', minWidth: 160, fontSize: 14, fontWeight: 500, letterSpacing: '-0.4px', color: 'var(--koala-text-secondary, #575757)', fontFamily: 'var(--font-family-primary)' }}>Keyword (not yet covered)</div>
+                        <div style={{ padding: '8px 16px', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 14, fontWeight: 500, letterSpacing: '-0.4px', color: 'var(--koala-text-secondary, #575757)', fontFamily: 'var(--font-family-primary)' }}>Impressions</div>
+                        <div style={{ padding: '8px 16px', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 14, fontWeight: 500, letterSpacing: '-0.4px', color: 'var(--koala-text-secondary, #575757)', fontFamily: 'var(--font-family-primary)' }}>Avg Position</div>
+                        <div style={{ padding: '8px 16px', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 14, fontWeight: 500, letterSpacing: '-0.4px', color: 'var(--koala-text-secondary, #575757)', fontFamily: 'var(--font-family-primary)' }}>Action</div>
                      </DataTableHeader>
                      {loading ? (
                         <DataTableBody><Skeleton /></DataTableBody>
@@ -671,15 +656,15 @@ const RecommendationsPage: NextPage = () => {
                            {ideasChunk.visibleItems.map((kw) => (
                               <DataTableRow key={kw.keyword} className="rec-row" style={{ minHeight: 56, alignItems: 'center' }}>
                                  <div style={{ padding: '10px 16px', flex: '1 1 0', minWidth: 160 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
                                  </div>
-                                 <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                                 <div style={{ padding: '10px 16px', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                                     {compactNum(kw.impressions)}
                                  </div>
-                                 <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                                 <div style={{ padding: '10px 16px', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                                     {kw.position > 0 ? kw.position.toFixed(1) : '—'}
                                  </div>
-                                 <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                                 <div style={{ padding: '10px 16px', width: 120, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
                                     <Button type="button" variant="secondary" size="xs" disabled={creatingKw === kw.keyword} onClick={() => handleCreateArticleForKeyword(kw.keyword)}>
                                        {creatingKw === kw.keyword ? '…' : '+ Create'}
                                     </Button>
@@ -697,17 +682,17 @@ const RecommendationsPage: NextPage = () => {
                {tab === 'optimize' && (
                   <DataTableContent minWidth={780} aria-label="Optimize recommendations">
                      <DataTableHeader>
-                        <div style={{ padding: '10px 16px', borderRight: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                            <Checkbox checked={someChecked && !allChecked ? 'indeterminate' : allChecked} onChange={toggleAll} />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flex: '1 1 0', minWidth: 200, overflow: 'hidden' }}>
-                           <Button type="button" variant="transparent" size="sm" onClick={() => handleSort('content_score')} style={{ gap: 4, padding: 0, color: '#52525C' }}>
-                              <span style={{ fontSize: 13, textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Page</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', flex: '1 1 0', minWidth: 200, overflow: 'hidden' }}>
+                           <Button type="button" variant="transparent" size="sm" onClick={() => handleSort('content_score')} style={{ gap: 4, padding: 0, color: 'var(--koala-text-secondary, #575757)' }}>
+                              <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.4px' }}>Page</span>
                               <SortUpDown active={false} dir={null} />
                            </Button>
-                           <span style={{ color: '#D4D4D8', lineHeight: '1rem' }}>/</span>
-                           <Button type="button" variant="transparent" size="sm" style={{ gap: 4, padding: 0, color: '#52525C' }}>
-                              <span style={{ fontSize: 13, textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Main keyword</span>
+                           <span style={{ color: 'var(--koala-border-primary, #e5e5e5)', lineHeight: '1rem' }}>/</span>
+                           <Button type="button" variant="transparent" size="sm" style={{ gap: 4, padding: 0, color: 'var(--koala-text-secondary, #575757)' }}>
+                              <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.4px' }}>Main keyword</span>
                               <SortUpDown active={false} dir={null} />
                            </Button>
                         </div>
@@ -732,7 +717,7 @@ const RecommendationsPage: NextPage = () => {
                                     selected={isSelected}
                                     style={{ minHeight: 72 }}
                                  >
-                                    <div style={{ padding: '0 16px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', flexShrink: 0, zIndex: 1 }}>
+                                    <div style={{ padding: '0 16px', display: 'flex', alignItems: 'center', flexShrink: 0, zIndex: 1 }}>
                                        <Checkbox checked={isSelected} onChange={() => toggleRow(row.id)} />
                                     </div>
 
@@ -743,44 +728,44 @@ const RecommendationsPage: NextPage = () => {
                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                                           <span
                                              title={row.title}
-                                             style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                                             style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
                                           >
                                              {displayPageTitle(row.title)}
                                           </span>
                                           <Button type="button" variant="link" size="xs" className="kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={(
-                                             <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, color: '#9F9FA9' }} className="kw-btn-icon">
+                                             <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, color: 'var(--koala-text-tertiary)' }} className="kw-btn-icon">
                                                 <g><path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" /></g>
                                              </svg>
                                           )} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0 }}>
                                              <span className="kw-btn-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{row.keyword || 'Set keyword'}</span>
                                           </Button>
                                           {showUrls && row.url && (
-                                             <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                             <span style={{ fontSize: 11, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                                                 {row.url}
                                              </span>
                                           )}
                                        </div>
 
-                                       <div className="row-actions" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 32px', flexShrink: 0, opacity: 0, transition: 'opacity 150ms ease', background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, #fff 28%)' }}>
+                                       <div className="row-actions" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 32px', flexShrink: 0, opacity: 0, transition: 'opacity 150ms ease', background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, var(--koala-bg-primary) 28%)' }}>
                                           {row.url && (
-                                             <a href={row.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', color: '#3F3F47', textDecoration: 'none' }}>
+                                             <a href={row.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', color: 'var(--koala-text-secondary)', textDecoration: 'none' }}>
                                                 <ExternalLinkIcon />
                                              </a>
                                           )}
-                                          <Button type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} icon={<PanelIcon />} style={{ padding: 0, color: '#3F3F47' }} aria-label="Open panel" />
+                                          <Button type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} icon={<PanelIcon />} style={{ padding: 0, color: 'var(--koala-text-secondary)' }} aria-label="Open panel" />
                                           <Button type="button" variant="secondary" size="xs" disabled={optimizingId === row.id} onClick={(e) => handleOptimize(row, e)}>
                                              {optimizingId === row.id ? 'Optimizing…' : 'Optimize'}
                                           </Button>
                                        </div>
                                     </div>
 
-                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 154, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
+                                    <div style={{ width: 154, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
                                        {row.content_score > 0 ? (
                                           <div style={{ cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
                                              <Gauge score={row.content_score} size="sm" />
                                           </div>
                                        ) : analyzingIds.has(row.id) ? (
-                                          <span style={{ fontSize: 12, fontWeight: 500, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Analyzing…</span>
+                                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }}>Analyzing…</span>
                                        ) : (
                                           <Button type="button" variant="secondary" size="xs" className="analyze-btn" onClick={(e) => handleAnalyze(row, e)}>
                                              Analyze
@@ -788,28 +773,28 @@ const RecommendationsPage: NextPage = () => {
                                        )}
                                     </div>
 
-                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                           {row.position > 0 && <DeltaDown />}
-                                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                                              {row.position > 0 ? row.position.toFixed(1) : '—'}
                                           </span>
                                        </div>
                                     </div>
 
-                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                           {row.clicks > 0 && <DeltaDown />}
-                                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                                              {row.clicks > 0 ? compactNum(row.clicks) : '0'}
                                           </span>
                                        </div>
                                     </div>
 
-                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                    <div style={{ width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                           {row.impressions > 0 && <DeltaDown />}
-                                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                                              {row.impressions > 0 ? compactNum(row.impressions) : '—'}
                                           </span>
                                        </div>
@@ -844,9 +829,9 @@ const RecommendationsPage: NextPage = () => {
          )}
 
          <style dangerouslySetInnerHTML={{ __html: `
-            .rec-row:hover { background: #fafafa !important; }
-            .rec-row:hover .row-actions { opacity: 1 !important; background: linear-gradient(90deg, rgba(250,250,250,0) 0%, #fafafa 28%) !important; }
-            .rec-row:hover .kw-btn-text { text-decoration-color: #D4D4D8 !important; }
+            .rec-row:hover { background: var(--koala-bg-secondary) !important; }
+            .rec-row:hover .row-actions { opacity: 1 !important; background: linear-gradient(90deg, rgba(250,250,250,0) 0%, var(--koala-bg-secondary) 28%) !important; }
+            .rec-row:hover .kw-btn-text { text-decoration-color: var(--koala-border-primary) !important; }
             .rec-row:hover .kw-btn-icon { opacity: 1 !important; }
             .rec-row:hover .analyze-btn { opacity: 1 !important; }
             .kw-row:hover { background: rgba(242,153,100,0.03) !important; }

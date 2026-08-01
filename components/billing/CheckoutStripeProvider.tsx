@@ -18,8 +18,6 @@ import {
   type CheckoutAddressValue,
   type CheckoutFieldErrors,
 } from '../../lib/checkoutValidation';
-import { CheckoutPageSkeleton } from './CheckoutPageSkeleton';
-
 const F = 'var(--font-family-primary)';
 
 type CheckoutMode = 'trial' | 'upfront';
@@ -38,7 +36,10 @@ export type CompanyState = {
 };
 
 type StripeCheckoutContextValue = {
+  planSlug: string;
+  billing: BillingPeriod;
   intentType: 'setup' | 'payment';
+  paymentReady: boolean;
   company: CompanyState;
   fieldErrors: CheckoutFieldErrors;
   onFieldErrors: (errors: CheckoutFieldErrors) => void;
@@ -59,21 +60,21 @@ function useStripeCheckout(): StripeCheckoutContextValue {
 const stripeAppearance: StripeElementsOptions['appearance'] = {
   theme: 'stripe',
   variables: {
-    colorPrimary: '#2F2F34',
+    colorPrimary: '#F84416',
     colorBackground: '#ffffff',
-    colorText: '#18181B',
+    colorText: '#1a1a1a',
     colorDanger: '#FF6F77',
     fontFamily: `${F}, system-ui, sans-serif`,
-    borderRadius: '10px',
+    borderRadius: '12px',
   },
   rules: {
     '.Input': {
-      border: '1px solid #D4D4D8',
+      border: '1px solid #e5e5e5',
       boxShadow: 'none',
     },
     '.Input:focus': {
-      border: '1px solid #F5C4A0',
-      boxShadow: '0 0 0 2px rgba(242,153,100,0.1)',
+      border: '1px solid #F84416',
+      boxShadow: '0 0 0 2px rgba(248,68,22,0.1)',
     },
     '.Label': { fontWeight: '500' },
   },
@@ -84,6 +85,21 @@ export type CheckoutStripeHandle = {
 };
 
 export function CheckoutStripePayment() {
+  const { paymentReady } = useStripeCheckout();
+  if (!paymentReady) {
+    return (
+      <div
+        aria-busy
+        aria-label="Loading payment form"
+        style={{
+          minHeight: 120,
+          borderRadius: 12,
+          border: '1px solid #e5e5e5',
+          background: '#f5f5f5',
+        }}
+      />
+    );
+  }
   return (
     <PaymentElement
       options={{
@@ -102,7 +118,21 @@ export function CheckoutStripePayment() {
 }
 
 export function CheckoutStripeAddress() {
-  const { onAddressChange } = useStripeCheckout();
+  const { paymentReady, onAddressChange } = useStripeCheckout();
+  if (!paymentReady) {
+    return (
+      <div
+        aria-busy
+        aria-label="Loading billing address"
+        style={{
+          minHeight: 160,
+          borderRadius: 12,
+          border: '1px solid #e5e5e5',
+          background: '#f5f5f5',
+        }}
+      />
+    );
+  }
   return (
     <AddressElement
       onChange={onAddressChange}
@@ -202,7 +232,7 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
     const stripe = useStripe();
     const elements = useElements();
     const {
-      intentType, company, onFieldErrors, onSuccess, onError, onSubmittingChange,
+      planSlug, billing, intentType, company, onFieldErrors, onSuccess, onError, onSubmittingChange,
     } = useStripeCheckout();
 
     React.useImperativeHandle(ref, () => ({
@@ -231,7 +261,9 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
             return;
           }
 
-          const confirmParams = { return_url: `${window.location.origin}/dashboard?checkout=success` };
+          const confirmParams = {
+            return_url: `${window.location.origin}/billing/confirmation/success?plan=${encodeURIComponent(planSlug)}&billing=${encodeURIComponent(billing)}`,
+          };
           const result = intentType === 'setup'
             ? await stripe.confirmSetup({ elements, confirmParams, redirect: 'if_required' })
             : await stripe.confirmPayment({ elements, confirmParams, redirect: 'if_required' });
@@ -272,7 +304,7 @@ const SubmitBridge = React.forwardRef<CheckoutStripeHandle>(function SubmitBridg
           onSubmittingChange(false);
         }
       },
-    }), [stripe, elements, intentType, company, onFieldErrors, onSuccess, onError, onSubmittingChange]);
+    }), [stripe, elements, planSlug, billing, intentType, company, onFieldErrors, onSuccess, onError, onSubmittingChange]);
 
     return null;
 });
@@ -339,8 +371,12 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
       [intent],
     );
 
+    const paymentReady = Boolean(intent && stripePromise);
     const contextValue = React.useMemo<StripeCheckoutContextValue>(() => ({
+      planSlug,
+      billing,
       intentType: intent?.intentType ?? 'setup',
+      paymentReady,
       company,
       fieldErrors,
       onFieldErrors,
@@ -348,34 +384,38 @@ export const CheckoutStripeProvider = React.forwardRef<CheckoutStripeHandle, Pro
       onSuccess,
       onError,
       onSubmittingChange,
-    }), [intent?.intentType, company, fieldErrors, onFieldErrors, onAddressChange, onSuccess, onError, onSubmittingChange]);
+    }), [planSlug, billing, intent?.intentType, paymentReady, company, fieldErrors, onFieldErrors, onAddressChange, onSuccess, onError, onSubmittingChange]);
 
-    if (loadError) {
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
-          <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>{loadError}</p>
-          <a href="/plans" style={{ fontSize: 14, color: '#18181B', fontFamily: F, fontWeight: 500 }}>
-            ← Back to plans
-          </a>
-        </div>
-      );
-    }
-
-    if (!intent || !stripePromise) {
-      return <CheckoutPageSkeleton />;
-    }
-
-    const options: StripeElementsOptions = {
-      clientSecret: intent.clientSecret,
-      appearance: stripeAppearance,
-    };
+    // Always keep children mounted so plan/billing toggles stay clickable while
+    // Stripe intent reloads (billing/plan change). Only the payment slot waits.
+    const body = (
+      <>
+        {loadError ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480, marginBottom: 16 }}>
+            <p style={{ margin: 0, fontSize: 14, color: '#FF6F77', fontFamily: F }}>{loadError}</p>
+            <a href="/plans" style={{ fontSize: 14, color: '#18181B', fontFamily: F, fontWeight: 500 }}>
+              ← Back to plans
+            </a>
+          </div>
+        ) : null}
+        {children}
+      </>
+    );
 
     return (
       <StripeCheckoutContext.Provider value={contextValue}>
-        <Elements stripe={stripePromise} options={options}>
-          <SubmitBridge ref={ref} />
-          {children}
-        </Elements>
+        {paymentReady && intent && stripePromise ? (
+          <Elements
+            key={intent.clientSecret}
+            stripe={stripePromise}
+            options={{ clientSecret: intent.clientSecret, appearance: stripeAppearance }}
+          >
+            <SubmitBridge ref={ref} />
+            {body}
+          </Elements>
+        ) : (
+          body
+        )}
       </StripeCheckoutContext.Provider>
     );
   },

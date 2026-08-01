@@ -1,7 +1,8 @@
 import React from 'react';
-import { Flex, Stack, Container } from '../core/layout';
-import { Text } from '../core/text';
-import { SentryPanel, SentryPanelHeader } from '../sentry-pages';
+import { Flex, Container } from '../koala/core/layout';
+import { Text } from '../koala/core/text';
+import { KoalaPanel, KoalaPanelHeader } from '../koala/layout';
+import { ListWidget } from '../koala/product';
 import Skeleton from './Skeleton';
 import DomainFavicon from '../common/DomainFavicon';
 
@@ -52,8 +53,8 @@ const PRIORITY_RATING: Record<string, number> = { high: 9, medium: 6, low: 3 };
 
 const CheckCircle = () => (
   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="12" cy="12" r="11" fill="#1AB25E" fillOpacity="0.1" />
-    <path d="M8 12.5L10.5 15L16 9" stroke="#1AB25E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="12" r="11" fill="var(--koala-status-success)" fillOpacity="0.1" />
+    <path d="M8 12.5L10.5 15L16 9" stroke="var(--koala-status-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -141,12 +142,17 @@ const CoverageFootnote = ({ coverage }: { coverage?: Props['coverage'] }) => {
   );
 };
 
-const SectionShell = ({ children }: { children: React.ReactNode }) => (
-  <SentryPanel noPadding>
-    <SentryPanelHeader title="Recommendations" />
-    {children}
-  </SentryPanel>
-);
+const SectionShell = ({ children, listItems }: { children?: React.ReactNode; listItems?: React.ReactNode[] }) => {
+  if (listItems) {
+    return <ListWidget title="Recommendations" items={listItems} />;
+  }
+  return (
+    <KoalaPanel noPadding>
+      <KoalaPanelHeader title="Recommendations" />
+      {children}
+    </KoalaPanel>
+  );
+};
 
 const RecommendationsSection = ({
   items, total, faviconDomain, viewHref, loading, pipeline, coverage, hasBlogPath, settingsHref,
@@ -177,7 +183,7 @@ const RecommendationsSection = ({
             </Text>
             {settingsHref && (
               <Container as="a" href={settingsHref} className="no-underline">
-                <Text as="span" size="sm" bold className="text-[#F29964]">Go to domain settings</Text>
+                <Text as="span" size="sm" bold style={{ color: 'var(--koala-brand)' }}>Go to domain settings</Text>
               </Container>
             )}
           </Flex>
@@ -199,20 +205,19 @@ const RecommendationsSection = ({
   }
   // Flat list of recommendation rows (optimize → score-gauge, create → priority-pill),
   // pre-sorted by the dashboard (most urgent first), then a "View all" link.
-  return (
-    <SectionShell>
-      <Stack>
-        {items.map((item, i) => <Row key={item.id} item={item} faviconDomain={faviconDomain} divider={i > 0} />)}
-      </Stack>
-      <Flex align="center" justify="between" gap="md" paddingTop="lg" paddingBottom="lg" paddingLeft="xl" paddingRight="xl" borderTop="md" wrap="wrap">
-        <CoverageFootnote coverage={coverage} />
-        <Container as="a" href={viewHref} className="dashboard-rec-view ml-auto no-underline" display="flex" alignItems="center" gap="xs">
-          <Text as="span" size="sm" bold variant="muted">View {total} {total === 1 ? 'Recommendation' : 'Recommendations'}</Text>
-          <Chevron />
-        </Container>
-      </Flex>
-    </SectionShell>
+  const listItems = items.map((item, i) => (
+    <Row key={item.id} item={item} faviconDomain={faviconDomain} divider={i > 0} />
+  ));
+  listItems.push(
+    <Flex key="footer" align="center" justify="between" gap="md" wrap="wrap" style={{ width: '100%', paddingTop: 8 }}>
+      <CoverageFootnote coverage={coverage} />
+      <Container as="a" href={viewHref} className="dashboard-rec-view ml-auto no-underline" display="flex" alignItems="center" gap="xs">
+        <Text as="span" size="sm" bold variant="muted">View {total} {total === 1 ? 'Recommendation' : 'Recommendations'}</Text>
+        <Chevron />
+      </Container>
+    </Flex>,
   );
+  return <SectionShell listItems={listItems} />;
 };
 
 export default RecommendationsSection;

@@ -28,7 +28,7 @@ const AuditTable: React.FC<Props> = ({ items, isLoading, onSelect, selectedId })
 
   const SortArrow = ({ col }: { col: SortKey }) => {
     if (sortBy !== col) return <span style={{ color: '#d4d4d8', marginLeft: 3 }}>↕</span>;
-    return <span style={{ color: '#f29964', marginLeft: 3 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
+    return <span style={{ color: '#F84416', marginLeft: 3 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>;
   };
 
   const formatNum = (n: number | null): string => {
@@ -45,7 +45,7 @@ const AuditTable: React.FC<Props> = ({ items, isLoading, onSelect, selectedId })
   if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
-        <div style={{ width: 28, height: 28, border: '3px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.65s linear infinite' }} />
+        <div style={{ width: 28, height: 28, border: '3px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.65s linear infinite' }} />
       </div>
     );
   }
@@ -119,7 +119,7 @@ const AuditTable: React.FC<Props> = ({ items, isLoading, onSelect, selectedId })
               >
                 <td style={tdStyle}>
                   <div style={{ fontWeight: 600, color: '#09090b' }}>{item.title}</div>
-                  <div style={{ fontSize: 11, color: '#f29964', marginTop: 1 }}>
+                  <div style={{ fontSize: 11, color: '#F84416', marginTop: 1 }}>
                     {item.mainKeyword ? `Keyword: ${item.mainKeyword}` : item.url}
                   </div>
                 </td>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { HoverTooltip, Button } from '../core';
+import { HoverTooltip, Button } from '../koala/core';
+import { SourceStatusBadge } from '../koala/product/helpers/SourceStatusBadge';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -50,13 +51,13 @@ const BrandStack = ({ brands }: { brands: SourceBrand[] }) => {
    );
 };
 
-const headCell: React.CSSProperties = { padding: '10px 16px', fontSize: 13, fontWeight: 500, color: '#71717B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
-const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box' };
-const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: '#fff', transition: 'background 100ms ease' };
+const headCell: React.CSSProperties = { padding: '8px 16px', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary, #575757)', fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
+const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box' };
+const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)', cursor: 'pointer', background: 'var(--koala-bg-primary, #fff)', transition: 'background 100ms ease' };
 
 /** Source cell: favicon + host(bold)/path(gray) over a horizontal fill bar sized by share. */
 const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: { icon: string; host: string; path: string; fillPct: number; indent?: boolean; chevronOpen?: boolean }) => (
-   <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, position: 'relative', gap: 8, paddingLeft: indent ? 44 : 16 }}>
+   <div style={{ ...bodyCell, flex: 1, minWidth: 0, position: 'relative', gap: 8, paddingLeft: indent ? 44 : 16 }}>
       <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.min(100, fillPct)}%`, background: 'linear-gradient(to right, rgba(244,244,245,0), #F0F0F2)', pointerEvents: 'none' }} />
       {chevronOpen !== undefined ? <span style={{ zIndex: 1, display: 'inline-flex', color: '#71717B' }}><ChevronRight open={chevronOpen} /></span> : null}
       <DomainFavicon domain={icon} size={20} style={{ zIndex: 1 }} />
@@ -70,7 +71,7 @@ const SourceCell = ({ icon, host, path, fillPct, indent = false, chevronOpen }: 
 
 const MetaCells = ({ mentioned, brands }: { mentioned?: boolean; brands?: SourceBrand[] }) => (
    <>
-      <div style={{ ...bodyCell, width: 100, flexShrink: 0, justifyContent: 'center', color: mentioned ? '#18181B' : '#71717B' }}>{mentioned ? 'Yes' : 'No'}</div>
+      <div style={{ ...bodyCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><SourceStatusBadge kind={mentioned ? 'yes' : 'no'} /></div>
       <div style={{ ...bodyCell, width: 120, flexShrink: 0 }}><BrandStack brands={brands || []} /></div>
       <div style={{ ...bodyCell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: '#9F9FA9' }}>N/A</div>
    </>
@@ -81,19 +82,13 @@ const TimesCell = ({ v }: { v: number }) => (
 );
 
 const setOpenIcon = (el: HTMLElement, on: boolean) => { const ic = el.querySelector('[data-open]') as HTMLElement | null; if (ic) ic.style.opacity = on ? '1' : '0'; };
-const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FBFAFF'; setOpenIcon(e.currentTarget, true); };
-const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#fff'; setOpenIcon(e.currentTarget, false); };
-const hoverOffChild = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = '#FCFCFD'; setOpenIcon(e.currentTarget, false); };
+const hoverOn = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = 'var(--koala-bg-secondary, #f5f5f5)'; setOpenIcon(e.currentTarget, true); };
+const hoverOff = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = 'var(--koala-bg-primary, #fff)'; setOpenIcon(e.currentTarget, false); };
+const hoverOffChild = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.background = 'var(--koala-bg-secondary, #f5f5f5)'; setOpenIcon(e.currentTarget, false); };
 
 /** Ranksmile-style sources table: fill-bar source column, optional group-by-domain with
  *  expandable URL rows, sortable Times shown, incremental "Show more" paging.
  *  onSelect receives the navigable list + index so the detail modal can page through it. */
-const CompareCell = ({ on }: { on: boolean }) => (
-   on
-      ? <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 6, padding: '2px 10px', fontSize: 13, fontWeight: 500, color: '#1AB25E', background: '#EAF8F0' }}>Yes</span>
-      : <span style={{ color: '#71717B' }}>No</span>
-);
-
 const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    sources: SourceRow[];
    grouped: boolean;
@@ -138,16 +133,16 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    const remaining = Math.max(0, total - visible);
 
    if (!sources.length) {
-      return <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
+      return <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
    }
 
    // Compare mode: two Mentioned columns ({you} vs {competitor}) + Price, no Brands/grouping.
    if (compare) {
       const truncLabel: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
       return (
-         <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
-            <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
-               <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>
+         <div style={{ background: 'var(--koala-bg-primary, #fff)' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
+               <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Source</div>
                <div style={{ ...headCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.ownLabel} Mentioned`}><HeadTip label={`${compare.ownLabel} Mentioned`} tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></span></div>
                <div style={{ ...headCell, width: 150, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.compLabel} Mentioned`}><HeadTip label={`${compare.compLabel} Mentioned`} tip="Whether the competitor is cited on the same prompts as this source" align="center" /></span></div>
                <div style={{ ...headCell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}><HeadTip label="Price" tip="Price of offers from link and sponsored article providers" align="right" /></div>
@@ -162,8 +157,8 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
                return (
                   <div key={s.url} style={rowStyle} onClick={() => onSelect(sorted, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOff} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(sorted, i, true); }}>
                      <SourceCell icon={s.domain} host={host} path={path} fillPct={(s.timesShown / maxUrl) * 100} />
-                     <div style={{ ...bodyCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><CompareCell on={!!s.mentioned} /></div>
-                     <div style={{ ...bodyCell, width: 150, flexShrink: 0, justifyContent: 'center' }}><CompareCell on={!!s.compMentioned} /></div>
+                     <div style={{ ...bodyCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><SourceStatusBadge kind={s.mentioned ? 'yes' : 'no'} /></div>
+                     <div style={{ ...bodyCell, width: 150, flexShrink: 0, justifyContent: 'center' }}><SourceStatusBadge kind={s.compMentioned ? 'yes' : 'no'} /></div>
                      <div style={{ ...bodyCell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: '#9F9FA9' }}>N/A</div>
                      <TimesCell v={s.timesShown} />
                   </div>
@@ -181,10 +176,10 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    }
 
    return (
-      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
+      <div style={{ background: 'var(--koala-bg-primary, #fff)' }}>
          {/* Header */}
-         <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
-            <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>
+         <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
+            <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Source</div>
             {grouped ? <div style={{ ...headCell, width: 80, flexShrink: 0, justifyContent: 'flex-end' }}>URLs</div> : null}
             <div style={{ ...headCell, width: 100, flexShrink: 0, justifyContent: 'center' }}><HeadTip label="Mentioned" tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></div>
             <div style={{ ...headCell, width: 120, flexShrink: 0 }}><HeadTip label="Brands" tip="Brands mentioned in AI answers citing this source" /></div>
@@ -207,7 +202,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
                {expanded.has(g.domain) && g.urls.map((u, i) => {
                   const { host, path } = splitSourceUrl(u.url, u.domain);
                   return (
-                     <div key={u.url} style={{ ...rowStyle, background: '#FCFCFD' }} onClick={() => onSelect(g.urls, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOffChild} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(g.urls, i, true); }}>
+                     <div key={u.url} style={{ ...rowStyle, background: 'var(--koala-bg-secondary, #f5f5f5)' }} onClick={() => onSelect(g.urls, i, true)} onMouseEnter={hoverOn} onMouseLeave={hoverOffChild} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onSelect(g.urls, i, true); }}>
                         <SourceCell icon={u.domain} host={host} path={path} fillPct={(u.timesShown / maxUrl) * 100} indent />
                         <div style={{ ...bodyCell, width: 80, flexShrink: 0 }} />
                         <MetaCells mentioned={u.mentioned} brands={u.brands} />

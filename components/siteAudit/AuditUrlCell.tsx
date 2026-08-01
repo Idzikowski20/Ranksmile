@@ -14,7 +14,7 @@ type UrlCellProps = {
   classPrefix?: string;
 };
 
-export function UrlCell({ url, classPrefix = 'sentry-issue' }: UrlCellProps) {
+export function UrlCell({ url, classPrefix = 'koala-issue' }: UrlCellProps) {
   if (!url || url === '—') return <span>—</span>;
   return (
     <div className={`${classPrefix}-url-cell`}>

@@ -1,49 +1,34 @@
-import React from 'react';
-import type { ChartOptions } from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import '../../lib/chartSetup';
+import React, { useMemo } from 'react';
+import { Chart as KoalaChart } from '../koala/charts';
+import type { ChartPreparedData } from '../koala/charts';
 
-type ChartProps ={
-   labels: string[],
-   series: number[],
-   reverse? : boolean,
-   noMaxLimit?: boolean
-}
+type ChartProps = {
+  labels: string[];
+  series: number[];
+  reverse?: boolean;
+};
 
-const Chart = ({ labels, series, reverse = true, noMaxLimit = false }:ChartProps) => {
-   const options = {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false as const,
-      scales: {
-         y: {
-            reverse,
-            min: 1,
-            max: !noMaxLimit && reverse ? 100 : undefined,
-         },
-      },
-      plugins: {
-         legend: {
-             display: false,
-         },
-     },
-   };
+/** Rank-history shim — prepares series then declarative RankHistory preset. */
+const Chart = ({ labels, series, reverse = true }: ChartProps) => {
+  const data: ChartPreparedData = useMemo(
+    () => ({
+      labels,
+      points: labels.map((label, index) => ({ label, value: series[index] ?? 0 })),
+    }),
+    [labels, series],
+  );
 
-   return <Line
-            datasetIdKey='XXX'
-            options={options}
-            data={{
-            labels,
-            datasets: [
-               {
-                  fill: 'start',
-                  data: series,
-                  borderColor: 'rgb(31, 205, 176)',
-                  backgroundColor: 'rgba(31, 205, 176, 0.5)',
-               },
-            ],
-            }}
-         />;
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <KoalaChart
+        preset={reverse ? 'RankHistory' : 'TrafficTrend'}
+        data={data}
+        state={labels.length ? 'ready' : 'empty'}
+        overrides={{ height: 160 }}
+        aria-label="Rank history"
+      />
+    </div>
+  );
 };
 
 export default Chart;

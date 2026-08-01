@@ -2,8 +2,12 @@ import {
   type BillingPeriod,
   type CheckoutPlan,
   getCheckoutPlan,
-  getPlanMonthlyPrice,
 } from '../billingPlans';
+import {
+  PLAN_DEFINITIONS,
+  planDisplayPrice,
+  type PlanSlug,
+} from './planDefinition';
 
 /** Extensible axis id — v1 ships only AI prompts. */
 export type RecommenderAxis = 'ai_prompts';
@@ -66,18 +70,28 @@ export function getRecommendedCheckoutPlan(planSlug: RecommendedPlanSlug): Check
 
 /** Yearly discount vs monthly list price, as whole percent (e.g. 17). */
 export function getYearlySavePercent(plan: CheckoutPlan): number {
+  const slug = plan.slug as PlanSlug;
+  const def = PLAN_DEFINITIONS[slug];
+  if (def) return def.yearlySavePct;
   if (plan.priceMonthly <= 0) return 0;
   return Math.round((1 - plan.priceYearly / plan.priceMonthly) * 100);
 }
 
 export function getRecommenderDisplayPrice(plan: CheckoutPlan, billing: BillingPeriod): number {
-  return getPlanMonthlyPrice(plan, billing);
+  const slug = plan.slug as PlanSlug;
+  const def = PLAN_DEFINITIONS[slug];
+  if (def) {
+    return planDisplayPrice(def, billing);
+  }
+  return billing === 'yearly' ? plan.priceYearly : plan.priceMonthly;
 }
 
-/** Highlight bullets for the recommender card (subset of checkout features). */
+/** Highlight bullets for the recommender card — from PlanDefinition SoT. */
 export function getRecommenderFeatureBullets(planSlug: RecommendedPlanSlug): string[] {
-  const plan = getRecommendedCheckoutPlan(planSlug);
-  return plan.features.slice(0, 4);
+  return PLAN_DEFINITIONS[planSlug].cardBenefits
+    .filter((b) => b.state !== 'excluded')
+    .slice(0, 4)
+    .map((b) => (b.value ? `${b.label}: ${b.value}` : b.label));
 }
 
 export function promptSliderIndex(value: PromptSliderValue): number {

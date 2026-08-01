@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import AppShell from '../../../components/common/AppShell';
-import { Button } from '../../../components/core';
+import { Button } from '../../../components/koala/core';
+import { SharePopoverContent } from '../../../components/koala/product/SharePopoverContent';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
 import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
 import KeywordSuggestInput from '../../../components/articles/KeywordSuggestInput';
@@ -259,52 +260,7 @@ const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
   );
 };
 
-/* Share popover (edit link + comment link, like Ranksmile) */
-const IcoReset = () => (
-  <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3.5 9a8.5 8.5 0 0 1 14.4-3.1L21 9M21 5v4h-4M20.5 15a8.5 8.5 0 0 1-14.4 3.1L3 15M3 19v-4h4" /></svg>
-);
-
-
-const ShareLinkBlock = ({ desc, link, onReset, copyLabel, loading }: { desc: React.ReactNode; link: string; onReset: () => void; copyLabel: string; loading?: boolean }) => {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    if (loading) return;
-    navigator.clipboard?.writeText(link).then(() => {
-      setCopied(true);
-      toast.success('Link copied');
-      setTimeout(() => setCopied(false), 1600);
-    }).catch(() => toast.error('Copy failed'));
-  };
-  return (
-    <div style={{ paddingBottom: 4 }}>
-      <style>{`@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }`}</style>
-      <div style={{ fontSize: 14, color: '#3f3f47', lineHeight: '20px', paddingBottom: 10 }}>{desc}</div>
-      <div style={{ background: '#f3f4f0', padding: '9px 14px', borderRadius: 8, minHeight: 38, display: 'flex', alignItems: 'center' }}>
-        {loading ? (
-          <span style={{ display: 'block', width: '70%', height: 14, borderRadius: 6, background: 'linear-gradient(90deg, #ececef 0px, #f6f6f8 80px, #ececef 160px)', backgroundSize: '200px 100%', animation: 'shimmer 1.1s linear infinite' }} />
-        ) : (
-          <a href={link} title={link} rel="noreferrer noopener" target="_blank"
-            style={{ display: 'block', width: '100%', fontSize: 14, color: '#52525c', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {link.replace(/^https?:\/\//, '')}
-          </a>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14 }}>
-        <button type="button" onClick={onReset} disabled={loading}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', padding: 0, cursor: loading ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, color: '#e5484d', opacity: loading ? 0.5 : 1, fontFamily: 'var(--font-family-primary)' }}>
-          <IcoReset /> Reset link
-        </button>
-        <button type="button" onClick={copy} disabled={loading}
-          style={{ padding: '7px 16px', borderRadius: 6, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600, color: '#fff', background: copied ? '#1ab25e' : '#18181b', opacity: loading ? 0.5 : 1, fontFamily: 'var(--font-family-primary)', transition: 'background 0.15s' }}
-          onMouseEnter={(e) => { if (!copied && !loading) e.currentTarget.style.background = '#f29964'; }}
-          onMouseLeave={(e) => { if (!copied) e.currentTarget.style.background = '#18181b'; }}>
-          {copied ? 'Copied' : copyLabel}
-        </button>
-      </div>
-    </div>
-  );
-};
-
+/* Share popover — Koala SharePopoverContent in portal shell. */
 const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClose: () => void; style?: React.CSSProperties }) => {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const [token, setToken] = useState('');
@@ -313,42 +269,22 @@ const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClos
     fetch(`/api/articles/${articleId}/share-link`).then((r) => r.json()).then((d) => { if (d.token) setToken(d.token); }).catch(() => {});
   }, [articleId]);
 
-  const resetLink = async () => {
-    try {
-      const r = await fetch(`/api/articles/${articleId}/share-link`, { method: 'POST' });
-      const d = await r.json();
-      if (d.token) { setToken(d.token); toast.success('Comment link reset'); }
-    } catch { toast.error('Could not reset link'); }
-  };
-
-  // Read-only preview/comment link — opens the shared draft view via opaque token.
-  const commentLink = token ? `${origin}/drafts/s/${token}` : `${origin}/drafts/s/…`;
-  return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        background: '#fff', borderRadius: 12, padding: 20, width: 360, maxWidth: 'calc(100vw - 24px)',
-        boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
-        animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', fontFamily: 'var(--font-family-primary)', ...style,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 16 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Share Content Editor</span>
-        <button type="button" aria-label="Close" onClick={onClose}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#52525c', display: 'inline-flex', lineHeight: 1 }}>
-          <svg viewBox="0 0 24 24" width={20} height={20}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
+  const commentLink = token ? `${origin}/drafts/s/${token}` : '';
+  if (!commentLink) {
+    return (
+      <div onClick={(e) => e.stopPropagation()} style={{ ...style, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 24px rgba(24,26,34,0.12)' }}>
+        <span style={{ fontSize: 14, color: '#71717B' }}>Loading share link…</span>
       </div>
-
-      <ShareLinkBlock
-        desc={<>Anyone with this link can <span style={{ fontWeight: 600, color: '#18181B' }}>view</span> and <span style={{ fontWeight: 600, color: '#18181B' }}>comment,</span> for an unlimited time</>}
-        link={commentLink} copyLabel="Copy comment link" onReset={resetLink} loading={!token}
-      />
+    );
+  }
+  return (
+    <div onClick={(e) => e.stopPropagation()} style={{ ...style }}>
+      <SharePopoverContent url={commentLink} title="Ranksmile draft" onClose={onClose} />
     </div>
   );
 };
 
-/** Portal Share popover — escapes `.sentry-panel { overflow: hidden }` on the toolbar. */
+/** Portal Share popover — escapes `.koala-panel { overflow: hidden }` on the toolbar. */
 const SharePopoverPortal = ({
   anchorRef,
   popoverRef,
@@ -534,7 +470,7 @@ const ArticleEditorPage: NextPage = () => {
   }, []);
   const commentAuthor: CommentAuthor = useMemo(() => ({
     name: session?.data?.user?.name || session?.data?.user?.email || 'You',
-    color: '#F29964',
+    color: '#F84416',
     avatar: gscPicture || undefined,
   }), [session?.data?.user?.name, session?.data?.user?.email, gscPicture]);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -2088,7 +2024,7 @@ const ArticleEditorPage: NextPage = () => {
             }}
           >
             {autoSaveState === 'saving' ? (
-              <div style={{ width: 13, height: 13, border: '2px solid #e4e4e7', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+              <div style={{ width: 13, height: 13, border: '2px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
             ) : (
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
             )}
@@ -2257,7 +2193,7 @@ const ArticleEditorPage: NextPage = () => {
             }}
           >
             {/* Top card: action icons + share */}
-            <div className="sentry-panel editor-side-toolbar" style={{ position: 'relative', zIndex: shareOpen || voiceOpen ? 150 : undefined }}>
+            <div className="koala-panel editor-side-toolbar" style={{ position: 'relative', zIndex: shareOpen || voiceOpen ? 150 : undefined }}>
               {/* Left: action icon buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* Mark / unmark as done */}
@@ -2316,7 +2252,7 @@ const ArticleEditorPage: NextPage = () => {
             </div>
 
             {/* Bottom card: keyword + content score OR panel */}
-            <div className="sentry-panel editor-side-panel-card">
+            <div className="koala-panel editor-side-panel-card">
               {editorLocked ? (
                 <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
                   <ContentScorePanel
@@ -2448,7 +2384,7 @@ const ArticleEditorPage: NextPage = () => {
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
           }}>
-            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
             <span
               key={autoOptimizeStatus}
               style={{
@@ -2461,7 +2397,7 @@ const ArticleEditorPage: NextPage = () => {
             </span>
             <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexShrink: 0 }}>
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} style={{ width: 3, borderRadius: 2, background: '#f29964', animation: `barPulse 1s ease-in-out ${i * 0.15}s infinite`, height: 14 }} />
+                <div key={i} style={{ width: 3, borderRadius: 2, background: '#F84416', animation: `barPulse 1s ease-in-out ${i * 0.15}s infinite`, height: 14 }} />
               ))}
             </div>
           </div>
@@ -2534,7 +2470,7 @@ const ArticleEditorPage: NextPage = () => {
             display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
           }}>
             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)' }}>Optimize AI Readability</span>
-            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#f29964', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Working</span>
           </div>
         )}
@@ -2616,7 +2552,7 @@ const ArticleEditorPage: NextPage = () => {
           }}>
             {/* Link count badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f29964', flexShrink: 0 }} />
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#F84416', flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>
                 {linkBar.count} link{linkBar.count !== 1 ? 's' : ''} inserted
               </span>
@@ -2670,9 +2606,9 @@ const ArticleEditorPage: NextPage = () => {
             <button
               type="button"
               onClick={() => setLinkBar(null)}
-              style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#f29964', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'background 0.15s', flexShrink: 0 }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#F84416', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'background 0.15s', flexShrink: 0 }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#6d28d9'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#f29964'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#F84416'; }}
             >
               Accept links
             </button>

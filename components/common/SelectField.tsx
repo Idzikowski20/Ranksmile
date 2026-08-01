@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Icon from './Icon';
-import Select from '../core/select/select';
-import { FormField } from '../core/form';
+import Select from '../koala/core/select/select';
+import { FormField } from '../koala/core/form';
 
 export type SelectionOption = {
    label:string,

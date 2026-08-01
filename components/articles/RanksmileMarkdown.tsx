@@ -24,7 +24,7 @@ const MD_CSS = `
 .ranksmile-md h4, .ranksmile-md h5, .ranksmile-md h6 { font-size: 1em; font-weight: 600; color: #18181b; margin: 12px 0 6px; }
 .ranksmile-md strong, .ranksmile-md b { font-weight: 600; color: #18181b; }
 .ranksmile-md em { font-style: italic; }
-.ranksmile-md a { color: #f29964; text-decoration: none; }
+.ranksmile-md a { color: #F84416; text-decoration: none; }
 .ranksmile-md a:hover { text-decoration: underline; }
 .ranksmile-md ul, .ranksmile-md ol { margin: 8px 0; padding-left: 22px; }
 .ranksmile-md ul { list-style: disc; }

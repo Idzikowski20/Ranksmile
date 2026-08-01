@@ -6,7 +6,6 @@ export const SEO_NAV: SiteNavItem[] = [
   { id: 'site-audit', label: 'Site Audit', path: 'site-audit', match: '/site-audit', keywords: ['crawl', 'technical'] },
   { id: 'recommendations', label: 'Recommendations', path: 'recommendations', match: '/recommendations', keywords: ['optimize', 'actions'] },
   { id: 'content-audit', label: 'Content Audit', path: 'content-audit', match: '/content-audit', keywords: ['audit', 'content'] },
-  { id: 'topical-map', label: 'Topical Map', path: 'topical-map', match: '/topical-map', keywords: ['topics', 'clusters'] },
   {
     id: 'keyword-list',
     label: 'Keyword list',
@@ -22,6 +21,13 @@ export const SEO_NAV: SiteNavItem[] = [
     keywords: ['rank', 'tracking', 'positions', 'monitor'],
   },
   { id: 'activity-log', label: 'Activity Log', path: 'activity-log', match: '/activity-log', keywords: ['history', 'log'] },
+  {
+    id: 'automations',
+    label: 'Automations',
+    path: 'automations',
+    match: '/automations',
+    keywords: ['calendar', 'schedule', 'events', 'publish'],
+  },
 ];
 
 /** Tools secondary — Audit URL is Site Audit contextual only, not listed here. */

@@ -5,8 +5,8 @@ import {
   PageFilterBar,
   type SelectOption,
   type SelectSection,
-} from '../core';
-import { TimeRangeFilter, type TimeRangeValue } from '../core/timeRangeFilter/timeRangeFilter';
+} from '../koala/core';
+import { TimeRangeFilter, type TimeRangeValue } from '../koala/core/timeRangeFilter/timeRangeFilter';
 import DomainFavicon from '../common/DomainFavicon';
 import { ModelIcon, isKnownModel } from './modelIcons';
 import type { PromptOption } from './types';
@@ -130,7 +130,7 @@ const AiVisibilityToolbar = ({
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <DomainFavicon domain={compareSelected} size={16} style={{ borderRadius: 3 }} />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{compareSelected}</span>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F29964', flexShrink: 0 }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F84416', flexShrink: 0 }} />
               </span>
             ) : 'Compare'
           }

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
-import { Checkbox } from '../core';
-import Modal from '../core/modal/modal';
-import Button from '../core/button/button';
-import Input from '../core/input/input';
+import { Checkbox } from '../koala/core';
+import Modal from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
+import Input from '../koala/core/input/input';
 
 // WP taxonomy/term labels can carry HTML entities (e.g. "Tips &amp; Hacks") — decode for display.
 const decodeLabel = (s: string): string => {
@@ -278,13 +278,13 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
                   const sel = mode === k;
                   return (
                     <button type="button" key={k} disabled={disabled} onClick={() => setMode(k)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#f29964' : '#e4e4e7'}`, borderRadius: 12, background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', border: `1px solid ${sel ? '#F84416' : '#e4e4e7'}`, borderRadius: 12, background: '#fff', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, fontFamily: F, textAlign: 'left' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <span style={{ color: '#18181b', display: 'inline-flex' }}>{icon}</span>
                         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{t}{disabled && <span style={{ fontSize: 12, color: '#9f9fa9', fontWeight: 400 }}> (not published yet)</span>}</span>
                       </span>
-                      <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#f29964' : '#d4d4d8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f29964' }} />}
+                      <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#F84416' : '#d4d4d8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {sel && <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#F84416' }} />}
                       </span>
                     </button>
                   );

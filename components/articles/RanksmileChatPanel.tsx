@@ -1,14 +1,13 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import RanksmileMessage from './RanksmileMessage';
 import ContextUsageRing from './ContextUsageRing';
 import IconRanksmile from './IconRanksmile';
 import { BounceSmileyAnimation } from '../pixel-perfect/bounce-smiley-animation';
 import AILoadingState from './AILoadingState';
-import AITextLoading from './AITextLoading';
 import RanksmileStreamingMessage from './RanksmileStreamingMessage';
 import { AIVoiceButton, AIVoicePanel, useAIVoice } from './AIVoice';
-import { Button } from '../core';
-import { SentryEmptyState } from '../sentry-pages';
+import { Button } from '../koala/core';
+import { KoalaEmptyState } from '../koala/layout';
 import type { PendingAction } from '../../lib/ai/types';
 import { shouldShowRanksmileAnswerStream } from '../../lib/ai/text';
 
@@ -20,7 +19,7 @@ export type RanksmileResponseState = {
   changelog?: Array<{ tool: string; summary: string }>; steps?: number; pendingAction?: PendingAction | null;
 };
 
-/** Everything the docked panel needs — the useRanksmile hook returns exactly this shape. */
+/** Everything the docked panel needs � the useRanksmile hook returns exactly this shape. */
 export interface RanksmilePanelApi {
   history: RanksmileHistoryEntry[];
   loading: boolean;
@@ -39,7 +38,7 @@ export interface RanksmilePanelApi {
   orgUsage: { used: number; limit: number; resetsAt: number; over: boolean } | null;
   suggestions: string[];
   conversations: RanksmileConversation[];
-  /** Text the user had selected when they opened Ranksmile — shown as a context chip (null = none). */
+  /** Text the user had selected when they opened Ranksmile � shown as a context chip (null = none). */
   selectionText: string | null;
   clearSelection: () => void;
   inputRef: React.RefObject<HTMLTextAreaElement>;
@@ -64,9 +63,9 @@ export interface RanksmilePanelApi {
 const HeaderBtn = ({ onClick, label, active, children }: { onClick: () => void; label: string; active?: boolean; children: React.ReactNode }) => (
   <button
     type="button" onClick={onClick} aria-label={label} title={label}
-    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: active ? '#f4f4f5' : 'transparent', border: 'none', color: active ? '#18181b' : '#52525c', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
-    onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; e.currentTarget.style.color = '#18181b'; }}
-    onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#f4f4f5' : 'transparent'; e.currentTarget.style.color = active ? '#18181b' : '#52525c'; }}
+    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: active ? '#FFF0EB' : 'transparent', border: 'none', color: active ? '#F84416' : '#52525c', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
+    onMouseEnter={(e) => { e.currentTarget.style.background = active ? '#FFF0EB' : '#f5f5f5'; e.currentTarget.style.color = active ? '#F84416' : '#18181b'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = active ? '#FFF0EB' : 'transparent'; e.currentTarget.style.color = active ? '#F84416' : '#52525c'; }}
   >
     {children}
   </button>
@@ -96,8 +95,8 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
 
   return (
   <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-    <style>{'.ranksmile-convo-row:hover { background: #f4f4f5 !important; } .ranksmile-convo-row:hover .ranksmile-kebab { opacity: 1 !important; }'}</style>
-    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 8px 0 6px', borderBottom: '1px solid #f4f4f5' }}>
+    <style>{'.ranksmile-convo-row:hover { background: #f5f5f5 !important; } .ranksmile-convo-row:hover .ranksmile-kebab { opacity: 1 !important; }'}</style>
+    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 8px 0 6px', borderBottom: '1px solid #e5e5e5' }}>
       <HeaderBtn onClick={onBack} label="Back to chat">
         <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
       </HeaderBtn>
@@ -106,7 +105,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
 
     {s.conversations.length === 0 ? (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 12px 32px' }}>
-        <SentryEmptyState
+        <KoalaEmptyState
           title="No conversations yet"
           description="Your chats with Smily are saved here. Start one to optimise this article."
           actions={(
@@ -137,7 +136,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
             onKeyDown={(e) => { if (e.key === 'Enter' && !editing) onPick(c.id); }}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px 8px 10px', borderRadius: 10, cursor: editing ? 'default' : 'pointer', transition: 'background 150ms ease' }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: '#f4f4f5', color: '#52525c', flexShrink: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: '#f5f5f5', color: '#52525c', flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" /></svg>
             </span>
             {editing ? (
@@ -147,7 +146,7 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
                 onChange={(e) => setEditTitle(e.target.value)}
                 onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') setEditingId(null); }}
                 onBlur={commitRename}
-                style={{ flex: 1, minWidth: 0, border: '1px solid #F5C4A0', borderRadius: 7, padding: '5px 8px', fontSize: 13.5, color: '#18181b', outline: 'none', boxShadow: '0 0 0 3px rgba(242,153,100,0.1)', fontFamily: 'var(--font-family-primary)' }}
+                style={{ flex: 1, minWidth: 0, border: '1px solid #F84416', borderRadius: 8, padding: '5px 8px', fontSize: 13.5, color: '#18181b', outline: 'none', boxShadow: '0 0 0 3px rgba(248,68,22,0.12)', fontFamily: 'var(--font-family-primary)' }}
               />
             ) : (
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -167,10 +166,10 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
                 </button>
                 {menuId === c.id && (
                   <div onClick={(e) => e.stopPropagation()}
-                    style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60, width: 168, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 10, padding: 5, boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
+                    style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60, width: 168, background: '#fff', border: '1px solid #e5e5e5', borderRadius: 12, padding: 5, boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
                     <button type="button" onClick={() => { setEditingId(c.id); setEditTitle(c.title || ''); setMenuId(null); }}
                       style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '7px 8px', borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', color: '#18181b', fontSize: 13, fontFamily: 'var(--font-family-primary)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
                       <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                       Rename
                     </button>
@@ -193,11 +192,11 @@ const HistoryView = ({ s, onBack, onPick, onNew }: { s: RanksmilePanelApi; onBac
   );
 };
 
-/** Docked, light, Twenty-style Ranksmile chat pane for the editor's right column. Pure view — all
+/** Docked, light, Twenty-style Ranksmile chat pane for the editor's right column. Pure view � all
  *  state + behaviour come from `s` (the useRanksmile hook). */
 const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
   const { response, loading } = s;
-  const blocked = Boolean(s.orgUsage?.over); // org spent its shared 5h budget → composer is locked
+  const blocked = Boolean(s.orgUsage?.over); // org spent its shared 5h budget � composer is locked
   const empty = s.history.length === 0 && !loading && !response;
   const [helpOpen, setHelpOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
@@ -243,22 +242,22 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
     const el = s.scrollRef.current;
     if (el) { el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }); setAtBottom(true); }
   }, [s.scrollRef]);
-  // Stick to the bottom as the conversation grows/streams — but only if the user is already there
-  // (so reading older messages isn't yanked away; the ↓ button appears instead).
+  // Stick to the bottom as the conversation grows/streams � but only if the user is already there
+  // (so reading older messages isn't yanked away; the � button appears instead).
   useEffect(() => {
     if (atBottom) { const el = s.scrollRef.current; if (el) el.scrollTop = el.scrollHeight; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.history, s.streamText, s.activity, s.loading, s.response]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: '#fff', fontFamily: 'var(--font-family-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, background: '#fff', borderLeft: '1px solid #e5e5e5', fontFamily: 'var(--font-family-primary)' }}>
       <style>{`
         @keyframes ranksmilespin { to { transform: rotate(360deg); } }
-        .ranksmile-box:focus-within { border-color: #F5C4A0 !important; box-shadow: 0 0 0 3px rgba(242,153,100,0.1) !important; }
+        .ranksmile-box:focus-within { border-color: #F84416 !important; box-shadow: 0 0 0 3px rgba(248,68,22,0.12) !important; }
       `}</style>
 
-      {/* Header — 48px, Twenty-style */}
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 48, padding: '0 8px 0 14px', borderBottom: '1px solid #f4f4f5' }}>
+      {/* Header � 48px, Twenty-style */}
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 48, padding: '0 8px 0 14px', borderBottom: '1px solid #e5e5e5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <IconRanksmile size={18} />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>Smily</span>
@@ -271,7 +270,7 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
             </span>
             {helpOpen && (
               <span style={{ position: 'absolute', top: 'calc(100% + 6px)', left: -2, zIndex: 250, width: 210, background: '#18181b', color: '#fff', fontSize: 11.5, lineHeight: '16px', padding: '8px 10px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
-                <strong style={{ fontWeight: 600 }}>Pre alpha</strong> — Smily can make mistakes; review changes before applying.
+                <strong style={{ fontWeight: 600 }}>Pre alpha</strong> � Smily can make mistakes; review changes before applying.
               </span>
             )}
           </span>
@@ -298,7 +297,7 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
         />
       ) : (
         <>
-          {/* Conversation body — relative wrapper so the scroll-to-latest ↓ can float over it */}
+          {/* Conversation body � relative wrapper so the scroll-to-latest � can float over it */}
           <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div ref={s.scrollRef} onScroll={onScroll} className="styled-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             {empty && (
@@ -306,7 +305,10 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                 <div style={{ width: 96, height: 110 }}>
                   <BounceSmileyAnimation entrance />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>What can I help you with?</div>
+                <KoalaEmptyState
+                  title="What can I help you with?"
+                  description="Ask Smily to optimize, rewrite, or research for this article."
+                />
               </div>
             )}
 
@@ -335,7 +337,7 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}>
                       <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: liveThinkOpen ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}><path d="M9 18l6-6-6-6" /></svg>
-                      <AITextLoading texts={['Thinking...', 'Processing...', 'Almost...']} />
+                      Thinking
                     </button>
                     {liveThinkOpen && thinkingPreview && (
                       <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #f0f0f2', color: '#9f9fa9', fontSize: 12.5, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{thinkingPreview}</div>
@@ -351,36 +353,36 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
             {response && !loading && ((response.changelog?.length ?? 0) > 0 || Boolean(s.metaPending)) && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', color: '#9f9fa9', marginBottom: 5 }}>
-                  WHAT RANKSMILE DID{typeof response.steps === 'number' ? ` · ${response.steps} steps` : ''}
+                  WHAT RANKSMILE DID{typeof response.steps === 'number' ? ` � ${response.steps} steps` : ''}
                 </div>
                 {(response.changelog || []).map((c, i) => {
                   const guard = c.tool === 'guard';
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12.5, lineHeight: '18px', color: guard ? '#d97706' : '#52525c' }}>
-                      <span style={{ flexShrink: 0 }}>{guard ? '⚠' : '✓'}</span>
+                      <span style={{ flexShrink: 0 }}>{guard ? '?' : '?'}</span>
                       <span>{c.summary}</span>
                     </div>
                   );
                 })}
                 {s.metaPending && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '2px 8px', borderRadius: 9999, background: 'rgba(242,153,100,0.1)', color: '#f29964', fontSize: 11, fontWeight: 500 }}>
-                    ✎ Will update meta {s.metaPending}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, padding: '2px 8px', borderRadius: 9999, background: 'rgba(242,153,100,0.1)', color: '#F84416', fontSize: 11, fontWeight: 500 }}>
+                    ? Will update meta {s.metaPending}
                   </div>
                 )}
               </div>
             )}
 
             {response && !loading && response.pendingAction?.type === 'publish_to_wordpress' && (
-              <div style={{ padding: '10px 12px', borderRadius: 10, background: '#f8f9ff', border: '1px solid #e4e4e7' }}>
+              <div style={{ padding: '10px 12px', borderRadius: 12, background: '#FFF8F5', border: '1px solid #e5e5e5' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#f29964" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
+                  <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#F84416" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 16V4" /><path d="m6 10 6-6 6 6" /><path d="M4 20h16" /></svg>
                   <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#52525c' }}>
-                    Smily chce opublikować {response.pendingAction.title ? `„${response.pendingAction.title}” ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#18181b' }}>zapisany</strong> artykuł.
+                    Smily chce opublikowa� {response.pendingAction.title ? `�${response.pendingAction.title}� ` : ''}do WordPressa. Publikowany jest <strong style={{ fontWeight: 600, color: '#18181b' }}>zapisany</strong> artyku�.
                   </div>
                 </div>
                 {response.pendingAction.warning && (
                   <div style={{ marginTop: 6, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11.5, lineHeight: '17px', color: '#d97706' }}>
-                    <span style={{ flexShrink: 0 }}>⚠</span><span>{response.pendingAction.warning}</span>
+                    <span style={{ flexShrink: 0 }}>?</span><span>{response.pendingAction.warning}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
@@ -389,79 +391,85 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                     Anuluj
                   </button>
                   <button type="button" onClick={s.confirmPublish} disabled={s.publishing}
-                    style={{ padding: '6px 14px', borderRadius: 6, background: '#f29964', border: 'none', cursor: s.publishing ? 'default' : 'pointer', opacity: s.publishing ? 0.65 : 1, color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}>
-                    {s.publishing ? 'Publikuję…' : 'Publikuj'}
+                    style={{ padding: '6px 14px', borderRadius: 6, background: '#F84416', border: 'none', cursor: s.publishing ? 'default' : 'pointer', opacity: s.publishing ? 0.65 : 1, color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-family-primary)' }}>
+                    {s.publishing ? 'Publikuj�' : 'Publikuj'}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Action row only when Ranksmile actually staged something to apply/review — pure advice
+            {/* Action row only when Ranksmile actually staged something to apply/review � pure advice
                 gets no Dismiss (there's nothing to dismiss; the reply stays in the conversation). */}
             {response && !loading && (s.canApply || s.canCompare) && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 8, borderTop: '1px solid #f4f4f5' }}>
-                {/* Two equal-width actions on one row (no text wrap), Dismiss as a quiet link below. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 8, borderTop: '1px solid #e5e5e5' }}>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {s.canCompare && (
-                    <button type="button" onClick={s.openCompare}
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, background: '#f4f4f5', border: '1px solid #ececef', cursor: 'pointer', color: '#18181b', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#ececef'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
-                      <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx={12} cy={12} r={3} /></svg>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={s.openCompare}
+                      style={{ flex: 1 }}
+                      icon={(
+                        <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx={12} cy={12} r={3} /></svg>
+                      )}
+                    >
                       See changes
-                    </button>
+                    </Button>
                   )}
                   {s.canApply && (
-                    <button type="button" onClick={s.apply}
-                      style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 10px', borderRadius: 8, background: '#f29964', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#5a1fd6'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f29964'; }}>
-                      <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={s.apply}
+                      style={{ flex: 1 }}
+                      icon={(
+                        <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                      )}
+                    >
                       Apply changes
-                    </button>
+                    </Button>
                   )}
                 </div>
-                <button type="button" onClick={s.dismiss}
-                  style={{ alignSelf: 'center', padding: '2px 8px', borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#9f9fa9', fontSize: 12.5, fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#52525c'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#9f9fa9'; }}>
+                <Button type="button" variant="link" size="sm" onClick={s.dismiss} style={{ alignSelf: 'center' }}>
                   Dismiss
-                </button>
+                </Button>
               </div>
             )}
           </div>
             {!atBottom && (
               <button type="button" onClick={() => scrollToBottom()} aria-label="Scroll to latest"
-                style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5, width: 30, height: 30, borderRadius: 9999, background: '#fff', border: '1px solid #e4e4e7', boxShadow: '0 4px 14px rgba(24,26,34,0.14)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#52525c', cursor: 'pointer', transition: 'background 150ms ease' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
+                style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5, width: 30, height: 30, borderRadius: 9999, background: '#fff', border: '1px solid #e5e5e5', boxShadow: '0 4px 14px rgba(24,26,34,0.14)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#52525c', cursor: 'pointer', transition: 'background 150ms ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}>
                 <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7" /></svg>
               </button>
             )}
           </div>
 
-          {/* Composer — Twenty-style box: textarea on top, controls + context ring inside the bottom row */}
+          {/* Composer � Twenty-style box: textarea on top, controls + context ring inside the bottom row */}
           <div style={{ flexShrink: 0, padding: 10 }}>
             {empty && s.suggestions.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 2px 8px' }}>
                 {s.suggestions.map((sug) => (
                   <button key={sug} type="button" onClick={() => s.pickSuggestion(sug)}
-                    style={{ padding: '4px 10px', borderRadius: 9999, background: '#f4f4f5', border: '1px solid #ececef', color: '#52525c', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
+                    style={{ padding: '4px 10px', borderRadius: 9999, background: '#f5f5f5', border: '1px solid #ececef', color: '#52525c', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-family-primary)' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#ececef'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f5f5'; }}>
                     {sug}
                   </button>
                 ))}
               </div>
             )}
-            {/* Selected-text context chip — sits directly above the input box */}
+            {/* Selected-text context chip � sits directly above the input box */}
             {s.selectionText && (
-              <div title={s.selectionText} style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', maxWidth: '100%', padding: '3px 5px 3px 9px', marginBottom: 8, borderRadius: 8, background: '#f4f4f5', border: '1px solid #e4e4e7' }}>
+              <div title={s.selectionText} style={{ display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', maxWidth: '100%', padding: '3px 5px 3px 9px', marginBottom: 8, borderRadius: 8, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
                 <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="#9f9fa9" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true"><path d="M7 8h10M7 12h6M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4V5a1 1 0 0 1 1-1Z" /></svg>
                 <span style={{ fontSize: 12, color: '#3f3f47', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{s.selectionText}</span>
                 <button type="button" onClick={s.clearSelection} aria-label="Clear selected text"
                   style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: 6, background: 'transparent', border: 'none', color: '#9f9fa9', cursor: 'pointer', flexShrink: 0, transition: 'background 150ms ease, color 150ms ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; e.currentTarget.style.color = '#52525c'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#e5e5e5'; e.currentTarget.style.color = '#52525c'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9f9fa9'; }}>
                   <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -473,12 +481,12 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                 <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="#dc2626" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></svg>
                 <div style={{ fontSize: 12.5, lineHeight: '18px', color: '#7f1d1d' }}>
                   <span style={{ fontWeight: 600 }}>Your organization reached its AI limit.</span>{' '}
-                  The shared budget resets every 5 hours — try again at{' '}
+                  The shared budget resets every 5 hours � try again at{' '}
                   <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{new Date(s.orgUsage.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>.
                 </div>
               </div>
             )}
-            <div className="ranksmile-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #d4d4d8', borderRadius: 12, background: blocked ? '#fafafa' : '#fff', opacity: blocked ? 0.7 : 1, transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
+            <div className="ranksmile-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116, padding: 12, border: '1px solid #e5e5e5', borderRadius: 12, background: blocked ? '#fafafa' : '#fff', opacity: blocked ? 0.7 : 1, transition: 'border-color 150ms ease, box-shadow 150ms ease' }}>
               {voice.listening ? (
                 <AIVoicePanel
                   listening={voice.listening}
@@ -496,7 +504,7 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                   value={s.prompt}
                   onChange={(e) => s.setPrompt(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!blocked) s.submit(); } }}
-                  placeholder={blocked ? 'AI limit reached — paused until the pool resets' : 'Ask, search or make anything…'}
+                  placeholder={blocked ? 'AI limit reached � paused until the pool resets' : 'Ask, search or make anything�'}
                   disabled={loading || blocked}
                   className="styled-scrollbar"
                   style={{
@@ -515,7 +523,7 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                     fontFamily: 'var(--font-family-primary)',
                     resize: 'none',
                     overflowY: 'auto',
-                    /* Do NOT use flex:1 — growing textarea would steal height from the footer ring. */
+                    /* Do NOT use flex:1 � growing textarea would steal height from the footer ring. */
                     flex: '0 0 auto',
                   }}
                 />
@@ -542,7 +550,7 @@ const RanksmileChatPanel = ({ s }: { s: RanksmilePanelApi }) => {
                     onClick={loading ? s.stop : () => { if (voice.listening) voice.stop(); s.submit(); }}
                     disabled={loading ? false : (blocked || !s.prompt.trim())}
                     aria-label={loading ? 'Stop' : 'Send'}
-                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#f29964' : '#f4f4f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9999, background: loading ? '#18181b' : (!blocked && s.prompt.trim()) ? '#F84416' : '#f5f5f5', border: 'none', color: loading || (!blocked && s.prompt.trim()) ? '#fff' : '#9f9fa9', cursor: loading || (!blocked && s.prompt.trim()) ? 'pointer' : 'not-allowed', padding: 0, flexShrink: 0, transition: 'background 150ms ease' }}
                   >
                     {loading
                       ? <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true"><rect x={7.5} y={7.5} width={9} height={9} rx={2} fill="currentColor" /></svg>

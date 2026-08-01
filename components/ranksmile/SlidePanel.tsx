@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import { XIcon } from './icons';
 import Gauge from './Gauge';
 
@@ -117,9 +118,9 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
    const targetScore = row.content_score || 0;
 
    return (
-      <>
-         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} />
-         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 420, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)' }}>
+      <ShellPortal>
+         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: overlayZ.drawer, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} />
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 420, maxWidth: 'calc(100vw - 16px)', zIndex: overlayZ.drawerPanel, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)' }}>
 
             {/* Header: PAGE label + actions + close */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '20px 24px 12px', gap: 12 }}>
@@ -180,7 +181,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                      type="button"
                      onClick={() => router.push(`/articles/${row.id}`)}
                      style={{ display: 'block', width: '100%', padding: '12px 24px', background: '#18181B', color: '#fff', borderRadius: 8, fontSize: 16, fontWeight: 600, fontFamily: font, border: 'none', cursor: 'pointer', transition: 'background 180ms ease' }}
-                     onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
+                     onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
                      onMouseLeave={(e) => { e.currentTarget.style.background = '#18181B'; }}
                   >
                      Optimize
@@ -216,7 +217,7 @@ function SlidePanel({ row, onClose, onRefresh, onChangeKeyword, analyzing }: {
                </div>
             </div>
          </div>
-      </>
+      </ShellPortal>
    );
 }
 

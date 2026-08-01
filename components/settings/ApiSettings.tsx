@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Button } from '../core';
-import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
+import { Button } from '../koala/core';
+import { KoalaPanel, KoalaPanelHeader, KoalaPanelBody } from '../koala/layout';
 
 const font = 'var(--font-family-primary)';
 
@@ -41,10 +41,10 @@ const LogoCircle = ({ children, overlap }: { children: React.ReactNode; overlap?
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      border: '1px solid #E4E4E7',
+      border: '1px solid var(--koala-border-primary)',
       borderRadius: 9999,
       padding: 8,
-      background: '#fff',
+      background: 'var(--koala-bg-primary)',
       marginLeft: overlap ? -8 : 0,
     }}
   >
@@ -58,9 +58,9 @@ const ApiSettings = () => (
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <LogoCircle><RanksmileMark /></LogoCircle>
         <div style={{ display: 'flex', alignItems: 'center', margin: '0 -6px', zIndex: 10 }}>
-          <div style={{ width: 10, height: 10, borderRadius: 9999, background: '#D4D4D8' }} />
-          <div style={{ width: 12, height: 2, background: '#D4D4D8' }} />
-          <div style={{ width: 10, height: 10, borderRadius: 9999, background: '#D4D4D8' }} />
+          <div style={{ width: 10, height: 10, borderRadius: 9999, background: 'var(--koala-border-primary)' }} />
+          <div style={{ width: 12, height: 2, background: 'var(--koala-border-primary)' }} />
+          <div style={{ width: 10, height: 10, borderRadius: 9999, background: 'var(--koala-border-primary)' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <LogoCircle><LookerMark /></LogoCircle>
@@ -69,10 +69,10 @@ const ApiSettings = () => (
         </div>
       </div>
       <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5 }}>
-        <span style={{ fontWeight: 600, color: '#18181B' }}>
+        <span style={{ fontWeight: 600, color: 'var(--koala-text-primary)' }}>
           Connect with Zapier, Looker Studio, or your CMS of choice.
         </span>
-        <span style={{ display: 'block', fontWeight: 600, color: '#71717B', marginTop: 4 }}>
+        <span style={{ display: 'block', fontWeight: 600, color: 'var(--koala-text-tertiary)', marginTop: 4 }}>
           Automate query creation, work in bulk, and analyze data without accessing the Ranksmile web app.
         </span>
       </p>
@@ -80,31 +80,31 @@ const ApiSettings = () => (
 
     <div style={{ display: 'flex', gap: 16, width: '100%', alignItems: 'stretch', flexWrap: 'wrap' }}>
       <div style={{ flexShrink: 0 }}>
-        <SentryPanel>
-          <SentryPanelHeader title="Docs" />
-          <SentryPanelBody>
-            <p style={{ margin: '0 0 12px', fontSize: 14, color: '#71717B' }}>Examples, Troubleshooting, FAQ</p>
+        <KoalaPanel>
+          <KoalaPanelHeader title="Docs" />
+          <KoalaPanelBody>
+            <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--koala-text-tertiary)' }}>Examples, Troubleshooting, FAQ</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button variant="secondary" size="sm" onClick={() => window.open('https://ranksmile.pl', '_blank')}>Overview</Button>
               <Button variant="secondary" size="sm" onClick={() => window.open('https://ranksmile.pl', '_blank')}>API reference</Button>
               <Button variant="secondary" size="sm" onClick={() => window.open('https://ranksmile.pl', '_blank')}>LLM-ready docs</Button>
             </div>
-          </SentryPanelBody>
-        </SentryPanel>
+          </KoalaPanelBody>
+        </KoalaPanel>
       </div>
 
       <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-        <SentryPanel>
-          <SentryPanelHeader title="API access" />
-          <SentryPanelBody>
-            <p style={{ margin: '0 0 12px', fontSize: 14, color: '#3F3F47', lineHeight: 1.45 }}>
+        <KoalaPanel>
+          <KoalaPanelHeader title="API access" />
+          <KoalaPanelBody>
+            <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: 1.45 }}>
               API access is not available on your plan. Upgrade to unlock API access and integrate Ranksmile with your tools.
             </p>
             <Button type="button" variant="primary" onClick={() => toast.success('Upgrade to Scale — coming soon!')}>
               Upgrade to Scale
             </Button>
-          </SentryPanelBody>
-        </SentryPanel>
+          </KoalaPanelBody>
+        </KoalaPanel>
       </div>
     </div>
   </div>
