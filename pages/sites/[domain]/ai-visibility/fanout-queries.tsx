@@ -23,7 +23,7 @@ type PromptsData = { pending?: boolean; prompts?: PromptRowRaw[] };
 type AiVisDetailItem = { promptId?: number; query?: string; title: string };
 type GroupBy = 'fanout' | 'prompt';
 
-const CARD_3D: React.CSSProperties = { border: '1px solid #DAD9DE', borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' };
+const CARD_3D: React.CSSProperties = { border: '1px solid #dbded4', borderRadius: 12, background: '#fff' };
 
 const RobotEmpty = ({ title, hint }: { title: string; hint: string }) => (
    <div style={{ ...CARD_3D, padding: '56px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>

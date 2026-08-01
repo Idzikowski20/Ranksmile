@@ -289,35 +289,10 @@ interface ScraperSettings {
    serpExtractor?(content:string): scraperExtractedItem[],
 }
 
-// Neon Auth subpath declarations (needed because TypeScript 4.x doesn't resolve package exports)
-declare module '@neondatabase/auth/next' {
-   export function createAuthClient(): any;
-}
-
-declare module '@neondatabase/auth/next/server' {
-   export function createNeonAuth(config: any): any;
-   export function authApiHandler(config: any): any;
-}
-
-declare module '@neondatabase/auth/react' {
-   import * as React from 'react';
-   export const NeonAuthUIProvider: React.FC<any>;
-   export const AuthView: React.FC<any>;
-   export const AuthUIProvider: React.FC<any>;
-   export function useAuthenticate(): any;
-   export function useAuthData(): any;
-   export const SignedIn: React.FC<any>;
-   export const SignedOut: React.FC<any>;
-   export const SignOut: React.FC<any>;
-   export const UserButton: React.FC<any>;
-   export const RedirectToSignIn: React.FC<any>;
-   export const RedirectToSignUp: React.FC<any>;
-}
-
 // @tiptap/react exposes its menu components only under the "./menus" subpath of
-// its package "exports" map, which TS node10 resolution can't read (same reason
-// as the Neon shims above). Re-export the real types from the physical dist path
-// so <BubbleMenu> stays fully typed. Webpack resolves the real subpath at runtime.
+// its package "exports" map, which TS node10 resolution can't read. Re-export the
+// real types from the physical dist path so <BubbleMenu> stays fully typed.
+// Webpack resolves the real subpath at runtime.
 declare module '@tiptap/react/menus' {
    export { BubbleMenu, FloatingMenu } from '@tiptap/react/dist/menus';
    export type { BubbleMenuProps, FloatingMenuProps } from '@tiptap/react/dist/menus';

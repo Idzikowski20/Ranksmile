@@ -89,7 +89,7 @@ const Select = ({ value, onChange, options }: { value: string; onChange: (v: str
             return (
               <button type="button" key={String(o.value)} onClick={() => { onChange(String(o.value)); setOpen(false); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 6, border: 'none', background: sel ? '#f4f4f5' : 'transparent', cursor: 'pointer', fontSize: 14, color: '#18181b', fontFamily: F }}
-                onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = sel ? '#f4f4f5' : 'transparent'; }}>
+                onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = sel ? '#f4f4f5' : 'transparent'; }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
                 {sel && <svg width={16} height={16} viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#18181b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
               </button>
@@ -123,7 +123,7 @@ const MultiSelect = ({ values, onChange, options }: { values: Array<string | num
           {options.length === 0 && <div style={{ padding: '8px 10px', fontSize: 13, color: '#9f9fa9' }}>None available</div>}
           {options.map((o) => (
             <div key={String(o.value)} onClick={() => toggle(o.value)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, cursor: 'pointer' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
               <Checkbox checked={values.includes(o.value)} onChange={() => toggle(o.value)} />
               <span style={{ fontSize: 14, color: '#18181b' }}>{o.label}</span>
             </div>

@@ -294,7 +294,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                         alignItems: 'center',
                         gap: 8,
                         padding: '0 12px',
-                        background: '#F8F8F9',
+                        background: '#f3f4f0',
                         border: '1px solid #D4D4D8',
                         borderRadius: 8,
                         fontSize: 14,

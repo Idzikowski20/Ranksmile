@@ -138,14 +138,14 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    const remaining = Math.max(0, total - visible);
 
    if (!sources.length) {
-      return <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
+      return <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>{compare ? 'No shared sources for this competitor.' : 'No sources yet.'}</div>;
    }
 
    // Compare mode: two Mentioned columns ({you} vs {competitor}) + Price, no Brands/grouping.
    if (compare) {
       const truncLabel: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
       return (
-         <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
+         <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
             <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>
                <div style={{ ...headCell, width: 130, flexShrink: 0, justifyContent: 'center' }}><span style={truncLabel} title={`${compare.ownLabel} Mentioned`}><HeadTip label={`${compare.ownLabel} Mentioned`} tip="Whether your brand is mentioned in AI answers citing this source" align="center" /></span></div>
@@ -181,7 +181,7 @@ const SourcesTable = ({ sources, grouped, onSelect, compare }: {
    }
 
    return (
-      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
+      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
          {/* Header */}
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Source</div>

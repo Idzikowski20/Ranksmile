@@ -545,7 +545,7 @@ const WriteOptimizePanel = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button type="button" onClick={onBack} title="Back" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid #e4e4e7', background: '#fff', cursor: 'pointer', color: '#18181b' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}>
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}>
             <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="m15 18l-6-6l6-6" /></svg>
           </button>
           <span style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>Write &amp; Optimize</span>

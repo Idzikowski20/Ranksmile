@@ -120,6 +120,11 @@ export function collectPrecisionCandidates(opts: {
 /**
  * Build plan with intent-aware targeting. Uncertain targets → skip.
  */
+export type PlanPrecisionResult = {
+  steps: PrecisionPlanStep[];
+  targeting: { skippedNoTarget: number; usedFallback: number; assigned: number };
+};
+
 export function planPrecisionStepsV4(opts: {
   candidates: EditCandidate[];
   profile: ArticleIntentProfile;
@@ -127,22 +132,35 @@ export function planPrecisionStepsV4(opts: {
   html: string;
   maxSteps?: number;
   baseBudget?: import('./editBudget').EditBudget;
-}): PrecisionPlanStep[] {
+}): PlanPrecisionResult {
   const sections = splitSections(opts.html);
   const guarded = filterCandidatesByIntent(opts.candidates, opts.profile);
   const assigned: EditCandidate[] = [];
+  let skippedNoTarget = 0;
+  let usedFallback = 0;
 
   for (const c of guarded) {
     if (c.suggestedAction === 'add_missing_section' && c.targetSectionId) {
       assigned.push(c);
       continue;
     }
-    const target = selectSectionTarget({ sections, candidate: c, critical: opts.critical });
-    if (!target) continue;
+    const isSeoEntity = c.source === 'seo_term' || c.source === 'entity';
+    const target = selectSectionTarget({
+      sections,
+      candidate: c,
+      critical: opts.critical,
+      allowSeoEntityFallback: isSeoEntity,
+    });
+    if (!target) {
+      skippedNoTarget += 1;
+      continue;
+    }
+    if (target.usedFallback) usedFallback += 1;
     assigned.push({ ...c, targetSectionId: target.sectionId });
   }
 
-  if (!assigned.length) return [];
+  const targeting = { skippedNoTarget, usedFallback, assigned: assigned.length };
+  if (!assigned.length) return { steps: [], targeting };
 
   const defaultSectionId = assigned[0].targetSectionId || sections[0]?.id || 'none';
   const byId = new Map(assigned.map((c) => [c.id, c]));
@@ -153,7 +171,10 @@ export function planPrecisionStepsV4(opts: {
     maxSteps: opts.maxSteps ?? 6,
     baseBudget: opts.baseBudget,
   });
-  return filterPlanStepsByAction(plan.steps, byId, opts.profile);
+  return {
+    steps: filterPlanStepsByAction(plan.steps, byId, opts.profile),
+    targeting,
+  };
 }
 
 /** @deprecated use planPrecisionStepsV4 */
@@ -181,6 +202,8 @@ export type ScoreHtmlFn = (html: string) => { scores: AoScores; aiAvailability: 
 export type PrecisionV4Result = {
   html: string;
   changed: number;
+  /** Body section edits that passed candidate gates (before final). */
+  bodyAccepted: number;
   rejected: number;
   tokens: number;
   rolledBack: boolean;
@@ -190,6 +213,7 @@ export type PrecisionV4Result = {
   sectionEvents: SectionEvent[];
   trace: AoTrace;
   outcome: 'improved' | 'already_optimal' | 'no_change' | 'rolled_back';
+  targeting: { skippedNoTarget: number; usedFallback: number; assigned: number };
 };
 
 function replaceSectionHtml(working: string, sectionHtml: string, afterHtml: string, sectionId: string): string {
@@ -303,7 +327,7 @@ export async function runPrecisionOptimizeV4(opts: {
     seoStrong: policy.seoStrong,
     aiWeak: policy.aiWeak,
   });
-  let steps = planPrecisionStepsV4({
+  const planned = planPrecisionStepsV4({
     candidates,
     profile,
     critical,
@@ -311,9 +335,16 @@ export async function runPrecisionOptimizeV4(opts: {
     maxSteps,
     baseBudget: policy.editBudget,
   });
+  const targetingStats = planned.targeting;
+  let steps = planned.steps;
   trace.push({
     step: 'edit_plan',
-    metadata: { steps: steps.length, candidates: candidates.length, strategy: policy.strategy },
+    metadata: {
+      steps: steps.length,
+      candidates: candidates.length,
+      strategy: policy.strategy,
+      targeting: targetingStats,
+    },
   });
 
   let working: AoDocumentSnapshot = { ...original };
@@ -499,6 +530,7 @@ export async function runPrecisionOptimizeV4(opts: {
     return {
       html: original.html,
       changed: 0,
+      bodyAccepted: 0,
       rejected: rejected + accepted,
       tokens,
       rolledBack: true,
@@ -508,16 +540,13 @@ export async function runPrecisionOptimizeV4(opts: {
       sectionEvents: [],
       trace,
       outcome: 'rolled_back',
+      targeting: targetingStats,
     };
   }
 
   const changed = accepted > 0 && !htmlMatchesNormalized(original.html, finalSnap.html);
   const sectionEvents = changed
-    ? buildArticleSectionDiffEvents(original.html, finalSnap.html, {
-      focus: 'ai-coverage',
-      mode: 'less',
-      reason: 'Precision section optimization',
-    })
+    ? buildArticleSectionDiffEvents(original.html, finalSnap.html)
     : [];
 
   const deltas = makeScoreDeltaSet(baseline.scores, finalSnap.scores, finalScored.aiAvailability);
@@ -531,6 +560,7 @@ export async function runPrecisionOptimizeV4(opts: {
   return {
     html: finalSnap.html,
     changed: changed ? sectionEvents.filter((e) => e.changed).length || 1 : 0,
+    bodyAccepted: accepted,
     rejected,
     tokens,
     rolledBack: false,
@@ -540,6 +570,7 @@ export async function runPrecisionOptimizeV4(opts: {
     sectionEvents,
     trace,
     outcome: changed ? 'improved' : (steps.length === 0 ? 'already_optimal' : 'no_change'),
+    targeting: targetingStats,
   };
 }
 

@@ -51,7 +51,7 @@ const SortArrow = ({ active }: { active?: boolean }) => (
 );
 
 const StatCard = ({ label, value, info }: { label: string; value: React.ReactNode; info?: boolean }) => (
-   <div style={{ flex: '1 1 0', minWidth: 120, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: FONT }}>
+   <div style={{ flex: '1 1 0', minWidth: 120, border: '1px solid #dbded4', borderRadius: 12, background: '#fff', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 4, fontFamily: FONT }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', color: MUTED }}>{label}</span>
          {info && <InfoIcon />}
@@ -249,17 +249,17 @@ const TopicResearchDetailPage: NextPage = () => {
                      </div>
                      <div style={{ display: 'flex', gap: 12 }}>
                         {[0, 1, 2, 3, 4, 5].map((i) => (
-                           <div key={i} style={{ flex: '1 1 0', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                           <div key={i} style={{ flex: '1 1 0', border: '1px solid #dbded4', borderRadius: 12, background: '#fff', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                               <span style={{ display: 'block', width: '70%', height: 10, borderRadius: 4, background: '#E4E4E7', animation: `auditPulse 1.4s ease-in-out ${i * 0.1}s infinite` }} />
                               <span style={{ display: 'block', width: '40%', height: 16, borderRadius: 4, background: '#E4E4E7', animation: `auditPulse 1.4s ease-in-out ${i * 0.1}s infinite` }} />
                            </div>
                         ))}
                      </div>
                      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-                        <div style={{ width: 330, flexShrink: 0, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div style={{ width: 330, flexShrink: 0, border: '1px solid #dbded4', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
                            {[0, 1, 2, 3, 4].map((i) => <span key={i} style={{ display: 'block', height: 44, borderRadius: 8, background: '#F1F1F3', animation: `auditPulse 1.4s ease-in-out ${i * 0.1}s infinite` }} />)}
                         </div>
-                        <div style={{ flex: 1, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div style={{ flex: 1, border: '1px solid #dbded4', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
                            {[0, 1, 2, 3, 4, 5, 6].map((i) => <span key={i} style={{ display: 'block', height: 44, borderRadius: 8, background: '#F1F1F3', animation: `auditPulse 1.4s ease-in-out ${i * 0.08}s infinite` }} />)}
                         </div>
                      </div>
@@ -336,7 +336,7 @@ const TopicResearchDetailPage: NextPage = () => {
                      ) : (
                         <div style={{ display: 'flex', flexDirection: 'row', gap: 12, flex: 1, minHeight: 0 }}>
                            {/* Left: clusters */}
-                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12 }}>
+                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexShrink: 0, border: '1px solid #dbded4', borderRadius: 12 }}>
                               <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', borderBottom: `1px solid ${BORDER}`, fontSize: 13, color: TEXT2 }}>
                                  <div style={{ width: 280, padding: '12px 16px' }}>Topic cluster</div>
                                  <div style={{ width: 50, padding: '12px 16px', borderLeft: `1px solid ${BORDER}` }} />
@@ -365,7 +365,7 @@ const TopicResearchDetailPage: NextPage = () => {
                            </div>
 
                            {/* Right: ideas */}
-                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexGrow: 1, minWidth: 0, border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12 }}>
+                           <div className="styled-scrollbar" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'auto', flexGrow: 1, minWidth: 0, border: '1px solid #dbded4', borderRadius: 12 }}>
                               <div style={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'stretch', background: '#fff', borderBottom: `1px solid ${BORDER}`, minWidth: 860 }}>
                                  <div style={{ width: 50, flexShrink: 0 }} />
                                  <HeadCell width={450} grow>Main keyword</HeadCell>

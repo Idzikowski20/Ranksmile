@@ -120,7 +120,7 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
           const analyzed = !!result;
           const met = !!r?.met;
           return (
-            <div key={c.key} style={{ display: 'flex', gap: 12, background: '#f8f8f9', borderRadius: 12, padding: 16 }}>
+            <div key={c.key} style={{ display: 'flex', gap: 12, background: '#f3f4f0', borderRadius: 12, padding: 16 }}>
               <span style={{ flexShrink: 0, marginTop: 2, width: 16, height: 16, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: !analyzed ? '#d4d4d8' : met ? '#1AB25E' : '#fff', border: analyzed && !met ? '2px solid #e4e4e7' : 'none' }}>
                 {analyzed && met && (
                   <svg width="11" height="11" viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>

@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import type { Editor, JSONContent } from '@tiptap/core';
@@ -697,7 +697,7 @@ const FeaturedImageBlock = ({
             <img
               src={imageUrl}
               alt={altText || 'Featured image'}
-              style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', objectPosition: 'center', display: 'block', background: '#F8F8F9' }}
+              style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain', objectPosition: 'center', display: 'block', background: '#f3f4f0' }}
             />
 
             {/* Dark overlay */}

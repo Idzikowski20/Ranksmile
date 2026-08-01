@@ -66,7 +66,7 @@ const AiVisibilityCompetitors: NextPage = () => {
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {pending ? (
-                     <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 24 }}><SkeletonRows count={10} withIcon /></div>
+                     <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: 24 }}><SkeletonRows count={10} withIcon /></div>
                   ) : (
                      <CompetitorsTable
                         competitors={competitors}

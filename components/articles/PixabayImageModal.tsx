@@ -200,7 +200,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                         padding: 0,
                         border: isSelected ? `2px solid ${ACCENT}` : '2px solid transparent',
                         borderRadius: RADIUS_XS, cursor: 'pointer',
-                        background: isSelected ? '#f8f5ff' : '#f8f8f9',
+                        background: isSelected ? '#f8f5ff' : '#f3f4f0',
                         overflow: 'hidden',
                         transition: `border-color var(--motion-fast), background var(--motion-fast)`,
                         outline: 'none',
@@ -215,7 +215,7 @@ const PixabayImageModal = ({ defaultQuery = '', onSelect, onClose }: Props) => {
                         if (!isSelected) e.currentTarget.style.background = '#f0f0f1';
                       }}
                       onMouseLeave={(e) => {
-                        if (!isSelected) e.currentTarget.style.background = '#f8f8f9';
+                        if (!isSelected) e.currentTarget.style.background = '#f3f4f0';
                       }}
                     >
                       <img

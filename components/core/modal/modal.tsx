@@ -9,6 +9,7 @@ interface ModalProps {
   children: React.ReactNode;
   width?: number;
   closeOnOverlayClick?: boolean;
+  className?: string;
 }
 
 const fadeIn = keyframes`
@@ -70,7 +71,7 @@ export function ModalFooter({ children }: { children: React.ReactNode }) {
 function CloseButton({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} aria-label="Close modal"
-      style={{ display: 'inline-flex', padding: 6, borderRadius: 5, border: '1px solid #DAD9DE', background: '#FFFFFF', color: '#6A6772', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>
+      style={{ display: 'inline-flex', padding: 6, borderRadius: 5, border: '1px solid #dbded4', background: '#FFFFFF', color: '#6A6772', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>
       <svg viewBox="0 0 16 16" width="12" height="12" fill="none">
         <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
@@ -78,7 +79,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function Modal({ title, onClose, children, width = 680, closeOnOverlayClick = true }: ModalProps) {
+export function Modal({ title, onClose, children, width = 680, closeOnOverlayClick = true, className }: ModalProps) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -98,7 +99,7 @@ export function Modal({ title, onClose, children, width = 680, closeOnOverlayCli
 
   return createPortal(
     <Overlay onClick={closeOnOverlayClick ? onClose : undefined}>
-      <Dialog $width={width} onClick={(e) => e.stopPropagation()}>
+      <Dialog $width={width} className={className} onClick={(e) => e.stopPropagation()}>
         {title && <ModalHeader title={title} onClose={onClose} closeButton />}
         {children}
       </Dialog>

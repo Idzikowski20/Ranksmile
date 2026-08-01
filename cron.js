@@ -7,8 +7,6 @@ require('dotenv').config({ path: './.env.local' });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Build the internal base URL for cron→server requests.
-// On Railway, NEXTJS_URL / APP_BASE_URL is required (no localhost fallback).
 const getInternalBaseURL = () => {
    const explicit = (process.env.NEXTJS_URL || process.env.APP_BASE_URL || '').trim();
    if (explicit) return explicit.replace(/\/$/, '');
@@ -26,6 +24,11 @@ const getInternalBaseURL = () => {
 
 const INTERNAL_BASE_URL = getInternalBaseURL();
 console.log(`[cron] INTERNAL_BASE_URL=${INTERNAL_BASE_URL}`);
+
+function cronBearer() {
+   const current = (process.env.CRON_SECRET_CURRENT || process.env.CRON_SECRET || '').trim();
+   return current || null;
+}
 
 async function fetchWithRetry(url, fetchOpts, { attempts = 3, baseDelayMs = 1000 } = {}) {
    let lastErr;
@@ -113,23 +116,59 @@ const generateCronTime = (interval) => {
    return cronTime;
 };
 
+const cronOpts = (method) => {
+   const bearer = cronBearer();
+   if (!bearer) return null;
+   return {
+      method,
+      headers: { Authorization: `Bearer ${bearer}` },
+   };
+};
+
+const scheduleHttpJob = (expr, name, path, method = 'GET') => {
+   new Cron(expr, () => {
+      const fetchOpts = cronOpts(method);
+      if (!fetchOpts) return;
+      fetchWithRetry(`${INTERNAL_BASE_URL}${path}`, fetchOpts)
+         .then((res) => res.json())
+         .then((data) => console.log(`[cron] ${name}`, data))
+         .catch((err) => {
+            console.log(`ERROR Making ${name} Cron Request (after retries)..`);
+            console.log(err);
+         });
+   }, { scheduled: true });
+};
+
 const runAppCronJobs = () => {
-   if (!process.env.APIKEY) {
-      console.error('[cron] APIKEY missing — cron HTTP calls will fail auth');
+   const bearer = cronBearer();
+   if (!bearer) {
+      console.error('[cron] FATAL: CRON_SECRET or CRON_SECRET_CURRENT required');
+      if (process.env.RAILWAY_ENVIRONMENT) process.exit(1);
+      return;
    }
 
+   // ── Platform jobs (SSOT — was split with vercel.json) ──────────────────
+   scheduleHttpJob('0 0 8 * * *', 'daily', '/api/cron/daily');
+   scheduleHttpJob('0 0 9 * * *', 'rank-tracking', '/api/cron/rank-tracking');
+   scheduleHttpJob('0 0 3 1 * *', 'rank-snapshots-retention', '/api/cron/rank-snapshots-retention');
+   scheduleHttpJob('*/5 * * * *', 'plan-reservations', '/api/cron/plan-reservations');
+   scheduleHttpJob('0 0 * * * *', 'stripe-billing-reconcile', '/api/cron/stripe-billing-reconcile');
+   scheduleHttpJob('0 0 3 * * *', 'starter-nudge', '/api/cron/starter-nudge');
+
+   // ── Legacy scrape / notify / failed_queue / GSC (now CRON_SECRET) ──────
    getAppSettings().then((settings) => {
       const scrape_interval = settings.scrape_interval || 'daily';
       if (scrape_interval !== 'never') {
          const scrapeCronTime = generateCronTime(scrape_interval);
          new Cron(scrapeCronTime, () => {
-            const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
+            const fetchOpts = cronOpts('POST');
+            if (!fetchOpts) return;
             fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron`, fetchOpts)
-            .then((res) => res.json())
-            .catch((err) => {
-               console.log('ERROR Making SERP Scraper Cron Request (after retries)..');
-               console.log(err);
-            });
+               .then((res) => res.json())
+               .catch((err) => {
+                  console.log('ERROR Making SERP Scraper Cron Request (after retries)..');
+                  console.log(err);
+               });
          }, { scheduled: true });
       }
 
@@ -138,14 +177,15 @@ const runAppCronJobs = () => {
          const cronTime = generateCronTime(notif_interval === 'daily' ? 'daily_morning' : notif_interval);
          if (cronTime) {
             new Cron(cronTime, () => {
-               const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
+               const fetchOpts = cronOpts('POST');
+               if (!fetchOpts) return;
                fetchWithRetry(`${INTERNAL_BASE_URL}/api/notify`, fetchOpts)
-               .then((res) => res.json())
-               .then((data) => console.log(data))
-               .catch((err) => {
-                  console.log('ERROR Making Cron Email Notification Request (after retries)..');
-                  console.log(err);
-               });
+                  .then((res) => res.json())
+                  .then((data) => console.log(data))
+                  .catch((err) => {
+                     console.log('ERROR Making Cron Email Notification Request (after retries)..');
+                     console.log(err);
+                  });
             }, { scheduled: true });
          }
       }
@@ -158,14 +198,15 @@ const runAppCronJobs = () => {
             try {
                const keywordsToRetry = data ? JSON.parse(data) : [];
                if (keywordsToRetry.length > 0) {
-                  const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
+                  const fetchOpts = cronOpts('POST');
+                  if (!fetchOpts) return;
                   fetchWithRetry(`${INTERNAL_BASE_URL}/api/refresh?id=${keywordsToRetry.join(',')}`, fetchOpts)
-                  .then((res) => res.json())
-                  .then((refreshedData) => console.log(refreshedData))
-                  .catch((fetchErr) => {
-                     console.log('ERROR Making failed_queue Cron Request (after retries)..');
-                     console.log(fetchErr);
-                  });
+                     .then((res) => res.json())
+                     .then((refreshedData) => console.log(refreshedData))
+                     .catch((fetchErr) => {
+                        console.log('ERROR Making failed_queue Cron Request (after retries)..');
+                        console.log(fetchErr);
+                     });
                }
             } catch (error) {
                console.log('ERROR Reading Failed Scrapes Queue File..', error);
@@ -179,62 +220,16 @@ const runAppCronJobs = () => {
    if (process.env.SEARCH_CONSOLE_PRIVATE_KEY && process.env.SEARCH_CONSOLE_CLIENT_EMAIL) {
       const searchConsoleCRONTime = generateCronTime('daily');
       new Cron(searchConsoleCRONTime, () => {
-         const fetchOpts = { method: 'POST', headers: { Authorization: `Bearer ${process.env.APIKEY}` } };
+         const fetchOpts = cronOpts('POST');
+         if (!fetchOpts) return;
          fetchWithRetry(`${INTERNAL_BASE_URL}/api/searchconsole`, fetchOpts)
-         .then((res) => res.json())
-         .then((data) => console.log(data))
-         .catch((err) => {
-            console.log('ERROR Making Google Search Console Scraper Cron Request (after retries)..');
-            console.log(err);
-         });
+            .then((res) => res.json())
+            .then((data) => console.log(data))
+            .catch((err) => {
+               console.log('ERROR Making Google Search Console Scraper Cron Request (after retries)..');
+               console.log(err);
+            });
       }, { scheduled: true });
    }
-
-  // Plan quota reservation sweeper — every 5 minutes
-  if (process.env.CRON_SECRET) {
-      new Cron('*/5 * * * *', () => {
-         const fetchOpts = {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-         };
-         fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron/plan-reservations`, fetchOpts)
-            .then((res) => res.json())
-            .then((data) => console.log('[cron] plan-reservations', data))
-            .catch((err) => {
-               console.log('ERROR Making plan-reservations Cron Request (after retries)..');
-               console.log(err);
-            });
-      }, { scheduled: true });
-
-      // Stripe billing reconciler — hourly
-      new Cron('0 0 * * * *', () => {
-         const fetchOpts = {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-         };
-         fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron/stripe-billing-reconcile`, fetchOpts)
-            .then((res) => res.json())
-            .then((data) => console.log('[cron] stripe-billing-reconcile', data))
-            .catch((err) => {
-               console.log('ERROR Making stripe-billing-reconcile Cron Request (after retries)..');
-               console.log(err);
-            });
-      }, { scheduled: true });
-
-      // Starter nudge — daily 03:00
-      new Cron('0 0 3 * * *', () => {
-         const fetchOpts = {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-         };
-         fetchWithRetry(`${INTERNAL_BASE_URL}/api/cron/starter-nudge`, fetchOpts)
-            .then((res) => res.json())
-            .then((data) => console.log('[cron] starter-nudge', data))
-            .catch((err) => {
-               console.log('ERROR Making starter-nudge Cron Request (after retries)..');
-               console.log(err);
-            });
-      }, { scheduled: true });
-  }
 };
 runAppCronJobs();

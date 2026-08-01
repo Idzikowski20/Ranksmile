@@ -51,7 +51,7 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
    const sources = topicSources(topic.prompts);
 
    return (
-      <div style={{ border: '1px solid #E4E4E7', borderRadius: 8, background: '#fff' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div style={{ border: '1px solid #bebebe', borderRadius: 8, background: '#fff' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
          {/* Header */}
          <div style={{ display: 'flex', alignItems: 'center', minHeight: 56, padding: '8px 16px', gap: 8 }}>
             <Button type="button" variant="transparent" size="zero" onClick={onToggleOpen} aria-label={open ? 'Collapse' : 'Expand'} icon={<Chevron open={open} />} style={{ color: '#18181B' }} />
@@ -88,7 +88,7 @@ const TopicAccordion = ({ topic, open, onToggleOpen, onRename, onRemoveTopic, on
                      type="button"
                      tabIndex={hover ? 0 : -1}
                      onClick={onGenerate}
-                     style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #E4E4E7', background: '#fff', borderRadius: 8, padding: '6px 14px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, cursor: 'pointer' }}
+                     style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #bebebe', background: '#fff', borderRadius: 8, padding: '6px 14px', fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: FONT, cursor: 'pointer' }}
                   >
                      Generate prompts
                   </button>

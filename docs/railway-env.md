@@ -30,13 +30,17 @@ PYTHON_SIDECAR_URL=http://${{python-sidecar.RAILWAY_PRIVATE_DOMAIN}}:${{python-s
 NEXTJS_URL=http://${{app.RAILWAY_PRIVATE_DOMAIN}}:${{app.PORT}}
 NEXT_PUBLIC_APP_URL=https://ranksmile.pl
 INTERNAL_PIPELINE_TOKEN=<shared strong secret>
+CRON_SECRET=<required — platform cron Bearer>
+# Optional rotation: CRON_SECRET_CURRENT / CRON_SECRET_PREVIOUS
 PIPELINE_STAGE=5
 PIPELINE_INLINE_WORKERS=0
+# Sentry on in prod by default; set SENTRY_ENABLED=false to disable
+SENTRY_ENABLED=
 ```
 
 Staging: use the Railway HTTPS URL for `NEXT_PUBLIC_APP_URL` and add that origin to Neon Auth trusted origins.
 
-Also copy existing secrets from Vercel (Neon Auth, Stripe, DeepSeek, DataForSEO, Ably, Google, `APIKEY`, `SECRET`, etc.).
+Also copy existing secrets from Vercel (Neon Auth, Stripe, DeepSeek, DataForSEO, Ably, Google, `SECRET`, etc.). Prefer `CRON_SECRET` over deprecated `APIKEY` for cron→app calls.
 
 **Resend (transactional email) — required on `app` + `pipeline-workers`:**
 

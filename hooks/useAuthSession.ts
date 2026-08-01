@@ -67,7 +67,7 @@ export async function fetchAuthSession(): Promise<AuthSessionPayload | null> {
   return user ? { user } : null;
 }
 
-/** Drop-in replacement for authClient.useSession() — no @neondatabase/auth (avoids Zod crash). */
+/** Session hook for authClient.useSession(). */
 export function useAuthSession(): AuthSessionResult {
   const query = useQuery(SESSION_KEY, fetchAuthSession, {
     staleTime: 60_000,

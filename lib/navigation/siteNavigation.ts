@@ -8,11 +8,18 @@ export const SEO_NAV: SiteNavItem[] = [
   { id: 'content-audit', label: 'Content Audit', path: 'content-audit', match: '/content-audit', keywords: ['audit', 'content'] },
   { id: 'topical-map', label: 'Topical Map', path: 'topical-map', match: '/topical-map', keywords: ['topics', 'clusters'] },
   {
-    id: 'search-intelligence',
-    label: 'Search Intelligence',
-    path: 'search-intelligence',
-    match: '/search-intelligence',
-    keywords: ['organic', 'keywords', 'serp', 'rank'],
+    id: 'keyword-list',
+    label: 'Keyword list',
+    path: 'keyword-list',
+    match: '/keyword-list',
+    keywords: ['organic', 'keywords', 'serp', 'search intelligence'],
+  },
+  {
+    id: 'keyword-tracking',
+    label: 'Keyword tracking',
+    path: 'keyword-tracking',
+    match: '/keyword-tracking',
+    keywords: ['rank', 'tracking', 'positions', 'monitor'],
   },
   { id: 'activity-log', label: 'Activity Log', path: 'activity-log', match: '/activity-log', keywords: ['history', 'log'] },
 ];
@@ -56,4 +63,5 @@ export function resolveSiteNav(
 
 /** Deep-link-only surfaces (not primary Tools nav). */
 export const AUDIT_URL_PATH = 'audit-tool';
-export const RANK_TRACKING_PATH = 'keyword-tracker';
+export const KEYWORD_LIST_PATH = 'keyword-list';
+export const KEYWORD_TRACKING_PATH = 'keyword-tracking';

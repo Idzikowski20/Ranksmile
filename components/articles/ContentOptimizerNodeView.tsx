@@ -4,16 +4,13 @@ import type { NodeViewProps } from '@tiptap/react';
 import { optimizeStore } from './optimizeStore';
 import { sanitizeArticleHtml } from '../../lib/sanitizeHtml';
 import { WHOLE_ARTICLE_ID } from '../../lib/optimizeWholeArticle';
-import { wordDiffSegments, renderDiffHtml } from '../../lib/optimizeWordDiff';
+import { renderStructuredDiffHtml } from '../../lib/optimizeWordDiff';
 import { useEntrance } from '../../lib/motion/useEntrance';
-import { sectionResultLabel } from '../../lib/optimizeMessaging';
 
 // React node-view for the contentOptimizer TipTap node.
 // Queued/scanning: original section while the stream runs.
-// Improved: inline diff only — Save/Cancel bar applies changes globally.
+// Improved: inline word/block diff only — no green chrome / result chips.
 // Save (bottom bar) splices final HTML — not done here.
-
-const stripTags = (html: string) => html.replace(/<[^>]+>/g, '');
 
 const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
   const entranceRef = useEntrance<HTMLDivElement>();
@@ -22,49 +19,27 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
   const r = optimizeStore.get(sectionId);
   const oldHtml = sanitizeArticleHtml(r?.oldHtml || '');
   const newHtml = sanitizeArticleHtml(r?.newHtml || '');
-  const { focus, mode, reason } = r || {};
 
-  const isImproved = status === 'improved' || status === 'active' || status === 'pending';
   const isScanning = status === 'scanning';
   const isQueued = status === 'queued';
 
-  const bordered = isImproved || isScanning || isQueued;
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
     margin: '8px 0',
-    padding: bordered ? '12px 16px' : 0,
-    border: bordered
-      ? (isImproved ? '1px solid rgba(26, 178, 94, 0.35)' : '1px solid #E4E4E7')
-      : 'none',
-    borderRadius: bordered ? 12 : 0,
-    background: isImproved ? 'rgba(26, 178, 94, 0.06)' : '#fff',
-    boxShadow: isImproved ? 'inset 3px 0 0 #1AB25E' : undefined,
+    padding: 0,
+    border: 'none',
+    borderRadius: 0,
+    background: 'transparent',
     fontFamily: 'var(--font-family-primary)',
     fontSize: 15,
     lineHeight: 1.6,
     color: '#18181B',
-    transition: 'background 0.2s ease, border-color 0.2s ease',
-  };
-
-  const resultChipStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '2px 8px',
-    borderRadius: 9999,
-    background: 'var(--gray-10)',
-    color: '#52525C',
-    fontSize: 12,
-    fontWeight: 500,
-    lineHeight: '16px',
-    fontFamily: 'var(--font-family-primary)',
-    marginBottom: 6,
   };
 
   const isWholeArticle = sectionId === WHOLE_ARTICLE_ID;
 
-  // Always word-diff plain text (See changes parity). Whole-article fallback used to
-  // skip this and dump newHtml with zero add/remove marks.
-  const inlineDiffHtml = renderDiffHtml(wordDiffSegments(stripTags(oldHtml), stripTags(newHtml)));
+  // Block-aware word diff — preserve H2/H3/P like the editor (not one flattened wall).
+  const inlineDiffHtml = renderStructuredDiffHtml(oldHtml, newHtml);
 
   let body: React.ReactNode;
   if (isQueued) {
@@ -78,7 +53,7 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
   } else {
     body = (
       <div
-        className={isWholeArticle ? 'ao-whole-article-preview' : undefined}
+        className={`ao-structured-diff${isWholeArticle ? ' ao-whole-article-preview' : ''}`}
         dangerouslySetInnerHTML={{ __html: inlineDiffHtml }}
       />
     );
@@ -86,9 +61,6 @@ const ContentOptimizerNodeView: React.FC<NodeViewProps> = ({ node }) => {
 
   return (
     <NodeViewWrapper as="div" ref={entranceRef} contentEditable={false} style={wrapperStyle}>
-      {isImproved && (focus || mode || reason) && (
-        <span style={resultChipStyle}>{sectionResultLabel({ focus, mode, reason })}</span>
-      )}
       {body}
     </NodeViewWrapper>
   );

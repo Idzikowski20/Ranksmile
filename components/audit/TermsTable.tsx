@@ -148,7 +148,7 @@ const TermsTable = ({ terms }: { terms: AuditTerm[] }) => {
                            {expanded && examples.length > 0 && (
                               <tr>
                                  <td colSpan={8} style={{ padding: 0, borderBottom: '1px solid #F4F4F5' }}>
-                                    <div style={{ margin: 12, background: '#F8F8F9', borderRadius: 8, padding: 12 }}>
+                                    <div style={{ margin: 12, background: '#f3f4f0', borderRadius: 8, padding: 12 }}>
                                        {examples.map((ex, i) => (
                                           <div key={i} style={{ fontSize: 13, color: '#52525C', fontFamily: FONT, marginBottom: i === examples.length - 1 ? 0 : 8, lineHeight: 1.5 }}>
                                              &quot;<Highlighted text={ex} term={t.term} />&quot;

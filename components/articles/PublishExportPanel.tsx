@@ -173,7 +173,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
             <textarea
               value={metaTitle} maxLength={70} placeholder="Meta title…" rows={2} readOnly={readOnly}
               onChange={(e) => onMetaTitleChange(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', minHeight: 60, padding: '8px 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: '#18181b', lineHeight: '20px', background: readOnly ? '#f8f8f9' : '#fff', cursor: readOnly ? 'default' : 'text' }}
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 60, padding: '8px 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: '#18181b', lineHeight: '20px', background: readOnly ? '#f3f4f0' : '#fff', cursor: readOnly ? 'default' : 'text' }}
             />
             <span style={{ alignSelf: 'flex-end', fontSize: 13, color: metaTitle.length >= 70 ? '#e5484d' : '#52525c', fontFamily: F }}>{metaTitle.length}/70</span>
           </div>
@@ -186,7 +186,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
             <textarea
               value={metaDescription} maxLength={156} placeholder="Meta description…" rows={5} readOnly={readOnly}
               onChange={(e) => onMetaDescriptionChange(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', minHeight: 116, padding: '8px 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: '#18181b', lineHeight: '20px', background: readOnly ? '#f8f8f9' : '#fff', cursor: readOnly ? 'default' : 'text' }}
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 116, padding: '8px 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: '#18181b', lineHeight: '20px', background: readOnly ? '#f3f4f0' : '#fff', cursor: readOnly ? 'default' : 'text' }}
             />
             <span style={{ alignSelf: 'flex-end', fontSize: 13, color: metaDescription.length >= 156 ? '#e5484d' : '#52525c', fontFamily: F }}>{metaDescription.length}/156</span>
           </div>
@@ -199,7 +199,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           <SectionTitle>Featured image</SectionTitle>
           {featuredImage?.url ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e4e4e7', background: '#F8F8F9', lineHeight: 0 }}>
+              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e4e4e7', background: '#f3f4f0', lineHeight: 0 }}>
                 {/* Native img keeps intrinsic aspect ratio — Next/Image width/height was squashing previews. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -211,7 +211,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               <input
                 type="text" value={featuredImage.alt} placeholder="Alt text…" readOnly={readOnly}
                 onChange={(e) => onFeaturedImageChange?.({ url: featuredImage.url, alt: e.target.value })}
-                style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', fontSize: 14, fontFamily: F, color: '#18181b', background: readOnly ? '#f8f8f9' : '#fff' }}
+                style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', fontSize: 14, fontFamily: F, color: '#18181b', background: readOnly ? '#f3f4f0' : '#fff' }}
               />
               {!readOnly && (
                 <div style={{ display: 'flex', gap: 8 }}>

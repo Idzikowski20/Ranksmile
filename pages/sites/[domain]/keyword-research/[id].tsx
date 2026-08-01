@@ -195,7 +195,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
          style={{
             position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 292,
             padding: 24, borderRadius: 12, border: `1px solid ${CARD_BORDER}`, background: '#fff',
-            boxShadow: hover ? '0 4px 0 0 #e4e4e7, 0px 8px 20px rgba(24,26,34,0.06)' : '0 4px 0 0 #e4e4e7',
+            boxShadow: hover ? '0px 8px 20px rgba(24,26,34,0.06)' : 'none',
             transition: 'box-shadow 150ms ease', overflow: 'hidden', fontFamily: FONT,
          }}
       >
@@ -259,7 +259,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
 };
 
 const SkeletonCard = ({ i }: { i: number }) => (
-   <div style={{ minHeight: 292, borderRadius: 12, border: `1px solid ${CARD_BORDER}`, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7', padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+   <div style={{ minHeight: 292, borderRadius: 12, border: `1px solid ${CARD_BORDER}`, background: '#fff', padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
          <div style={{ width: 90, height: 18, borderRadius: 4, background: '#E4E4E7', animation: 'auditPulse 1.4s ease-in-out infinite', animationDelay: `${i * 0.05}s` }} />
          <div style={{ width: 70, height: 18, borderRadius: 4, background: '#F1F1F3' }} />
@@ -474,7 +474,7 @@ const KeywordResearchDetailPage: NextPage = () => {
                </div>
 
                {failed && (
-                  <div style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7', padding: '48px 24px', textAlign: 'center' }}>
+                  <div style={{ border: `1px solid ${CARD_BORDER}`, borderRadius: 12, background: '#fff', padding: '48px 24px', textAlign: 'center' }}>
                      <div style={{ fontSize: 15, fontWeight: 600, color: '#DC2626' }}>Research failed</div>
                      <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>{run?.error || 'Try again with a different seed keyword.'}</div>
                   </div>

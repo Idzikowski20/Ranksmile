@@ -64,7 +64,7 @@ const IconClearFormatting = () => (
 );
 
 const Separator = () => (
-  <div style={{ width: 1, height: 20, background: '#DAD9DE', margin: '0 4px', flexShrink: 0 }} />
+  <div style={{ width: 1, height: 20, background: '#dbded4', margin: '0 4px', flexShrink: 0 }} />
 );
 
 const ChevronDown = ({ open }: { open: boolean }) => (
@@ -615,7 +615,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
         fontWeight: 500,
         textAlign: 'left',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F8F9'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
       <span>{label}</span>
@@ -637,7 +637,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
         minWidth: 260,
         maxWidth: 'min(320px, calc(100vw - 16px))',
         background: '#FFFFFF',
-        border: '1px solid #DAD9DE',
+        border: '1px solid #dbded4',
         borderRadius: 8,
         boxShadow: '0 16px 32px rgba(24,26,34,0.16), 0 2px 8px rgba(24,26,34,0.08)',
         fontFamily: 'var(--font-family-primary)',
@@ -651,7 +651,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
           alignItems: 'center',
           gap: 2,
           padding: '8px 10px',
-          borderBottom: '1px solid #DAD9DE',
+          borderBottom: '1px solid #dbded4',
           flexWrap: 'wrap',
         }}
       >
@@ -674,7 +674,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                 minWidth: 200,
                 padding: 6,
                 background: '#FFFFFF',
-                border: '1px solid #DAD9DE',
+                border: '1px solid #dbded4',
                 borderRadius: 8,
                 boxShadow: '0 8px 16px rgba(24,26,34,0.12)',
                 zIndex: 2,
@@ -746,7 +746,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                 minWidth: 200,
                 padding: 6,
                 background: '#FFFFFF',
-                border: '1px solid #DAD9DE',
+                border: '1px solid #dbded4',
                 borderRadius: 8,
                 boxShadow: '0 8px 16px rgba(24,26,34,0.12)',
                 zIndex: 2,
@@ -810,7 +810,7 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
               padding: '10px 12px',
               border: 'none',
               borderRadius: 6,
-              background: voiceMenuOpen ? '#F8F8F9' : 'transparent',
+              background: voiceMenuOpen ? '#f3f4f0' : 'transparent',
               color: '#181225',
               cursor: 'pointer',
               fontFamily: 'var(--font-family-primary)',
@@ -818,8 +818,8 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
               fontWeight: 500,
               textAlign: 'left',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F8F9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = voiceMenuOpen ? '#F8F8F9' : 'transparent'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = voiceMenuOpen ? '#f3f4f0' : 'transparent'; }}
           >
             <span>Change voice</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#6A6772', fontWeight: 400 }}>
@@ -835,9 +835,9 @@ export default function RanksmileBubbleMenu({ editor, onAskRanksmile, onAddComme
                 marginLeft: 8,
                 marginRight: 8,
                 padding: 4,
-                border: '1px solid #DAD9DE',
+                border: '1px solid #dbded4',
                 borderRadius: 6,
-                background: '#F8F8F9',
+                background: '#f3f4f0',
               }}
             >
               {RANKSMILE_VOICE_OPTIONS.map((v) => (

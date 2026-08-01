@@ -52,7 +52,7 @@ const ScoreTrio = ({ seo, ai, hasAi, content, onSeoClick, onAiClick, deltas }: {
   const [hovered, setHovered] = useState<'seo' | 'ai' | null>(null);
   const overlayBase: React.CSSProperties = {
     position: 'absolute', top: 0, bottom: 0, width: 'calc(50% + 50px)',
-    border: '1px solid #e4e4e7', background: '#f8f8f9', pointerEvents: 'none',
+    border: '1px solid #e4e4e7', background: '#f3f4f0', pointerEvents: 'none',
     transition: 'opacity 0.15s ease-out, background-color 0.15s ease-out',
   };
   return (

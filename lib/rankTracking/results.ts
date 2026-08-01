@@ -80,7 +80,9 @@ function decodeCursor(cursor: string): { sortValue: string | number | null; id: 
 
 export async function buildRankResultsPage(query: ResultsQuery): Promise<RankResultsPage> {
   const keywords = await queryRows<RankTrackingKeywordRow>(
-    'SELECT * FROM rank_tracking_keywords WHERE config_id = ? ORDER BY keyword ASC',
+    `SELECT * FROM rank_tracking_keywords
+     WHERE config_id = ? AND archived_at IS NULL
+     ORDER BY keyword ASC`,
     [query.config.id],
   );
 

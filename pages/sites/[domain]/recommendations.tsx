@@ -6,7 +6,6 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { SentryPanel } from '../../../components/sentry-pages';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
@@ -16,7 +15,7 @@ import { buildImportKeywordList } from '../../../lib/buildImportKeywordList';
 import { normalizeUrlForMatch, kwScore, buildGscUrlKeywordMap } from '../../../utils/gsc';
 import { slugToDomain } from '../../../utils/slugToDomain';
 import toast from 'react-hot-toast';
-import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown } from '../../../components/core';
+import { Gauge, Checkbox, Toggle, SearchBar, Tabs, SlidePanel, SelectionBar, Skeleton, SortableHeader, CompactSelect, ToolRibbon, Button, DeltaDown, SortUpDown, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import ChangeKeywordModal, { GscKeyword } from '../../../components/domains/ChangeKeywordModal';
 
@@ -406,6 +405,16 @@ const RecommendationsPage: NextPage = () => {
    const [optimizingId, setOptimizingId] = useState<string | number | null>(null);
    // Stagger-reveal table rows (both tabs render `.rec-row`; only the active tab is in the DOM).
    const rowsRef = useStaggerReveal<HTMLDivElement>('.rec-row');
+   const scrollRef = useRef<HTMLDivElement>(null);
+
+   const optimizeChunk = useTableLoadMore(filtered, {
+      pageSize: 20,
+      resetKey: `opt-${sortKey}-${sortDir}-${search}-${filtered.length}-${JSON.stringify(filters)}`,
+   });
+   const ideasChunk = useTableLoadMore(filteredGapRows, {
+      pageSize: 20,
+      resetKey: `ideas-${search}-${filteredGapRows.length}`,
+   });
 
    // Optimize → same path as Articles → Import content: scrape URL, startAnalysis, editor + deep analysis.
    const handleOptimize = async (row: RecommRow, e: React.MouseEvent) => {
@@ -602,8 +611,9 @@ const RecommendationsPage: NextPage = () => {
             section="Recommendations"
             heading="Recommendations"
             contentMaxWidth="100%"
+            fillHeight
             filters={(
-               <ToolRibbon>
+               <ToolRibbon className="rec-tool-ribbon">
                   <Tabs
                      items={[
                         { value: 'optimize', label: 'Optimize', count: optimizeRows.length },
@@ -612,7 +622,7 @@ const RecommendationsPage: NextPage = () => {
                      value={tab}
                      onChange={(v) => setTab(v as 'optimize' | 'ideas')}
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                  <div className="rec-tool-controls" style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto', flexWrap: 'wrap' }}>
                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
                         <Toggle checked={showUrls} onChange={() => setShowUrls((v) => !v)} />
                         <span style={{ fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Show URLs</span>
@@ -639,65 +649,65 @@ const RecommendationsPage: NextPage = () => {
                </ToolRibbon>
             )}
          >
-            <SentryPanel noPadding>
-            <div ref={rowsRef} style={{ overflowX: 'auto' }}>
-
+            <DataTable ref={rowsRef}>
+            <DataTableScroll ref={scrollRef}>
                {/* ── Content Ideas tab — content gap from GSC ── */}
                {tab === 'ideas' && (
-                  <div style={{ minWidth: '100%' }}>
-                     <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5', borderRadius: '8px 8px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
-                        <div style={{ padding: '10px 16px', flexGrow: 1, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Keyword (not yet covered)</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Impressions</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Avg Position</div>
-                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Action</div>
-                     </div>
+                  <DataTableContent minWidth={560} aria-label="Content ideas">
+                     <DataTableHeader>
+                        <div style={{ padding: '10px 16px', flex: '1 1 0', minWidth: 160, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Keyword (not yet covered)</div>
+                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #E4E4E7', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Impressions</div>
+                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #E4E4E7', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Avg Position</div>
+                        <div style={{ padding: '10px 16px', borderLeft: '1px solid #E4E4E7', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>Action</div>
+                     </DataTableHeader>
                      {loading ? (
-                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Loading…</div>
+                        <DataTableBody><Skeleton /></DataTableBody>
                      ) : filteredGapRows.length === 0 ? (
-                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
+                        <DataTableEmpty>
                            No content gaps found — all GSC keywords already have articles.
-                        </div>
-                     ) : filteredGapRows.map((kw, i) => (
-                        <div key={kw.keyword} className="rec-row" style={{ display: 'flex', alignItems: 'center', borderBottom: i < filteredGapRows.length - 1 ? '1px solid #F4F4F5' : 'none', minHeight: 56, background: '#fff', transition: 'background 120ms' }}>
-                           <div style={{ padding: '10px 16px', flexGrow: 1 }}>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
-                           </div>
-                           <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                              {compactNum(kw.impressions)}
-                           </div>
-                           <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
-                              {kw.position > 0 ? kw.position.toFixed(1) : '—'}
-                           </div>
-                           <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, display: 'flex', justifyContent: 'flex-end' }}>
-                              <Button type="button" variant="secondary" size="xs" disabled={creatingKw === kw.keyword} onClick={() => handleCreateArticleForKeyword(kw.keyword)}>
-                                 {creatingKw === kw.keyword ? '…' : '+ Create'}
-                              </Button>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
+                        </DataTableEmpty>
+                     ) : (
+                        <DataTableBody>
+                           {ideasChunk.visibleItems.map((kw) => (
+                              <DataTableRow key={kw.keyword} className="rec-row" style={{ minHeight: 56, alignItems: 'center' }}>
+                                 <div style={{ padding: '10px 16px', flex: '1 1 0', minWidth: 160 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>{kw.keyword}</span>
+                                 </div>
+                                 <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                                    {compactNum(kw.impressions)}
+                                 </div>
+                                 <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+                                    {kw.position > 0 ? kw.position.toFixed(1) : '—'}
+                                 </div>
+                                 <div style={{ padding: '10px 16px', borderLeft: '1px solid #F4F4F5', width: 120, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Button type="button" variant="secondary" size="xs" disabled={creatingKw === kw.keyword} onClick={() => handleCreateArticleForKeyword(kw.keyword)}>
+                                       {creatingKw === kw.keyword ? '…' : '+ Create'}
+                                    </Button>
+                                 </div>
+                              </DataTableRow>
+                           ))}
+                           <TableLoadMore hasMore={ideasChunk.hasMore} isLoading={ideasChunk.isLoading} onLoadMore={ideasChunk.loadMore} scrollRootRef={scrollRef} />
+                        </DataTableBody>
+                     )}
+                  </DataTableContent>
                )}
 
 
                {/* ── Optimize tab ── */}
                {tab === 'optimize' && (
-                  <div style={{ width: '100%', overflow: 'hidden' }}>
-
-                     {/* Header */}
-                     <div style={{ display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden', background: '#fff', borderBottom: '1px solid #F4F4F5', borderRadius: '8px 8px 0 0', position: 'sticky', top: 0, zIndex: 1 }}>
-                        {/* Checkbox */}
-                        <div style={{ padding: '10px 16px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', flexShrink: 0, height: '100%' }}>
+                  <DataTableContent minWidth={780} aria-label="Optimize recommendations">
+                     <DataTableHeader>
+                        <div style={{ padding: '10px 16px', borderRight: '1px solid #E4E4E7', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                            <Checkbox checked={someChecked && !allChecked ? 'indeterminate' : allChecked} onChange={toggleAll} />
                         </div>
-                        {/* Page / Main keyword */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', flex: '1 1 0', minWidth: 200, overflow: 'hidden' }}>
                            <Button type="button" variant="transparent" size="sm" onClick={() => handleSort('content_score')} style={{ gap: 4, padding: 0, color: '#52525C' }}>
-                              <span style={{ fontSize: 13 }}>Page</span>
+                              <span style={{ fontSize: 13, textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Page</span>
                               <SortUpDown active={false} dir={null} />
                            </Button>
                            <span style={{ color: '#D4D4D8', lineHeight: '1rem' }}>/</span>
                            <Button type="button" variant="transparent" size="sm" style={{ gap: 4, padding: 0, color: '#52525C' }}>
-                              <span style={{ fontSize: 13 }}>Main keyword</span>
+                              <span style={{ fontSize: 13, textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Main keyword</span>
                               <SortUpDown active={false} dir={null} />
                            </Button>
                         </div>
@@ -705,132 +715,115 @@ const RecommendationsPage: NextPage = () => {
                         <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
                         <SortableHeader label="Clicks" sortKey="clicks" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
                         <SortableHeader label="Impr." sortKey="impressions" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
-                     </div>
+                     </DataTableHeader>
 
-                     {/* Rows */}
                      {loading ? (
-                        <Skeleton />
+                        <DataTableBody><Skeleton /></DataTableBody>
                      ) : filtered.length === 0 ? (
-                        <div style={{ padding: '48px 16px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>
-                           No pages need optimization. Great job!
-                        </div>
-                     ) : filtered.map((row, i) => {
-                        const isSelected = selectedIds.has(row.id);
-                        return (
-                           <div
-                              key={row.id}
-                              className="rec-row"
-                              style={{
-                                 display: 'flex',
-                                 alignItems: 'stretch',
-                                 width: '100%',
-                                 overflow: 'hidden',
-                                 borderBottom: i < filtered.length - 1 ? '1px solid #F4F4F5' : 'none',
-                                 minHeight: 72,
-                                 background: isSelected ? 'rgba(242,153,100,0.04)' : '#fff',
-                                 transition: 'background 120ms ease',
-                                 position: 'relative',
-                              }}
-                           >
-                              {/* Checkbox cell */}
-                              <div style={{ padding: '0 16px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', flexShrink: 0, zIndex: 1 }}>
-                                 <Checkbox checked={isSelected} onChange={() => toggleRow(row.id)} />
-                              </div>
-
-                              {/* Page info + hover actions */}
-                              <div
-                                 style={{ position: 'relative', flex: '1 1 0', minWidth: 0, overflow: 'hidden', padding: '12px 16px', cursor: 'pointer' }}
-                                 onClick={() => setPanelRow(row)}
-                              >
-                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                                    <span
-                                       title={row.title}
-                                       style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
-                                    >
-                                       {displayPageTitle(row.title)}
-                                    </span>
-                                    {/* Keyword — clickable to change */}
-                                    <Button type="button" variant="link" size="xs" className="kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={(
-                                       <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, color: '#9F9FA9' }} className="kw-btn-icon">
-                                          <g><path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" /></g>
-                                       </svg>
-                                    )} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0 }}>
-                                       <span className="kw-btn-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{row.keyword || 'Set keyword'}</span>
-                                    </Button>
-                                    {showUrls && row.url && (
-                                       <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                                          {row.url}
-                                       </span>
-                                    )}
-                                 </div>
-
-                                 {/* Right: hover actions (overlay — must not steal column width) */}
-                                 <div className="row-actions" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 32px', flexShrink: 0, opacity: 0, transition: 'opacity 150ms ease', background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, #fff 28%)' }}>
-                                    {row.url && (
-                                       <a href={row.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', color: '#3F3F47', textDecoration: 'none' }}>
-                                          <ExternalLinkIcon />
-                                       </a>
-                                    )}
-                                    <Button type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} icon={<PanelIcon />} style={{ padding: 0, color: '#3F3F47' }} aria-label="Open panel" />
-                                    <Button type="button" variant="secondary" size="xs" disabled={optimizingId === row.id} onClick={(e) => handleOptimize(row, e)}>
-                                       {optimizingId === row.id ? 'Optimizing…' : 'Optimize'}
-                                    </Button>
-                                 </div>
-                              </div>
-
-                              {/* Content Score */}
-                              <div style={{ borderLeft: '1px solid #F4F4F5', width: 154, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
-                                 {row.content_score > 0 ? (
-                                    <div style={{ cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
-                                       <Gauge score={row.content_score} size="sm" />
+                        <DataTableEmpty>No pages need optimization. Great job!</DataTableEmpty>
+                     ) : (
+                        <DataTableBody>
+                           {optimizeChunk.visibleItems.map((row) => {
+                              const isSelected = selectedIds.has(row.id);
+                              return (
+                                 <DataTableRow
+                                    key={row.id}
+                                    className="rec-row"
+                                    selected={isSelected}
+                                    style={{ minHeight: 72 }}
+                                 >
+                                    <div style={{ padding: '0 16px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', flexShrink: 0, zIndex: 1 }}>
+                                       <Checkbox checked={isSelected} onChange={() => toggleRow(row.id)} />
                                     </div>
-                                 ) : analyzingIds.has(row.id) ? (
-                                    <span style={{ fontSize: 12, fontWeight: 500, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Analyzing…</span>
-                                 ) : (
-                                    <Button type="button" variant="secondary" size="xs" className="analyze-btn" onClick={(e) => handleAnalyze(row, e)}>
-                                       Analyze
-                                    </Button>
-                                 )}
-                              </div>
 
-                              {/* Position */}
-                              <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    {row.position > 0 && <DeltaDown />}
-                                    <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
-                                       {row.position > 0 ? row.position.toFixed(1) : '—'}
-                                    </span>
-                                 </div>
-                              </div>
+                                    <div
+                                       style={{ position: 'relative', flex: '1 1 0', minWidth: 200, overflow: 'hidden', padding: '12px 16px', cursor: 'pointer' }}
+                                       onClick={() => setPanelRow(row)}
+                                    >
+                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                                          <span
+                                             title={row.title}
+                                             style={{ fontSize: 13, fontWeight: 600, color: '#09090B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                                          >
+                                             {displayPageTitle(row.title)}
+                                          </span>
+                                          <Button type="button" variant="link" size="xs" className="kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={(
+                                             <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" style={{ flexShrink: 0, color: '#9F9FA9' }} className="kw-btn-icon">
+                                                <g><path d="m5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25z" /></g>
+                                             </svg>
+                                          )} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0 }}>
+                                             <span className="kw-btn-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{row.keyword || 'Set keyword'}</span>
+                                          </Button>
+                                          {showUrls && row.url && (
+                                             <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                                {row.url}
+                                             </span>
+                                          )}
+                                       </div>
 
-                              {/* Clicks */}
-                              <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    {row.clicks > 0 && <DeltaDown />}
-                                    <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
-                                       {row.clicks > 0 ? compactNum(row.clicks) : '0'}
-                                    </span>
-                                 </div>
-                              </div>
+                                       <div className="row-actions" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 16px 0 32px', flexShrink: 0, opacity: 0, transition: 'opacity 150ms ease', background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, #fff 28%)' }}>
+                                          {row.url && (
+                                             <a href={row.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', color: '#3F3F47', textDecoration: 'none' }}>
+                                                <ExternalLinkIcon />
+                                             </a>
+                                          )}
+                                          <Button type="button" variant="transparent" size="sm" onClick={(e) => { e.stopPropagation(); setPanelRow(row); }} icon={<PanelIcon />} style={{ padding: 0, color: '#3F3F47' }} aria-label="Open panel" />
+                                          <Button type="button" variant="secondary" size="xs" disabled={optimizingId === row.id} onClick={(e) => handleOptimize(row, e)}>
+                                             {optimizingId === row.id ? 'Optimizing…' : 'Optimize'}
+                                          </Button>
+                                       </div>
+                                    </div>
 
-                              {/* Impressions */}
-                              <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    {row.impressions > 0 && <DeltaDown />}
-                                    <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
-                                       {row.impressions > 0 ? compactNum(row.impressions) : '—'}
-                                    </span>
-                                 </div>
-                              </div>
+                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 154, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px' }}>
+                                       {row.content_score > 0 ? (
+                                          <div style={{ cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                             <Gauge score={row.content_score} size="sm" />
+                                          </div>
+                                       ) : analyzingIds.has(row.id) ? (
+                                          <span style={{ fontSize: 12, fontWeight: 500, color: '#9F9FA9', fontFamily: 'var(--font-family-primary)' }}>Analyzing…</span>
+                                       ) : (
+                                          <Button type="button" variant="secondary" size="xs" className="analyze-btn" onClick={(e) => handleAnalyze(row, e)}>
+                                             Analyze
+                                          </Button>
+                                       )}
+                                    </div>
 
-                           </div>
-                        );
-                     })}
-                  </div>
+                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                          {row.position > 0 && <DeltaDown />}
+                                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                                             {row.position > 0 ? row.position.toFixed(1) : '—'}
+                                          </span>
+                                       </div>
+                                    </div>
+
+                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                          {row.clicks > 0 && <DeltaDown />}
+                                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                                             {row.clicks > 0 ? compactNum(row.clicks) : '0'}
+                                          </span>
+                                       </div>
+                                    </div>
+
+                                    <div style={{ borderLeft: '1px solid #F4F4F5', width: 108, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '12px 16px', cursor: 'pointer' }} onClick={() => setPanelRow(row)}>
+                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                          {row.impressions > 0 && <DeltaDown />}
+                                          <span style={{ fontSize: 13, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>
+                                             {row.impressions > 0 ? compactNum(row.impressions) : '—'}
+                                          </span>
+                                       </div>
+                                    </div>
+                                 </DataTableRow>
+                              );
+                           })}
+                           <TableLoadMore hasMore={optimizeChunk.hasMore} isLoading={optimizeChunk.isLoading} onLoadMore={optimizeChunk.loadMore} scrollRootRef={scrollRef} />
+                        </DataTableBody>
+                     )}
+                  </DataTableContent>
                )}
-
-            </div>
-            </SentryPanel>
+            </DataTableScroll>
+            </DataTable>
          </DomainSubLayout>
 
          <SlidePanel
@@ -851,8 +844,8 @@ const RecommendationsPage: NextPage = () => {
          )}
 
          <style dangerouslySetInnerHTML={{ __html: `
-            .rec-row:hover { background: #F8F8F9 !important; }
-            .rec-row:hover .row-actions { opacity: 1 !important; background: linear-gradient(90deg, rgba(248,248,249,0) 0%, #F8F8F9 28%) !important; }
+            .rec-row:hover { background: #fafafa !important; }
+            .rec-row:hover .row-actions { opacity: 1 !important; background: linear-gradient(90deg, rgba(250,250,250,0) 0%, #fafafa 28%) !important; }
             .rec-row:hover .kw-btn-text { text-decoration-color: #D4D4D8 !important; }
             .rec-row:hover .kw-btn-icon { opacity: 1 !important; }
             .rec-row:hover .analyze-btn { opacity: 1 !important; }

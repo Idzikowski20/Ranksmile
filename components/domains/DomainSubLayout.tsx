@@ -15,6 +15,8 @@ type DomainSubLayoutProps = {
   subtitle?: React.ReactNode;
   meta?: React.ReactNode;
   filters?: React.ReactNode;
+  /** No page scroll — table/content area scrolls internally. */
+  fillHeight?: boolean;
 };
 
 const DomainSubLayout = ({
@@ -25,8 +27,9 @@ const DomainSubLayout = ({
   subtitle,
   meta,
   filters,
+  fillHeight,
 }: DomainSubLayoutProps) => (
-  <SentryPage maxWidth={contentMaxWidth}>
+  <SentryPage maxWidth={contentMaxWidth} fillHeight={fillHeight}>
     {heading && (
       <SentryPageHeader
         title={heading}

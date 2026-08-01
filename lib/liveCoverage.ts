@@ -20,28 +20,55 @@ export function liveCoverageItems(
 ): readonly CoverageItem[] {
   return snapshotItems.map((it) => {
     if (!PRESENCE_CHECKABLE.has(it.type)) return it;
-    const covered = presenceCovered(it, plainText, html);
-    if (covered === it.covered && !(covered && it.quality === 0)) return it;
-    if (!covered) return { ...it, covered: false };
-    // Presence ≠ Coverage: live presence may only reach mentioned/partial (cap 1–2).
-    const signal = it.importance === 'critical' ? 'exact' : it.importance === 'recommended' ? 'partial' : 'weak';
-    const floor = livePresenceQualityCap(signal);
-    return { ...it, covered: true, quality: Math.max(it.quality, floor) };
+    const presence = presenceSignal(it, plainText, html);
+    if (!presence.covered) {
+      if (!it.covered) return it;
+      return { ...it, covered: false };
+    }
+    // Depth-aware floor: short FAQ mention stays partial (≤2); substantive answers can
+    // reach adequate/comprehensive so AI gauge is not stuck at ~50 after "all Covered".
+    const floor = presence.depthFloor ?? livePresenceQualityCap(
+      it.importance === 'critical' ? 'exact' : it.importance === 'recommended' ? 'partial' : 'weak',
+    );
+    const nextQuality = Math.max(it.quality, floor);
+    if (it.covered && it.quality === nextQuality) return it;
+    return { ...it, covered: true, quality: nextQuality };
   });
 }
 
 /** Deterministic presence check per type. Local re-implementations of the same rules the content
  *  scorer uses (contentScore.ts helpers are private + must stay untouched — Part 8). */
-function presenceCovered(it: CoverageItem, plainText: string, html: string): boolean {
+function presenceSignal(
+  it: CoverageItem,
+  plainText: string,
+  html: string,
+): { covered: boolean; depthFloor?: number } {
   switch (it.type) {
-    case 'entity':      return countOccurrences(plainText, it.label) >= 1;             // == contentScore.ts:336
-    case 'structure':   return hasStructure(html);                                     // headings/lists/question-format
-    case 'readability': return readableParagraphs(html);                               // paragraph-length metric
-    case 'paa':         return faqAnswered(it.label, html);                            // question answered in body/heading
-    case 'question':    return faqAnswered(it.label, html);                           // PAA rows typed as question
-    case 'intent':      return faqAnswered(it.label, html);
-    default:            return it.covered;
+    case 'entity':
+      return { covered: countOccurrences(plainText, it.label) >= 1 };
+    case 'structure':
+      return { covered: hasStructure(html) };
+    case 'readability':
+      return { covered: readableParagraphs(html) };
+    case 'paa':
+    case 'question':
+    case 'intent': {
+      const depth = faqAnswerDepth(it.label, html);
+      return depth.covered
+        ? { covered: true, depthFloor: answerDepthQualityFloor(depth.answerChars) }
+        : { covered: false };
+    }
+    default:
+      return { covered: it.covered };
   }
+}
+
+/** Map answer length → quality floor (Presence≠Coverage for short hits; depth unlocks 3–4). */
+export function answerDepthQualityFloor(answerChars: number): number {
+  if (answerChars >= 280) return 4;
+  if (answerChars >= 140) return 3;
+  if (answerChars >= 30) return 2;
+  return 1;
 }
 
 /** Structural signal: at least one heading (h2-h4) OR a substantial list (>=3 <li>). Local mirror
@@ -94,8 +121,14 @@ function readableParagraphs(html: string): boolean {
 
 /** FAQ-answered signal — Ranksmile/Semrush pattern: question as H2/H3 + direct short answer in <p>. */
 function faqAnswered(label: string, html: string): boolean {
+  return faqAnswerDepth(label, html).covered;
+}
+
+/** Best matching answer length for a question label (0 if uncovered). */
+function faqAnswerDepth(label: string, html: string): { covered: boolean; answerChars: number } {
   const normalizedLabel = normalizeCoverageQuestion(label);
   const pairs = extractHeadingAnswerPairs(html);
+  let best = 0;
 
   for (const { question, answer } of pairs) {
     const nq = normalizeCoverageQuestion(question);
@@ -104,8 +137,12 @@ function faqAnswered(label: string, html: string): boolean {
       || nq.includes(normalizedLabel)
       || normalizedLabel.includes(nq)
       || overlap >= 0.75;
-    if (exactish && answer.length >= 30) return true;
+    if (exactish && answer.length >= 30) {
+      best = Math.max(best, answer.length);
+    }
   }
+
+  if (best > 0) return { covered: true, answerChars: best };
 
   const bodyText = html.replace(/<[^>]+>/g, ' ').toLowerCase();
   const headings = [...html.matchAll(/<h[2-4][^>]*>([\s\S]*?)<\/h[2-4]>/gi)]
@@ -116,11 +153,15 @@ function faqAnswered(label: string, html: string): boolean {
 
   const words = label.toLowerCase().replace(/[?!.,]/g, '').split(/\s+/)
     .filter((w) => w.length > 2 && !STOP.has(w));
-  if (words.length === 0) return true;
+  if (words.length === 0) return { covered: true, answerChars: 40 };
 
   const bodyHit = words.filter((w) => bodyText.includes(w)).length / words.length >= 0.7;
   const headingHit = headings.some((h) => words.filter((w) => h.includes(w)).length / words.length >= 0.6);
-  return bodyHit || headingHit;
+  if (bodyHit || headingHit) {
+    // Body/heading token hit without structured Q→A — presence only (no depth unlock).
+    return { covered: true, answerChars: 40 };
+  }
+  return { covered: false, answerChars: 0 };
 }
 
 /** Positive per-bucket deltas only, sorted desc — "why it improved". Matched by bucket key. */

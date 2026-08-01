@@ -2,14 +2,13 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import { SentryPanel } from '../../../components/sentry-pages';
 import { useStaggerReveal } from '../../../lib/motion/useStaggerReveal';
-import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon } from '../../../components/core';
+import { Gauge, Button, Badge, Checkbox, Toggle, SearchBar, SortableHeader, Skeleton, SlidePanel, ToolRibbon, DataTable, DataTableScroll, DataTableContent, DataTableHeader, DataTableBody, DataTableRow, DataTableEmpty, TableLoadMore, useTableLoadMore } from '../../../components/core';
 import { useSortState } from '../../../lib/useSortState';
 import { useFetchDomains } from '../../../services/domains';
 import { useWorkspaces } from '../../../services/workspaces';
@@ -129,6 +128,7 @@ const ContentAuditPage: NextPage = () => {
    const [retryingIds, setRetryingIds] = useState<Set<string | number>>(new Set());
    // Stagger-reveal the article rows (`.audit-row`) as they scroll into view.
    const rowsRef = useStaggerReveal<HTMLDivElement>('.audit-row');
+   const scrollRef = useRef<HTMLDivElement>(null);
    const queryClient = useQueryClient();
 
    const { sortKey, sortDir, handleSort } = useSortState<SortKey>('content_score');
@@ -312,6 +312,11 @@ const ContentAuditPage: NextPage = () => {
       return out;
    }, [rows, search, sortKey, sortDir]);
 
+   const auditChunk = useTableLoadMore(filtered, {
+      pageSize: 20,
+      resetKey: `ca-${sortKey}-${sortDir}-${search}-${filtered.length}`,
+   });
+
    const portfolioInsight = useMemo(
       () => computePortfolioPruning(rows.map((r) => ({
          id: r.id,
@@ -375,7 +380,7 @@ const ContentAuditPage: NextPage = () => {
             <title>{`Content Audit — ${domain} — Ranksmile`}</title>
          </Head>
 
-         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%"
+         <DomainSubLayout domain={domain} slug={slug || ''} section="Content Audit" heading="Content Audit" actions={actions} contentMaxWidth="100%" fillHeight
             filters={(
                <ToolRibbon>
                   <span style={{ fontSize: 14, color: '#71717B', fontFamily: FONT }}>Data for {dataRangeLabel}.</span>
@@ -394,7 +399,7 @@ const ContentAuditPage: NextPage = () => {
                   marginBottom: 16,
                   padding: 16,
                   borderRadius: 8,
-                  border: '1px solid #dad9de',
+                  border: '1px solid #dbded4',
                   background: '#fff',
                   fontFamily: FONT,
                }}
@@ -444,28 +449,27 @@ const ContentAuditPage: NextPage = () => {
                   )}
                </div>
             )}
-            <SentryPanel noPadding>
-            <div ref={rowsRef} style={{ overflow: 'hidden' }}>
-               {/* Header */}
-               <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderBottom: '1px solid #F4F4F5' }}>
-                  {/* Checkbox */}
-                  <div style={{ padding: '10px 12px', borderRight: '1px solid #F4F4F5' }}>
+            <DataTable ref={rowsRef}>
+            <DataTableScroll ref={scrollRef}>
+               <DataTableContent minWidth={780} aria-label="Content audit">
+               <DataTableHeader>
+                  <div style={{ padding: '10px 12px', borderRight: '1px solid #E4E4E7' }}>
                      <Checkbox checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
                   </div>
-                  <div style={{ padding: '10px 12px', flexGrow: 1, minWidth: 256, display: 'flex', gap: 8 }}>
-                     <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>Page</span>
+                  <div style={{ padding: '10px 12px', flexGrow: 1, minWidth: 256, display: 'flex', gap: 8, alignItems: 'center' }}>
+                     <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)', textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Page</span>
                      <span style={{ color: '#D4D4D8', fontSize: 12 }}>/</span>
-                     <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>Main keyword</span>
+                     <span style={{ fontSize: 12, color: '#71717B', fontWeight: 500, fontFamily: 'var(--font-family-primary)', textDecoration: 'underline dotted', textDecorationColor: '#9F9FA9', textUnderlineOffset: 4 }}>Main keyword</span>
                   </div>
                   <SortableHeader label="Content Score" sortKey="content_score" activeKey={sortKey} dir={sortDir} width={150} onSort={(k) => handleSort(k as SortKey)} />
                   <SortableHeader label="Position" sortKey="position" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
                   <SortableHeader label="Traffic" sortKey="clicks" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
                   <SortableHeader label="Impr." sortKey="impressions" activeKey={sortKey} dir={sortDir} width={108} onSort={(k) => handleSort(k as SortKey)} />
-               </div>
+               </DataTableHeader>
 
-               {/* Pages added from the "Add pages" panel — analyzed in the background by the sidecar */}
+               <DataTableBody>
                {pending.map((p) => (
-                  <div key={`pending-${p.path}`} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4F4F5', minHeight: 64, background: '#FCFCFD' }}>
+                  <DataTableRow key={`pending-${p.path}`} style={{ minHeight: 64, background: '#FCFCFD' }}>
                      <div style={{ padding: '12px', borderRight: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44 }}>
                         {p.status === 'processing' ? <Spinner /> : <span style={{ width: 16, height: 16 }} />}
                      </div>
@@ -482,99 +486,101 @@ const ContentAuditPage: NextPage = () => {
                      <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>—</div>
                      <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT }}>{p.clicks > 0 ? p.clicks : '—'}</div>
                      <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT }}>{p.impressions > 0 ? p.impressions : '—'}</div>
-                  </div>
+                  </DataTableRow>
                ))}
                {isLoading ? (
                   <Skeleton />
                ) : filtered.length === 0 ? (
                   pending.length === 0 ? (
-                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '80px 24px 48px', textAlign: 'center' }}>
-                        <EmptyEyes />
-                        <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>You haven&apos;t added any pages yet</span>
-                        <p style={{ margin: 0, maxWidth: 408, color: '#3F3F47', fontSize: 14, lineHeight: '20px', fontFamily: FONT }}>Add existing pages you want to audit, get recommendations, and keep an eye out for. Modify anytime.</p>
-                        <Button variant="primary" onClick={() => setAddOpen(true)}>
-                           Add Page
-                        </Button>
-                     </div>
+                     <DataTableEmpty>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '32px 24px', textAlign: 'center' }}>
+                           <EmptyEyes />
+                           <span style={{ fontSize: 16, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>You haven&apos;t added any pages yet</span>
+                           <p style={{ margin: 0, maxWidth: 408, color: '#3F3F47', fontSize: 14, lineHeight: '20px', fontFamily: FONT }}>Add existing pages you want to audit, get recommendations, and keep an eye out for. Modify anytime.</p>
+                           <Button variant="primary" onClick={() => setAddOpen(true)}>
+                              Add Page
+                           </Button>
+                        </div>
+                     </DataTableEmpty>
                   ) : null
                ) : (
-                  filtered.map((row, i) => (
-                     <div
-                        key={row.id}
-                        style={{
-                           display: 'flex', alignItems: 'center',
-                           borderBottom: i < filtered.length - 1 ? '1px solid #F4F4F5' : 'none',
-                           minHeight: 64,
-                           background: selected.has(row.id) ? '#FAFAF5' : 'transparent',
-                           transition: 'background 0.1s',
-                        }}
-                        className="audit-row"
-                     >
-                        <div style={{ padding: '12px', borderRight: '1px solid #F4F4F5' }}>
-                           <Checkbox checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
-                        </div>
-                        <div style={{ padding: '12px', flexGrow: 1, minWidth: 256, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, overflow: 'hidden' }}>
-                           <div onClick={() => setPanelRow(row)} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                 <span style={{ fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {row.title}
-                                 </span>
-                                 <StatusBadge status={row.status} />
-                                 {row.url && droppedPaths.has(toPath(row.url)) && (
-                                    <span style={{ fontSize: 11, fontWeight: 600, color: '#B91C1C', background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 9999, padding: '1px 8px', whiteSpace: 'nowrap', fontFamily: FONT }}>Traffic drop</span>
+                  <>
+                     {auditChunk.visibleItems.map((row) => (
+                        <DataTableRow
+                           key={row.id}
+                           className="audit-row"
+                           selected={selected.has(row.id)}
+                           style={{ minHeight: 64 }}
+                        >
+                           <div style={{ padding: '12px', borderRight: '1px solid #F4F4F5' }}>
+                              <Checkbox checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} />
+                           </div>
+                           <div style={{ padding: '12px', flexGrow: 1, minWidth: 256, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, overflow: 'hidden' }}>
+                              <div onClick={() => setPanelRow(row)} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                       {row.title}
+                                    </span>
+                                    <StatusBadge status={row.status} />
+                                    {row.url && droppedPaths.has(toPath(row.url)) && (
+                                       <span style={{ fontSize: 11, fontWeight: 600, color: '#B91C1C', background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 9999, padding: '1px 8px', whiteSpace: 'nowrap', fontFamily: FONT }}>Traffic drop</span>
+                                    )}
+                                 </div>
+                                 {row.keyword ? (
+                                    <Button type="button" variant="link" size="xs" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={<PencilIcon />} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0, color: '#71717B' }}>
+                                       <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword}</span>
+                                    </Button>
+                                 ) : (
+                                    <Button type="button" variant="link" size="xs" title="Add keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ alignSelf: 'flex-start', padding: 0 }}>
+                                       + Add keyword
+                                    </Button>
+                                 )}
+                                 {showUrls && row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
+                              </div>
+                              <div>
+                                 {row.status === 'error' ? (
+                                    <Button
+                                       variant="danger"
+                                       size="sm"
+                                       onClick={(e) => { e.stopPropagation(); handleRetry(row); }}
+                                       disabled={retryingIds.has(row.id)}
+                                    >
+                                       {retryingIds.has(row.id) ? <><Spinner size={12} /> Retrying…</> : 'Retry'}
+                                    </Button>
+                                 ) : (
+                                    <Link href={`/articles/${row.id}`} legacyBehavior passHref>
+                                       <Button variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
+                                          Optimize
+                                       </Button>
+                                    </Link>
                                  )}
                               </div>
-                              {row.keyword ? (
-                                 <Button type="button" variant="link" size="xs" className="ca-kw-btn" title="Change main keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} icon={<PencilIcon />} style={{ alignSelf: 'flex-start', maxWidth: '100%', padding: 0, color: '#71717B' }}>
-                                    <span className="ca-kw-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keyword}</span>
-                                 </Button>
-                              ) : (
-                                 <Button type="button" variant="link" size="xs" title="Add keyword" onClick={(e) => { e.stopPropagation(); setKwModalRow(row); }} style={{ alignSelf: 'flex-start', padding: 0 }}>
-                                    + Add keyword
-                                 </Button>
-                              )}
-                              {showUrls && row.url && <span style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.url}</span>}
                            </div>
-                           <div>
-                              {row.status === 'error' ? (
-                                 <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={(e) => { e.stopPropagation(); handleRetry(row); }}
-                                    disabled={retryingIds.has(row.id)}
-                                 >
-                                    {retryingIds.has(row.id) ? <><Spinner size={12} /> Retrying…</> : 'Retry'}
-                                 </Button>
-                              ) : (
-                                 <Link href={`/articles/${row.id}`} legacyBehavior passHref>
-                                    <Button variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
-                                       Optimize
-                                    </Button>
-                                 </Link>
-                              )}
+                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', width: 150, display: 'flex', justifyContent: 'flex-end' }}>
+                              <Gauge score={row.content_score} size="sm" />
                            </div>
-                        </div>
-                        <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', width: 150, display: 'flex', justifyContent: 'flex-end' }}>
-                           <Gauge score={row.content_score} size="sm" />
-                        </div>
-                        <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
-                           {row.position > 0 ? row.position.toFixed(1) : '—'}
-                        </div>
-                        <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
-                           {row.clicks > 0 ? row.clicks : '—'}
-                        </div>
-                        <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
-                           {row.impressions > 0 ? row.impressions : '—'}
-                        </div>
-                     </div>
-                  ))
+                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+                              {row.position > 0 ? row.position.toFixed(1) : '—'}
+                           </div>
+                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+                              {row.clicks > 0 ? row.clicks : '—'}
+                           </div>
+                           <div style={{ padding: '12px', borderLeft: '1px solid #F4F4F5', minWidth: 108, textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#09090B', fontFamily: 'var(--font-family-primary)' }}>
+                              {row.impressions > 0 ? row.impressions : '—'}
+                           </div>
+                        </DataTableRow>
+                     ))}
+                     <TableLoadMore hasMore={auditChunk.hasMore} isLoading={auditChunk.isLoading} onLoadMore={auditChunk.loadMore} scrollRootRef={scrollRef} />
+                  </>
                )}
-            </div>
-            </SentryPanel>
+               </DataTableBody>
+               </DataTableContent>
+            </DataTableScroll>
+            </DataTable>
 
             <style dangerouslySetInnerHTML={{ __html: `
-               .audit-row:hover { background: #F8F8F9 !important; }
-               .addpage-row:hover { background: #F8F8F9 !important; }
+               .audit-row:hover { background: #fafafa !important; }
+               .addpage-row:hover { background: #f3f4f0 !important; }
                .audit-row:hover .ca-row-actions { opacity: 1 !important; }
                .ca-kw-btn:hover .ca-kw-text { text-decoration-color: #D4D4D8 !important; }
             ` }} />

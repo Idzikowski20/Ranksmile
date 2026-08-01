@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { keyframes } from '@emotion/react';
 import styled from '@emotion/styled';
-import type { SentryTheme } from '../theme';
 import type { ButtonProps, ButtonSize, ButtonVariant } from './types';
 
-const BTN_ELEVATION: Record<ButtonSize, string> = { md: '2px', sm: '2px', xs: '1px', zero: '0px' };
-const HOVER_ELEVATION = '1px';
+/** PostHog LemonButton chrome-depth (~0.1875rem). Reserved inside the button box. */
+const BTN_ELEVATION: Record<ButtonSize, string> = { md: '3px', sm: '3px', xs: '2px', zero: '0px' };
+const HOVER_LIFT = '-1px';
 
 const BTN_SIZES = {
   md: { height: '36px', minHeight: '36px', fontSize: '0.875rem', lineHeight: '1rem', padding: '8px 16px', borderRadius: '8px' },
@@ -17,10 +17,10 @@ const BTN_SIZES = {
 type ThemeColors = { surface: string; chonk: string; content: string };
 function getColors(variant: ButtonVariant): ThemeColors {
   switch (variant) {
-    case 'primary': return { surface: '#F29964', chonk: '#C97D52', content: '#FFFFFF' };
+    case 'primary': return { surface: '#F29964', chonk: '#c97e52', content: '#FFFFFF' };
     case 'danger': return { surface: '#FF002B', chonk: '#C10000', content: '#FFFFFF' };
     case 'warning': return { surface: '#FFCE00', chonk: '#D59600', content: '#000000' };
-    case 'secondary': return { surface: '#FFFFFF', chonk: '#DAD9DE', content: '#181225' };
+    case 'secondary': return { surface: '#FFFFFF', chonk: '#bebebe', content: '#181225' };
     case 'transparent': return { surface: 'transparent', chonk: 'transparent', content: '#6A6772' };
     case 'link': return { surface: 'transparent', chonk: 'transparent', content: '#E07D42' };
   }
@@ -33,14 +33,16 @@ const busyBar = keyframes`
   100% { transform: scaleX(0); transform-origin: right; }
 `;
 
+const pressEase = '120ms cubic-bezier(0.8, -0.4, 0.5, 1)';
+
 const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $iconOnly: boolean; $hover: boolean; $active: boolean; $busy: boolean }>(
   ({ $size, $variant, $iconOnly, $hover, $active, $busy }) => {
     const sz = BTN_SIZES[$size];
     const el = BTN_ELEVATION[$size];
     const c = getColors($variant);
     const isChonk = $variant !== 'transparent' && $variant !== 'link';
-    const surfaceShift = $active && !$busy ? '0' : `-${el}`;
-    const contentShift = $active && !$busy ? el : ($hover && !$busy ? HOVER_ELEVATION : '0');
+    const pressed = $active && !$busy;
+    const hovering = $hover && !$busy && !pressed;
 
     return {
       position: 'relative',
@@ -50,7 +52,6 @@ const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $ic
       whiteSpace: 'nowrap',
       fontWeight: 500,
       fontFamily: "Rubik, 'Avenir Next', 'InterVariable', 'Inter', Arial, sans-serif",
-      opacity: '$disabled' in {} ? undefined : undefined,
       cursor: $busy ? 'wait' : 'pointer',
       padding: $iconOnly ? '0' : sz.padding,
       borderRadius: sz.borderRadius,
@@ -64,28 +65,40 @@ const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $ic
       lineHeight: sz.lineHeight,
       outline: 'none',
       ...(isChonk ? {
+        /*
+          Outer frame — wraps face + chonk ledge (full inset:0).
+          Do NOT use inset:-1px with an empty ::before: the hole between
+          shortened ::after and the frame shows page bg (= white gap).
+        */
         '&::before': {
           content: '""',
-          display: 'block',
           position: 'absolute',
           inset: 0,
-          height: `calc(100% - ${el})`,
-          top: el,
-          transform: `translateY(-${el})`,
-          boxShadow: `0 ${el} 0 0px ${c.chonk}`,
-          background: c.chonk,
           borderRadius: 'inherit',
+          border: `1px solid ${c.chonk}`,
+          background: c.chonk,
+          pointerEvents: 'none',
+          zIndex: 0,
         },
+        /*
+          Face sits above the chonk fill. bottom:el reserves the ledge;
+          face bottom border sits directly on the chonk (no gap).
+        */
         '&::after': {
           content: '""',
-          display: 'block',
           position: 'absolute',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: pressed ? 0 : el,
           background: c.surface,
           borderRadius: 'inherit',
           border: `1px solid ${c.chonk}`,
-          transform: `translateY(${surfaceShift})`,
-          transition: 'transform 120ms cubic-bezier(0.8, -0.4, 0.5, 1)',
+          boxShadow: 'none',
+          transform: hovering ? `translateY(${HOVER_LIFT})` : 'none',
+          transition: `transform ${pressEase}, bottom ${pressEase}`,
+          pointerEvents: 'none',
+          zIndex: 0,
         },
       } : {
         background: $variant === 'transparent' && $hover ? '#0000200F' : 'transparent',
@@ -97,6 +110,9 @@ const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $ic
           border: '1px solid #F29964',
           boxShadow: '0 0 0 1px #F29964',
         },
+        '&::before': {
+          border: '1px solid #F29964',
+        },
       } : {
         outline: '2px solid #F29964',
         outlineOffset: 2,
@@ -105,11 +121,6 @@ const ChonkBtn = styled.button<{ $size: ButtonSize; $variant: ButtonVariant; $ic
         cursor: 'not-allowed',
         opacity: 0.6,
       },
-      ...(isChonk ? {
-        '&:hover::before': {
-          // elevation layer stays
-        },
-      } : {}),
     };
   }
 );
@@ -121,12 +132,12 @@ const ContentSpan = styled.span<{ $shift: string }>(({ $shift }) => ({
   alignItems: 'center',
   gap: 6,
   transform: `translateY(${$shift})`,
-  transition: 'transform 120ms cubic-bezier(0.8, -0.4, 0.5, 1)',
+  transition: `transform ${pressEase}`,
 }));
 
 const BusyBar = styled.span`
   position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
-  background: currentColor; opacity: 0.3; zIndex: 3;
+  background: currentColor; opacity: 0.3; z-index: 3;
   animation: ${busyBar} 1.8s ease-in-out infinite;
 `;
 
@@ -140,7 +151,10 @@ export function Button({
   const isIconOnly = !children && !!icon;
   const el = BTN_ELEVATION[size];
   const isChonk = variant !== 'transparent' && variant !== 'link';
-  const contentShift = active && !busy ? el : (hover && !busy ? HOVER_ELEVATION : '0');
+  const pressed = active && !busy;
+  const hovering = hover && !busy && !pressed;
+  /* Deep press: content drops by full elevation. Hover: subtle lift like PostHog. */
+  const contentShift = !isChonk ? '0' : (pressed ? el : (hovering ? HOVER_LIFT : '0'));
 
   return (
     <ChonkBtn
@@ -158,7 +172,7 @@ export function Button({
       onMouseLeave={(e) => { setHover(false); setActive(false); onMouseLeave?.(e); }}
       {...rest}
     >
-      <ContentSpan $shift={isChonk ? contentShift : '0'}>
+      <ContentSpan $shift={contentShift}>
         {icon}
         {children}
       </ContentSpan>

@@ -1,62 +1,9 @@
-import { diffWordsWithSpace, diffChars } from 'diff';
+import { diffBlocks, wordDiffSegments, type DiffSeg } from './wordDiff';
 
-export type DiffSeg = { type: 'equal' | 'added' | 'removed'; text: string };
+export type { DiffSeg };
+export { wordDiffSegments };
 
-// Adjacent removed+added word pairs are char-sub-diffed only when their common
-// prefix covers at least this fraction of the shorter word — keeps unrelated
-// substitutions as whole tokens while expanding near-identical inflections.
-const CHAR_SUB_DIFF_MIN_PREFIX_RATIO = 0.8;
-
-/** Longest common prefix length of two strings. */
-function commonPrefixLen(a: string, b: string): number {
-   let i = 0;
-   const len = Math.min(a.length, b.length);
-   while (i < len && a[i] === b[i]) i++;
-   return i;
-}
-
-/** Word-level diff of two PLAIN-TEXT strings → ordered segments (display only).
- *  Uses word-boundary diff as the primary strategy. Adjacent removed+added word
- *  pairs that share a long common prefix (≥ 80 % of the shorter word, ≥ 3 chars)
- *  are expanded with a character-level sub-diff so partial matches like "aplikacj"
- *  surface as equal segments. Pairs with a short overlap are kept as whole tokens.
- *  This is display-only — never used as a source of truth for accept/reject.
- */
-export function wordDiffSegments(oldText: string, newText: string): DiffSeg[] {
-   const raw = diffWordsWithSpace(oldText, newText).map((p) => ({
-      type: (p.added ? 'added' : p.removed ? 'removed' : 'equal') as DiffSeg['type'],
-      text: p.value,
-   }));
-
-   const result: DiffSeg[] = [];
-   let i = 0;
-   while (i < raw.length) {
-      const cur = raw[i];
-      if (cur.type === 'removed' && i + 1 < raw.length && raw[i + 1].type === 'added') {
-         const next = raw[i + 1];
-         const shorter = Math.min(cur.text.length, next.text.length);
-         const prefix = commonPrefixLen(cur.text, next.text);
-         // Sub-diff only when prefix is substantial (≥ 80 % of shorter, ≥ 3 chars)
-         if (shorter > 0 && prefix >= 3 && prefix / shorter >= CHAR_SUB_DIFF_MIN_PREFIX_RATIO) {
-            diffChars(cur.text, next.text).forEach((p) => {
-               result.push({
-                  type: (p.added ? 'added' : p.removed ? 'removed' : 'equal') as DiffSeg['type'],
-                  text: p.value,
-               });
-            });
-         } else {
-            result.push(cur, next);
-         }
-         i += 2;
-      } else {
-         result.push(cur);
-         i += 1;
-      }
-   }
-   return result;
-}
-
-/** Render diff segments as inline HTML: removed = gray strikethrough, added = green bg + underline. */
+/** AO review styling: removed = gray strikethrough, added = green underline. */
 export function renderDiffHtml(segs: DiffSeg[]): string {
    return segs.map((s) => {
       const t = escapeHtml(s.text);
@@ -65,6 +12,34 @@ export function renderDiffHtml(segs: DiffSeg[]): string {
          return `<span data-diff-type="removed" style="color:#9f9fa9;text-decoration:line-through;opacity:0.85">${t}</span>`;
       }
       return `<span data-diff-type="added" style="color:#18181b;background:rgba(26,178,94,0.14);border-radius:2px;text-decoration:underline;text-decoration-color:#1AB25E;text-underline-offset:2px;text-decoration-thickness:2px">${t}</span>`;
+   }).join('');
+}
+
+/**
+ * Block-aware AO review diff: keeps H2/H3/P/li structure like the editor,
+ * with word-level add/remove marks inside each block (not one flattened wall).
+ */
+export function renderStructuredDiffHtml(oldHtml: string, newHtml: string): string {
+   const blocks = diffBlocks(oldHtml || '', newHtml || '');
+   if (blocks.length === 0) {
+      const strip = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      return renderDiffHtml(wordDiffSegments(strip(oldHtml || ''), strip(newHtml || '')));
+   }
+
+   return blocks.map((b) => {
+      const oldText = (b.left || []).map((s) => s.text).join('');
+      const newText = (b.right || []).map((s) => s.text).join('');
+      let segs: DiffSeg[];
+      if (b.status === 'equal') {
+         segs = [{ type: 'equal', text: newText || oldText }];
+      } else if (b.status === 'added') {
+         segs = [{ type: 'added', text: newText }];
+      } else if (b.status === 'removed') {
+         segs = [{ type: 'removed', text: oldText }];
+      } else {
+         segs = wordDiffSegments(oldText, newText);
+      }
+      return `<${b.tag}>${renderDiffHtml(segs)}</${b.tag}>`;
    }).join('');
 }
 

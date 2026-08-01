@@ -2,15 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { reconcileStripeBilling } from '../../../lib/stripeBillingReconcile';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
 export const config = { maxDuration: 60 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
     const result = await reconcileStripeBilling();
     return res.status(200).json({ ok: true, ...result });
@@ -19,4 +15,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withOrgPaymentAccess(handler);
+export default withOrgPaymentAccess(withCronWatchdog('stripe-billing-reconcile', handler));

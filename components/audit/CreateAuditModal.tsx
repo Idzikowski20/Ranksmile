@@ -140,7 +140,7 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
                               <button
                                  key={c.code} type="button" onClick={() => { setCountry(c.code); setCtryOpen(false); }}
                                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', border: 'none', borderRadius: 8, padding: '8px 10px', background: c.code === country ? '#F4F4F5' : 'transparent', color: '#18181B', fontSize: 14, fontFamily: FONT, cursor: 'pointer', textAlign: 'left' }}
-                                 onMouseEnter={(e) => { if (c.code !== country) e.currentTarget.style.background = '#F8F8F9'; }}
+                                 onMouseEnter={(e) => { if (c.code !== country) e.currentTarget.style.background = '#f3f4f0'; }}
                                  onMouseLeave={(e) => { if (c.code !== country) e.currentTarget.style.background = 'transparent'; }}
                               >
                                  <CountryFlag code={c.code} /><span>{c.name}</span>

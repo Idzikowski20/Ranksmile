@@ -71,10 +71,10 @@ const WritingModePage: NextPage = () => {
       onClick={onClick}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 24, padding: 24, borderRadius: 16, textAlign: 'left',
-        border: `1px solid ${active ? '#E4E4E7' : 'transparent'}`, background: active ? '#F8F8F9' : 'transparent',
+        border: `1px solid ${active ? '#E4E4E7' : 'transparent'}`, background: active ? '#f3f4f0' : 'transparent',
         cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s', fontFamily: 'var(--font-family-primary)', width: '100%',
       }}
-      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#F8F8F9'; }}
+      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#f3f4f0'; }}
       onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
     >
       {children}

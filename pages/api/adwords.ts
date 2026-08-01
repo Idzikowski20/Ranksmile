@@ -1,10 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { readFile, writeFile } from 'fs/promises';
 import Cryptr from 'cryptr';
 import getConfig from 'next/config';
 import db from '../../database/database';
 import verifyUser from '../../utils/verifyUser';
+import { getCurrentUserId } from '../../utils/getUser';
 import { getAdwordsCredentials, getAdwordsKeywordIdeas } from '../../utils/adwords';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
 
@@ -13,9 +15,18 @@ type adwordsValidateResp = {
    error?: string|null,
 }
 
+function parseState(state: string): { userId?: string; nonce?: string } {
+   try {
+      const parsed = JSON.parse(state) as { userId?: string; nonce?: string };
+      return parsed;
+   } catch {
+      return {};
+   }
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
-   // OAuth callback from Google — secured server-side, no session cookie needed.
+   // OAuth callback — CSRF via state cookie + session
    if (req.method === 'GET' && req.query.code) {
       return getAdwordsRefreshToken(req, res);
    }
@@ -23,7 +34,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
    }
-   // Return the OAuth authorization URL so the frontend can open it without knowing the client_id.
    if (req.method === 'GET' && req.query.get_url) {
       return getAdwordsAuthUrl(req, res);
    }
@@ -36,63 +46,86 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    return res.status(502).json({ error: 'Unrecognized Route.' });
 }
 
-/** Build and return the Google OAuth2 authorization URL from env credentials. */
 const getAdwordsAuthUrl = async (req: NextApiRequest, res: NextApiResponse) => {
+   const userId = await getCurrentUserId(req, res);
+   if (!userId) {
+      return res.status(401).json({ error: 'Not authorized' });
+   }
    const client_id = process.env.ADWORDS_CLIENT_ID || '';
    if (!client_id) {
       return res.status(400).json({ error: 'ADWORDS_CLIENT_ID is not set in .env' });
    }
    const redirectURL = buildRedirectUrl(req);
+   const nonce = crypto.randomBytes(16).toString('hex');
+   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+   res.setHeader(
+      'Set-Cookie',
+      `adwords_oauth_state=${nonce}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600${secure}`,
+   );
+   const state = JSON.stringify({ userId, nonce });
    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount`
       + `?access_type=offline`
       + `&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fadwords`
       + `&response_type=code`
       + `&client_id=${encodeURIComponent(client_id)}`
       + `&redirect_uri=${encodeURIComponent(redirectURL)}`
+      + `&state=${encodeURIComponent(state)}`
       + `&service=lso&o2v=2&theme=glif&flowName=GeneralOAuthFlow`;
    return res.status(200).json({ url: authUrl });
 };
 
-/** Exchange the Google OAuth code for a refresh token and save it to settings.json. */
 const getAdwordsRefreshToken = async (req: NextApiRequest, res: NextApiResponse<string>) => {
    try {
-      const code = req.query.code as string;
+      const code = typeof req.query.code === 'string' ? req.query.code : '';
+      const stateRaw = typeof req.query.state === 'string' ? req.query.state : '';
       const redirectURL = buildRedirectUrl(req);
 
-      if (code) {
-         try {
-            const client_id = process.env.ADWORDS_CLIENT_ID || '';
-            const client_secret = process.env.ADWORDS_CLIENT_SECRET || '';
-            if (!client_id || !client_secret) {
-               return res.status(400).send('ADWORDS_CLIENT_ID and ADWORDS_CLIENT_SECRET must be set in .env');
-            }
-            const oAuth2Client = new OAuth2Client(client_id, client_secret, redirectURL);
-            const r = await oAuth2Client.getToken(code);
-            if (r?.tokens?.refresh_token) {
-               const cryptr = new Cryptr(process.env.SECRET as string);
-               const adwords_refresh_token = cryptr.encrypt(r.tokens.refresh_token);
-               // Save only the refresh token to settings.json (all other creds live in .env)
-               const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' }).catch(() => '{}');
-               const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
-               await writeFile(
-                  `${process.cwd()}/data/settings.json`,
-                  JSON.stringify({ ...settings, adwords_refresh_token }),
-                  { encoding: 'utf-8' },
-               );
-               return res.status(200).send('Google Ads Integrated Successfully! You can close this window.');
-            }
-            return res.status(400).send('Error Getting the Google Ads Refresh Token. Please Try Again!');
-         } catch (error) {
-            const e = error as { response?: { data?: { error?: string } } };
-            let errorMsg = e?.response?.data?.error || '';
-            if (typeof errorMsg === 'string' && errorMsg.includes('redirect_uri_mismatch')) {
-               errorMsg += ` Redirected URL: ${redirectURL}`;
-            }
-            console.log('[Error] Getting Google Ads Refresh Token! Reason: ', errorMsg);
-            return res.status(400).send(`Error Saving the Google Ads Refresh Token${errorMsg ? `. Details: ${errorMsg}` : ''}. Please Try Again!`);
-         }
-      } else {
+      res.setHeader('Set-Cookie', 'adwords_oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+
+      const { nonce: stateNonce, userId: stateUserId } = parseState(stateRaw);
+      if (!stateNonce || req.cookies.adwords_oauth_state !== stateNonce) {
+         console.error('[AdWords OAuth] state nonce mismatch (possible CSRF)');
+         return res.status(400).send('Invalid OAuth state. Please try connecting again.');
+      }
+
+      const sessionUserId = await getCurrentUserId(req, res);
+      if (!sessionUserId || !stateUserId || sessionUserId !== stateUserId) {
+         return res.status(401).send('Not authenticated. Please sign in and try again.');
+      }
+
+      if (!code) {
          return res.status(400).send('No Code Provided By Google. Please Try Again!');
+      }
+
+      try {
+         const client_id = process.env.ADWORDS_CLIENT_ID || '';
+         const client_secret = process.env.ADWORDS_CLIENT_SECRET || '';
+         if (!client_id || !client_secret) {
+            return res.status(400).send('ADWORDS_CLIENT_ID and ADWORDS_CLIENT_SECRET must be set in .env');
+         }
+         const oAuth2Client = new OAuth2Client(client_id, client_secret, redirectURL);
+         const r = await oAuth2Client.getToken(code);
+         if (r?.tokens?.refresh_token) {
+            const cryptr = new Cryptr(process.env.SECRET as string);
+            const adwords_refresh_token = cryptr.encrypt(r.tokens.refresh_token);
+            const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' }).catch(() => '{}');
+            const settings: SettingsType = settingsRaw ? JSON.parse(settingsRaw) : {};
+            await writeFile(
+               `${process.cwd()}/data/settings.json`,
+               JSON.stringify({ ...settings, adwords_refresh_token }),
+               { encoding: 'utf-8' },
+            );
+            return res.status(200).send('Google Ads Integrated Successfully! You can close this window.');
+         }
+         return res.status(400).send('Error Getting the Google Ads Refresh Token. Please Try Again!');
+      } catch (error) {
+         const e = error as { response?: { data?: { error?: string } } };
+         let errorMsg = e?.response?.data?.error || '';
+         if (typeof errorMsg === 'string' && errorMsg.includes('redirect_uri_mismatch')) {
+            errorMsg += ` Redirected URL: ${redirectURL}`;
+         }
+         console.log('[Error] Getting Google Ads Refresh Token! Reason: ', errorMsg);
+         return res.status(400).send(`Error Saving the Google Ads Refresh Token${errorMsg ? `. Details: ${errorMsg}` : ''}. Please Try Again!`);
       }
    } catch (error) {
       console.log('[ERROR] Getting Google Ads Refresh Token: ', error);
@@ -100,7 +133,6 @@ const getAdwordsRefreshToken = async (req: NextApiRequest, res: NextApiResponse<
    }
 };
 
-/** Test that all env credentials + stored refresh token are working. */
 const validateAdwordsIntegration = async (req: NextApiRequest, res: NextApiResponse<adwordsValidateResp>) => {
    const errMsg = 'Error Validating Google Ads Integration. Make sure all ADWORDS_* variables are set in .env and OAuth is connected.';
    try {
@@ -123,7 +155,6 @@ const validateAdwordsIntegration = async (req: NextApiRequest, res: NextApiRespo
    }
 };
 
-/** Remove the stored Google Ads refresh token (disconnect). */
 const disconnectGoogleAds = async (_req: NextApiRequest, res: NextApiResponse) => {
    try {
       const settingsRaw = await readFile(`${process.cwd()}/data/settings.json`, { encoding: 'utf-8' }).catch(() => '{}');
@@ -141,7 +172,6 @@ const disconnectGoogleAds = async (_req: NextApiRequest, res: NextApiResponse) =
    }
 };
 
-/** Build the OAuth redirect URL using NEXT_PUBLIC_APP_URL / X-Forwarded headers / host. */
 const buildRedirectUrl = (req: NextApiRequest): string => {
    const { serverRuntimeConfig } = getConfig() || {};
    const appURL: string = serverRuntimeConfig?.appURL || '';

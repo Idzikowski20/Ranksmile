@@ -409,7 +409,7 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
         value={search}
         onChange={(v) => { setSearch(v); setPage(1); }}
         placeholder="Search"
-        width={220}
+        width="100%"
       />
       <Button variant="secondary" size="sm" disabled>
         Advanced filters

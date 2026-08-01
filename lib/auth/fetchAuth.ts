@@ -1,5 +1,5 @@
 /**
- * Neon / Better Auth REST calls — no @neondatabase/auth client (avoids Zod bundle crash on Next 12).
+ * Neon / Better Auth REST calls (fetch-based; no auth SDK client).
  * Proxied via pages/api/auth/[...auth0].ts → NEON_AUTH_BASE_URL.
  */
 

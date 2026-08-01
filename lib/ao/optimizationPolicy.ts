@@ -121,6 +121,9 @@ export function chooseStrategyFromDiagnosis(opts: {
     return 'enrichment';
   }
 
+  // Weak scores stay on deep_optimize (section dual-gate + SEO fallback).
+  // Auto whole_article_fallback produced thin one-shot rewrites (SEO~58/AI~28)
+  // vs section path that previously reached SEO~90 — keep whole_article explicit/flag only.
   return 'deep_optimize';
 }
 
@@ -166,6 +169,19 @@ export function resolveOptimizationPolicy(opts: {
   const seoStrong = Math.round(opts.scores.seo) >= 85;
   const aiWeak = Math.round(opts.scores.ai) < TARGET_AI;
   const workUnits = opts.sectionCount + highValueGaps + (structural === 'weak' ? 3 : 0);
+
+  if (strategy === 'whole_article_fallback') {
+    return {
+      strategy,
+      gate: DEEP_SCORE_GATE_POLICY,
+      maxSteps: 2,
+      editBudget: DEEP_EDIT_BUDGET,
+      allowNewHeading: true,
+      faq: { enabled: true, maxQuestions: 5 },
+      seoStrong,
+      aiWeak,
+    };
+  }
 
   if (strategy === 'deep_optimize') {
     const maxSteps = clamp(12 + Math.floor(workUnits / 3), 12, 20);

@@ -36,6 +36,8 @@ Internet → app
 
 Cron calls app over private URL (`NEXTJS_URL` / `http://app.railway.internal:$PORT`).
 
+**SSOT:** Railway `cron.js` owns the full schedule (daily 08:00, rank-tracking 09:00, retention monthly, plan-reservations */5, stripe-billing-reconcile hourly, starter-nudge 03:00, plus legacy scrape/notify). `vercel.json` crons are empty. Auth: `CRON_SECRET` / `CRON_SECRET_CURRENT` (+ optional `CRON_SECRET_PREVIOUS`).
+
 | App state | Cron behavior |
 |-----------|----------------|
 | Transient 5xx / network error | **Retry** with exponential backoff (e.g. 1s → 2s → 4s, max 3 attempts per tick), then **log + skip** that tick |

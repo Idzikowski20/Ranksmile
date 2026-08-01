@@ -51,7 +51,7 @@ export function ExpandedPanel({
       gap: 14,
       padding: '16px 20px 20px 48px',
       background: '#F7F9FC',
-      borderBottom: '1px solid #DAD9DE',
+      borderBottom: '1px solid #dbded4',
     }}
     >
       <div style={{

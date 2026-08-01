@@ -179,7 +179,7 @@ const SharePreviewPage: NextPage = () => {
             </button>
           </div>
           <div style={{ fontSize: 14, color: '#3f3f47', lineHeight: '20px', paddingBottom: 10 }}>Anyone with this link can <span style={{ fontWeight: 600, color: '#18181B' }}>view</span> and <span style={{ fontWeight: 600, color: '#18181B' }}>comment,</span> for an unlimited time</div>
-          <div style={{ background: '#f8f8f9', padding: '9px 14px', borderRadius: 8 }}>
+          <div style={{ background: '#f3f4f0', padding: '9px 14px', borderRadius: 8 }}>
             <span style={{ display: 'block', fontSize: 14, color: '#52525c', textDecoration: 'underline', textUnderlineOffset: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shareLink.replace(/^https?:\/\//, '')}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 14 }}>

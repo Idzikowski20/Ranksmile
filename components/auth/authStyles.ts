@@ -123,7 +123,7 @@ export const authLabelStyle: CSSProperties = {
   color: '#181225',
 };
 
-/** Sentry input: white surface + bottom chonk edge, radius 8px. */
+/** Sentry input: white surface, radius 8px. */
 export const authInputStyle: CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
@@ -136,16 +136,16 @@ export const authInputStyle: CSSProperties = {
   fontWeight: 400,
   color: '#302E36',
   background: '#FFFFFF',
-  border: '1px solid #DAD9DE',
+  border: '1px solid #dbded4',
   borderRadius: 8,
-  boxShadow: '0px 2px 0px 0px #DAD9DE',
+  boxShadow: 'none',
   outline: 'none',
   transition: 'border-color 120ms cubic-bezier(0.72, 0, 0.16, 1), box-shadow 120ms cubic-bezier(0.72, 0, 0.16, 1)',
 };
 
 export const authInputFocusStyle: CSSProperties = {
   borderColor: '#F29964',
-  boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #F29964, 0px 2px 0px 0px #DAD9DE',
+  boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #F29964',
 };
 
 export const authFieldWrapStyle: CSSProperties = {
@@ -184,7 +184,7 @@ export const authDividerWrapStyle: CSSProperties = {
 export const authDividerLineStyle: CSSProperties = {
   flex: 1,
   height: 1,
-  background: '#DAD9DE',
+  background: '#dbded4',
 };
 
 export const authDividerTextStyle: CSSProperties = {

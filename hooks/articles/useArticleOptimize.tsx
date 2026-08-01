@@ -503,7 +503,9 @@ export function useArticleOptimize({
             const meta = payload as {
               changedCount: number; total: number; promptVersion: string; creditDeducted: boolean;
               seo?: number; ai?: number; content?: number; rounds?: number; phase?: string;
-              outcome?: 'improved' | 'already_optimal' | 'no_usable_edit' | 'no_change';
+              outcome?: string;
+              userMessage?: string;
+              metrics?: { bodyAccepted?: number; faqAccepted?: boolean };
             };
             optimizeMetaRef.current = {
               changedCount: meta.changedCount,
@@ -521,7 +523,14 @@ export function useArticleOptimize({
               setEditorHtml(reviewHtml);
               setOptimizeDocTick((t) => t + 1);
               setOptimizeState('reviewing');
-              setAutoOptimizeStatus(`Review ${meta.changedCount} section${meta.changedCount === 1 ? '' : 's'}…`);
+              const statusMsg = meta.userMessage
+                || (meta.outcome === 'faq_only'
+                  ? 'Incomplete — FAQ only; review carefully before Save'
+                  : `Review ${meta.changedCount} section${meta.changedCount === 1 ? '' : 's'}…`);
+              setAutoOptimizeStatus(statusMsg);
+              if (meta.outcome === 'faq_only' || meta.outcome === 'partial_body' || meta.outcome === 'incomplete_no_body') {
+                toast(meta.userMessage || 'Partial optimization — SEO gaps may remain.', { icon: '⚠️', duration: 7000 });
+              }
             } else if (meta.outcome === 'already_optimal') {
               setAutoOptimizeStatus('Already well-optimized — no changes needed.');
               toast('Your article is well-optimized — we didn’t find anything to improve. No credit deducted.', { icon: '✨', duration: 6000 });
@@ -531,8 +540,8 @@ export function useArticleOptimize({
               toast.error('Auto-Optimize got an incomplete rewrite and kept your article unchanged. Try again.', { duration: 6000 });
               resetIdle();
             } else {
-              setAutoOptimizeStatus('No changes produced.');
-              toast('Auto-Optimize didn’t change the article this time. No credit deducted.', { duration: 6000 });
+              setAutoOptimizeStatus(meta.userMessage || 'No changes produced.');
+              toast(meta.userMessage || 'Auto-Optimize didn’t change the article this time. No credit deducted.', { duration: 6000 });
               resetIdle();
             }
             return;

@@ -130,7 +130,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
          <div
             style={{
                minHeight: 40,
-               border: '1px solid #DAD9DE',
+               border: '1px solid #dbded4',
                borderRadius: 8,
                padding: '4px 12px',
                display: 'flex',
@@ -138,7 +138,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                alignItems: 'center',
                gap: 4,
                background: '#fff',
-               boxShadow: '0px 2px 0px 0px #DAD9DE',
+               boxShadow: 'none',
                cursor: 'text',
             }}
             onClick={() => inputRef.current?.focus()}

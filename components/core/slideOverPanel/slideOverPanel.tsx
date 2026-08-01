@@ -37,7 +37,7 @@ const Title = styled.h2`
 
 const CloseBtn = styled.button`
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 6px; border-radius: 5px; border: 1px solid #DAD9DE;
+  padding: 6px; border-radius: 5px; border: 1px solid #dbded4;
   background: #FFFFFF; color: #6A6772; cursor: pointer;
 `;
 

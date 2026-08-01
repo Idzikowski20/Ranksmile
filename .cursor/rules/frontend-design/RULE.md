@@ -23,7 +23,7 @@ alwaysApply: false
 - Font: `var(--font-family-primary)` / Rubik w shell — nigdy hardcode Inter jako brand
 - Ikony: wyłącznie inline SVG
 - **Accent:** `#F29964` (Ranksmile/Sentry) — **nie** Ranksmile purple `#783AFB` w nowym UI
-- Karty Sentry: border `#DAD9DE`, radius `8px`
+- Karty Sentry: border `#dbded4`, radius `8px`
 - Anti-slop: DESIGN.md §12 przed shipem
 
 Szczegóły → `@DESIGN.md`

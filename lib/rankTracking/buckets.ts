@@ -25,7 +25,7 @@ function wasInTopN(previousPosition: number | null, max: number): boolean {
   return previousPosition != null && previousPosition <= max;
 }
 
-/** Mutually exclusive bands (3, 4–10, 11–20, rest) — used by rank-tracking analytics. */
+/** Mutually exclusive bands (3, 4–10, 11–20, rest) — used by visibility percents. */
 export function summarizeExclusiveBuckets(devs: RankTrackingDeviceResult[]): {
   top3: number;
   top10: number;
@@ -45,6 +45,28 @@ export function summarizeExclusiveBuckets(devs: RankTrackingDeviceResult[]): {
     else notRanking += 1;
   }
   return { top3, top10, top20, notRanking };
+}
+
+/** Mutually exclusive bands for UI: Top 3 / Top 10 (4–10) / Top 100 (11–100) / Not ranking. */
+export function summarizeUiBuckets(devs: RankTrackingDeviceResult[]): {
+  top3: number;
+  top10: number;
+  top100: number;
+  notRanking: number;
+} {
+  let top3 = 0;
+  let top10 = 0;
+  let top100 = 0;
+  let notRanking = 0;
+  for (const d of devs) {
+    const p = d.position;
+    if (!d.found || p == null) notRanking += 1;
+    else if (p <= 3) top3 += 1;
+    else if (p <= 10) top10 += 1;
+    else if (p <= 100) top100 += 1;
+    else notRanking += 1;
+  }
+  return { top3, top10, top100, notRanking };
 }
 
 export function exclusiveVisibilityPercents(

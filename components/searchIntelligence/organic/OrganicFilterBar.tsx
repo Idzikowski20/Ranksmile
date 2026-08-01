@@ -91,7 +91,7 @@ function RangeApply({
   return (
     <div style={{ padding: '8px 12px 12px', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: '#181225', fontFamily: FONT }}>Custom range</div>
-      <div style={{ display: 'flex', border: '1px solid #DAD9DE', borderRadius: 6, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', border: '1px solid #dbded4', borderRadius: 6, overflow: 'hidden' }}>
         <Input
           size="sm"
           placeholder="From"
@@ -99,7 +99,7 @@ function RangeApply({
           onChange={(e) => setF(e.target.value)}
           style={{ border: 'none', borderRadius: 0, flex: 1, boxShadow: 'none' }}
         />
-        <div style={{ width: 1, background: '#DAD9DE', flexShrink: 0 }} />
+        <div style={{ width: 1, background: '#dbded4', flexShrink: 0 }} />
         <Input
           size="sm"
           placeholder="To"

@@ -6,15 +6,11 @@ import { ensureSnapshotPartitionsAhead } from '../../../lib/rankTracking/partiti
 import { reclaimStaleRuns } from '../../../lib/rankTracking/repository';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
 export const config = { maxDuration: 60 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   if (!isRankTrackingRunnerEnabled()) {
     return res.status(200).json({ ok: true, skipped: true });
   }
@@ -30,4 +26,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withOrgPaymentAccess(handler);
+export default withOrgPaymentAccess(withCronWatchdog('rank-tracking', handler));

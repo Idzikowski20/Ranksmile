@@ -116,9 +116,9 @@ export default function OrganicPositionChart({
   return (
     <div style={{
       background: '#fff',
-      border: '1px solid #DAD9DE',
+      border: '1px solid #dbded4',
       borderRadius: connectedAbove ? '0 0 8px 8px' : 8,
-      borderTop: connectedAbove ? 'none' : '1px solid #DAD9DE',
+      borderTop: connectedAbove ? 'none' : '1px solid #dbded4',
       padding: '20px',
     }}
     >

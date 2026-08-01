@@ -39,7 +39,7 @@ const Trigger = styled.button<{ $sz: 'sm' | 'md'; $open: boolean }>(({ $sz, $ope
     lineHeight: '1rem',
     borderRadius: cfg.r,
     // Open: single accent border + soft glow (NOT border+hard ring — that reads as double border).
-    border: $open ? '1px solid #F29964' : '1px solid #DAD9DE',
+    border: $open ? '1px solid #F29964' : '1px solid #dbded4',
     backgroundColor: '#FFFFFF',
     color: '#302E36',
     boxShadow: $open ? '0 0 0 3px rgba(242, 153, 100, 0.18)' : 'none',
@@ -76,7 +76,7 @@ const SearchWrap = styled.div`
 
 const SearchInp = styled.input`
   width: 100%; height: 30px; padding: 0 8px;
-  border: 1px solid #DAD9DE; border-radius: 5px;
+  border: 1px solid #dbded4; border-radius: 5px;
   font-size: 14px; font-family: inherit; color: #302E36; background: #FFFFFF;
   outline: none;
   &::placeholder { color: #6A6772; }
@@ -93,7 +93,7 @@ const Opt = styled.button<{ $sel: boolean }>(({ $sel }) => ({
   background: $sel ? '#F0F0F2' : 'transparent',
   padding: '8px 12px', fontSize: 14, fontFamily: 'inherit', color: '#302E36',
   cursor: 'pointer', textAlign: 'left' as const,
-  '&:hover': { background: $sel ? '#F0F0F2' : '#F8F8F9' },
+  '&:hover': { background: $sel ? '#F0F0F2' : '#f3f4f0' },
 }));
 
 const Emp = styled.div`

@@ -56,7 +56,7 @@ const LearnSection = () => (
               flexDirection: 'column',
               overflow: 'hidden',
               borderRadius: 8,
-              border: '1px solid #DAD9DE',
+              border: '1px solid #dbded4',
               textDecoration: 'none',
               color: 'inherit',
               background: '#fff',

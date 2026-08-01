@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { Button, CompactSelect } from '../core';
-import { useAddKeywords } from '../../services/keywords';
+import { useAddRankKeywords, useRankConfigs } from '../../services/rankTracking';
 import countries from '../../utils/countries';
 
 type IdeaKeyword = {
@@ -132,9 +132,9 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
    const [trackingIds, setTrackingIds] = useState<Set<string>>(new Set());
 
-   const { mutate: addKeywords } = useAddKeywords(() => {
-      toast.success('Keyword added to tracker');
-   });
+   const configsQ = useRankConfigs(slug || undefined);
+   const configId = configsQ.data?.configs?.[0]?.id;
+   const { mutate: addKeywords } = useAddRankKeywords(slug || undefined, configId);
 
    const handleSearch = async () => {
       const q = search.trim();
@@ -171,15 +171,9 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
    };
 
    const handleTrack = (kw: IdeaKeyword) => {
-      if (!domain?.domain || trackingIds.has(kw.uid)) return;
+      if (!slug || !configId || trackingIds.has(kw.uid)) return;
       setTrackingIds((prev) => new Set(prev).add(kw.uid));
-      addKeywords([{
-         keyword: kw.keyword,
-         device: 'desktop',
-         country: kw.country,
-         domain: domain.domain,
-         tags: '',
-      }]);
+      addKeywords([kw.keyword]);
    };
 
    // Sort results
@@ -408,7 +402,7 @@ const KeywordResearchPanel = ({ domain, slug, isAdwordsConnected }: Props) => {
 
          {/* ── Row hover styles ── */}
          <style dangerouslySetInnerHTML={{ __html: `
-            .kwr-row:hover { background: #F8F8F9 !important; }
+            .kwr-row:hover { background: #f3f4f0 !important; }
             .kwr-row:hover .kwr-track-btn { opacity: 1 !important; }
          ` }} />
       </div>

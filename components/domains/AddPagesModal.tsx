@@ -147,7 +147,7 @@ const AddPagesModal = ({ pages, onClose, onAdd }: {
                      {filtered.map((p) => {
                         const isSel = selected.has(p.path);
                         return (
-                           <div key={p.path} onClick={() => toggle(p.path)} className="addpage-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: isSel ? '#F8F8F9' : '#fff', transition: 'background 100ms ease' }}>
+                           <div key={p.path} onClick={() => toggle(p.path)} className="addpage-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: isSel ? '#f3f4f0' : '#fff', transition: 'background 100ms ease' }}>
                               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center' }}>
                                  <Checkbox checked={isSel} onChange={() => toggle(p.path)} />
                               </div>

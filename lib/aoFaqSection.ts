@@ -55,8 +55,16 @@ export function selectFaqQuestions(opts: {
     const key = label.toLowerCase().replace(/\s+/g, ' ');
     if (seen.has(key)) continue;
 
-    // Redundant if question tokens already answered in body
-    const tokens = key.split(/\s+/).filter((w) => w.length > 3);
+    // Redundant if content tokens (minus stopwords) are already in body
+    const STOP = new Set([
+      'czym', 'jaka', 'jaki', 'jakie', 'jak', 'dlaczego', 'czy', 'co', 'to',
+      'jest', 'są', 'oraz', 'what', 'when', 'where', 'which', 'does',
+      'the', 'and', 'for', 'with', 'from', 'znaczy', 'oznacza',
+    ]);
+    const tokens = key
+      .split(/\s+/)
+      .map((w) => w.replace(/[^\p{L}\p{N}]+/gu, ''))
+      .filter((w) => w.length > 3 && !STOP.has(w));
     const hitRatio = tokens.length
       ? tokens.filter((t) => plainLow.includes(t)).length / tokens.length
       : 0;
@@ -95,6 +103,85 @@ export function mergeFaqHtml(articleHtml: string, faqHtml: string): string {
     return `${articleHtml.slice(0, start).trimEnd()}\n${trimmedFaq}`;
   }
   return `${articleHtml.trimEnd()}\n\n${trimmedFaq}`;
+}
+
+export type FaqStructureValidation =
+  | { ok: true; questionCount: number }
+  | { ok: false; reason: string };
+
+const FAQ_H2_PL = /najcz[eę]ściej zadawane pytania|pytania i odpowiedzi/i;
+const FAQ_H2_EN = /\bfaq\b|frequently asked questions/i;
+const MIN_ANSWER_CHARS = 40;
+const MAX_ANSWER_CHARS = 500;
+/** Single paragraph longer than this without H3 structure = wall of text. */
+const WALL_OF_TEXT_CHARS = 600;
+
+/**
+ * Hard structural gate for AO FAQ HTML. Score gates alone are not enough —
+ * wall-of-text dumps must fail even if AI coverage rises.
+ */
+export function validateFaqHtmlStructure(
+  html: string,
+  opts?: { language?: string; expectedQuestionCount?: number },
+): FaqStructureValidation {
+  const trimmed = (html || '').trim();
+  if (!trimmed) return { ok: false, reason: 'empty' };
+
+  const h2Matches = [...trimmed.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
+  if (h2Matches.length !== 1) {
+    return { ok: false, reason: h2Matches.length === 0 ? 'missing_h2' : 'multiple_h2' };
+  }
+  const h2Text = h2Matches[0][1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const isPl = opts?.language === 'pl' || FAQ_H2_PL.test(h2Text);
+  if (isPl && !FAQ_H2_PL.test(h2Text)) {
+    return { ok: false, reason: 'pl_heading_required' };
+  }
+  if (!isPl && !FAQ_H2_EN.test(h2Text) && !FAQ_H2_PL.test(h2Text)) {
+    return { ok: false, reason: 'invalid_faq_heading' };
+  }
+
+  const h3Matches = [...trimmed.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)];
+  if (h3Matches.length < 1) {
+    // Wall of text: one giant paragraph, no questions
+    const plain = trimmed.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (plain.length >= WALL_OF_TEXT_CHARS) {
+      return { ok: false, reason: 'wall_of_text' };
+    }
+    return { ok: false, reason: 'missing_h3' };
+  }
+
+  // Each H3 must be followed by a non-empty <p> before the next H3/H2/end
+  for (let i = 0; i < h3Matches.length; i++) {
+    const h3 = h3Matches[i];
+    const start = (h3.index ?? 0) + h3[0].length;
+    const end = i + 1 < h3Matches.length
+      ? (h3Matches[i + 1].index ?? trimmed.length)
+      : trimmed.length;
+    const between = trimmed.slice(start, end);
+    const pMatch = /<p\b[^>]*>([\s\S]*?)<\/p>/i.exec(between);
+    if (!pMatch) return { ok: false, reason: 'h3_without_p' };
+    const answer = pMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (answer.length < MIN_ANSWER_CHARS) return { ok: false, reason: 'answer_too_short' };
+    if (answer.length > MAX_ANSWER_CHARS) return { ok: false, reason: 'answer_too_long' };
+  }
+
+  // Reject leading/orphan wall text after H2 before first H3
+  const afterH2 = trimmed.slice((h2Matches[0].index ?? 0) + h2Matches[0][0].length);
+  const beforeFirstH3 = afterH2.slice(0, afterH2.search(/<h3\b/i));
+  const orphanPlain = beforeFirstH3.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (orphanPlain.length >= WALL_OF_TEXT_CHARS) {
+    return { ok: false, reason: 'wall_of_text' };
+  }
+
+  if (
+    opts?.expectedQuestionCount != null
+    && opts.expectedQuestionCount > 0
+    && h3Matches.length !== opts.expectedQuestionCount
+  ) {
+    return { ok: false, reason: 'question_count_mismatch' };
+  }
+
+  return { ok: true, questionCount: h3Matches.length };
 }
 
 export function buildFaqSectionPrompt(opts: {

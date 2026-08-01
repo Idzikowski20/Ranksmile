@@ -36,10 +36,10 @@
 
 | Komponent | Użycie |
 |-----------|--------|
-| `SentryPage` | Scroll container, bg `#F8F8F9`, padding 24px |
+| `SentryPage` | Scroll container, bg `#f3f4f0`, padding 24px |
 | `SentryPageHeader` | Tytuł + subtitle + actions |
 | `SentryPageFilters` | Filtry: time, dropdown, search |
-| `SentryPanel` / `Header` / `Body` | Biała karta, border `#DAD9DE`, radius 8px |
+| `SentryPanel` / `Header` / `Body` | Biała karta, border `#dbded4`, radius 8px |
 | `SentryTable` + head/body/row/cell | Dane; uppercase gray headers; bez vertical borders |
 | `SentryDetailLayout` | ~75% main + 300px aside |
 | `SentrySettingsSection` / `Row` | Settings: label left / control right |
@@ -60,7 +60,7 @@ Import: `import { theme } from 'components/core/theme'` (lub Emotion `Theme`).
 | Token | Hex | Użycie |
 |-------|-----|--------|
 | `background.primary` | `#FFFFFF` | karty, inputy, panele |
-| `background.secondary` | `#F8F8F9` | page bg, section |
+| `background.secondary` | `#f3f4f0` | page bg, section |
 | `background.tertiary` | `#F0F0F2` | nested / muted surface |
 | Shell bg | `#252525` / `#09090b` | nav, topbar (`--sentry-shell-bg`) |
 | Shell border | `#221e28` | rail border |
@@ -90,7 +90,7 @@ Import: `import { theme } from 'components/core/theme'` (lub Emotion `Theme`).
 
 | Token | Hex | Użycie |
 |-------|-----|--------|
-| `border.primary` | `#DAD9DE` | karty, panele, dividers |
+| `border.primary` | `#dbded4` | karty, panele, dividers |
 | `border.secondary` | `#E6E6E9` | subtle |
 | `border.accent.vibrant` | `#F29964` | focus / selected |
 
@@ -176,7 +176,7 @@ Sizes: `md` 36px · `sm` 32px · `xs` 24–28px.
 ## 6. Inputs / forms
 
 - Height: `theme.form.md` (36) / `sm` (32).
-- Border: `#DAD9DE`; focus border + ring accent `#F29964`.
+- Border: `#dbded4`; focus border + ring accent `#F29964`.
 - Placeholder / secondary: `#6A6772` / `#878490`.
 - Prefer `core` `Input`, `Textarea`, `Select`, `Form`.
 
@@ -186,11 +186,11 @@ Sizes: `md` 36px · `sm` 32px · `xs` 24–28px.
 
 ```
 background: #FFFFFF
-border: 1px solid #DAD9DE
+border: 1px solid #dbded4
 border-radius: 8px   /* Sentry panel — nie 12px Ranksmile card default */
 ```
 
-Page bg: `#F8F8F9`. Unikaj `#F8F9FF` poza `--zone-editor-bg`.
+Page bg: `#f3f4f0`. Unikaj `#F8F9FF` poza `--zone-editor-bg`.
 
 ---
 
@@ -219,7 +219,7 @@ Page bg: `#F8F8F9`. Unikaj `#F8F9FF` poza `--zone-editor-bg`.
 |---------|------|
 | Topbar | ~58px, sticky, dark `#09090b` / `#252525` |
 | Nav rail | dark, border `#221e28` |
-| Content | light `#F8F8F9` |
+| Content | light `#f3f4f0` |
 | Mobile | `MobileBottomNav`; rail hidden on small |
 
 ---
@@ -280,7 +280,7 @@ Unikanie listy ≠ design. Trzymaj spójność z `theme.tsx` i jedną strefą wi
 
 - [ ] Accent / focus = `#F29964` (nie purple)
 - [ ] Font: CSS var / Rubik shell — bez hardcode Inter
-- [ ] Karty: border `#DAD9DE`, radius 8px (Sentry)
+- [ ] Karty: border `#dbded4`, radius 8px (Sentry)
 - [ ] Buttons z `core` lub wizualnie zgodne z chonk
 - [ ] Hover / focus-visible / disabled
 - [ ] Anti-slop §12 — zero gradient pill / boop / opacity-0 trap
@@ -297,7 +297,7 @@ Unikanie listy ≠ design. Trzymaj spójność z `theme.tsx` i jedną strefą wi
 | Brand purple `#783AFB` | Accent `#F29964` |
 | Purple focus `#AA93FD` | Focus `#F29964` |
 | Dark CTA `#2F2F34` → hover purple | `Button` primary orange chonk |
-| Card border `#F4F4F5`, radius 12 | `#DAD9DE`, radius 8 |
-| Content bg `#F8F9FF` | Page `#F8F8F9` (editor canvas może zostać cool tint) |
+| Card border `#F4F4F5`, radius 12 | `#dbded4`, radius 8 |
+| Content bg `#F8F9FF` | Page `#f3f4f0` (editor canvas może zostać cool tint) |
 | Inter as brand | Rubik shell + `--font-family-primary` |
 | Inline-everything app-wide | `core` + Emotion poza edytorem |

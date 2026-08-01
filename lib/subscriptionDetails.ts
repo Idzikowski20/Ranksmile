@@ -1,7 +1,7 @@
 import type { BillingPeriod } from './billingPlans';
 import { getCheckoutPlan, getPlanPeriodPrice } from './billingPlans';
 import { getLockedCheckoutPlanSlug } from './billingPlanLock';
-import { getOrgBillingState, type SubscriptionStatus } from './orgBilling';
+import { getOrgBillingState, type OrgBillingState, type SubscriptionStatus } from './orgBilling';
 import { resolvePlanSlug } from './planLimits';
 import type { UpcomingPaymentDetails } from './subscriptionFormat';
 import { getStripe, isStripeConfigured } from './stripe';

@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import React, { useState, useMemo } from 'react';
 import { useQuery } from 'react-query';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
-import { useAddKeywords } from '../../services/keywords';
+import { useAddRankKeywords, useRankConfigs } from '../../services/rankTracking';
 import Icon from '../common/Icon';
 import KeywordIdea from './KeywordIdea';
 import useWindowResize from '../../hooks/useWindowResize';
@@ -36,7 +36,10 @@ const IdeasKeywordsTable = ({
    const [listHeight, setListHeight] = useState(500);
    const [addKeywordDevice, setAddKeywordDevice] = useState<'desktop'|'mobile'>('desktop');
    const [addKeywordDomain, setAddKeywordDomain] = useState('');
-   const { mutate: addKeywords } = useAddKeywords(() => { if (domain && domain.slug) router.push(`/sites/${domain.slug}`); });
+   const siteSlug = domain?.slug || (typeof router.query.domain === 'string' ? router.query.domain : '');
+   const configsQ = useRankConfigs(siteSlug || undefined);
+   const configId = configsQ.data?.configs?.[0]?.id;
+   const { mutate: addKeywords } = useAddRankKeywords(siteSlug || undefined, configId);
    const { mutate: faveKeyword, isLoading: isFaving } = useMutateFavKeywordIdeas(router);
    const [isMobile] = useIsMobile();
    const isResearchPage = router.pathname === '/research';
@@ -91,20 +94,16 @@ const IdeasKeywordsTable = ({
    };
 
    const addKeywordIdeasToTracker = () => {
-      const selectedkeywords:KeywordAddPayload[] = [];
-      keywords.forEach((kitem:IdeaKeyword) => {
-         if (selectedKeywords.includes(kitem.uid)) {
-            const { keyword, country } = kitem;
-            selectedkeywords.push({
-               keyword,
-               device: addKeywordDevice,
-               country,
-               domain: isResearchPage ? addKeywordDomain : (domain?.domain || ''),
-               tags: '',
-            });
-         }
+      const texts: string[] = [];
+      keywords.forEach((kitem: IdeaKeyword) => {
+         if (selectedKeywords.includes(kitem.uid)) texts.push(kitem.keyword);
       });
-      addKeywords(selectedkeywords);
+      if (!texts.length || !configId) return;
+      addKeywords(texts, {
+         onSuccess: () => {
+            if (domain?.slug) void router.push(`/sites/${domain.slug}/keyword-tracking`);
+         },
+      });
       setSelectedKeywords([]);
    };
 

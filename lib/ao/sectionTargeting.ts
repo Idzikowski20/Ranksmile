@@ -67,12 +67,15 @@ export function scoreSectionsForTarget(opts: {
 
 /**
  * Best target or null if uncertain.
+ * When `allowSeoEntityFallback` is true, SEO/entity gaps get a semantic fallback
+ * (best body section → intro) instead of silent skip — IntentGuard still applies upstream.
  */
 export function selectSectionTarget(opts: {
   sections: Section[];
   candidate: EditCandidate;
   critical: CriticalContentMap;
-}): { sectionId: string; score: SectionTargetScore } | null {
+  allowSeoEntityFallback?: boolean;
+}): { sectionId: string; score: SectionTargetScore; usedFallback?: boolean } | null {
   if (!opts.sections.length) return null;
 
   // add_missing_section → caller handles new block; still need an anchor section id if present
@@ -98,7 +101,8 @@ export function selectSectionTarget(opts: {
     .map((s) => {
       const sec = opts.sections.find((x) => x.id === s.sectionId);
       const introPenalty = sec && sec.index === 0 ? 0.15 : 0;
-      return { ...s, total: s.total - introPenalty };
+      const commercialPenalty = s.isCommercial ? 0.5 : 0;
+      return { ...s, total: s.total - introPenalty - commercialPenalty };
     })
     .sort((a, b) => b.total - a.total);
 
@@ -113,16 +117,39 @@ export function selectSectionTarget(opts: {
   if (insertSources.has(opts.candidate.source) && ranked.length > 0) {
     const body = ranked.find((s) => {
       const sec = opts.sections.find((x) => x.id === s.sectionId);
-      return sec != null && sec.index > 0;
+      return sec != null && sec.index > 0 && !s.isCommercial;
     });
     if (body) {
+      const boosted = body.confidence < TARGET_CONFIDENCE_MIN;
       return {
         sectionId: body.sectionId,
         score: { ...body, confidence: Math.max(body.confidence, TARGET_CONFIDENCE_MIN) },
+        usedFallback: boosted || undefined,
       };
     }
   }
 
-  // 5. Reject
+  // 5. SEO/entity fallback: best non-commercial body → intro (controlled, not dump-all-to-intro)
+  if (
+    opts.allowSeoEntityFallback
+    && insertSources.has(opts.candidate.source)
+    && ranked.length > 0
+  ) {
+    const nonCommercial = ranked.filter((s) => !s.isCommercial);
+    const body = nonCommercial.find((s) => {
+      const sec = opts.sections.find((x) => x.id === s.sectionId);
+      return sec != null && sec.index > 0;
+    });
+    const pick = body || nonCommercial[0] || ranked[0];
+    if (pick) {
+      return {
+        sectionId: pick.sectionId,
+        score: { ...pick, confidence: Math.max(pick.confidence, TARGET_CONFIDENCE_MIN) },
+        usedFallback: true,
+      };
+    }
+  }
+
+  // 6. Reject
   return null;
 }

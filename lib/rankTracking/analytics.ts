@@ -1,12 +1,19 @@
 import type { ComparePeriod, RankAnalyticsSummary, RankTrackingRow } from '../types/rankTracking';
 import { buildRankResultsPage } from './results';
 import type { RankTrackingConfigRow } from '../types/rankTracking';
+import { ANALYTICS_VERSION } from './constants';
 import {
   activeRankDevice,
   exclusiveVisibilityPercents,
   pickDeviceResult,
   summarizeExclusiveBuckets,
+  summarizeUiBuckets,
 } from './buckets';
+import {
+  getLatestSummary,
+  listSummaryChartPoints,
+  summaryRowToAnalytics,
+} from './summaryStore';
 
 function primaryDelta(row: RankTrackingRow, device: 'desktop' | 'mobile'): number {
   const r = pickDeviceResult(row, device);
@@ -14,7 +21,8 @@ function primaryDelta(row: RankTrackingRow, device: 'desktop' | 'mobile'): numbe
   return r.previousPosition - r.position;
 }
 
-export async function buildAnalyticsSummary(
+/** Live compute — temporary fallback until backfill; remove after summaries exist. */
+export async function buildAnalyticsSummaryLive(
   config: RankTrackingConfigRow,
   comparePeriod: ComparePeriod,
   activeDevice: 'desktop' | 'mobile' = activeRankDevice(config),
@@ -37,7 +45,21 @@ export async function buildAnalyticsSummary(
     ? Math.round(ranked.reduce((s, x) => s + (x.dev.position as number), 0) / ranked.length)
     : null;
 
+  let movedUp = 0;
+  let movedDown = 0;
+  let unchanged = 0;
+  for (const x of withDelta) {
+    if (x.dev.position == null || x.dev.previousPosition == null) {
+      unchanged += 1;
+      continue;
+    }
+    if (x.delta > 0) movedUp += 1;
+    else if (x.delta < 0) movedDown += 1;
+    else unchanged += 1;
+  }
+
   const bucketCounts = summarizeExclusiveBuckets(withDelta.map((x) => x.dev));
+  const uiBuckets = summarizeUiBuckets(withDelta.map((x) => x.dev));
   const total = withDelta.length || 1;
 
   return {
@@ -78,6 +100,30 @@ export async function buildAnalyticsSummary(
         previousPosition: x.dev.previousPosition,
       })),
     averagePosition: avg,
+    previousAveragePosition: null,
+    movedUp,
+    movedDown,
+    unchanged,
+    buckets: uiBuckets,
+    previousBuckets: { top3: 0, top10: 0, top100: 0, notRanking: 0 },
     visibilityScore: exclusiveVisibilityPercents(bucketCounts, total),
+    analyticsVersion: ANALYTICS_VERSION,
+    runId: null,
+    previousRunId: null,
+    fromSummary: false,
   };
 }
+
+export async function buildAnalyticsSummary(
+  config: RankTrackingConfigRow,
+  comparePeriod: ComparePeriod,
+  activeDevice: 'desktop' | 'mobile' = activeRankDevice(config),
+): Promise<RankAnalyticsSummary> {
+  const stored = await getLatestSummary(config.id);
+  if (stored) return summaryRowToAnalytics(stored);
+
+  // Temporary compute-on-read fallback
+  return buildAnalyticsSummaryLive(config, comparePeriod, activeDevice);
+}
+
+export { listSummaryChartPoints };

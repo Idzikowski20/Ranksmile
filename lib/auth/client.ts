@@ -1,8 +1,4 @@
-/**
- * Browser auth facade — fetch-based only.
- * Do NOT import @neondatabase/auth here: its Zod schemas crash Next 12 client bundles
- * ("Cannot set properties of undefined (setting 'def')").
- */
+/** Browser auth facade — fetch-based session + sign-out. */
 import { useAuthSession } from '../../hooks/useAuthSession';
 import { signOut as fetchSignOut } from './fetchAuth';
 

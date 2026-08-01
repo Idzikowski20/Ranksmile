@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Gauge } from '../core';
 import GeneratingStage from './GeneratingStage';
@@ -159,19 +160,32 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Close menu on outside click
+  // Close menu on outside click / scroll / resize (fixed portal follows neither)
   useEffect(() => {
     if (openMenuId === null) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpenMenuId(null);
-      }
+    const onPointer = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t) || menuBtnRef.current?.contains(t)) return;
+      setOpenMenuId(null);
+      setMenuPos(null);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const close = () => {
+      setOpenMenuId(null);
+      setMenuPos(null);
+    };
+    document.addEventListener('mousedown', onPointer);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
   }, [openMenuId]);
 
   useEffect(() => {
@@ -270,7 +284,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = '#D4D4D8';
-                  e.currentTarget.style.background = '#F8F8F9';
+                  e.currentTarget.style.background = '#f3f4f0';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = '#E4E4E7';
@@ -289,7 +303,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   style={{
                     height: 82,
                     borderRadius: 12,
-                    background: '#F8F8F9',
+                    background: '#f3f4f0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -315,7 +329,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+    <div className="article-list" style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 0, maxWidth: '100%' }}>
       {articles.map((article) => {
         const time = mounted ? timeAgo(article.updated_at || article.created_at) : null;
         // Content score from dedicated column (synced with editor via PUT /api/articles/[id])
@@ -443,18 +457,18 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               gap: 12,
               userSelect: 'none',
               cursor: 'pointer',
-              // 3D button: a solid bottom "edge" that collapses when pressed.
-              boxShadow: '0 4px 0 0 #E4E4E7',
-              transition: 'box-shadow 0.12s ease, transform 0.12s ease, border-color 0.2s',
+              minWidth: 0,
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+              boxShadow: 'none',
+              transition: 'border-color 0.2s, box-shadow 0.12s ease',
             }}
-            onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0 4px 0 0 #D4D4D8, 0px 6px 10px 0px rgba(24,26,34,0.06)'; }}
-            onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'none'; el.style.boxShadow = '0 4px 0 0 #E4E4E7'; }}
-            onMouseDown={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'translateY(4px)'; el.style.boxShadow = '0 0 0 0 #E4E4E7'; }}
-            onMouseUp={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.transform = 'none'; el.style.boxShadow = '0 4px 0 0 #D4D4D8, 0px 6px 10px 0px rgba(24,26,34,0.06)'; }}
+            onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0px 6px 10px 0px rgba(24,26,34,0.06)'; el.style.borderColor = '#D4D4D8'; }}
+            onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = '#E4E4E7'; }}
           >
             {/* Left: Score gauge / Checkbox */}
             <div
-              className="group flex h-full items-center justify-between border-r hover:border-gray-10 border-transparent pl-lg pr-md"
+              className="article-list-card-gauge group flex h-full items-center justify-between border-r hover:border-gray-10 border-transparent pl-lg pr-md"
               style={{
                 display: 'flex',
                 height: '100%',
@@ -463,6 +477,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 borderRight: '1px solid transparent',
                 paddingLeft: 24,
                 paddingRight: 12,
+                flexShrink: 0,
                 transition: 'border-color 0.15s',
               }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = '#F4F4F5'; }}
@@ -533,22 +548,23 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
             </div>
 
             {/* Main content */}
-            <div style={{ position: 'relative', display: 'flex', height: '100%', flex: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="article-list-card-main" style={{ position: 'relative', display: 'flex', height: '100%', flex: 1, alignItems: 'center', justifyContent: 'space-between', minWidth: 0, overflow: 'hidden' }}>
               <Link href={`/articles/${article.id}`}>
                 <a style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
               </Link>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
+              <div className="article-list-card-cols" style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minWidth: 0, paddingRight: 4 }}>
                 {/* Top row: title + meta */}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <div className="article-list-card-top" style={{ display: 'flex', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
                       <span
+                        className="article-list-card-title"
                         style={{
                           fontSize: 14,
                           lineHeight: '20px',
                           fontWeight: 600,
-                          maxWidth: 450,
+                          maxWidth: '100%',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -561,10 +577,11 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     </div>
                     {article.target_keyword && (
                       <span
+                        className="article-list-card-keyword"
                         style={{
                           fontSize: 14,
                           lineHeight: '20px',
-                          maxWidth: 450,
+                          maxWidth: '100%',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -578,7 +595,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   </div>
 
                   {/* Right meta: status check, avatar, menu */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, zIndex: 1 }}>
+                  <div className="article-list-card-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, zIndex: 1, flexShrink: 0 }}>
                     {/* Check icon if accepted or published */}
                     {(article.status === 'accepted' || article.status === 'published') && (
                       <span
@@ -622,11 +639,27 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                       </span>
                     </div>
 
-                    {/* Triple-dot menu */}
-                    <div style={{ position: 'relative' }} ref={openMenuId === article.id ? menuRef : undefined}>
+                    {/* Triple-dot menu — dropdown portaled to body (cards/panels clip overflow) */}
+                    <div style={{ position: 'relative' }}>
                       <button
                         type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenMenuId(openMenuId === article.id ? null : article.id); }}
+                        ref={openMenuId === article.id ? menuBtnRef : undefined}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (openMenuId === article.id) {
+                            setOpenMenuId(null);
+                            setMenuPos(null);
+                            return;
+                          }
+                          const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          const menuW = 220;
+                          setMenuPos({
+                            top: r.bottom + 4,
+                            left: Math.max(8, Math.min(r.right - menuW, window.innerWidth - menuW - 8)),
+                          });
+                          setOpenMenuId(article.id);
+                        }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -648,15 +681,14 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                         </svg>
                       </button>
 
-                      {/* Dropdown menu */}
-                      {openMenuId === article.id && (
+                      {openMenuId === article.id && menuPos && mounted && createPortal(
                         <div
+                          ref={menuRef}
                           style={{
-                            position: 'absolute',
-                            top: '100%',
-                            right: 0,
-                            marginTop: 4,
-                            zIndex: 100,
+                            position: 'fixed',
+                            top: menuPos.top,
+                            left: menuPos.left,
+                            zIndex: 10000,
                             display: 'flex',
                             flexDirection: 'column',
                             padding: 6,
@@ -670,26 +702,6 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                           }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {/* Folders — disabled */}
-                          <div
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 8,
-                              padding: '8px 12px', borderRadius: 6,
-                              fontSize: 14, fontWeight: 500, color: '#9F9FA9',
-                              cursor: 'not-allowed', opacity: 0.6,
-                              fontFamily: 'var(--font-family-primary)',
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0, color: '#9F9FA9' }}>
-                              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
-                            </svg>
-                            Folders
-                            <div style={{ marginLeft: 'auto' }}>
-                              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
-                            </div>
-                          </div>
-
-                          {/* Get shareable link */}
                           <div
                             role="button"
                             style={{
@@ -699,9 +711,9 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                               cursor: 'pointer', transition: 'background 0.12s',
                               fontFamily: 'var(--font-family-primary)',
                             }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#F8F8F9'; }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#f3f4f0'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                            onClick={() => { setOpenMenuId(null); }}
+                            onClick={() => { setOpenMenuId(null); setMenuPos(null); }}
                           >
                             <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
                               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185" />
@@ -709,32 +721,8 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                             Get shareable link
                           </div>
 
-                          {/* Add Tags — disabled */}
-                          <div
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 8,
-                              padding: '8px 12px', borderRadius: 6,
-                              fontSize: 14, fontWeight: 500, color: '#9F9FA9',
-                              cursor: 'not-allowed', opacity: 0.6,
-                              fontFamily: 'var(--font-family-primary)',
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0, color: '#9F9FA9' }}>
-                              <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5">
-                                <path d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.224-5.223c.54-.827.368-1.908-.33-2.607l-9.583-9.58A2.25 2.25 0 0 0 9.568 3" />
-                                <path d="M6 6h.008v.008H6z" />
-                              </g>
-                            </svg>
-                            Add Tags
-                            <div style={{ marginLeft: 'auto' }}>
-                              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
-                            </div>
-                          </div>
-
-                          {/* Separator */}
                           <div style={{ height: 1, background: '#F4F4F5', margin: '4px -6px' }} />
 
-                          {/* Delete */}
                           <div
                             role="button"
                             style={{
@@ -746,77 +734,27 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#FEF2F2'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                            onClick={() => { setOpenMenuId(null); onDelete(article.id); }}
+                            onClick={() => { setOpenMenuId(null); setMenuPos(null); onDelete(article.id); }}
                           >
                             <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
                               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0" />
                             </svg>
                             Delete
                           </div>
-                        </div>
+                        </div>,
+                        document.body,
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom row: tags + country + timestamp */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+                {/* Bottom row: country + timestamp */}
+                <div className="article-list-card-bottom" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
                   {/* Left tags */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 24, flexWrap: 'wrap' }}>
-                    {/* Folder tag */}
-                    <button
-                      type="button"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '2px 12px',
-                        borderRadius: 24,
-                        background: '#F8F8F9',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        lineHeight: '16px',
-                        color: '#3F3F47',
-                        fontFamily: 'var(--font-family-primary)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}>
-                        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
-                      </svg>
-                      <span>Unassigned</span>
-                    </button>
-
-                    {/* Tag button */}
-                    <button
-                      type="button"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                        fontSize: 13,
-                        lineHeight: '16px',
-                        fontWeight: 600,
-                        color: '#3F3F47',
-                        fontFamily: 'var(--font-family-primary)',
-                      }}
-                    >
-                      <svg viewBox="0 0 20 20" width="16" height="16">
-                        <path fill="currentColor" d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
-                      </svg>
-                      <span>Tag</span>
-                    </button>
-                  </div>
-
                   {/* Right: country + timestamp */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <div className="article-list-card-loc" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, minWidth: 0 }}>
                     {/* Country */}
-                    <div style={{ display: 'flex', alignItems: 'center', fontSize: 13, lineHeight: '16px', color: '#3F3F47', gap: 2, fontFamily: 'var(--font-family-primary)' }}>
+                    <div className="article-list-card-country" style={{ display: 'flex', alignItems: 'center', fontSize: 13, lineHeight: '16px', color: '#3F3F47', gap: 2, fontFamily: 'var(--font-family-primary)' }}>
                       <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
                         <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
                       </svg>
@@ -824,7 +762,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     </div>
 
                     {/* Timestamp */}
-                    <div style={{ fontSize: 13, lineHeight: '16px', color: '#3F3F47', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)' }} suppressHydrationWarning>
+                    <div style={{ fontSize: 13, lineHeight: '16px', color: '#3F3F47', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }} suppressHydrationWarning>
                       <span className="article-time-relative">{time?.relative || ''}</span>
                       <span className="article-time-full hidden">{time?.full || ''}</span>
                     </div>
@@ -849,18 +787,13 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
       {/* ── Bulk selection bar ── */}
       {selectedIds.size > 0 && (
         <div
+          className="article-bulk-bar"
           style={{
-            position: 'fixed',
-            bottom: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             minHeight: 48,
-            minWidth: 480,
-            padding: '8px 16px',
             borderRadius: 8,
             background: '#18181B',
             boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.12), 0px 2px 4px 0px rgba(24,26,34,0.06), 0px 1px 2px 0px rgba(0,0,0,0.08)',
@@ -933,7 +866,14 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
             <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-1.935l-1.342-9.523m16.498 0a48.108 48.108 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.166m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
-            <span>{isDeleting ? 'Deleting…' : 'Put in trash'}</span>
+            <span>
+              {isDeleting ? 'Deleting…' : (
+                <>
+                  <span className="article-bulk-bar-trash-full">Put in trash</span>
+                  <span className="article-bulk-bar-trash-short">Trash</span>
+                </>
+              )}
+            </span>
           </button>
         </div>
       )}

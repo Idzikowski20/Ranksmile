@@ -16,7 +16,6 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^@neondatabase/auth/next$': '<rootDir>/__mocks__/neondatabase-auth.ts',
     // `ai` SDK is pure ESM with a heavy provider tree Jest can't load; stub its
     // identity-passthrough `tool()` (see __mocks__/ai.ts).
     '^ai$': '<rootDir>/__mocks__/ai.ts',

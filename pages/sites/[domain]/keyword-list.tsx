@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import React, { useMemo, useState } from 'react';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
-import SearchIntelligenceTabs from '../../../components/searchIntelligence/SearchIntelligenceTabs';
 import OrganicFilterBar from '../../../components/searchIntelligence/organic/OrganicFilterBar';
 import OrganicKpiRow from '../../../components/searchIntelligence/organic/OrganicKpiRow';
 import OrganicKeywordsTable from '../../../components/searchIntelligence/organic/OrganicKeywordsTable';
@@ -25,7 +24,7 @@ import { slugToDomain } from '../../../utils/slugToDomain';
 
 const FONT = 'var(--font-family-primary)';
 
-const SearchIntelligencePage: NextPage = () => {
+const KeywordListPage: NextPage = () => {
   const router = useRouter();
   const slug = typeof router.query.domain === 'string' ? router.query.domain : '';
   const domain = slug ? slugToDomain(slug) : '';
@@ -88,7 +87,7 @@ const SearchIntelligencePage: NextPage = () => {
   const trafficSeries = monthlyChart.map((c) => c.traffic ?? 0);
   const trendOpen = summaryMetric === 'keywords' || summaryMetric === 'traffic';
   const trendTitle = summaryMetric === 'traffic' ? 'Traffic Trend' : 'Organic Keywords Trend';
-  const gscConnectHref = `/api/gsc/connect?redirect=${encodeURIComponent(`/sites/${slug}/search-intelligence`)}`;
+  const gscConnectHref = `/api/gsc/connect?redirect=${encodeURIComponent(`/sites/${slug}/keyword-list`)}`;
 
   const onSort = (key: string) => {
     const k = key as OrganicSortKey;
@@ -103,15 +102,15 @@ const SearchIntelligencePage: NextPage = () => {
 
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
-      <Head><title>{`Search Intelligence — ${domain} — Ranksmile`}</title></Head>
+      <Head><title>{`Keyword list — ${domain} — Ranksmile`}</title></Head>
       <style>{`
-        .si-organic-row:hover { background: #F8F8F9 !important; }
+        .si-organic-row:hover { background: #f3f4f0 !important; }
       `}</style>
 
       <DomainSubLayout
         domain={domain}
         slug={slug || ''}
-        section="Search Intelligence"
+        section="Keyword list"
         heading={<OrganicPageTitle domain={domain} />}
         subtitle={(
           <OrganicPageHeaderInfo
@@ -121,7 +120,6 @@ const SearchIntelligencePage: NextPage = () => {
           />
         )}
         contentMaxWidth="100%"
-        filters={slug ? <SearchIntelligenceTabs slug={slug} active="organic" /> : undefined}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {organicQ.isLoading && (
@@ -134,7 +132,7 @@ const SearchIntelligencePage: NextPage = () => {
 
           {organicQ.isError && (
             <div style={{
-              background: '#fff', border: '1px solid #DAD9DE', borderRadius: 8, padding: 24,
+              background: '#fff', border: '1px solid #dbded4', borderRadius: 8, padding: 24,
               color: '#E03E3E', fontFamily: FONT, fontSize: 14,
             }}
             >
@@ -145,7 +143,7 @@ const SearchIntelligencePage: NextPage = () => {
           {!organicQ.isLoading && !organicQ.isError && needsDfs && (
             <div style={{
               background: '#fff',
-              border: '1px solid #DAD9DE',
+              border: '1px solid #dbded4',
               borderRadius: 8,
               padding: '48px 32px',
               textAlign: 'center',
@@ -166,7 +164,7 @@ const SearchIntelligencePage: NextPage = () => {
                 lineHeight: 1.5,
               }}
               >
-                Search Intelligence needs DataForSEO Labs for keyword positions, traffic estimates,
+                Keyword list needs DataForSEO Labs for keyword positions, traffic estimates,
                 and the monthly trend chart. Add credentials in your environment, then reload.
               </div>
               <Link
@@ -185,7 +183,7 @@ const SearchIntelligencePage: NextPage = () => {
               {!gscConnected && (
                 <div style={{
                   background: '#fff',
-                  border: '1px solid #DAD9DE',
+                  border: '1px solid #dbded4',
                   borderRadius: 8,
                   padding: '12px 16px',
                   display: 'flex',
@@ -278,4 +276,4 @@ const SearchIntelligencePage: NextPage = () => {
   );
 };
 
-export default SearchIntelligencePage;
+export default KeywordListPage;

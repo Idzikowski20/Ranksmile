@@ -33,7 +33,7 @@ function motionCurveWithDuration(dur: number, easing: readonly number[]) {
 const tokens = {
   background: {
     primary: '#FFFFFF',
-    secondary: '#F8F8F9',
+    secondary: '#f3f4f0',
     tertiary: '#F0F0F2',
     overlay: '#FFFFFF',
     transparent: {
@@ -77,9 +77,9 @@ const tokens = {
     },
   },
   border: {
-    primary: '#DAD9DE',
+    primary: '#bebebe',
     secondary: '#E6E6E9',
-    neutral: { muted: '#DAD9DE', moderate: '#C0BEC6', vibrant: '#A29FAA' },
+    neutral: { muted: '#bebebe', moderate: '#C0BEC6', vibrant: '#A29FAA' },
     accent: { muted: '#F5D4BC', moderate: '#F0B88A', vibrant: '#F29964' },
     success: { muted: '#B5EABB', moderate: '#7CD88A', vibrant: '#009800' },
     warning: { muted: '#F2D88E', moderate: '#EDCA60', vibrant: '#FFCE00' },
@@ -91,16 +91,16 @@ const tokens = {
   interactive: {
     chonky: {
       embossed: {
-        accent: { background: '#F29964', chonk: '#C97D52', content: '#FFFFFF' },
-        neutral: { background: '#FFFFFF', chonk: '#DAD9DE', content: '#181225' },
+        accent: { background: '#F29964', chonk: '#c97e52', content: '#FFFFFF' },
+        neutral: { background: '#FFFFFF', chonk: '#bebebe', content: '#181225' },
         danger: { background: '#FF002B', chonk: '#C10000', content: '#FFFFFF' },
         warning: { background: '#FFCE00', chonk: '#D59600', content: '#000000' },
         success: { background: '#00F261', chonk: '#007800', content: '#000000' },
         promotion: { background: '#FC5CB4', chonk: '#B5006F', content: '#000000' },
       },
       debossed: {
-        neutral: { background: '#10103008', chonk: '#DAD9DE', content: { primary: '#181225', secondary: '#6A6772', danger: '#D50000' } },
-        accent: { background: '#F29964', chonk: '#C97D52', content: '#FFFFFF' },
+        neutral: { background: '#10103008', chonk: '#bebebe', content: { primary: '#181225', secondary: '#6A6772', danger: '#D50000' } },
+        accent: { background: '#F29964', chonk: '#c97e52', content: '#FFFFFF' },
       },
     },
     transparent: {
@@ -116,7 +116,7 @@ const tokens = {
     invalid: '#FF002B',
   },
   graphics: {
-    neutral: { muted: '#DAD9DE', moderate: '#C0BEC6', vibrant: '#787581' },
+    neutral: { muted: '#dbded4', moderate: '#C0BEC6', vibrant: '#787581' },
     accent: { muted: '#F5D4BC', moderate: '#F0B88A', vibrant: '#F29964' },
     success: { muted: '#B5EABB', moderate: '#7CD88A', vibrant: '#009800' },
     warning: { muted: '#F2D88E', moderate: '#EDCA60', vibrant: '#D59600' },

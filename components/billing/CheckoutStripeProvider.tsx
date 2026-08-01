@@ -69,7 +69,7 @@ const stripeAppearance: StripeElementsOptions['appearance'] = {
   rules: {
     '.Input': {
       border: '1px solid #D4D4D8',
-      boxShadow: '0px 2px 0px 0px #DAD9DE',
+      boxShadow: 'none',
     },
     '.Input:focus': {
       border: '1px solid #F5C4A0',
@@ -126,7 +126,7 @@ const inputStyle = (hasError: boolean): React.CSSProperties => ({
   fontFamily: F,
   color: '#18181B',
   background: '#fff',
-  boxShadow: hasError ? '0 0 0 2px rgba(255,111,119,0.12)' : '0px 2px 0px 0px #DAD9DE',
+  boxShadow: hasError ? '0 0 0 2px rgba(255,111,119,0.12)' : 'none',
   outline: 'none',
   boxSizing: 'border-box',
 });

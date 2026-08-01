@@ -74,7 +74,7 @@ function InfoItem({ label, children }: { label: string; children: React.ReactNod
 export function OrganicPageTitle({ domain }: { domain: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
-      <span style={{ fontWeight: 400 }}>Search Intelligence:</span>
+      <span style={{ fontWeight: 400 }}>Keyword list:</span>
       <span
         style={{
           color: '#6A6772',
@@ -120,7 +120,7 @@ export function OrganicPageHeaderInfo({
           gap: 6,
           padding: '5px 10px 5px 8px',
           borderRadius: 6,
-          border: '1px solid #DAD9DE',
+          border: '1px solid #dbded4',
           background: '#F0F0F2',
           fontFamily: FONT,
           fontSize: 13,

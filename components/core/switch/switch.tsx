@@ -31,10 +31,10 @@ const HiddenCheckbox = styled.input<{ $sz: NonNullable<SwitchProps['size']> }>`
   /* OFF state — debossed neutral track */
   & + div {
     background: #10103008;
-    border-top: 2px solid #DAD9DE;
-    border-right: 1px solid #DAD9DE;
-    border-bottom: 1px solid #DAD9DE;
-    border-left: 1px solid #DAD9DE;
+    border-top: 2px solid #dbded4;
+    border-right: 1px solid #dbded4;
+    border-bottom: 1px solid #dbded4;
+    border-left: 1px solid #dbded4;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
     [data-icon='checkmark'],
@@ -48,7 +48,7 @@ const HiddenCheckbox = styled.input<{ $sz: NonNullable<SwitchProps['size']> }>`
 
     > div {
       background: #FFFFFF;
-      border: 1px solid #DAD9DE;
+      border: 1px solid #dbded4;
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       transform: translateY(-2px);
     }

@@ -9,6 +9,10 @@ import verifyUser from '../../utils/verifyUser';
 import parseKeywords from '../../utils/parseKeywords';
 import { scrapeKeywordFromGoogle } from '../../utils/scraper';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { assertCronSecret } from '../../lib/cronAuth';
+import { getCurrentUserId } from '../../utils/getUser';
+import { ensureUserTenancy, getAccessibleWorkspaceIds } from '../../lib/tenancy';
+import { verifyDomainOwnership } from '../../utils/verifyDomainOwnership';
 
 type KeywordsRefreshRes = {
    keywords?: KeywordType[]
@@ -27,6 +31,12 @@ type KeywordSearchResultRes = {
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
+
+   // Failed-queue / platform retry — install-wide via CRON_SECRET
+   if (req.method === 'POST' && assertCronSecret(req)) {
+      return refresTheKeywords(req, res, { mode: 'cron' });
+   }
+
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
@@ -35,12 +45,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return getKeywordSearchResults(req, res);
    }
    if (req.method === 'POST') {
-      return refresTheKeywords(req, res);
+      return refresTheKeywords(req, res, { mode: 'session' });
    }
    return res.status(502).json({ error: 'Unrecognized Route.' });
 }
 
-const refresTheKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsRefreshRes>) => {
+const refresTheKeywords = async (
+   req: NextApiRequest,
+   res: NextApiResponse<KeywordsRefreshRes>,
+   opts: { mode: 'cron' | 'session' },
+) => {
    if (!req.query.id || typeof req.query.id !== 'string') {
       return res.status(400).json({ error: 'keyword ID is Required!' });
    }
@@ -49,9 +63,40 @@ const refresTheKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywo
    }
    const keywordIDs = req.query.id !== 'all' && (req.query.id as string).split(',').map((item) => parseInt(item, 10));
    const { domain } = req.query || {};
-   console.log('keywordIDs: ', keywordIDs);
+
+   let userId: string | null = null;
+   let orgId: number | null = null;
 
    try {
+      if (opts.mode === 'session') {
+         userId = await getCurrentUserId(req, res);
+         if (!userId) return res.status(401).json({ error: 'Not authorized' });
+         ({ orgId } = await ensureUserTenancy(userId));
+
+         if (req.query.id === 'all' && typeof domain === 'string') {
+            const owned = await verifyDomainOwnership(domain, userId);
+            if (owned === false) return res.status(403).json({ error: 'Access denied.' });
+            if (owned === null) return res.status(404).json({ error: 'Domain not found.' });
+         } else if (keywordIDs && keywordIDs.length) {
+            const wsIds = await getAccessibleWorkspaceIds(userId);
+            const rows = await Keyword.findAll({
+               where: { ID: { [Op.in]: keywordIDs } },
+               attributes: ['ID', 'domain'],
+            });
+            if (rows.length !== keywordIDs.length) {
+               return res.status(403).json({ error: 'Access denied.' });
+            }
+            const domains = [...new Set(rows.map((r) => r.get('domain') as string))];
+            for (const d of domains) {
+               const owned = await Domain.findOne({
+                  where: { domain: d, workspace_id: { [Op.in]: wsIds } },
+                  attributes: ['ID'],
+               });
+               if (!owned) return res.status(403).json({ error: 'Access denied.' });
+            }
+         }
+      }
+
       const settings = await getAppSettings();
       if (!settings || (settings && settings.scraper_type === 'never')) {
          return res.status(400).json({ error: 'Scraper has not been set up yet.' });
@@ -64,8 +109,6 @@ const refresTheKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywo
 
       let keywords = [];
 
-      // If Single Keyword wait for the scraping process,
-      // else, Process the task in background. Do not wait.
       if (keywordIDs && keywordIDs.length === 1) {
          const refreshed: KeywordType[] = await refreshAndUpdateKeywords(keywordQueries, settings, domainList);
          keywords = refreshed;
@@ -73,6 +116,14 @@ const refresTheKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywo
          refreshAndUpdateKeywords(keywordQueries, settings, domainList);
          keywords = parseKeywords(keywordQueries.map((el) => el.get({ plain: true })));
       }
+
+      console.info('[api] keywords.refresh', JSON.stringify({
+         userId,
+         orgId,
+         resource: typeof domain === 'string' ? domain : `ids:${req.query.id}`,
+         mode: opts.mode,
+         count: keywordQueries.length,
+      }));
 
       return res.status(200).json({ keywords });
    } catch (error) {
@@ -90,7 +141,7 @@ const getKeywordSearchResults = async (req: NextApiRequest, res: NextApiResponse
       if (!settings || (settings && settings.scraper_type === 'never')) {
          return res.status(400).json({ error: 'Scraper has not been set up yet.' });
       }
-      const dummyKeyword:KeywordType = {
+      const dummyKeyword: KeywordType = {
          ID: 99999999999999,
          keyword: req.query.keyword as string,
          device: 'desktop',

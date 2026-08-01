@@ -1,9 +1,7 @@
 import db from '../../database/database';
 import { queryOne, queryRows } from '../db/query';
 import type {
-  ComparePeriod,
   RankCheckRunRow,
-  RankRunStatus,
   RankRunTrigger,
   RankSnapshotRow,
   RankTrackingConfigRow,
@@ -12,7 +10,9 @@ import type {
 } from '../types/rankTracking';
 import { devicesList, normalizeKeyword } from '../types/rankTracking';
 import { MAX_KEYWORDS_PER_CONFIG, STALE_RUN_SECS } from './cost';
+import { SERP_PROVIDER, SERP_PROVIDER_VERSION } from './constants';
 import { computeNextCheckAt, isScheduledInterval } from './schedule';
+import { providerResponseHash } from './providerHash';
 
 const isPg = !!process.env.DATABASE_URL;
 
@@ -108,74 +108,128 @@ export async function archiveConfig(configId: number, domainId: number): Promise
   );
 }
 
+/** Active keywords = not soft-archived (business limit counts these). */
 export async function listKeywords(configId: number): Promise<RankTrackingKeywordRow[]> {
   return queryRows<RankTrackingKeywordRow>(
-    'SELECT * FROM rank_tracking_keywords WHERE config_id = ? ORDER BY keyword ASC',
+    `SELECT * FROM rank_tracking_keywords
+     WHERE config_id = ? AND archived_at IS NULL
+     ORDER BY keyword ASC`,
     [configId],
   );
 }
 
-export async function addKeywords(configId: number, keywords: string[]): Promise<number[]> {
-  const existing = await listKeywords(configId);
-  const set = new Set(existing.map((k) => normalizeKeyword(k.keyword)));
-  const ids: number[] = [];
-  for (const raw of keywords) {
-    const kw = raw.trim();
-    if (!kw) continue;
-    const norm = normalizeKeyword(kw);
-    if (set.has(norm)) continue;
-    if (existing.length + ids.length >= MAX_KEYWORDS_PER_CONFIG) break;
-    set.add(norm);
-    if (isPg) {
-      const row = await queryOne<{ id: number }>(
-        'INSERT INTO rank_tracking_keywords (config_id, keyword) VALUES (?, ?) RETURNING id',
-        [configId, kw],
-      );
-      if (row) ids.push(row.id);
-    } else {
-      await db.query(
-        'INSERT INTO rank_tracking_keywords (config_id, keyword) VALUES (?, ?)',
-        { replacements: [configId, kw] },
-      );
-      const row = await queryOne<{ id: number }>(
-        'SELECT id FROM rank_tracking_keywords WHERE config_id = ? AND keyword = ? LIMIT 1',
-        [configId, kw],
-      );
-      if (row) ids.push(row.id);
-    }
+export async function countActiveKeywords(configId: number, transaction?: import('sequelize').Transaction): Promise<number> {
+  if (transaction && isPg) {
+    const [rows] = await db.query(
+      `SELECT COUNT(*)::int AS c FROM rank_tracking_keywords
+       WHERE config_id = ? AND archived_at IS NULL FOR UPDATE`,
+      { replacements: [configId], transaction },
+    );
+    const row = (rows as Array<{ c: number }>)[0];
+    return Number(row?.c ?? 0);
   }
+  const row = await queryOne<{ c: number }>(
+    `SELECT COUNT(*) AS c FROM rank_tracking_keywords WHERE config_id = ? AND archived_at IS NULL`,
+    [configId],
+  );
+  return Number(row?.c ?? 0);
+}
+
+export async function addKeywords(configId: number, keywords: string[]): Promise<number[]> {
+  const ids: number[] = [];
+  await db.transaction(async (transaction) => {
+    const activeCount = await countActiveKeywords(configId, transaction);
+    const existing = await queryRows<RankTrackingKeywordRow>(
+      `SELECT * FROM rank_tracking_keywords WHERE config_id = ?`,
+      [configId],
+    );
+    // Note: queryRows ignores tx on some paths — re-read inside PG with transaction for norms
+    const set = new Set(existing.filter((k) => !k.archived_at).map((k) => normalizeKeyword(k.keyword)));
+    let remaining = MAX_KEYWORDS_PER_CONFIG - activeCount;
+
+    for (const raw of keywords) {
+      const kw = raw.trim();
+      if (!kw) continue;
+      const norm = normalizeKeyword(kw);
+      if (set.has(norm)) continue;
+      if (remaining <= 0) break;
+      set.add(norm);
+      remaining -= 1;
+      if (isPg) {
+        const [rows] = await db.query(
+          `INSERT INTO rank_tracking_keywords (config_id, keyword, status, attempt_count)
+           VALUES (?, ?, 'queued', 0) RETURNING id`,
+          { replacements: [configId, kw], transaction },
+        );
+        const row = (rows as Array<{ id: number }>)[0];
+        if (row) ids.push(row.id);
+      } else {
+        await db.query(
+          `INSERT INTO rank_tracking_keywords (config_id, keyword, status, attempt_count)
+           VALUES (?, ?, 'queued', 0)`,
+          { replacements: [configId, kw], transaction },
+        );
+        const row = await queryOne<{ id: number }>(
+          'SELECT id FROM rank_tracking_keywords WHERE config_id = ? AND keyword = ? LIMIT 1',
+          [configId, kw],
+        );
+        if (row) ids.push(row.id);
+      }
+    }
+  });
   return ids;
 }
 
+/** Soft-archive — history snapshots remain. */
 export async function removeKeywords(configId: number, keywordIds: number[]): Promise<void> {
   if (!keywordIds.length) return;
   const placeholders = keywordIds.map(() => '?').join(',');
   await db.query(
-    `DELETE FROM rank_tracking_keywords WHERE config_id = ? AND id IN (${placeholders})`,
+    `UPDATE rank_tracking_keywords
+     SET status = 'archived', archived_at = CURRENT_TIMESTAMP
+     WHERE config_id = ? AND id IN (${placeholders}) AND archived_at IS NULL`,
     { replacements: [configId, ...keywordIds] },
   );
+}
+
+export async function updateKeywordStatus(
+  keywordId: number,
+  patch: Partial<Pick<RankTrackingKeywordRow, 'status' | 'last_error' | 'last_attempt_at' | 'next_retry_at' | 'attempt_count'>>,
+): Promise<void> {
+  const fields: string[] = [];
+  const vals: unknown[] = [];
+  if (patch.status !== undefined) { fields.push('status = ?'); vals.push(patch.status); }
+  if (patch.last_error !== undefined) { fields.push('last_error = ?'); vals.push(patch.last_error); }
+  if (patch.last_attempt_at !== undefined) { fields.push('last_attempt_at = ?'); vals.push(patch.last_attempt_at); }
+  if (patch.next_retry_at !== undefined) { fields.push('next_retry_at = ?'); vals.push(patch.next_retry_at); }
+  if (patch.attempt_count !== undefined) { fields.push('attempt_count = ?'); vals.push(patch.attempt_count); }
+  if (!fields.length) return;
+  vals.push(keywordId);
+  await db.query(`UPDATE rank_tracking_keywords SET ${fields.join(', ')} WHERE id = ?`, { replacements: vals });
 }
 
 export async function createRun(configId: number, trigger: RankRunTrigger, keywordsTotal: number): Promise<number> {
   if (isPg) {
     const row = await queryOne<{ id: number }>(
-      `INSERT INTO rank_check_runs (config_id, status, trigger, keywords_total, keywords_checked, attempts)
-       VALUES (?, 'pending', ?, ?, 0, 0) RETURNING id`,
-      [configId, trigger, keywordsTotal],
+      `INSERT INTO rank_check_runs (config_id, status, trigger, provider, keywords_total, keywords_checked, keywords_success, keywords_failed, attempts)
+       VALUES (?, 'pending', ?, ?, ?, 0, 0, 0, 0) RETURNING id`,
+      [configId, trigger, SERP_PROVIDER, keywordsTotal],
     );
     if (!row) throw new Error('Failed to create run');
+    console.info('[rank-tracking] tracking_started', JSON.stringify({ configId, runId: row.id, trigger }));
     return row.id;
   }
   await db.query(
-    `INSERT INTO rank_check_runs (config_id, status, trigger, keywords_total, keywords_checked, attempts)
-     VALUES (?, 'pending', ?, ?, 0, 0)`,
-    { replacements: [configId, trigger, keywordsTotal] },
+    `INSERT INTO rank_check_runs (config_id, status, trigger, provider, keywords_total, keywords_checked, keywords_success, keywords_failed, attempts)
+     VALUES (?, 'pending', ?, ?, ?, 0, 0, 0, 0)`,
+    { replacements: [configId, trigger, SERP_PROVIDER, keywordsTotal] },
   );
   const row = await queryOne<{ id: number }>(
     'SELECT id FROM rank_check_runs WHERE config_id = ? ORDER BY id DESC LIMIT 1',
     [configId],
   );
   if (!row) throw new Error('Failed to create run');
+  console.info('[rank-tracking] tracking_started', JSON.stringify({ configId, runId: row.id, trigger }));
   return row.id;
 }
 
@@ -214,12 +268,15 @@ export async function getActiveRun(configId: number): Promise<RankCheckRunRow | 
 
 export async function updateRun(
   runId: number,
-  patch: Partial<Pick<RankCheckRunRow, 'status' | 'keywords_checked' | 'last_error' | 'finished_at'>>,
+  patch: Partial<Pick<RankCheckRunRow, 'status' | 'keywords_checked' | 'keywords_success' | 'keywords_failed' | 'duration_ms' | 'last_error' | 'finished_at'>>,
 ): Promise<void> {
   const fields: string[] = [];
   const vals: unknown[] = [];
   if (patch.status !== undefined) { fields.push('status = ?'); vals.push(patch.status); }
   if (patch.keywords_checked !== undefined) { fields.push('keywords_checked = ?'); vals.push(patch.keywords_checked); }
+  if (patch.keywords_success !== undefined) { fields.push('keywords_success = ?'); vals.push(patch.keywords_success); }
+  if (patch.keywords_failed !== undefined) { fields.push('keywords_failed = ?'); vals.push(patch.keywords_failed); }
+  if (patch.duration_ms !== undefined) { fields.push('duration_ms = ?'); vals.push(patch.duration_ms); }
   if (patch.last_error !== undefined) { fields.push('last_error = ?'); vals.push(patch.last_error); }
   if (patch.finished_at !== undefined) { fields.push('finished_at = ?'); vals.push(patch.finished_at); }
   if (!fields.length) return;
@@ -249,7 +306,18 @@ export async function upsertSnapshot(input: {
   rankingDomain: string | null;
   serpFeatures: string[];
   rawItems: unknown[];
+  locationCode: number;
+  provider?: string;
+  providerVersion?: string;
 }): Promise<void> {
+  const provider = input.provider ?? SERP_PROVIDER;
+  const providerVersion = input.providerVersion ?? SERP_PROVIDER_VERSION;
+  const hash = providerResponseHash({
+    provider,
+    locationCode: input.locationCode,
+    device: input.device,
+    rawItems: input.rawItems,
+  });
   const serpJson = JSON.stringify(input.serpFeatures);
   const rawJson = JSON.stringify(input.rawItems);
   const isPgDb = !!process.env.DATABASE_URL;
@@ -257,8 +325,8 @@ export async function upsertSnapshot(input: {
   if (isPgDb) {
     await db.query(
       `INSERT INTO rank_snapshots
-       (config_id, run_id, tracking_keyword_id, device, found, position, ranking_url, ranking_title, ranking_description, ranking_domain, serp_features, raw_items, checked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, CURRENT_TIMESTAMP)
+       (config_id, run_id, tracking_keyword_id, device, found, position, ranking_url, ranking_title, ranking_description, ranking_domain, serp_features, raw_items, provider, provider_version, provider_response_hash, checked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, CURRENT_TIMESTAMP)
        ON CONFLICT (run_id, tracking_keyword_id, device) DO UPDATE SET
          found = EXCLUDED.found,
          position = EXCLUDED.position,
@@ -268,12 +336,16 @@ export async function upsertSnapshot(input: {
          ranking_domain = EXCLUDED.ranking_domain,
          serp_features = EXCLUDED.serp_features,
          raw_items = EXCLUDED.raw_items,
+         provider = EXCLUDED.provider,
+         provider_version = EXCLUDED.provider_version,
+         provider_response_hash = EXCLUDED.provider_response_hash,
          checked_at = CURRENT_TIMESTAMP`,
       {
         replacements: [
           input.configId, input.runId, input.trackingKeywordId, input.device,
           input.found, input.position, input.rankingUrl, input.rankingTitle,
           input.rankingDescription, input.rankingDomain, serpJson, rawJson,
+          provider, providerVersion, hash,
         ],
       },
     );
@@ -287,24 +359,27 @@ export async function upsertSnapshot(input: {
   if (existing) {
     await db.query(
       `UPDATE rank_snapshots SET found = ?, position = ?, ranking_url = ?, ranking_title = ?, ranking_description = ?,
-       ranking_domain = ?, serp_features = ?, raw_items = ?, checked_at = CURRENT_TIMESTAMP WHERE id = ?`,
+       ranking_domain = ?, serp_features = ?, raw_items = ?, provider = ?, provider_version = ?, provider_response_hash = ?,
+       checked_at = CURRENT_TIMESTAMP WHERE id = ?`,
       {
         replacements: [
           input.found ? 1 : 0, input.position, input.rankingUrl, input.rankingTitle,
-          input.rankingDescription, input.rankingDomain, serpJson, rawJson, existing.id,
+          input.rankingDescription, input.rankingDomain, serpJson, rawJson,
+          provider, providerVersion, hash, existing.id,
         ],
       },
     );
   } else {
     await db.query(
       `INSERT INTO rank_snapshots
-       (config_id, run_id, tracking_keyword_id, device, found, position, ranking_url, ranking_title, ranking_description, ranking_domain, serp_features, raw_items)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (config_id, run_id, tracking_keyword_id, device, found, position, ranking_url, ranking_title, ranking_description, ranking_domain, serp_features, raw_items, provider, provider_version, provider_response_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       {
         replacements: [
           input.configId, input.runId, input.trackingKeywordId, input.device,
           input.found ? 1 : 0, input.position, input.rankingUrl, input.rankingTitle,
           input.rankingDescription, input.rankingDomain, serpJson, rawJson,
+          provider, providerVersion, hash,
         ],
       },
     );

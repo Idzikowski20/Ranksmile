@@ -18,15 +18,13 @@ const FORM: Record<InputSize, { height: string; minHeight: string; fontSize: str
 
 const StyledInput = styled.input<{ $sz: InputSize; $mono: boolean; $err: boolean }>(({ $sz, $mono, $err }) => {
   const cfg = FORM[$sz];
-  const chonk = $err ? '#FF002B' : '#DAD9DE';
   return {
     display: 'block',
     width: '100%',
     color: '#302E36',
     backgroundColor: '#FFFFFF',
-    // Convex "button" look: white surface with a solid bottom edge (like the secondary button).
-    boxShadow: `0px 2px 0px 0px ${chonk}`,
-    border: $err ? '1px solid #FF002B' : '1px solid #DAD9DE',
+    boxShadow: 'none',
+    border: $err ? '1px solid #FF002B' : '1px solid #dbded4',
     fontFamily: $mono
       ? "'Roboto Mono', Monaco, Consolas, 'Courier New', monospace"
       : "Rubik, 'Avenir Next', 'InterVariable', 'Inter', Arial, sans-serif",
@@ -52,8 +50,8 @@ const StyledInput = styled.input<{ $sz: InputSize; $mono: boolean; $err: boolean
       opacity: '60%',
     },
     '&:focus, &:focus-visible': {
-      borderColor: '#7553FF',
-      boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #7553FF, 0px 2px 0px 0px #DAD9DE',
+      borderColor: '#F29964',
+      boxShadow: '0 0 0 2px #FFFFFF, 0 0 0 4px #F29964',
     },
     '&[type="number"]': {
       appearance: 'textfield',

@@ -62,7 +62,7 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    const toggle = (t: string) => setOpen((prev) => { const n = new Set(prev); if (n.has(t)) n.delete(t); else n.add(t); return n; });
 
    if (!topics.length) {
-      return <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No prompts yet.</div>;
+      return <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No prompts yet.</div>;
    }
 
    const metricCells = (o: { avgPosition: number | null; mentionRate: number; visibility: number }, boldVis = false) => (
@@ -74,7 +74,7 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    );
 
    return (
-      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
+      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Topic</div>
             <div style={{ ...headCell, width: 110, flexShrink: 0 }}>Brands</div>

@@ -27,10 +27,18 @@ describe('siteNavigation registry', () => {
     expect(TOOLS_NAV.some((i) => i.path.includes('audit'))).toBe(false);
   });
 
-  it('points Search Intelligence at canonical path', () => {
-    const si = SEO_NAV.find((i) => i.id === 'search-intelligence');
-    expect(si?.path).toBe('search-intelligence');
-    expect(si?.match).toBe('/search-intelligence');
+  it('points Keyword list at canonical path', () => {
+    const si = SEO_NAV.find((i) => i.id === 'keyword-list');
+    expect(si?.path).toBe('keyword-list');
+    expect(si?.match).toBe('/keyword-list');
+    expect(si?.label).toBe('Keyword list');
+  });
+
+  it('points Keyword tracking at canonical path', () => {
+    const kt = SEO_NAV.find((i) => i.id === 'keyword-tracking');
+    expect(kt?.path).toBe('keyword-tracking');
+    expect(kt?.match).toBe('/keyword-tracking');
+    expect(kt?.label).toBe('Keyword tracking');
   });
 
   it('resolves the same hrefs for desktop/mobile consumers', () => {
@@ -50,25 +58,27 @@ describe('routeAliases', () => {
     expect([...SITE_SEGMENT_REDIRECTS]).toEqual([...routeAliasesCjs.SITE_SEGMENT_REDIRECTS]);
   });
 
-  it('redirects rank-tracking → search-intelligence (permanent)', () => {
+  it('redirects rank-tracking → keyword-tracking (permanent)', () => {
     const redirects = buildSiteSegmentRedirects();
     const hit = redirects.find((r) => r.source === '/sites/:domain/rank-tracking');
     expect(hit).toEqual({
       source: '/sites/:domain/rank-tracking',
-      destination: '/sites/:domain/search-intelligence',
+      destination: '/sites/:domain/keyword-tracking',
       permanent: true,
     });
     expect(routeAliasesCjs.buildSiteSegmentRedirects()).toEqual(redirects);
   });
 
-  it('covers legacy console/insight/ideas/audit', () => {
+  it('covers legacy console/insight/ideas/audit/search-intelligence/keyword-tracker', () => {
     const map = Object.fromEntries(SITE_SEGMENT_REDIRECTS);
     expect(map).toMatchObject({
       console: 'performance',
       insight: 'performance',
       ideas: 'recommendations',
       audit: 'content-audit',
-      'rank-tracking': 'search-intelligence',
+      'rank-tracking': 'keyword-tracking',
+      'search-intelligence': 'keyword-list',
+      'keyword-tracker': 'keyword-tracking',
     });
   });
 });

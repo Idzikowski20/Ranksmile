@@ -31,5 +31,11 @@ export function isAdequatelyCovered(quality: number, covered: boolean): boolean 
     || coverageStateFromQuality(quality, covered) === 'comprehensive';
 }
 
-/** quality threshold for adequate = 3 */
+/** quality threshold for adequate = 3 (checklist presence / residual FAQ). */
 export const ADEQUATE_QUALITY_MIN = 3;
+
+/**
+ * AI gauge uses quality/5 × 85. Quality 3 ≈ mid-50s even when every item is "Covered".
+ * When SEO is strong and AI is weak, AO must deepen answers to this floor (not stop at 3).
+ */
+export const AI_SCORE_QUALITY_TARGET = 4;

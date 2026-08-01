@@ -5,13 +5,15 @@ type SentryPageProps = {
   maxWidth?: number | string;
   className?: string;
   unified?: boolean;
+  /** Lock page height — no page scroll; children (e.g. DataTable) scroll inside. */
+  fillHeight?: boolean;
 };
 
 /** Main scrollable page container (Sentry Issues/Traces background). */
-export function SentryPage({ children, maxWidth = 1200, className = '', unified }: SentryPageProps) {
+export function SentryPage({ children, maxWidth = 1200, className = '', unified, fillHeight }: SentryPageProps) {
   const maxW = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth;
   return (
-    <div className={`sentry-page ${unified ? 'sentry-page--unified' : ''} ${className}`}>
+    <div className={`sentry-page ${unified ? 'sentry-page--unified' : ''} ${fillHeight ? 'sentry-page--fill' : ''} ${className}`.trim()}>
       <div
         className="sentry-page-inner styled-scrollbar"
         style={{ maxWidth: maxW, width: '100%' }}
@@ -34,15 +36,17 @@ type SentryPageHeaderProps = {
 export function SentryPageHeader({ title, subtitle, icon, actions, meta, borderless }: SentryPageHeaderProps) {
   return (
     <header className={`sentry-page-header ${borderless ? 'sentry-page-header--borderless' : ''}`}>
-      <div className="sentry-page-header-main">
-        {icon && <span className="sentry-page-header-icon">{icon}</span>}
-        <div className="sentry-page-header-titles">
-          <h1 className="sentry-page-header-title">{title}</h1>
-          {subtitle && <div className="sentry-page-header-subtitle">{subtitle}</div>}
+      {meta && <div className="sentry-page-header-meta">{meta}</div>}
+      <div className="sentry-page-header-row">
+        <div className="sentry-page-header-main">
+          {icon && <span className="sentry-page-header-icon">{icon}</span>}
+          <div className="sentry-page-header-titles">
+            <h1 className="sentry-page-header-title">{title}</h1>
+            {subtitle && <div className="sentry-page-header-subtitle">{subtitle}</div>}
+          </div>
         </div>
-        {meta && <div className="sentry-page-header-meta">{meta}</div>}
+        {actions && <div className="sentry-page-header-actions">{actions}</div>}
       </div>
-      {actions && <div className="sentry-page-header-actions">{actions}</div>}
     </header>
   );
 }

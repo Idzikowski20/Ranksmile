@@ -182,7 +182,7 @@ const MenuRow = ({ icon, label, sub, chevron, onClick, disabled }: { icon: React
       border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
       fontFamily: 'var(--font-family-primary)', color: '#18181B', opacity: disabled ? 0.45 : 1,
     }}
-    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#f8f8f9'; }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#f3f4f0'; }}
     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
   >
     <span style={{ color: '#18181B', display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
@@ -236,13 +236,13 @@ const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
       <div style={{ maxHeight: 240, overflowY: 'auto' }} className="styled-scrollbar">
         <div style={{ padding: '6px 16px 4px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#9f9fa9', letterSpacing: '0.04em' }}>Built-in voices</div>
         <button type="button" onClick={() => setSelected('serp')} style={rowStyle}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <span style={{ flex: 1 }}>SERP based</span>
           {selected === 'serp' && <Check18 />}
         </button>
         {filtered.map((v) => (
           <button key={v.id} type="button" onClick={() => setSelected(v.id)} style={rowStyle}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}</span>
             {selected === v.id && <Check18 />}
           </button>
@@ -251,7 +251,7 @@ const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
 
       <div style={{ height: 1, background: '#f4f4f5', margin: '4px 0' }} />
       <button type="button" onClick={() => router.push('/settings/custom_voices')} style={rowStyle}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
         <svg viewBox="0 0 24 24" width={18} height={18}><path d="M12 5v14M5 12h14" stroke="#18181B" strokeWidth={2} strokeLinecap="round" /></svg>
         Add Custom Voice
       </button>
@@ -279,7 +279,7 @@ const ShareLinkBlock = ({ desc, link, onReset, copyLabel, loading }: { desc: Rea
     <div style={{ paddingBottom: 4 }}>
       <style>{`@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }`}</style>
       <div style={{ fontSize: 14, color: '#3f3f47', lineHeight: '20px', paddingBottom: 10 }}>{desc}</div>
-      <div style={{ background: '#f8f8f9', padding: '9px 14px', borderRadius: 8, minHeight: 38, display: 'flex', alignItems: 'center' }}>
+      <div style={{ background: '#f3f4f0', padding: '9px 14px', borderRadius: 8, minHeight: 38, display: 'flex', alignItems: 'center' }}>
         {loading ? (
           <span style={{ display: 'block', width: '70%', height: 14, borderRadius: 6, background: 'linear-gradient(90deg, #ececef 0px, #f6f6f8 80px, #ececef 160px)', backgroundSize: '200px 100%', animation: 'shimmer 1.1s linear infinite' }} />
         ) : (
@@ -438,7 +438,7 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
       </Link>
       <div className="ce-bc-rest" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
       <BcChevron />
-      <Link href="/articles" style={{ color: '#9F9FA9', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: f, fontSize: 14 }}>Content Editor</Link>
+      <Link href="/articles" style={{ color: '#9F9FA9', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: f, fontSize: 14 }}>Articles</Link>
       <BcChevron />
       <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, position: 'relative' }}>
         <span style={{ display: 'block', color: '#fff', fontWeight: 600, fontFamily: f, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, maxWidth: 'min(460px, 34vw)' }}>{title || 'Untitled'}</span>
@@ -1604,7 +1604,7 @@ const ArticleEditorPage: NextPage = () => {
           } else if (eventType === 'done') {
             const meta = payload as {
               changedCount: number; total: number; promptVersion: string; creditDeducted: boolean;
-              wholeArticle?: boolean; outcome?: 'improved' | 'already_optimal' | 'no_usable_edit' | 'no_change';
+              wholeArticle?: boolean; outcome?: string; userMessage?: string;
             };
             optimizeMetaRef.current = { changedCount: meta.changedCount, creditDeducted: meta.creditDeducted, promptVersion: meta.promptVersion };
             setScanningSectionId(null);
@@ -1623,8 +1623,15 @@ const ArticleEditorPage: NextPage = () => {
               setOptimizeDocTick((t) => t + 1);
               setOptimizeState('reviewing');
               const nChanged = orderedEvents.filter((e) => e.changed).length;
+              const statusMsg = meta.userMessage
+                || (meta.outcome === 'faq_only'
+                  ? 'Incomplete — FAQ only; review carefully before Save'
+                  : `Review ${nChanged} section${nChanged === 1 ? '' : 's'}…`);
+              setAutoOptimizeStatus(statusMsg);
               setOptimizeRemaining(nChanged);
-              setAutoOptimizeStatus(`Review ${nChanged} section${nChanged === 1 ? '' : 's'}…`);
+              if (meta.outcome === 'faq_only' || meta.outcome === 'partial_body' || meta.outcome === 'incomplete_no_body') {
+                toast(meta.userMessage || 'Partial optimization — SEO gaps may remain.', { icon: '⚠️', duration: 7000 });
+              }
             } else if (meta.outcome === 'already_optimal') {
               setAutoOptimizeStatus('Already well-optimized — no changes needed.');
               toast('Your article is well-optimized — we didn’t find anything to improve. No credit deducted.', { icon: '✨', duration: 6000 });
@@ -1634,8 +1641,8 @@ const ArticleEditorPage: NextPage = () => {
               toast.error('Auto-Optimize got an incomplete rewrite and kept your article unchanged. Try again.', { duration: 6000 });
               resetIdle();
             } else {
-              setAutoOptimizeStatus('No changes produced.');
-              toast('Auto-Optimize didn’t change the article this time. No credit deducted.', { duration: 6000 });
+              setAutoOptimizeStatus(meta.userMessage || 'No changes produced.');
+              toast(meta.userMessage || 'Auto-Optimize didn’t change the article this time. No credit deducted.', { duration: 6000 });
               resetIdle();
             }
             return;
@@ -1849,7 +1856,7 @@ const ArticleEditorPage: NextPage = () => {
 
   if (!article) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8f8f9', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f3f4f0', gap: 16 }}>
         <p style={{ color: '#9f9fa9' }}>Article not found.</p>
         <Link href="/articles"><a style={{ color: 'var(--color-surface-raised)' }}>← Back to list</a></Link>
       </div>
@@ -1965,7 +1972,7 @@ const ArticleEditorPage: NextPage = () => {
         .ranksmile-toolbar-actions-row {
           display: flex; align-items: center; gap: 0.5rem;
           height: 48px; padding: 0.5rem 0.75rem;
-          background: #F8F8F9; border-radius: 0 0 0.5rem 0.5rem;
+          background: #f3f4f0; border-radius: 0 0 0.5rem 0.5rem;
         }
         .ranksmile-toolbar-actions-left {
           display: flex; align-items: center; gap: 0.5rem; flex: 1;

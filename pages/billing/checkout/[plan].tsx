@@ -109,8 +109,8 @@ const Input = ({
       fontSize: 14,
       fontFamily: F,
       color: '#18181B',
-      background: disabled ? '#F8F8F9' : '#fff',
-      boxShadow: hasError ? '0 0 0 2px rgba(255,111,119,0.12)' : disabled ? 'none' : '0px 2px 0px 0px #DAD9DE',
+      background: disabled ? '#f3f4f0' : '#fff',
+      boxShadow: hasError ? '0 0 0 2px rgba(255,111,119,0.12)' : 'none',
       outline: 'none',
       boxSizing: 'border-box',
     }}
@@ -423,7 +423,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                     </a>
                   </Link>
                 </div>
-                <div className="checkout-card" style={{ border: '2px solid #18181B', borderRadius: 12, padding: 16, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' }}>
+                <div className="checkout-card" style={{ border: '2px solid #18181B', borderRadius: 12, padding: 16, background: '#fff' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, lineHeight: '20px' }}>{plan.name}</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 6, marginTop: 4, fontSize: 14, lineHeight: '20px' }}>
                     {isYearly && <span style={{ color: '#71717B', textDecoration: 'line-through' }}>{formatEuro(originalYearPrice)}/year</span>}
@@ -433,7 +433,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 </div>
               </section>
 
-              <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#fff' }}>
+              <section className="checkout-card" style={{ border: '1px solid #dbded4', borderRadius: 12, padding: 20, background: '#fff' }}>
                 <h2 style={{ margin: '0 0 12px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Plan Features</h2>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {plan.features.map((feature) => (
@@ -445,7 +445,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 </ul>
               </section>
 
-              <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#fff' }}>
+              <section className="checkout-card" style={{ border: '1px solid #dbded4', borderRadius: 12, padding: 20, background: '#fff' }}>
                 <h2 style={{ margin: '0 0 18px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Payment Details</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
                   {isUpgrade ? (
@@ -510,7 +510,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                   )}
                   {!stripeCheckoutEnabled && (isUpfront ? (
                     <Field label="Country">
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', height: 42, border: '1px solid #D4D4D8', borderRadius: 10, background: '#F8F8F9', padding: '0 12px', opacity: 0.75 }}>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', height: 42, border: '1px solid #D4D4D8', borderRadius: 10, background: '#f3f4f0', padding: '0 12px', opacity: 0.75 }}>
                         <span style={{ flex: 1, fontSize: 14, color: '#18181B' }}>Poland</span>
                         <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style={{ color: '#9F9FA9' }}>
                           <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
@@ -536,7 +536,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                           fontSize: 14,
                           fontFamily: F,
                           color: country ? '#18181B' : '#52525C',
-                          boxShadow: countryOpen ? '0 0 0 2px rgba(242,153,100,0.1)' : '0px 2px 0px 0px #DAD9DE',
+                          boxShadow: countryOpen ? '0 0 0 2px rgba(242,153,100,0.1)' : 'none',
                           cursor: 'pointer',
                         }}
                       >
@@ -565,7 +565,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 </div>
               </section>
 
-              <section className="checkout-card" style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20, background: '#F8F8F9' }}>
+              <section className="checkout-card" style={{ border: '1px solid #dbded4', borderRadius: 12, padding: 20, background: '#f3f4f0' }}>
                 <h2 style={{ margin: 0, fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Company Information (Optional)</h2>
                 <p style={{ margin: '4px 0 16px', fontSize: 14, lineHeight: '20px', color: '#3F3F47' }}>If you&apos;d like your company details listed on your invoices, enter them here</p>
                 <div style={{ display: 'grid', gap: 14 }}>
@@ -606,7 +606,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
 
             <aside style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {isUpgrade ? (
-                <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
+                <section style={{ background: '#fff', border: '1px solid #dbded4', borderRadius: 12, padding: 20 }}>
                   <h2 style={{ margin: '0 0 16px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Upgrade summary</h2>
                   {previewLoading || !upgradePreview ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -658,7 +658,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                   )}
                 </section>
               ) : isUpfront ? (
-                <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
+                <section style={{ background: '#fff', border: '1px solid #dbded4', borderRadius: 12, padding: 20 }}>
                   <h2 style={{ margin: '0 0 16px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Order summary</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -685,7 +685,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 </section>
               ) : (
               <>
-              <section style={{ background: '#F8F8F9', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <section style={{ background: '#f3f4f0', border: '1px solid #dbded4', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <h2 style={{ margin: 0, fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>How your free trial works</h2>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: '22px' }}>Your free trial includes a 7-day access to our most popular plan - <strong>{plan.name}</strong>.</p>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10, fontSize: 14 }}>
@@ -695,12 +695,12 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 </ul>
                 <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', paddingTop: 8 }}>
                   <div style={{ position: 'absolute', top: 20, left: 22, right: 22, height: 2, background: '#E4E4E7' }} />
-                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start', background: '#F8F8F9', paddingRight: 8 }}>
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start', background: '#f3f4f0', paddingRight: 8 }}>
                     <CardIcon />
                     <span style={{ color: '#15803D', fontSize: 14 }}>{trialStartLabel}</span>
                     <strong style={{ color: '#15803D', fontSize: 14 }}>Trial start</strong>
                   </div>
-                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', background: '#F8F8F9', paddingLeft: 8 }}>
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', background: '#f3f4f0', paddingLeft: 8 }}>
                     <CardIcon muted />
                     <span style={{ fontSize: 14 }}>{trialEndLabel}</span>
                     <strong style={{ fontSize: 14 }}>{plan.name} starts</strong>
@@ -708,7 +708,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
                 </div>
               </section>
 
-              <section style={{ background: '#fff', border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: 20 }}>
+              <section style={{ background: '#fff', border: '1px solid #dbded4', borderRadius: 12, padding: 20 }}>
                 <h2 style={{ margin: '0 0 14px', fontSize: 13, lineHeight: '20px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0 }}>Order Summary</h2>
                 <Button type="button" variant="primary" size="md" onClick={handleTrialStart} disabled={checkoutLoading} style={{ width: '100%' }}>
                   Start my trial

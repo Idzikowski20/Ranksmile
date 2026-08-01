@@ -1,7 +1,8 @@
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useAddKeywords, useDeleteKeywords, useFetchKeywords } from '../../../services/keywords';
+import { useAddRankKeywords, useRankConfigs, useRankKeywordsList, useRemoveRankKeywords } from '../../../services/rankTracking';
+import { normalizeKeyword } from '../../../lib/types/rankTracking';
 import { Button, Checkbox } from '../../core';
 import type { OrganicKeyword, SearchIntent } from '../../../lib/organicResearch/types';
 import { formatCompact } from './OrganicKpiRow';
@@ -43,7 +44,7 @@ const INTENT_META: Record<NonNullable<SearchIntent>, { letter: string; bg: strin
 
 
 function kdDotColor(kd: number | null): string {
-  if (kd == null) return '#DAD9DE';
+  if (kd == null) return '#dbded4';
   if (kd <= 14) return '#22C55E';
   if (kd <= 29) return '#84CC16';
   if (kd <= 49) return '#EAB308';
@@ -160,8 +161,6 @@ function pagePath(url: string | null): string {
   }
 }
 
-const TRACKER_DEVICE = 'desktop';
-
 const ghostIconBtn: React.CSSProperties = {
   border: 'none',
   background: 'transparent',
@@ -176,7 +175,7 @@ const dropdownPanel: React.CSSProperties = {
   position: 'absolute',
   right: 0,
   background: '#fff',
-  border: '1px solid #DAD9DE',
+  border: '1px solid #dbded4',
   borderRadius: 8,
   boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
   zIndex: 30,
@@ -191,10 +190,6 @@ const exportLinkStyle: React.CSSProperties = {
   textDecoration: 'none',
   fontFamily: FONT,
 };
-
-function trackerEntryKey(keyword: string, country: string, device = TRACKER_DEVICE): string {
-  return `${keyword.trim().toLowerCase()}:${country.toUpperCase().slice(0, 2)}:${device}`;
-}
 
 function FilledIcon({
   size = 16,
@@ -362,7 +357,7 @@ function Th({
         color: '#6A6772',
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
-        borderBottom: '1px solid #DAD9DE',
+        borderBottom: '1px solid #dbded4',
         fontFamily: FONT,
         cursor: clickable ? 'pointer' : 'default',
         whiteSpace: 'nowrap',
@@ -391,27 +386,24 @@ export default function OrganicKeywordsTable({
   footer,
 }: Props) {
   const router = useRouter();
-  const country = trackerCountry.toUpperCase().slice(0, 2);
-  const { keywordsData } = useFetchKeywords(router, domain);
+  const slug = typeof router.query.domain === 'string' ? router.query.domain : '';
+  const configsQ = useRankConfigs(slug || undefined);
+  const configId = configsQ.data?.configs?.[0]?.id;
+  const keywordsQ = useRankKeywordsList(slug || undefined, configId);
   const clearSelectionAfterAddRef = useRef(false);
-  const { mutate: addKeywords, isLoading: isAdding } = useAddKeywords(() => {
-    if (clearSelectionAfterAddRef.current) {
-      setSelected(new Set());
-      clearSelectionAfterAddRef.current = false;
-    }
-  });
-  const { mutate: deleteKeywords, isLoading: isRemoving } = useDeleteKeywords(() => {});
+  const { mutate: addKeywords, isLoading: isAdding } = useAddRankKeywords(slug || undefined, configId);
+  const { mutate: removeKeywords, isLoading: isRemoving } = useRemoveRankKeywords(slug || undefined, configId);
 
   const { trackedKeys, trackedIdByKey } = useMemo(() => {
     const keys = new Set<string>();
     const idByKey = new Map<string, number>();
-    for (const k of keywordsData?.keywords ?? []) {
-      const key = trackerEntryKey(k.keyword, k.country, k.device);
+    for (const k of keywordsQ.data?.keywords ?? []) {
+      const key = normalizeKeyword(k.keyword);
       keys.add(key);
-      idByKey.set(key, k.ID);
+      idByKey.set(key, k.id);
     }
     return { trackedKeys: keys, trackedIdByKey: idByKey };
-  }, [keywordsData]);
+  }, [keywordsQ.data]);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -451,33 +443,34 @@ export default function OrganicKeywordsTable({
     };
   }, [columnsOpen, exportOpen]);
 
-  const isKeywordTracked = (keyword: string) => trackedKeys.has(trackerEntryKey(keyword, country));
+  const isKeywordTracked = (keyword: string) => trackedKeys.has(normalizeKeyword(keyword));
 
   const addKeywordsToTracker = (keywordTexts: string[], opts?: { clearSelection?: boolean }) => {
-    if (!domain) {
-      toast.error('Domain is required to add keywords to tracker');
+    if (!slug || !configId) {
+      toast.error('Open a site domain to track keywords');
       return;
     }
     const toAdd = keywordTexts
       .map((k) => k.trim())
       .filter((k) => k && !isKeywordTracked(k));
     if (!toAdd.length) {
-      toast('Selected keywords are already in the tracker', { icon: 'ℹ️' });
+      toast('Selected keywords are already tracked', { icon: 'ℹ️' });
       return;
     }
     clearSelectionAfterAddRef.current = opts?.clearSelection === true;
-    addKeywords(toAdd.map((keyword) => ({
-      keyword,
-      device: TRACKER_DEVICE,
-      country,
-      domain,
-      tags: '',
-    })));
+    addKeywords(toAdd, {
+      onSuccess: () => {
+        if (clearSelectionAfterAddRef.current) {
+          setSelected(new Set());
+          clearSelectionAfterAddRef.current = false;
+        }
+      },
+    });
   };
 
   const removeKeywordFromTracker = (keyword: string) => {
-    const id = trackedIdByKey.get(trackerEntryKey(keyword, country));
-    if (id) deleteKeywords([id]);
+    const id = trackedIdByKey.get(normalizeKeyword(keyword));
+    if (id) removeKeywords([id]);
   };
 
   const toggleRow = (id: string) => {
@@ -500,7 +493,7 @@ export default function OrganicKeywordsTable({
   return (
     <div style={{
       background: '#fff',
-      border: '1px solid #DAD9DE',
+      border: '1px solid #dbded4',
       borderRadius: 8,
       overflow: 'hidden',
     }}
@@ -510,7 +503,7 @@ export default function OrganicKeywordsTable({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 16px',
-        borderBottom: '1px solid #DAD9DE',
+        borderBottom: '1px solid #dbded4',
         gap: 12,
         flexWrap: 'wrap',
       }}
@@ -654,7 +647,7 @@ export default function OrganicKeywordsTable({
               const tracked = isKeywordTracked(k.keyword);
               return (
                 <React.Fragment key={k.id}>
-                  <tr className="si-organic-row" style={{ background: open ? '#F8F8F9' : undefined }}>
+                  <tr className="si-organic-row" style={{ background: open ? '#f3f4f0' : undefined }}>
                     <td style={{ ...td, width: 44, paddingLeft: 12 }}>
                       <button
                         type="button"
@@ -817,7 +810,7 @@ export default function OrganicKeywordsTable({
       {footer && (
         <div style={{
           padding: '12px 16px',
-          borderTop: '1px solid #DAD9DE',
+          borderTop: '1px solid #dbded4',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -840,7 +833,7 @@ const thBase: React.CSSProperties = {
   color: '#6A6772',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
-  borderBottom: '1px solid #DAD9DE',
+  borderBottom: '1px solid #dbded4',
   fontFamily: FONT,
   background: '#fff',
 };
