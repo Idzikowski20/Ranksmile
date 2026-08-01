@@ -7,6 +7,13 @@ export type RankRunStatus = 'pending' | 'running' | 'partial' | 'completed' | 'f
 export type RankRunTrigger = 'manual' | 'scheduled';
 export type ComparePeriod = '1d' | '2d' | '7d' | '30d' | '60d' | '90d';
 export type ExportFormat = 'csv' | 'json';
+export type RankKeywordStatus =
+  | 'queued'
+  | 'active'
+  | 'running'
+  | 'failed'
+  | 'paused'
+  | 'archived';
 
 export interface RankTrackingConfigRow {
   id: number;
@@ -30,6 +37,12 @@ export interface RankTrackingKeywordRow {
   id: number;
   config_id: number;
   keyword: string;
+  status: RankKeywordStatus;
+  archived_at: string | null;
+  last_error: string | null;
+  last_attempt_at: string | null;
+  next_retry_at: string | null;
+  attempt_count: number;
   created_at: string | null;
 }
 
@@ -49,8 +62,12 @@ export interface RankCheckRunRow {
   config_id: number;
   status: RankRunStatus;
   trigger: RankRunTrigger;
+  provider: string | null;
   keywords_total: number;
   keywords_checked: number;
+  keywords_success: number;
+  keywords_failed: number;
+  duration_ms: number | null;
   attempts: number;
   last_error: string | null;
   started_at: string | null;
@@ -72,7 +89,44 @@ export interface RankSnapshotRow {
   ranking_domain: string | null;
   serp_features: string[] | null;
   raw_items: unknown[] | null;
+  provider: string | null;
+  provider_version: string | null;
+  provider_response_hash: string | null;
   checked_at: string;
+}
+
+export interface RankTrackingSummaryRow {
+  id: number;
+  config_id: number;
+  run_id: number;
+  previous_run_id: number | null;
+  analytics_version: string;
+  avg_position: number | null;
+  previous_avg_position: number | null;
+  moved_up: number;
+  moved_down: number;
+  unchanged: number;
+  bucket_top3: number;
+  bucket_top10: number;
+  bucket_top100: number;
+  bucket_not_ranking: number;
+  prev_bucket_top3: number;
+  prev_bucket_top10: number;
+  prev_bucket_top100: number;
+  prev_bucket_not_ranking: number;
+  visibility: {
+    top3: number;
+    top10: number;
+    top20: number;
+    notRanking: number;
+  } | null;
+  updated_at: string | null;
+}
+
+export interface RankSummaryChartPoint {
+  runId: number;
+  finishedAt: string | null;
+  avgPosition: number | null;
 }
 
 export interface RankTrackingDeviceResult {
@@ -111,7 +165,27 @@ export interface RankAnalyticsSummary {
   newlyRanked: Array<{ keyword: string; trackingKeywordId: number; position: number | null }>;
   lostRankings: Array<{ keyword: string; trackingKeywordId: number; previousPosition: number | null }>;
   averagePosition: number | null;
+  previousAveragePosition: number | null;
+  movedUp: number;
+  movedDown: number;
+  unchanged: number;
+  buckets: {
+    top3: number;
+    top10: number;
+    top100: number;
+    notRanking: number;
+  };
+  previousBuckets: {
+    top3: number;
+    top10: number;
+    top100: number;
+    notRanking: number;
+  };
   visibilityScore: { top3: number; top10: number; top20: number; notRanking: number };
+  analyticsVersion: string;
+  runId: number | null;
+  previousRunId: number | null;
+  fromSummary: boolean;
 }
 
 export interface RankHistorySummaryPoint {

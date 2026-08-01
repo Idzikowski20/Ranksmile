@@ -9,19 +9,11 @@ function toDate(unixSeconds: number | null | undefined): Date | null {
 }
 
 function asSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
-  switch (status) {
-    case 'trialing':
-    case 'active':
-    case 'past_due':
-    case 'canceled':
-    case 'unpaid':
-    case 'incomplete':
-    case 'incomplete_expired':
-    case 'paused':
-      return status;
-    default:
-      return 'active';
-  }
+  const known: SubscriptionStatus[] = [
+    'trialing', 'active', 'past_due', 'canceled', 'unpaid',
+    'incomplete', 'incomplete_expired', 'paused',
+  ];
+  return (known as string[]).includes(status) ? (status as SubscriptionStatus) : 'active';
 }
 
 function planFromMetadata(metadata: Stripe.Metadata | null | undefined): {

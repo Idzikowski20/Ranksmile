@@ -17,7 +17,7 @@ const AppLoading = ({
       position: 'fixed',
       inset: 0,
       zIndex: 9999,
-      background: '#F8F8F9',
+      background: '#f3f4f0',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

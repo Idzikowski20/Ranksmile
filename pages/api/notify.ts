@@ -11,21 +11,14 @@ import {
 } from '../../lib/notifications/emailQueue';
 import type { EnqueueNotifyResult } from '../../lib/notifications/emailTypes';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { assertCronSecret } from '../../lib/cronAuth';
 
 type NotifyResponse = EnqueueNotifyResult | { success?: boolean; error?: string | null };
 
 export const config = { maxDuration: 60 };
 
-function isApiKeyAuth(req: NextApiRequest): boolean {
-  const auth = req.headers.authorization;
-  if (!auth?.startsWith('Bearer ') || !process.env.APIKEY) return false;
-  return auth.substring('Bearer '.length) === process.env.APIKEY;
-}
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(401).json({ success: false, error: 'Invalid Method' });
-  const authorized = await verifyUser(req, res);
-  if (authorized !== 'authorized') return res.status(401).json({ success: false, error: authorized });
   await db.sync();
   return notify(req, res);
 }
@@ -37,9 +30,13 @@ const notify = async (req: NextApiRequest, res: NextApiResponse<NotifyResponse>)
     const notificationInterval = String(settings.notification_interval || 'daily');
     const defaultToEmail = String(settings.notification_email || '');
 
-    // APIKEY = install-wide scheduler. Session users are scoped to their org.
+    // CRON_SECRET = install-wide scheduler. Session users are scoped to their org.
     let orgId: number | null = null;
-    if (!isApiKeyAuth(req)) {
+    if (assertCronSecret(req)) {
+      orgId = null;
+    } else {
+      const authorized = await verifyUser(req, res);
+      if (authorized !== 'authorized') return res.status(401).json({ success: false, error: authorized });
       const userId = await getCurrentUserId(req, res);
       if (!userId) {
         return res.status(401).json({ success: false, error: 'Not authorized' });

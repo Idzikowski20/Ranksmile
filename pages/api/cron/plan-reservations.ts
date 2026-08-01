@@ -3,15 +3,11 @@ import { ensurePlanQuotaTables } from '../../../lib/ensurePlanQuotaTables';
 import { sweepExpiredReservations } from '../../../lib/quota';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
 export const config = { maxDuration: 60 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
     await ensurePlanQuotaTables();
     const released = await sweepExpiredReservations(200);
@@ -21,4 +17,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withOrgPaymentAccess(handler);
+export default withOrgPaymentAccess(withCronWatchdog('plan-reservations', handler));

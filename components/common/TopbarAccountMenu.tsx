@@ -109,7 +109,7 @@ const TopbarAccountMenu = () => {
                <div
                   role="menuitem"
                   aria-selected="true"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: font, fontSize: 14, fontWeight: 600, color: '#2F2F34', background: orgHover ? '#F8F8F9' : 'transparent', transition: 'background 120ms ease' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: font, fontSize: 14, fontWeight: 600, color: '#2F2F34', background: orgHover ? '#f3f4f0' : 'transparent', transition: 'background 120ms ease' }}
                   onMouseEnter={() => setOrgHover(true)}
                   onMouseLeave={() => setOrgHover(false)}
                >

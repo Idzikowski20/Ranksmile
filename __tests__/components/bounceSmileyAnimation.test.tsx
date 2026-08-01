@@ -18,4 +18,18 @@ describe('BounceSmileyAnimation', () => {
     expect(container.querySelector('.smily-face-spin')).toBeNull();
     expect(container.querySelector('.smily-eye-blink')).toBeNull();
   });
+
+  it('smily-wobble CSS uses alternate so the loop does not jump angle', () => {
+    // Root cause regression: non-closed keyframes (0° → 100°) + infinite
+    // snapped every cycle. alternate (or 0%===100%) keeps motion continuous.
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../styles/globals.css'),
+      'utf8',
+    );
+    const block = css.match(/\.smily-face-spin\s*\{[^}]+\}/);
+    expect(block?.[0] ?? '').toMatch(/infinite\s+alternate|alternate\s+infinite/);
+    expect(css).toMatch(/@keyframes smily-wobble[\s\S]*?\bfrom\b[\s\S]*?\bto\b/);
+  });
 });

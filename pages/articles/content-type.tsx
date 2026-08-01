@@ -33,7 +33,7 @@ const TemplateCard = ({ t, selected, onSelect }: { t: Template; selected: boolea
     style={{
       minHeight: 112, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 16,
       borderRadius: 16, border: `1px solid ${selected ? '#E4E4E7' : '#F4F4F5'}`,
-      background: selected ? '#F8F8F9' : '#fff', cursor: 'pointer', transition: 'border-color 0.2s, background 0.2s',
+      background: selected ? '#f3f4f0' : '#fff', cursor: 'pointer', transition: 'border-color 0.2s, background 0.2s',
     }}
     onMouseEnter={(e) => { if (!selected) (e.currentTarget as HTMLDivElement).style.borderColor = '#E4E4E7'; }}
     onMouseLeave={(e) => { if (!selected) (e.currentTarget as HTMLDivElement).style.borderColor = '#F4F4F5'; }}

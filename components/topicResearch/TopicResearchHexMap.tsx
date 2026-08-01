@@ -44,7 +44,7 @@ const TopicResearchHexMap = ({ items, selectedMain, onSelect, width = 720, heigh
    ];
 
    return (
-      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', padding: 16, fontFamily: FONT }}>
+      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff', padding: 16, fontFamily: FONT }}>
          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>Topic map</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: '#52525C' }}>

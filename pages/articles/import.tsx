@@ -212,7 +212,7 @@ const ImportPage: NextPage = () => {
                         disabled
                         style={{
                           width: '100%', height: 40, display: 'flex', alignItems: 'center',
-                          gap: 8, padding: '0 12px', background: '#F8F8F9',
+                          gap: 8, padding: '0 12px', background: '#f3f4f0',
                           border: '1px solid #D4D4D8', borderRadius: 8, fontSize: 14,
                           lineHeight: '20px', color: '#9F9FA9', cursor: 'not-allowed',
                           opacity: 0.6, fontFamily: 'var(--font-family-primary)',

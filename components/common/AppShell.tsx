@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../../lib/motion/gsap';
 import SentryNav from './nav/SentryNav';
 import GlobalTopbar from './GlobalTopbar';
-import MobileBottomNav from './MobileBottomNav';
+import MobileSidebar from './MobileSidebar';
 import { useRouteTransition } from '../../lib/motion/useRouteTransition';
 
 type AppShellProps = {
@@ -17,27 +17,33 @@ type AppShellProps = {
    /** Replaces the workspace switcher in the topbar's left slot (e.g. editor breadcrumb). */
    breadcrumb?: React.ReactNode;
    contentClassName?: string;
-   /** Hide the mobile bottom nav (e.g. the content editor wants the full height). */
+   /** @deprecated Bottom nav removed — kept for call-site compatibility. */
    hideMobileNav?: boolean;
 };
 
 const AppShell = ({
    domains = [],
-   showAddModal,
-   showSettings,
    children,
    showSidebar = true,
    sidebar,
-   topbarTitle,
    breadcrumb,
    contentClassName = '',
-   hideMobileNav = false,
 }: AppShellProps) => {
+   const [mobileNavOpen, setMobileNavOpen] = useState(false);
    useGSAP(() => { registerMotionPlugins(); });
    const contentRef = useRouteTransition<HTMLElement>();
+
+   useEffect(() => {
+      document.documentElement.classList.add('app-framed');
+      return () => document.documentElement.classList.remove('app-framed');
+   }, []);
+
    return (
       <div className="app-shell">
-         <GlobalTopbar breadcrumb={breadcrumb} />
+         <GlobalTopbar
+            breadcrumb={breadcrumb}
+            onMobileMenuClick={() => setMobileNavOpen(true)}
+         />
          <div className="app-shell-body">
             {sidebar ?? (showSidebar && (
                <SentryNav domains={domains} />
@@ -46,13 +52,11 @@ const AppShell = ({
                {children}
             </main>
          </div>
-         {!hideMobileNav && (
-            <MobileBottomNav
-               domains={domains}
-               showAddModal={showAddModal}
-               showSettings={showSettings}
-            />
-         )}
+         <MobileSidebar
+            open={mobileNavOpen}
+            onClose={() => setMobileNavOpen(false)}
+            domains={domains}
+         />
       </div>
    );
 };

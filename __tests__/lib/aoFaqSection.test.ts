@@ -4,6 +4,7 @@ import {
   buildFaqSectionPrompt,
   faqBudgetForWordCount,
   selectFaqQuestions,
+  validateFaqHtmlStructure,
 } from '../../lib/aoFaqSection';
 import type { CoverageItem } from '../../lib/aiCoverage';
 import { buildIntentProfile } from '../../lib/ao/intentProfile';
@@ -64,5 +65,30 @@ describe('aoFaqSection', () => {
       articlePlainText: Array(100).fill('słowo').join(' '),
     });
     expect(selected.length).toBeLessThanOrEqual(2);
+  });
+
+  it('validateFaqHtmlStructure accepts proper PL FAQ', () => {
+    const html =
+      '<h2>Najczęściej zadawane pytania</h2>'
+      + '<h3>Czym jest cuckolding?</h3>'
+      + '<p>Cuckolding to konsensualna praktyka seksualna, w której partnerzy świadomie ustalają zasady.</p>';
+    expect(validateFaqHtmlStructure(html, { language: 'pl', expectedQuestionCount: 1 })).toEqual({
+      ok: true,
+      questionCount: 1,
+    });
+  });
+
+  it('validateFaqHtmlStructure rejects wall-of-text without H3', () => {
+    const wall = `<h2>FAQ</h2><p>${'x'.repeat(650)}</p>`;
+    const r = validateFaqHtmlStructure(wall, { language: 'en' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('wall_of_text');
+  });
+
+  it('validateFaqHtmlStructure rejects H3 without answer paragraph', () => {
+    const html = '<h2>FAQ</h2><h3>What is it?</h3><h3>Another?</h3><p>Only second gets answer text that is long enough here.</p>';
+    const r = validateFaqHtmlStructure(html, { language: 'en' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('h3_without_p');
   });
 });

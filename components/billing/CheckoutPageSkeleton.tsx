@@ -27,8 +27,7 @@ const CardShell = ({
 }) => (
   <div
     style={{
-      border: '1px solid #DAD9DE',
-      boxShadow: '0 4px 0 0 #e4e4e7',
+      border: '1px solid #dbded4',
       borderRadius: 12,
       padding,
       background: '#fff',

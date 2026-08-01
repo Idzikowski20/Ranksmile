@@ -16,6 +16,10 @@ type MigrationPostResponse = {
    error?: string
 }
 
+function migrateEndpointEnabled(): boolean {
+   return process.env.ENABLE_DB_MIGRATE_ENDPOINT === 'true' || process.env.ENABLE_DB_MIGRATE_ENDPOINT === '1';
+}
+
 function getSequelizeForMigrations(): Sequelize {
    const DATABASE_URL = process.env.DATABASE_URL;
    if (DATABASE_URL) {
@@ -25,7 +29,10 @@ function getSequelizeForMigrations(): Sequelize {
          logging: false,
       });
    }
-   // eslint-disable-next-line @typescript-eslint/no-var-requires
+   if (process.env.NODE_ENV === 'production') {
+      throw new Error('DATABASE_URL required in production');
+   }
+   // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
    const sqlite3 = require('sqlite3');
    return new Sequelize({
       dialect: 'sqlite',
@@ -36,20 +43,25 @@ function getSequelizeForMigrations(): Sequelize {
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+   if (!migrateEndpointEnabled()) {
+      return res.status(404).json({ error: 'Not found' });
+   }
+
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') return res.status(401).json({ error: authorized });
+
+   const userId = await getCurrentUserId(req, res);
+   if (!userId) return res.status(401).json({ error: 'Not authorized' });
+   const role = await getCallerRole(String(userId)).catch(() => null);
+   if (role !== 'owner') {
+      return res.status(403).json({ migrated: false, error: 'Owner only.' });
+   }
+
    if (req.method === 'GET') {
       await db.sync();
       return getMigrationStatus(req, res);
    }
    if (req.method === 'POST') {
-      // Running global schema migrations is owner/admin-only for session users. A non-session
-      // install admin (basic-auth USER/PASSWORD, no userId) stays trusted as before.
-      const userId = await getCurrentUserId(req, res);
-      if (userId) {
-         const role = await getCallerRole(String(userId)).catch(() => null);
-         if (role !== 'owner' && role !== 'admin') return res.status(403).json({ migrated: false, error: 'Admin only.' });
-      }
       return migrateDatabase(req, res);
    }
    return res.status(405).json({ error: 'Method not allowed' });

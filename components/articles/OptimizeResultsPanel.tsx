@@ -92,7 +92,7 @@ const AdjustmentCard = ({ row, onCardClick }: { row: AdjustmentRow; onCardClick?
       onMouseLeave={() => setHover(false)}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-        border: '1px solid #F4F4F5', borderRadius: 12, background: hover ? '#F8F8F9' : '#FFFFFF',
+        border: '1px solid #F4F4F5', borderRadius: 12, background: hover ? '#f3f4f0' : '#FFFFFF',
         borderColor: hover ? '#E4E4E7' : '#F4F4F5', padding: '10px 12px',
         cursor: clickable ? 'pointer' : 'default',
         transition: 'background 150ms ease, border-color 150ms ease',

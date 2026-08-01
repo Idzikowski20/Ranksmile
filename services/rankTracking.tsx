@@ -106,6 +106,56 @@ export function useRankAnalytics(
   );
 }
 
+export function useRankAnalyticsChart(
+  slug: string | undefined,
+  configId: number | undefined,
+): UseQueryResult<{ chart: Array<{ runId: number; finishedAt: string | null; avgPosition: number | null }> }> {
+  return useQuery(
+    ['rank-analytics-chart', slug, configId],
+    () => fetchJson<{ chart: Array<{ runId: number; finishedAt: string | null; avgPosition: number | null }> }>(
+      `/api/rank-tracking/${slug}/analytics?configId=${configId}&chart=1&limit=90`,
+    ),
+    { enabled: !!slug && !!configId, keepPreviousData: true },
+  );
+}
+
+export function useRankKeywordsList(
+  slug: string | undefined,
+  configId: number | undefined,
+): UseQueryResult<{ keywords: RankTrackingKeywordRow[]; limit: number }> {
+  return useQuery(
+    ['rank-keywords', slug, configId],
+    () => fetchJson<{ keywords: RankTrackingKeywordRow[]; limit: number }>(
+      `/api/rank-tracking/${slug}/keywords?configId=${configId}`,
+    ),
+    { enabled: !!slug && !!configId, keepPreviousData: true },
+  );
+}
+
+export function useRemoveRankKeywords(slug: string | undefined, configId: number | undefined) {
+  const qc = useQueryClient();
+  return useMutation(
+    (keywordIds: number[]) => fetchJson<{ ok: boolean }>(
+      `/api/rank-tracking/${slug}/keywords?configId=${configId}`,
+      {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywordIds }),
+      },
+    ),
+    {
+      onSuccess: () => {
+        toast.success('Keywords archived');
+        void qc.invalidateQueries(['rank-results', slug, configId]);
+        void qc.invalidateQueries(['rank-keywords', slug, configId]);
+        void qc.invalidateQueries(['rank-cost', slug, configId]);
+        void qc.invalidateQueries(['rank-analytics', slug, configId]);
+      },
+      onError: toastError,
+    },
+  );
+}
+
 export function useRankRunPolling(slug: string | undefined, configId: number | undefined) {
   return useQuery(
     ['rank-run-latest', slug, configId],
@@ -151,7 +201,10 @@ export function useAddRankKeywords(slug: string | undefined, configId: number | 
           );
         }
         void qc.invalidateQueries(['rank-results', slug, configId]);
+        void qc.invalidateQueries(['rank-keywords', slug, configId]);
         void qc.invalidateQueries(['rank-cost', slug, configId]);
+        void qc.invalidateQueries(['rank-analytics', slug, configId]);
+        void qc.invalidateQueries(['rank-analytics-chart', slug, configId]);
         if (data.run && slug && configId) {
           void qc.invalidateQueries(['rank-run-latest', slug, configId]);
           try {

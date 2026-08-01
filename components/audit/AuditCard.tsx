@@ -75,7 +75,7 @@ const AuditCard = ({ item, onOpen, onDelete }: { item: AuditCardDTO; onOpen: (id
 
    return (
       <div
-         className="article-list-item"
+         className="article-list-item audit-card"
          style={{ height: 133, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #E4E4E7', borderRadius: 12, paddingRight: 24, gap: 12, userSelect: 'none', cursor: done ? 'pointer' : 'default', transition: 'box-shadow 0.2s, border-color 0.2s', fontFamily: FONT }}
          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0px 4px 4px 0px rgba(24,26,34,0.02), 0px 1px 2px 0px rgba(24,26,34,0.08), 0px -1px 1px 0px rgba(0,0,0,0.02)'; }}
          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
@@ -117,7 +117,7 @@ const AuditCard = ({ item, onOpen, onDelete }: { item: AuditCardDTO; onOpen: (id
                         </button>
                         {menuOpen && (
                            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 100, display: 'flex', flexDirection: 'column', padding: 6, borderRadius: 8, background: '#fff', boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.06), 0px 2px 8px 0px rgba(24,26,34,0.03), 0px 1px 2px 0px rgba(24,26,34,0.06)', border: '1px solid #F4F4F5', minWidth: 200, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)', transformOrigin: '100% 0' }} onClick={(e) => e.stopPropagation()}>
-                              <div role="button" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F8F9'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }} onClick={shareLink}>
+                              <div role="button" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }} onClick={shareLink}>
                                  <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185" /></svg>
                                  Get shareable link
                               </div>
@@ -139,7 +139,7 @@ const AuditCard = ({ item, onOpen, onDelete }: { item: AuditCardDTO; onOpen: (id
                {/* Bottom row: tags + country + timestamp */}
                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 24, zIndex: 1 }}>
-                     <button type="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 12px', borderRadius: 24, background: '#F8F8F9', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: '16px', color: '#3F3F47', fontFamily: FONT, whiteSpace: 'nowrap' }}>
+                     <button type="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 12px', borderRadius: 24, background: '#f3f4f0', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: '16px', color: '#3F3F47', fontFamily: FONT, whiteSpace: 'nowrap' }}>
                         <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" /></svg>
                         <span>Unassigned</span>
                      </button>

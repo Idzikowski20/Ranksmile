@@ -3,7 +3,9 @@
  * Keep in sync with next.config.js `redirects()` (same pairs).
  */
 export const SITE_SEGMENT_REDIRECTS: ReadonlyArray<readonly [from: string, to: string]> = [
-  ['rank-tracking', 'search-intelligence'],
+  ['rank-tracking', 'keyword-tracking'],
+  ['search-intelligence', 'keyword-list'],
+  ['keyword-tracker', 'keyword-tracking'],
   ['console', 'performance'],
   ['insight', 'performance'],
   ['ideas', 'recommendations'],

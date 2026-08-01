@@ -328,15 +328,14 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
             style={{
               position: 'relative',
               border: isCurrent
-                ? '1px solid #DAD9DE'
+                ? '1px solid #dbded4'
                 : isSliderPick
                   ? '2px solid #F29964'
-                  : '1px solid #DAD9DE',
+                  : '1px solid #dbded4',
               boxShadow: isCurrent
-                ? '0 4px 0 0 #e4e4e7'
-                : isSliderPick
-                  ? '0 4px 0 0 #F29964, 0 0 0 3px rgba(242,153,100,0.2)'
-                  : '0 4px 0 0 #e4e4e7',
+                ? 'none' : isSliderPick
+                  ? '0 0 0 3px rgba(242,153,100,0.2)'
+                  : 'none',
               borderRadius: plan.recommended || isCurrent ? '0 0 12px 12px' : 12,
               padding: '24px',
               background: isCurrent

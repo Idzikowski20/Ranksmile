@@ -4,7 +4,7 @@ import type { ArticleIntentProfile } from './intentProfile';
 import { textHitsForbidden } from './intentProfile';
 import type { CoverageItem } from '../aiCoverage';
 import { AI_SEARCH_CHECKPOINT_TYPES } from '../aiCoverage';
-import { ADEQUATE_QUALITY_MIN } from './coverageState';
+import { ADEQUATE_QUALITY_MIN, AI_SCORE_QUALITY_TARGET } from './coverageState';
 import type { TermUsageGap } from '../optimizeSectionEdit';
 import type { Section } from '../articleSections';
 import type { OptimizationStrategy } from './optimizationPolicy';
@@ -89,7 +89,10 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
       continue;
     }
     if (!AI_SEARCH_CHECKPOINT_TYPES.has(it.type)) continue;
-    if (it.covered && it.quality >= ADEQUATE_QUALITY_MIN) continue;
+    // Presence/"Covered" at quality 3 still caps AI gauge ~50s. When AI is weak, keep
+    // deepening until AI_SCORE_QUALITY_TARGET so score can climb toward 70+.
+    const qualityDone = input.aiWeak ? AI_SCORE_QUALITY_TARGET : ADEQUATE_QUALITY_MIN;
+    if (it.covered && it.quality >= qualityDone) continue;
     if (textHitsForbidden(it.label, profile)) continue;
 
     const source: EditCandidate['source'] =
@@ -107,6 +110,7 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
           : `coverage:item:${slug(it.id || it.label)}`;
 
     const tier: 0 | 2 = it.importance === 'critical' ? 0 : 2;
+    const shallow = it.covered && it.quality > 0 && it.quality < qualityDone;
 
     out.push(
       makeCandidate({
@@ -115,7 +119,9 @@ export function buildEditCandidates(input: BuildCandidatesInput): EditCandidate[
         source,
         targetSectionId: sectionHint,
         targetGap: it.label,
-        reason: `Uncovered ${source}: ${it.label}`,
+        reason: shallow
+          ? `Shallow AI answer (quality ${it.quality}/${AI_SCORE_QUALITY_TARGET}): ${it.label}`
+          : `Uncovered ${source}: ${it.label}`,
         expectedOutcome: { type: 'coverage_item_resolved', id: gapId },
         priority: priorityFromImportance(it.importance),
         priorityTier: tier,

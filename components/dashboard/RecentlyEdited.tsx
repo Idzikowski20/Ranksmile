@@ -223,15 +223,14 @@ const RecentlyEdited = ({items, loading}: Props) => {
     <SentryPanel>
       <SentryPanelHeader title="Recently edited" />
       <SentryPanelBody>
-      {/* eslint-disable-next-line no-nested-ternary */}
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
+        <div className="recently-edited-grid">
           {[0, 1, 2].map((i) => <CardSkeleton key={i} />)}
         </div>
       ) : items.length === 0 ? (
         <EmptyState />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
+        <div className="recently-edited-grid">
           {items.map((item) => (
             <Card key={item.id} item={item} userInitial={userInitial} />
           ))}

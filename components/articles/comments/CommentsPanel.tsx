@@ -46,7 +46,7 @@ const CommentsPanel = ({ articleId, onCountChange, style, reloadSignal }: { arti
           <AnimatePresence initial={false}>
             {comments.map((c) => (
               <motion.div key={c.id} layout initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
-                style={{ padding: '12px 16px', borderBottom: '1px solid #f8f8f9' }}>
+                style={{ padding: '12px 16px', borderBottom: '1px solid #f3f4f0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{ width: 22, height: 22, borderRadius: '50%', background: c.color, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{c.author.charAt(0).toUpperCase()}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>{c.author}</span>

@@ -70,6 +70,25 @@ describe('liveCoverageItems', () => {
     expect(out[0].covered).toBe(true);
   });
 
+  it('substantive FAQ answer raises live quality floor to 4 (unlocks AI gauge)', () => {
+    const snap = [item({
+      id: 'i1',
+      type: 'paa',
+      label: 'Czym jest cuckolding',
+      covered: false,
+      quality: 0,
+      importance: 'critical',
+    })];
+    const long =
+      'Cuckolding to konsensualna praktyka w związku, w której partnerzy świadomie ustalają granice '
+      + 'i komunikację wokół fantazji o udziale trzeciej osoby. Nie jest to tożsame ze zdradą bez zgody, '
+      + 'bo kluczowa jest jawność, negocjacja zasad i bezpieczeństwo emocjonalne obu stron w relacji.';
+    const html = `<h3>Czym jest cuckolding?</h3><p>${long}</p>`;
+    const out = liveCoverageItems(snap, 'text', html);
+    expect(out[0].covered).toBe(true);
+    expect(out[0].quality).toBeGreaterThanOrEqual(4);
+  });
+
   describe('structure toggling', () => {
     it('covered true when html has headings/lists', () => {
       const snap = [item({ id: 's1', type: 'structure', label: 'Use structure', covered: false })];

@@ -22,7 +22,7 @@ import {
 } from './repository';
 import { processRankCheckChunk } from './runner';
 import { buildRankResultsPage } from './results';
-import { buildAnalyticsSummary } from './analytics';
+import { buildAnalyticsSummary, listSummaryChartPoints } from './analytics';
 
 export async function getConfigsForDomain(domainId: number) {
   return ensureDefaultConfigForDomain(domainId);
@@ -123,6 +123,12 @@ export async function getAnalytics(domainId: number, configId: number, comparePe
   const config = await getConfig(configId, domainId);
   if (!config) throw new Error('Config not found');
   return buildAnalyticsSummary(config, comparePeriod);
+}
+
+export async function getAnalyticsChart(domainId: number, configId: number, limit = 90) {
+  const config = await getConfig(configId, domainId);
+  if (!config) throw new Error('Config not found');
+  return listSummaryChartPoints(configId, limit);
 }
 
 export async function estimateCost(domainId: number, configId: number) {

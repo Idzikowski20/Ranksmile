@@ -3,13 +3,9 @@ import { ensureRankTrackingTables } from '../../../lib/ensureRankTrackingTables'
 import { pruneOldSnapshotPartitions } from '../../../lib/rankTracking/partitions';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
     await ensureRankTrackingTables();
     const dropped = await pruneOldSnapshotPartitions();
@@ -19,4 +15,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withOrgPaymentAccess(handler);
+export default withOrgPaymentAccess(withCronWatchdog('rank-snapshots-retention', handler));

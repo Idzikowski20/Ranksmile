@@ -1,4 +1,4 @@
-// GET /api/cron/daily — Vercel Cron trigger
+// GET /api/cron/daily — Railway cron (SSOT via cron.js)
 // Automatycznie generuje artykuł dla każdej aktywnej domeny z topics
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '../../../database/database';
@@ -12,16 +12,12 @@ import { sendMail } from '../../../lib/sendMail';
 import { queryRows, type ArticleRow } from '../../../lib/db/query';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withCronWatchdog } from '../../../lib/cronWatchdog';
+import { cronSecrets } from '../../../lib/cronAuth';
 
-// Vercel: LLM/sidecar calls can take up to ~minutes; raise from the ~10s default.
 export const config = { maxDuration: 60 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
-   // Weryfikuj Vercel Cron Secret
-   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
-   }
-
    await db.sync();
 
    // Refresh Search Console data for every domain so the dashboard/performance stay current.
@@ -40,15 +36,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    }
 
    // ── Weekly GSC drop digest (Mondays only) ──────────────────────────────
-   // Snapshot the previous full week per page, then email each org's active members
-   // a digest of pages that crossed a ranking threshold. Throttled to 1/7 days/org.
    if (new Date().getUTCDay() === 1) {
       try {
          await ensureGscSnapshotTables();
-         const thisWeek = weekStartFor(new Date());     // previous full week's Monday
+         const thisWeek = weekStartFor(new Date());
          const lastWeek = shiftWeek(thisWeek, -1);
 
-         // 1) Capture snapshots for every domain (isolated per domain).
          const [domRows] = await db.query('SELECT d."ID" AS id, d.domain, d.workspace_id FROM domain d');
          const allDomains = domRows as Array<{ id: number; domain: string; workspace_id: number | null }>;
          for (const dom of allDomains) {
@@ -56,12 +49,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             catch (e) { console.error('[cron] snapshot failed for', dom.domain, e); }
          }
 
-         // 2) Per organization: compute drops across its domains, email if any (and not throttled).
          const [orgRows] = await db.query('SELECT id, name, last_gsc_digest_sent_at FROM organizations');
          for (const org of orgRows as Array<{ id: number; name: string; last_gsc_digest_sent_at: string | null }>) {
             try {
                const sentAt = org.last_gsc_digest_sent_at ? new Date(org.last_gsc_digest_sent_at).getTime() : 0;
-               if (Date.now() - sentAt < 7 * 24 * 3600 * 1000) continue; // throttled
+               if (Date.now() - sentAt < 7 * 24 * 3600 * 1000) continue;
 
                const [oDomRows] = await db.query(
                   'SELECT d."ID" AS id, d.domain FROM domain d JOIN workspaces w ON d.workspace_id = w.id WHERE w.org_id = ?',
@@ -71,7 +63,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                for (const d of oDomRows as Array<{ id: number; domain: string }>) {
                   const now = await getSnapshot(d.id, thisWeek);
                   const prev = await getSnapshot(d.id, lastWeek);
-                  if (prev.size === 0) continue; // baseline week for this domain — nothing to compare
+                  if (prev.size === 0) continue;
                   const r = computeDrops(now, prev);
                   if (r.hasDrops) digests.push({ domain: d.domain, summary: r.summary, tiers: r.tiers });
                }
@@ -100,7 +92,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    }
 
    try {
-      // Pobierz wszystkie domeny z topics w site_context
       const domains = await queryRows<{ ID: number; domain: string; topics: string | null }>(
          `SELECT d."ID", d.domain, sc.topics
           FROM domain d
@@ -109,6 +100,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       );
 
       const triggered: string[] = [];
+      const secrets = cronSecrets();
+      const cronHeader = secrets[0] || '';
 
       for (const domain of domains) {
          let topics: string[] = [];
@@ -119,25 +112,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          }
          if (!topics.length) continue;
 
-         // Pobierz już użyte keywords
          const usedRows = await queryRows<ArticleRow>(
             `SELECT target_keyword FROM articles WHERE domain_id = ?`,
             [domain.ID],
          );
          const usedTopics = usedRows.map((r) => r.target_keyword);
 
-         // Znajdź następny nieużyty topic
          const nextTopic = topics.find((t: string) => !usedTopics.includes(t)) || topics[0];
 
-         // Trigger generowania przez wewnętrzny fetch
-         const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+         const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXTJS_URL || 'http://localhost:3000';
          try {
             await fetch(`${baseUrl}/api/articles/generate`, {
                method: 'POST',
                headers: {
                   'Content-Type': 'application/json',
-                  // Przekaż secret żeby ominąć auth w trybie cron
-                  'x-cron-secret': process.env.CRON_SECRET || '',
+                  'x-cron-secret': cronHeader,
                },
                body: JSON.stringify({ domainId: domain.ID, keyword: nextTopic }),
             });
@@ -153,4 +142,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
    }
 }
 
-export default withOrgPaymentAccess(handler);
+export default withOrgPaymentAccess(withCronWatchdog('daily', handler));

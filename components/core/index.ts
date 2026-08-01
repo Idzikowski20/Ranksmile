@@ -45,6 +45,18 @@ export type { SelectOption, SelectSection, SelectOptionOrSection, CompactSelectP
 export { PageFilterBar } from './pageFilterBar/pageFilterBar';
 export { ToolRibbon } from './toolRibbon/toolRibbon';
 
+export {
+  DataTable,
+  DataTableScroll,
+  DataTableContent,
+  DataTableHeader,
+  DataTableBody,
+  DataTableRow,
+  DataTableEmpty,
+} from './dataTable/dataTable';
+export { TableLoadMore } from './dataTable/TableLoadMore';
+export { useTableLoadMore } from './dataTable/useTableLoadMore';
+
 // KEEP_UNIQUE — Ranksmile widgets (see components/ranksmile/)
 export { default as Gauge } from '../ranksmile/Gauge';
 export { default as SelectionBar } from '../ranksmile/SelectionBar';

@@ -21,10 +21,25 @@ export type SectionDiffMeta = {
    reason?: string;
 };
 
+const FAQ_HEADING_HINT = /faq|najcz[eę]ściej zadawane pytania|frequently asked questions|pytania i odpowiedzi/i;
+
+/** Infer review label focus from section content — never hardcode whole-doc ai-coverage. */
+export function inferSectionDiffFocus(ev: {
+   headingText: string;
+   oldHtml: string;
+   newHtml: string;
+}): StepFocus {
+   const head = `${ev.headingText}\n${ev.newHtml.slice(0, 400)}`;
+   if (FAQ_HEADING_HINT.test(head)) return 'ai-coverage';
+   if (!ev.oldHtml.trim() && ev.newHtml.trim()) return 'ai-coverage';
+   return 'seo-terms';
+}
+
 /**
  * BEFORE/AFTER article → ordered SectionEvents for review (contentOptimizer + wordDiff).
  * Uses BEFORE section ids so the client can map onto splitSections(preHtml).
  * Extra AFTER sections (e.g. new FAQ H2) are appended as new changed events.
+ * When meta.focus is omitted, each changed event gets a per-section inferred focus.
  */
 export function buildArticleSectionDiffEvents(
    beforeHtml: string,
@@ -41,24 +56,40 @@ export function buildArticleSectionDiffEvents(
       const a = after[i];
       if (b && a) {
          const changed = normalizeHtmlForDiff(b.html) !== normalizeHtmlForDiff(a.html);
-         events.push({
+         const base = {
             sectionId: b.id,
             index: b.index,
             headingText: b.headingText,
             oldHtml: b.html,
             newHtml: a.html,
             changed,
-            ...(changed && meta ? meta : {}),
+         };
+         if (!changed) {
+            events.push(base);
+            continue;
+         }
+         const focus = meta?.focus ?? inferSectionDiffFocus(base);
+         events.push({
+            ...base,
+            focus,
+            ...(meta?.mode ? { mode: meta.mode } : { mode: focus === 'ai-coverage' ? 'less' : 'normal' }),
+            ...(meta?.reason ? { reason: meta.reason } : {}),
          });
       } else if (!b && a) {
-         events.push({
+         const base = {
             sectionId: a.id,
             index: a.index,
             headingText: a.headingText,
             oldHtml: '',
             newHtml: a.html,
-            changed: true,
-            ...(meta || {}),
+            changed: true as const,
+         };
+         const focus = meta?.focus ?? inferSectionDiffFocus(base);
+         events.push({
+            ...base,
+            focus,
+            ...(meta?.mode ? { mode: meta.mode } : { mode: 'less' }),
+            ...(meta?.reason ? { reason: meta.reason } : {}),
          });
       } else if (b && !a) {
          events.push({
@@ -68,7 +99,9 @@ export function buildArticleSectionDiffEvents(
             oldHtml: b.html,
             newHtml: '',
             changed: true,
-            ...(meta || {}),
+            focus: meta?.focus ?? 'seo-terms',
+            ...(meta?.mode ? { mode: meta.mode } : {}),
+            ...(meta?.reason ? { reason: meta.reason } : {}),
          });
       }
    }

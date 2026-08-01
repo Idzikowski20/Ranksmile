@@ -11,40 +11,37 @@ import { ensureUserTenancy } from '../../lib/tenancy';
 import refreshAndUpdateKeywords from '../../utils/refresh';
 import { queryRows } from '../../lib/db/query';
 import { withOrgPaymentAccess } from '../../lib/requireOrgPaymentAccess';
+import { assertCronSecret } from '../../lib/cronAuth';
 
 type CRONRefreshRes = {
    started: boolean
    error?: string|null,
 }
 
-function isApiKeyAuth(req: NextApiRequest): boolean {
-   const auth = req.headers.authorization;
-   if (!auth?.startsWith('Bearer ') || !process.env.APIKEY) return false;
-   return auth.substring('Bearer '.length) === process.env.APIKEY;
-}
-
 async function handler(req: NextApiRequest, res: NextApiResponse) {
    await db.sync();
+   if (req.method !== 'POST') {
+      return res.status(502).json({ error: 'Unrecognized Route.' });
+   }
+
+   // Platform scheduler (CRON_SECRET) — install-wide
+   if (assertCronSecret(req)) {
+      return cronRefreshkeywords(req, res, null);
+   }
+
    const authorized = await verifyUser(req, res);
    if (authorized !== 'authorized') {
       return res.status(401).json({ error: authorized });
    }
-   if (req.method === 'POST') {
-      // APIKEY = install-wide scheduler. Session: owner/admin of *their* org only.
-      const isApiKey = isApiKeyAuth(req);
-      let orgId: number | null = null;
-      if (!isApiKey) {
-         const userId = await getCurrentUserId(req, res);
-         if (!userId) return res.status(401).json({ started: false, error: 'Not authorized' });
-         const role = await getCallerRole(String(userId)).catch(() => null);
-         if (role !== 'owner' && role !== 'admin') {
-            return res.status(403).json({ started: false, error: 'Admin only.' });
-         }
-         ({ orgId } = await ensureUserTenancy(userId));
-      }
-      return cronRefreshkeywords(req, res, orgId);
+
+   const userId = await getCurrentUserId(req, res);
+   if (!userId) return res.status(401).json({ started: false, error: 'Not authorized' });
+   const role = await getCallerRole(String(userId)).catch(() => null);
+   if (role !== 'owner' && role !== 'admin') {
+      return res.status(403).json({ started: false, error: 'Admin only.' });
    }
-   return res.status(502).json({ error: 'Unrecognized Route.' });
+   const { orgId } = await ensureUserTenancy(userId);
+   return cronRefreshkeywords(req, res, orgId);
 }
 
 const cronRefreshkeywords = async (

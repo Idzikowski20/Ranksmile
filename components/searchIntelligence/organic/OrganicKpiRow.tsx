@@ -246,7 +246,7 @@ function SummaryCell({
             height: 0,
             borderLeft: '6px solid transparent',
             borderRight: '6px solid transparent',
-            borderTop: '8px solid #DAD9DE',
+            borderTop: '8px solid #dbded4',
             margin: '0 auto',
           }}
           />
@@ -273,7 +273,7 @@ function Divider() {
       style={{
         width: 1,
         alignSelf: 'stretch',
-        background: '#DAD9DE',
+        background: '#dbded4',
         marginLeft: 24,
         marginRight: 24,
         flexShrink: 0,
@@ -313,9 +313,9 @@ export default function OrganicKpiRow({
       data-at="positions-summary-widget"
       style={{
         background: '#fff',
-        border: '1px solid #DAD9DE',
+        border: '1px solid #dbded4',
         borderRadius: connectedBelow ? '8px 8px 0 0' : 8,
-        borderBottom: connectedBelow ? '1px solid #DAD9DE' : undefined,
+        borderBottom: connectedBelow ? '1px solid #dbded4' : undefined,
         padding: '16px 20px',
       }}
     >

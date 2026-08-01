@@ -8,7 +8,7 @@ import { useQuery } from 'react-query';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import { SentryPanel, SentryPanelHeader } from '../../../components/sentry-pages';
-import { Button, CompactSelect, PageFilterBar } from '../../../components/core';
+import { Button, CompactSelect, PageFilterBar, Modal, ModalFooter } from '../../../components/core';
 import PerformanceLineChart from '../../../components/performance/PerformanceLineChart';
 import { useFetchDomains } from '../../../services/domains';
 import countries from '../../../utils/countries';
@@ -253,7 +253,7 @@ function TableSortButton({
       variant="secondary"
       size="sm"
       onClick={onClick}
-      style={{ borderRadius: 8, border: '1px solid #D4D4D8', background: 'transparent', color: '#18181B' }}
+      style={{ borderRadius: 8, border: '1px solid #dbded4', background: 'transparent', color: '#18181B' }}
     >
       <span style={{ textTransform: 'lowercase' }}>{value}</span>
       <ChevronDown size={18} />
@@ -282,7 +282,7 @@ function MetricCard({
 }) {
   return (
     <div
-      className="perf-3d-card"
+      className="perf-3d-card performance-metric-card"
       style={{
       borderRadius: 12,
       padding: 16,
@@ -383,6 +383,7 @@ const PerformancePage: NextPage = () => {
   const [keywordSortOrder, setKeywordSortOrder] = useState<SortOrder>('highest');
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [goalPercentage, setGoalPercentage] = useState(10);
   const [goalPeriod, setGoalPeriod] = useState<GoalPeriod>('MONTH');
   const [trafficGoal, setTrafficGoal] = useState<TrafficGoal | null>(null);
@@ -818,6 +819,7 @@ const PerformancePage: NextPage = () => {
   };
 
   const openKeywordModal = (mode: 'custom' | 'brand') => {
+    setFiltersModalOpen(false);
     setKeywordModalMode(mode);
     if (mode === 'custom') {
       setKeywordOperatorDraft(customKeywordRule?.operator || 'contains');
@@ -921,6 +923,125 @@ const PerformancePage: NextPage = () => {
     return { progressPct, targetClicks, totalCurrentClicks, daysRemaining, avgNeeded };
   }, [trafficGoal, currentClicks]);
 
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (datePreset !== '30') n += 1;
+    if (locationCode !== 'ALL') n += 1;
+    if (deviceFilter !== 'all') n += 1;
+    if (pageFilter !== 'all') n += 1;
+    if (keywordMode !== 'all') n += 1;
+    return n;
+  }, [datePreset, locationCode, deviceFilter, pageFilter, keywordMode]);
+
+  const performanceFilterControls = (
+    <>
+      <CompactSelect
+        prefix={<CalendarIcon />}
+        size="sm"
+        options={[]}
+        hideOptions
+        triggerLabel={getRangeLabel(datePreset, selectedDateRange)}
+        menuTitle="Filter time range"
+        menuWidth="min(580px, calc(100vw - 2rem))"
+        menuBody={({ close }) => (
+          <div style={{ padding: '0 0 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {DATE_PRESETS.map((preset) => (
+                  <Button key={preset.value} variant={datePreset === preset.value ? 'primary' : 'secondary'} size="xs"
+                    onClick={() => { applyPreset(preset.value); close(); }}>
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+              <Button variant="link" size="xs" onClick={() => { handleTodayClick(); close(); }}>Today</Button>
+            </div>
+            <DateRangePicker
+              startDate={parseDateKey(selectedDateRange.start)}
+              endDate={parseDateKey(selectedDateRange.end)}
+              maxDate={getToday()}
+              onChange={({ start, end }) => {
+                setSelectedDateRange({ start: formatDateKey(start), end: formatDateKey(end) });
+                setDatePreset('custom');
+                close();
+              }}
+            />
+          </div>
+        )}
+      />
+
+      <CompactSelect
+        prefix={<LocationIcon />}
+        size="sm"
+        search={{ placeholder: 'Search locations…' }}
+        options={locationSelectOptions}
+        value={locationCode}
+        triggerLabel={selectedLocationLabel}
+        menuMinWidth={300}
+        onChange={(opt) => setLocationCode(String(opt.value))}
+      />
+
+      <CompactSelect
+        prefix={<DeviceIcon />}
+        size="sm"
+        options={deviceSelectOptions}
+        value={deviceFilter}
+        triggerLabel={selectedDeviceLabel}
+        menuMinWidth={240}
+        onChange={(opt) => setDeviceFilter(opt.value as DeviceFilter)}
+      />
+
+      <CompactSelect
+        prefix={<PageIcon />}
+        size="sm"
+        options={pageSelectOptions}
+        value={pageFilter}
+        triggerLabel={selectedPageLabel}
+        menuMinWidth={240}
+        onChange={(opt) => setPageFilter(opt.value as PageFilter)}
+      />
+
+      <CompactSelect
+        prefix={<KeywordIcon />}
+        size="sm"
+        value={keywordMode === 'custom' ? 'all' : keywordMode}
+        triggerLabel={selectedKeywordLabel}
+        menuMinWidth={260}
+        options={[
+          {
+            options: [
+              { value: 'all', label: 'All keywords' },
+              { value: '__custom_action__', label: 'Custom Keyword' },
+            ],
+          },
+          {
+            options: [
+              { value: 'nonBranded', label: 'Non-Branded Keywords' },
+              { value: 'branded', label: 'Branded Keywords', trailingItems: <span>{brandTerms.length}</span> },
+            ],
+          },
+          {
+            options: [
+              { value: '__manage_brand__', label: 'Manage Branded Keywords', leadingItems: <SettingsIcon /> },
+            ],
+          },
+        ]}
+        onChange={(opt) => {
+          const v = String(opt.value);
+          if (v === '__custom_action__') {
+            openKeywordModal('custom');
+            return;
+          }
+          if (v === '__manage_brand__') {
+            openKeywordModal('brand');
+            return;
+          }
+          setKeywordMode(v as KeywordMode);
+        }}
+      />
+    </>
+  );
+
   const feedbackAction = (
     <Button variant="link" size="sm" icon={<FeedbackIcon />} style={{ padding: 0, color: '#3F3F47' }}>
       Leave feedback
@@ -944,14 +1065,14 @@ const PerformancePage: NextPage = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} style={{ borderRadius: 12, padding: 16, background: '#F8F8F9', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div key={i} style={{ borderRadius: 12, padding: 16, background: '#f3f4f0', minHeight: 110, display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div style={{ width: 60, height: 14, borderRadius: 6, background: '#E8E8ED' }} />
                     <div style={{ width: 80, height: 24, borderRadius: 6, background: '#E0E0E6' }} />
                     <div style={{ width: 100, height: 12, borderRadius: 6, background: '#E8E8ED' }} />
                   </div>
                 ))}
               </div>
-              <div style={{ borderRadius: 12, background: '#F8F8F9', padding: 16 }}>
+              <div style={{ borderRadius: 12, background: '#f3f4f0', padding: 16 }}>
                 <div style={{ height: 220, borderRadius: 6, background: '#E8E8ED' }} />
               </div>
             </div>
@@ -965,115 +1086,31 @@ const PerformancePage: NextPage = () => {
         ) : (
           <>
               <SentryPanel noPadding>
-                <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <PageFilterBar condensed className="performance-filter-bar">
-                <div className="performance-filters" style={{ display: 'contents' }}>
-                    <CompactSelect
-                      prefix={<CalendarIcon />}
-                      size="sm"
-                      options={[]}
-                      hideOptions
-                      triggerLabel={getRangeLabel(datePreset, selectedDateRange)}
-                      menuTitle="Filter time range"
-                      menuWidth="min(580px, calc(100vw - 2rem))"
-                      menuBody={({ close }) => (
-                        <div style={{ padding: '0 0 8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', flexWrap: 'wrap', gap: 10 }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                              {DATE_PRESETS.map((preset) => (
-                                <Button key={preset.value} variant={datePreset === preset.value ? 'primary' : 'secondary'} size="xs"
-                                  onClick={() => { applyPreset(preset.value); close(); }}>
-                                  {preset.label}
-                                </Button>
-                              ))}
-                            </div>
-                            <Button variant="link" size="xs" onClick={() => { handleTodayClick(); close(); }}>Today</Button>
-                          </div>
-                          <DateRangePicker
-                            startDate={parseDateKey(selectedDateRange.start)}
-                            endDate={parseDateKey(selectedDateRange.end)}
-                            maxDate={getToday()}
-                            onChange={({ start, end }) => {
-                              setSelectedDateRange({ start: formatDateKey(start), end: formatDateKey(end) });
-                              setDatePreset('custom');
-                              close();
-                            }}
-                          />
-                        </div>
-                      )}
-                    />
+                <div className="performance-panel-body">
+                <div className="performance-filters-desktop">
+                  <PageFilterBar condensed className="performance-filter-bar">
+                    <div className="performance-filters" style={{ display: 'contents' }}>
+                      {performanceFilterControls}
+                    </div>
+                  </PageFilterBar>
+                </div>
 
-                    <CompactSelect
-                      prefix={<LocationIcon />}
-                      size="sm"
-                      search={{ placeholder: 'Search locations…' }}
-                      options={locationSelectOptions}
-                      value={locationCode}
-                      triggerLabel={selectedLocationLabel}
-                      menuMinWidth={300}
-                      onChange={(opt) => setLocationCode(String(opt.value))}
-                    />
-
-                    <CompactSelect
-                      prefix={<DeviceIcon />}
-                      size="sm"
-                      options={deviceSelectOptions}
-                      value={deviceFilter}
-                      triggerLabel={selectedDeviceLabel}
-                      menuMinWidth={240}
-                      onChange={(opt) => setDeviceFilter(opt.value as DeviceFilter)}
-                    />
-
-                    <CompactSelect
-                      prefix={<PageIcon />}
-                      size="sm"
-                      options={pageSelectOptions}
-                      value={pageFilter}
-                      triggerLabel={selectedPageLabel}
-                      menuMinWidth={240}
-                      onChange={(opt) => setPageFilter(opt.value as PageFilter)}
-                    />
-
-                    <CompactSelect
-                      prefix={<KeywordIcon />}
-                      size="sm"
-                      value={keywordMode === 'custom' ? 'all' : keywordMode}
-                      triggerLabel={selectedKeywordLabel}
-                      menuMinWidth={260}
-                      options={[
-                        {
-                          options: [
-                            { value: 'all', label: 'All keywords' },
-                            { value: '__custom_action__', label: 'Custom Keyword' },
-                          ],
-                        },
-                        {
-                          options: [
-                            { value: 'nonBranded', label: 'Non-Branded Keywords' },
-                            { value: 'branded', label: 'Branded Keywords', trailingItems: <span>{brandTerms.length}</span> },
-                          ],
-                        },
-                        {
-                          options: [
-                            { value: '__manage_brand__', label: 'Manage Branded Keywords', leadingItems: <SettingsIcon /> },
-                          ],
-                        },
-                      ]}
-                      onChange={(opt) => {
-                        const v = String(opt.value);
-                        if (v === '__custom_action__') {
-                          openKeywordModal('custom');
-                          return;
-                        }
-                        if (v === '__manage_brand__') {
-                          openKeywordModal('brand');
-                          return;
-                        }
-                        setKeywordMode(v as KeywordMode);
-                      }}
-                    />
-                  </div>
-                </PageFilterBar>
+                <div className="performance-filters-mobile">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setFiltersModalOpen(true)}
+                    icon={(
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                        <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    )}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                  </Button>
+                </div>
 
                   <div className="performance-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
                     {computed.statsCards.map((card) => (
@@ -1096,9 +1133,9 @@ const PerformancePage: NextPage = () => {
                   <div className="performance-goal-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, color: '#3F3F47', fontFamily: 'var(--font-family-primary)', fontSize: 14, borderTop: '1px solid #F4F4F5', paddingTop: 20, marginTop: 4 }}>
                   {trafficGoal ? (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <div style={{ fontWeight: 400 }}>Goal</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="performance-goal-row performance-goal-row--title">
+                        <div className="performance-goal-row-label">Goal</div>
+                        <div className="performance-goal-row-value">
                           <span>Increase clicks by {trafficGoal.percentage}% each {trafficGoal.period === 'MONTH' ? 'month' : 'quarter'}</span>
                           <Button
                             type="button"
@@ -1117,17 +1154,17 @@ const PerformancePage: NextPage = () => {
                           />
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <div style={{ fontWeight: 400 }}>Current progress</div>
-                        <div>{goalStats?.progressPct ?? 0}%</div>
+                      <div className="performance-goal-row">
+                        <div className="performance-goal-row-label">Current progress</div>
+                        <div className="performance-goal-row-value">{goalStats?.progressPct ?? 0}%</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <div style={{ fontWeight: 400 }}>Days remaining</div>
-                        <div>{goalStats?.daysRemaining ?? '-'}</div>
+                      <div className="performance-goal-row">
+                        <div className="performance-goal-row-label">Days remaining</div>
+                        <div className="performance-goal-row-value">{goalStats?.daysRemaining ?? '-'}</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <div style={{ fontWeight: 400 }}>Avg. clicks to meet goal</div>
-                        <div>{goalStats?.avgNeeded ?? 0}/day</div>
+                      <div className="performance-goal-row">
+                        <div className="performance-goal-row-label">Avg. clicks to meet goal</div>
+                        <div className="performance-goal-row-value">{goalStats?.avgNeeded ?? 0}/day</div>
                       </div>
                     </>
                   ) : (
@@ -1139,17 +1176,17 @@ const PerformancePage: NextPage = () => {
                       } style={{ padding: 0, color: '#3F3F47' }}>
                         Set up traffic goal
                       </Button>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <span style={{ fontWeight: 400 }}>Current progress</span>
-                        <span>-</span>
+                      <div className="performance-goal-row">
+                        <span className="performance-goal-row-label">Current progress</span>
+                        <span className="performance-goal-row-value">-</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <span style={{ fontWeight: 400 }}>Days remaining</span>
-                        <span>-</span>
+                      <div className="performance-goal-row">
+                        <span className="performance-goal-row-label">Days remaining</span>
+                        <span className="performance-goal-row-value">-</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
-                        <span style={{ fontWeight: 400 }}>Avg. clicks to meet goal</span>
-                        <span>-</span>
+                      <div className="performance-goal-row">
+                        <span className="performance-goal-row-label">Avg. clicks to meet goal</span>
+                        <span className="performance-goal-row-value">-</span>
                       </div>
                     </>
                   )}
@@ -1167,31 +1204,33 @@ const PerformancePage: NextPage = () => {
               <SentryPanel noPadding>
                 <SentryPanelHeader
                   title={(
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div className="performance-table-header-title">
                       <span>Pages</span>
-                      <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
-                      <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                      <TableSortButton
-                        value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
-                        onClick={() => {
-                          const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                          const currentIndex = order.indexOf(pageSortMetric);
-                          setPageSortMetric(order[(currentIndex + 1) % order.length]);
-                        }}
-                      />
+                      <span className="performance-table-header-sorts">
+                        <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                        <TableSortButton value={pageSortOrder} onClick={() => setPageSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
+                        <TableSortButton
+                          value={pageSortMetric === 'impressions' ? 'impr.' : pageSortMetric}
+                          onClick={() => {
+                            const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
+                            const currentIndex = order.indexOf(pageSortMetric);
+                            setPageSortMetric(order[(currentIndex + 1) % order.length]);
+                          }}
+                        />
+                      </span>
                     </div>
                   )}
                 />
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="performance-data-table-wrap">
+                  <table className="performance-data-table">
                     <thead>
                       <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
                         <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Page</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Position</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Position</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1208,10 +1247,10 @@ const PerformancePage: NextPage = () => {
                           <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={row.position.toFixed(1).replace('.0', '')} direction={row.positionDir} />
                           </td>
                         </tr>
@@ -1224,31 +1263,33 @@ const PerformancePage: NextPage = () => {
               <SentryPanel noPadding>
                 <SentryPanelHeader
                   title={(
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div className="performance-table-header-title">
                       <span>Keywords</span>
-                      <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
-                      <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
-                      <TableSortButton
-                        value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
-                        onClick={() => {
-                          const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
-                          const currentIndex = order.indexOf(keywordSortMetric);
-                          setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
-                        }}
-                      />
+                      <span className="performance-table-header-sorts">
+                        <span style={{ fontSize: 16, fontWeight: 400, color: '#52525C' }}>with</span>
+                        <TableSortButton value={keywordSortOrder} onClick={() => setKeywordSortOrder((current) => (current === 'highest' ? 'lowest' : 'highest'))} />
+                        <TableSortButton
+                          value={keywordSortMetric === 'impressions' ? 'impr.' : keywordSortMetric}
+                          onClick={() => {
+                            const order: SortMetric[] = ['clicks', 'impressions', 'ctr', 'position'];
+                            const currentIndex = order.indexOf(keywordSortMetric);
+                            setKeywordSortMetric(order[(currentIndex + 1) % order.length]);
+                          }}
+                        />
+                      </span>
                     </div>
                   )}
                 />
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="performance-data-table-wrap">
+                  <table className="performance-data-table">
                     <thead>
                       <tr style={{ borderBottom: '1px solid #F4F4F5' }}>
                         <th style={{ minWidth: 200, width: 496, padding: '12px 16px 12px 24px', textAlign: 'left', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Keyword</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Clicks</th>
                         <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Impr.</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
-                        <th style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Position</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>CTR</th>
+                        <th className="performance-col-secondary" style={{ minWidth: 80, padding: '12px 16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' }}>Position</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1265,10 +1306,10 @@ const PerformancePage: NextPage = () => {
                           <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={compactNumber(row.impressions)} direction={row.impressionDir} />
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={formatPercent(row.ctr)} direction={row.ctrDir} />
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+                          <td className="performance-col-secondary" style={{ padding: '14px 16px', textAlign: 'right', fontSize: 14, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
                             <DeltaValue value={row.position.toFixed(1).replace('.0', '')} direction={row.positionDir} />
                           </td>
                         </tr>
@@ -1293,6 +1334,24 @@ const PerformancePage: NextPage = () => {
             onSaveGoal={handleSaveGoal}
             goalSaving={goalSaving}
           />
+        ) : null}
+
+        {filtersModalOpen ? (
+          <Modal
+            title="Filters"
+            onClose={() => setFiltersModalOpen(false)}
+            width={400}
+            className="performance-filters-modal"
+          >
+            <div className="performance-filters-modal-stack">
+              {performanceFilterControls}
+            </div>
+            <ModalFooter>
+              <Button type="button" variant="primary" size="sm" onClick={() => setFiltersModalOpen(false)}>
+                Done
+              </Button>
+            </ModalFooter>
+          </Modal>
         ) : null}
 
         {keywordModalMode ? (
@@ -1330,33 +1389,14 @@ const PerformancePage: NextPage = () => {
             }
           }
 
-          @media (max-width: 1100px) {
+          @media (max-width: 1100px) and (min-width: 768px) {
             .performance-metrics-grid,
             .performance-summary-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             }
           }
 
-          @media (max-width: 900px) {
-            .performance-filters {
-              display: grid !important;
-              grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            }
-
-            .perf-filter-button {
-              width: 100%;
-              justify-content: space-between;
-            }
-          }
-
           @media (max-width: 720px) {
-            .performance-metrics-grid,
-            .performance-summary-grid,
-            .performance-goal-bar,
-            .performance-filters {
-              grid-template-columns: minmax(0, 1fr) !important;
-            }
-
             .performance-calendar-months {
               flex-wrap: wrap !important;
             }

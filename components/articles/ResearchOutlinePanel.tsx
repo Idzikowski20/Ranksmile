@@ -270,7 +270,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                   <div
                     style={{
                       padding: '10px 12px 8px',
-                      background: '#f8f8f9',
+                      background: '#f3f4f0',
                       borderBottom: '1px solid #f4f4f5',
                       display: 'flex',
                       alignItems: 'center',
@@ -519,7 +519,7 @@ const ResearchOutlinePanel: React.FC<Props> = ({
                             </a>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, background: '#f8f8f9', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, background: '#f3f4f0', flexShrink: 0, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                           <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
                             <path d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                           </svg>

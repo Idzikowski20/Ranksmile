@@ -236,7 +236,7 @@ export const Spinner = ({ size = 14 }: { size?: number }) => (
     aria-hidden="true"
     style={{
       display: 'inline-block', width: size, height: size, flexShrink: 0,
-      border: '2px solid #dad9de', borderTopColor: '#F29964', borderRadius: '50%',
+      border: '2px solid #dbded4', borderTopColor: '#F29964', borderRadius: '50%',
           animation: 'sentry-setup-spin 0.7s linear infinite',
     }}
   />

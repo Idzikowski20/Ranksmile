@@ -13,7 +13,7 @@ export const color = {
   textMuted: '#52525C',
   textFaint: '#9F9FA9',
   white: '#FFFFFF',
-  surfaceSubtle: '#F8F8F9',
+  surfaceSubtle: '#f3f4f0',
   surfaceLight: '#F4F4F5',
   success: '#1AB25E',
   error: '#FF6F77',

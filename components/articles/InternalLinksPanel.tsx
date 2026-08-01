@@ -359,7 +359,7 @@ const InternalLinksPanel: React.FC<Props> = ({
                           type="button"
                           onClick={() => { setSiteUrl(`https://${d}/`); setSiteDropdownOpen(false); setSiteSearch(''); }}
                           style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', border: 'none', background: isSel ? '#f4f4f5' : 'transparent', borderRadius: 6, cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-family-primary)' }}
-                          onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = '#f8f8f9'; }}
+                          onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.background = '#f3f4f0'; }}
                           onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}
                         >
                           <DomainFavicon domain={d} size={20} />
@@ -386,7 +386,7 @@ const InternalLinksPanel: React.FC<Props> = ({
                       type="button"
                       onClick={() => { window.location.href = '/api/gsc/connect'; }}
                       style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', fontSize: 13, fontWeight: 600, color: '#52525c', textAlign: 'left' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f8f9'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
                       Add another Search Console account

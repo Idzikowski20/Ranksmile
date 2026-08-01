@@ -28,7 +28,7 @@ const InfoIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="no
 const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
 
 // Shared 3D "card" surface — matches the AI Visibility overview cards.
-const CARD_3D: React.CSSProperties = { border: '1px solid #DAD9DE', borderRadius: 12, background: '#fff', boxShadow: '0 4px 0 0 #e4e4e7' };
+const CARD_3D: React.CSSProperties = { border: '1px solid #dbded4', borderRadius: 12, background: '#fff' };
 
 const StatCard = ({ label, value, hint, pending }: { label: string; value: string; hint: string; pending: boolean }) => (
    <section style={{ ...CARD_3D, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>

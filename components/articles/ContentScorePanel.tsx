@@ -755,7 +755,7 @@ const ContentScorePanel = ({
             {nlpOpen && (
               <>
                 <div style={{ padding: '0 16px 8px' }}>
-                  <div style={{ background: '#f8f8f9', border: '1px solid #f4f4f5', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ background: '#f3f4f0', border: '1px solid #f4f4f5', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? '#1ab25e' : '#d70028'} />
                     <span style={{ fontSize: 12, color: '#52525c' }}>NLP terms: {coveredCount}/{terms.length} covered</span>
                   </div>

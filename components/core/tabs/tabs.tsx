@@ -13,6 +13,9 @@ interface TabsProps {
 const TabList = styled.div`
   display: inline-flex;
   position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: #F0F0F2;
   border-radius: 6px;
   padding: 3px;

@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { Sequelize } from 'sequelize-typescript';
 import Domain from './models/domain';
 import Keyword from './models/keyword';

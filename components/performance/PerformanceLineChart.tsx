@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ChartPoint } from '../../lib/performance/types';
 import { buildChartTicks, compactNumber, formatPercent } from '../../lib/performance/formatters';
 
@@ -10,10 +10,19 @@ type PerformanceLineChartProps = {
 export default function PerformanceLineChart({ data, visibleMetrics }: PerformanceLineChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hoverState, setHoverState] = useState<{ index: number; lineX: number; cursorPx: number } | null>(null);
+  const [narrow, setNarrow] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   if (!data.length) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, color: '#52525C', fontSize: 14 }}>
+      <div className="performance-line-chart--empty">
         No chart data for this filter.
       </div>
     );
@@ -54,8 +63,8 @@ export default function PerformanceLineChart({ data, visibleMetrics }: Performan
   const ctrArea = `${ctrPath}L${getX(data.length - 1).toFixed(3)},${innerHeight}L0,${innerHeight}Z`;
   const positionArea = `${positionPath}L${getX(data.length - 1).toFixed(3)},${innerHeight}L0,${innerHeight}Z`;
 
-  const labelStep = Math.max(1, Math.floor(data.length / 14));
-  const xLabels = data.filter((_, index) => index % labelStep === 0).slice(0, 15);
+  const labelStep = Math.max(1, Math.floor(data.length / (narrow ? 6 : 14)));
+  const xLabels = data.filter((_, index) => index % labelStep === 0).slice(0, narrow ? 7 : 15);
 
   const formatAxisDate = (value: string) => {
     const date = new Date(value);
@@ -107,11 +116,11 @@ export default function PerformanceLineChart({ data, visibleMetrics }: Performan
   return (
     <div
       ref={containerRef}
-      style={{ position: 'relative', height: 400, width: '100%' }}
+      className="performance-line-chart"
       onMouseMove={handlePointerMove}
       onMouseLeave={() => setHoverState(null)}
     >
-        <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
+        <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
           <g transform={`translate(${leftPad},${topPad})`}>
             {[0, 1, 2, 3].map((index) => {
               const y = innerHeight - (innerHeight / 3) * index;

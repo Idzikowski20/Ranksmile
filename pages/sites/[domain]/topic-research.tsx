@@ -70,7 +70,7 @@ const TopicResearchPage: NextPage = () => {
                </div>
                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {loading && Array.from({ length: 4 }).map((_, i) => (
-                     <div key={`tr-skel-${i}`} style={{ height: 96, border: '1px solid #E4E4E7', borderRadius: 12, background: '#F8F8F9', animation: 'skeletonPulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.08}s` }} />
+                     <div key={`tr-skel-${i}`} style={{ height: 96, border: '1px solid #E4E4E7', borderRadius: 12, background: '#f3f4f0', animation: 'skeletonPulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.08}s` }} />
                   ))}
 
                   {!loading && items.length === 0 && (

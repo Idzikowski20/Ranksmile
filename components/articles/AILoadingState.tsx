@@ -78,7 +78,7 @@ export default function AILoadingState({
               fontSize: 12,
               scrollBehavior: 'smooth',
               background: '#FFFFFF',
-              border: '1px solid #DAD9DE',
+              border: '1px solid #dbded4',
             }}
           >
             <div>

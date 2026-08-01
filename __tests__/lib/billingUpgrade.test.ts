@@ -1,4 +1,6 @@
+import type Stripe from 'stripe';
 import {
+  applySubscriptionUpgrade,
   assertCanUpgradeSubscription,
   isAllowedSubscriptionChange,
   isPaidPlanUpgrade,
@@ -57,5 +59,57 @@ describe('billingUpgrade helpers', () => {
     const down = assertCanUpgradeSubscription(billing, 'growth', 'yearly');
     expect(down.ok).toBe(false);
     if (!down.ok) expect(down.error).toMatch(/Downgrade/i);
+  });
+});
+
+describe('applySubscriptionUpgrade pending updates', () => {
+  const baseSub = {
+    id: 'sub_x',
+    metadata: {},
+    cancel_at_period_end: false,
+    items: { data: [{ id: 'si_1' }] },
+    latest_invoice: null,
+  };
+
+  function mockStripe(sub: typeof baseSub) {
+    const retrieve = jest.fn().mockResolvedValue(sub);
+    const update = jest.fn().mockImplementation(async (_id: string, params: Record<string, unknown>) => ({
+      ...sub,
+      ...params,
+      cancel_at_period_end: params.cancel_at_period_end ?? sub.cancel_at_period_end,
+      latest_invoice: null,
+    }));
+    return { subscriptions: { retrieve, update } } as unknown as Stripe;
+  }
+
+  const args = {
+    orgId: 1,
+    userId: 'u1',
+    subscriptionId: 'sub_x',
+    targetPriceId: 'price_growth',
+    targetSlug: 'growth' as const,
+    targetBilling: 'monthly' as const,
+  };
+
+  it('does not send cancel_at_period_end with pending_if_incomplete', async () => {
+    const stripe = mockStripe(baseSub);
+    await applySubscriptionUpgrade(stripe, args);
+
+    const pendingCall = (stripe.subscriptions.update as jest.Mock).mock.calls.find(
+      (c) => c[1]?.payment_behavior === 'pending_if_incomplete',
+    );
+    expect(pendingCall).toBeDefined();
+    expect(pendingCall![1]).not.toHaveProperty('cancel_at_period_end');
+  });
+
+  it('clears scheduled cancel in a separate update before pending upgrade', async () => {
+    const stripe = mockStripe({ ...baseSub, cancel_at_period_end: true });
+    await applySubscriptionUpgrade(stripe, args);
+
+    const calls = (stripe.subscriptions.update as jest.Mock).mock.calls;
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(calls[0][1]).toEqual({ cancel_at_period_end: false });
+    expect(calls[1][1].payment_behavior).toBe('pending_if_incomplete');
+    expect(calls[1][1]).not.toHaveProperty('cancel_at_period_end');
   });
 });

@@ -17,11 +17,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 // Zod 4 ships separate ESM + CJS builds. Next 12 webpack can pull both into the
 // client bundle; mixing ZodString/$ZodType across copies crashes with
-// "Cannot set properties of undefined (setting 'def')" during Neon Auth init.
+// "Cannot set properties of undefined (setting 'def')".
 //
 // IMPORTANT: use `$` exact-match aliases. A plain `zod → index.cjs` alias makes
-// webpack rewrite `zod/v4/core` to `index.cjs/v4/core` (missing), which breaks
-// @hookform/resolvers (pulled in by @neondatabase/auth-ui).
+// webpack rewrite `zod/v4/core` to `index.cjs/v4/core` (missing).
 const zodRoot = path.dirname(require.resolve('zod/package.json'));
 const zodAliases = {
   zod$: path.join(zodRoot, 'index.cjs'),
@@ -90,9 +89,10 @@ const nextConfig = {
 
 module.exports = nextConfig;
 
-// Sentry temporarily disabled — re-enable by setting SENTRY_ENABLED=true and
-// restoring withSentryConfig wrapping below.
-const SENTRY_ENABLED = process.env.SENTRY_ENABLED === 'true';
+// Sentry: on in production by default; set SENTRY_ENABLED=false to disable.
+// Non-prod requires SENTRY_ENABLED=true.
+const SENTRY_ENABLED = process.env.SENTRY_ENABLED === 'true'
+  || (process.env.NODE_ENV === 'production' && process.env.SENTRY_ENABLED !== 'false');
 
 if (SENTRY_ENABLED) {
   // Injected content via Sentry wizard below

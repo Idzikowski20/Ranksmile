@@ -13,6 +13,14 @@ function ignoreExisting(label: string, e: unknown): void {
   if (!/exist|duplicate|already/i.test(m)) console.warn(`[rank-tracking] ${label} failed:`, m);
 }
 
+async function addColumn(table: string, column: string, ddl: string): Promise<void> {
+  try {
+    await db.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  } catch (e) {
+    ignoreExisting(`${table}.${column}`, e);
+  }
+}
+
 /**
  * Rank Tracking v3 tables — separate from legacy `keyword` scraper table.
  * Snapshots: regular table + indexes (PG retention via partitions.ts DELETE/partition helpers).
@@ -41,7 +49,20 @@ export async function ensureRankTrackingTables(): Promise<void> {
     id ${PK},
     config_id INTEGER NOT NULL,
     keyword TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued',
+    archived_at TIMESTAMP,
+    last_error TEXT,
+    last_attempt_at TIMESTAMP,
+    next_retry_at TIMESTAMP,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('rank_tracking_keywords', e));
+
+  await addColumn('rank_tracking_keywords', 'status', "TEXT NOT NULL DEFAULT 'queued'");
+  await addColumn('rank_tracking_keywords', 'archived_at', 'TIMESTAMP');
+  await addColumn('rank_tracking_keywords', 'last_error', 'TEXT');
+  await addColumn('rank_tracking_keywords', 'last_attempt_at', 'TIMESTAMP');
+  await addColumn('rank_tracking_keywords', 'next_retry_at', 'TIMESTAMP');
+  await addColumn('rank_tracking_keywords', 'attempt_count', 'INTEGER NOT NULL DEFAULT 0');
 
   await db.query(`CREATE TABLE IF NOT EXISTS keyword_metrics (
     id ${PK},
@@ -58,13 +79,22 @@ export async function ensureRankTrackingTables(): Promise<void> {
     config_id INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     trigger TEXT NOT NULL DEFAULT 'manual',
+    provider TEXT DEFAULT 'dataforseo',
     keywords_total INTEGER NOT NULL DEFAULT 0,
     keywords_checked INTEGER NOT NULL DEFAULT 0,
+    keywords_success INTEGER NOT NULL DEFAULT 0,
+    keywords_failed INTEGER NOT NULL DEFAULT 0,
+    duration_ms INTEGER,
     attempts INTEGER NOT NULL DEFAULT 0,
     last_error TEXT,
     started_at TIMESTAMP,
     finished_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('rank_check_runs', e));
+
+  await addColumn('rank_check_runs', 'provider', "TEXT DEFAULT 'dataforseo'");
+  await addColumn('rank_check_runs', 'keywords_success', 'INTEGER NOT NULL DEFAULT 0');
+  await addColumn('rank_check_runs', 'keywords_failed', 'INTEGER NOT NULL DEFAULT 0');
+  await addColumn('rank_check_runs', 'duration_ms', 'INTEGER');
 
   await db.query(`CREATE TABLE IF NOT EXISTS rank_snapshots (
     id ${PK},
@@ -80,19 +110,51 @@ export async function ensureRankTrackingTables(): Promise<void> {
     ranking_domain TEXT,
     serp_features ${JSON_T},
     raw_items ${JSON_T},
+    provider TEXT,
+    provider_version TEXT,
+    provider_response_hash TEXT,
     checked_at TIMESTAMP NOT NULL DEFAULT ${NOW})`).catch((e) => ignoreExisting('rank_snapshots', e));
+
+  await addColumn('rank_snapshots', 'provider', 'TEXT');
+  await addColumn('rank_snapshots', 'provider_version', 'TEXT');
+  await addColumn('rank_snapshots', 'provider_response_hash', 'TEXT');
+
+  await db.query(`CREATE TABLE IF NOT EXISTS rank_tracking_summary (
+    id ${PK},
+    config_id INTEGER NOT NULL,
+    run_id INTEGER NOT NULL,
+    previous_run_id INTEGER,
+    analytics_version TEXT NOT NULL DEFAULT 'v1',
+    avg_position REAL,
+    previous_avg_position REAL,
+    moved_up INTEGER NOT NULL DEFAULT 0,
+    moved_down INTEGER NOT NULL DEFAULT 0,
+    unchanged INTEGER NOT NULL DEFAULT 0,
+    bucket_top3 INTEGER NOT NULL DEFAULT 0,
+    bucket_top10 INTEGER NOT NULL DEFAULT 0,
+    bucket_top100 INTEGER NOT NULL DEFAULT 0,
+    bucket_not_ranking INTEGER NOT NULL DEFAULT 0,
+    prev_bucket_top3 INTEGER NOT NULL DEFAULT 0,
+    prev_bucket_top10 INTEGER NOT NULL DEFAULT 0,
+    prev_bucket_top100 INTEGER NOT NULL DEFAULT 0,
+    prev_bucket_not_ranking INTEGER NOT NULL DEFAULT 0,
+    visibility ${JSON_T},
+    updated_at TIMESTAMP DEFAULT ${NOW})`).catch((e) => ignoreExisting('rank_tracking_summary', e));
 
   const indexes: Array<[string, string]> = [
     ['idx_rtc_domain', 'CREATE INDEX IF NOT EXISTS idx_rtc_domain ON rank_tracking_configs (domain_id)'],
     ['idx_rtc_domain_archived', 'CREATE INDEX IF NOT EXISTS idx_rtc_domain_archived ON rank_tracking_configs (domain_id, archived_at)'],
     ['idx_rtk_config', 'CREATE INDEX IF NOT EXISTS idx_rtk_config ON rank_tracking_keywords (config_id)'],
     ['idx_rtk_config_keyword', 'CREATE UNIQUE INDEX IF NOT EXISTS idx_rtk_config_keyword ON rank_tracking_keywords (config_id, keyword)'],
+    ['idx_rtk_config_active', 'CREATE INDEX IF NOT EXISTS idx_rtk_config_active ON rank_tracking_keywords (config_id, archived_at)'],
     ['idx_km_lookup', 'CREATE INDEX IF NOT EXISTS idx_km_lookup ON keyword_metrics (keyword_normalized, location_code, language_code, fetched_at DESC)'],
     ['idx_rcr_config_status', 'CREATE INDEX IF NOT EXISTS idx_rcr_config_status ON rank_check_runs (config_id, status, id)'],
     ['idx_rs_config_checked', 'CREATE INDEX IF NOT EXISTS idx_rs_config_checked ON rank_snapshots (config_id, checked_at DESC)'],
     ['idx_rs_kw_device_checked', 'CREATE INDEX IF NOT EXISTS idx_rs_kw_device_checked ON rank_snapshots (tracking_keyword_id, device, checked_at DESC)'],
     ['idx_rs_run', 'CREATE INDEX IF NOT EXISTS idx_rs_run ON rank_snapshots (run_id)'],
     ['idx_rs_run_kw_device', 'CREATE UNIQUE INDEX IF NOT EXISTS idx_rs_run_kw_device ON rank_snapshots (run_id, tracking_keyword_id, device)'],
+    ['idx_rts_config_run', 'CREATE UNIQUE INDEX IF NOT EXISTS idx_rts_config_run ON rank_tracking_summary (config_id, run_id)'],
+    ['idx_rts_config_run_id', 'CREATE INDEX IF NOT EXISTS idx_rts_config_run_id ON rank_tracking_summary (config_id, run_id DESC)'],
   ];
 
   for (const [label, sql] of indexes) {

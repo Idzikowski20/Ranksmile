@@ -25,7 +25,17 @@ describe('buildArticleSectionDiffEvents', () => {
     const before = '<h2>A</h2><p>aaa</p>';
     const after = '<h2>A</h2><p>aaa</p><h2>FAQ</h2><h3>Q?</h3><p>Answer text here.</p>';
     const ev = buildArticleSectionDiffEvents(before, after);
-    expect(ev.some((e) => e.changed && e.newHtml.includes('FAQ'))).toBe(true);
+    const faqEv = ev.find((e) => e.changed && e.newHtml.includes('FAQ'));
+    expect(faqEv).toBeDefined();
+    expect(faqEv!.focus).toBe('ai-coverage');
+  });
+
+  it('labels body edits as seo-terms when no global focus override', () => {
+    const before = '<h2>Why</h2><p>Old</p>';
+    const after = '<h2>Why</h2><p>New body with SEO term woven in carefully.</p>';
+    const ev = buildArticleSectionDiffEvents(before, after);
+    expect(ev[0].changed).toBe(true);
+    expect(ev[0].focus).toBe('seo-terms');
   });
 });
 

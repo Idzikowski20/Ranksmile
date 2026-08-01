@@ -6,33 +6,45 @@ jest.mock('../../lib/rankTracking/partitions', () => ({
   pruneOldSnapshotPartitions: jest.fn().mockResolvedValue(0),
 }));
 jest.mock('../../lib/rankTracking/repository', () => ({ reclaimStaleRuns: jest.fn().mockResolvedValue(0) }));
+jest.mock('../../database/database', () => ({
+  __esModule: true,
+  default: { query: jest.fn().mockResolvedValue([[], null]), sync: jest.fn() },
+}));
 
 import { ensureRankTrackingTables } from '../../lib/ensureRankTrackingTables';
 import rankCronHandler from '../../pages/api/cron/rank-tracking';
 import retentionCronHandler from '../../pages/api/cron/rank-snapshots-retention';
 
 const makeRes = () => {
-  const res: { status: jest.Mock; json: jest.Mock } = {
+  const res: { status: jest.Mock; json: jest.Mock; statusCode?: number } = {
     status: jest.fn(),
     json: jest.fn(),
   };
-  res.status.mockReturnValue(res);
+  res.status.mockImplementation((code: number) => {
+    res.statusCode = code;
+    return res;
+  });
   res.json.mockReturnValue(res);
   return res;
 };
 
-const OLD_CRON_SECRET = process.env.CRON_SECRET;
+const OLD = {
+  CRON_SECRET: process.env.CRON_SECRET,
+  CRON_SECRET_CURRENT: process.env.CRON_SECRET_CURRENT,
+  CRON_SECRET_PREVIOUS: process.env.CRON_SECRET_PREVIOUS,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
   delete process.env.CRON_SECRET;
+  delete process.env.CRON_SECRET_CURRENT;
+  delete process.env.CRON_SECRET_PREVIOUS;
 });
 
 afterAll(() => {
-  if (OLD_CRON_SECRET === undefined) {
-    delete process.env.CRON_SECRET;
-  } else {
-    process.env.CRON_SECRET = OLD_CRON_SECRET;
+  for (const [k, v] of Object.entries(OLD)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
   }
 });
 
@@ -46,4 +58,12 @@ it.each([
 
   expect(res.status).toHaveBeenCalledWith(401);
   expect(ensureRankTrackingTables).not.toHaveBeenCalled();
+});
+
+it('accepts PREVIOUS secret during rotation', async () => {
+  process.env.CRON_SECRET_CURRENT = 'new';
+  process.env.CRON_SECRET_PREVIOUS = 'old';
+  const res = makeRes();
+  await rankCronHandler({ headers: { authorization: 'Bearer old' }, method: 'GET' } as never, res as never);
+  expect(res.status).toHaveBeenCalledWith(200);
 });

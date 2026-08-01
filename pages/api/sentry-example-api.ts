@@ -1,17 +1,12 @@
-import * as Sentry from "@sentry/nextjs";
-
-// Custom error class for Sentry testing
-class SentryExampleAPIError extends Error {
-  constructor(message: string | undefined) {
-    super(message);
-    this.name = "SentryExampleAPIError";
-  }
-}
-// A faulty API route to test Sentry's error monitoring
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+/** Example endpoint disabled in production. */
 export default function handler(_req: NextApiRequest, res: NextApiResponse) {
-  Sentry.logger.info("Sentry example API called");
-throw new SentryExampleAPIError("This error is raised on the backend called by the example page.");
-res.status(200).json({ name: "John Doe" });
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Sentry = require('@sentry/nextjs');
+  Sentry.logger?.info?.('Sentry example API called');
+  throw new Error('Sentry Example API Error');
 }

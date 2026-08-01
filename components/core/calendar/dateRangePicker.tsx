@@ -94,8 +94,8 @@ const StyledWrapper = styled.div`
   .rdrMonthPicker select:hover, .rdrYearPicker select:hover { background-color: transparent; }
   .rdrPprevButton { margin-left: 0; }
   .rdrNextButton { margin-right: 0; }
-  .rdrPprevButton i { border-right-color: #DAD9DE; margin: 0; }
-  .rdrNextButton i { border-left-color: #DAD9DE; margin: 0; }
+  .rdrPprevButton i { border-right-color: #dbded4; margin: 0; }
+  .rdrNextButton i { border-left-color: #dbded4; margin: 0; }
   .rdrDayPassive { visibility: hidden; }
 `;
 

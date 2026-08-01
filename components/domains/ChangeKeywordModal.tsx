@@ -23,7 +23,7 @@ function KwRow({ keyword, position, clicks, impr, selected, onSelect, suggest, a
    selected: boolean; onSelect: () => void; suggest?: boolean; addNew?: boolean;
 }) {
    return (
-      <div onClick={onSelect} className="kw-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: selected ? '#F8F8F9' : '#fff', transition: 'background 100ms ease' }}>
+      <div onClick={onSelect} className="kw-row" style={{ display: 'flex', alignItems: 'stretch', borderBottom: '1px solid #F4F4F5', cursor: 'pointer', background: selected ? '#f3f4f0' : '#fff', transition: 'background 100ms ease' }}>
          <label style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer' }}>
             <input type="radio" checked={selected} readOnly style={{ accentColor: '#18181B', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
             <span style={{ minWidth: 0, fontSize: 14, fontWeight: addNew ? 500 : 400, color: addNew ? '#F29964' : '#18181B', fontFamily: KW_FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{keyword}</span>

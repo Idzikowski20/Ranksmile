@@ -75,7 +75,7 @@ const AuditToolPage: NextPage = () => {
             contentMaxWidth="100%"
          >
             <div style={{ width: '100%', maxWidth: 880, margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
+            <div className="audit-url-list-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
                <div style={{ fontSize: 13, color: '#6A6772', fontFamily: FONT }}>One-off URL audits</div>
                {actions}
             </div>

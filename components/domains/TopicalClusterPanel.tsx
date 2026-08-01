@@ -97,7 +97,7 @@ const GroupBlock = ({ group }: { group: KeywordGroup }) => {
             tabIndex={0}
             onClick={() => setOpen((o) => !o)}
             onKeyDown={(e) => { if (e.key === 'Enter') setOpen((o) => !o); }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 12, background: '#F8F8F9', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 12, background: '#f3f4f0', cursor: 'pointer' }}
          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                {group.url ? (
@@ -181,7 +181,7 @@ const TopicalClusterPanel = ({ cluster, initialTab = 'overview', onClose }: { cl
    return (
       <>
          <div onClick={handleClose} role="presentation" style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} />
-         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 920, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)' }}>
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 420, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 16px' }}>
                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <HexIcon />

@@ -12,6 +12,7 @@ import {
    isUsableWholeArticleEdit,
    shouldChargeCredit,
    resolveOptimizeDoneOutcome,
+   computeTermUsageGaps,
 } from '../../../lib/optimizeSectionEdit';
 import type { ScoreData } from '../../../lib/contentScore';
 import { computeOverallContentScore, computeAiSearchScore, type AiVisibilitySummary } from '../../../lib/aiSearchScore';
@@ -25,11 +26,13 @@ import {
    collectUncoveredAiQuestions,
    buildFaqSectionPrompt,
    selectFaqQuestions,
+   validateFaqHtmlStructure,
 } from '../../../lib/aoFaqSection';
 import { applyGatedFaqMerge } from '../../../lib/ao/applyGatedFaq';
 import { buildCriticalContentMap } from '../../../lib/ao/criticalContentMap';
 import { countWordsFromHtml } from '../../../lib/ao/aoBaseline';
 import type { AoScores } from '../../../lib/ao/aoScoreDelta';
+import { aoOutcomeUserMessage, resolveAoWorkOutcome } from '../../../lib/ao/aoRunOutcome';
 import { structureIssues } from '../../../lib/validateArticleStructure';
 import { scoreArticleHtml } from '../../../lib/scoreArticleHtml';
 import { getArticleIdSql } from '../../../lib/articleSql';
@@ -357,6 +360,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       let aoTraceSummary: Record<string, unknown> | null = null;
       let runBaselineScores: AoScores = { seo: initialSeo, content: initialContent, ai: initialAi };
       let runBaselineWordCount = countWordsFromHtml(workingHtml);
+      let bodyAccepted = 0;
+      let bodyRejected = 0;
+      let faqAccepted = false;
+      let faqStructurallyValid: boolean | null = null;
+      let faqChanged = false;
+      let targetingSkippedNoTarget = 0;
+      let targetingUsedFallback = 0;
+      const seoEntityGapsBefore = computeTermUsageGaps(ctx?.scoreData ?? scoreData, workingHtml)
+         .filter((g) => g.status === 'missing' || g.status === 'low').length;
 
       const originalHtml = content;
 
@@ -466,6 +478,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
             aiTokens += v4.tokens;
             rejectedUnusable += v4.rejected;
+            bodyRejected += v4.rejected;
+            bodyAccepted = v4.rolledBack ? 0 : v4.bodyAccepted;
+            targetingSkippedNoTarget = v4.targeting.skippedNoTarget;
+            targetingUsedFallback = v4.targeting.usedFallback;
             workingHtml = v4.html;
             if (!v4.rolledBack && v4.changed > 0) {
                changedCount += v4.changed;
@@ -500,7 +516,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                deltas: v4.deltas,
             });
          } else {
-            // Controlled whole-article fallback (feature flag / body) — never auto from precision fail
+            // Controlled whole-article fallback — explicit body/env flag only (never auto from diagnosis).
             for (let round = 1; round <= MAX_ROUNDS && !aborted; round += 1) {
                roundsRun = round;
                const snapshot = ctx?.coverage ?? null;
@@ -606,6 +622,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                if (roundChanged) {
                   workingHtml = newHtml;
                   changedCount += 1;
+                  // Whole-article pass counts as body work for outcome classification
+                  bodyAccepted += 1;
                }
 
                finalSeo = scoreSeo(workingHtml, ctx?.scoreData ?? scoreData, ctx?.keyword || '', ctx);
@@ -641,7 +659,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             }
          }
 
-         // FAQ round — only remaining gaps after body; gated; Final vs ORIGINAL baseline
+         // FAQ round — residual AI Qs only (not a success path when body=0 + SEO gaps remain).
+         // Structural validation hard-rejects wall-of-text before score gates.
          if (
             !aborted
             && ctx
@@ -661,14 +680,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                uncovered = await readWeakVisibilityPrompts(Number(articleId));
             }
             const profile = buildProfileFromContext(ctx, workingHtml);
+            // Residual: only questions not already covered after body (selectFaqQuestions drops high token hitRatio)
             const gated = selectFaqQuestions({
                questions: uncovered,
                profile,
                articlePlainText: plainForFaq,
-               // Ceiling: policy budget ∩ hard 5 ∩ relevant pool size
                maxQuestions: Math.min(5, aoPolicy.faq.maxQuestions, uncovered.length),
             });
-            if (gated.length > 0) {
+
+            // P0.3: FAQ is residual coverage, not a substitute for missing body SEO work.
+            // Still allow FAQ for remaining AI questions, but workOutcome will be faq_only when bodyAccepted=0.
+            const skipFaqForEmptyBodySeo =
+               bodyAccepted === 0
+               && seoEntityGapsBefore > 0
+               && gated.length === 0;
+
+            if (gated.length > 0 && !skipFaqForEmptyBodySeo) {
                const faqPrompt = buildFaqSectionPrompt({
                   keyword: ctx.keyword || '',
                   questions: gated.map((q) => q.label),
@@ -694,7 +721,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                      const faqData = parseChatCompletion(await faqRes.json());
                      aiTokens += faqData.totalTokens;
                      const faqHtml = stripFences(faqData.content);
-                     if (isUsableEdit(faqHtml)) {
+                     const structure = validateFaqHtmlStructure(faqHtml, {
+                        language: ctx.language || 'pl',
+                        expectedQuestionCount: gated.length,
+                     });
+                     faqStructurallyValid = structure.ok;
+                     if (!structure.ok) {
+                        rejectedUnusable += 1;
+                        sse(res, 'progress', {
+                           round: roundsRun + 1,
+                           processed: roundsRun + 1,
+                           phase: 'faq',
+                           changed: 0,
+                           faqRejected: true,
+                           reason: structure.reason,
+                        });
+                     } else if (isUsableEdit(faqHtml)) {
                         const workingScores: AoScores = {
                            seo: finalSeo || initialSeo,
                            content: finalContent || initialContent,
@@ -732,6 +774,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                         if (faqGate.rolledBack) {
                            workingHtml = faqGate.html;
                            changedCount = 0;
+                           bodyAccepted = 0;
+                           faqAccepted = false;
+                           faqChanged = false;
                            rejectedUnusable += 1;
                            finalSeo = faqGate.scores.seo;
                            finalAi = faqGate.scores.ai;
@@ -740,6 +785,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                         } else if (faqGate.accepted) {
                            workingHtml = faqGate.html;
                            changedCount += 1;
+                           faqAccepted = true;
+                           faqChanged = true;
                            finalSeo = faqGate.scores.seo;
                            finalAi = faqGate.scores.ai;
                            finalContent = faqGate.scores.content;
@@ -768,13 +815,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          }
 
          if (!aborted && normalizeHtmlForDiff(originalHtml) !== normalizeHtmlForDiff(workingHtml)) {
-            const sectionEvents = buildArticleSectionDiffEvents(originalHtml, workingHtml, {
-               focus: 'ai-coverage',
-               mode: 'less',
-               reason: optimizationStrategy === 'precision'
-                  ? 'Precision section optimization'
-                  : 'Whole-article optimization',
-            });
+            const sectionEvents = buildArticleSectionDiffEvents(originalHtml, workingHtml);
             for (const ev of sectionEvents) {
                sse(res, 'section', ev);
             }
@@ -789,7 +830,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (aborted) return;
 
       const creditDeducted = orgId != null && shouldChargeCredit(changedCount, aiTokens);
-      const outcome = resolveOptimizeDoneOutcome({
+      const seoEntityGapsAfter = computeTermUsageGaps(ctx?.scoreData ?? scoreData, workingHtml)
+         .filter((g) => g.status === 'missing' || g.status === 'low').length;
+      const workOutcome = resolveAoWorkOutcome({
+         bodyAccepted,
+         faqAccepted,
+         seoEntityGapsBefore,
+         seoEntityGapsAfter,
+         alreadyOptimal: false,
+      });
+      const legacyOutcome = resolveOptimizeDoneOutcome({
          changedCount,
          rejectedUnusable,
          initialSeo,
@@ -799,10 +849,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          targetAi: TARGET_AI_SCORE,
          targetContent: TARGET_CONTENT_SCORE,
       });
+      // Prefer work-class outcome when FAQ-only / incomplete; keep legacy for no_change paths
+      const outcome = (workOutcome === 'faq_only' || workOutcome === 'partial_body' || workOutcome === 'incomplete_no_body')
+         ? workOutcome
+         : legacyOutcome;
 
       sse(res, 'done', {
          changedCount, total: MAX_ROUNDS, promptVersion: PROMPT_VERSION,
          creditDeducted, rounds: roundsRun, phase, outcome,
+         userMessage: aoOutcomeUserMessage(workOutcome),
          seo: finalSeo, ai: finalAi, content: finalContent,
          targetSeo: TARGET_SEO_SCORE, targetAi: TARGET_AI_SCORE, targetContent: TARGET_CONTENT_SCORE,
          trimmed: trimmedMeta.trimmed, ignoredLift: trimmedMeta.ignoredLift,
@@ -811,6 +866,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
          baseline: aoBaselinePayload,
          deltas: aoDeltasPayload,
          traceSummary: aoTraceSummary,
+         metrics: {
+            bodyAccepted,
+            bodyRejected,
+            faqAccepted,
+            faqStructurallyValid,
+            bodyChanged: bodyAccepted > 0,
+            faqChanged,
+            seoEntityGapsBefore,
+            seoEntityGapsAfter,
+            targetingSkippedNoTarget,
+            targetingUsedFallback,
+         },
       });
    } catch (error) {
       if (aborted || (error instanceof DOMException && error.name === 'AbortError')) return;

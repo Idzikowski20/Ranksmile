@@ -4,7 +4,7 @@ import CompetitorsSection from '../competitors/CompetitorsSection';
 /* ── Design tokens ─────────────────────────────────────────────── */
 const C = {
   text: '#18181B', g160: '#09090B', g140: '#18181B', g120: '#2F2F34', g100: '#3F3F47', g80: '#52525C',
-  g60: '#9F9FA9', g40: '#D4D4D8', g20: '#E4E4E7', g10: '#F4F4F5', g5: '#F8F8F9',
+  g60: '#9F9FA9', g40: '#D4D4D8', g20: '#E4E4E7', g10: '#F4F4F5', g5: '#f3f4f0',
   purple: '#F29964', purple80: '#630DE3', purple100: '#B86A42', purple40: '#F5C4A0',
   purple10: '#FDE8D8', purple5: '#F1EBFE',
   yellow: '#EFA00D', green: '#1AB25E', red: '#FB5D5D', blue: '#155DFC',

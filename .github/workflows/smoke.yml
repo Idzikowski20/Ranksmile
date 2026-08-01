@@ -1,0 +1,20 @@
+name: Smoke
+
+on:
+  workflow_dispatch:
+  # Optionally wire to deployment_status / repository_dispatch after staging deploy
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Health / ready / system check
+        env:
+          SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/smoke-min.mjs

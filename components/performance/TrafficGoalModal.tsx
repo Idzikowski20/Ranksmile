@@ -31,7 +31,7 @@ export default function TrafficGoalModal({
     <Modal title="Create clicks goal" onClose={onClose} width={600}>
       <ModalBody>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: 'inherit' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12, background: '#F8F8F9', padding: 16, flexWrap: 'wrap', fontSize: 14, color: '#3F3F47' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, borderRadius: 12, background: '#f3f4f0', padding: 16, flexWrap: 'wrap', fontSize: 14, color: '#3F3F47' }}>
             <span>Increase clicks by</span>
             <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
               <Input size="sm" type="number" min={1} max={999} value={goalPercentage}

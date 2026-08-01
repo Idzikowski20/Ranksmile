@@ -6,6 +6,7 @@ import TopbarInbox from './TopbarInbox';
 type Props = {
    title?: string;
    breadcrumb?: React.ReactNode;
+   onMobileMenuClick?: () => void;
 };
 
 const HelpButton = () => (
@@ -22,10 +23,33 @@ const HelpButton = () => (
    </a>
 );
 
-const GlobalTopbar = ({ breadcrumb }: Props) => (
+const MenuIcon = () => (
+   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M9 3v18" stroke="currentColor" strokeWidth="2" />
+   </svg>
+);
+
+const GlobalTopbar = ({ breadcrumb, onMobileMenuClick }: Props) => (
    <header className="global-topbar">
       <div className="global-topbar-left">
-         {breadcrumb ?? <OrganizationSwitcher />}
+         {onMobileMenuClick && (
+            <button
+               type="button"
+               className="sentry-nav-utilbtn global-topbar-menu-btn"
+               aria-label="Open navigation menu"
+               onClick={onMobileMenuClick}
+            >
+               <MenuIcon />
+            </button>
+         )}
+         {breadcrumb ? (
+            <div className="global-topbar-breadcrumb">{breadcrumb}</div>
+         ) : (
+            <div className="global-topbar-org">
+               <OrganizationSwitcher />
+            </div>
+         )}
       </div>
 
       <div className="global-topbar-actions">

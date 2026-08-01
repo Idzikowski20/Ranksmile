@@ -98,7 +98,7 @@ Rules:
 ### Architektura UI
 
 - **Shell:** ciemny Sentry — bg `#252525` / `#09090b`, border `#221e28`
-- **App content:** jasny — page `#F8F8F9`, karty białe, border `#DAD9DE`, radius `8px`
+- **App content:** jasny — page `#f3f4f0`, karty białe, border `#dbded4`, radius `8px`
 - **Styling poza edytorem:** `components/core` + Emotion / CSS vars — bez nowych Tailwind klas
 - **Editor zone:** KEEP TipTap/scoring; primitives z `core`
 - **Font:** `var(--font-family-primary)` / Rubik w shell — nigdy hardcode Inter jako brand
@@ -110,8 +110,8 @@ Rules:
 |-------|---------|--------|
 | Accent | `#F29964` | primary CTA, focus, active |
 | Accent chonk | `#C97D52` | Button primary underside |
-| Card border | `#DAD9DE` | karty / panele Sentry |
-| Page bg | `#F8F8F9` | content areas |
+| Card border | `#dbded4` | karty / panele Sentry |
+| Page bg | `#f3f4f0` | content areas |
 | Headings | `#181225` | titles |
 | Body | `#302E36` | primary text |
 | Muted | `#6A6772` | secondary |

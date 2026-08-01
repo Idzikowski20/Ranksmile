@@ -129,23 +129,15 @@ const SiteAuditPage: NextPage = () => {
   );
 
   const headerMeta = data ? (
-    <div className="sentry-site-audit-meta">
-      <span className="sentry-site-audit-meta-item">Desktop</span>
-      <span className="sentry-site-audit-meta-divider" aria-hidden="true" />
-      <span className="sentry-site-audit-meta-item">
-        {data.jsRendering ? 'JS rendering' : 'No JS rendering'}
-      </span>
-      <span className="sentry-site-audit-meta-divider" aria-hidden="true" />
-      <CrawlLimitIndicator
-        pagesCrawled={data.pagesCrawled}
-        pagesLimit={data.pagesLimit}
-        atCrawlLimit={data.atCrawlLimit}
-        canUpgradeCrawlLimit={data.canUpgradeCrawlLimit}
-        upgradePlanName={data.upgradePlanName}
-        upgradePlanSlug={data.upgradePlanSlug}
-        upgradePagesLimit={data.upgradePagesLimit}
-      />
-    </div>
+    <CrawlLimitIndicator
+      pagesCrawled={data.pagesCrawled}
+      pagesLimit={data.pagesLimit}
+      atCrawlLimit={data.atCrawlLimit}
+      canUpgradeCrawlLimit={data.canUpgradeCrawlLimit}
+      upgradePlanName={data.upgradePlanName}
+      upgradePlanSlug={data.upgradePlanSlug}
+      upgradePagesLimit={data.upgradePagesLimit}
+    />
   ) : null;
 
   return (
@@ -183,8 +175,6 @@ const SiteAuditPage: NextPage = () => {
                 {busyLabel}
               </span>
             </Button>
-            <Button type="button" variant="secondary" size="sm" disabled>Export</Button>
-            <Button type="button" variant="secondary" size="sm" disabled>Share</Button>
           </div>
         )}
       >
@@ -195,7 +185,7 @@ const SiteAuditPage: NextPage = () => {
               marginBottom: 16,
               padding: '12px 16px',
               borderRadius: 8,
-              border: '1px solid #DAD9DE',
+              border: '1px solid #dbded4',
               background: '#FFFFFF',
               color: '#302E36',
               fontFamily: FONT,
@@ -210,7 +200,7 @@ const SiteAuditPage: NextPage = () => {
               style={{
                 width: 14,
                 height: 14,
-                border: '2px solid #DAD9DE',
+                border: '2px solid #dbded4',
                 borderTopColor: '#F29964',
                 borderRadius: '50%',
                 animation: 'spin 0.7s linear infinite',

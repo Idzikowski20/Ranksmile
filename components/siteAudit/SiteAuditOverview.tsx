@@ -206,7 +206,7 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <section className="perf-3d-card" style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
-          <div style={{ display: 'flex', minHeight: 280 }}>
+          <div className="sentry-audit-overview-split">
             <div style={{ flex: 1, padding: '12px 20px', borderRight: `1px solid ${BORDER}` }}>
               <WidgetTitle
                 onInfoClick={openPopper('info-site-health')}
@@ -269,7 +269,7 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
         </section>
 
         <section className="perf-3d-card" style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
-          <div style={{ display: 'flex', minHeight: 280 }}>
+          <div className="sentry-audit-overview-split">
             <div style={{ flex: 1, padding: '12px 20px 20px', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 12 }}>
                 <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: FONT }}>AI Search Health</h2>
@@ -411,6 +411,7 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
               {data.topInsights.map((issue) => (
                 <div
                   key={issue.id}
+                  className="sentry-audit-insight-row"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'minmax(0, 1fr) auto auto',

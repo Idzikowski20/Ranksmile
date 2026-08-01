@@ -91,18 +91,7 @@ const ArticlesPage: NextPage = () => {
   const articles = articlesData?.articles || [];
 
   const headerActions = (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-      <Button
-        type="button"
-        variant="transparent"
-        size="sm"
-        aria-label="Export"
-        icon={(
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13 7L11.8845 4.76892C11.5634 4.1268 11.4029 3.80573 11.1634 3.57116C10.9516 3.36373 10.6963 3.20597 10.4161 3.10931C10.0992 3 9.74021 3 9.02229 3H5.2C4.0799 3 3.51984 3 3.09202 3.21799C2.71569 3.40973 2.40973 3.71569 2.21799 4.09202C2 4.51984 2 5.0799 2 6.2V7M2 7H17.2C18.8802 7 19.7202 7 20.362 7.32698C20.9265 7.6146 21.3854 8.07354 21.673 8.63803C22 9.27976 22 10.1198 22 11.8V16.2C22 17.8802 22 18.7202 21.673 19.362C21.3854 19.9265 20.9265 20.3854 20.362 20.673C19.7202 21 18.8802 21 17.2 21H6.8C5.11984 21 4.27976 21 3.63803 20.673C3.07354 20.3854 2.6146 19.9265 2.32698 19.362C2 18.7202 2 17.8802 2 16.2V7ZM12 17V11M9 14H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      />
+    <div className="articles-page-actions">
       <Button
         type="button"
         variant="secondary"
@@ -114,9 +103,9 @@ const ArticlesPage: NextPage = () => {
           </svg>
         )}
       >
-        Import content
+        <span className="articles-page-actions-label">Import content</span>
       </Button>
-      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+      <div className="articles-page-actions-new">
         <Button
           type="button"
           variant="primary"
@@ -127,7 +116,7 @@ const ArticlesPage: NextPage = () => {
               <path fill="currentColor" d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5z" />
             </svg>
           )}
-          style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+          style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0, flex: 1 }}
         >
           New Content
         </Button>
@@ -150,9 +139,9 @@ const ArticlesPage: NextPage = () => {
 
   return (
     <DashboardLayout domains={domains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
-      <Head><title>Content Editor — Ranksmile</title></Head>
-      <SentryPage maxWidth={880}>
-        <SentryPageHeader title="Content Editor" actions={headerActions} borderless />
+      <Head><title>Articles — Ranksmile</title></Head>
+      <SentryPage maxWidth={880} className="articles-page">
+        <SentryPageHeader title="Articles" actions={headerActions} borderless />
 
         <SentryPageFilters trailing={<SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search" width={300} />}>
           <CompactSelect
@@ -161,7 +150,7 @@ const ArticlesPage: NextPage = () => {
             onChange={(opt) => setSortBy(opt.value)}
             options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           />
-          {['Status', 'Tags', 'Author'].map((label) => (
+          {['Status', 'Author'].map((label) => (
             <Button key={label} type="button" variant="secondary" size="sm">{label}</Button>
           ))}
         </SentryPageFilters>

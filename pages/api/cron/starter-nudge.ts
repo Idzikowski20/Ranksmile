@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { runStarterNudgeCron } from '../../../lib/emails/runStarterNudgeCron';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { withCronWatchdog } from '../../../lib/cronWatchdog';
 
 export const config = { maxDuration: 60 };
 
@@ -9,11 +10,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
@@ -24,4 +20,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withOrgPaymentAccess(handler);
+export default withOrgPaymentAccess(withCronWatchdog('starter-nudge', handler));

@@ -268,7 +268,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             style={{
               flex: '1 1 0',
               minWidth: 240,
-              background: '#F8F8F9',
+              background: '#f3f4f0',
               borderRadius: 8,
               padding: 24,
               display: 'flex',
@@ -323,8 +323,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             style={{
               flex: '1 1 0',
               minWidth: 240,
-              border: '1px solid #DAD9DE',
-              boxShadow: '0 4px 0 0 #e4e4e7',
+              border: '1px solid #dbded4',
               borderRadius: 12,
               padding: 24,
               display: 'flex',
@@ -556,8 +555,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               {/* Card 1 — Masterclass */}
               <div
                 style={{
-                  border: '1px solid #DAD9DE',
-                  boxShadow: '0 4px 0 0 #e4e4e7',
+                  border: '1px solid #dbded4',
                   borderRadius: 12,
                   padding: 24,
                   display: 'flex',
@@ -609,8 +607,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               {/* Card 2 — Live Support */}
               <div
                 style={{
-                  border: '1px solid #DAD9DE',
-                  boxShadow: '0 4px 0 0 #e4e4e7',
+                  border: '1px solid #dbded4',
                   borderRadius: 12,
                   padding: 24,
                   display: 'flex',

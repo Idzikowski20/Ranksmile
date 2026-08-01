@@ -74,7 +74,7 @@ const FanoutTable = ({ group, rows, dir, onToggleSort, onOpenRow }: Props) => {
    const secondLabel = group === 'fanout' ? 'Prompts' : 'Fanout Queries';
 
    return (
-      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>{firstLabel}</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}>{secondLabel}</div>

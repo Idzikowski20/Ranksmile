@@ -1,7 +1,10 @@
-import React, { useLayoutEffect, useRef } from 'react';
-import * as am5 from '@amcharts/amcharts5';
-import * as am5xy from '@amcharts/amcharts5/xy';
-import am5themes_Animated from '@amcharts/amcharts5/themes/Animated';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ParentSize } from '@visx/responsive';
+import { scaleBand, scaleLinear } from '@visx/scale';
+import { PatternLines } from '@visx/pattern';
+import { Group } from '@visx/group';
+import { Bar } from '@visx/shape';
+import { localPoint } from '@visx/event';
 import { AuditFactor } from '../../lib/auditTypes';
 
 const FONT = 'var(--font-family-primary)';
@@ -10,141 +13,328 @@ const YOU_STROKE = '#7934CB';
 const COMP = '#CBD5E0';
 const RANGE = '#68D391';
 const RANGE_HATCH = '#9AE6B4';
-const NUM = '#,###.##';
+const MARGIN = { top: 28, right: 12, bottom: 52, left: 44 };
 
-interface Bar { cat: string; host: string; link: string; value: number; you: boolean; }
+interface ChartBar {
+  cat: string;
+  host: string;
+  link: string;
+  value: number;
+  you: boolean;
+}
+
+function formatValue(n: number): string {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
 
 /**
- * One Ranksmile-style factor chart (amCharts 5, client-only — imported via
- * next/dynamic({ ssr:false })): "You" (purple) vs ranked competitors (grey, dimmed when
- * placeholder), a hatched green suggested-range band, value labels, a dashed cursor with
- * a dark value pill, and a legend (You / Competitors / Suggested range).
+ * Ranksmile-style factor chart (visx): "You" vs competitors, optional hatched
+ * suggested-range band, value labels, hover cursor pill, clickable competitor bars.
  */
 const AuditFactorChart = ({ factor, height = 300 }: { factor: AuditFactor; height?: number }) => {
-   const ref = useRef<HTMLDivElement>(null);
-   const hasRange = factor.suggestedMin !== null && factor.suggestedMax !== null && factor.suggestedMax > 0;
+  const hasRange =
+    factor.suggestedMin !== null &&
+    factor.suggestedMax !== null &&
+    factor.suggestedMax > 0;
 
-   useLayoutEffect(() => {
-      if (!ref.current) return undefined;
-      const root = am5.Root.new(ref.current);
-      root.setThemes([am5themes_Animated.new(root)]);
-      root._logo?.dispose();
-      root.numberFormatter.set('numberFormat', NUM);
+  const bars: ChartBar[] = useMemo(
+    () => [
+      { cat: 'You', host: 'You', link: '', value: factor.you, you: true },
+      ...[...factor.competitors]
+        .sort((a, b) => a.rank - b.rank)
+        .map((c) => ({
+          cat: `${c.label}\n#${c.rank} in Google`,
+          host: c.label || 'Competitor',
+          link: c.url || '',
+          value: c.value,
+          you: false,
+        })),
+    ],
+    [factor],
+  );
 
-      // Two-line x labels: "You" / "domain \n #N in Google" (unique per bar → safe category key).
-      const bars: Bar[] = [
-         { cat: 'You', host: 'You', link: '', value: factor.you, you: true },
-         ...[...factor.competitors].sort((a, b) => a.rank - b.rank).map((c) => ({
-            // Tooltip shows the short domain (a long URL broke the amCharts label); the full
-            // article URL rides on `link` for the click-through.
-            cat: `${c.label}\n#${c.rank} in Google`, host: c.label || 'Competitor', link: c.url || '', value: c.value, you: false,
-         })),
-      ];
-
-      const chart = root.container.children.push(am5xy.XYChart.new(root, {
-         paddingLeft: 12, paddingRight: 8, paddingBottom: 4, layout: root.verticalLayout,
-      }));
-
-      const xRenderer = am5xy.AxisRendererX.new(root, { minGridDistance: 30 });
-      xRenderer.grid.template.set('visible', false);
-      xRenderer.labels.template.setAll({ fontSize: 11, fill: am5.color('#52525C'), textAlign: 'center', oversizedBehavior: 'wrap', maxWidth: 120, paddingTop: 6 });
-      const xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, { categoryField: 'cat', renderer: xRenderer }));
-      xAxis.data.setAll(bars);
-
-      const yRenderer = am5xy.AxisRendererY.new(root, { minGridDistance: 28 });
-      yRenderer.grid.template.setAll({ stroke: am5.color('#000000'), strokeOpacity: 0.08 });
-      yRenderer.labels.template.setAll({ fontSize: 11, fill: am5.color('#9F9FA9') });
-      // extraMax leaves headroom so the value label above the tallest bar is never clipped.
-      const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, extraMax: 0.08, renderer: yRenderer }));
-
-      // Dark value pill on the Y axis, revealed by the dashed cursor line (kept in bounds).
-      // autoTextColor:false so amCharts doesn't recolor the label for contrast.
-      const yTooltip = am5.Tooltip.new(root, { autoTextColor: false });
-      yTooltip.get('background')?.setAll({ fill: am5.color('#000000'), fillOpacity: 1 });
-      yTooltip.label.setAll({ fill: am5.color('#FFFFFF'), fontSize: 12 });
-      yAxis.set('tooltip', yTooltip);
-
-      // ── Hatched suggested-range band, with a solid green line on both edges ──
-      if (hasRange) {
-         const hatch = am5.LinePattern.new(root, { color: am5.color(RANGE_HATCH), colorOpacity: 0.7, rotation: 45, gap: 5, strokeWidth: 1, width: 1000, height: 1000 });
-         const band = yAxis.makeDataItem({ value: factor.suggestedMin as number, endValue: factor.suggestedMax as number });
-         yAxis.createAxisRange(band);
-         band.get('axisFill')?.setAll({ fill: am5.color(RANGE_HATCH), fillOpacity: 0.12, fillPattern: hatch, visible: true });
-         band.get('grid')?.setAll({ stroke: am5.color(RANGE), strokeOpacity: 1, strokeWidth: 2 });
-         const top = yAxis.makeDataItem({ value: factor.suggestedMax as number });
-         yAxis.createAxisRange(top);
-         top.get('grid')?.setAll({ stroke: am5.color(RANGE), strokeOpacity: 1, strokeWidth: 2 });
-      }
-
-      const series = chart.series.push(am5xy.ColumnSeries.new(root, { xAxis, yAxis, categoryXField: 'cat', valueYField: 'value' }));
-      // labelText populates from the hovered column's data. autoTextColor:false is the fix
-      // for the dark-on-dark label: amCharts was auto-recoloring the text to contrast with
-      // the column fill (dark "You" bar → white, light competitor bar → black), overriding
-      // our explicit white. getFillFromSprite:false keeps the pill black regardless of bar.
-      const colTooltip = am5.Tooltip.new(root, { getFillFromSprite: false, autoTextColor: false, labelText: '{host}' });
-      colTooltip.get('background')?.setAll({ fill: am5.color('#000000'), fillOpacity: 1 });
-      colTooltip.label.setAll({ fill: am5.color('#FFFFFF'), fontSize: 12 });
-      series.set('tooltip', colTooltip);
-      series.columns.template.setAll({ width: am5.percent(58), cornerRadiusTL: 3, cornerRadiusTR: 3, strokeOpacity: 0, tooltipY: 0, tooltipText: '{host}', templateField: 'columnSettings' });
-      // Click a competitor bar → open its ranking article in a new tab.
-      series.columns.template.events.on('click', (ev) => {
-         const link = (ev.target.dataItem?.dataContext as { link?: string } | undefined)?.link;
-         if (link) window.open(link, '_blank', 'noopener,noreferrer');
-      });
-      series.data.setAll(bars.map((b) => ({
-         cat: b.cat, value: b.value, host: b.host, link: b.link,
-         columnSettings: {
-            fill: am5.color(b.you ? YOU : COMP),
-            fillOpacity: b.you ? 1 : (factor.placeholder ? 0.5 : 1),
-            stroke: b.you ? am5.color(YOU_STROKE) : undefined,
-            strokeOpacity: b.you ? 1 : 0,
-            cursorOverStyle: b.link ? 'pointer' : 'default',
-         },
-      })));
-
-      // Value labels above the bars (comma-formatted, decimals kept for densities).
-      series.bullets.push(() => am5.Bullet.new(root, {
-         locationY: 1, sprite: am5.Label.new(root, {
-            text: `{valueY.formatNumber('${NUM}')}`, centerX: am5.p50, centerY: am5.p100, dy: -6,
-            fontSize: 12, fill: am5.color('#18181B'), populateText: true,
-         }),
-      }));
-
-      // Dashed cursor line → dark y-value pill.
-      const cursor = chart.set('cursor', am5xy.XYCursor.new(root, { behavior: 'none', xAxis, yAxis }));
-      cursor.lineX.set('visible', false);
-      cursor.lineY.setAll({ stroke: am5.color('#000000'), strokeDasharray: [3, 3], strokeOpacity: 0.4 });
-
-      series.appear(600);
-      chart.appear(600, 60);
-      return () => root.dispose();
-   }, [factor, hasRange]);
-
-   const Swatch = ({ style }: { style: React.CSSProperties }) => (
-      <span style={{ width: 14, height: 14, borderRadius: 3, display: 'inline-block', flexShrink: 0, ...style }} />
-   );
-
-   return (
-      <div>
-         <div ref={ref} style={{ width: '100%', height }} />
-         {/* Legend (HTML — one ColumnSeries can't drive a 3-item amCharts legend) */}
-         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 24, marginTop: 4, fontSize: 13, color: '#3F3F47', fontFamily: FONT }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Swatch style={{ background: YOU }} />You</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Swatch style={{ background: COMP }} />Competitors</span>
-            {hasRange && (
-               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <Swatch style={{ backgroundColor: 'rgba(154,230,180,0.18)', backgroundImage: `repeating-linear-gradient(45deg, ${RANGE_HATCH} 0 1.5px, transparent 1.5px 5px)`, border: `1px solid ${RANGE}` }} />
-                  Suggested range
-               </span>
-            )}
-         </div>
-         {factor.placeholder && (
-            <div style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, textAlign: 'right', marginTop: 2 }}>
-               Competitor bars &amp; suggested range are sample data — real SERP data lands in the next phase
-            </div>
-         )}
+  return (
+    <div>
+      <div style={{ width: '100%', height }}>
+        <ParentSize>
+          {({ width }) =>
+            width > 0 ? (
+              <FactorBars
+                width={width}
+                height={height}
+                bars={bars}
+                factor={factor}
+                hasRange={hasRange}
+              />
+            ) : null
+          }
+        </ParentSize>
       </div>
-   );
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: 24,
+          marginTop: 4,
+          fontSize: 13,
+          color: '#3F3F47',
+          fontFamily: FONT,
+        }}
+      >
+        <LegendSwatch color={YOU} label="You" />
+        <LegendSwatch color={COMP} label="Competitors" />
+        {hasRange && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 3,
+                display: 'inline-block',
+                flexShrink: 0,
+                backgroundColor: 'rgba(154,230,180,0.18)',
+                backgroundImage: `repeating-linear-gradient(45deg, ${RANGE_HATCH} 0 1.5px, transparent 1.5px 5px)`,
+                border: `1px solid ${RANGE}`,
+              }}
+            />
+            Suggested range
+          </span>
+        )}
+      </div>
+      {factor.placeholder && (
+        <div style={{ fontSize: 11, color: '#9F9FA9', fontFamily: FONT, textAlign: 'right', marginTop: 2 }}>
+          Competitor bars &amp; suggested range are sample data — real SERP data lands in the next phase
+        </div>
+      )}
+    </div>
+  );
 };
+
+function LegendSwatch({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <span
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: 3,
+          display: 'inline-block',
+          flexShrink: 0,
+          background: color,
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function FactorBars({
+  width,
+  height,
+  bars,
+  factor,
+  hasRange,
+}: {
+  width: number;
+  height: number;
+  bars: ChartBar[];
+  factor: AuditFactor;
+  hasRange: boolean;
+}) {
+  const [hover, setHover] = useState<{ y: number; value: number } | null>(null);
+
+  const innerW = Math.max(0, width - MARGIN.left - MARGIN.right);
+  const innerH = Math.max(0, height - MARGIN.top - MARGIN.bottom);
+
+  const dataMax = Math.max(
+    ...bars.map((b) => b.value),
+    hasRange ? (factor.suggestedMax as number) : 0,
+    1,
+  );
+  const yDomainMax = dataMax * 1.08;
+
+  const xScale = useMemo(
+    () =>
+      scaleBand<string>({
+        domain: bars.map((b) => b.cat),
+        range: [0, innerW],
+        padding: 0.28,
+      }),
+    [bars, innerW],
+  );
+
+  const yScale = useMemo(
+    () =>
+      scaleLinear<number>({
+        domain: [0, yDomainMax],
+        range: [innerH, 0],
+        nice: true,
+      }),
+    [innerH, yDomainMax],
+  );
+
+  const onMove = useCallback((event: React.MouseEvent<SVGRectElement>, bar: ChartBar) => {
+    const pt = localPoint(event);
+    if (!pt) return;
+    setHover({ y: pt.y - MARGIN.top, value: bar.value });
+  }, []);
+
+  const patternId = `audit-range-${factor.key}`;
+  const yTicks = yScale.ticks(5);
+
+  return (
+    <svg width={width} height={height} style={{ fontFamily: FONT, overflow: 'visible' }}>
+      <PatternLines
+        id={patternId}
+        height={6}
+        width={6}
+        stroke={RANGE_HATCH}
+        strokeWidth={1}
+        orientation={['diagonal']}
+      />
+      <Group left={MARGIN.left} top={MARGIN.top}>
+        {hasRange && (
+          <g>
+            <rect
+              x={0}
+              y={yScale(factor.suggestedMax as number)}
+              width={innerW}
+              height={Math.max(
+                0,
+                yScale(factor.suggestedMin as number) - yScale(factor.suggestedMax as number),
+              )}
+              fill={`url(#${patternId})`}
+              fillOpacity={0.35}
+            />
+            <rect
+              x={0}
+              y={yScale(factor.suggestedMax as number)}
+              width={innerW}
+              height={Math.max(
+                0,
+                yScale(factor.suggestedMin as number) - yScale(factor.suggestedMax as number),
+              )}
+              fill={RANGE_HATCH}
+              fillOpacity={0.12}
+            />
+            <line
+              x1={0}
+              x2={innerW}
+              y1={yScale(factor.suggestedMin as number)}
+              y2={yScale(factor.suggestedMin as number)}
+              stroke={RANGE}
+              strokeWidth={2}
+            />
+            <line
+              x1={0}
+              x2={innerW}
+              y1={yScale(factor.suggestedMax as number)}
+              y2={yScale(factor.suggestedMax as number)}
+              stroke={RANGE}
+              strokeWidth={2}
+            />
+          </g>
+        )}
+
+        {yTicks.map((t) => (
+          <g key={t}>
+            <line
+              x1={0}
+              x2={innerW}
+              y1={yScale(t)}
+              y2={yScale(t)}
+              stroke="#000"
+              strokeOpacity={0.08}
+            />
+            <text
+              x={-8}
+              y={yScale(t)}
+              dy={3}
+              textAnchor="end"
+              fill="#9F9FA9"
+              fontSize={11}
+              fontFamily={FONT}
+            >
+              {formatValue(t)}
+            </text>
+          </g>
+        ))}
+
+        {bars.map((bar) => {
+          const x = xScale(bar.cat) ?? 0;
+          const bw = xScale.bandwidth();
+          const y = yScale(bar.value);
+          const h = Math.max(0, innerH - y);
+          const labelLines = bar.cat.split('\n');
+          return (
+            <g key={bar.cat}>
+              <Bar
+                x={x}
+                y={y}
+                width={bw}
+                height={h}
+                fill={bar.you ? YOU : COMP}
+                fillOpacity={bar.you ? 1 : factor.placeholder ? 0.5 : 1}
+                stroke={bar.you ? YOU_STROKE : 'none'}
+                strokeWidth={bar.you ? 1 : 0}
+                rx={3}
+                style={{ cursor: bar.link ? 'pointer' : 'default' }}
+                onMouseMove={(e) => onMove(e, bar)}
+                onMouseLeave={() => setHover(null)}
+                onClick={() => {
+                  if (bar.link) window.open(bar.link, '_blank', 'noopener,noreferrer');
+                }}
+              />
+              <text
+                x={x + bw / 2}
+                y={y - 6}
+                textAnchor="middle"
+                fill="#18181B"
+                fontSize={12}
+                fontFamily={FONT}
+              >
+                {formatValue(bar.value)}
+              </text>
+              {labelLines.map((line, i) => (
+                <text
+                  key={`${bar.cat}-${line}`}
+                  x={x + bw / 2}
+                  y={innerH + 14 + i * 13}
+                  textAnchor="middle"
+                  fill="#52525C"
+                  fontSize={11}
+                  fontFamily={FONT}
+                >
+                  {line}
+                </text>
+              ))}
+            </g>
+          );
+        })}
+
+        {hover && (
+          <g>
+            <line
+              x1={0}
+              x2={innerW}
+              y1={Math.min(innerH, Math.max(0, hover.y))}
+              y2={Math.min(innerH, Math.max(0, hover.y))}
+              stroke="#000"
+              strokeOpacity={0.4}
+              strokeDasharray="3 3"
+            />
+            <g transform={`translate(0, ${Math.min(innerH, Math.max(0, hover.y))})`}>
+              <rect x={-44} y={-11} width={40} height={22} rx={4} fill="#000" />
+              <text x={-24} y={4} textAnchor="middle" fill="#fff" fontSize={12} fontFamily={FONT}>
+                {formatValue(hover.value)}
+              </text>
+            </g>
+          </g>
+        )}
+      </Group>
+    </svg>
+  );
+}
 
 export default AuditFactorChart;

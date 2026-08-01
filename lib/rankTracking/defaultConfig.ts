@@ -52,7 +52,7 @@ export async function ensureDefaultConfigForDomain(
     languageCode: defaults.languageCode,
     devices: opts?.devices ?? 'desktop',
     serpDepth: 40,
-    scheduleInterval: opts?.scheduleInterval ?? 'weekly',
+    scheduleInterval: opts?.scheduleInterval ?? 'daily',
     locationName: defaults.locationName,
   });
 

@@ -179,12 +179,17 @@ export async function applySubscriptionUpgrade(
   const itemId = subscription.items.data[0]?.id;
   if (!itemId) throw new Error('Subscription has no items');
 
+  // cancel_at_period_end is not allowed with payment_behavior=pending_if_incomplete
+  // (Stripe pending-updates supported attributes). Clear it in a separate call first.
+  if (subscription.cancel_at_period_end) {
+    await stripe.subscriptions.update(args.subscriptionId, { cancel_at_period_end: false });
+  }
+
   const updated = await stripe.subscriptions.update(args.subscriptionId, {
     items: [{ id: itemId, price: args.targetPriceId }],
     proration_behavior: 'always_invoice',
     ...(args.prorationDate ? { proration_date: args.prorationDate } : {}),
     payment_behavior: 'pending_if_incomplete',
-    cancel_at_period_end: false,
     expand: ['latest_invoice.payment_intent'],
     metadata: {
       ...subscription.metadata,

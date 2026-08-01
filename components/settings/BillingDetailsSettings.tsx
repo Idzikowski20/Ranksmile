@@ -160,7 +160,7 @@ const BillingDetailsSettings = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 420 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <label style={{ fontFamily: font, fontSize: 14, fontWeight: 500, color: '#3F3F47' }}>Country</label>
-                  <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8F8F9', border: '1px solid #E4E4E7', borderRadius: 8, padding: '10px 12px', fontFamily: font, fontSize: 14, color: '#9F9FA9' }}>
+                  <div style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f3f4f0', border: '1px solid #E4E4E7', borderRadius: 8, padding: '10px 12px', fontFamily: font, fontSize: 14, color: '#9F9FA9' }}>
                     <span>Poland</span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M6 9l6 6 6-6" stroke="#9F9FA9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

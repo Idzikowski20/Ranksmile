@@ -18,7 +18,7 @@ const FONT = 'var(--font-family-primary)';
 const DEFAULT_SELECTED = 5;
 
 const SkeletonCard = () => (
-   <div style={{ border: '1px solid #E4E4E7', borderRadius: 8, background: '#fff', height: 56, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12 }}>
+   <div style={{ border: '1px solid #bebebe', borderRadius: 8, background: '#fff', height: 56, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12 }}>
       <div className="aiv-pulse" style={{ width: 20, height: 20, borderRadius: 4, background: '#F4F4F5' }} />
       <div className="aiv-pulse" style={{ height: 14, width: '32%', borderRadius: 4, background: '#F4F4F5' }} />
    </div>

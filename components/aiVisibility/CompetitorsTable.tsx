@@ -51,11 +51,11 @@ const CompetitorsTable = ({ competitors, onSelect }: { competitors: CompetitorRo
    const toggle = (k: SortKey, def: 'asc' | 'desc') => { if (sort === k) setDir((d) => (d === 'asc' ? 'desc' : 'asc')); else { setSort(k); setDir(def); } };
 
    if (!competitors.length) {
-      return <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
+      return <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No competitors found in this scan.</div>;
    }
 
    return (
-      <div style={{ border: '1px solid #DAD9DE', boxShadow: '0 4px 0 0 #e4e4e7', borderRadius: 12, background: '#fff' }}>
+      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
          <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
             <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Competitor</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Avg. pos." active={sort === 'avgPosition'} dir={dir} onClick={() => toggle('avgPosition', 'asc')} /></div>
