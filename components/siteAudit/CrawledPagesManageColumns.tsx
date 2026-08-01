@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Checkbox, CompactSelect, DropdownButton } from '../core';
+import { Checkbox, CompactSelect, DropdownButton } from '../koala/core';
 
 export type CrawledPageColumnKey =
   | 'ilr'
@@ -105,7 +105,7 @@ export default function CrawledPagesManageColumns({ visible, onChange }: Props) 
       align="right"
       menuMinWidth={300}
       menuWidth={320}
-      menuClassName="sentry-manage-columns-menu"
+      menuClassName="koala-manage-columns-menu"
       trigger={(props, isOpen) => (
         <DropdownButton
           {...props}
@@ -116,7 +116,7 @@ export default function CrawledPagesManageColumns({ visible, onChange }: Props) 
           style={{ width: 'auto' }}
         >
           Manage columns
-          <span className="sentry-crawled-pages-col-count">
+          <span className="koala-crawled-pages-col-count">
             {visibleCount}
             /
             {CRAWLED_PAGE_COLUMNS.length}
@@ -124,20 +124,20 @@ export default function CrawledPagesManageColumns({ visible, onChange }: Props) 
         </DropdownButton>
       )}
       menuBody={() => (
-        <div className="sentry-manage-columns">
-          <div className="sentry-compact-select-menu-header sentry-manage-columns-header">
-            <span className="sentry-compact-select-menu-title">Columns</span>
-            <div className="sentry-manage-columns-actions">
-              <button type="button" className="sentry-compact-select-clear" onClick={resetToDefault}>
+        <div className="koala-manage-columns">
+          <div className="koala-compact-select-menu-header koala-manage-columns-header">
+            <span className="koala-compact-select-menu-title">Columns</span>
+            <div className="koala-manage-columns-actions">
+              <button type="button" className="koala-compact-select-clear" onClick={resetToDefault}>
                 Reset to default
               </button>
-              <button type="button" className="sentry-compact-select-clear" onClick={selectAll}>
+              <button type="button" className="koala-compact-select-clear" onClick={selectAll}>
                 Select all
               </button>
             </div>
           </div>
           <div
-            className="sentry-compact-select-list styled-scrollbar sentry-manage-columns-list"
+            className="koala-compact-select-list styled-scrollbar koala-manage-columns-list"
             role="menu"
           >
             {CRAWLED_PAGE_COLUMNS.map((col) => {
@@ -150,7 +150,7 @@ export default function CrawledPagesManageColumns({ visible, onChange }: Props) 
                   role="menuitemcheckbox"
                   aria-checked={isVisible}
                   aria-disabled={disabled || undefined}
-                  className={`sentry-manage-columns-item${disabled ? ' sentry-manage-columns-item--disabled' : ''}`}
+                  className={`koala-manage-columns-item${disabled ? ' koala-manage-columns-item--disabled' : ''}`}
                   onClick={() => !disabled && toggleColumn(col.key, !isVisible)}
                   onKeyDown={(e) => {
                     if (disabled) return;
@@ -167,7 +167,7 @@ export default function CrawledPagesManageColumns({ visible, onChange }: Props) 
                     disabled={disabled}
                     readOnly
                   />
-                  <span className="sentry-manage-columns-label">{col.label}</span>
+                  <span className="koala-manage-columns-label">{col.label}</span>
                 </div>
               );
             })}

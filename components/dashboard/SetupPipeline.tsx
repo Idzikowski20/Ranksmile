@@ -16,8 +16,8 @@ const STAGE_LABELS: Record<StageKey, string> = {
 function CheckIcon() {
    return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-         <circle cx="8" cy="8" r="8" fill="#1AB25E" />
-         <path d="M4.5 8L7 10.5L11.5 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+         <circle cx="8" cy="8" r="8" fill="var(--koala-status-success)" />
+         <path d="M4.5 8L7 10.5L11.5 6" stroke="var(--koala-text-on-brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
    );
 }
@@ -28,7 +28,7 @@ function SpinnerIcon() {
          aria-hidden="true"
          style={{
             display: 'inline-block', width: 16, height: 16, flexShrink: 0,
-            border: '2px solid #E4E4E7', borderTopColor: '#F29964', borderRadius: '9999px',
+            border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-brand)', borderRadius: '9999px',
             animation: 'spin 0.7s linear infinite',
          }}
       />
@@ -38,7 +38,7 @@ function SpinnerIcon() {
 function HollowCircle() {
    return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-         <circle cx="8" cy="8" r="7" stroke="#D4D4D8" strokeWidth="1.5" />
+         <circle cx="8" cy="8" r="7" stroke="var(--koala-border-primary)" strokeWidth="1.5" />
       </svg>
    );
 }
@@ -64,15 +64,15 @@ const SetupPipeline: React.FC<Props> = ({ stages, status, error, onRetry }) => {
          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                  <circle cx="12" cy="12" r="10" fill="#FF6F77" />
-                  <path d="M12 7.5v5.5M12 16.3h.01" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                  <circle cx="12" cy="12" r="10" fill="var(--koala-status-danger)" />
+                  <path d="M12 7.5v5.5M12 16.3h.01" stroke="var(--koala-text-on-brand)" strokeWidth="2" strokeLinecap="round" />
                </svg>
-               <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>
+               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)' }}>
                   We couldn&apos;t finish analyzing your domain
                </span>
             </div>
             {error && (
-               <span style={{ fontSize: 12.5, color: '#52525C', fontFamily: 'var(--font-family-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
+               <span style={{ fontSize: 12.5, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
                   {error}
                </span>
             )}
@@ -81,11 +81,9 @@ const SetupPipeline: React.FC<Props> = ({ stages, status, error, onRetry }) => {
                onClick={onRetry}
                style={{
                   alignSelf: 'flex-start', padding: '8px 16px', borderRadius: 8, border: 'none',
-                  background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600,
+                  background: 'var(--koala-btn-brand-bg)', color: 'var(--koala-btn-brand-fg)', fontSize: 13, fontWeight: 600,
                   fontFamily: 'var(--font-family-primary)', cursor: 'pointer', transition: 'background 150ms ease',
                }}
-               onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
-               onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
             >
                Retry
             </button>
@@ -98,7 +96,7 @@ const SetupPipeline: React.FC<Props> = ({ stages, status, error, onRetry }) => {
          <p style={{
             fontSize: 15,
             fontWeight: 700,
-            color: '#18181B',
+            color: 'var(--koala-text-primary)',
             fontFamily: 'var(--font-family-primary)',
             margin: '0 0 20px',
          }}>
@@ -115,7 +113,7 @@ const SetupPipeline: React.FC<Props> = ({ stages, status, error, onRetry }) => {
                      <span style={{
                         fontSize: 13,
                         fontWeight: isPending ? 400 : 600,
-                        color: isPending ? '#52525C' : '#18181B',
+                        color: isPending ? 'var(--koala-text-secondary)' : 'var(--koala-text-primary)',
                         fontFamily: 'var(--font-family-primary)',
                         lineHeight: '20px',
                      }}>

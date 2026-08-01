@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import { useAddDomain } from '../../services/domains';
 import { isValidUrl } from '../../utils/client/validators';
 
@@ -57,12 +58,12 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
    };
 
    return (
-      /* Backdrop — above topbar (z-index 100) */
+      <ShellPortal>
       <div
          style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 300,
+            zIndex: overlayZ.modal,
             background: 'rgba(0,0,0,0.55)',
             display: 'flex',
             alignItems: 'center',
@@ -222,7 +223,7 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
                      padding: '7px 20px',
                      borderRadius: 'var(--radius-xs, 7px)',
                      border: 'none',
-                     background: 'var(--color-surface-raised, #f29964)',
+                     background: 'var(--color-surface-raised, #F84416)',
                      color: '#fff',
                      fontSize: 13,
                      fontWeight: 600,
@@ -236,7 +237,7 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
                      if (!isAdding) (e.currentTarget as HTMLButtonElement).style.background = '#6b2fe0';
                   }}
                   onMouseLeave={(e) => {
-                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-raised, #f29964)';
+                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-raised, #F84416)';
                   }}
                >
                   {isAdding ? 'Adding...' : 'Add Domain'}
@@ -244,6 +245,7 @@ const AddDomain = ({ closeModal, domains = [] }: AddDomainProps) => {
             </div>
          </div>
       </div>
+      </ShellPortal>
    );
 };
 

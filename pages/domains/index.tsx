@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
-import { Button } from '../../components/core';
-import { SentryPage, SentryPageHeader, SentryPanel, SentryEmptyState } from '../../components/sentry-pages';
+import { Button } from '../../components/koala/core';
+import { KoalaPage, KoalaPageHeader, KoalaPanel, KoalaEmptyState } from '../../components/koala/layout';
 import { useCheckMigrationStatus, useFetchSettings } from '../../services/settings';
 import { useFetchDomains } from '../../services/domains';
 import DomainItem from '../../components/domains/DomainItem';
@@ -96,8 +96,8 @@ const Domains: NextPage = () => {
          <Head>
             <title>Domains - Ranksmile</title>
          </Head>
-         <SentryPage maxWidth={880}>
-            <SentryPageHeader
+         <KoalaPage maxWidth={880}>
+            <KoalaPageHeader
                title="Domains"
                subtitle={`${domainsData?.domains?.length || 0} domains · ${totalKeywords} keywords`}
                borderless
@@ -107,7 +107,7 @@ const Domains: NextPage = () => {
                   </Button>
                )}
             />
-            <SentryPanel noPadding>
+            <KoalaPanel noPadding>
                {domainsData?.domains && domainsData.domains.map((domain:DomainType) => (
                   <DomainItem
                      key={domain.ID}
@@ -124,7 +124,7 @@ const Domains: NextPage = () => {
                   </div>
                )}
                {!isLoading && domainsData && domainsData.domains && domainsData.domains.length === 0 && (
-                  <SentryEmptyState
+                  <KoalaEmptyState
                      title="No domains yet"
                      description="Add a domain to start tracking keywords and content."
                      actions={(
@@ -134,8 +134,8 @@ const Domains: NextPage = () => {
                      )}
                   />
                )}
-            </SentryPanel>
-         </SentryPage>
+            </KoalaPanel>
+         </KoalaPage>
 
          <CSSTransition in={showAddDomain} timeout={300} classNames="modal_anim" unmountOnExit mountOnEnter>
             <AddDomain closeModal={() => setShowAddDomain(false)} domains={domainsData?.domains || []} />

@@ -1,15 +1,8 @@
 import React, { useMemo } from 'react';
-import { Bar } from '../../charts/bar';
-import { BarChart } from '../../charts/bar-chart';
-import { LineChart } from '../../charts/line-chart';
-import { Line } from '../../charts/line';
-import { LineSeriesTerminalMarker } from '../../charts/line-series-terminal-marker';
+import { Sparkline } from '../../koala/charts';
 import type { OrganicMetrics } from '../../../lib/organicResearch/types';
 
 const FONT = 'var(--font-family-primary)';
-const TRAFFIC_LINE = '#5B7CE8';
-const KEYWORDS_BAR = '#B8C4F0';
-const KEYWORDS_BAR_CURRENT = '#6B7FD7';
 
 export type SummaryMetric = 'keywords' | 'traffic' | 'trafficCost';
 
@@ -23,9 +16,18 @@ function formatCompact(n: number): string {
   return n % 1 === 0 ? String(n) : n.toFixed(1);
 }
 
-function formatTrafficCost(n: number): string {
-  if (n >= 1000) return `$${formatCompact(n)}`;
-  return `$${n.toFixed(1)}`;
+const CURRENCY_PREFIX: Record<string, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  PLN: '',
+};
+
+function formatTrafficCost(n: number, currency = 'USD'): string {
+  const prefix = CURRENCY_PREFIX[currency] ?? `${currency} `;
+  const suffix = currency === 'PLN' ? ' zł' : '';
+  const body = n >= 1000 ? formatCompact(n) : n.toFixed(1);
+  return `${prefix}${body}${suffix}`;
 }
 
 function Delta({ pct }: { pct: number | null }) {
@@ -44,101 +46,6 @@ function Delta({ pct }: { pct: number | null }) {
     >
       {pct.toFixed(2)}%
     </span>
-  );
-}
-
-/** Bklit BarChart sparkline for Keywords KPI — last bar darker (current). */
-function MiniKeywordsBarSpark({ values }: { values: number[] }) {
-  const data = useMemo(
-    () => values.map((value, i) => {
-      const isLast = i === values.length - 1;
-      return {
-        label: String(i),
-        past: isLast ? 0 : value,
-        current: isLast ? value : 0,
-      };
-    }),
-    [values],
-  );
-
-  if (!values.length) return null;
-
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        width: 168,
-        height: 40,
-        flexShrink: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none',
-      }}
-    >
-      <BarChart
-        data={data}
-        xDataKey="label"
-        stacked
-        barGap={0.18}
-        aspectRatio="168 / 40"
-        margin={{ top: 4, right: 2, bottom: 2, left: 2 }}
-        animationDuration={900}
-      >
-        <Bar dataKey="past" fill={KEYWORDS_BAR} stroke={KEYWORDS_BAR} lineCap={2} />
-        <Bar dataKey="current" fill={KEYWORDS_BAR_CURRENT} stroke={KEYWORDS_BAR_CURRENT} lineCap={2} />
-      </BarChart>
-    </div>
-  );
-}
-
-/** Bklit LineChart sparkline for Traffic KPI. */
-function MiniTrafficLineSpark({ values }: { values: number[] }) {
-  const data = useMemo(
-    () => values.map((value, i) => ({
-      date: new Date(Date.UTC(2024, 0, 1 + i)),
-      value,
-    })),
-    [values],
-  );
-
-  if (!values.length) return null;
-
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        width: 168,
-        height: 40,
-        flexShrink: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none',
-      }}
-    >
-      <LineChart
-        data={data}
-        xDataKey="date"
-        aspectRatio="168 / 40"
-        margin={{ top: 6, right: 8, bottom: 4, left: 2 }}
-        animationDuration={900}
-        yDomainTween={false}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <Line
-          dataKey="value"
-          stroke={TRAFFIC_LINE}
-          strokeWidth={1.75}
-          fadeEdges={false}
-          showHighlight={false}
-          showMarkers={false}
-        />
-        <LineSeriesTerminalMarker
-          dataKey="value"
-          stroke={TRAFFIC_LINE}
-          fill={TRAFFIC_LINE}
-          radius={3}
-          strokeWidth={0}
-        />
-      </LineChart>
-    </div>
   );
 }
 
@@ -286,36 +193,45 @@ type Props = {
   metrics: OrganicMetrics;
   keywordSeries: number[];
   trafficSeries: number[];
+  trafficCostSeries?: number[];
   selected?: SummaryMetric | null;
   onSelect?: (metric: SummaryMetric) => void;
-  /** When trend panel is open under this card, square off bottom corners. */
   connectedBelow?: boolean;
-  /** Hide Traffic Cost (e.g. GSC-only mode). Hybrid keeps it visible. */
   hideTrafficCost?: boolean;
+  currency?: string;
 };
 
 export default function OrganicKpiRow({
   metrics,
   keywordSeries,
   trafficSeries,
+  trafficCostSeries,
   selected = 'keywords',
   onSelect,
   connectedBelow = false,
   hideTrafficCost = false,
+  currency = 'USD',
 }: Props) {
   const gscHint = metrics.gscClicks != null
     ? `GSC actual clicks (28d): ${formatCompact(metrics.gscClicks)}`
     : null;
+
+  const keywordValues = useMemo(() => keywordSeries.slice(), [keywordSeries]);
+  const trafficValues = useMemo(() => trafficSeries.slice(), [trafficSeries]);
+  const costValues = useMemo(
+    () => (trafficCostSeries?.length ? trafficCostSeries.slice() : []),
+    [trafficCostSeries],
+  );
 
   return (
     <div
       aria-label="Domain summary"
       data-at="positions-summary-widget"
       style={{
-        background: '#fff',
-        border: '1px solid #dbded4',
-        borderRadius: connectedBelow ? '8px 8px 0 0' : 8,
-        borderBottom: connectedBelow ? '1px solid #dbded4' : undefined,
+        background: 'var(--koala-bg-primary, #fff)',
+        border: '1px solid var(--koala-border-primary, #e5e5e5)',
+        borderRadius: connectedBelow ? '16px 16px 0 0' : 16,
+        borderBottom: connectedBelow ? '1px solid var(--koala-border-primary, #e5e5e5)' : undefined,
         padding: '16px 20px',
       }}
     >
@@ -329,7 +245,9 @@ export default function OrganicKpiRow({
           selected={selected === 'keywords'}
           onSelect={onSelect ? () => onSelect('keywords') : undefined}
           showCaret={connectedBelow}
-          chart={keywordSeries.length ? <MiniKeywordsBarSpark values={keywordSeries} /> : null}
+          chart={keywordValues.length ? (
+            <Sparkline appearance="compact" values={keywordValues} width={168} height={40} />
+          ) : null}
         />
         <Divider />
         <SummaryCell
@@ -341,7 +259,9 @@ export default function OrganicKpiRow({
           selected={selected === 'traffic'}
           onSelect={onSelect ? () => onSelect('traffic') : undefined}
           showCaret={connectedBelow}
-          chart={trafficSeries.length ? <MiniTrafficLineSpark values={trafficSeries} /> : null}
+          chart={trafficValues.length ? (
+            <Sparkline appearance="analytics" values={trafficValues} width={168} height={40} />
+          ) : null}
           hint={gscHint}
         />
         {!hideTrafficCost && (
@@ -351,9 +271,12 @@ export default function OrganicKpiRow({
               id="trafficCost"
               label="Traffic Cost"
               title="Estimated monthly cost to get the same traffic via Google Ads."
-              value={formatTrafficCost(metrics.trafficCost)}
+              value={formatTrafficCost(metrics.trafficCost, currency)}
               delta={metrics.trafficCostDeltaPct}
               selected={false}
+              chart={costValues.length ? (
+                <Sparkline appearance="analytics" values={costValues} width={168} height={40} />
+              ) : null}
             />
           </>
         )}

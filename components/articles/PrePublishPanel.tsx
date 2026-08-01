@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import MiniGauge from './MiniGauge';
 import PlagiarismScanningModal from './PlagiarismScanningModal';
 import PlagiarismPanel from './PlagiarismPanel';
+import { overlayZ } from '../koala/overlay/ShellPortal';
 
 const F = 'var(--font-family-primary)';
 
@@ -106,7 +107,7 @@ const AI_READABILITY_CRITERIA: Array<{ key: string; title: string; desc: string 
 ];
 
 const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; result?: AiReadabilityResult | null }) => createPortal(
-  <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
+  <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: overlayZ.modal, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: F }}>
     <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 600, maxHeight: '85vh', background: '#fff', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '24px 24px 16px' }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181b' }}>How do we assess AI Readability?</h2>
@@ -137,7 +138,7 @@ const AiReadabilityInfoModal = ({ onClose, result }: { onClose: () => void; resu
       </div>
       <div style={{ borderTop: '1px solid #f4f4f5', padding: 20, display: 'flex', justifyContent: 'flex-end' }}>
         <button type="button" onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: F, transition: 'background 0.15s' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#f29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
           Close
         </button>
       </div>
@@ -356,7 +357,7 @@ const PrePublishPanel = ({
                 {onApplyReadability && cards.length > 0 && !applied && (
                   <button type="button" disabled={readOnly} onClick={() => onApplyReadability(aiRead)}
                     style={{ width: '100%', padding: '9px 16px', borderRadius: 8, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: readOnly ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
-                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#f29964'; }}
+                    onMouseEnter={(e) => { if (!readOnly) e.currentTarget.style.background = '#F84416'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
                     Apply All
                   </button>

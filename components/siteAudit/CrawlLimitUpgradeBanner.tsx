@@ -19,7 +19,7 @@ export default function CrawlLimitUpgradeBanner({
   if (!upgradePlanName) return null;
 
   return (
-    <section className="sentry-crawl-limit-banner perf-3d-card">
+    <section className="koala-crawl-limit-banner">
       <CrawlLimitBody
         pagesCrawled={pagesCrawled}
         pagesLimit={pagesLimit}

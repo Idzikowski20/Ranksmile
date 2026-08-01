@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from '../core';
-import { SentrySettingsSection, SentrySettingsRow, SentryPanel, SentryPanelBody } from '../sentry-pages';
+import { Button } from '../koala/core';
+import { KoalaSettingsSection, KoalaSettingsRow, KoalaPanel, KoalaPanelBody } from '../koala/layout';
 
 type SearchConsoleSettingsProps = {
   settings?: SettingsType;
@@ -84,21 +84,21 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
   const addAccountLabel = accounts.length > 0 ? 'Add another Google Account' : 'Add Google Account';
 
   return (
-    <SentrySettingsSection title="Connected accounts">
-      <SentrySettingsRow
+    <KoalaSettingsSection title="Connected accounts">
+      <KoalaSettingsRow
         label="Google Search Console"
         description="Connect your Google Search Console with Ranksmile to get accurate data about your domains."
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
           {isLoading ? (
-            <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 14, color: '#52525C', fontFamily: 'var(--font-family-primary)' }}>
+            <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
               Loading accounts…
             </div>
           ) : (
-            <SentryPanel noPadding>
+            <KoalaPanel noPadding>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {accounts.length === 0 ? (
-                  <div style={{ padding: '24px 16px', fontSize: 14, color: '#71717A', fontFamily: 'var(--font-family-primary)' }}>
+                  <div style={{ padding: '24px 16px', fontSize: 14, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }}>
                     No Google accounts connected yet.
                   </div>
                 ) : (
@@ -115,7 +115,7 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 9999, overflow: 'hidden', background: '#F4F4F5', flexShrink: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 9999, overflow: 'hidden', background: 'var(--koala-bg-secondary)', flexShrink: 0 }}>
                           <img
                             alt=""
                             src={account.picture || 'https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png'}
@@ -129,16 +129,16 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {account.email || account.googleSub || 'Google Account'}
                             </span>
                             {account.status === 'expired' && (
-                              <span style={{ flexShrink: 0, borderRadius: 9999, background: '#FFF1F2', padding: '2px 8px', fontSize: 11, fontWeight: 600, color: '#B91C1C' }}>
+                              <span style={{ flexShrink: 0, borderRadius: 9999, background: 'var(--koala-status-danger-bg)', padding: '2px 8px', fontSize: 11, fontWeight: 600, color: 'var(--koala-status-danger)' }}>
                                 Reconnect needed
                               </span>
                             )}
                           </div>
-                          <span style={{ fontSize: 13, color: '#71717A', fontFamily: 'var(--font-family-primary)' }} suppressHydrationWarning>
+                          <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: 'var(--font-family-primary)' }} suppressHydrationWarning>
                             {mounted
                               ? (account.status === 'expired'
                                 ? 'Connection expired — reconnect to restore Search Console data'
@@ -167,7 +167,7 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
                   ))
                 )}
               </div>
-            </SentryPanel>
+            </KoalaPanel>
           )}
           <div>
             <Button type="button" variant="primary" icon={<GoogleIcon />} onClick={handleConnect}>
@@ -175,8 +175,8 @@ const SearchConsoleSettings = (_props: SearchConsoleSettingsProps) => {
             </Button>
           </div>
         </div>
-      </SentrySettingsRow>
-    </SentrySettingsSection>
+      </KoalaSettingsRow>
+    </KoalaSettingsSection>
   );
 };
 

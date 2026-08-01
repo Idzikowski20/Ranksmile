@@ -1,5 +1,5 @@
 import React from 'react';
-import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
+import { Card, WidgetShell } from '../koala/product';
 
 const font = 'var(--font-family-primary)';
 
@@ -39,28 +39,23 @@ const clamp = (lines: number): React.CSSProperties => ({
 });
 
 const LearnSection = () => (
-  <SentryPanel>
-    <SentryPanelHeader title="Learn" />
-    <SentryPanelBody>
-      <div
-        className="dashboard-learn-grid"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 12 }}
-      >
-        {CARDS.map((card) => (
+  <WidgetShell title="Learn">
+    <div
+      className="dashboard-learn-grid"
+      style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 12 }}
+    >
+      {CARDS.map((card) => (
+        <Card key={card.title} padded elevated={false}>
           <a
-            key={card.title}
             href={card.href}
             className="dashboard-learn-card"
             style={{
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden',
-              borderRadius: 8,
-              border: '1px solid #dbded4',
               textDecoration: 'none',
               color: 'inherit',
-              background: '#fff',
-              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+              margin: -20,
+              padding: 16,
             }}
           >
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
@@ -69,7 +64,7 @@ const LearnSection = () => (
                   fontSize: 13,
                   lineHeight: '16px',
                   fontWeight: 500,
-                  color: '#6A6772',
+                  color: 'var(--koala-text-secondary)',
                   fontFamily: font,
                   ...clamp(1),
                 }}
@@ -81,7 +76,7 @@ const LearnSection = () => (
                   fontSize: 14,
                   lineHeight: '20px',
                   fontWeight: 600,
-                  color: '#181225',
+                  color: 'var(--koala-text-primary)',
                   fontFamily: font,
                   ...clamp(3),
                 }}
@@ -93,7 +88,7 @@ const LearnSection = () => (
                   fontSize: 13,
                   lineHeight: '16px',
                   fontWeight: 500,
-                  color: '#6A6772',
+                  color: 'var(--koala-text-secondary)',
                   marginTop: 'auto',
                   fontFamily: font,
                   ...clamp(1),
@@ -103,10 +98,10 @@ const LearnSection = () => (
               </span>
             </div>
           </a>
-        ))}
-      </div>
-    </SentryPanelBody>
-  </SentryPanel>
+        </Card>
+      ))}
+    </div>
+  </WidgetShell>
 );
 
 export default LearnSection;

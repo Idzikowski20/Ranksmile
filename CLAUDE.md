@@ -92,40 +92,28 @@ Rules:
 **OBOWIĄZUJE NA TYM PROJEKCIE — BEZ WYJĄTKU:**
 
 1. Przed każdą zmianą UI uruchom skill `/frontend-design`
-2. **Przeczytaj `DESIGN.md` przed napisaniem jakiegokolwiek kodu UI** — Sentry-first design system
-3. Ściśle stosuj `DESIGN.md` — nie wymyślaj nowych kolorów, rozmiarów, shadowów, border-radiusów
+2. **Przeczytaj `DESIGN.md` przed napisaniem jakiegokolwiek kodu UI** — Koala UI v11
+3. Ściśle stosuj `DESIGN.md` — tokeny z `components/koala/tokens`, rejestr w `components/koala/REGISTRY.md`
 
 ### Architektura UI
 
-- **Shell:** ciemny Sentry — bg `#252525` / `#09090b`, border `#221e28`
-- **App content:** jasny — page `#f3f4f0`, karty białe, border `#dbded4`, radius `8px`
-- **Styling poza edytorem:** `components/core` + Emotion / CSS vars — bez nowych Tailwind klas
-- **Editor zone:** KEEP TipTap/scoring; primitives z `core`
-- **Font:** `var(--font-family-primary)` / Rubik w shell — nigdy hardcode Inter jako brand
-- **Ikony:** wyłącznie inline SVG
+- **Shell / app:** Koala Light — page `#f5f5f5`, karty białe, border `#e5e5e5`, radius card `16px` / button `12px`
+- **Styling poza edytorem:** `components/koala` (+ legacy `components/core` shim) + Emotion / CSS vars
+- **Editor zone:** KEEP TipTap/scoring; primitives z koala/core
+- **Font:** DM Sans — `var(--font-family-primary)`
+- **Ikony:** `components/koala/icons` (Phosphor Bold = Koala Icon_Bold)
+- **Accent:** `#F84416` (Dark Orange 500)
 
-### Kluczowe tokeny (Sentry / Ranksmile)
-
-| Token | Wartość | Kiedy |
-|-------|---------|--------|
-| Accent | `#F29964` | primary CTA, focus, active |
-| Accent chonk | `#C97D52` | Button primary underside |
-| Card border | `#dbded4` | karty / panele Sentry |
-| Page bg | `#f3f4f0` | content areas |
-| Headings | `#181225` | titles |
-| Body | `#302E36` | primary text |
-| Muted | `#6A6772` | secondary |
-
-**Nie używaj** Ranksmile purple `#783AFB` jako brand accent w nowym UI (legacy tylko w `scoreColor.ts`). Anti-slop: `DESIGN.md` §12.
+**Nie używaj** Sentry accent `#F29964` ani Ranksmile purple `#783AFB` jako brand w nowym UI (legacy score tylko w `scoreColor.ts`).
 
 ### Struktura
 
 ```
-components/core/           — Button, Modal, Input, theme.tsx
-components/sentry-pages/   — SentryPage, Panel, Table
-components/ranksmile/         — Gauge, SelectionBar (KEEP)
-components/common/AppShell.tsx
-styles/globals.css         — CSS vars + shell
+components/koala/ — tokens, icons, primitives, product, layout
+components/core/ — shim / legacy during migration (theme → koala)
+components/sentry-pages/ — page layout wrappers (Koala tokens)
+components/ranksmile/ — Gauge, SelectionBar (KEEP)
+DESIGN.md — Koala-first
 ```
 
 Szczegóły → `DESIGN.md`.

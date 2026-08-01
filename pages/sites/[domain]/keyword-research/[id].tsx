@@ -7,12 +7,13 @@ import AppShell from '../../../../components/common/AppShell';
 import DomainSubLayout from '../../../../components/domains/DomainSubLayout';
 import KeywordClusterModal from '../../../../components/keywordResearch/KeywordClusterModal';
 import ScoreGauge from '../../../../components/articles/ScoreGauge';
-import { Button } from '../../../../components/core';
+import { Button } from '../../../../components/koala/core';
+import { KeywordIntentBadge } from '../../../../components/koala/product/helpers/KeywordIntentBadge';
 import { useKeywordResearchRun } from '../../../../services/keywordResearch';
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AUDIT_COUNTRIES } from '../../../../lib/countryLang';
-import { buildKwClusters, fmtNum, INTENTS, type KwCluster, type KwIntent } from '../../../../lib/keywordResearchView';
+import { buildKwClusters, fmtNum, INTENTS, kwIntentToSearchIntent, type KwCluster, type KwIntent } from '../../../../lib/keywordResearchView';
 
 const FONT = 'var(--font-family-primary)';
 const TEXT = '#18181B';
@@ -44,10 +45,6 @@ const LinkIcon = () => (<svg viewBox="0 0 24 24" width={16} height={16}><path fi
 const ExportIcon = () => (<svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>);
 const GoogleIcon = () => (
    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M15.68 8.18c0-.54-.04-1.08-.14-1.62H8v3.08h4.32a3.7 3.7 0 0 1-1.6 2.43v2h2.58a7.8 7.8 0 0 0 2.38-5.89" fill="#4285F4" /><path d="M8 16a7.6 7.6 0 0 0 5.3-1.93l-2.58-2a4.8 4.8 0 0 1-2.72.77 4.77 4.77 0 0 1-4.49-3.3H.85v2.06A8 8 0 0 0 8 16" fill="#34A853" /><path d="M3.51 9.53a4.8 4.8 0 0 1 0-3.06V4.41H.85a8 8 0 0 0 0 7.18z" fill="#FBBC04" /><path d="M8 3.17a4.35 4.35 0 0 1 3.07 1.2l2.28-2.29A7.7 7.7 0 0 0 8 0a8 8 0 0 0-7.15 4.41L3.5 6.47A4.77 4.77 0 0 1 8 3.17" fill="#EA4335" /></svg>
-);
-
-const IntentBadge = ({ intent }: { intent: KwIntent }) => (
-   <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #D4D4D8', fontSize: 11, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', color: MUTED, whiteSpace: 'nowrap' }}>{intent}</span>
 );
 
 /* ─── Filter popovers ─────────────────────────────────────────────────────── */
@@ -167,7 +164,7 @@ const TabItem = ({ label, count, active, disabled, onClick }: { label: string; c
    <button type="button" disabled={disabled} onClick={onClick} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 4px 14px', border: 'none', background: 'transparent', cursor: disabled ? 'default' : 'pointer', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', color: disabled ? MUTED2 : active ? '#18181B' : MUTED, opacity: disabled ? 0.6 : 1, fontFamily: FONT }}>
       {label}
       <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 18, padding: '0 5px', borderRadius: 6, background: active ? '#18181B' : '#E4E4E7', color: active ? '#fff' : '#52525C', fontSize: 12, fontWeight: 600 }}>{count}</span>
-      {active && <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, background: '#F29964', borderRadius: 2 }} />}
+      {active && <span style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, background: '#F84416', borderRadius: 2 }} />}
    </button>
 );
 
@@ -201,7 +198,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
       >
          {/* top row */}
          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <IntentBadge intent={cluster.intent} />
+            <KeywordIntentBadge intent={kwIntentToSearchIntent(cluster.intent)} label />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, fontWeight: 500, color: '#52525C', whiteSpace: 'nowrap' }}>
                <span><span style={{ color: MUTED2, textTransform: 'uppercase', paddingRight: 4 }}>MSV:</span>{fmtNum(cluster.msv)}</span>
                <span><span style={{ color: MUTED2, textTransform: 'uppercase', paddingRight: 4 }}>KD:</span>{cluster.kd}</span>
@@ -230,7 +227,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
             </div>
          )}
          {state === 'idle' && (
-            <button type="button" aria-label="Open details" onClick={onOpenDetails} style={{ position: 'absolute', bottom: 24, right: 24, width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', zIndex: 5, transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
+            <button type="button" aria-label="Open details" onClick={onOpenDetails} style={{ position: 'absolute', bottom: 24, right: 24, width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', zIndex: 5, transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
                <PencilIcon />
             </button>
          )}
@@ -238,7 +235,7 @@ const ClusterCard = ({ cluster, state, onOpenDetails, onOpenEditor, onCopyLink }
             <div style={{ position: 'absolute', bottom: 24, right: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 6 }}>
                <ScoreGauge score={0} pending size={52} />
                <div style={{ position: 'relative' }} ref={menuRef}>
-                  <button type="button" aria-label="Article actions" onClick={() => setMenuOpen((o) => !o)} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
+                  <button type="button" aria-label="Article actions" onClick={() => setMenuOpen((o) => !o)} style={{ width: 42, height: 42, borderRadius: '50%', background: '#2F2F34', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 4px 12px rgba(9,9,11,0.24)', transition: 'background 150ms ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}>
                      <KebabIcon />
                   </button>
                   {menuOpen && (

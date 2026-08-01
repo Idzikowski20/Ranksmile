@@ -3,44 +3,19 @@ import type { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import WizardShell, { WizardNextButton, WizardBackButton } from '../../components/articles/WizardShell';
-import { Button, CompactSelect, SegmentedControl, Switch, Textarea } from '../../components/core';
-import type { SelectOption } from '../../components/core';
+import { Button, CompactSelect, SegmentedControl, Switch, Textarea } from '../../components/koala/core';
+import type { SelectOption } from '../../components/koala/core';
 import { saveWizardState } from '../../lib/wizardState';
 import { useContentSettings, useUpdateContentSettings } from '../../services/contentSettings';
 import { useArticle } from '../../services/article';
 import DomainFavicon from '../../components/common/DomainFavicon';
+import SidePanel from '../../components/common/SidePanel';
 import { parseRankingSources, buildAiRankingSources } from '../../lib/rankingSources';
 import type { AiVisibilitySummary } from '../../lib/aiSearchScore';
 
 interface Voice { id: string; name: string; description: string; isDefault: boolean; }
 
 const label: React.CSSProperties = { fontSize: 14, fontWeight: 500, color: '#3F3F47', fontFamily: 'var(--font-family-primary)' };
-
-/** Right slide-in detail panel (Ranking content / Brand Knowledge). */
-const SidePanel = ({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode; }) => (
-  <div
-    style={{ position: 'fixed', inset: 0, zIndex: 150, background: open ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0)', pointerEvents: open ? 'auto' : 'none', transition: 'background 0.2s' }}
-    onClick={onClose}
-  >
-    <div
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        position: 'fixed', top: 8, bottom: 8, right: 8, width: 512, maxWidth: 'calc(100% - 16px)',
-        background: '#fff', borderRadius: 12, boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
-        transform: open ? 'translateX(0)' : 'translateX(110%)', transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px 16px' }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: 'var(--font-family-primary)' }}>{title}</h2>
-        <Button type="button" variant="transparent" size="xs" onClick={onClose} aria-label="Close" style={{ color: '#52525C', minWidth: 28, padding: 4 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </Button>
-      </div>
-      <div style={{ padding: '0 28px 28px', overflowY: 'auto' }} className="styled-scrollbar">{children}</div>
-    </div>
-  </div>
-);
 
 const ContextPage: NextPage = () => {
   const router = useRouter();
@@ -257,7 +232,7 @@ const ContextPage: NextPage = () => {
         />
       </div>
 
-      <SidePanel open={panel === 'ranking'} title="Ranking content" onClose={() => setPanel(null)}>
+      <SidePanel open={panel === 'ranking'} title="Ranking content" onClose={() => setPanel(null)} width={512}>
         <style>{'@keyframes rkPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }'}</style>
         <div style={{ marginBottom: 18 }}>
           <SegmentedControl
@@ -313,7 +288,7 @@ const ContextPage: NextPage = () => {
                     <DomainFavicon domain={s.domain} size={16} />
                     <span>{s.domain}</span>
                     <span style={{ color: '#D4D4D8' }}>·</span>
-                    <span style={{ color: '#F29964', fontWeight: 600 }}>cited in AI Overview</span>
+                    <span style={{ color: '#F84416', fontWeight: 600 }}>cited in AI Overview</span>
                   </div>
                   {s.title && (
                     <a href={s.url} target="_blank" rel="noreferrer noopener" style={{ fontSize: 14, fontWeight: 600, color: '#18181B', textDecoration: 'none', lineHeight: '20px', fontFamily: 'var(--font-family-primary)' }}>{s.title}</a>
@@ -325,7 +300,7 @@ const ContextPage: NextPage = () => {
         )}
       </SidePanel>
 
-      <SidePanel open={panel === 'brand'} title="Brand Knowledge" onClose={() => setPanel(null)}>
+      <SidePanel open={panel === 'brand'} title="Brand Knowledge" onClose={() => setPanel(null)} width={512}>
         <Textarea
           label="Knowledge"
           value={brandText}

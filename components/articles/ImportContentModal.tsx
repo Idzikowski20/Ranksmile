@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
-import Modal from '../core/modal/modal';
-import Button from '../core/button/button';
-import Input from '../core/input/input';
+import Modal from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
+import Input from '../koala/core/input/input';
+import { Flag } from '../koala';
 
 interface Props {
   domains: { ID: number; domain: string }[];
@@ -12,12 +13,12 @@ interface Props {
   isImporting: boolean;
 }
 
-const COUNTRIES: Record<string, { name: string; flag: string }> = {
-  US: { name: 'United States', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/us.svg' },
-  GB: { name: 'United Kingdom', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/gb.svg' },
-  PL: { name: 'Poland', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/pl.svg' },
-  DE: { name: 'Germany', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/de.svg' },
-  FR: { name: 'France', flag: 'https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/fr.svg' },
+const COUNTRIES: Record<string, string> = {
+  US: 'United States',
+  GB: 'United Kingdom',
+  PL: 'Poland',
+  DE: 'Germany',
+  FR: 'France',
 };
 
 const DEVICES = ['Desktop', 'Mobile'] as const;
@@ -95,7 +96,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
     }
   };
 
-  const countryData = COUNTRIES[country] || COUNTRIES.US;
+  const countryName = COUNTRIES[country] || COUNTRIES.US;
 
   return (
     <Modal onClose={onClose} width={1130} closeOnOverlayClick>
@@ -116,9 +117,9 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            background: '#fff',
+            background: 'var(--koala-bg-primary)',
             borderRadius: 12,
-            border: '1px solid #E4E4E7',
+            border: '1px solid var(--koala-border-primary)',
             overflow: 'hidden',
           }}
         >
@@ -399,7 +400,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                     flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    borderTop: '1px solid #E4E4E7',
+                    borderTop: '1px solid var(--koala-border-primary)',
                     paddingTop: 24,
                     marginTop: 8,
                     gap: 12,
@@ -430,12 +431,8 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                           transition: 'opacity 0.2s',
                         }}
                       >
-                        <img
-                          src={countryData.flag}
-                          alt={countryData.name}
-                          style={{ width: 20, height: 15, boxShadow: 'rgba(0,0,0,0.5) 0px 0px 1px 0px' }}
-                        />
-                        <span>{countryData.name}</span>
+                        <Flag code={country} size={20} />
+                        <span>{countryName}</span>
                         <svg viewBox="0 0 20 20" width="20" height="20" style={{ color: '#9F9FA9' }}>
                           <path fill="currentColor" fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
                         </svg>
@@ -447,8 +444,8 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                             top: '100%',
                             left: 0,
                             marginTop: 4,
-                            background: '#fff',
-                            border: '1px solid #E4E4E7',
+                            background: 'var(--koala-bg-primary)',
+                            border: '1px solid var(--koala-border-primary)',
                             borderRadius: 8,
                             boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
                             zIndex: 10,
@@ -456,7 +453,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                             overflow: 'hidden',
                           }}
                         >
-                          {Object.entries(COUNTRIES).map(([code, c]) => (
+                          {Object.entries(COUNTRIES).map(([code, name]) => (
                             <button
                               key={code}
                               type="button"
@@ -476,8 +473,8 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                                 textAlign: 'left',
                               }}
                             >
-                              <img src={c.flag} alt={c.name} style={{ width: 20, height: 15 }} />
-                              {c.name}
+                              <Flag code={code} size={20} />
+                              {name}
                             </button>
                           ))}
                         </div>
@@ -520,8 +517,8 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
                             top: '100%',
                             left: 0,
                             marginTop: 4,
-                            background: '#fff',
-                            border: '1px solid #E4E4E7',
+                            background: 'var(--koala-bg-primary)',
+                            border: '1px solid var(--koala-border-primary)',
                             borderRadius: 8,
                             boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
                             zIndex: 10,
@@ -565,7 +562,7 @@ const ImportContentModal = ({ domains, onClose, isImporting }: Props) => {
               padding: 12,
               display: 'flex',
               justifyContent: 'center',
-              borderTop: '1px solid #E4E4E7',
+              borderTop: '1px solid var(--koala-border-primary)',
             }}
           >
             <div style={{ width: '100%', maxWidth: 512, display: 'flex', gap: 12 }}>

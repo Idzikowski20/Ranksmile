@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../core';
-import { SentryPanelHeader } from '../sentry-pages';
+import { Button } from '../koala/core';
+import { KoalaPanelHeader } from '../koala/layout';
 import { ScoreData, NlpTerm, countOccurrences } from '../../lib/contentScore';
 import { scoreArticleHtml } from '../../lib/scoreArticleHtml';
 import { computeOpportunityScore } from '../../lib/keywordEnrichment';
@@ -19,7 +19,7 @@ import ScoreTrio from './ScoreTrio';
 import { AiVisibilitySummary, computeOverallContentScore, resolveAiScore } from '../../lib/aiSearchScore';
 import type { CoverageItem, BucketScore, CoverageSnapshot } from '../../lib/aiCoverage';
 import { useCompetitors } from '../../services/competitors';
-import { Gauge } from '../core';
+import { Gauge } from '../koala/core';
 import { useCoverageHistoryDelta } from '../../hooks/articles/useCoverageHistoryDelta';
 import PipelineStatusStrip from './PipelineStatusStrip';
 
@@ -223,7 +223,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
               {competitor.serp_title || competitor.title}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <span style={{ fontSize: 11, color: '#f29964', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
+              <span style={{ fontSize: 11, color: '#F84416', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
               <span style={{ fontSize: 11, color: '#9f9fa9' }}>·</span>
               <span style={{ fontSize: 11, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>
                 {competitor.word_count.toLocaleString()}w
@@ -247,7 +247,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           <a
             href={competitor.url} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            style={{ fontSize: 10, color: '#f29964', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
+            style={{ fontSize: 10, color: '#F84416', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
             onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
             onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
           >
@@ -674,7 +674,7 @@ const ContentScorePanel = ({
         <PipelineStatusStrip articleId={articleId} />
       </div>
       <div data-tour="content-score" className="editor-side-panel-score">
-        <SentryPanelHeader
+        <KoalaPanelHeader
           title={(
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               Content Score

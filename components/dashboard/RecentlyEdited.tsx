@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
-import { Flex, Stack } from '../core/layout';
-import { Text } from '../core/text';
-import { Button, Gauge } from '../core';
-import { SentryPanel, SentryPanelHeader, SentryPanelBody } from '../sentry-pages';
+import { Flex, Stack } from '../koala/core/layout';
+import { Text } from '../koala/core/text';
+import { Button, Gauge } from '../koala/core';
+import { WidgetShell } from '../koala/product';
 import Skeleton from './Skeleton';
 import { authClient } from '../../lib/auth/client';
 
@@ -220,9 +220,7 @@ const RecentlyEdited = ({items, loading}: Props) => {
   const userInitial = name ? name.charAt(0).toLowerCase() : '?';
 
   return (
-    <SentryPanel>
-      <SentryPanelHeader title="Recently edited" />
-      <SentryPanelBody>
+    <WidgetShell title="Recently edited">
       {loading ? (
         <div className="recently-edited-grid">
           {[0, 1, 2].map((i) => <CardSkeleton key={i} />)}
@@ -236,8 +234,7 @@ const RecentlyEdited = ({items, loading}: Props) => {
           ))}
         </div>
       )}
-      </SentryPanelBody>
-    </SentryPanel>
+    </WidgetShell>
   );
 };
 

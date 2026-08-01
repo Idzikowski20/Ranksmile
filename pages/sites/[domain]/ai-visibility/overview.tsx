@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import AiVisPageShell from '../../../../components/aiVisibility/AiVisPageShell';
 import { SkeletonBars, SkeletonRows, SkeletonBox } from '../../../../components/aiVisibility/SkeletonBlocks';
 import DomainFavicon from '../../../../components/common/DomainFavicon';
-import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/core';
+import { HoverTooltip, Button, Modal, SegmentedControl } from '../../../../components/koala/core';
+import { MetricWidget } from '../../../../components/koala/product';
 import { AI_VIS_PRIORITY_LABEL, type AiVisPriority } from '../../../../lib/aiVisibility';
 import { useAiVisOverview, useAiVisHistory, useStartAiVisScan, useAiVisScanStatus, type DomainOverview } from '../../../../services/aiVisibility';
 
@@ -25,9 +26,11 @@ type OverviewDelta = {
    prompts: { gained: number[]; lost: number[] };
 };
 
-const card: React.CSSProperties = { border: '1px solid #dbded4', borderRadius: 12, background: '#fff' };
+const card: React.CSSProperties = { border: '1px solid var(--koala-border-primary, #e5e5e5)', borderRadius: 16, background: 'var(--koala-bg-primary, #fff)' };
 const cardHeader: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 24px 0' };
-const cardTitle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: '#3F3F47', fontFamily: FONT };
+const cardTitle: React.CSSProperties = { fontSize: 15, fontWeight: 600, color: 'var(--koala-text-secondary, #3F3F47)', fontFamily: FONT };
+
+const sparkNums = (vals: Array<number | null>): number[] => vals.filter((v): v is number => v != null && Number.isFinite(v));
 
 const PanelNavButton = ({ href, children, onNavigate }: { href: string; children: React.ReactNode; onNavigate: (href: string) => void }) => (
    <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate(href)}>{children}</Button>
@@ -56,16 +59,6 @@ const InfoHint = ({ text }: { text: string }) => (
 const fmtK = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n));
 const splitUrl = (url: string, fallback: string): { host: string; path: string } => {
    try { const u = new URL(url); return { host: u.host, path: `${u.pathname}${u.search}` }; } catch { return { host: fallback, path: '' }; }
-};
-
-const DeltaBadge = ({ d }: { d: MetricDelta }) => {
-   if (d.trend === 'same') return null;
-   const up = d.trend === 'up';
-   return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, fontWeight: 600, color: up ? '#1AB25E' : '#FF6F77', fontFamily: FONT }}>
-         {up ? '↑' : '↓'}{Math.abs(d.delta)}
-      </span>
-   );
 };
 
 const daysAgo = (iso?: string | null): number | null => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : null);
@@ -211,19 +204,29 @@ const AiVisibilityOverview: NextPage = () => {
                : '';
             const scoreHint = [compareDomain, updatedTxt, refreshTxt].filter(Boolean).join(' · ');
 
+            const sparkVis = sparkNums(youVals((o) => o.visibilityScore));
+            const sparkMention = sparkNums(youVals((o) => o.mentionRate));
+            const sparkPos = sparkNums(youVals((o) => o.avgPosition));
+            const visDelta = delta?.visibilityScore;
+            const mentionVs = !pending && own && comp ? own.mentionRate - comp.mentionRate : null;
+            const posVs = !pending && own && comp && own.avgPosition != null && comp.avgPosition != null
+               ? own.avgPosition - comp.avgPosition
+               : null;
+
             return (
                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {ov?.usingFallbackScan ? (
                      <div style={{
                         padding: '12px 16px',
-                        borderRadius: 12,
-                        border: '1px solid #F4F4F5',
+                        borderRadius: 16,
+                        border: '1px solid var(--koala-border-primary, #e5e5e5)',
                         background: '#FFFBEB',
-                        color: '#52525C',
+                        color: 'var(--koala-text-secondary, #52525C)',
                         fontSize: 14,
                         fontFamily: FONT,
                         lineHeight: '20px',
-                     }}>
+                     }}
+                     >
                         Ostatni skan nie powiódł się (brak środków na koncie DataForSEO).
                         {' '}
                         Pokazujemy dane z {ov.finishedAt ? new Date(ov.finishedAt).toLocaleDateString() : 'poprzedniego skanu'}.
@@ -231,13 +234,64 @@ const AiVisibilityOverview: NextPage = () => {
                         Doładuj konto DFS i kliknij „Refresh data”.
                      </div>
                   ) : null}
-                  {/* Visibility score — competitor ranking + Compare */}
+
+                  <div style={{
+                     display: 'grid',
+                     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                     gap: 16,
+                  }}
+                  >
+                     <MetricWidget
+                        title={(
+                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              AI Visibility Score
+                              {scoreHint ? <InfoHint text={scoreHint} /> : null}
+                           </span>
+                        )}
+                        value={pending || !own ? '—' : own.visibilityScore}
+                        delta={pending || !own ? undefined : [
+                           visDelta && visDelta.trend !== 'same'
+                              ? `${visDelta.trend === 'up' ? '↑' : '↓'}${Math.abs(visDelta.delta)}`
+                              : null,
+                           comp ? `vs. ${comp.visibilityScore}` : null,
+                        ].filter(Boolean).join(' ') || undefined}
+                        deltaPositive={visDelta ? visDelta.trend === 'up' : undefined}
+                        state={pending ? 'loading' : 'success'}
+                        sparkline={sparkVis.length > 1 ? { appearance: 'analytics', values: sparkVis } : undefined}
+                     />
+                     <MetricWidget
+                        title={(
+                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              Mention Rate
+                              <InfoHint text="Share of prompt/model answers that cite your domain" />
+                           </span>
+                        )}
+                        value={pending || !own ? '—' : `${own.mentionRate}%`}
+                        delta={comp && !pending ? `vs. ${comp.mentionRate}%` : undefined}
+                        deltaPositive={mentionVs == null ? undefined : mentionVs >= 0}
+                        state={pending ? 'loading' : 'success'}
+                        sparkline={sparkMention.length > 1 ? { appearance: 'analytics', values: sparkMention } : undefined}
+                     />
+                     <MetricWidget
+                        title={(
+                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              Avg Position
+                              <InfoHint text="Your average citation rank when cited (lower is better)" />
+                           </span>
+                        )}
+                        value={pending || !own || own.avgPosition == null ? '—' : own.avgPosition.toFixed(1)}
+                        delta={comp && !pending ? `vs. ${comp.avgPosition ?? '—'}` : undefined}
+                        deltaPositive={posVs == null ? undefined : posVs <= 0}
+                        state={pending ? 'loading' : 'success'}
+                        sparkline={sparkPos.length > 1 ? { appearance: 'analytics', values: sparkPos } : undefined}
+                     />
+                  </div>
+
+                  {/* Competitor ranking — Koala bars */}
                   <Panel
                      title={(
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                           Visibility score: <span style={{ fontWeight: 400, color: '#18181B' }}>{pending || !own ? '—' : own.visibilityScore}</span>
-                           {!pending && delta ? <DeltaBadge d={delta.visibilityScore} /> : null}
-                           {!pending && comp ? <span style={{ fontSize: 14, color: '#9F9FA9', fontWeight: 400 }}>vs. {comp.visibilityScore}</span> : null}
+                           Visibility ranking
                            {!pending && scoreHint ? <InfoHint text={scoreHint} /> : null}
                         </span>
                      )}
@@ -248,7 +302,7 @@ const AiVisibilityOverview: NextPage = () => {
                               value={chartMode}
                               onChange={setChartMode}
                               options={[
-                                 { value: 'bar', label: <BarIcon />, },
+                                 { value: 'bar', label: <BarIcon /> },
                                  { value: 'line', label: <LineIcon /> },
                               ]}
                            />
@@ -340,8 +394,8 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'You', data: youVals((o) => o.mentionRate), color: '#F29964' },
-                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.mentionRate), color: '#9F9FA9' }] : []),
+                                    { label: 'You', data: youVals((o) => o.mentionRate), color: '#F84416' },
+                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.mentionRate), kind: 'neutral' as const }] : []),
                                  ]}
                                  yMin={0}
                                  yMax={100}
@@ -364,8 +418,8 @@ const AiVisibilityOverview: NextPage = () => {
                               <MetricTrendChart
                                  labels={histLabels}
                                  lines={[
-                                    { label: 'You', data: youVals((o) => o.avgPosition), color: '#F29964' },
-                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.avgPosition), color: '#9F9FA9' }] : []),
+                                    { label: 'You', data: youVals((o) => o.avgPosition), color: '#F84416' },
+                                    ...(compareDomain ? [{ label: compareDomain, data: compVals((o) => o.avgPosition), kind: 'neutral' as const }] : []),
                                  ]}
                                  yMin={1}
                                  yMax={10}
@@ -392,7 +446,7 @@ const AiVisibilityOverview: NextPage = () => {
                                  labels={histLabels}
                                  lines={[
                                     { label: 'Direct citations', data: youVals((o) => o.directCitations), color: '#18181B' },
-                                    { label: 'Pages', data: youVals((o) => o.pages), color: '#9F9FA9' },
+                                    { label: 'Pages', data: youVals((o) => o.pages), kind: 'neutral' as const },
                                  ]}
                                  yMin={0}
                               />

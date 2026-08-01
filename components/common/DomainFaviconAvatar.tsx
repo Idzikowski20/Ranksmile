@@ -20,11 +20,11 @@ const DomainFaviconAvatar = ({ domain, size = 24, className = '', plain = false 
   const [err, setErr] = useState(false);
   const host = cleanDomainHost(domain);
   const initial = (host || '?').charAt(0).toUpperCase();
-  const isShellAvatar = className.includes('sentry-nav-avatar');
-  const plainClass = plain ? 'sentry-org-domain-avatar--plain' : '';
+  const isShellAvatar = className.includes('koala-nav-avatar');
+  const plainClass = plain ? 'koala-org-domain-avatar--plain' : '';
   const rootClass = isShellAvatar
     ? className
-    : `sentry-org-domain-avatar ${plainClass} ${className}`.trim();
+    : `koala-org-domain-avatar ${plainClass} ${className}`.trim();
 
   return (
     <span
@@ -41,7 +41,7 @@ const DomainFaviconAvatar = ({ domain, size = 24, className = '', plain = false 
           onError={() => setErr(true)}
         />
       ) : (
-        <span className="sentry-org-domain-avatar-fallback">{initial}</span>
+        <span className="koala-org-domain-avatar-fallback">{initial}</span>
       )}
     </span>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Switch } from '../core/switch/switch';
-import { FormField } from '../core/form';
+import { Switch } from '../koala/core/switch/switch';
+import { FormField } from '../koala/core/form';
 
 type ToggleFieldProps = {
    label: string;
@@ -11,7 +11,7 @@ type ToggleFieldProps = {
 
 const ToggleField = ({ label = '', value = false, onChange, classNames = '' }: ToggleFieldProps) => (
    <FormField label={label} className={classNames}>
-      <div className="sentry-toggle-field-row">
+      <div className="koala-toggle-field-row">
          <Switch checked={!!value} onChange={(v) => onChange(v)} size="lg" />
       </div>
    </FormField>

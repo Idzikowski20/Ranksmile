@@ -1,0 +1,25 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="23.5" height="36.0931" viewBox="0 0 23.5 36.0931" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Cursors / Busy" filter="url(#filter0_d_0_4)">
+<g id="circle">
+<path id="circle border" d="M12 14.0931C6.75329 14.0931 2.5 18.3464 2.5 23.5931C2.5 28.8398 6.75329 33.0931 12 33.0931C17.2467 33.0931 21.5 28.8398 21.5 23.5931C21.4945 18.3487 17.2444 14.0986 12 14.0931ZM8.61 18.0931C9.62418 17.4492 10.7987 17.1027 12 17.0931C15.5876 17.0986 18.4945 20.0055 18.5 23.5931C18.4904 24.7944 18.1439 25.9689 17.5 26.9831L8.61 18.0931ZM12 30.0931C8.41243 30.0876 5.50551 27.1807 5.5 23.5931C5.50396 22.3816 5.85065 21.1959 6.5 20.1731L15.44 29.1131C14.4172 29.7625 13.2315 30.1091 12.02 30.1131L12 30.0931Z" fill="white"/>
+<path id="Vector" fill-rule="evenodd" clip-rule="evenodd" d="M3 23.5931C3 28.5631 7.03 32.5931 12 32.5931C16.97 32.5931 21 28.5631 21 23.5931C21 18.6221 16.97 14.5931 12 14.5931C7.03 14.5931 3 18.6221 3 23.5931ZM7.826 17.9831C8.993 17.1141 10.434 16.5931 12 16.5931C15.866 16.5931 19 19.7271 19 23.5931C19 25.1601 18.48 26.6011 17.61 27.7671L7.826 17.9831ZM5 23.5931C5 22.0151 5.529 20.5641 6.409 19.3941L16.199 29.1841C15.028 30.0651 13.577 30.5931 12 30.5931C8.134 30.5931 5 27.4591 5 23.5931Z" fill="url(#paint0_linear_0_4)"/>
+</g>
+<path id="Arrow Outline" d="M2 17.015V1L13.591 12.619H6.55L6.399 12.743L2 17.015Z" fill="white"/>
+<path id="Arrow" d="M3 3.4071V14.5951L5.969 11.7291L6.129 11.5901H11.165L3 3.4071Z" fill="#1A1A1A"/>
+</g>
+<defs>
+<filter id="filter0_d_0_4" x="0" y="0" width="23.5" height="36.0931" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="1"/>
+<feGaussianBlur stdDeviation="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4049 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_4"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_4" result="shape"/>
+</filter>
+<linearGradient id="paint0_linear_0_4" x1="12" y1="14.5931" x2="12" y2="32.5931" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F1F1F1"/>
+<stop offset="1" stop-color="#D6D6D6"/>
+</linearGradient>
+</defs>
+</svg>

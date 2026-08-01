@@ -128,7 +128,7 @@ const SecLabel = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Toggle = ({ on }: { on: boolean }) => (
-  <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? '#f29964' : '#d4d4d8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}>
+  <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? '#F84416' : '#d4d4d8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}>
     <span style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
   </span>
 );
@@ -200,7 +200,7 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
       <button type="button" onClick={() => setOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b', textAlign: 'left' }}>{title}</span>
         {badge && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #F5C4A0', color: '#F29964', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{badge}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #F5C4A0', color: '#F84416', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{badge}</span>
         )}
         <span style={{ marginLeft: 'auto' }}><Chevron open={open} color="#18181b" /></span>
       </button>
@@ -697,10 +697,10 @@ const WriteOptimizePanel = ({
               <button key={key} type="button" onClick={() => setTab(key)} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 0 10px', background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: 14, fontWeight: 600, color: on ? '#18181b' : '#52525c', fontFamily: F,
-                borderBottom: on ? '2px solid #f29964' : '2px solid transparent', marginBottom: -1,
+                borderBottom: on ? '2px solid #F84416' : '2px solid transparent', marginBottom: -1,
               }}>
                 {label}
-                <span style={{ background: on ? '#f29964' : '#52525c', color: '#fff', fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '1px 6px' }}>{count}</span>
+                <span style={{ background: on ? '#F84416' : '#52525c', color: '#fff', fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '1px 6px' }}>{count}</span>
               </button>
             );
           })}

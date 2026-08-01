@@ -2,20 +2,45 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
-import { Button } from '../core';
-import { SentryPanel, SentryPanelBody } from '../sentry-pages';
+import { Button } from '../koala/core';
+import { KoalaPanel, KoalaPanelBody } from '../koala/layout';
+import { overlayZ, ShellPortal } from '../koala/overlay/ShellPortal';
 import PricingPlansSettings from './PricingPlansSettings';
+import { resolveSubscriptionBadge, SubscriptionStatusRow } from './SubscriptionStatusBadge';
 import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
 import type { UpcomingPaymentDetails } from '../../lib/subscriptionFormat';
 import { formatMoney, formatUpcomingTotal } from '../../lib/subscriptionFormat';
 
-// ─── SVG atoms ────────────────────────────────────────────────────────────────
+function ShellEscapeOverlay({
+  onClose,
+  dim = 0.6,
+  children,
+}: {
+  onClose: () => void;
+  dim?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <ShellPortal>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: `rgba(0,0,0,${dim})`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: overlayZ.modal,
+        }}
+      >
+        {children}
+      </div>
+    </ShellPortal>
+  );
+}
 
-const ChevronRight = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
-    <path d="m8.25 4.5 7.5 7.5-7.5 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+// ─── SVG atoms ────────────────────────────────────────────────────────────────
 
 const XIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -27,7 +52,7 @@ const TrashIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
     <path
       d="M16 6V5.2C16 4.0799 16 3.51984 15.782 3.09202C15.5903 2.71569 15.2843 2.40973 14.908 2.21799C14.4802 2 13.9201 2 12.8 2H11.2C10.0799 2 9.51984 2 9.09202 2.21799C8.71569 2.40973 8.40973 2.71569 8.21799 3.09202C8 3.51984 8 4.0799 8 5.2V6M10 11.5V16.5M14 11.5V16.5M3 6H21M19 6V17.2C19 18.8802 19 19.7202 18.673 20.362C18.3854 20.9265 17.9265 21.3854 17.362 21.673C16.7202 22 15.8802 22 14.2 22H9.8C8.11984 22 7.27976 22 6.63803 21.673C6.07354 21.3854 5.6146 20.9265 5.32698 20.362C5 19.7202 5 18.8802 5 17.2V6"
-      stroke="#DC2626"
+      stroke="var(--koala-status-danger)"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -39,7 +64,7 @@ const GreenCheckBadge = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
     <path
       d="M8.603 3.799A4.5 4.5 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.5 4.5 0 0 1 3.498 1.307a4.5 4.5 0 0 1 1.307 3.497A4.5 4.5 0 0 1 21.75 12a4.5 4.5 0 0 1-1.549 3.397a4.5 4.5 0 0 1-1.307 3.497a4.5 4.5 0 0 1-3.497 1.307A4.5 4.5 0 0 1 12 21.75a4.5 4.5 0 0 1-3.397-1.549a4.5 4.5 0 0 1-3.498-1.306a4.5 4.5 0 0 1-1.307-3.498A4.5 4.5 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.5 4.5 0 0 1 1.307-3.497a4.5 4.5 0 0 1 3.497-1.307m7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094z"
-      fill="#1AB25E"
+      fill="var(--koala-status-success)"
     />
   </svg>
 );
@@ -54,12 +79,12 @@ const PlayCircleIcon = () => (
     style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' }}
   >
     <circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.55)" />
-    <path d="M10 8l6 4-6 4V8z" fill="#fff" />
+    <path d="M10 8l6 4-6 4V8z" fill="var(--koala-bg-primary)" />
   </svg>
 );
 
 const ChatBubbleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525C" strokeWidth="1.5" aria-hidden="true">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" style={{ color: 'var(--koala-text-secondary)' }}>
     <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193q-.51.041-1.02.072v3.091l-3-3q-2.031 0-4.02-.163a2.1 2.1 0 0 1-.825-.242m9.345-8.334a2 2 0 0 0-.476-.095a48.6 48.6 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.5 48.5 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402c-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235q.865.113 1.74.194V21l4.155-4.155" />
   </svg>
 );
@@ -76,19 +101,19 @@ export const showCancellationApprovedToast = () => {
         gap: 14,
         width: 360,
         padding: '16px 18px',
-        color: '#FFFFFF',
+        color: 'var(--koala-text-primary)',
         fontFamily: 'var(--font-family-primary)',
       }}
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: '#87E58F', marginTop: 2 }}>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, color: 'var(--koala-status-success)', marginTop: 2 }}>
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
         <path d="m8 12.2 2.4 2.4L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-        <span style={{ fontSize: 18, lineHeight: '24px', fontWeight: 700, color: '#87E58F' }}>
+        <span style={{ fontSize: 18, lineHeight: '24px', fontWeight: 700, color: 'var(--koala-status-success)' }}>
           Your request has been approved
         </span>
-        <span style={{ fontSize: 16, lineHeight: '24px', fontWeight: 400, color: '#FFFFFF' }}>
+        <span style={{ fontSize: 16, lineHeight: '24px', fontWeight: 400, color: 'var(--koala-text-primary)' }}>
           Your plan won&apos;t auto-renew and charges will not be incurred.
         </span>
       </div>
@@ -105,7 +130,7 @@ export const showCancellationApprovedToast = () => {
           padding: 0,
           border: 'none',
           background: 'transparent',
-          color: '#FFFFFF',
+          color: 'var(--koala-text-secondary)',
           cursor: 'pointer',
           flexShrink: 0,
         }}
@@ -129,22 +154,11 @@ const UpcomingBillsModal = ({ upcoming, canceled, onClose }: {
   const taxLabel = upcoming?.taxLabel ?? 'TAX';
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 500,
-      }}
-    >
+    <ShellEscapeOverlay onClose={onClose} dim={0.5}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#fff',
+          background: 'var(--koala-bg-primary)',
           borderRadius: 16,
           width: 'min(520px, calc(100vw - 32px))',
           padding: 24,
@@ -154,37 +168,37 @@ const UpcomingBillsModal = ({ upcoming, canceled, onClose }: {
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Upcoming bills</span>
+          <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Upcoming bills</span>
           <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<XIcon size={18} />} />
         </div>
 
         {/* Plan rows */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 12 }}>Plan</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', marginBottom: 12 }}>Plan</span>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>{planName}</span>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>{planAmount}</span>
+            <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>{planName}</span>
+            <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>{planAmount}</span>
           </div>
 
           {!canceled && upcoming && upcoming.taxAmountCents > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-              <span style={{ fontSize: 14, color: '#3F3F47' }}>{taxLabel}</span>
-              <span style={{ fontSize: 14, color: '#3F3F47' }}>{taxAmount}</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>{taxLabel}</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>{taxAmount}</span>
             </div>
           )}
 
           {/* Divider */}
-          <div style={{ minHeight: 1, background: '#E4E4E7', margin: '8px 0' }} />
+          <div style={{ minHeight: 1, background: 'var(--koala-border-primary)', margin: '8px 0' }} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>TOTAL</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>{totalAmount}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>TOTAL</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>{totalAmount}</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#3F3F47' }}>Renewal date</span>
-            <span style={{ fontSize: 14, color: '#52525C' }}>{renewalDate}</span>
+            <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>Renewal date</span>
+            <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>{renewalDate}</span>
           </div>
         </div>
 
@@ -195,7 +209,7 @@ const UpcomingBillsModal = ({ upcoming, canceled, onClose }: {
           </Button>
         </div>
       </div>
-    </div>
+    </ShellEscapeOverlay>
   );
 };
 
@@ -203,7 +217,7 @@ const UpcomingBillsModal = ({ upcoming, canceled, onClose }: {
 
 const LOSS_ITEMS = [
   'Your optimized content',
-  'Sites (Topical Maps, Content Audits, and Reports)',
+  'Sites (Content Audits and Reports)',
   'AI Tracker projects',
   'Keyword Research tools and saved data',
 ];
@@ -214,22 +228,11 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
   onProceed: () => void;
 }) => {
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 500,
-      }}
-    >
+    <ShellEscapeOverlay onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#fff',
+          background: 'var(--koala-bg-primary)',
           borderRadius: 8,
           maxWidth: 800,
           width: 'calc(100% - 2.5rem)',
@@ -248,7 +251,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             alignItems: 'flex-start',
           }}
         >
-          <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B', maxWidth: 480, lineHeight: '1.35' }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)', maxWidth: 480, lineHeight: '1.35' }}>
             Are you sure? You will lose all of your data
           </span>
           <Button type="button" variant="transparent" size="sm" onClick={onClose} aria-label="Close" icon={<XIcon size={18} />} style={{ marginLeft: 16, flexShrink: 0 }} />
@@ -268,7 +271,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             style={{
               flex: '1 1 0',
               minWidth: 240,
-              background: '#f3f4f0',
+              background: 'var(--koala-bg-tertiary)',
               borderRadius: 8,
               padding: 24,
               display: 'flex',
@@ -278,7 +281,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ margin: 0, fontSize: 14, color: '#3F3F47', lineHeight: '1.55' }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: '1.55' }}>
                 Your subscription stays active until <strong>{accessUntilLabel}</strong>.{' '}
                 After that, you will lose access and your data will be{' '}
                 <strong>permanently removed</strong>:
@@ -289,7 +292,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
                   <div
                     key={label}
                     style={{
-                      background: '#fff',
+                      background: 'var(--koala-bg-primary)',
                       borderRadius: 6,
                       padding: '12px 12px',
                       display: 'flex',
@@ -297,7 +300,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
                       gap: 8,
                       fontWeight: 600,
                       fontSize: 13,
-                      color: '#18181B',
+                      color: 'var(--koala-text-primary)',
                     }}
                   >
                     <TrashIcon />
@@ -306,7 +309,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
                 ))}
               </div>
 
-              <p style={{ margin: 0, fontSize: 12, color: '#52525C', lineHeight: '1.5' }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--koala-text-secondary)', lineHeight: '1.5' }}>
                 This data cannot be recovered after deletion. If you decide to come back later, you will need to start from scratch.
               </p>
             </div>
@@ -323,7 +326,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             style={{
               flex: '1 1 0',
               minWidth: 240,
-              border: '1px solid #dbded4',
+              border: '1px solid var(--koala-border-primary)',
               borderRadius: 12,
               padding: 24,
               display: 'flex',
@@ -334,12 +337,12 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Keep headline row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 14, color: '#18181B' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 14, color: 'var(--koala-text-primary)' }}>
                 <GreenCheckBadge />
                 <span>Keep your work and progress</span>
               </div>
 
-              <p style={{ margin: 0, fontSize: 14, color: '#52525C', lineHeight: '1.55' }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: '1.55' }}>
                 Continue optimizing your content and maintain access to all your work and data.
               </p>
 
@@ -358,13 +361,13 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
                   />
                   <PlayCircleIcon />
                 </div>
-                <p style={{ margin: 0, fontSize: 13, color: '#52525C', lineHeight: '1.55' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-secondary)', lineHeight: '1.55' }}>
                   Need help? Our new{' '}
                   <a
                     href="https://ranksmile.pl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: '#18181B', textDecoration: 'underline' }}
+                    style={{ color: 'var(--koala-text-primary)', textDecoration: 'underline' }}
                   >
                     Content Optimization Masterclass
                   </a>{' '}
@@ -381,7 +384,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
           </div>
         </div>
       </div>
-    </div>
+    </ShellEscapeOverlay>
   );
 };
 
@@ -424,12 +427,12 @@ const RadioOption = ({
       alignItems: 'center',
       padding: '14px 16px',
       borderRadius: 8,
-      border: selected ? '1px solid #F5C4A0' : '1px solid #E4E4E7',
-      background: selected ? 'rgba(242,153,100,0.04)' : '#fff',
-      boxShadow: selected ? '0 0 0 3px rgba(242,153,100,0.1)' : 'none',
+      border: selected ? '1px solid #F9A08D' : '1px solid var(--koala-border-primary)',
+      background: selected ? 'rgba(248,68,22,0.04)' : 'var(--koala-bg-primary)',
+      boxShadow: selected ? '0 0 0 3px rgba(248,68,22,0.1)' : 'none',
       cursor: 'pointer',
       fontSize: 14,
-      color: '#18181B',
+      color: 'var(--koala-text-primary)',
       fontFamily: 'var(--font-family-primary)',
       transition: 'border 150ms ease, box-shadow 150ms ease, background 150ms ease',
     }}
@@ -468,22 +471,11 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
       : "We're still here for you";
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 500,
-      }}
-    >
+    <ShellEscapeOverlay onClose={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#fff',
+          background: 'var(--koala-bg-primary)',
           borderRadius: 8,
           maxWidth: 800,
           width: 'calc(100% - 2.5rem)',
@@ -503,11 +495,11 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B', maxWidth: 560, lineHeight: '1.35' }}>
+            <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--koala-text-primary)', maxWidth: 560, lineHeight: '1.35' }}>
               {stepTitle}
             </span>
             {step === 3 && (
-              <span style={{ fontSize: 14, color: '#52525C', lineHeight: '1.5', maxWidth: 560 }}>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: '1.5', maxWidth: 560 }}>
                 Your business deserves a watertight SEO strategy. Let&apos;s build yours with Ranksmile.
               </span>
             )}
@@ -555,7 +547,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               {/* Card 1 — Masterclass */}
               <div
                 style={{
-                  border: '1px solid #dbded4',
+                  border: '1px solid var(--koala-border-primary)',
                   borderRadius: 12,
                   padding: 24,
                   display: 'flex',
@@ -569,7 +561,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                     width: 44,
                     height: 44,
                     borderRadius: '50%',
-                    background: '#F4F4F5',
+                    background: 'var(--koala-bg-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -578,14 +570,14 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                   <ChatBubbleIcon />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>Take Content Optimization Masterclass</span>
-                  <p style={{ margin: 0, fontSize: 14, color: '#52525C', lineHeight: '1.55' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Take Content Optimization Masterclass</span>
+                  <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: '1.55' }}>
                     Need help? Our new{' '}
                     <a
                       href="https://ranksmile.pl"
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: '#18181B', textDecoration: 'underline' }}
+                      style={{ color: 'var(--koala-text-primary)', textDecoration: 'underline' }}
                     >
                       Content Optimization Masterclass
                     </a>{' '}
@@ -607,7 +599,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
               {/* Card 2 — Live Support */}
               <div
                 style={{
-                  border: '1px solid #dbded4',
+                  border: '1px solid var(--koala-border-primary)',
                   borderRadius: 12,
                   padding: 24,
                   display: 'flex',
@@ -621,7 +613,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                     width: 44,
                     height: 44,
                     borderRadius: '50%',
-                    background: '#F4F4F5',
+                    background: 'var(--koala-bg-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -630,8 +622,8 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
                   <ChatBubbleIcon />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#18181B' }}>Chat with live Support</span>
-                  <p style={{ margin: 0, fontSize: 14, color: '#52525C', lineHeight: '1.55' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Chat with live Support</span>
+                  <p style={{ margin: 0, fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: '1.55' }}>
                     Write to us if you&apos;re feeling stuck on your SEO journey. There&apos;s no question too small, no issue too big. Let&apos;s plan your next move, together.
                   </p>
                   <Button
@@ -650,7 +642,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
         </div>
 
         {/* Separator */}
-        <div style={{ height: 1, background: '#E4E4E7' }} />
+        <div style={{ height: 1, background: 'var(--koala-border-primary)' }} />
 
         {/* Footer */}
         <div
@@ -694,7 +686,7 @@ const CancelFlowModal = ({ onClose, onConfirm }: { onClose: () => void; onConfir
           )}
         </div>
       </div>
-    </div>
+    </ShellEscapeOverlay>
   );
 };
 
@@ -725,53 +717,43 @@ const SubscriptionPage = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', fontFamily: 'var(--font-family-primary)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>Plan</span>
-        <span style={{ fontSize: 14, color: '#52525C' }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)' }}>Plan</span>
+        <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)' }}>
           {periodLabel ?? '—'}
         </span>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', width: '100%' }}>
         <div style={{ flex: '1 1 280px', minWidth: 0, maxWidth: '100%' }}>
-          <SentryPanel>
-            <SentryPanelBody>
+          <KoalaPanel>
+            <KoalaPanelBody>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                {canceled ? (
-                  <>
-                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>{planName}</span>
-                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#1AB25E', flexShrink: 0 }} />
-                    <span style={{ fontSize: 14, color: '#52525C' }}>
-                      Active until {transitionDate ?? '—'}
-                    </span>
-                  </>
-                ) : showTrialFlow ? (
-                  <>
-                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>Trial</span>
-                    <ChevronRight />
-                    <span style={{ fontSize: 14, color: '#3F3F47' }}>on {transitionDate}</span>
-                    <ChevronRight />
-                    <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>{planName}</span>
-                  </>
-                ) : (
-                  <span style={{ fontSize: 18, fontWeight: 600, color: '#18181B' }}>{planName}</span>
-                )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, flex: 1 }}>
+                <SubscriptionStatusRow
+                  label={canceled ? `${planName} · until ${transitionDate ?? '—'}` : showTrialFlow ? `Trial → ${planName}` : planName}
+                  info={resolveSubscriptionBadge(subscription)}
+                />
+                {showTrialFlow && transitionDate ? (
+                  <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', paddingLeft: 8 }}>
+                    Converts on {transitionDate}
+                  </span>
+                ) : null}
               </div>
               <Button type="button" variant="primary" size="sm" onClick={onChangePlan}>
                 {subscription?.hasStripeSubscription ? 'Change plan' : 'Choose plan'}
               </Button>
             </div>
-          </SentryPanelBody>
-          </SentryPanel>
+          </KoalaPanelBody>
+          </KoalaPanel>
         </div>
 
         <div style={{ flexBasis: 240, flexShrink: 0, minWidth: 200 }}>
-          <SentryPanel>
-            <SentryPanelBody>
+          <KoalaPanel>
+            <KoalaPanelBody>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 14, color: '#18181B' }}>Upcoming payments</span>
-                  <span style={{ fontSize: 20, fontWeight: 600, color: '#18181B' }}>
+                  <span style={{ fontSize: 14, color: 'var(--koala-text-primary)' }}>Upcoming payments</span>
+                  <span style={{ fontSize: 20, fontWeight: 600, color: 'var(--koala-text-primary)' }}>
                     {upcomingTotal}
                   </span>
                 </div>
@@ -779,8 +761,8 @@ const SubscriptionPage = ({
                   Details
                 </Button>
               </div>
-            </SentryPanelBody>
-          </SentryPanel>
+            </KoalaPanelBody>
+          </KoalaPanel>
         </div>
       </div>
 

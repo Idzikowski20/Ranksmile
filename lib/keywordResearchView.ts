@@ -6,7 +6,25 @@
  */
 import type { TopicResearchResult } from './topicResearchTypes';
 
+import type { SearchIntent } from './organicResearch/types';
+
 export type KwIntent = 'Informational' | 'Local' | 'Shopping' | 'Customer Investigation' | 'Not detected';
+
+/** Map research cluster intent labels to organic SearchIntent for KeywordIntentBadge. */
+export function kwIntentToSearchIntent(intent: KwIntent): SearchIntent {
+  switch (intent) {
+    case 'Informational':
+      return 'informational';
+    case 'Local':
+      return 'navigational';
+    case 'Shopping':
+      return 'transactional';
+    case 'Customer Investigation':
+      return 'commercial';
+    default:
+      return null;
+  }
+}
 
 export interface KwKeyword {
    keyword: string;

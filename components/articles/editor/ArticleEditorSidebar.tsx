@@ -132,7 +132,7 @@ export function ArticleEditorSidebar({
   readabilityAccepted,
 }: ArticleEditorSidebarProps) {
   return (
-    <div className="sentry-panel editor-side-panel-card">
+    <div className="koala-panel editor-side-panel-card">
       {editorLocked ? (
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="styled-scrollbar">
           <ContentScorePanel

@@ -1,64 +1,69 @@
 import React, { useEffect, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import { registerMotionPlugins } from '../../lib/motion/gsap';
-import SentryNav from './nav/SentryNav';
-import GlobalTopbar from './GlobalTopbar';
-import MobileSidebar from './MobileSidebar';
 import { useRouteTransition } from '../../lib/motion/useRouteTransition';
+import { KoalaHeader, KoalaSidebar } from '../koala/shell';
+import MobileSidebar from './MobileSidebar';
 
 type AppShellProps = {
-   domains?: DomainType[];
-   showAddModal: () => void;
-   showSettings?: () => void;
-   children: React.ReactNode;
-   showSidebar?: boolean;
-   sidebar?: React.ReactNode;
-   topbarTitle?: string;
-   /** Replaces the workspace switcher in the topbar's left slot (e.g. editor breadcrumb). */
-   breadcrumb?: React.ReactNode;
-   contentClassName?: string;
-   /** @deprecated Bottom nav removed — kept for call-site compatibility. */
-   hideMobileNav?: boolean;
+  domains?: DomainType[];
+  showAddModal: () => void;
+  showSettings?: () => void;
+  children: React.ReactNode;
+  showSidebar?: boolean;
+  sidebar?: React.ReactNode;
+  topbarTitle?: string;
+  /** Replaces search in header (e.g. editor breadcrumb). */
+  breadcrumb?: React.ReactNode;
+  contentClassName?: string;
+  /** @deprecated */
+  hideMobileNav?: boolean;
 };
 
+/**
+ * App shell = Product Sidebar + Header (Figma `4903:6905` + `6959:74257`).
+ */
 const AppShell = ({
-   domains = [],
-   children,
-   showSidebar = true,
-   sidebar,
-   breadcrumb,
-   contentClassName = '',
+  domains = [],
+  children,
+  showSidebar = true,
+  sidebar,
+  breadcrumb,
+  contentClassName = '',
 }: AppShellProps) => {
-   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-   useGSAP(() => { registerMotionPlugins(); });
-   const contentRef = useRouteTransition<HTMLElement>();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useGSAP(() => { registerMotionPlugins(); });
+  const contentRef = useRouteTransition<HTMLElement>();
 
-   useEffect(() => {
-      document.documentElement.classList.add('app-framed');
-      return () => document.documentElement.classList.remove('app-framed');
-   }, []);
+  useEffect(() => {
+    document.documentElement.classList.add('app-framed', 'koala-shell');
+    return () => {
+      document.documentElement.classList.remove('app-framed', 'koala-shell');
+    };
+  }, []);
 
-   return (
-      <div className="app-shell">
-         <GlobalTopbar
+  return (
+    <div className="app-shell koala-app-shell">
+      <div className="app-shell-body koala-shell-body">
+        {sidebar ?? (showSidebar ? <KoalaSidebar domains={domains} /> : null)}
+        <div className="koala-shell-main">
+          <KoalaHeader
             breadcrumb={breadcrumb}
-            onMobileMenuClick={() => setMobileNavOpen(true)}
-         />
-         <div className="app-shell-body">
-            {sidebar ?? (showSidebar && (
-               <SentryNav domains={domains} />
-            ))}
-            <main ref={contentRef} className={`app-content motion-page-enter ${contentClassName}`}>
-               {children}
-            </main>
-         </div>
-         <MobileSidebar
-            open={mobileNavOpen}
-            onClose={() => setMobileNavOpen(false)}
-            domains={domains}
-         />
+            onMobileMenuClick={showSidebar ? () => setMobileNavOpen(true) : undefined}
+          />
+          <main ref={contentRef} className={`app-content motion-page-enter ${contentClassName}`}>
+            {children}
+          </main>
+        </div>
       </div>
-   );
+
+      <MobileSidebar
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        domains={domains}
+      />
+    </div>
+  );
 };
 
 export default AppShell;

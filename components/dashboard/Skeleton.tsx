@@ -9,7 +9,7 @@ const Skeleton = ({ width, height, radius = 6, style }: {
 }) => (
   <div
     aria-hidden="true"
-    className="sentry-skeleton-block"
+    className="koala-skeleton-block"
     style={{ width, height, borderRadius: radius, ...style }}
   />
 );

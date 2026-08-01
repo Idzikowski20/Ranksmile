@@ -6,6 +6,10 @@ export function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/drafts')
     || pathname.startsWith('/invite')
     || pathname.startsWith('/legal')
+    || pathname.startsWith('/dev')
     || pathname === '/'
+    || pathname === '/404'
+    || pathname === '/no-access'
   );
+
 }

@@ -2,30 +2,17 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
+import AuthPageLayout from '../../components/auth/AuthPageLayout';
+import AuthShell from '../../components/auth/AuthShell';
+import { authSubtitleStyle, authTitleStyle } from '../../components/auth/authStyles';
 import { signOut } from '../../lib/auth/fetchAuth';
 import { useMarkEmailConfirmed } from '../../lib/emailConfirmedStatus';
-
-const F = 'var(--font-family-primary)';
+import { Card } from '../../components/koala/product';
+import Button from '../../components/koala/primitives/Button';
+import { LoadingState } from '../../components/koala/feedback';
 
 type ConfirmStatus = { confirmed: boolean; email?: string };
 type SendResult = { sent?: boolean; confirmed?: boolean; cooldownMs?: number };
-
-/** Simple flat-shape envelope illustration: white envelope + orange-bordered card peeking out with two eyes. */
-const EnvelopeIllustration = () => (
-   <svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      {/* envelope body */}
-      <rect x="20" y="60" width="160" height="90" rx="10" fill="#FFFFFF" />
-      {/* envelope flap (open) */}
-      <path d="M20 68 L100 20 L180 68 L180 60 L100 12 L20 60 Z" fill="#FFFFFF" />
-      {/* envelope bottom fold lines */}
-      <path d="M22 62 L100 118 L178 62" stroke="#D4D4D8" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {/* card peeking out */}
-      <rect x="58" y="26" width="84" height="60" rx="10" fill="#FFFFFF" stroke="#FF8A4C" strokeWidth="3" />
-      {/* eyes on the card */}
-      <rect x="80" y="50" width="10" height="16" rx="4" fill="#18181B" />
-      <rect x="110" y="50" width="10" height="16" rx="4" fill="#18181B" />
-   </svg>
-);
 
 const ConfirmAccount: NextPage = () => {
    const router = useRouter();
@@ -33,6 +20,7 @@ const ConfirmAccount: NextPage = () => {
    const [email, setEmail] = useState<string>('');
    const [cooldown, setCooldown] = useState<number>(0);
    const [sent, setSent] = useState<boolean>(false);
+   const [ready, setReady] = useState(false);
    const initialized = useRef<boolean>(false);
    const cooldownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
    const sentTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,10 +67,12 @@ const ConfirmAccount: NextPage = () => {
                }
             } catch {
                // network error on initial load — user can still use "Resend email" manually.
+            } finally {
+               setReady(true);
             }
          };
 
-         init();
+         void init();
       }
 
       return () => {
@@ -131,107 +121,42 @@ const ConfirmAccount: NextPage = () => {
    const resendDisabled = cooldown > 0;
 
    return (
-      <>
+      <AuthShell>
          <Head><title>Confirm your e-mail - Ranksmile</title></Head>
-         <style>{'.confirm-right-panel { display: none; } @media (min-width: 1280px) { .confirm-right-panel { display: flex; } }'}</style>
-         <div style={{ minHeight: '100vh', padding: 8, background: '#09090B', fontFamily: F }}>
-            <div style={{ display: 'flex', gap: 8, minHeight: 'calc(100vh - 16px)' }}>
-               {/* LEFT white panel */}
-               <div style={{
-                  flex: 1,
-                  background: '#fff',
-                  borderRadius: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 24,
-                  textAlign: 'center',
-               }}
-               >
-                  <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#18181B' }}>
-                     Check your e-mail
-                  </h1>
-                  <p style={{ margin: '12px 0 24px', fontSize: 15, color: '#18181B', lineHeight: 1.6, maxWidth: 420 }}>
-                     {email ? (
-                        <>We sent a temporary link to the email address, <strong style={{ fontWeight: 700 }}>{email}</strong>.</>
-                     ) : (
-                        'We sent a temporary link to your e-mail address.'
-                     )}
-                     <br />
-                     Please check your Spam folder as well.
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                     <button
-                        type="button"
-                        onClick={handleResend}
-                        disabled={resendDisabled}
-                        style={{
-                           background: '#2F2F34',
-                           color: '#fff',
-                           border: 'none',
-                           borderRadius: 8,
-                           padding: '10px 20px',
-                           fontSize: 14,
-                           fontWeight: 600,
-                           fontFamily: F,
-                           cursor: resendDisabled ? 'not-allowed' : 'pointer',
-                           opacity: resendDisabled ? 0.6 : 1,
-                           transition: 'background 150ms ease',
-                        }}
-                        onMouseEnter={(e) => { if (!resendDisabled) e.currentTarget.style.background = '#F29964'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
-                     >
-                        {resendLabel}
-                     </button>
-                     <button
-                        type="button"
-                        onClick={handleSignOut}
-                        style={{
-                           background: 'transparent',
-                           border: 'none',
-                           padding: 0,
-                           color: '#52525C',
-                           fontSize: 14,
-                           fontWeight: 600,
-                           fontFamily: F,
-                           cursor: 'pointer',
-                           transition: 'color 150ms ease',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = '#18181B'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = '#52525C'; }}
-                     >
-                        Sign out
-                     </button>
+         <AuthPageLayout>
+            <Card elevated>
+               {!ready ? (
+                  <LoadingState label="Sending confirmation email…" />
+               ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
+                     <h1 style={authTitleStyle}>Check your e-mail</h1>
+                     <p style={{ ...authSubtitleStyle, margin: 0, maxWidth: 420 }}>
+                        {email ? (
+                           <>We sent a temporary link to <strong style={{ fontWeight: 700, color: '#1a1a1a' }}>{email}</strong>.</>
+                        ) : (
+                           'We sent a temporary link to your e-mail address.'
+                        )}
+                        {' '}Please check your Spam folder as well.
+                     </p>
+                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 8 }}>
+                        <Button
+                           type="button"
+                           variant="primary"
+                           size="md"
+                           onClick={handleResend}
+                           disabled={resendDisabled}
+                        >
+                           {resendLabel}
+                        </Button>
+                        <Button type="button" variant="transparent" size="md" onClick={handleSignOut}>
+                           Sign out
+                        </Button>
+                     </div>
                   </div>
-               </div>
-
-               {/* RIGHT purple panel — hidden below 1280px via .confirm-right-panel CSS (correct on first paint, no flash) */}
-               <div
-                  className="confirm-right-panel"
-                  style={{
-                     flex: '0 0 40%',
-                     background: '#F29964',
-                     borderRadius: 12,
-                     flexDirection: 'column',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     padding: 24,
-                     textAlign: 'center',
-                  }}
-               >
-                  <h2 style={{ margin: 0, fontSize: 30, fontWeight: 700, color: '#fff', letterSpacing: 0, lineHeight: 1.2 }}>
-                     We just sent
-                     <br />
-                     you an email!
-                  </h2>
-                  <div style={{ marginTop: 32 }}>
-                     <EnvelopeIllustration />
-                  </div>
-               </div>
-            </div>
-         </div>
-      </>
+               )}
+            </Card>
+         </AuthPageLayout>
+      </AuthShell>
    );
 };
 

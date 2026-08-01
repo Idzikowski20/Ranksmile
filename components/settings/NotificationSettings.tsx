@@ -1,6 +1,6 @@
 import React from 'react';
-import { Alert, Input, Select } from '../core';
-import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
+import { Alert, Input, Select } from '../koala/core';
+import { KoalaSettingsSection, KoalaSettingsRow } from '../koala/layout';
 
 type NotificationSettingsProps = {
   settings: SettingsType;
@@ -23,8 +23,8 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <SentrySettingsSection title="Email notifications">
-        <SentrySettingsRow
+      <KoalaSettingsSection title="Email notifications">
+        <KoalaSettingsRow
           label="Notification frequency"
           description="How often rank-change alerts are sent to your team."
         >
@@ -34,12 +34,12 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
             onChange={(value) => updateSettings('notification_interval', value)}
             width={220}
           />
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
       {showSmtp && (
-        <SentrySettingsSection title="SMTP delivery">
-          <SentrySettingsRow label="Notification emails" description="Comma-separated list of recipients.">
+        <KoalaSettingsSection title="SMTP delivery">
+          <KoalaSettingsRow label="Notification emails" description="Comma-separated list of recipients.">
             <Input
               type="text"
               value={settings?.notification_email || ''}
@@ -48,9 +48,9 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
               aria-invalid={settingsError?.type === 'no_email'}
               style={{ width: '100%', maxWidth: 420 }}
             />
-          </SentrySettingsRow>
+          </KoalaSettingsRow>
 
-          <SentrySettingsRow label="SMTP server">
+          <KoalaSettingsRow label="SMTP server">
             <Input
               type="text"
               value={settings?.smtp_server || ''}
@@ -59,9 +59,9 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
               aria-invalid={settingsError?.type === 'no_smtp_server'}
               style={{ width: '100%', maxWidth: 420 }}
             />
-          </SentrySettingsRow>
+          </KoalaSettingsRow>
 
-          <SentrySettingsRow label="SMTP port">
+          <KoalaSettingsRow label="SMTP port">
             <Input
               type="text"
               value={settings?.smtp_port || ''}
@@ -70,18 +70,18 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
               aria-invalid={settingsError?.type === 'no_smtp_port'}
               style={{ width: '100%', maxWidth: 160 }}
             />
-          </SentrySettingsRow>
+          </KoalaSettingsRow>
 
-          <SentrySettingsRow label="SMTP username">
+          <KoalaSettingsRow label="SMTP username">
             <Input
               type="text"
               value={settings?.smtp_username || ''}
               onChange={(e) => updateSettings('smtp_username', e.target.value)}
               style={{ width: '100%', maxWidth: 420 }}
             />
-          </SentrySettingsRow>
+          </KoalaSettingsRow>
 
-          <SentrySettingsRow label="SMTP password">
+          <KoalaSettingsRow label="SMTP password">
             <Input
               type="password"
               value={settings?.smtp_password || ''}
@@ -89,9 +89,9 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
               autoComplete="new-password"
               style={{ width: '100%', maxWidth: 420 }}
             />
-          </SentrySettingsRow>
+          </KoalaSettingsRow>
 
-          <SentrySettingsRow label="From email address">
+          <KoalaSettingsRow label="From email address">
             <Input
               type="email"
               value={settings?.notification_email_from || ''}
@@ -100,9 +100,9 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
               aria-invalid={settingsError?.type === 'no_smtp_from'}
               style={{ width: '100%', maxWidth: 420 }}
             />
-          </SentrySettingsRow>
+          </KoalaSettingsRow>
 
-          <SentrySettingsRow label="Email from name">
+          <KoalaSettingsRow label="Email from name">
             <Input
               type="text"
               value={settings?.notification_email_from_name || 'Ranksmile'}
@@ -110,8 +110,8 @@ const NotificationSettings = ({ settings, settingsError, updateSettings }: Notif
               onChange={(e) => updateSettings('notification_email_from_name', e.target.value)}
               style={{ width: '100%', maxWidth: 420 }}
             />
-          </SentrySettingsRow>
-        </SentrySettingsSection>
+          </KoalaSettingsRow>
+        </KoalaSettingsSection>
       )}
 
       {settingsError?.msg && (

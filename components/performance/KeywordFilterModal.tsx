@@ -1,4 +1,4 @@
-import { Button, Input, Modal, ModalBody, ModalFooter, Select } from '../core';
+import { Button, Input, Modal, ModalBody, ModalFooter, Select } from '../koala/core';
 import { KEYWORD_OPERATOR_OPTIONS, type KeywordOperator } from '../../lib/performance/types';
 
 type KeywordFilterModalProps = {

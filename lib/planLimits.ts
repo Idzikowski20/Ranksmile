@@ -130,6 +130,19 @@ export function overallUsagePct(metrics: PlanLimitMetric[]): number {
   return Math.round(peak);
 }
 
+/** Remaining trial time as `2d, 10h, 30m` (omits leading zero units). */
+export function formatTrialCountdown(endsAt: string | Date, nowMs = Date.now()): string {
+  const end = new Date(endsAt).getTime();
+  if (!Number.isFinite(end)) return '';
+  const totalMin = Math.max(0, Math.floor((end - nowMs) / 60_000));
+  const d = Math.floor(totalMin / (24 * 60));
+  const h = Math.floor((totalMin % (24 * 60)) / 60);
+  const m = totalMin % 60;
+  if (d > 0) return `${d}d, ${h}h, ${m}m`;
+  if (h > 0) return `${h}h, ${m}m`;
+  return `${m}m`;
+}
+
 export function formatPlanStatus(
   subscriptionStatus: string | null,
   trialEndsAt: string | null,

@@ -1,7 +1,8 @@
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 import { verifyTwoFactor } from '../../lib/auth/fetchAuth';
-import { Button } from '../core';
+import Button from '../koala/primitives/Button';
+import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
@@ -35,44 +36,53 @@ export default function TwoFactorForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Two-factor authentication</h1>
-      <p style={authSubtitleStyle}>Enter the code from your authenticator app</p>
-
-      {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
-
-      <AuthField
-        id="two-factor-code"
-        label="Verification code"
-        type="text"
-        value={code}
-        onChange={setCode}
-        autoComplete="one-time-code"
-        disabled={loading}
-      />
-
-      <div style={authFullWidthBtnStyle}>
-        <Button type="submit" variant="primary" size="md" busy={loading} disabled={loading} style={{ width: '100%' }}>
-          {loading ? 'Verifying…' : 'Verify'}
-        </Button>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', width: '100%' }}
+    >
+      <AuthBrandMark />
+      <div style={{ textAlign: 'center', width: '100%', maxWidth: 384 }}>
+        <h1 style={authTitleStyle}>Two-factor authentication</h1>
+        <p style={authSubtitleStyle}>Enter the code from your authenticator app</p>
       </div>
 
-      <p style={{ marginTop: 16, textAlign: 'center' }}>
-        <button
-          type="button"
-          onClick={() => router.push('/auth/sign-in')}
-          style={{
-            ...authLinkStyle,
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Back to Sign In
-        </button>
-      </p>
+      {error ? <div style={{ ...authErrorStyle, width: '100%' }} role="alert">{error}</div> : null}
+
+      <div style={{ width: '100%' }}>
+        <AuthField
+          id="two-factor-code"
+          label="Verification code"
+          type="text"
+          value={code}
+          onChange={setCode}
+          autoComplete="one-time-code"
+          disabled={loading}
+          required
+        />
+      </div>
+
+      <div style={{ ...authFullWidthBtnStyle, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+        <Button type="submit" variant="primary" size="lg" busy={loading} disabled={loading} style={{ width: '100%', borderRadius: 14 }}>
+          {loading ? 'Verifying…' : 'Verify'}
+        </Button>
+        <p style={{ margin: 0, textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => router.push('/auth/sign-in')}
+            style={{
+              ...authLinkStyle,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              textDecoration: 'underline',
+            }}
+          >
+            Back to Sign In
+          </button>
+        </p>
+      </div>
     </form>
   );
 }

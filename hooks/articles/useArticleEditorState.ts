@@ -124,7 +124,7 @@ export function useArticleEditorState({
 
   const commentAuthor: CommentAuthor = useMemo(() => ({
     name: session?.data?.user?.name || session?.data?.user?.email || 'You',
-    color: '#F29964',
+    color: '#F84416',
     avatar: gscPicture || undefined,
   }), [session?.data?.user?.name, session?.data?.user?.email, gscPicture]);
 

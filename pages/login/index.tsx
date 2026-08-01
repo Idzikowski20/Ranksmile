@@ -23,7 +23,7 @@ const Login: NextPage = () => {
                   font-weight: 600; color: #fff; letter-spacing: -0.02em; }
                .splash-spin { width: 28px; height: 28px;
                   border: 3px solid rgba(255,255,255,0.2);
-                  border-top-color: #F29964; border-radius: 50%; animation: sp 0.75s linear infinite; }
+                  border-top-color: #F84416; border-radius: 50%; animation: sp 0.75s linear infinite; }
                .splash-sub { font-size: 0.9rem; color: rgba(255,255,255,0.45); }
                @keyframes sp { to { transform: rotate(360deg); } }
             `}</style>

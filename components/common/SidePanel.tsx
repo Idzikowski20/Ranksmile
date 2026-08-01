@@ -1,5 +1,5 @@
 import React from 'react';
-import { SlideOverPanel } from '../core';
+import { SlideOverPanel } from '../koala/core';
 import useOnKey from '../../hooks/useOnKey';
 
 const WIDTH_MAP = {

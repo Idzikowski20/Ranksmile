@@ -76,8 +76,7 @@ const WpConnectionsTable = ({ emptyState }: Props) => {
          const res = await fetch('/api/wordpress/connections', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, workspaceId: activeWsId }),
-         });
+            body: JSON.stringify({ id, workspaceId: activeWsId }) });
          if (!res.ok) throw new Error();
          await queryClient.invalidateQueries(['wpConnections', activeWsId]);
          toast.success('Account disconnected.');
@@ -89,14 +88,12 @@ const WpConnectionsTable = ({ emptyState }: Props) => {
    };
 
    const th: React.CSSProperties = {
-      textAlign: 'left', padding: 16, fontSize: 13, fontWeight: 500, color: '#71717B',
-      textTransform: 'uppercase', letterSpacing: '0.02em', borderBottom: '1px solid #F4F4F5', whiteSpace: 'nowrap',
-   };
+      textAlign: 'left', padding: 16, fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary, #575757)',
+      textTransform: 'uppercase', letterSpacing: '0.02em', borderBottom: '1px solid #F4F4F5', whiteSpace: 'nowrap' };
    const td: React.CSSProperties = { padding: 16, fontSize: 14, color: '#18181B', verticalAlign: 'middle' };
    const kebabBtn: React.CSSProperties = {
       border: 'none', background: '#F4F4F5', color: '#18181B', borderRadius: 8, padding: 8, cursor: 'pointer',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'background 150ms ease',
-   };
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'background 150ms ease' };
    const skeleton: React.CSSProperties = { height: 14, borderRadius: 6, background: '#F4F4F5' };
 
    if (!isLoading && connections.length === 0) {
@@ -159,8 +156,7 @@ const WpConnectionsTable = ({ emptyState }: Props) => {
                                        position: 'absolute', top: 'calc(100% + 4px)', right: 16, zIndex: 150, minWidth: 200,
                                        background: '#FFFFFF', border: '1px solid #E4E4E7', borderRadius: 12, padding: 6,
                                        boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
-                                       animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)', transformOrigin: 'top right',
-                                    }}
+                                       animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)', transformOrigin: 'top right' }}
                                  >
                                     <button
                                        type="button"

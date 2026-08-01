@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge } from '../core';
+import { Badge } from '../koala/core';
 import { getCatalogEntry } from '../../lib/siteAudit/issueCatalog';
 import type { IssueHelpContent as IssueHelp } from '../../lib/siteAudit/types';
 
@@ -7,22 +7,22 @@ const LINK_BLUE = '#2563EB';
 
 export function IssueAboutBlock({ help }: { help: IssueHelp }) {
   return (
-    <section className="sentry-issue-aside-block">
-      <h3 className="sentry-issue-aside-heading">About the issue</h3>
+    <section className="koala-issue-aside-block">
+      <h3 className="koala-issue-aside-heading">About the issue</h3>
       {help.about.map((para) => (
-        <p key={para.slice(0, 48)} className="sentry-issue-aside-text">{para}</p>
+        <p key={para.slice(0, 48)} className="koala-issue-aside-text">{para}</p>
       ))}
       {help.bullets && (
-        <ul className="sentry-issue-aside-list">
+        <ul className="koala-issue-aside-list">
           {help.bullets.map((item) => <li key={item}>{item}</li>)}
         </ul>
       )}
       {help.badge && <Badge variant="experimental">{help.badge}</Badge>}
       {help.badgeExtra?.map((para) => (
-        <p key={para.slice(0, 48)} className="sentry-issue-aside-text">{para}</p>
+        <p key={para.slice(0, 48)} className="koala-issue-aside-text">{para}</p>
       ))}
       {help.articleLinks && help.articleLinks.length > 0 && (
-        <p className="sentry-issue-aside-text">
+        <p className="koala-issue-aside-text">
           For more information:
           {' '}
           {help.articleLinks.map((link, idx) => (
@@ -35,7 +35,7 @@ export function IssueAboutBlock({ help }: { help: IssueHelp }) {
           ))}
         </p>
       )}
-      <p className="sentry-issue-aside-meta">
+      <p className="koala-issue-aside-meta">
         <strong>Category:</strong>
         {' '}
         {help.category}
@@ -46,15 +46,15 @@ export function IssueAboutBlock({ help }: { help: IssueHelp }) {
 
 export function IssueFixBlock({ help }: { help: IssueHelp }) {
   return (
-    <section className="sentry-issue-aside-block sentry-issue-aside-block--fix">
-      <h3 className="sentry-issue-aside-heading">How to fix</h3>
+    <section className="koala-issue-aside-block koala-issue-aside-block--fix">
+      <h3 className="koala-issue-aside-heading">How to fix</h3>
       {help.fixBullets ? (
-        <ul className="sentry-issue-aside-list">
+        <ul className="koala-issue-aside-list">
           {help.fix.map((item) => <li key={item}>{item}</li>)}
         </ul>
       ) : (
         help.fix.map((para) => (
-          <p key={para.slice(0, 48)} className="sentry-issue-aside-text">{para}</p>
+          <p key={para.slice(0, 48)} className="koala-issue-aside-text">{para}</p>
         ))
       )}
     </section>
@@ -67,7 +67,7 @@ export default function IssueHelpContent({ issueId }: { issueId: string }) {
   if (!catalog) return null;
 
   return (
-    <div className="sentry-issue-aside">
+    <div className="koala-issue-aside">
       <IssueAboutBlock help={catalog.help} />
       <IssueFixBlock help={catalog.help} />
     </div>

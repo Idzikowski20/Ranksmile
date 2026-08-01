@@ -1,22 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { useWorkspaces, useRenameWorkspace, useDeleteWorkspace, Workspace } from '../../services/workspaces';
 import { useWorkspaceSettings, useUpdateWorkspaceLogo } from '../../services/workspaceSettings';
 import ConfirmModal from '../common/ConfirmModal';
-import { Button, Input } from '../core';
-import { SentrySettingsSection, SentrySettingsRow } from '../sentry-pages';
-import { faviconUrl } from '../../lib/faviconUrl';
+import { Button, Input } from '../koala/core';
+import { FileUpload } from '../koala/forms';
+import { KoalaSettingsSection, KoalaSettingsRow } from '../koala/layout';
 
 const font = 'var(--font-family-primary)';
 
 type GscAccount = { email: string; picture: string };
-
-const UploadIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style={{ flexShrink: 0 }}>
-    <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-  </svg>
-);
 
 /** Strip protocol, `sc-domain:` prefix and any path so we get a bare host like "idztech.pl". */
 const cleanDomain = (raw: string): string => raw
@@ -45,9 +38,7 @@ const WorkspaceGeneralSettings = () => {
   const [removing, setRemoving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [gscAccount, setGscAccount] = useState<GscAccount | null>(null);
-  const [faviconError, setFaviconError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const seeded = useRef(false);
 
   useEffect(() => {
@@ -73,13 +64,11 @@ const WorkspaceGeneralSettings = () => {
   }, []);
 
   const domain = current?.domain ? cleanDomain(current.domain) : '';
-  const workspaceFaviconSrc = domain ? faviconUrl(domain, 64) : '';
   const storedLogo = settings?.logoUrl || null;
   const displayLogo = pendingLogo || storedLogo;
   const country = settings?.country || null;
   const language = settings?.language || null;
   const locationCc = settings?.cc || null;
-  const initial = (current?.name || '').charAt(0).toUpperCase() || '?';
 
   const handleSave = async () => {
     if (!current) return;
@@ -115,65 +104,34 @@ const WorkspaceGeneralSettings = () => {
 
   return (
     <>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".png,.jpg,.jpeg,.gif,.webp"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => setPendingLogo(typeof reader.result === 'string' ? reader.result : null);
-          reader.readAsDataURL(file);
-        }}
-      />
-
-      <SentrySettingsSection title="Logo">
-        <SentrySettingsRow
+      <KoalaSettingsSection title="Logo">
+        <KoalaSettingsRow
+          layout="stack"
           label="Workspace logo"
-          description="Drag an image or click Upload. Falls back to your domain favicon when unset."
+          description="PNG, JPG, GIF or WEBP."
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 8,
-                background: displayLogo || (workspaceFaviconSrc && !faviconError) ? 'transparent' : 'rgba(242,153,100,0.10)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                overflow: 'hidden',
-              }}
-            >
-              {displayLogo ? (
-                <Image
-                  src={displayLogo}
-                  alt="Workspace logo"
-                  width={64}
-                  height={64}
-                  unoptimized
-                  style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }}
-                />
-              ) : workspaceFaviconSrc && !faviconError ? (
-                <img src={workspaceFaviconSrc} alt="Workspace favicon" style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover' }} onError={() => setFaviconError(true)} />
-              ) : (
-                <span style={{ fontSize: 20, fontWeight: 600, color: '#F29964', textTransform: 'uppercase', fontFamily: font, userSelect: 'none' }}>
-                  {initial}
-                </span>
-              )}
-            </div>
-            <Button type="button" size="sm" variant="secondary" icon={<UploadIcon />} onClick={() => fileRef.current?.click()}>
-              Upload
-            </Button>
-          </div>
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+          <FileUpload
+            className="koala-settings-file-upload"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            maxSize={5 * 1024 * 1024}
+            preview
+            valueUrl={displayLogo}
+            label="Upload logo"
+            description="Drag and drop or browse"
+            onUpload={(files) => {
+              const file = files[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => setPendingLogo(typeof reader.result === 'string' ? reader.result : null);
+              reader.readAsDataURL(file);
+            }}
+            onRemove={() => setPendingLogo(null)}
+          />
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
-      <SentrySettingsSection title="Workspace details">
-        <SentrySettingsRow label="Workspace name" description="The display name for this workspace.">
+      <KoalaSettingsSection title="Workspace details">
+        <KoalaSettingsRow layout="stack" label="Workspace name" description="The display name for this workspace.">
           <Input
             id="workspace-name"
             type="text"
@@ -183,24 +141,24 @@ const WorkspaceGeneralSettings = () => {
             maxLength={60}
             style={{ width: '100%', maxWidth: 320 }}
           />
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+        <div className="koala-account-actions">
+          <Button type="button" variant="primary" onClick={handleSave} disabled={saving || !current}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </div>
+      </KoalaSettingsSection>
 
-      <div>
-        <Button type="button" variant="primary" onClick={handleSave} disabled={saving || !current}>
-          {saving ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
-
-      <SentrySettingsSection title="Search Console">
-        <SentrySettingsRow
+      <KoalaSettingsSection title="Search Console">
+        <KoalaSettingsRow
+          layout="stack"
           label="Connected property"
           description="The Google Search Console domain linked to this workspace."
         >
           {domain ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', fontFamily: font }}>{domain}</span>
-              <span style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#71717A', fontFamily: font }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: font }}>{domain}</span>
+              <span style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--koala-text-tertiary)', fontFamily: font }}>
                 Domain property
               </span>
               {gscAccount && (gscAccount.email || gscAccount.picture) ? (
@@ -214,26 +172,26 @@ const WorkspaceGeneralSettings = () => {
                       style={{ width: 28, height: 28, borderRadius: 9999, objectFit: 'cover', flexShrink: 0 }}
                     />
                   ) : (
-                    <span style={{ width: 28, height: 28, borderRadius: 9999, background: 'rgba(242,153,100,0.12)', color: '#F29964', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0, fontFamily: font, textTransform: 'uppercase' }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 9999, background: 'color-mix(in srgb, var(--koala-brand) 12%, transparent)', color: 'var(--koala-brand)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0, fontFamily: font, textTransform: 'uppercase' }}>
                       {(gscAccount.email || '?').charAt(0)}
                     </span>
                   )}
-                  <span style={{ fontSize: 14, color: '#52525C', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: font, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {gscAccount.email || 'Connected account'}
                   </span>
                 </div>
               ) : (
-                <span style={{ fontSize: 13, color: '#71717A', fontFamily: font }}>No Search Console account connected.</span>
+                <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: font }}>No Search Console account connected.</span>
               )}
             </div>
           ) : (
-            <span style={{ fontSize: 13, color: '#71717A', fontFamily: font }}>No domain linked to this workspace.</span>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: font }}>No domain linked to this workspace.</span>
           )}
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
-      <SentrySettingsSection title="Location and language">
-        <SentrySettingsRow label="Target market" description="Country and language configured for this workspace.">
+      <KoalaSettingsSection title="Location and language">
+        <KoalaSettingsRow layout="stack" label="Target market" description="Country and language configured for this workspace.">
           {country || language ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {locationCc && (
@@ -243,32 +201,36 @@ const WorkspaceGeneralSettings = () => {
                   style={{ width: 20, height: 15, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }}
                 />
               )}
-              <span style={{ fontSize: 14, color: '#52525C', fontFamily: font }}>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: font }}>
                 {[country, language].filter(Boolean).join(' / ')}
               </span>
             </div>
           ) : (
-            <span style={{ fontSize: 13, color: '#71717A', fontFamily: font }}>Not set.</span>
+            <span style={{ fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: font }}>Not set.</span>
           )}
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
-      <SentrySettingsSection title="Danger zone">
-        <SentrySettingsRow
+      <KoalaSettingsSection title="Danger zone">
+        <KoalaSettingsRow
+          layout="stack"
           label="Remove workspace"
           description="Permanently delete this workspace and all of its content. This action cannot be undone."
         >
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setConfirmOpen(true)}
-            disabled={removing || !current}
-            style={{ color: '#FF6F77', borderColor: '#FF6F77' }}
-          >
-            {removing ? 'Removing…' : 'Remove workspace'}
-          </Button>
-        </SentrySettingsRow>
-      </SentrySettingsSection>
+          <div className="koala-account-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmOpen(true)}
+              disabled={removing || !current}
+              style={{ color: 'var(--koala-status-danger)', borderColor: 'var(--koala-status-danger)' }}
+            >
+              {removing ? 'Removing…' : 'Remove workspace'}
+            </Button>
+          </div>
+        </KoalaSettingsRow>
+      </KoalaSettingsSection>
 
       <ConfirmModal
         open={confirmOpen}
@@ -278,7 +240,7 @@ const WorkspaceGeneralSettings = () => {
           <>
             This action cannot be undone. All content in this workspace will be removed. To proceed, enter the workspace name
             {' '}
-            <strong style={{ color: '#18181B', fontWeight: 600 }}>{current.name}</strong>
+            <strong style={{ color: 'var(--koala-text-primary)', fontWeight: 600 }}>{current.name}</strong>
             {' '}
             below to confirm deletion.
           </>

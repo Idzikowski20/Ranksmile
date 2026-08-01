@@ -58,15 +58,6 @@ export type CalendarCell = {
   today: boolean;
 };
 
-export type GoalPeriod = 'MONTH' | 'QUARTER';
-
-export type TrafficGoal = {
-  percentage: number;
-  period: GoalPeriod;
-  startDate: string;
-  baseClicks: number;
-};
-
 export const DATE_PRESETS: Array<{ value: DatePreset; label: string; days?: number; months?: number }> = [
   { value: '30', label: 'Last 30 days', days: 30 },
   { value: '60', label: 'Last 60 days', days: 60 },

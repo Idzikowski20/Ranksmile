@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, ModalBody, ModalFooter, FormField, Textarea, Button } from '../core';
+import { Modal, ModalBody, ModalFooter, FormField, Textarea, Button } from '../koala/core';
 
 type Props = {
   open: boolean;

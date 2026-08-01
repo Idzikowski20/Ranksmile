@@ -7,7 +7,7 @@ import DomainSubLayout from '../../../components/domains/DomainSubLayout';
 import EmptyEyes from '../../../components/common/EmptyEyes';
 import CreateTopicResearchModal from '../../../components/topicResearch/CreateTopicResearchModal';
 import TopicResearchCard from '../../../components/topicResearch/TopicResearchCard';
-import { Button } from '../../../components/core';
+import { Button } from '../../../components/koala/core';
 import {
    useKeywordResearchList, useKeywordResearchStatus, useCreateKeywordResearch, useRunKeywordResearch, useDeleteKeywordResearch,
 } from '../../../services/keywordResearch';

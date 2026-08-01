@@ -10,7 +10,7 @@ import { useAuditRun, useRerunAudit, useRunAudits } from '../../../../services/a
 import { useFetchDomains } from '../../../../services/domains';
 import { slugToDomain } from '../../../../utils/slugToDomain';
 import { AuditFactor, AuditResult } from '../../../../lib/auditTypes';
-import { Button } from '../../../../components/core';
+import { Button } from '../../../../components/koala/core';
 
 const AuditFactorChart = dynamic(() => import('../../../../components/audit/AuditFactorChart'), { ssr: false });
 const TermsTable = dynamic(() => import('../../../../components/audit/TermsTable'), { ssr: false });

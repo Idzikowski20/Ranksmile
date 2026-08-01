@@ -9,10 +9,10 @@ interface Suggestion {
 }
 
 const INTENT: Record<string, { label: string; bg: string; color: string }> = {
-   informational: { label: 'Info', bg: '#EAF2FE', color: '#2563EB' },
-   commercial: { label: 'Comm', bg: '#F3EEFF', color: '#F29964' },
-   transactional: { label: 'Trans', bg: '#E4F5EA', color: '#1AB25E' },
-   navigational: { label: 'Nav', bg: '#F4F4F5', color: '#52525C' },
+   informational: { label: 'Info', bg: 'var(--koala-bg-info-secondary, #EAF2FE)', color: 'var(--koala-text-info, #2563EB)' },
+   commercial: { label: 'Comm', bg: 'var(--koala-bg-accent-secondary, #FFF0EB)', color: 'var(--koala-brand, #F84416)' },
+   transactional: { label: 'Trans', bg: 'var(--koala-bg-success-secondary, #E4F5EA)', color: 'var(--koala-text-success, #1AB25E)' },
+   navigational: { label: 'Nav', bg: 'var(--koala-bg-tertiary, #F4F4F5)', color: 'var(--koala-text-secondary, #52525C)' },
 };
 
 interface Props {
@@ -29,35 +29,52 @@ function formatVolume(v: number): string {
 }
 
 function difficultyColor(index: number): string {
-   if (index <= 33) return '#22c55e';
-   if (index <= 66) return '#f59e0b';
-   return '#ef4444';
+   if (index <= 33) return 'var(--koala-text-success, #22c55e)';
+   if (index <= 66) return 'var(--koala-text-warning, #f59e0b)';
+   return 'var(--koala-text-danger, #ef4444)';
 }
+
+const skeletonPulse: React.CSSProperties = {
+   background: 'var(--koala-bg-tertiary, #F4F4F5)',
+   borderRadius: 4,
+   animation: 'skeletonPulse 1.5s ease-in-out infinite',
+};
 
 const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeholder }: Props) => {
    const [inputValue, setInputValue] = useState('');
    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
    const [hasVolumeData, setHasVolumeData] = useState(false);
    const [isOpen, setIsOpen] = useState(false);
+   const [isLoading, setIsLoading] = useState(false);
    const [focusedIndex, setFocusedIndex] = useState(-1);
    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
    const containerRef = useRef<HTMLDivElement>(null);
    const inputRef = useRef<HTMLInputElement>(null);
-   const reqSeqRef = useRef(0); // ignore out-of-order (stale) responses
+   const reqSeqRef = useRef(0);
 
    const fetchSuggestions = useCallback(async (q: string) => {
       const seq = ++reqSeqRef.current;
+      setIsLoading(true);
+      setIsOpen(true);
       try {
          const res = await fetch(`/api/articles/keyword-suggest?q=${encodeURIComponent(q)}&country=${country}`);
-         if (seq !== reqSeqRef.current || !res.ok) return; // a newer query superseded this one
+         if (seq !== reqSeqRef.current) return;
+         if (!res.ok) {
+            setSuggestions([]);
+            setHasVolumeData(false);
+            return;
+         }
          const data = await res.json();
          if (seq !== reqSeqRef.current) return;
          setSuggestions(data.suggestions || []);
          setHasVolumeData(data.hasVolumeData || false);
-         setIsOpen(true);
          setFocusedIndex(-1);
       } catch {
-         // network offline — keep dropdown closed
+         if (seq !== reqSeqRef.current) return;
+         setSuggestions([]);
+         setHasVolumeData(false);
+      } finally {
+         if (seq === reqSeqRef.current) setIsLoading(false);
       }
    }, [country]);
 
@@ -66,13 +83,16 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
       if (inputValue.length < 3) {
          setSuggestions([]);
          setIsOpen(false);
+         setIsLoading(false);
          return;
       }
+      // Show popover immediately so volume/difficulty loading is visible while waiting.
+      setIsLoading(true);
+      setIsOpen(true);
       debounceRef.current = setTimeout(() => fetchSuggestions(inputValue), 350);
       return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
    }, [inputValue, fetchSuggestions]);
 
-   // Close on outside click
    useEffect(() => {
       const handler = (e: MouseEvent) => {
          if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -90,11 +110,22 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
       setInputValue('');
       setSuggestions([]);
       setIsOpen(false);
+      setIsLoading(false);
       inputRef.current?.focus();
    };
 
    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      const total = suggestions.length + 1; // +1 for "Add X" row
+      if (isLoading) {
+         if (e.key === 'Escape') {
+            setIsOpen(false);
+            setFocusedIndex(-1);
+         } else if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addKeyword(inputValue);
+         }
+         return;
+      }
+      const total = suggestions.length + 1;
       if (e.key === 'ArrowDown') {
          e.preventDefault();
          setFocusedIndex((i) => Math.min(i + 1, total - 1));
@@ -120,24 +151,25 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
       height: 36,
       padding: '0 12px',
       cursor: 'pointer',
-      background: focusedIndex === index ? '#FFF7ED' : 'transparent',
+      background: focusedIndex === index ? 'var(--koala-bg-accent-secondary, #FFF7ED)' : 'transparent',
       gap: 8,
    });
 
+   const showVolumeCols = isLoading || hasVolumeData;
+
    return (
       <div ref={containerRef} style={{ position: 'relative' }}>
-         {/* Input container with pills */}
          <div
             style={{
                minHeight: 40,
-               border: '1px solid #dbded4',
+               border: '1px solid var(--koala-border-primary, #dbded4)',
                borderRadius: 8,
                padding: '4px 12px',
                display: 'flex',
                flexWrap: 'wrap',
                alignItems: 'center',
                gap: 4,
-               background: '#fff',
+               background: 'var(--koala-bg-primary, #fff)',
                boxShadow: 'none',
                cursor: 'text',
             }}
@@ -150,12 +182,12 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      display: 'inline-flex',
                      alignItems: 'center',
                      gap: 4,
-                     background: '#F4F4F5',
+                     background: 'var(--koala-bg-tertiary, #F4F4F5)',
                      borderRadius: 4,
                      padding: '1px 6px',
                      fontSize: 13,
                      lineHeight: '20px',
-                     color: '#09090B',
+                     color: 'var(--koala-text-primary, #09090B)',
                      fontFamily: 'var(--font-family-primary)',
                   }}
                >
@@ -166,7 +198,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         padding: 0, display: 'flex', alignItems: 'center',
-                        color: '#52525C', fontSize: 14, lineHeight: 1,
+                        color: 'var(--koala-text-secondary, #52525C)', fontSize: 14, lineHeight: 1,
                      }}
                   >
                      ×
@@ -180,7 +212,6 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                onChange={(e) => setInputValue(e.target.value)}
                onKeyDown={handleKeyDown}
                onBlur={() => {
-                  // short delay so click on suggestion registers first
                   setTimeout(() => {
                      if (!containerRef.current?.contains(document.activeElement)) {
                         setIsOpen(false);
@@ -188,6 +219,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                   }, 150);
                }}
                placeholder={keywords.length === 0 ? (placeholder || 'Enter keyword...') : ''}
+               aria-busy={isLoading}
                style={{
                   flex: 1,
                   minWidth: 120,
@@ -195,25 +227,40 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                   outline: 'none',
                   fontSize: 14,
                   lineHeight: '20px',
-                  color: '#09090B',
+                  color: 'var(--koala-text-primary, #09090B)',
                   background: 'transparent',
                   fontFamily: 'var(--font-family-primary)',
                   padding: '4px 0',
                }}
             />
+            {isLoading && (
+               <span
+                  aria-hidden="true"
+                  style={{
+                     width: 14,
+                     height: 14,
+                     borderRadius: '50%',
+                     border: '2px solid var(--koala-border-primary, #E4E4E7)',
+                     borderTopColor: 'var(--koala-brand, #F84416)',
+                     animation: 'spin 0.7s linear infinite',
+                     flexShrink: 0,
+                  }}
+               />
+            )}
          </div>
 
-         {/* Dropdown */}
          {isOpen && (
             <div
+               role="listbox"
+               aria-busy={isLoading}
                style={{
                   position: 'absolute',
                   top: '100%',
                   left: 0,
                   right: 0,
                   marginTop: 4,
-                  background: '#fff',
-                  border: '1px solid #E4E4E7',
+                  background: 'var(--koala-bg-primary, #fff)',
+                  border: '1px solid var(--koala-border-primary, #E4E4E7)',
                   borderRadius: 8,
                   boxShadow: '0px 4px 16px rgba(0,0,0,0.08)',
                   zIndex: 50,
@@ -221,32 +268,62 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                   overflowY: 'auto',
                }}
             >
-               {/* Header row (only with volume data) */}
-               {hasVolumeData && suggestions.length > 0 && (
+               {showVolumeCols && (
                   <div
                      style={{
                         display: 'flex',
                         alignItems: 'center',
                         height: 32,
                         padding: '0 12px',
-                        borderBottom: '1px solid #F4F4F5',
+                        borderBottom: '1px solid var(--koala-border-secondary, #F4F4F5)',
                         gap: 8,
                      }}
                   >
-                     <span style={{ flex: 1, fontSize: 13, color: '#9F9FA9', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
+                     <span style={{ flex: 1, fontSize: 13, color: 'var(--koala-text-tertiary, #9F9FA9)', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
                         Keyword
                      </span>
-                     <span style={{ width: 72, fontSize: 13, color: '#9F9FA9', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
+                     <span style={{ width: 72, fontSize: 13, color: 'var(--koala-text-tertiary, #9F9FA9)', fontWeight: 500, fontFamily: 'var(--font-family-primary)' }}>
                         Difficulty
                      </span>
-                     <span style={{ width: 72, fontSize: 13, color: '#9F9FA9', fontWeight: 500, textAlign: 'right', fontFamily: 'var(--font-family-primary)' }}>
+                     <span style={{ width: 72, fontSize: 13, color: 'var(--koala-text-tertiary, #9F9FA9)', fontWeight: 500, textAlign: 'right', fontFamily: 'var(--font-family-primary)' }}>
                         Volume
                      </span>
                   </div>
                )}
 
-               {/* Suggestions */}
-               {suggestions.map((s, i) => (
+               {isLoading && (
+                  <>
+                     {[0, 1, 2, 3, 4].map((i) => (
+                        <div
+                           key={`skel-${i}`}
+                           style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              height: 36,
+                              padding: '0 12px',
+                              gap: 8,
+                           }}
+                        >
+                           <div style={{ ...skeletonPulse, flex: 1, height: 12, animationDelay: `${i * 0.08}s` }} />
+                           <div style={{ ...skeletonPulse, width: 24, height: 6, animationDelay: `${i * 0.08}s` }} />
+                           <div style={{ ...skeletonPulse, width: 40, height: 12, marginLeft: 'auto', animationDelay: `${i * 0.08}s` }} />
+                        </div>
+                     ))}
+                     <div
+                        style={{
+                           padding: '8px 12px',
+                           fontSize: 12,
+                           color: 'var(--koala-text-tertiary, #9F9FA9)',
+                           fontFamily: 'var(--font-family-primary)',
+                           borderTop: '1px solid var(--koala-border-secondary, #F4F4F5)',
+                        }}
+                     >
+                        Loading volume &amp; difficulty…
+                     </div>
+                  </>
+               )}
+
+               {!isLoading && suggestions.map((s, i) => (
                   <div
                      key={s.keyword}
                      style={rowHoverStyle(i)}
@@ -258,7 +335,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                         style={{
                            flex: 1,
                            fontSize: 14,
-                           color: '#2F2F34',
+                           color: 'var(--koala-text-primary, #2F2F34)',
                            fontWeight: 500,
                            overflow: 'hidden',
                            textOverflow: 'ellipsis',
@@ -275,7 +352,6 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      )}
                      {hasVolumeData && (
                         <>
-                           {/* Difficulty bar */}
                            <div style={{ width: 72, display: 'flex', alignItems: 'center' }}>
                               <div
                                  style={{
@@ -283,7 +359,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                                     height: 6,
                                     overflow: 'hidden',
                                     position: 'relative',
-                                    background: '#E4E4E7',
+                                    background: 'var(--koala-bg-tertiary, #E4E4E7)',
                                     borderRadius: 2,
                                  }}
                               >
@@ -300,12 +376,11 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                                  />
                               </div>
                            </div>
-                           {/* Volume */}
                            <span
                               style={{
                                  width: 72,
                                  fontSize: 14,
-                                 color: '#2F2F34',
+                                 color: 'var(--koala-text-primary, #2F2F34)',
                                  textAlign: 'right',
                                  fontFamily: 'var(--font-family-primary)',
                               }}
@@ -317,12 +392,11 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                   </div>
                ))}
 
-               {/* "Add X" row — always shown when there's input */}
-               {inputValue.trim().length > 0 && (
+               {!isLoading && inputValue.trim().length > 0 && (
                   <div
                      style={{
                         ...rowHoverStyle(suggestions.length),
-                        borderTop: suggestions.length > 0 ? '1px solid #F4F4F5' : undefined,
+                        borderTop: suggestions.length > 0 ? '1px solid var(--koala-border-secondary, #F4F4F5)' : undefined,
                      }}
                      onMouseEnter={() => setFocusedIndex(suggestions.length)}
                      onMouseLeave={() => setFocusedIndex(-1)}
@@ -331,7 +405,7 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      <span
                         style={{
                            fontSize: 14,
-                           color: '#2F2F34',
+                           color: 'var(--koala-text-primary, #2F2F34)',
                            fontWeight: 500,
                            fontFamily: 'var(--font-family-primary)',
                         }}

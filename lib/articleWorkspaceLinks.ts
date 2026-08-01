@@ -5,7 +5,6 @@ export type ArticleWorkspaceLinks = {
    keyword: string;
    import: string;
    contentAudit: string;
-   topicalMap: string;
 };
 
 export function buildArticleWorkspaceLinks(wsId: number | null | undefined, activeSlug: string): ArticleWorkspaceLinks {
@@ -14,6 +13,5 @@ export function buildArticleWorkspaceLinks(wsId: number | null | undefined, acti
       keyword: workspaceHref(wsId, '/sites/articles/new'),
       import: workspaceHref(wsId, '/sites/articles/import'),
       contentAudit: activeSlug ? workspaceHref(wsId, `/sites/${activeSlug}/content-audit`) : workspaceHref(wsId, '/dashboard'),
-      topicalMap: activeSlug ? workspaceHref(wsId, `/sites/${activeSlug}/topical-map`) : workspaceHref(wsId, '/dashboard'),
    };
 }

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { PixabayImage, PixabayResponse } from '../../pages/api/pixabay/search';
 import { getErrorMessage } from '../../lib/errors';
-import Modal from '../core/modal/modal';
-import Button from '../core/button/button';
-import Input from '../core/input/input';
+import Modal from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
+import Input from '../koala/core/input/input';
 
 interface Props {
   defaultQuery?: string;
@@ -12,7 +12,7 @@ interface Props {
 }
 
 /* ── Shared style objects using design tokens ───────────────────────── */
-const ACCENT = 'var(--color-surface-raised)';  // #f29964
+const ACCENT = 'var(--color-surface-raised)';  // #F84416
 const STRONG = 'var(--color-surface-strong)';    // #09090b
 const FF = 'var(--font-family-primary)';
 const RADIUS_XS = 'var(--radius-xs)';  // 7px

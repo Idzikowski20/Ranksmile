@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-08-01T23:34:06.899Z",
+  "buckets": {
+    "pages": {
+      "files": 40,
+      "hex": 605
+    },
+    "components": {
+      "files": 166,
+      "hex": 2501
+    },
+    "css": {
+      "files": 1,
+      "hex": 702
+    },
+    "articles-chrome": {
+      "files": 62,
+      "hex": 1757
+    }
+  },
+  "totalPagesComponentsHex": 3106
+}

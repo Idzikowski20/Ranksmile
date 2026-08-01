@@ -4,13 +4,16 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import AppShell from '../../../components/common/AppShell';
 import DomainSubLayout from '../../../components/domains/DomainSubLayout';
+import { PageHeader } from '../../../components/koala/layout';
 import {
   AveragePositionCard,
   RankingBucketsCard,
   TrackingMovementCards,
+  VisibilityChartCard,
 } from '../../../components/rankTracking/TrackingOverview';
 import TrackedKeywordsTable from '../../../components/rankTracking/TrackedKeywordsTable';
-import { Skeleton } from '../../../components/core';
+import { Skeleton } from '../../../components/koala/core';
+import { StatusBadge, type StatusTone } from '../../../components/koala/primitives/StatusBadge';
 import { useFetchDomains } from '../../../services/domains';
 import {
   useAddRankKeywords,
@@ -103,11 +106,16 @@ const KeywordTrackingPage: NextPage = () => {
     : null;
 
   const run = runQ.data?.run;
-  const runBadge = run?.status === 'completed' && run.finished_at
+  const runStatus = run?.status;
+  const runCompletedNote = runStatus === 'completed' && run?.finished_at
     ? `Last update finished ${new Date(run.finished_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${run.keywords_success ?? 0} ok / ${run.keywords_failed ?? 0} failed`
-    : run?.status === 'running' || run?.status === 'pending' || run?.status === 'partial'
-      ? `Run in progress… ${run.keywords_checked ?? 0}/${run.keywords_total ?? 0}`
-      : null;
+    : null;
+  const runActiveBadge = runStatus === 'running' || runStatus === 'pending' || runStatus === 'partial'
+    ? {
+        status: (runStatus === 'partial' ? 'processing' : runStatus === 'pending' ? 'pending' : 'running') as StatusTone,
+        label: `Run in progress… ${run?.keywords_checked ?? 0}/${run?.keywords_total ?? 0}`,
+      }
+    : null;
 
   return (
     <AppShell domains={domains} showAddModal={() => {}} showSettings={() => {}}>
@@ -118,25 +126,43 @@ const KeywordTrackingPage: NextPage = () => {
         domain={domain}
         slug={slug || ''}
         section="Keyword tracking"
-        heading={<h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#181225', fontFamily: FONT }}>Keyword tracking</h1>}
         contentMaxWidth="100%"
       >
+        <PageHeader
+          title="Keyword tracking"
+          subtitle={domain}
+        />
         <div style={{ fontFamily: FONT }}>
-          {runBadge && (
-            <div style={{ fontSize: 13, color: '#6A6772', marginBottom: 8 }}>{runBadge}</div>
-          )}
+          {runCompletedNote ? (
+            <div style={{ fontSize: 13, color: 'var(--koala-text-secondary)', marginBottom: 8 }}>{runCompletedNote}</div>
+          ) : null}
+          {runActiveBadge ? (
+            <div style={{ marginBottom: 8 }}>
+              <StatusBadge status={runActiveBadge.status} label={runActiveBadge.label} />
+            </div>
+          ) : null}
 
           {analyticsQ.isLoading && !analyticsQ.data ? (
             <Skeleton rows={2} columns={3} />
           ) : (
-            <TrackingMovementCards summary={analyticsQ.data?.summary} />
+            <TrackingMovementCards
+              summary={analyticsQ.data?.summary}
+              chart={chartQ.data?.chart ?? []}
+            />
           )}
 
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
             <AveragePositionCard
               summary={analyticsQ.data?.summary}
               chart={chartQ.data?.chart ?? []}
             />
+            <VisibilityChartCard
+              summary={analyticsQ.data?.summary}
+              chart={chartQ.data?.chart ?? []}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
             <RankingBucketsCard summary={analyticsQ.data?.summary} />
           </div>
 

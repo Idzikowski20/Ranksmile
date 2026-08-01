@@ -8,8 +8,8 @@ import DashboardLayout from '../../components/common/DashboardLayout';
 import ArticleList from '../../components/articles/ArticleList';
 import AddDomain from '../../components/domains/AddDomain';
 import Settings from '../../components/settings/Settings';
-import { SentryPage, SentryPageHeader, SentryPageFilters, SentryPanel } from '../../components/sentry-pages';
-import { Button, CompactSelect, SearchBar } from '../../components/core';
+import { KoalaPage, KoalaPageHeader, KoalaPageFilters, KoalaPanel } from '../../components/koala/layout';
+import { Button, CompactSelect, SearchBar } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useFetchSettings } from '../../services/settings';
 import { useWorkspaces } from '../../services/workspaces';
@@ -54,7 +54,6 @@ const ArticlesPage: NextPage = () => {
     recommendations: articleLinks.recommendations,
     keyword: articleLinks.keyword,
     contentAudit: articleLinks.contentAudit,
-    topicalMap: articleLinks.topicalMap,
   };
 
   React.useEffect(() => {
@@ -140,10 +139,10 @@ const ArticlesPage: NextPage = () => {
   return (
     <DashboardLayout domains={domains} showAddModal={() => setShowAddDomain(true)} showSettings={() => setShowSettings(true)}>
       <Head><title>Articles — Ranksmile</title></Head>
-      <SentryPage maxWidth={880} className="articles-page">
-        <SentryPageHeader title="Articles" actions={headerActions} borderless />
+      <KoalaPage maxWidth={880} className="articles-page">
+        <KoalaPageHeader title="Articles" actions={headerActions} borderless />
 
-        <SentryPageFilters trailing={<SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search" width={300} />}>
+        <KoalaPageFilters trailing={<SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search" width={300} />}>
           <CompactSelect
             size="sm"
             value={sortBy}
@@ -153,9 +152,9 @@ const ArticlesPage: NextPage = () => {
           {['Status', 'Author'].map((label) => (
             <Button key={label} type="button" variant="secondary" size="sm">{label}</Button>
           ))}
-        </SentryPageFilters>
+        </KoalaPageFilters>
 
-        <SentryPanel noPadding className="sentry-panel--cards">
+        <KoalaPanel noPadding className="koala-panel--cards">
           <ArticleList
             articles={articles}
             onDelete={handleDelete}
@@ -163,8 +162,8 @@ const ArticlesPage: NextPage = () => {
             isLoading={isLoading}
             startLinks={startLinks}
           />
-        </SentryPanel>
-      </SentryPage>
+        </KoalaPanel>
+      </KoalaPage>
 
       {showAddDomain && (
         <AddDomain

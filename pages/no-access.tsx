@@ -23,7 +23,7 @@ const NoAccess: NextPage = () => (
       <a
         href="/"
         style={{ marginTop: 4, padding: '9px 18px', borderRadius: 8, background: '#2F2F34', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', fontFamily: font, transition: 'background 150ms ease' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#F29964'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#F84416'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
       >
         Try again

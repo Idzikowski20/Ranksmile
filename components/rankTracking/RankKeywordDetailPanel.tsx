@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import Chart from '../common/Chart';
-import { CompactSelect } from '../core';
-import type { SelectOption } from '../core';
+import { CompactSelect } from '../koala/core';
+import type { SelectOption } from '../koala/core';
 import { XIcon } from '../ranksmile/icons';
 import useOnKey from '../../hooks/useOnKey';
 import { useRankKeywordHistory } from '../../services/rankTracking';
@@ -18,11 +19,11 @@ const PANEL_SHELL: React.CSSProperties = {
   right: 8,
   width: 480,
   maxWidth: 'calc(100vw - 16px)',
-  zIndex: 301,
-  background: '#fff',
+  zIndex: overlayZ.drawerPanel,
+  background: 'var(--koala-bg-primary)',
   borderRadius: 16,
   boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)',
-  border: '1px solid #E4E4E7',
+  border: '1px solid var(--koala-border-primary)',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
@@ -91,7 +92,7 @@ const IconButton = ({ children, onClick, href, ariaLabel }: {
     justifyContent: 'center',
     border: 'none',
     background: 'transparent',
-    color: '#52525C',
+    color: 'var(--koala-text-secondary)',
     cursor: 'pointer',
     padding: 0,
     transition: 'opacity 150ms ease',
@@ -186,13 +187,13 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
   const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(row.keyword)}`;
 
   return (
-    <>
+    <ShellPortal>
       <div
         onClick={handleClose}
         style={{
           position: 'fixed',
           inset: 0,
-          zIndex: 300,
+          zIndex: overlayZ.drawer,
           background: 'rgba(0,0,0,0.12)',
           opacity: visible ? 1 : 0,
           transition: 'opacity 200ms ease',
@@ -206,7 +207,7 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', padding: '20px 24px 12px', gap: 12, flexShrink: 0 }}>
-          <p style={{ flex: 1, margin: 0, fontSize: 13, fontWeight: 600, color: '#52525C', fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+          <p style={{ flex: 1, margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
             Keyword
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingRight: 16 }}>
@@ -226,7 +227,7 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#18181B', fontFamily: FONT, lineHeight: '24px', wordBreak: 'break-word' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: FONT, lineHeight: '24px', wordBreak: 'break-word' }}>
                 {row.keyword}
               </h2>
               <span style={{
@@ -236,8 +237,8 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
                 fontSize: 12,
                 fontWeight: 600,
                 fontFamily: FONT,
-                background: position === 0 ? '#F4F4F5' : 'rgba(242,153,100,0.15)',
-                color: position === 0 ? '#71717B' : '#C97D52',
+                background: position === 0 ? 'var(--koala-bg-secondary)' : 'var(--koala-status-warning-bg)',
+                color: position === 0 ? 'var(--koala-text-secondary)' : 'var(--koala-status-danger)',
               }}
               >
                 {notFoundLabel}
@@ -246,7 +247,7 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
 
             <section>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>SERP History</h3>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>SERP History</h3>
                 <CompactSelect
                   size="sm"
                   value={chartTime}
@@ -255,13 +256,13 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
                   menuMinWidth={160}
                 />
               </div>
-              <div style={{ height: 200, border: '1px solid #E4E4E7', borderRadius: 12, padding: 12, background: '#FAFAFA', overflow: 'hidden' }}>
+              <div style={{ height: 200, border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 12, background: 'var(--koala-bg-secondary)', overflow: 'hidden' }}>
                 {loading ? (
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: FONT }}>
                     Loading history…
                   </div>
                 ) : chartData.labels.length === 0 ? (
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#9F9FA9', fontFamily: FONT, textAlign: 'center', padding: '0 12px' }}>
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: FONT, textAlign: 'center', padding: '0 12px' }}>
                     No position history yet. Run a rank check to collect data.
                   </div>
                 ) : (
@@ -271,19 +272,19 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
             </section>
 
             <section>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #E4E4E7', gap: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#3F3F47', fontFamily: FONT }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--koala-border-primary)', gap: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: FONT }}>
                   Google Search Result
                 </h3>
                 {latestSnapshot?.checked_at && (
-                  <span style={{ fontSize: 12, color: '#71717B', fontFamily: FONT, flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)', fontFamily: FONT, flexShrink: 0 }}>
                     {dayjs(latestSnapshot.checked_at).format('MMMM D, YYYY')}
                   </span>
                 )}
               </div>
 
               {serpItems.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9', fontFamily: FONT }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-tertiary)', fontFamily: FONT }}>
                   {loading ? 'Loading SERP preview…' : 'No SERP snapshot available for this keyword.'}
                 </p>
               ) : (
@@ -297,16 +298,16 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
                         style={{
                           padding: '12px 14px',
                           borderRadius: 10,
-                          border: isOurs ? '1px solid rgba(242,153,100,0.45)' : '1px solid #F4F4F5',
-                          background: isOurs ? 'rgba(242,153,100,0.08)' : '#FFFFFF',
+                          border: isOurs ? '1px solid var(--koala-border-brand)' : '1px solid var(--koala-bg-secondary)',
+                          background: isOurs ? 'var(--koala-status-warning-bg)' : 'var(--koala-bg-primary)',
                         }}
                       >
                         <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, fontFamily: FONT, lineHeight: 1.4 }}>
-                          <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#2563EB', textDecoration: 'none' }}>
+                          <a href={item.url} target="_blank" rel="noreferrer" style={{ color: 'var(--koala-text-link)', textDecoration: 'none' }}>
                             {item.position}. {item.title}
                           </a>
                         </h4>
-                        <a href={item.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#1AB25E', fontFamily: FONT, wordBreak: 'break-all' }}>
+                        <a href={item.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--koala-status-success)', fontFamily: FONT, wordBreak: 'break-all' }}>
                           {item.url}
                         </a>
                       </div>
@@ -318,6 +319,6 @@ export default function RankKeywordDetailPanel({ row, slug, configId, onClose }:
           </div>
         </div>
       </div>
-    </>
+    </ShellPortal>
   );
 }

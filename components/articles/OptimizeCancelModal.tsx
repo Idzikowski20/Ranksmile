@@ -1,6 +1,6 @@
 import React from 'react';
-import Modal, { ModalBody, ModalFooter, ModalHeader } from '../core/modal/modal';
-import Button from '../core/button/button';
+import Modal, { ModalBody, ModalFooter, ModalHeader } from '../koala/core/modal/modal';
+import Button from '../koala/core/button/button';
 
 // AO-8a: confirmation modal shown when the user cancels an Auto-Optimize review.
 // Cancelling discards every suggested change and restores the pre-optimize article,

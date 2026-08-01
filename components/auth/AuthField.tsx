@@ -57,7 +57,12 @@ export default function AuthField({
 
   return (
     <div style={authFieldWrapStyle}>
-      {label ? <label htmlFor={id} style={authLabelStyle}>{label}</label> : null}
+      {label ? (
+        <label htmlFor={id} style={authLabelStyle}>
+          {label}
+          {required ? <span style={{ color: '#F84416', fontWeight: 400 }}> *</span> : null}
+        </label>
+      ) : null}
       <div style={{ position: 'relative' }}>
         <input
           id={id}
@@ -95,7 +100,7 @@ export default function AuthField({
               justifyContent: 'center',
               border: 'none',
               background: 'transparent',
-              color: '#6A6772',
+              color: '#767676',
               cursor: 'pointer',
               borderRadius: 6,
               padding: 0,

@@ -27,5 +27,101 @@
         "tsx": "never"
       }
    ]
- }
+ },
+ "overrides": [
+   {
+     "files": ["components/koala/**/*"],
+     "rules": {
+       "no-restricted-imports": ["error", {
+         "patterns": [
+           {
+             "group": ["**/pages/**", "pages/**"],
+             "message": "Koala components must not import from pages/ — keep UI layer free of route modules."
+           },
+           {
+             "group": ["stripe", "stripe/*", "**/stripe", "**/stripe/*", "@stripe/*"],
+             "message": "Koala components must not import Stripe — billing belongs in pages/api and lib."
+           },
+           {
+             "group": ["bullmq", "bullmq/*"],
+             "message": "Koala components must not import BullMQ — queue workers belong in scripts/lib."
+           },
+           {
+             "group": ["ioredis", "ioredis/*"],
+             "message": "Koala components must not import ioredis — Redis clients belong in lib/scripts."
+           },
+           {
+             "group": ["**/dataforseo", "**/dataforseo/**", "**/dataforseoLlm", "**/dataforseoBudget"],
+             "message": "Koala components must not import DataForSEO — SEO providers belong in lib/providers."
+           }
+         ]
+       }]
+     }
+   },
+   {
+     "files": ["pages/**/*.{ts,tsx,js,jsx}", "components/**/*.{ts,tsx,js,jsx}"],
+    "excludedFiles": [
+      "components/koala/charts/**/*"
+    ],
+    "rules": {
+      "no-restricted-imports": ["error", {
+        "patterns": [
+          {
+            "group": [
+              "**/components/charts",
+              "**/components/charts/**",
+              "components/charts",
+              "components/charts/**",
+              "**/common/ChartSlim",
+              "**/common/ChartSlim.*",
+              "**/shimmering-text",
+              "**/shimmering-text.*"
+            ],
+            "message": "Cleanup Freeze: legacy components/charts and ChartSlim/shimmer are deleted. Use koala/charts Chart/Sparkline."
+          },
+          {
+            "group": [
+              "**/components/keywords",
+              "**/components/keywords/**",
+              "components/keywords",
+              "components/keywords/**",
+              "**/components/ideas",
+              "**/components/ideas/**",
+              "components/ideas",
+              "components/ideas/**",
+              "**/components/insight",
+              "**/components/insight/**",
+              "components/insight",
+              "components/insight/**",
+              "**/domains/DomainSettings",
+              "**/domains/DomainSettings.*"
+            ],
+            "message": "Cleanup Freeze: legacy keywords/ideas/insight/DomainSettings removed. Use rankTracking, keywordResearch, or koala product tables."
+          },
+          {
+            "group": [
+              "**/koala/charts/ChartRenderer",
+              "**/koala/charts/ChartRenderer.*",
+              "**/koala/charts/HeatmapRenderer",
+              "**/koala/charts/HeatmapRenderer.*",
+              "**/koala/charts/ChartTooltip",
+              "**/koala/charts/ChartTooltip.*",
+              "**/koala/charts/ChartLegend",
+              "**/koala/charts/ChartLegend.*",
+              "**/koala/charts/presets",
+              "**/koala/charts/presets.*",
+              "**/koala/charts/formatters",
+              "**/koala/charts/formatters/**",
+              "**/koala/charts/chartMotion",
+              "**/koala/charts/chartMotion.*",
+              "**/koala/charts/Heatmap",
+              "**/koala/charts/Heatmap.*"
+            ],
+            "message": "Visualization internals are private. Import only Chart or Sparkline from koala/charts (or widgets from koala/product)."
+          }
+        ]
+      }]
+    }
+   }
+ ]
 }

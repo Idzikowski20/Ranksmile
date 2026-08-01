@@ -103,7 +103,7 @@ const WordPressConnect: NextPage = () => {
                   <a
                      href={`/auth/sign-in?next=${encodeURIComponent(router.asPath)}`}
                      style={primaryBtn(false)}
-                     onMouseEnter={(e) => setBtnBg(e, '#F29964')}
+                     onMouseEnter={(e) => setBtnBg(e, '#F84416')}
                      onMouseLeave={(e) => setBtnBg(e, '#18181B')}
                   >Sign in</a>
                </div>
@@ -164,9 +164,9 @@ const WordPressConnect: NextPage = () => {
                   onClick={connect}
                   disabled={disabled}
                   style={primaryBtn(disabled)}
-                  onMouseEnter={(e) => { if (!disabled) setBtnBg(e, '#F29964'); }}
+                  onMouseEnter={(e) => { if (!disabled) setBtnBg(e, '#F84416'); }}
                   onMouseDown={(e) => { if (!disabled) setBtnBg(e, '#B86A42'); }}
-                  onMouseUp={(e) => { if (!disabled) setBtnBg(e, '#F29964'); }}
+                  onMouseUp={(e) => { if (!disabled) setBtnBg(e, '#F84416'); }}
                   onMouseLeave={(e) => setBtnBg(e, '#18181B')}
                >{busy ? 'Connecting…' : 'Connect'}</button>
             </div>

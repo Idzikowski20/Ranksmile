@@ -89,9 +89,9 @@ Rules:
 
 ## 6. Design Frontend
 - Use always /frontend-design
-- Read `DESIGN.md` before any UI (Sentry-first; accent `#F29964`, not Ranksmile purple)
-- Stick `DESIGN.md` + anti-slop §12
-- New UI outside editor → `components/core` + `theme.tsx`; editor KEEP TipTap/scoring layout
+- Read `DESIGN.md` before any UI (Koala UI v11; accent `#F84416`, DM Sans; Ranksmile naming/logo)
+- Stick `DESIGN.md` + `components/koala/REGISTRY.md` (ponytail)
+- New UI outside editor → `components/koala`; editor KEEP TipTap/scoring layout; `components/core` is migration shim
 
 ## 7. TypeScript — no `any`
 

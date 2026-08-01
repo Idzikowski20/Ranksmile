@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { verifyEmailOtp } from '../../lib/auth/fetchAuth';
-import { Button } from '../core';
+import Button from '../koala/primitives/Button';
+import AuthBrandMark from './AuthBrandMark';
 import AuthField from './AuthField';
 import {
   authErrorStyle,
@@ -36,34 +37,44 @@ export default function EmailOtpForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1 style={authTitleStyle}>Email verification</h1>
-      <p style={authSubtitleStyle}>Enter the code we sent to your email</p>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', width: '100%' }}
+    >
+      <AuthBrandMark />
+      <div style={{ textAlign: 'center', width: '100%', maxWidth: 384 }}>
+        <h1 style={authTitleStyle}>Email verification</h1>
+        <p style={authSubtitleStyle}>Enter the code we sent to your email</p>
+      </div>
 
-      {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
+      {error ? <div style={{ ...authErrorStyle, width: '100%' }} role="alert">{error}</div> : null}
 
-      <AuthField
-        id="email-otp-email"
-        label="Email"
-        type="email"
-        value={email}
-        onChange={setEmail}
-        autoComplete="email"
-        disabled={loading}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+        <AuthField
+          id="email-otp-email"
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          autoComplete="email"
+          disabled={loading}
+          required
+        />
 
-      <AuthField
-        id="email-otp-code"
-        label="Verification code"
-        type="text"
-        value={otp}
-        onChange={setOtp}
-        autoComplete="one-time-code"
-        disabled={loading}
-      />
+        <AuthField
+          id="email-otp-code"
+          label="Verification code"
+          type="text"
+          value={otp}
+          onChange={setOtp}
+          autoComplete="one-time-code"
+          disabled={loading}
+          required
+        />
+      </div>
 
-      <div style={authFullWidthBtnStyle}>
-        <Button type="submit" variant="primary" size="md" busy={loading} disabled={loading} style={{ width: '100%' }}>
+      <div style={{ ...authFullWidthBtnStyle, width: '100%' }}>
+        <Button type="submit" variant="primary" size="lg" busy={loading} disabled={loading} style={{ width: '100%', borderRadius: 14 }}>
           {loading ? 'Verifying…' : 'Verify'}
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Textarea } from '../../core';
+import { Button, Textarea } from '../../koala/core';
 
 const F = 'var(--font-family-primary)';
 const EMOJIS = ['👍', '👎', '❤️', '🔥', '😀', '😍', '🎉', '✅', '🙌', '👀', '💡', '🚀'];

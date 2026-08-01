@@ -7,20 +7,22 @@ import {
   SearchBar,
   SegmentedControl,
   getPaginationCaption,
-} from '../core';
+} from '../koala/core';
 import {
-  SentryDetailLayout,
-  SentryEmptyState,
-  SentryPanel,
-  SentryPanelBody,
-  SentryPanelHeader,
+  KoalaDetailLayout,
+  KoalaEmptyState,
+  KoalaPanel,
+  KoalaPanelBody,
+  KoalaPanelHeader,
+} from '../koala/layout';
+import {
   SentryTable,
   SentryTableBody,
   SentryTableCell,
   SentryTableHead,
   SentryTableHeaderCell,
   SentryTableRow,
-} from '../sentry-pages';
+} from '../koala/layout';
 import type { IssueDetailLayout, IssueInstance, SiteAuditIssueDetailPayload } from '../../lib/siteAudit/types';
 import { UrlCell } from './AuditUrlCell';
 import IssueHelpContent from './IssueHelpContent';
@@ -89,7 +91,7 @@ function IssueVisibilityButton({
   return (
     <button
       type="button"
-      className="sentry-issue-hide-btn"
+      className="koala-issue-hide-btn"
       onClick={onClick}
       aria-label={label}
       title={label}
@@ -114,8 +116,8 @@ function formatDiscovered(iso: string | null): string {
 
 function PageUrlCell({ row }: { row: IssueInstance }) {
   return (
-    <div className="sentry-issue-page-url">
-      {row.title && <div className="sentry-issue-page-title">{row.title}</div>}
+    <div className="koala-issue-page-url">
+      {row.title && <div className="koala-issue-page-title">{row.title}</div>}
       <UrlCell url={row.url} />
     </div>
   );
@@ -128,7 +130,7 @@ function columnsForLayout(layout: IssueDetailLayout): ColDef[] {
     key: 'discovered',
     label: 'Discovered',
     render: (row) => (
-      <div className="sentry-issue-discovered">
+      <div className="koala-issue-discovered">
         <span>{formatDiscovered(row.discoveredAt)}</span>
         {row.isNew && <Badge variant="new">New</Badge>}
       </div>
@@ -149,7 +151,7 @@ function columnsForLayout(layout: IssueDetailLayout): ColDef[] {
       {
         key: 'malformed',
         label: 'Malformed URL',
-        render: (row) => <code className="sentry-issue-mono">{row.secondaryUrl ?? '—'}</code>,
+        render: (row) => <code className="koala-issue-mono">{row.secondaryUrl ?? '—'}</code>,
       },
       discovered,
     ];
@@ -217,20 +219,20 @@ function StatsBar({ failed, successful }: { failed: number; successful: number }
   const total = failed + successful;
   const failPct = total ? (failed / total) * 100 : 0;
   return (
-    <div className="sentry-issue-stats">
+    <div className="koala-issue-stats">
       <span>
         Failed:
         {' '}
-        <strong className="sentry-issue-stats-failed">{failed}</strong>
+        <strong className="koala-issue-stats-failed">{failed}</strong>
       </span>
       <span>
         Successful:
         {' '}
-        <strong className="sentry-issue-stats-ok">{successful}</strong>
+        <strong className="koala-issue-stats-ok">{successful}</strong>
       </span>
-      <div className="sentry-issue-stats-bar" aria-hidden="true">
-        <div className="sentry-issue-stats-bar-fail" style={{ width: `${failPct}%` }} />
-        <div className="sentry-issue-stats-bar-ok" />
+      <div className="koala-issue-stats-bar" aria-hidden="true">
+        <div className="koala-issue-stats-bar-fail" style={{ width: `${failPct}%` }} />
+        <div className="koala-issue-stats-bar-ok" />
       </div>
     </div>
   );
@@ -251,13 +253,13 @@ function SelectionBar({
   const actionLabel = mode === 'hide' ? 'Hide' : 'Unhide';
   const actionIcon = mode === 'hide' ? <EyeOffIcon /> : <EyeIcon />;
   return (
-    <div className="sentry-issue-selection-bar" role="region" aria-label="Selected rows actions">
-      <span className="sentry-issue-selection-count" data-test-id="selected-rows-text">
+    <div className="koala-issue-selection-bar" role="region" aria-label="Selected rows actions">
+      <span className="koala-issue-selection-count" data-test-id="selected-rows-text">
         <strong>{count}</strong>
         {' '}
         {label}
       </span>
-      <div className="sentry-issue-selection-actions">
+      <div className="koala-issue-selection-actions">
         <Button variant="link" size="sm" onClick={onDeselectAll} data-test-id="button-deselect-all">
           Deselect all
         </Button>
@@ -394,15 +396,15 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
   );
 
   const filterTabs = (
-    <div className="sentry-issue-toolbar">
+    <div className="koala-issue-toolbar">
       <SegmentedControl
         value={tab}
         size="sm"
         onChange={(v) => { setTab(v); setPage(1); deselectAll(); }}
         name="issue-detail-tab"
         options={[
-          { value: 'issues', label: <>Issues <span className="sentry-issue-tab-count">{visibleInstances.length}</span></> },
-          { value: 'hidden', label: <>Hidden <span className="sentry-issue-tab-count">{hiddenInstances.length}</span></> },
+          { value: 'issues', label: <>Issues <span className="koala-issue-tab-count">{visibleInstances.length}</span></> },
+          { value: 'hidden', label: <>Hidden <span className="koala-issue-tab-count">{hiddenInstances.length}</span></> },
         ]}
       />
       <SearchBar
@@ -443,7 +445,7 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
           {pageRows.length === 0 ? (
             <SentryTableRow>
               <SentryTableCell colSpan={cols.length + 2}>
-                <SentryEmptyState
+                <KoalaEmptyState
                   title={tab === 'issues' ? 'No matching URLs' : 'No hidden issues'}
                   description={tab === 'issues' ? 'Try adjusting your search query.' : 'Issues you hide will appear here.'}
                 />
@@ -474,19 +476,19 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
           )}
         </SentryTableBody>
       </SentryTable>
-      <div className="sentry-issue-pagination">
+      <div className="koala-issue-pagination">
         <Pagination
           page={safePage}
           pageCount={pageCount}
           onPageChange={setPage}
           caption={getPaginationCaption({ page: safePage, pageSize, total: filtered.length })}
         />
-        <label className="sentry-issue-page-size">
+        <label className="koala-issue-page-size">
           Rows
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-            className="sentry-issue-page-size-select"
+            className="koala-issue-page-size-select"
           >
             {[10, 25, 50, 100].map((n) => (
               <option key={n} value={n}>{n}</option>
@@ -498,19 +500,19 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
   );
 
   return (
-    <div className="sentry-issue-detail">
-      <Button variant="secondary" size="sm" onClick={onBack} icon={<ArrowLeftIcon />} className="sentry-issue-back">
+    <div className="koala-issue-detail">
+      <Button variant="secondary" size="sm" onClick={onBack} icon={<ArrowLeftIcon />} className="koala-issue-back">
         All issues
       </Button>
 
-      <SentryDetailLayout
+      <KoalaDetailLayout
         main={(
-          <div className="sentry-issue-main-stack">
-            <SentryPanel>
-              <SentryPanelHeader
+          <div className="koala-issue-main-stack">
+            <KoalaPanel>
+              <KoalaPanelHeader
                 title={(
-                  <span className="sentry-issue-title-row">
-                    <span className="sentry-issue-title">{issue.title}</span>
+                  <span className="koala-issue-title-row">
+                    <span className="koala-issue-title">{issue.title}</span>
                     <Badge variant={severityVariant}>
                       {issue.severity === 'error' ? 'Error' : issue.severity === 'warning' ? 'Warning' : 'Notice'}
                     </Badge>
@@ -518,15 +520,15 @@ export default function SiteAuditIssueDetail({ data, onBack }: Props) {
                 )}
                 actions={headerActions}
               />
-              <SentryPanelBody className="sentry-issue-header-body">
+              <KoalaPanelBody className="koala-issue-header-body">
                 <StatsBar failed={failed} successful={successful} />
-              </SentryPanelBody>
-            </SentryPanel>
+              </KoalaPanelBody>
+            </KoalaPanel>
 
-            <SentryPanel noPadding className="sentry-issue-table-panel">
-              <div className="sentry-issue-toolbar-wrap">{filterTabs}</div>
+            <KoalaPanel noPadding className="koala-issue-table-panel">
+              <div className="koala-issue-toolbar-wrap">{filterTabs}</div>
               {tableContent}
-            </SentryPanel>
+            </KoalaPanel>
           </div>
         )}
         aside={<IssueDetailAside issueId={issue.id} />}

@@ -54,21 +54,21 @@ export const strengthLabels: Record<StrengthLevel, string> = {
   'very-strong': 'Very Strong',
 };
 
-/** Bar / badge fill — Sentry semantic + brand accent for medium. */
+/** Bar / badge fill — Koala semantic. */
 export const strengthBarColors: Record<StrengthLevel, string> = {
-  empty: '#E6E6E9',
-  weak: '#FF002B',
-  medium: '#F29964',
-  strong: '#009800',
-  'very-strong': '#008900',
+  empty: '#e5e5e5',
+  weak: '#ef4444',
+  medium: '#F84416',
+  strong: '#22c55e',
+  'very-strong': '#15803d',
 };
 
 export const strengthLabelColors: Record<StrengthLevel, string> = {
-  empty: '#6A6772',
-  weak: '#D50000',
-  medium: '#A45200',
-  strong: '#008900',
-  'very-strong': '#008900',
+  empty: '#767676',
+  weak: '#dc2626',
+  medium: '#c11c0d',
+  strong: '#15803d',
+  'very-strong': '#15803d',
 };
 
 export const PASSWORD_REQUIREMENTS: { key: keyof PasswordStrengthResult['checks']; label: string }[] = [

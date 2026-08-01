@@ -249,7 +249,7 @@ export function AIVoiceButton({
         borderRadius: 9999,
         background: listening ? 'rgba(242,153,100,0.15)' : 'transparent',
         border: 'none',
-        color: listening ? '#F29964' : '#9f9fa9',
+        color: listening ? '#F84416' : '#9f9fa9',
         cursor: disabled ? 'not-allowed' : 'pointer',
         padding: 0,
         flexShrink: 0,

@@ -156,7 +156,7 @@ const VersionHistoryPanel = ({ articleId, currentScore, onClose, onRestore }: Pr
         {/* Past versions */}
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-            <div style={{ width: 20, height: 20, border: '2px solid #E4E4E7', borderTopColor: '#F29964', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+            <div style={{ width: 20, height: 20, border: '2px solid #E4E4E7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
           </div>
         ) : versions.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '48px 0' }}>

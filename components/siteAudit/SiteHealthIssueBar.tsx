@@ -21,7 +21,7 @@ export default function SiteHealthIssueBar({ segments, onSegmentClick }: Props) 
   const total = positive.reduce((sum, s) => sum + s.count, 0);
 
   if (!total || positive.length === 0) {
-    return <div className="sentry-health-issue-bar sentry-health-issue-bar--empty" aria-hidden="true" />;
+    return <div className="koala-health-issue-bar koala-health-issue-bar--empty" aria-hidden="true" />;
   }
 
   // Fixed quality order (Watchtower / PasswordStrength): best → fair, stacked left.
@@ -31,7 +31,7 @@ export default function SiteHealthIssueBar({ segments, onSegmentClick }: Props) 
   );
 
   return (
-    <div className="sentry-health-issue-bar" role="group" aria-label="Issue severity mix">
+    <div className="koala-health-issue-bar" role="group" aria-label="Issue severity mix">
       {ordered.map((seg, index) => {
         const pct = (seg.count / total) * 100;
         const z = ordered.length - index;
@@ -39,7 +39,7 @@ export default function SiteHealthIssueBar({ segments, onSegmentClick }: Props) 
           <button
             key={seg.id}
             type="button"
-            className="sentry-health-issue-bar-seg"
+            className="koala-health-issue-bar-seg"
             aria-label={`${seg.count} ${seg.label}`}
             title={`${seg.label}: ${seg.count}`}
             onClick={onSegmentClick ? () => onSegmentClick(seg.id) : undefined}

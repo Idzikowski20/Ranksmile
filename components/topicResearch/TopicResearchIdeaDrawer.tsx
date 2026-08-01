@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Button, SegmentedControl } from '../core';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
+import { Button, SegmentedControl } from '../koala/core';
 import type { TopicIdea } from '../../lib/topicResearchTypes';
 
 const FONT = 'var(--font-family-primary)';
@@ -80,9 +81,9 @@ const TopicResearchIdeaDrawer = ({ items, index, onNavigate, onClose, onCreate }
    const avgKd = idea.keywords.length ? Math.round(idea.keywords.reduce((s, k) => s + (k.kd ?? 0), 0) / idea.keywords.length) : null;
 
    return (
-      <>
-         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
-         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 800, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
+      <ShellPortal>
+         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: overlayZ.drawer, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 800, maxWidth: 'calc(100vw - 16px)', zIndex: overlayZ.drawerPanel, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
             {/* Header: nav arrows · title/meta · Create + close */}
             <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -129,12 +130,12 @@ const TopicResearchIdeaDrawer = ({ items, index, onNavigate, onClose, onCreate }
                         <div style={{ fontSize: 15, fontWeight: 600, color: '#18181B' }}>Not Covered</div>
                         <div style={{ fontSize: 12, color: '#9F9FA9', marginTop: 2 }}>{idea.keywords.length} keywords · avg. KD {avgKd ?? '—'} · total vol. {fmtVol(notCoveredVol)}</div>
                      </div>
-                     <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden' }}>
+                     <div style={{ overflow: 'hidden' }}>
                         <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
                            <div style={{ ...cell, flex: 1, minWidth: 0 }}>Keywords</div>
-                           <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>Position</div>
-                           <div style={{ ...cell, width: 70, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>KD</div>
-                           <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5' }}>Vol.</div>
+                           <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}>Position</div>
+                           <div style={{ ...cell, width: 70, flexShrink: 0, justifyContent: 'flex-end' }}>KD</div>
+                           <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end' }}>Vol.</div>
                         </div>
                         {idea.keywords.map((kw, i) => (
                            <div key={kw.keyword} style={{ display: 'flex', borderTop: i === 0 ? 'none' : '1px solid #F4F4F5' }}>
@@ -142,9 +143,9 @@ const TopicResearchIdeaDrawer = ({ items, index, onNavigate, onClose, onCreate }
                                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#18181B' }}>{kw.keyword}</span>
                                  {kw.keyword === idea.main && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', color: '#52525C', background: '#F4F4F5', borderRadius: 4, padding: '2px 6px' }}>MAIN</span>}
                               </div>
-                              <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5', color: kw.position != null ? '#18181B' : '#9F9FA9' }}>{kw.position ?? '—'}</div>
-                              <div style={{ ...cell, width: 70, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5', color: '#52525C' }}>{kw.kd ?? '—'}</div>
-                              <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end', borderLeft: '1px solid #F4F4F5', fontWeight: 600, color: '#18181B' }}>{fmtVol(kw.volume)}</div>
+                              <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end', color: kw.position != null ? '#18181B' : '#9F9FA9' }}>{kw.position ?? '—'}</div>
+                              <div style={{ ...cell, width: 70, flexShrink: 0, justifyContent: 'flex-end', color: '#52525C' }}>{kw.kd ?? '—'}</div>
+                              <div style={{ ...cell, width: 90, flexShrink: 0, justifyContent: 'flex-end', fontWeight: 600, color: '#18181B' }}>{fmtVol(kw.volume)}</div>
                            </div>
                         ))}
                      </div>
@@ -152,7 +153,7 @@ const TopicResearchIdeaDrawer = ({ items, index, onNavigate, onClose, onCreate }
                )}
             </div>
          </div>
-      </>
+      </ShellPortal>
    );
 };
 

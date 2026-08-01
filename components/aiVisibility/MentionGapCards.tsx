@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -21,7 +21,7 @@ const Bubble = ({ card }: { card: Card }) => {
       <svg width={w} height={74} style={{ overflow: 'visible', flexShrink: 0 }} aria-hidden>
          <defs><clipPath id={clipId}><circle cx={cx1} cy={37} r={compR} /></clipPath></defs>
          <circle cx={cx1} cy={37} r={compR} fill="#F97316" fillOpacity={0.7} />
-         <circle cx={cx2} cy={37} r={yourR} fill="#F29964" fillOpacity={0.75} />
+         <circle cx={cx2} cy={37} r={yourR} fill="#F84416" fillOpacity={0.75} />
          {card.shared > 0 ? <circle cx={cx2} cy={37} r={yourR} fill="#FF6F77" clipPath={`url(#${clipId})`} /> : null}
       </svg>
    );
@@ -95,7 +95,7 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                   role={onCompare ? 'button' : undefined}
                   tabIndex={onCompare ? 0 : undefined}
                   onKeyDown={(e) => { if (!onCompare || e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCompare(card.domain); } }}
-                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#F29964' : '#dbded4'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(242,153,100,0.1)' : 'none', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
+                  style={{ position: 'relative', width: 300, flexShrink: 0, border: `1px solid ${activeDomain === card.domain ? '#F84416' : '#dbded4'}`, boxShadow: activeDomain === card.domain ? '0 0 0 3px rgba(242,153,100,0.1)' : 'none', borderRadius: 12, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, cursor: onCompare ? 'pointer' : 'default', transition: 'border-color 120ms ease, box-shadow 120ms ease' }}
                >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                      <div style={{ position: 'relative', minWidth: 0 }}>
@@ -110,7 +110,7 @@ const MentionGapCards = ({ cards, candidates, ownLabel, selected, onSelected, ac
                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 8px' }}>
                         <LegendRow n={card.gap} label="Gap" color="#F97316" />
                         <LegendRow n={card.shared} label="Shared" color="#FF6F77" />
-                        <LegendRow n={card.you} label={ownLabel} color="#F29964" />
+                        <LegendRow n={card.you} label={ownLabel} color="#F84416" />
                      </div>
                      <Bubble card={card} />
                   </div>

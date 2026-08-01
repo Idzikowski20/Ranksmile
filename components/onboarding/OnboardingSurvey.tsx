@@ -9,7 +9,7 @@ const stepVariants = {
 };
 
 const F = 'var(--font-family-primary)';
-const PURPLE = '#F29964';
+const PURPLE = '#F84416';
 
 type QType = 'radio' | 'checkbox';
 type Question = { id: string; type: QType; title: string; subtitle?: string; options: string[] };
@@ -48,8 +48,6 @@ const QUESTIONS: Question[] = [
       options: ['Events', 'LinkedIn', 'YouTube', 'Facebook', 'External Advisors', 'Content Optimization Masterclass', 'Software reviews (G2, Capterra)', 'Google Search', 'Word of mouth and peers', 'ChatGPT or other AI', 'Other'],
    },
 ];
-
-const TRUST_LOGOS = ['Lenovo', 'ClickUp', 'Square', 'Intuit', 'Opera', 'FedEx', 'Jasper', 'Thomson Reuters', 'Shopify', 'InPost', 'FreshBooks', 'Authority Hacker'];
 
 const RadioMark = ({ on }: { on: boolean }) => (
    <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${on ? PURPLE : '#D4D4D8'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color 150ms ease' }}>
@@ -104,17 +102,12 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
    };
 
    return (
-      <div className="ob-split" style={{ flex: 1, display: 'flex', gap: 8, width: '100%', minHeight: 0, fontFamily: F, marginBottom: 8 }}>
+      <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px clamp(20px, 4vw, 48px)', fontFamily: F }}>
          <style>{`
             .ob-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-            .ob-aside { display: none; }
             @media (min-width: 720px) { .ob-grid { grid-template-columns: 1fr 1fr; } }
-            @media (min-width: 1100px) { .ob-aside { display: flex; } }
          `}</style>
-
-         {/* Left — form */}
-         <section style={{ flex: 1, minWidth: 0, background: '#fff', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px clamp(20px, 4vw, 48px)' }}>
-            <div style={{ width: '100%', maxWidth: 860, display: 'flex', flexDirection: 'column', gap: 40 }}>
+         <div style={{ width: '100%', maxWidth: 860, display: 'flex', flexDirection: 'column', gap: 40 }}>
                {/* Header: back + progress */}
                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                   <div>
@@ -220,21 +213,8 @@ const OnboardingSurvey = ({ onFinish, submitting = false }: Props) => {
                   </div>
                </motion.div>
                </AnimatePresence>
-            </div>
-         </section>
-
-         {/* Right — trust panel */}
-         <aside className="ob-aside" aria-hidden="true" style={{ width: '40%', flexShrink: 0, background: '#6B4EFF', borderRadius: 16, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 36, padding: 48 }}>
-            <p style={{ margin: 0, maxWidth: 28 + 'ch', textAlign: 'center', color: '#fff', fontSize: 20, fontWeight: 500, lineHeight: 1.35, textWrap: 'balance' as React.CSSProperties['textWrap'] }}>
-               Trusted by 150,000+ Content Creators, SEOs and Agencies.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '18px 22px', maxWidth: 440 }}>
-               {TRUST_LOGOS.map((name) => (
-                  <span key={name} style={{ color: '#fff', opacity: 0.92, fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{name}</span>
-               ))}
-            </div>
-         </aside>
-      </div>
+         </div>
+      </section>
    );
 };
 

@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import Link from 'next/link';
-import {Stack} from '../core/layout';
-import {Text, Heading} from '../core/text';
-import {Button} from '../core';
+import {Stack} from '../koala/core/layout';
+import {Text, Heading} from '../koala/core/text';
+import {Button} from '../koala/core';
 import Skeleton from './Skeleton';
 
 const timeGreeting = (hour: number | null): string => {

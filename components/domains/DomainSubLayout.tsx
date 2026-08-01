@@ -1,8 +1,8 @@
 /**
- * Shared layout for domain sub-pages — Sentry Issues/Traces page chrome.
+ * Shared layout for domain sub-pages — Koala Dashboard page chrome.
  */
 import React from 'react';
-import { SentryPage, SentryPageHeader } from '../sentry-pages';
+import { KoalaPage, KoalaPageHeader } from '../koala/layout';
 
 type DomainSubLayoutProps = {
   domain: string;
@@ -29,9 +29,9 @@ const DomainSubLayout = ({
   filters,
   fillHeight,
 }: DomainSubLayoutProps) => (
-  <SentryPage maxWidth={contentMaxWidth} fillHeight={fillHeight}>
+  <KoalaPage maxWidth={contentMaxWidth} fillHeight={fillHeight}>
     {heading && (
-      <SentryPageHeader
+      <KoalaPageHeader
         title={heading}
         subtitle={subtitle}
         actions={actions}
@@ -40,13 +40,13 @@ const DomainSubLayout = ({
       />
     )}
     {!heading && actions && (
-      <div className="sentry-page-filters-trailing" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+      <div className="koala-page-filters-trailing" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         {actions}
       </div>
     )}
     {filters}
-    <div className="sentry-page-content">{children}</div>
-  </SentryPage>
+    <div className="koala-page-content">{children}</div>
+  </KoalaPage>
 );
 
 export default DomainSubLayout;

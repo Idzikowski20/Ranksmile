@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import { getPlanCheckoutHref } from '../../lib/billingPlans';
 
 export function WarningIcon() {
@@ -38,7 +38,7 @@ export function CrawlLimitBody({
   variant,
   onClose,
 }: CrawlLimitBodyProps) {
-  const prefix = variant === 'popover' ? 'sentry-crawl-limit-popover' : 'sentry-crawl-limit-banner';
+  const prefix = variant === 'popover' ? 'koala-crawl-limit-popover' : 'koala-crawl-limit-banner';
   const upgradeHref = upgradePlanSlug ? getPlanCheckoutHref(upgradePlanSlug, 'monthly') : '/settings/billing';
   const upgradeLimitLabel = upgradePagesLimit
     ? `${upgradePagesLimit.toLocaleString('en-US')} pages per audit`

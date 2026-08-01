@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
-import { Modal, ModalBody, ModalFooter, FormField, Input, Button, CompactSelect } from '../core';
-import type { SelectOption } from '../core';
+import { Modal, ModalBody, ModalFooter, FormField, Input, Button, CompactSelect } from '../koala/core';
+import type { SelectOption } from '../koala/core';
 import CountryFlag from '../audit/CountryFlag';
 
 const CreateTopicResearchModal = ({

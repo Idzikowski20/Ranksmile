@@ -1,49 +1,50 @@
-import React from 'react';
-import type { ChartOptions } from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import '../../lib/chartSetup';
+import React, { useMemo } from 'react';
+import { Chart } from '../koala/charts';
+import type { ChartPreparedData } from '../koala/charts';
 
-type Point = { finishedAt: string | null; series: { you: { visibilityScore: number } | null; competitor?: { visibilityScore: number } | null } };
-
-const OPTIONS: ChartOptions<'line'> = {
-   responsive: true,
-   maintainAspectRatio: false,
-   // index + intersect:false → hovering anywhere at an x shows the tooltip, not only
-   // when the cursor is exactly on a point.
-   interaction: { mode: 'index', intersect: false },
-   scales: {
-      y: { min: 0, max: 100, ticks: { color: '#9F9FA9' }, grid: { color: '#F4F4F5' } },
-      x: { ticks: { color: '#9F9FA9' }, grid: { display: false } },
-   },
-   plugins: {
-      legend: { display: false },
-      tooltip: {
-         mode: 'index',
-         intersect: false,
-         usePointStyle: true,
-         boxPadding: 4,
-         backgroundColor: '#18181B',
-         cornerRadius: 8,
-         padding: 12,
-         titleColor: '#fff',
-         bodyColor: '#fff',
-         titleFont: { weight: 'bold' },
-      },
-   },
-   elements: { point: { radius: 3, hoverRadius: 5 } },
+type Point = {
+  finishedAt: string | null;
+  series: { you: { visibilityScore: number } | null; competitor?: { visibilityScore: number } | null };
 };
 
 const TrendLineChart = ({ scans, competitorDomain }: { scans: Point[]; competitorDomain: string | null }) => {
-   const labels = scans.map((s) => (s.finishedAt ? new Date(s.finishedAt).toLocaleDateString() : ''));
-   const datasets = [
-      { label: 'You', data: scans.map((s) => s.series.you?.visibilityScore ?? 0), borderColor: '#F29964', backgroundColor: '#F29964', pointBackgroundColor: '#F29964', tension: 0.3 },
-   ];
-   if (competitorDomain) datasets.push({ label: competitorDomain, data: scans.map((s) => s.series.competitor?.visibilityScore ?? 0), borderColor: '#9F9FA9', backgroundColor: '#9F9FA9', pointBackgroundColor: '#9F9FA9', tension: 0.3 });
-   return (
-      <div style={{ height: 300 }}>
-         <Line data={{ labels, datasets }} options={OPTIONS} />
-      </div>
-   );
+  const data: ChartPreparedData = useMemo(() => {
+    const labels = scans.map((s) => (s.finishedAt ? new Date(s.finishedAt).toLocaleDateString() : ''));
+    return {
+      labels,
+      series: [
+        {
+          label: 'You',
+          kind: 'traffic' as const,
+          values: scans.map((s) => s.series.you?.visibilityScore ?? 0),
+        },
+        ...(competitorDomain
+          ? [{
+              label: competitorDomain,
+              kind: 'comparison' as const,
+              values: scans.map((s) => s.series.competitor?.visibilityScore ?? 0),
+            }]
+          : []),
+      ],
+    };
+  }, [scans, competitorDomain]);
+
+  return (
+    <div style={{ height: 300 }}>
+      <Chart
+        preset="Comparison"
+        data={data}
+        state={scans.length ? 'ready' : 'empty'}
+        overrides={{ height: 300 }}
+        aria-label="Visibility trend"
+        legendItems={data.series?.map((s) => ({
+          key: s.label,
+          label: s.label,
+          color: s.kind === 'traffic' ? 'var(--koala-bg-brand)' : 'var(--koala-text-secondary)',
+        }))}
+      />
+    </div>
+  );
 };
 
 export default TrendLineChart;

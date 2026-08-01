@@ -41,6 +41,13 @@ describe('siteNavigation registry', () => {
     expect(kt?.label).toBe('Keyword tracking');
   });
 
+  it('points Automations at canonical path', () => {
+    const auto = SEO_NAV.find((i) => i.id === 'automations');
+    expect(auto?.path).toBe('automations');
+    expect(auto?.match).toBe('/automations');
+    expect(auto?.label).toBe('Automations');
+  });
+
   it('resolves the same hrefs for desktop/mobile consumers', () => {
     const hrefFn = (p: string) => `/workspace/1${p}`;
     const seo = resolveSiteNav(SEO_NAV, 'example-com', hrefFn);

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import DomainFavicon from '../common/DomainFavicon';
 
 const FONT = 'var(--font-family-primary)';
@@ -30,9 +30,9 @@ const BrandStack = ({ brands }: { brands: string[] }) => {
    );
 };
 
-const headCell: React.CSSProperties = { padding: '10px 16px', fontSize: 13, fontWeight: 500, color: '#71717B', fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
-const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, borderLeft: '1px solid #F4F4F5', display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box', color: '#18181B' };
-const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid #F4F4F5', background: '#fff', transition: 'background 100ms ease' };
+const headCell: React.CSSProperties = { padding: '8px 16px', fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary, #575757)', fontFamily: FONT, display: 'flex', alignItems: 'center', boxSizing: 'border-box' };
+const bodyCell: React.CSSProperties = { padding: '12px 16px', fontSize: 14, fontFamily: FONT, display: 'flex', alignItems: 'center', minHeight: 48, boxSizing: 'border-box', color: 'var(--koala-text-primary, #1a1a1a)' };
+const rowStyle: React.CSSProperties = { display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)', background: 'var(--koala-bg-primary, #fff)', transition: 'background 100ms ease' };
 
 const SortHead = ({ label, active, dir, onClick, bold }: { label: string; active: boolean; dir: 'asc' | 'desc'; onClick: () => void; bold?: boolean }) => (
    <Button type="button" variant="transparent" size="sm" onClick={onClick} style={{ gap: 4, fontWeight: bold || active ? 600 : 500, color: active ? '#18181B' : '#52525C' }}>
@@ -62,7 +62,7 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    const toggle = (t: string) => setOpen((prev) => { const n = new Set(prev); if (n.has(t)) n.delete(t); else n.add(t); return n; });
 
    if (!topics.length) {
-      return <div style={{ border: '1px solid #dbded4', borderRadius: 12, padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No prompts yet.</div>;
+      return <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 14, color: '#9F9FA9', fontFamily: FONT }}>No prompts yet.</div>;
    }
 
    const metricCells = (o: { avgPosition: number | null; mentionRate: number; visibility: number }, boldVis = false) => (
@@ -74,9 +74,9 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
    );
 
    return (
-      <div style={{ border: '1px solid #dbded4', borderRadius: 12, background: '#fff' }}>
-         <div style={{ display: 'flex', borderBottom: '1px solid #F4F4F5' }}>
-            <div style={{ ...headCell, borderLeft: 'none', flex: 1, minWidth: 0 }}>Topic</div>
+      <div style={{ background: 'var(--koala-bg-primary, #fff)' }}>
+         <div style={{ display: 'flex', borderBottom: '1px solid var(--koala-border-primary, #e5e5e5)' }}>
+            <div style={{ ...headCell, flex: 1, minWidth: 0 }}>Topic</div>
             <div style={{ ...headCell, width: 110, flexShrink: 0 }}>Brands</div>
             <div style={{ ...headCell, width: 120, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Avg. pos." active={sort === 'avgPosition'} dir={dir} onClick={() => toggleSort('avgPosition', 'asc')} /></div>
             <div style={{ ...headCell, width: 140, flexShrink: 0, justifyContent: 'flex-end' }}><SortHead label="Mention rate" active={sort === 'mentionRate'} dir={dir} onClick={() => toggleSort('mentionRate', 'desc')} /></div>
@@ -85,8 +85,8 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
 
          {sorted.map((t) => (
             <React.Fragment key={t.topic}>
-               <div style={{ ...rowStyle, cursor: 'pointer' }} onClick={() => toggle(t.topic)} onMouseEnter={(e) => { e.currentTarget.style.background = '#FBFAFF'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') toggle(t.topic); }}>
-                  <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, gap: 8 }}>
+               <div style={{ ...rowStyle, cursor: 'pointer' }} onClick={() => toggle(t.topic)} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary, #f5f5f5)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-primary, #fff)'; }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') toggle(t.topic); }}>
+                  <div style={{ ...bodyCell, flex: 1, minWidth: 0, gap: 8 }}>
                      <Chevron open={open.has(t.topic)} />
                      <span style={{ fontWeight: 600, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.topic}</span>
                      <span style={{ color: '#9F9FA9', flexShrink: 0 }}>{t.promptCount} prompts</span>
@@ -95,8 +95,8 @@ const PromptTopicsTable = ({ topics }: { topics: TopicRow[] }) => {
                   {metricCells(t, true)}
                </div>
                {open.has(t.topic) && t.prompts.map((p) => (
-                  <div key={p.id} style={{ ...rowStyle, background: '#FCFCFD' }}>
-                     <div style={{ ...bodyCell, borderLeft: 'none', flex: 1, minWidth: 0, paddingLeft: 48, color: '#3F3F47' }}>
+                  <div key={p.id} style={{ ...rowStyle, background: 'var(--koala-bg-secondary, #f5f5f5)' }}>
+                     <div style={{ ...bodyCell, flex: 1, minWidth: 0, paddingLeft: 48, color: '#3F3F47' }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.text}</span>
                      </div>
                      <div style={{ ...bodyCell, width: 110, flexShrink: 0 }}><BrandStack brands={p.brands} /></div>

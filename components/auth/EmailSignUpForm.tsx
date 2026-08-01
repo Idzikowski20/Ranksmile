@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import posthog from 'posthog-js';
 import { signInSocial, signUpEmail } from '../../lib/auth/fetchAuth';
-import { Button } from '../core';
+import Button from '../koala/primitives/Button';
 import { IconGoogleColor } from './IconGoogleColor';
 import AuthField from './AuthField';
 import AuthBrandMark from './AuthBrandMark';
@@ -19,6 +19,7 @@ import {
   authTitleStyle,
 } from './authStyles';
 
+/** Koala Register Minimal — Ranksmile naming + password strength (kept). */
 export default function EmailSignUpForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,7 +52,6 @@ export default function EmailSignUpForm() {
     }
 
     posthog.capture('user_signed_up', { method: 'email' });
-
     window.location.href = '/';
   };
 
@@ -84,77 +84,92 @@ export default function EmailSignUpForm() {
   const busy = loading || googleLoading;
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', width: '100%' }}
+    >
       <AuthBrandMark />
-      <h1 style={authTitleStyle}>Create your Ranksmile account</h1>
-      <p style={authSubtitleStyle}>Start shipping SEO content faster.</p>
+      <div style={{ textAlign: 'center', width: '100%', maxWidth: 384 }}>
+        <h1 style={authTitleStyle}>Create an account</h1>
+        <p style={authSubtitleStyle}>Start shipping SEO content with Ranksmile.</p>
+      </div>
 
-      {error ? <div style={authErrorStyle} role="alert">{error}</div> : null}
+      {error ? <div style={{ ...authErrorStyle, width: '100%' }} role="alert">{error}</div> : null}
 
-      <AuthField
-        id="sign-up-name"
-        label="Name"
-        type="text"
-        value={name}
-        onChange={setName}
-        autoComplete="name"
-        disabled={busy}
-        placeholder="Your name"
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          busy={googleLoading}
+          disabled={busy}
+          onClick={() => { void handleGoogle(); }}
+          icon={<IconGoogleColor size={20} />}
+          style={{ width: '100%', borderRadius: 14, boxShadow: '0px 1px 1px rgba(0,0,0,0.04)' }}
+        >
+          {googleLoading ? 'Redirecting…' : 'Sign in with Google'}
+        </Button>
 
-      <AuthField
-        id="sign-up-email"
-        label="Email"
-        type="email"
-        value={email}
-        onChange={setEmail}
-        autoComplete="email"
-        disabled={busy}
-        placeholder="you@work.com"
-      />
+        <div style={authDividerWrapStyle} aria-hidden="true">
+          <span style={authDividerLineStyle} />
+          <span style={authDividerTextStyle}>Or continue with email</span>
+          <span style={authDividerLineStyle} />
+        </div>
 
-      <PasswordStrengthIndicator
-        id="sign-up-password"
-        label="Password"
-        value={password}
-        onChange={setPassword}
-        autoComplete="new-password"
-        disabled={busy}
-        placeholder="Create a password"
-      />
+        <AuthField
+          id="sign-up-name"
+          label="Full Name"
+          type="text"
+          value={name}
+          onChange={setName}
+          autoComplete="name"
+          disabled={busy}
+          placeholder="Enter your full name"
+          required
+        />
 
-      <div style={authFullWidthBtnStyle}>
-        <Button type="submit" variant="primary" size="md" busy={loading} disabled={busy} style={{ width: '100%' }}>
+        <AuthField
+          id="sign-up-email"
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          autoComplete="email"
+          disabled={busy}
+          placeholder="Enter your email"
+          required
+        />
+
+        <PasswordStrengthIndicator
+          id="sign-up-password"
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          disabled={busy}
+          placeholder="Create a password"
+        />
+      </div>
+
+      <div style={{ ...authFullWidthBtnStyle, display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          busy={loading}
+          disabled={busy}
+          style={{ width: '100%', borderRadius: 14 }}
+        >
           {loading ? 'Creating account…' : 'Create account'}
         </Button>
+        <p style={authFooterStyle}>
+          Have an account already?
+          {' '}
+          <Link href="/auth/sign-in" style={{ ...authLinkStyle, textDecoration: 'underline' }}>
+            Login now
+          </Link>
+        </p>
       </div>
-
-      <div style={authDividerWrapStyle} aria-hidden="true">
-        <span style={authDividerLineStyle} />
-        <span style={authDividerTextStyle}>Or continue with</span>
-        <span style={authDividerLineStyle} />
-      </div>
-
-      <Button
-        type="button"
-        variant="secondary"
-        size="md"
-        busy={googleLoading}
-        disabled={busy}
-        onClick={() => { void handleGoogle(); }}
-        icon={<IconGoogleColor size={18} />}
-        style={{ width: '100%' }}
-      >
-        {googleLoading ? 'Redirecting…' : 'Continue with Google'}
-      </Button>
-
-      <p style={authFooterStyle}>
-        Already have an account?
-        {' '}
-        <Link href="/auth/sign-in" style={{ ...authLinkStyle, color: '#181225', fontWeight: 600 }}>
-          Sign in
-        </Link>
-      </p>
     </form>
   );
 }

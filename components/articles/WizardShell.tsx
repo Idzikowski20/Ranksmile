@@ -2,13 +2,12 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import DashboardLayout from '../common/DashboardLayout';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import { useFetchDomains } from '../../services/domains';
 
 /**
- * Shared layout for the New-Content wizard steps (content type → context →
- * writing mode → generating). White card, centred 576px column, optional sticky
- * footer action bar.
+ * Shared layout for New-Content / Import wizard steps.
+ * Flat koala surface — no inset card (padding/radius frame).
  */
 const WizardShell = ({ title, children, footer }: {
   title: string;
@@ -22,29 +21,25 @@ const WizardShell = ({ title, children, footer }: {
   return (
     <DashboardLayout domains={domains} showAddModal={() => {}} showSettings={() => {}}>
       <Head><title>{`${title} — Ranksmile`}</title></Head>
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#f8f9ff' }}>
-        <div style={{ padding: 4, display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <div style={{ border: '1px solid #E4E4E7', background: '#fff', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '48px 24px', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'auto', width: '100%' }} className="styled-scrollbar">
-              <div style={{ width: '100%', maxWidth: 576, display: 'flex', flexDirection: 'column', gap: 32 }}>
-                {children}
-              </div>
-            </div>
-            {footer && (
-              <div style={{ padding: 12, display: 'flex', justifyContent: 'center', width: '100%', borderTop: '1px solid #E4E4E7' }}>
-                <div style={{ width: '100%', maxWidth: 576, display: 'flex', gap: 12 }}>
-                  {footer}
-                </div>
-              </div>
-            )}
+      <div className="koala-wizard-shell">
+        <div className="koala-wizard-shell__body styled-scrollbar">
+          <div className="koala-wizard-shell__column">
+            {children}
           </div>
         </div>
+        {footer ? (
+          <div className="koala-wizard-shell__footer">
+            <div className="koala-wizard-shell__footer-inner">
+              {footer}
+            </div>
+          </div>
+        ) : null}
       </div>
     </DashboardLayout>
   );
 };
 
-/** Sentry chonk primary CTA for wizard steps. */
+/** Flat Koala primary CTA for wizard steps. */
 export const WizardNextButton = ({ label, sublabel, onClick, disabled }: {
   label: string; sublabel?: string; onClick: () => void; disabled?: boolean;
 }) => (

@@ -1,40 +1,46 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { CompactSelect, type SelectOption } from '../../koala/core';
+import { Flag } from '../../koala/icons/Flag';
+import { Icon } from '../../koala/icons/Icon';
+import { AUDIT_COUNTRIES } from '../../../lib/countryLang';
 import { formatCompact } from './OrganicKpiRow';
 
 const FONT = 'var(--font-family-primary)';
 
-function FlagIcon({ code }: { code: string }) {
-  const cc = code.toLowerCase().slice(0, 2);
-  return (
-    <img
-      src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${cc}.svg`}
-      alt=""
-      width={16}
-      height={12}
-      style={{ display: 'block', boxShadow: 'rgba(0, 0, 0, 0.35) 0 0 1px 0' }}
-    />
-  );
-}
+export type OrganicDevice = 'desktop' | 'mobile';
+export type OrganicCurrency = 'USD' | 'EUR' | 'PLN' | 'GBP';
 
-function IconDesktop() {
-  return (
-    <svg width={16} height={16} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M1 2.5A1.5 1.5 0 0 1 2.5 1h11A1.5 1.5 0 0 1 15 2.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 9.5v-7ZM3 3v6h10V3H3Z"
-      />
-      <path d="M4 14a1 1 0 0 1 1-1h2v-1h2v1h2a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Z" />
-    </svg>
-  );
-}
+const DEVICE_OPTIONS: SelectOption<OrganicDevice>[] = [
+  {
+    value: 'desktop',
+    label: 'Desktop',
+    textValue: 'Desktop',
+    leadingItems: <Icon name="Monitor" size={16} weight="bold" />,
+  },
+  {
+    value: 'mobile',
+    label: 'Mobile',
+    textValue: 'Mobile',
+    leadingItems: <Icon name="DeviceMobile" size={16} weight="bold" />,
+  },
+];
+
+const CURRENCY_OPTIONS: SelectOption<OrganicCurrency>[] = [
+  { value: 'USD', label: 'USD', textValue: 'USD' },
+  { value: 'EUR', label: 'EUR', textValue: 'EUR' },
+  { value: 'PLN', label: 'PLN', textValue: 'PLN' },
+  { value: 'GBP', label: 'GBP', textValue: 'GBP' },
+];
 
 type OrganicPageHeaderInfoProps = {
   countryCode: string;
+  onCountryChange: (code: string) => void;
+  device: OrganicDevice;
+  onDeviceChange: (device: OrganicDevice) => void;
+  currency: OrganicCurrency;
+  onCurrencyChange: (currency: OrganicCurrency) => void;
   keywordCount?: number;
   fetchedAt?: string | null;
-  device?: 'desktop' | 'mobile';
-  currency?: string;
 };
 
 const infoItemStyle: React.CSSProperties = {
@@ -46,20 +52,10 @@ const infoItemStyle: React.CSSProperties = {
 
 const infoLabelStyle: React.CSSProperties = {
   fontSize: 13,
-  color: '#6A6772',
+  color: 'var(--koala-text-secondary)',
   fontFamily: FONT,
   lineHeight: 1,
   marginTop: -1,
-};
-
-const metaValueStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  fontSize: 13,
-  color: '#302E36',
-  fontFamily: FONT,
-  lineHeight: 1.2,
 };
 
 function InfoItem({ label, children }: { label: string; children: React.ReactNode }) {
@@ -77,7 +73,7 @@ export function OrganicPageTitle({ domain }: { domain: string }) {
       <span style={{ fontWeight: 400 }}>Keyword list:</span>
       <span
         style={{
-          color: '#6A6772',
+          color: 'var(--koala-text-secondary)',
           fontWeight: 400,
           fontSize: 'inherit',
           overflow: 'hidden',
@@ -94,14 +90,34 @@ export function OrganicPageTitle({ domain }: { domain: string }) {
 
 export function OrganicPageHeaderInfo({
   countryCode,
+  onCountryChange,
+  device,
+  onDeviceChange,
+  currency,
+  onCurrencyChange,
   keywordCount = 0,
   fetchedAt,
-  device = 'desktop',
-  currency = 'USD',
 }: OrganicPageHeaderInfoProps) {
   const dateLabel = fetchedAt
     ? new Date(fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
+
+  const country = countryCode.toUpperCase().slice(0, 2);
+  const selectedCountry = AUDIT_COUNTRIES.find((c) => c.code === country) || AUDIT_COUNTRIES.find((c) => c.code === 'US') || AUDIT_COUNTRIES[0];
+
+  const countryOptions: SelectOption[] = useMemo(
+    () => AUDIT_COUNTRIES.map((c) => ({
+      value: c.code,
+      label: c.name,
+      textValue: `${c.name} ${c.code} ${c.lang}`,
+      leadingItems: <Flag code={c.code} size={18} />,
+      details: c.lang.toUpperCase(),
+    })),
+    [],
+  );
+
+  const deviceOpt = DEVICE_OPTIONS.find((o) => o.value === device) || DEVICE_OPTIONS[0];
+  const currencyOpt = CURRENCY_OPTIONS.find((o) => o.value === currency) || CURRENCY_OPTIONS[0];
 
   return (
     <div
@@ -113,43 +129,69 @@ export function OrganicPageHeaderInfo({
         marginTop: 8,
       }}
     >
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '5px 10px 5px 8px',
-          borderRadius: 6,
-          border: '1px solid #dbded4',
-          background: '#F0F0F2',
-          fontFamily: FONT,
-          fontSize: 13,
-          fontWeight: 600,
-          color: '#302E36',
-        }}
-      >
-        <FlagIcon code={countryCode} />
-        <span>{countryCode.toUpperCase()}</span>
-        {keywordCount > 0 && (
-          <span style={{ color: '#6A6772', fontSize: 12, marginLeft: 2 }}>
-            {formatCompact(keywordCount)}
+      <CompactSelect
+        size="sm"
+        value={selectedCountry.code}
+        options={countryOptions}
+        onChange={(opt) => onCountryChange(String(opt.value))}
+        search={{ placeholder: 'Search market…' }}
+        menuMinWidth={220}
+        triggerLabel={(
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Flag code={selectedCountry.code} size={16} />
+            <span style={{ fontWeight: 600 }}>{selectedCountry.code}</span>
+            {keywordCount > 0 ? (
+              <span style={{ color: 'var(--koala-text-secondary)', fontSize: 12, fontWeight: 500 }}>
+                {formatCompact(keywordCount)}
+              </span>
+            ) : null}
           </span>
         )}
-      </span>
+      />
 
       <InfoItem label="Device:">
-        <span style={metaValueStyle}>
-          <IconDesktop />
-          {device === 'desktop' ? 'Desktop' : 'Mobile'}
-        </span>
+        <CompactSelect
+          size="sm"
+          value={device}
+          options={DEVICE_OPTIONS}
+          onChange={(opt) => onDeviceChange(opt.value === 'mobile' ? 'mobile' : 'desktop')}
+          menuMinWidth={160}
+          triggerLabel={(
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {deviceOpt.leadingItems}
+              {deviceOpt.label}
+            </span>
+          )}
+        />
       </InfoItem>
 
       <InfoItem label="Date:">
-        <span style={metaValueStyle}>{dateLabel}</span>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            fontSize: 13,
+            color: 'var(--koala-text-primary)',
+            fontFamily: FONT,
+            lineHeight: 1.2,
+          }}
+        >
+          {dateLabel}
+        </span>
       </InfoItem>
 
       <InfoItem label="Currency:">
-        <span style={metaValueStyle}>{currency}</span>
+        <CompactSelect
+          size="sm"
+          value={currency}
+          options={CURRENCY_OPTIONS}
+          onChange={(opt) => {
+            const v = String(opt.value);
+            if (v === 'USD' || v === 'EUR' || v === 'PLN' || v === 'GBP') onCurrencyChange(v);
+          }}
+          menuMinWidth={120}
+          triggerLabel={currencyOpt.label}
+        />
       </InfoItem>
     </div>
   );

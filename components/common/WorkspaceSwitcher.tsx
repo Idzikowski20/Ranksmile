@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import { faviconUrl } from '../../lib/faviconUrl';
 import { useWorkspaces, useSetActiveWorkspace, useCreateSetupWorkspace } from '../../services/workspaces';
 
@@ -22,7 +22,7 @@ const HeartAvatar = ({ size = 24 }: { size?: number }) => (
       width: size,
       height: size,
       borderRadius: 6,
-      background: '#F29964',
+      background: '#F84416',
       flexShrink: 0,
     }}
   >

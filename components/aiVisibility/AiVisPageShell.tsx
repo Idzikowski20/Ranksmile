@@ -7,7 +7,7 @@ import AiVisibilityToolbar from './AiVisibilityToolbar';
 import AiVisExportMenu from './AiVisExportMenu';
 import CrunchingBar from './CrunchingBar';
 import { SkeletonBars } from './SkeletonBlocks';
-import { Button, ToolRibbon } from '../core';
+import { Button, ToolRibbon } from '../koala/core';
 import type { PromptOption } from './types';
 import { useAiVisibilityGuard } from '../../lib/useAiVisibilityGuard';
 import { useAiVisScanStatus } from '../../services/aiVisibility';
@@ -15,8 +15,8 @@ import { useFetchDomains } from '../../services/domains';
 import { slugToDomain } from '../../utils/slugToDomain';
 
 /**
- * Shared chrome for AI Visibility sub-pages — Sentry Issues/Discover pattern:
- * SentryPageHeader (title + actions) → ToolRibbon (PageFilterBar + trailing) → content.
+ * Shared chrome for AI Visibility sub-pages — Koala Issues/Discover pattern:
+ * KoalaPageHeader (title + actions) → ToolRibbon (PageFilterBar + trailing) → content.
  */
 const AiVisPageShell = ({
   section,

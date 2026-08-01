@@ -113,6 +113,14 @@ export function resetPassword(params: {
   return authPost('reset-password', params);
 }
 
+export function changePassword(params: {
+  currentPassword: string;
+  newPassword: string;
+  revokeOtherSessions?: boolean;
+}): Promise<AuthFetchResult<unknown>> {
+  return authPost('change-password', params);
+}
+
 export function verifyTwoFactor(params: {
   code: string;
 }): Promise<AuthFetchResult<unknown>> {

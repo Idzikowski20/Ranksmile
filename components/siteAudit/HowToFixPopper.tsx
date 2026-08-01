@@ -142,7 +142,7 @@ export default function HowToFixPopper({ issue, anchorRect, onClose }: Props) {
               padding: '8px 14px',
               borderRadius: 8,
               border: 'none',
-              background: '#783AFB',
+              background: 'var(--koala-bg-brand)',
               color: '#FFFFFF',
               fontFamily: FONT,
               fontSize: 13,

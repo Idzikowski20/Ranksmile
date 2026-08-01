@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ORG_COLORS = ['#FFD00E', '#F29964', '#6C5FC7', '#57BE8C', '#FF6B6B'] as const;
+const ORG_COLORS = ['#FFD00E', '#F84416', '#6C5FC7', '#57BE8C', '#FF6B6B'] as const;
 
 export function orgAvatarColor(name: string): string {
   let h = 0;
@@ -11,7 +11,7 @@ export function orgAvatarColor(name: string): string {
 }
 
 function textOnBg(hex: string): string {
-  const light = new Set(['#FFD00E', '#F29964']);
+  const light = new Set(['#FFD00E', '#F84416']);
   return light.has(hex) ? '#000000' : '#FFFFFF';
 }
 
@@ -29,7 +29,7 @@ const LetterAvatar = ({ letter, color, size = 32, title }: LetterAvatarProps) =>
 
   return (
     <span
-      className="sentry-letter-avatar"
+      className="koala-letter-avatar"
       style={{ width: size, height: size }}
       title={title}
       aria-hidden={title ? undefined : 'true'}

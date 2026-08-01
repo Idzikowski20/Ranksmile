@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import IconRanksmile from './IconRanksmile';
+import AITextLoading from './AITextLoading';
 
 export type AILoadingLine = {
   text: string;
@@ -31,6 +32,8 @@ export default function AILoadingState({
   const codeContainerRef = useRef<HTMLDivElement>(null);
   const showLog = lines.length > 0;
   const doneCount = lines.filter((l) => l.done).length;
+  const statusLabel = status.endsWith('...') ? status : `${status}...`;
+  const statusTexts = [statusLabel, 'Processing...', 'Thinking...', 'Almost...'];
 
   useEffect(() => {
     const el = codeContainerRef.current;
@@ -60,7 +63,10 @@ export default function AILoadingState({
         }}
       >
         <IconRanksmile size={20} />
-        <span style={{ fontSize: 13 }}>{status}{status.endsWith('...') ? '' : '...'}</span>
+        <AITextLoading
+          texts={statusTexts}
+          style={{ fontSize: 13, fontWeight: 500 }}
+        />
       </div>
 
       {showLog && (

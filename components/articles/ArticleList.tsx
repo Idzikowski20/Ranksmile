@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { Gauge } from '../core';
+import { Badge, Gauge } from '../koala/core';
 import GeneratingStage from './GeneratingStage';
 
 interface Article {
@@ -42,7 +42,6 @@ interface Props {
     recommendations: string;
     keyword: string;
     contentAudit: string;
-    topicalMap: string;
   };
 }
 
@@ -68,6 +67,16 @@ const timeAgo = (dateStr: string): { relative: string; full: string } => {
   return { relative, full };
 };
 
+const articleStatusBadge = (status: string) => {
+  if (status === 'published') {
+    return <Badge appearance="success" size="sm">Published</Badge>;
+  }
+  if (status === 'accepted') {
+    return <Badge appearance="warning" size="sm">Accepted</Badge>;
+  }
+  return null;
+};
+
 const EmptyCardArrow = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
     <path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -83,29 +92,21 @@ const RecommendationsIcon = () => (
 
 const KeywordIcon = () => (
   <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <rect x="7" y="9" width="28" height="24" rx="5" fill="#F4F4F5" stroke="#D4D4D8" strokeWidth="1.5" />
-    <path d="M14 17h14M14 22h10M14 27h14" stroke="#3F3F47" strokeWidth="2" strokeLinecap="round" />
+    <rect x="7" y="9" width="28" height="24" rx="5" fill="var(--koala-bg-secondary)" stroke="var(--koala-border-secondary)" strokeWidth="1.5" />
+    <path d="M14 17h14M14 22h10M14 27h14" stroke="var(--koala-text-primary)" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
 const ContentAuditIcon = () => (
   <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <rect x="9" y="7" width="19" height="26" rx="4" fill="#F0FDF4" stroke="#1AB25E" strokeWidth="1.5" />
-    <path d="M14 15h9M14 20h7M14 25h5" stroke="#137832" strokeWidth="2" strokeLinecap="round" />
-    <circle cx="29" cy="28" r="5" fill="#FFFFFF" stroke="#137832" strokeWidth="2" />
-    <path d="m32.8 31.8 3.2 3.2" stroke="#137832" strokeWidth="2" strokeLinecap="round" />
+    <rect x="9" y="7" width="19" height="26" rx="4" fill="var(--koala-status-success-bg)" stroke="var(--koala-status-success)" strokeWidth="1.5" />
+    <path d="M14 15h9M14 20h7M14 25h5" stroke="var(--koala-status-success)" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="29" cy="28" r="5" fill="var(--koala-bg-primary)" stroke="var(--koala-status-success)" strokeWidth="2" />
+    <path d="m32.8 31.8 3.2 3.2" stroke="var(--koala-status-success)" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
-const TopicalMapIcon = () => (
-  <svg width="42" height="42" viewBox="0 0 42 42" fill="none" aria-hidden="true">
-    <path d="M21 5.5 34.4 13v15L21 35.5 7.6 28V13L21 5.5Z" fill="#FDE8D8" stroke="#F29964" strokeWidth="1.5" />
-    <path d="M21 20.5 34 13M21 20.5 8 13M21 20.5v14" stroke="#F29964" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="21" cy="20.5" r="3.5" fill="#F29964" />
-  </svg>
-);
-
-type EmptyStartOptionKey = 'recommendations' | 'keyword' | 'contentAudit' | 'topicalMap';
+type EmptyStartOptionKey = 'recommendations' | 'keyword' | 'contentAudit';
 
 const EMPTY_START_OPTIONS: Array<{
   key: EmptyStartOptionKey;
@@ -134,13 +135,6 @@ const EMPTY_START_OPTIONS: Array<{
     description: 'Optimize your existing content',
     href: '/articles/import',
     icon: <ContentAuditIcon />,
-  },
-  {
-    key: 'topicalMap',
-    title: 'Topical Map',
-    description: 'Create content based on your existing topics',
-    href: '/dashboard',
-    icon: <TopicalMapIcon />,
   },
 ];
 
@@ -224,7 +218,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               height: 133,
               display: 'flex',
               alignItems: 'center',
-              border: '1px solid #E4E4E7',
+              border: '1px solid var(--koala-border-primary)',
               borderRadius: 12,
               gap: 12,
               animation: 'skeletonPulse 1.5s ease-in-out infinite',
@@ -233,17 +227,17 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
           >
             {/* Left: score gauge placeholder */}
             <div style={{ width: 84, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingLeft: 24 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F0F0F4' }} />
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--koala-bg-secondary)' }} />
             </div>
             {/* Title + meta */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ width: '45%', height: 16, borderRadius: 6, background: '#F0F0F4' }} />
-              <div style={{ width: '28%', height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+              <div style={{ width: '45%', height: 16, borderRadius: 6, background: 'var(--koala-bg-secondary)' }} />
+              <div style={{ width: '28%', height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
             </div>
             {/* Right: status/date placeholders */}
             <div style={{ paddingRight: 24, display: 'flex', gap: 16, flexShrink: 0 }}>
-              <div style={{ width: 60, height: 12, borderRadius: 6, background: '#F5F5F9' }} />
-              <div style={{ width: 40, height: 12, borderRadius: 6, background: '#F5F5F9' }} />
+              <div style={{ width: 60, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
+              <div style={{ width: 40, height: 12, borderRadius: 6, background: 'var(--koala-bg-tertiary)' }} />
             </div>
           </div>
         ))}
@@ -263,7 +257,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
           fontFamily: 'var(--font-family-primary)',
         }}
       >
-        <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: '#71717B' }}>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: 'var(--koala-text-secondary)' }}>
           How do you want to start?
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, width: '100%' }}>
@@ -275,27 +269,27 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   flexDirection: 'column',
                   minHeight: 196,
                   padding: 16,
-                  border: '1px solid #E4E4E7',
+                  border: '1px solid var(--koala-border-primary)',
                   borderRadius: 16,
-                  background: '#FFFFFF',
-                  color: '#18181B',
+                  background: 'var(--koala-bg-primary)',
+                  color: 'var(--koala-text-primary)',
                   textDecoration: 'none',
                   transition: 'border-color 150ms ease, background 150ms ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#D4D4D8';
-                  e.currentTarget.style.background = '#f3f4f0';
+                  e.currentTarget.style.borderColor = 'var(--koala-border-secondary)';
+                  e.currentTarget.style.background = 'var(--koala-bg-secondary)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#E4E4E7';
-                  e.currentTarget.style.background = '#FFFFFF';
+                  e.currentTarget.style.borderColor = 'var(--koala-border-primary)';
+                  e.currentTarget.style.background = 'var(--koala-bg-primary)';
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#F5C4A0';
+                  e.currentTarget.style.borderColor = 'var(--koala-border-focus)';
                   e.currentTarget.style.boxShadow = '0 0 0 2px rgba(242,153,100,0.1)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E4E4E7';
+                  e.currentTarget.style.borderColor = 'var(--koala-border-primary)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
@@ -303,7 +297,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   style={{
                     height: 82,
                     borderRadius: 12,
-                    background: '#f3f4f0',
+                    background: 'var(--koala-bg-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -311,13 +305,13 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 >
                   {option.icon}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 16, color: '#18181B' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 16, color: 'var(--koala-text-primary)' }}>
                   <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 600 }}>
                     {option.title}
                   </span>
                   <EmptyCardArrow />
                 </div>
-                <span style={{ marginTop: 4, fontSize: 14, lineHeight: '20px', color: '#71717B' }}>
+                <span style={{ marginTop: 4, fontSize: 14, lineHeight: '20px', color: 'var(--koala-text-secondary)' }}>
                   {option.description}
                 </span>
               </a>
@@ -346,7 +340,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                border: '1px solid #E4E4E7',
+                border: '1px solid var(--koala-border-primary)',
                 borderRadius: 12,
                 paddingRight: 24,
                 gap: 12,
@@ -377,7 +371,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     fontSize: 14,
                     lineHeight: '20px',
                     fontWeight: 600,
-                    color: '#3F3F47',
+                    color: 'var(--koala-text-primary)',
                     fontFamily: 'var(--font-family-primary)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -391,7 +385,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   style={{
                     fontSize: 13,
                     lineHeight: '16px',
-                    color: '#9F9FA9',
+                    color: 'var(--koala-text-tertiary)',
                     fontFamily: 'var(--font-family-primary)',
                   }}
                 >
@@ -417,16 +411,16 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  color: '#9F9FA9',
+                  color: 'var(--koala-text-tertiary)',
                   flexShrink: 0,
                   transition: 'color 0.15s, background 0.15s',
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = '#dc2626';
-                  (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--koala-status-danger)';
+                  (e.currentTarget as HTMLButtonElement).style.background = 'var(--koala-status-danger-bg)';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = '#9F9FA9';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--koala-text-tertiary)';
                   (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
                 }}
               >
@@ -451,7 +445,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              border: '1px solid #E4E4E7',
+              border: '1px solid var(--koala-border-primary)',
               borderRadius: 12,
               paddingRight: 24,
               gap: 12,
@@ -463,8 +457,8 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               boxShadow: 'none',
               transition: 'border-color 0.2s, box-shadow 0.12s ease',
             }}
-            onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0px 6px 10px 0px rgba(24,26,34,0.06)'; el.style.borderColor = '#D4D4D8'; }}
-            onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = '#E4E4E7'; }}
+            onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = '0px 6px 10px 0px rgba(24,26,34,0.06)'; el.style.borderColor = 'var(--koala-border-secondary)'; }}
+            onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = 'var(--koala-border-primary)'; }}
           >
             {/* Left: Score gauge / Checkbox */}
             <div
@@ -480,7 +474,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                 flexShrink: 0,
                 transition: 'border-color 0.15s',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = '#F4F4F5'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = 'var(--koala-bg-secondary)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderRightColor = 'transparent'; }}
             >
               <div style={{ width: 48 }}>
@@ -494,7 +488,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     style={{
                       fontSize: 16,
                       lineHeight: '24px',
-                      color: '#2F2F34',
+                      color: 'var(--koala-text-primary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -511,8 +505,8 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                           width: 20,
                           height: 20,
                           borderRadius: 4,
-                          border: '1px solid #D4D4D8',
-                          background: selectedIds.has(article.id) ? '#F29964' : '#fff',
+                          border: '1px solid var(--koala-border-secondary)',
+                          background: selectedIds.has(article.id) ? 'var(--koala-text-brand)' : 'var(--koala-bg-primary)',
                           boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
                           cursor: 'pointer',
                           appearance: 'none',
@@ -534,7 +528,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                             left: '50%',
                             top: '50%',
                             transform: 'translate(-50%, -50%)',
-                            color: '#fff',
+                            color: 'var(--koala-text-on-brand)',
                             pointerEvents: 'none',
                           }}
                         >
@@ -568,7 +562,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
-                          color: '#2F2F34',
+                          color: 'var(--koala-text-primary)',
                           fontFamily: 'var(--font-family-primary)',
                         }}
                       >
@@ -585,7 +579,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
-                          color: '#3F3F47',
+                          color: 'var(--koala-text-primary)',
                           fontFamily: 'var(--font-family-primary)',
                         }}
                       >
@@ -596,24 +590,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
 
                   {/* Right meta: status check, avatar, menu */}
                   <div className="article-list-card-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, zIndex: 1, flexShrink: 0 }}>
-                    {/* Check icon if accepted or published */}
-                    {(article.status === 'accepted' || article.status === 'published') && (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#16a34a',
-                          padding: 0,
-                          flexShrink: 0,
-                        }}
-                        title={article.status === 'published' ? 'Published' : 'Accepted'}
-                      >
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                          <path fill="currentColor" fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75s-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12m13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094z" clipRule="evenodd" />
-                        </svg>
-                      </span>
-                    )}
+                    {articleStatusBadge(article.status)}
 
                     {/* Avatar */}
                     <div
@@ -621,8 +598,8 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                         width: 24,
                         height: 24,
                         borderRadius: '50%',
-                        background: '#F4F4F5',
-                        color: '#09090B',
+                        background: 'var(--koala-bg-secondary)',
+                        color: 'var(--koala-text-primary)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -667,7 +644,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                           background: 'transparent',
                           border: 'none',
                           cursor: 'pointer',
-                          color: '#3F3F47',
+                          color: 'var(--koala-text-primary)',
                           padding: 0,
                           transition: 'opacity 0.15s',
                         }}
@@ -693,9 +670,9 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                             flexDirection: 'column',
                             padding: 6,
                             borderRadius: 8,
-                            background: '#fff',
+                            background: 'var(--koala-bg-primary)',
                             boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.06), 0px 2px 8px 0px rgba(24,26,34,0.03), 0px 1px 2px 0px rgba(24,26,34,0.06)',
-                            border: '1px solid #F4F4F5',
+                            border: '1px solid var(--koala-bg-secondary)',
                             minWidth: 220,
                             animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)',
                             transformOrigin: '100% 0',
@@ -707,11 +684,11 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                             style={{
                               display: 'flex', alignItems: 'center', gap: 8,
                               padding: '8px 12px', borderRadius: 6,
-                              fontSize: 14, fontWeight: 500, color: '#2F2F34',
+                              fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)',
                               cursor: 'pointer', transition: 'background 0.12s',
                               fontFamily: 'var(--font-family-primary)',
                             }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#f3f4f0'; }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--koala-bg-secondary)'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                             onClick={() => { setOpenMenuId(null); setMenuPos(null); }}
                           >
@@ -721,18 +698,18 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                             Get shareable link
                           </div>
 
-                          <div style={{ height: 1, background: '#F4F4F5', margin: '4px -6px' }} />
+                          <div style={{ height: 1, background: 'var(--koala-bg-secondary)', margin: '4px -6px' }} />
 
                           <div
                             role="button"
                             style={{
                               display: 'flex', alignItems: 'center', gap: 8,
                               padding: '8px 12px', borderRadius: 6,
-                              fontSize: 14, fontWeight: 500, color: '#EF4444',
+                              fontSize: 14, fontWeight: 500, color: 'var(--koala-status-danger)',
                               cursor: 'pointer', transition: 'background 0.12s',
                               fontFamily: 'var(--font-family-primary)',
                             }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#FEF2F2'; }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--koala-status-danger-bg)'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                             onClick={() => { setOpenMenuId(null); setMenuPos(null); onDelete(article.id); }}
                           >
@@ -754,7 +731,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                   {/* Right: country + timestamp */}
                   <div className="article-list-card-loc" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, minWidth: 0 }}>
                     {/* Country */}
-                    <div className="article-list-card-country" style={{ display: 'flex', alignItems: 'center', fontSize: 13, lineHeight: '16px', color: '#3F3F47', gap: 2, fontFamily: 'var(--font-family-primary)' }}>
+                    <div className="article-list-card-country" style={{ display: 'flex', alignItems: 'center', fontSize: 13, lineHeight: '16px', color: 'var(--koala-text-primary)', gap: 2, fontFamily: 'var(--font-family-primary)' }}>
                       <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
                         <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
                       </svg>
@@ -762,7 +739,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
                     </div>
 
                     {/* Timestamp */}
-                    <div style={{ fontSize: 13, lineHeight: '16px', color: '#3F3F47', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }} suppressHydrationWarning>
+                    <div style={{ fontSize: 13, lineHeight: '16px', color: 'var(--koala-text-primary)', whiteSpace: 'nowrap', fontFamily: 'var(--font-family-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }} suppressHydrationWarning>
                       <span className="article-time-relative">{time?.relative || ''}</span>
                       <span className="article-time-full hidden">{time?.full || ''}</span>
                     </div>
@@ -795,7 +772,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
             gap: 8,
             minHeight: 48,
             borderRadius: 8,
-            background: '#18181B',
+            background: 'var(--koala-bg-inverse)',
             boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.12), 0px 2px 4px 0px rgba(24,26,34,0.06), 0px 1px 2px 0px rgba(0,0,0,0.08)',
           }}
         >
@@ -810,7 +787,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: '#fff',
+              color: 'var(--koala-text-on-brand)',
               padding: 0,
               flexShrink: 0,
             }}
@@ -828,7 +805,7 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               margin: 0,
               fontSize: 13,
               lineHeight: '16px',
-              color: '#fff',
+              color: 'var(--koala-text-on-brand)',
               fontFamily: 'var(--font-family-primary)',
               fontWeight: 400,
               flex: 1,
@@ -848,20 +825,20 @@ const ArticleList = ({ articles, onDelete, onDeleteMultiple, isLoading, hasMore,
               gap: 6,
               padding: '4px 12px',
               borderRadius: 24,
-              background: '#EF444420',
+              background: 'color-mix(in srgb, var(--koala-status-danger) 12%, transparent)',
               border: 'none',
               cursor: isDeleting ? 'not-allowed' : 'pointer',
               fontSize: 13,
               lineHeight: '16px',
-              color: '#FCA5A5',
+              color: 'var(--koala-status-danger)',
               fontFamily: 'var(--font-family-primary)',
               fontWeight: 500,
               whiteSpace: 'nowrap',
               opacity: isDeleting ? 0.6 : 1,
               transition: 'opacity 0.15s',
             }}
-            onMouseEnter={(e) => { if (!isDeleting) (e.currentTarget as HTMLButtonElement).style.background = '#EF444440'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#EF444420'; }}
+            onMouseEnter={(e) => { if (!isDeleting) (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--koala-status-danger) 25%, transparent)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--koala-status-danger) 12%, transparent)'; }}
           >
             <svg viewBox="0 0 24 24" width="16" height="16" style={{ flexShrink: 0 }}>
               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-1.935l-1.342-9.523m16.498 0a48.108 48.108 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.166m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />

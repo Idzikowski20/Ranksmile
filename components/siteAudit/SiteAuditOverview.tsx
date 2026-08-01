@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
 import { dashedLinkStyle } from './InfoPopper';
 import SiteAuditScoreGauge from './SiteAuditScoreGauge';
 import SiteHealthIssueBar, { type HealthIssueSegment } from './SiteHealthIssueBar';
@@ -16,15 +16,16 @@ import type {
 const FONT = 'var(--font-family-primary)';
 
 const CARD: React.CSSProperties = {
-  borderRadius: 12,
-  background: '#FFFFFF',
+  borderRadius: 16,
+  background: 'var(--koala-bg-primary)',
+  border: '1px solid var(--koala-border-primary)',
 };
 
 const LINK_BLUE = '#2563EB';
 
 const MUTED = '#52525C';
 const TEXT = '#18181B';
-const BORDER = '#E4E4E7';
+const BORDER = '#e5e5e5';
 
 const BUCKET_COLORS: Record<PageBucket, string> = {
   healthy: 'rgb(129, 224, 34)',
@@ -71,10 +72,10 @@ function OverviewScoreGauge({
   variant?: 'watchtower' | 'compact';
 }) {
   return (
-    <div className="sentry-site-audit-score-gauge">
+    <div className="koala-site-audit-score-gauge">
       <SiteAuditScoreGauge score={score} size={size} variant={variant} showLabel={variant === 'watchtower'} />
       {deltaLabel ? (
-        <span className="sentry-site-audit-score-gauge-delta">{deltaLabel}</span>
+        <span className="koala-site-audit-score-gauge-delta">{deltaLabel}</span>
       ) : null}
     </div>
   );
@@ -153,7 +154,7 @@ function ThematicCard({
 }) {
   const href = report.externalHref ?? report.href;
   return (
-    <div className="perf-3d-card" style={{ ...CARD, padding: 20, display: 'flex', flexDirection: 'column', minHeight: 160, border: 'none', boxShadow: 'none' }}>
+    <div style={{ ...CARD, padding: 20, display: 'flex', flexDirection: 'column', minHeight: 160, border: 'none', boxShadow: 'none' }}>
       <WidgetTitle onInfoClick={onInfoClick} infoOpen={infoOpen}>{report.title}</WidgetTitle>
       {report.notice ? (
         <p style={{ margin: '0 0 16px', fontSize: 12, color: MUTED, fontFamily: FONT, lineHeight: 1.5 }}>{report.notice}</p>
@@ -205,8 +206,8 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: FONT }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <section className="perf-3d-card" style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
-          <div className="sentry-audit-overview-split">
+        <section style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
+          <div className="koala-audit-overview-split">
             <div style={{ flex: 1, padding: '12px 20px', borderRight: `1px solid ${BORDER}` }}>
               <WidgetTitle
                 onInfoClick={openPopper('info-site-health')}
@@ -237,19 +238,19 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
               >
                 Crawled Pages
               </WidgetTitle>
-              <div className="sentry-cp-overview-row">
+              <div className="koala-cp-overview-row">
                 <a
                   href={`/sites/${data.slug}/site-audit`}
-                  className="sentry-cp-overview-total"
+                  className="koala-cp-overview-total"
                   data-test-id="crawled-pages-total"
                   aria-label={`Open all ${data.crawledPages.total} crawled pages`}
                 >
                   {data.crawledPages.total}
                 </a>
-                <span className="sentry-cp-overview-delta" data-test-id="crawled-pages-delta">
+                <span className="koala-cp-overview-delta" data-test-id="crawled-pages-delta">
                   {data.crawledPages.delta === null ? 'no changes' : `${data.crawledPages.delta > 0 ? '+' : ''}${data.crawledPages.delta}`}
                 </span>
-                <div className="sentry-cp-overview-issue-bar" data-test-id="crawled-pages-chart">
+                <div className="koala-cp-overview-issue-bar" data-test-id="crawled-pages-chart">
                   <SiteHealthIssueBar segments={crawledBarSegments} />
                 </div>
               </div>
@@ -268,8 +269,8 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
           </div>
         </section>
 
-        <section className="perf-3d-card" style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
-          <div className="sentry-audit-overview-split">
+        <section style={{ ...CARD, flex: '1 1 320px', minWidth: 0 }}>
+          <div className="koala-audit-overview-split">
             <div style={{ flex: 1, padding: '12px 20px 20px', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 12 }}>
                 <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: FONT }}>AI Search Health</h2>
@@ -315,7 +316,7 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
                   </button>
                   <button
                     type="button"
-                    style={{ border: 'none', background: 'transparent', padding: 0, color: '#783AFB', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}
+                    style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--koala-text-brand)', cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 500 }}
                   >
                     {data.aiSearchIssues} {data.aiSearchIssues === 1 ? 'issue' : 'issues'}
                   </button>
@@ -369,7 +370,7 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
       )}
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <section className="perf-3d-card" style={{ ...CARD, flex: '1 1 280px', padding: '20px 24px 24px' }}>
+        <section style={{ ...CARD, flex: '1 1 280px', padding: '20px 24px 24px' }}>
           <WidgetTitle
             onInfoClick={openPopper('info-errors')}
             infoOpen={isInfoOpen('info-errors')}
@@ -391,7 +392,6 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
         </section>
 
         <section
-          className="perf-3d-card"
           style={{
             ...CARD,
             flex: '2 1 400px',
@@ -411,7 +411,7 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
               {data.topInsights.map((issue) => (
                 <div
                   key={issue.id}
-                  className="sentry-audit-insight-row"
+                  className="koala-audit-insight-row"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'minmax(0, 1fr) auto auto',
@@ -433,8 +433,8 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
                       <span style={{
                         fontSize: 10,
                         fontWeight: 600,
-                        color: '#783AFB',
-                        background: '#F4F0FF',
+                        color: 'var(--koala-text-brand)',
+                        background: 'var(--koala-bg-secondary)',
                         borderRadius: 4,
                         padding: '2px 6px',
                         flexShrink: 0,
@@ -498,11 +498,11 @@ export default function SiteAuditOverview({ data, onViewAllIssues }: Props) {
         </section>
       </div>
 
-      <section className="perf-3d-card" style={{ ...CARD, padding: '8px 0 16px' }}>
+      <section style={{ ...CARD, padding: '8px 0 16px' }}>
         <h2 style={{ margin: '0 0 8px', padding: '8px 20px', fontSize: 14, fontWeight: 600, color: TEXT }}>Thematic Reports</h2>
-        <div className="sentry-thematic-reports-grid">
+        <div className="koala-thematic-reports-grid">
           {data.thematicReports.map((report) => (
-            <div key={report.id} className="sentry-thematic-reports-cell">
+            <div key={report.id} className="koala-thematic-reports-cell">
               <ThematicCard
                 report={report}
                 onInfoClick={report.id === 'robots' ? openPopper('info-robots-txt') : undefined}

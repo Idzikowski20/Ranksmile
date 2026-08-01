@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import type { AuditItem } from '../../pages/api/audit';
-import { Gauge } from '../core';
+import { Gauge } from '../koala/core';
 
 interface Props {
   item: AuditItem | null;
@@ -79,7 +79,7 @@ const AuditPanel: React.FC<Props> = ({ item, lastAnalysisAt, lastSCUpdate, onClo
           }}
           style={{
             width: '100%', padding: '11px 16px', borderRadius: 10.5, border: 'none',
-            background: 'linear-gradient(135deg, #f29964 0%, #6d28d9 100%)',
+            background: 'linear-gradient(135deg, #F84416 0%, #6d28d9 100%)',
             color: '#fff', fontSize: 14, fontWeight: 600,
             cursor: 'pointer', fontFamily: 'Inter Variable, Arial, sans-serif',
             marginBottom: 21, transition: 'opacity 0.15s',

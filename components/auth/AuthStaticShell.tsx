@@ -9,7 +9,7 @@ import {
 } from '../common/nav/sentryIcons';
 
 /**
- * Static visual copy of dashboard chrome (GlobalTopbar + SentryNav rail).
+ * Static visual copy of dashboard chrome (header + sidebar rail).
  * Non-interactive preview only — pointer-events none; login card stays clickable.
  */
 export default function AuthStaticShell({ children }: { children: React.ReactNode }) {
@@ -18,16 +18,16 @@ export default function AuthStaticShell({ children }: { children: React.ReactNod
       <header className="global-topbar" aria-hidden="true" style={{ pointerEvents: 'none', userSelect: 'none' }}>
         <div className="global-topbar-left">
           <span
-            className="sentry-nav-org"
+            className="koala-nav-org"
             style={{ cursor: 'default', width: 32, height: 32, borderRadius: 8, color: '#FFFFFF' }}
           >
             <IconQuestion size={16} />
           </span>
         </div>
         <div className="global-topbar-actions">
-          <div className="sentry-nav-btnbar sentry-nav-btnbar--horizontal">
+          <div className="koala-nav-btnbar koala-nav-btnbar--horizontal">
             <span
-              className="sentry-nav-utilbtn"
+              className="koala-nav-utilbtn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -45,13 +45,13 @@ export default function AuthStaticShell({ children }: { children: React.ReactNod
               <span>Search</span>
               <span style={{ fontSize: 11, opacity: 0.7 }}>Ctrl K</span>
             </span>
-            <span className="sentry-nav-utilbtn" aria-hidden="true">
+            <span className="koala-nav-utilbtn" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M22 6l-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <span className="sentry-nav-utilbtn" aria-hidden="true">
+            <span className="koala-nav-utilbtn" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M9.09 9C9.3251 8.33167 9.78915 7.76811 10.4 7.40913C11.0108 7.05016 11.7289 6.91894 12.4272 7.03871C13.1255 7.15849 13.7588 7.52152 14.2151 8.06353C14.6713 8.60553 14.9211 9.29152 14.92 10C14.92 12 11.92 13 11.92 13M12 17H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -61,31 +61,31 @@ export default function AuthStaticShell({ children }: { children: React.ReactNod
       </header>
 
       <div className="app-shell-body">
-        <div className="sentry-nav-rail-wrap" aria-hidden="true" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-          <nav aria-label="Primary Navigation preview" className="sentry-nav">
-            <ul className="sentry-nav-list">
-              <li className="sentry-nav-item">
-                <span className="sentry-nav-link" aria-current="location" data-active-group="true">
+        <div className="koala-nav-rail-wrap" aria-hidden="true" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+          <nav aria-label="Primary Navigation preview" className="koala-nav">
+            <ul className="koala-nav-list">
+              <li className="koala-nav-item">
+                <span className="koala-nav-link" aria-current="location" data-active-group="true">
                   <IconDashboard />
                 </span>
               </li>
-              <li className="sentry-nav-item">
-                <span className="sentry-nav-link"><IconIssues /></span>
+              <li className="koala-nav-item">
+                <span className="koala-nav-link"><IconIssues /></span>
               </li>
-              <li className="sentry-nav-item">
-                <span className="sentry-nav-link"><IconCompass /></span>
+              <li className="koala-nav-item">
+                <span className="koala-nav-link"><IconCompass /></span>
               </li>
-              <li className="sentry-nav-item">
-                <span className="sentry-nav-link"><IconSiren /></span>
+              <li className="koala-nav-item">
+                <span className="koala-nav-link"><IconSiren /></span>
               </li>
-              <li className="sentry-nav-item">
-                <span className="sentry-nav-link"><IconSettings /></span>
+              <li className="koala-nav-item">
+                <span className="koala-nav-link"><IconSettings /></span>
               </li>
             </ul>
 
-            <div className="sentry-nav-footer">
-              <div className="sentry-nav-btnbar">
-                <span className="sentry-nav-utilbtn" style={{ opacity: 0.85 }}>
+            <div className="koala-nav-footer">
+              <div className="koala-nav-btnbar">
+                <span className="koala-nav-utilbtn" style={{ opacity: 0.85 }}>
                   <span style={{
                     width: 28,
                     height: 28,
@@ -101,7 +101,7 @@ export default function AuthStaticShell({ children }: { children: React.ReactNod
                     A
                   </span>
                 </span>
-                <span className="sentry-nav-utilbtn" style={{ opacity: 0.85 }}>
+                <span className="koala-nav-utilbtn" style={{ opacity: 0.85 }}>
                   <span style={{
                     width: 28,
                     height: 28,
@@ -129,7 +129,7 @@ export default function AuthStaticShell({ children }: { children: React.ReactNod
                     />
                   </span>
                 </span>
-                <span className="sentry-nav-utilbtn" style={{ opacity: 0.85 }}>
+                <span className="koala-nav-utilbtn" style={{ opacity: 0.85 }}>
                   <span style={{
                     width: 28,
                     height: 28,
@@ -145,7 +145,7 @@ export default function AuthStaticShell({ children }: { children: React.ReactNod
                     C
                   </span>
                 </span>
-                <span className="sentry-nav-utilbtn">
+                <span className="koala-nav-utilbtn">
                   <IconQuestion size={18} />
                 </span>
               </div>

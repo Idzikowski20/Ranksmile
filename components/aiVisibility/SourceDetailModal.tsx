@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../core';
+import { Button } from '../koala/core';
+import { SourceStatusBadge, type SourceStatusKind } from '../koala/product/helpers/SourceStatusBadge';
 import { SourceRow, splitSourceUrl } from './SourcesTable';
 import MetricTrendChart from './MetricTrendChart';
 import { SkeletonBox } from './SkeletonBlocks';
 import { AI_VIS_MODEL_LABEL } from '../../lib/aiVisibility';
 import { useAiVisSourceDetail } from '../../services/aiVisibility';
 import DomainFavicon from '../common/DomainFavicon';
+import { AiVisSlidePortal, aiVisOverlayZ } from './AiVisSlidePortal';
 
 const FONT = 'var(--font-family-primary)';
 
@@ -21,21 +23,17 @@ const safeHref = (url: string): string | undefined => {
 };
 
 type Sentiment = 'positive' | 'neutral' | 'negative' | 'mixed';
-const SENT: Record<Sentiment, { label: string; fg: string; bg: string }> = {
-   positive: { label: 'Positive', fg: '#1AB25E', bg: '#EAF8F0' },
-   neutral: { label: 'Neutral', fg: '#52525C', bg: '#F4F4F5' },
-   negative: { label: 'Negative', fg: '#FF6F77', bg: '#FDECED' },
-   mixed: { label: 'Mixed', fg: '#D97706', bg: '#FEF3E2' },
+
+const sentimentKind = (sentiment: Sentiment): SourceStatusKind => {
+   if (sentiment === 'positive') return 'positive';
+   if (sentiment === 'negative') return 'negative';
+   if (sentiment === 'neutral') return 'neutral';
+   return 'unknown';
 };
 
-const SentBadge = ({ sentiment }: { sentiment: Sentiment }) => {
-   const s = SENT[sentiment] || SENT.neutral;
-   return <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 6, padding: '2px 10px', fontSize: 12, fontWeight: 600, color: s.fg, background: s.bg }}>{s.label}</span>;
-};
-
-const Chevron = ({ open }: { open: boolean }) => (<svg viewBox="0 0 24 24" width="18" height="18" style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(-180deg)' : 'none', color: '#71717B', flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" /></svg>);
-const Globe = () => (<svg viewBox="0 0 24 24" width="18" height="18" fill="none" style={{ flexShrink: 0, color: '#9F9FA9' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" /><path d="M3 12h18M12 3c2.4 2.5 2.4 15.5 0 18M12 3c-2.4 2.5-2.4 15.5 0 18" stroke="currentColor" strokeWidth="1.5" /></svg>);
-const SortArrow = ({ asc }: { asc: boolean }) => (<svg viewBox="0 0 20 20" width="16" height="16" style={{ transform: asc ? 'none' : 'rotate(180deg)', color: '#9F9FA9', flexShrink: 0 }}><path fill="currentColor" fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" /></svg>);
+const Chevron = ({ open }: { open: boolean }) => (<svg viewBox="0 0 24 24" width="18" height="18" style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(-180deg)' : 'none', color: 'var(--koala-text-secondary)', flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m19.5 8.25l-7.5 7.5l-7.5-7.5" /></svg>);
+const Globe = () => (<svg viewBox="0 0 24 24" width="18" height="18" fill="none" style={{ flexShrink: 0, color: 'var(--koala-text-secondary)' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" /><path d="M3 12h18M12 3c2.4 2.5 2.4 15.5 0 18M12 3c-2.4 2.5-2.4 15.5 0 18" stroke="currentColor" strokeWidth="1.5" /></svg>);
+const SortArrow = ({ asc }: { asc: boolean }) => (<svg viewBox="0 0 20 20" width="16" height="16" style={{ transform: asc ? 'none' : 'rotate(180deg)', color: 'var(--koala-text-secondary)', flexShrink: 0 }}><path fill="currentColor" fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17" clipRule="evenodd" /></svg>);
 
 type BrandDetail = { pos: number; brand: string; sentiment: Sentiment; quotes: string[] };
 
@@ -46,7 +44,7 @@ const BrandDetailRow = ({ b, first }: { b: BrandDetail; first: boolean }) => {
    const hasQuotes = b.quotes.length > 0;
    return (
       <div>
-         {!first ? <div style={{ height: 1, background: '#F4F4F5' }} /> : null}
+         {!first ? <div style={{ height: 1, background: 'var(--koala-border-primary)' }} /> : null}
          <div
             className="aiv-brandrow"
             onClick={() => hasQuotes && setOpen((o) => !o)}
@@ -55,15 +53,15 @@ const BrandDetailRow = ({ b, first }: { b: BrandDetail; first: boolean }) => {
             onKeyDown={(e) => { if (hasQuotes && e.key === 'Enter') setOpen((o) => !o); }}
             style={{ display: 'grid', gridTemplateColumns: '74px 1fr', cursor: hasQuotes ? 'pointer' : 'default' }}
          >
-            <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', color: '#18181B', fontSize: 14 }}>{b.pos}</div>
-            <div style={{ borderLeft: '1px solid #F4F4F5', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', color: 'var(--koala-text-primary)', fontSize: 14 }}>{b.pos}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                      <Globe />
-                     <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.brand}</span>
+                     <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.brand}</span>
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                     <SentBadge sentiment={b.sentiment} />
+                     <SourceStatusBadge kind={sentimentKind(b.sentiment)} label={b.sentiment === 'mixed' ? 'Mixed' : undefined} />
                      {hasQuotes ? <Chevron open={open} /> : null}
                   </span>
                </div>
@@ -71,10 +69,10 @@ const BrandDetailRow = ({ b, first }: { b: BrandDetail; first: boolean }) => {
                   <div>
                      {b.quotes.map((q) => (
                         <React.Fragment key={q}>
-                           <div style={{ height: 1, background: '#F4F4F5' }} />
+                           <div style={{ height: 1, background: 'var(--koala-border-primary)' }} />
                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px' }}>
-                              <div style={{ padding: '12px 16px', fontSize: 14, color: '#52525C', lineHeight: 1.5 }}>{q}</div>
-                              <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start' }}><SentBadge sentiment={b.sentiment} /></div>
+                              <div style={{ padding: '12px 16px', fontSize: 14, color: 'var(--koala-text-secondary)', lineHeight: 1.5 }}>{q}</div>
+                              <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start' }}><SourceStatusBadge kind={sentimentKind(b.sentiment)} label={b.sentiment === 'mixed' ? 'Mixed' : undefined} /></div>
                            </div>
                         </React.Fragment>
                      ))}
@@ -98,7 +96,7 @@ const ArrowDown = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="n
 const ExternalIcon = () => (<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><g fill="currentColor" fillRule="evenodd" clipRule="evenodd"><path d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5z" /><path d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06" /></g></svg>);
 const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>);
 
-const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: '#52525C', cursor: 'pointer', borderRadius: 6 };
+const iconBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', padding: 4, color: 'var(--koala-text-secondary)', cursor: 'pointer', borderRadius: 6 };
 
 /** Right-side slide-over for a source row. When `navigable`, the up/down arrows (and
  *  ↑/↓ keys) page through the surrounding list — Ranksmile's ungrouped behaviour. */
@@ -142,12 +140,12 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
    const canDown = navigable && index < list.length - 1;
 
    return (
-      <>
-         <style>{'.aiv-brandrow:hover{background:#FAFAFA}'}</style>
-         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
-         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 520, maxWidth: 'calc(100vw - 16px)', zIndex: 301, background: '#fff', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid #E4E4E7', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
+      <AiVisSlidePortal>
+         <style>{'.aiv-brandrow:hover{background:var(--koala-bg-secondary)}'}</style>
+         <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: aiVisOverlayZ.backdrop, background: 'rgba(0,0,0,0.12)', opacity: visible ? 1 : 0, transition: 'opacity 200ms ease' }} role="presentation" />
+         <div style={{ position: 'fixed', top: 8, bottom: 8, right: 8, width: 520, maxWidth: 'calc(100vw - 16px)', zIndex: aiVisOverlayZ.panel, background: 'var(--koala-bg-primary)', borderRadius: 16, boxShadow: '0px 24px 64px rgba(0,0,0,0.16), 0px 8px 24px rgba(0,0,0,0.08)', border: '1px solid var(--koala-border-primary)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: visible ? 'translateX(0)' : 'translateX(calc(100% + 16px))', transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)', fontFamily: FONT }} role="dialog" aria-modal="true">
             {/* Header: nav arrows (left) + external/close (right), then the source URL */}
-            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid #F4F4F5' }}>
+            <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid var(--koala-border-primary)' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                      {navigable ? (
@@ -171,8 +169,8 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                      { /* eslint-disable-next-line @next/next/no-img-element */ }
                      <DomainFavicon domain={s.domain} size={20} />
                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 16 }}>
-                        <span style={{ fontWeight: 600, color: '#18181B' }}>{host}</span>
-                        <span style={{ fontWeight: 400, color: '#9F9FA9' }}>{path}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--koala-text-primary)' }}>{host}</span>
+                        <span style={{ fontWeight: 400, color: 'var(--koala-text-secondary)' }}>{path}</span>
                      </span>
                   </span>
                </h2>
@@ -181,39 +179,39 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
             {/* Body: real per-source data from the latest scan */}
             <div className="styled-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                     <span style={{ fontSize: 13, color: '#71717B' }}>Times shown</span>
-                     <span style={{ fontSize: 24, fontWeight: 700, color: '#18181B' }}>{s.timesShown}</span>
+                  <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                     <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Times shown</span>
+                     <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--koala-text-primary)' }}>{s.timesShown}</span>
                   </div>
-                  <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                     <span style={{ fontSize: 13, color: '#71717B' }}>Models</span>
-                     <span style={{ fontSize: 24, fontWeight: 700, color: '#18181B' }}>{s.models.length}</span>
+                  <div style={{ border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                     <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>Models</span>
+                     <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--koala-text-primary)' }}>{s.models.length}</span>
                   </div>
                </div>
                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 8 }}>Cited by</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', marginBottom: 8 }}>Cited by</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                      {s.models.map((m) => (
-                        <span key={m} style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #E4E4E7', borderRadius: 9999, padding: '4px 12px', fontSize: 13, fontWeight: 500, color: '#3F3F47' }}>{AI_VIS_MODEL_LABEL[m] || m}</span>
+                        <span key={m} style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--koala-border-primary)', borderRadius: 9999, padding: '4px 12px', fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)' }}>{AI_VIS_MODEL_LABEL[m] || m}</span>
                      ))}
                   </div>
-                  <p style={{ margin: '12px 0 0', fontSize: 13, color: '#9F9FA9', lineHeight: 1.5 }}>Engines that cited this page for your tracked prompts in the latest scan.</p>
+                  <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--koala-text-secondary)', lineHeight: 1.5 }}>Engines that cited this page for your tracked prompts in the latest scan.</p>
                </div>
 
                {/* Times-shown trend across scans */}
                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 8 }}>Times shown over time</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', marginBottom: 8 }}>Times shown over time</div>
                   {detailQ.isLoading ? (
                      <SkeletonBox w="100%" h={200} />
                   ) : (detail && detail.history.length > 1) ? (
                      <MetricTrendChart
                         labels={detail.history.map((h) => fmtDay(h.finishedAt))}
-                        lines={[{ label: 'Times shown', data: detail.history.map((h) => h.timesShown), color: '#F29964' }]}
+                        lines={[{ label: 'Times shown', data: detail.history.map((h) => h.timesShown), color: 'var(--koala-text-brand)' }]}
                         yMin={0}
                         height={200}
                      />
                   ) : (
-                     <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9' }}>Not enough scan history yet — the trend appears after two or more scans.</p>
+                     <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-secondary)' }}>Not enough scan history yet — the trend appears after two or more scans.</p>
                   )}
                </div>
 
@@ -223,19 +221,19 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                ) : (detail && sortedBrands.length > 0) ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181B' }}>Source mentioned {detail.brandCount} brands</span>
-                        <span style={{ fontSize: 13, color: '#71717B', lineHeight: 1.5 }}>You should be mentioned as the first choice, review the list and check if you can improve your position by contacting the source owner.</span>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Source mentioned {detail.brandCount} brands</span>
+                        <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', lineHeight: 1.5 }}>You should be mentioned as the first choice, review the list and check if you can improve your position by contacting the source owner.</span>
                      </div>
-                     <div style={{ border: '1px solid #F4F4F5', borderRadius: 12, overflow: 'hidden' }}>
+                     <div style={{ overflow: 'hidden' }}>
                         {/* Table header */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '74px 1fr', borderBottom: '1px solid #F4F4F5', fontSize: 13, color: '#71717B' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '74px 1fr', borderBottom: '1px solid var(--koala-border-primary)', fontSize: 13, color: 'var(--koala-text-secondary)' }}>
                            <div style={{ padding: '12px 16px' }}>
-                              <Button type="button" variant="transparent" size="sm" onClick={() => setPosAsc((v) => !v)} style={{ gap: 4, color: '#71717B' }}>
+                              <Button type="button" variant="transparent" size="sm" onClick={() => setPosAsc((v) => !v)} style={{ gap: 4, color: 'var(--koala-text-secondary)' }}>
                                  <span style={{ fontWeight: 600, textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 4, textDecorationColor: '#C4C4CC' }}>Pos.</span>
                                  <SortArrow asc={posAsc} />
                               </Button>
                            </div>
-                           <div style={{ borderLeft: '1px solid #F4F4F5', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                           <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                               <span>Brand</span>
                               <span>Sentiment</span>
                            </div>
@@ -245,13 +243,13 @@ const SourceDetailModal = ({ slug, list, index, navigable, onNavigate, onClose }
                   </div>
                ) : (
                   <div>
-                     <div style={{ fontSize: 14, fontWeight: 600, color: '#18181B', marginBottom: 8 }}>Brands mentioned</div>
-                     <p style={{ margin: 0, fontSize: 13, color: '#9F9FA9' }}>No brands were detected in the AI answers citing this source.</p>
+                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', marginBottom: 8 }}>Brands mentioned</div>
+                     <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-secondary)' }}>No brands were detected in the AI answers citing this source.</p>
                   </div>
                )}
             </div>
          </div>
-      </>
+      </AiVisSlidePortal>
    );
 };
 

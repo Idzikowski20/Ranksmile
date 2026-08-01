@@ -1,4 +1,5 @@
 import React from 'react';
+import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import CompetitorsSection from './CompetitorsSection';
 
 const FONT = 'var(--font-family-primary)';
@@ -24,9 +25,10 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => {
    const [saving, setSaving] = React.useState(false);
 
    return (
+   <ShellPortal>
    <div
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: overlayZ.modal, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
    >
       <div style={{ position: 'relative', width: '100%', maxWidth: 1000, maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', animation: 'growOut 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}>
          <button
@@ -64,7 +66,7 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => {
                onClick={onConfirm}
                disabled={saving}
                style={{ border: 'none', background: '#2F2F34', color: '#fff', borderRadius: 6, padding: '8px 16px', fontSize: 14, fontWeight: 600, fontFamily: FONT, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, transition: 'background 150ms ease' }}
-               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#F29964'; }}
+               onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = '#F84416'; }}
                onMouseLeave={(e) => { e.currentTarget.style.background = '#2F2F34'; }}
             >
                Let&apos;s go
@@ -72,6 +74,7 @@ const CompetitorsModal = ({ slug, keyword, onClose, onConfirm }: Props) => {
          </div>
       </div>
    </div>
+   </ShellPortal>
    );
 };
 
