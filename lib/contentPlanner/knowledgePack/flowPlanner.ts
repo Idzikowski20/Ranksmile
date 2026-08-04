@@ -62,12 +62,32 @@ function transitionToText(next: NeighborSummary, currentHeading: string): string
   return `Następnie: ${goalLabel(next.goal)}`;
 }
 
+function applyPackSectionTransitions(packs: KnowledgePack[]): KnowledgePack[] {
+  return packs.map((pack, index) => {
+    const fromPrevious = index === 0 ? null : packs[index - 1].heading;
+    const toNext = index === packs.length - 1 ? null : packs[index + 1].heading;
+    return {
+      ...pack,
+      sectionTransitions: {
+        fromPrevious,
+        toNext,
+      },
+    };
+  });
+}
+
 export function planFlow(
   packs: KnowledgePack[],
   paragraphs: ParagraphPlan[],
 ): { packs: KnowledgePack[]; paragraphs: ParagraphPlan[] } {
-  if (packs.length === 0 || paragraphs.length === 0) {
+  if (packs.length === 0) {
     return { packs, paragraphs };
+  }
+
+  const flowedPacks = applyPackSectionTransitions(packs);
+
+  if (paragraphs.length === 0) {
+    return { packs: flowedPacks, paragraphs };
   }
 
   const headings = buildSectionHeadingMap(packs);
@@ -99,18 +119,6 @@ export function planFlow(
       ...paragraph,
       transitionFrom,
       transitionTo,
-    };
-  });
-
-  const flowedPacks: KnowledgePack[] = packs.map((pack, index) => {
-    const fromPrevious = index === 0 ? null : packs[index - 1].heading;
-    const toNext = index === packs.length - 1 ? null : packs[index + 1].heading;
-    return {
-      ...pack,
-      sectionTransitions: {
-        fromPrevious,
-        toNext,
-      },
     };
   });
 

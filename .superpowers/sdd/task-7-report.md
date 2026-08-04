@@ -25,3 +25,29 @@ Completed.
 - `npx tsc --noEmit` still reports many pre-existing errors unrelated to this task (billing, intelligence, dashboard, etc.). `compileWritePlan.ts` and `flowPlanner.ts` introduced no new TypeScript errors and use no `any`.
 - No structural validator changes were made; semantic validation is left for Task 8 as instructed.
 - No push performed.
+
+---
+
+## Revision (Task 7 Important finding)
+
+### Status
+Completed.
+
+### Problem
+`planFlow` returned early when `paragraphs.length === 0`, skipping `sectionTransitions` for valid structurally empty packs (e.g. sections with `expectedWords === 0` and no paragraph blocks).
+
+### Fix
+- `applyPackSectionTransitions` now runs whenever `packs.length > 0`, independent of paragraph count.
+- Paragraph `transitionFrom` / `transitionTo` are filled only when `paragraphs.length > 0`.
+- Early return only when `packs.length === 0`.
+
+### Tests
+- Added regression: 3 packs with empty `paragraphPlanIds` → middle pack has both `fromPrevious` and `toNext` non-null.
+- `npx jest __tests__/lib/contentPlanner/flowPlanner.test.ts __tests__/lib/contentPlanner/compileWritePlan.test.ts --ci --no-coverage` → 2 suites, 23/23 passed.
+
+### Commits
+- `fix(planner): section transitions without paragraphs`
+
+### Concerns
+- No push performed.
+- No `any` added.
