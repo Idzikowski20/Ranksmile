@@ -126,6 +126,24 @@ describe('planFlow', () => {
     }
   });
 
+  it('fills pack section transitions when paragraphs are empty', () => {
+    const packs: KnowledgePack[] = [
+      makePack({ sectionId: 's1', heading: 'Wstęp', paragraphPlanIds: [] }),
+      makePack({ sectionId: 's2', heading: 'Kroki', paragraphPlanIds: [] }),
+      makePack({ sectionId: 's3', heading: 'Podsumowanie', paragraphPlanIds: [] }),
+    ];
+
+    const { packs: flowed, paragraphs: flowedParagraphs } = planFlow(packs, []);
+
+    expect(flowedParagraphs).toEqual([]);
+    expect(flowed[0].sectionTransitions.fromPrevious).toBeNull();
+    expect(flowed[0].sectionTransitions.toNext).toBe('Kroki');
+    expect(flowed[1].sectionTransitions.fromPrevious).toBe('Wstęp');
+    expect(flowed[1].sectionTransitions.toNext).toBe('Podsumowanie');
+    expect(flowed[2].sectionTransitions.fromPrevious).toBe('Kroki');
+    expect(flowed[2].sectionTransitions.toNext).toBeNull();
+  });
+
   it('returns empty input unchanged', () => {
     expect(planFlow([], [])).toEqual({ packs: [], paragraphs: [] });
   });
