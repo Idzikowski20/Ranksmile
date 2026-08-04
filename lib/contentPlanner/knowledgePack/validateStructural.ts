@@ -29,7 +29,6 @@ export function validateStructural(plan: CompiledWritePlan): PackValidationResul
   for (const pack of plan.knowledgePacks) {
     if (!pack.id || pack.id.trim().length === 0) {
       issues.push(issue('empty_pack_id', 'Knowledge pack has an empty id'));
-      continue;
     }
 
     if (pack.paragraphPlanIds.length === 0) {
@@ -82,7 +81,6 @@ export function validateStructural(plan: CompiledWritePlan): PackValidationResul
   for (const paragraph of plan.paragraphPlans) {
     if (!paragraph.id || paragraph.id.trim().length === 0) {
       issues.push(issue('empty_paragraph_id', 'Paragraph plan has an empty id'));
-      continue;
     }
 
     for (const depId of paragraph.dependsOnParagraphs) {

@@ -191,4 +191,32 @@ describe('validateStructural', () => {
     };
     expect(issueCodes(plan)).toContain('empty_pack');
   });
+
+  it('reports empty pack id and missing paragraph ref together', () => {
+    const plan: CompiledWritePlan = {
+      ...basePlan,
+      knowledgePacks: [{ ...basePack, id: '', paragraphPlanIds: ['p1', 'missing'] }],
+    };
+    const codes = issueCodes(plan);
+    expect(codes).toContain('empty_pack_id');
+    expect(codes).toContain('missing_paragraph');
+  });
+
+  it('reports empty paragraph id and unresolved refs together', () => {
+    const plan: CompiledWritePlan = {
+      ...basePlan,
+      paragraphPlans: [
+        {
+          ...baseParagraph,
+          id: '',
+          dependsOnParagraphs: ['missing'],
+          claims: [{ claimId: 'missing' }],
+        },
+      ],
+    };
+    const codes = issueCodes(plan);
+    expect(codes).toContain('empty_paragraph_id');
+    expect(codes).toContain('missing_dependency');
+    expect(codes).toContain('unresolved_claim');
+  });
 });
