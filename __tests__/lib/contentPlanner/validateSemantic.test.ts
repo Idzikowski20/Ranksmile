@@ -146,6 +146,16 @@ describe('validateSemantic', () => {
     expect(issueCodes(result)).toContain('invalid_expected_words');
   });
 
+  it('errors when an orphan paragraph has expectedWords <= 0', () => {
+    const p1 = paragraph('p1', 'intro', 100);
+    const orphan = paragraph('orphan', 'context', 0);
+    const sec1 = pack('sec1', ['p1'], 100);
+    const result = validateSemantic(plan([sec1], [p1, orphan]));
+    expect(result.ok).toBe(false);
+    expect(issueCodes(result)).toContain('invalid_expected_words');
+    expect(issuesForCode(result, 'invalid_expected_words').some((i) => i.paragraphId === 'orphan')).toBe(true);
+  });
+
   it('errors when a pack has expectedWords <= 0', () => {
     const p1 = paragraph('p1', 'intro', 100);
     const sec1 = pack('sec1', ['p1'], 0);

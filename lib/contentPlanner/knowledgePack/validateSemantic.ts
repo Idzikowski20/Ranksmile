@@ -34,6 +34,7 @@ export function validateSemantic(plan: CompiledWritePlan): PackValidationResult 
   }
 
   // Global paragraph order: pack order, then paragraphPlanIds order within a pack.
+  // Orphans (not in any pack) trail packed paragraphs in plan.paragraphPlans order.
   const orderById = new Map<string, number>();
   let order = 0;
   for (const pack of plan.knowledgePacks) {
@@ -44,6 +45,14 @@ export function validateSemantic(plan: CompiledWritePlan): PackValidationResult 
       }
     }
   }
+  for (const paragraph of plan.paragraphPlans) {
+    if (!orderById.has(paragraph.id)) {
+      orderById.set(paragraph.id, order);
+      order += 1;
+    }
+  }
+
+  validateParagraphBudgets(plan.paragraphPlans, issues);
 
   for (const pack of plan.knowledgePacks) {
     validatePackBudget(pack, paragraphsById, issues);
@@ -60,6 +69,21 @@ export function validateSemantic(plan: CompiledWritePlan): PackValidationResult 
   };
 }
 
+function validateParagraphBudgets(paragraphs: ParagraphPlan[], issues: PackValidationIssue[]): void {
+  for (const paragraph of paragraphs) {
+    if (paragraph.expectedWords <= 0) {
+      issues.push(
+        issue(
+          'invalid_expected_words',
+          `Paragraph "${paragraph.id}" expectedWords must be > 0`,
+          paragraph.sectionId,
+          paragraph.id,
+        ),
+      );
+    }
+  }
+}
+
 function validatePackBudget(
   pack: KnowledgePack,
   paragraphsById: Map<string, ParagraphPlan>,
@@ -72,19 +96,6 @@ function validatePackBudget(
   const paragraphs = pack.paragraphPlanIds
     .map((id) => paragraphsById.get(id))
     .filter((p): p is ParagraphPlan => p !== undefined);
-
-  for (const paragraph of paragraphs) {
-    if (paragraph.expectedWords <= 0) {
-      issues.push(
-        issue(
-          'invalid_expected_words',
-          `Paragraph "${paragraph.id}" expectedWords must be > 0`,
-          pack.id,
-          paragraph.id,
-        ),
-      );
-    }
-  }
 
   if (pack.expectedWords > 0 && paragraphs.length > 0) {
     const sum = paragraphs.reduce((total, paragraph) => total + paragraph.expectedWords, 0);
@@ -214,6 +225,7 @@ function validateDependencies(
   for (const paragraph of paragraphs) {
     const currentOrder = orderById.get(paragraph.id);
     if (currentOrder === undefined) {
+      // Structural validator reports paragraphs missing from the plan registry.
       continue;
     }
 
