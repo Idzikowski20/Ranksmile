@@ -26,8 +26,10 @@ import {
   parseCompetitorCacheJson,
 } from '../../../../lib/contentPlanner/fromArticleInputs';
 import {
+  compileAndValidateWritePlan,
   finalizePlannerForWrite,
   runContentPlanner,
+  toSidecarCompiledPlan,
   toSidecarExecutionPlan,
 } from '../../../../lib/contentPlanner';
 import {
@@ -258,7 +260,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
+    const compiledResult = compileAndValidateWritePlan(finalized.bundle.executionPlan, {
+      importantTerms: [],
+      allowBrandNiche,
+    });
+    if (!compiledResult.ok) {
+      return res.status(422).json({
+        error: 'compiled_write_plan_invalid',
+        issues: compiledResult.issues,
+        diagnostics: compiledResult.diagnostics,
+      });
+    }
+
     const executionPlan = toSidecarExecutionPlan(finalized.bundle.executionPlan);
+    const compiledWritePlan = toSidecarCompiledPlan(compiledResult.plan);
 
     // 6. Build the sidecar payload (snake_case keys match the sidecar GenerateRequest).
     const sidecarPayload = {
@@ -275,6 +290,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       brand_knowledge: allowBrandNiche ? brandKnowledge : '',
       voice_tone: voiceTone,
       execution_plan: executionPlan,
+      compiled_write_plan: compiledWritePlan,
     };
 
     // 7. Async: enqueue a job, mark the article 'generating', and kick off the sidecar.
@@ -308,6 +324,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       jobId,
       articleId,
       planHash: finalized.bundle.executionPlan.planHash,
+      diagnostics: compiledResult.diagnostics,
     });
   } catch (error) {
     console.error('[articles/[id]/generate] error:', error);
