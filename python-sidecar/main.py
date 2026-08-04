@@ -126,6 +126,8 @@ class GenerateRequest(BaseModel):
     review_outline: bool = False
     brand_knowledge: str = ""   # shared Brand Knowledge (context for the model)
     voice_tone: str = ""        # selected Custom Voice reference text — drives tone/style
+    # Planner First — immutable Article Execution Plan (Write Engine executes only).
+    execution_plan: dict | None = None
 
 
 class GenerateResponse(BaseModel):
@@ -169,11 +171,11 @@ async def generate_article(req: GenerateRequest):
     5. Internal links
     6. Priorytetyzowane rekomendacje
     """
-    deepseek_key = os.getenv("DEEPSEEK_API_KEY", "")
-    if not deepseek_key:
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not openrouter_key:
         raise HTTPException(
             status_code=500,
-            detail="DEEPSEEK_API_KEY not configured. Set it in python-sidecar/.env"
+            detail="OPENROUTER_API_KEY not configured. Set it in python-sidecar/.env or project .env"
         )
 
     # 1. Analiza strony
@@ -184,20 +186,24 @@ async def generate_article(req: GenerateRequest):
     print(f"[generate] Analyzing SERP for keyword: {req.keyword}")
     serp_data = await analyze_serp(req.keyword, req.language)
 
-    # 3. Generuj artykuł przez Claude
-    print(f"[generate] Running AI pipeline...")
+    # 3. Generuj artykuł — Write Engine executes Execution Plan when present (no outline invent).
+    print("[generate] Running AI pipeline (Write Engine)...")
     article_html = await run_pipeline(
         site_context=site_context,
         serp_data=serp_data,
         keyword=req.keyword,
         language=req.language,
         tone=req.tone or site_context.get("tone", "professional"),
-        target_words=serp_data.get("words_target", 2200),
+        target_words=(
+            (req.execution_plan or {}).get("article_budget", {}) or {}
+        ).get("words")
+        or serp_data.get("words_target", 2200),
         content_type=req.content_type,
         instructions=req.instructions,
         external_links=req.external_links,
         brand_knowledge=req.brand_knowledge,
         voice_tone=req.voice_tone,
+        execution_plan=req.execution_plan,
     )
 
     # 4. Meta dane
@@ -330,8 +336,8 @@ async def brand_knowledge_endpoint(body: dict):
         assert_public_url(url)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if not os.getenv("DEEPSEEK_API_KEY", ""):
-        raise HTTPException(status_code=500, detail="DEEPSEEK_API_KEY not configured")
+    if not os.getenv("OPENROUTER_API_KEY", "").strip():
+        raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
     print(f"[brand-knowledge] Analyzing {url}")
     site = await analyze_site(url)
     meta = site.get("meta", {}) or {}
@@ -518,6 +524,11 @@ async def run_generate(job_id: str, payload: dict, nextjs_url: str) -> None:
     from pipeline.domain_runner import post_terminal
     try:
         resp = await generate_article(GenerateRequest(**payload))
+        html = (resp.article_html or "").strip()
+        plain = re.sub(r"<[^>]+>", " ", html)
+        plain = re.sub(r"\s+", " ", plain).strip()
+        if len(plain) < 80:
+            raise RuntimeError(f"empty_article_html (chars={len(html)})")
         await post_terminal(nextjs_url, job_id, "done", result=resp.model_dump())
     except Exception as exc:
         err = f"{type(exc).__name__}: {exc}"

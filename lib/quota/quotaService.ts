@@ -1,9 +1,11 @@
 import type { Transaction } from 'sequelize';
 import db from '../../database/database';
 import { ensurePlanQuotaTables } from '../ensurePlanQuotaTables';
+import { hasActiveBillingEntitlement } from '../billingEntitlement';
 import { getOrgBillingState } from '../orgBilling';
 import {
   ACTIVE_PERIOD_KEY,
+  DEFAULT_PLAN_SLUG,
   getMeterKind,
   getPlanMeterLimit,
   resolvePlanSlug,
@@ -39,6 +41,8 @@ async function exec(sql: string, replacements: unknown[], opt: TxOpt = {}): Prom
 
 async function resolvePlan(orgId: number): Promise<string> {
   const billing = await getOrgBillingState(orgId);
+  // Ignore stale plan_slug from incomplete checkout / canceled subs.
+  if (!hasActiveBillingEntitlement(billing)) return DEFAULT_PLAN_SLUG;
   return resolvePlanSlug(billing?.planSlug);
 }
 
@@ -126,6 +130,18 @@ async function ensureBalanceRow(
   periodKey: string,
   opt: TxOpt = {},
 ): Promise<void> {
+  // Postgres: never let INSERT fail inside a caller transaction (aborts the whole tx).
+  // Match ensureBalances.upsertBalance — ON CONFLICT, not try/catch on "Validation error".
+  if (process.env.DATABASE_URL) {
+    await exec(
+      `INSERT INTO org_quota_balances (org_id, meter, period_key, used, reserved)
+       VALUES (?, ?, ?, 0, 0)
+       ON CONFLICT (org_id, meter, period_key) DO NOTHING`,
+      [orgId, meter, periodKey],
+      opt,
+    );
+    return;
+  }
   try {
     await exec(
       `INSERT INTO org_quota_balances (org_id, meter, period_key, used, reserved)
