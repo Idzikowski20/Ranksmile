@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Badge, type BadgeAppearance } from '../koala/core/badge/badge';
 import { useOpenReveal } from '../../lib/motion/useOpenReveal';
 import { createPortal } from 'react-dom';
 import { NlpTerm, Coverage, termCoverage, termUsageHint } from '../../lib/contentScore';
@@ -9,9 +10,11 @@ import { faviconUrl } from '../../lib/faviconUrl';
 import DomainFavicon from '../common/DomainFavicon';
 import ScoreTrio from './ScoreTrio';
 import EffortChecklist from './EffortChecklist';
+import SourceExplorer from './SourceExplorer';
 import { buildEffortChecklist } from '../../lib/contentEffort';
 import { TIP_BUBBLE_BASE } from './tipBubble';
 import type { Action } from '../../lib/primitives/types';
+import type { CanonicalClaim } from '../../lib/knowledgeEngine/types';
 
 const F = 'var(--font-family-primary)';
 
@@ -63,10 +66,10 @@ interface Props {
   /** @deprecated Surgical Apply removed from AI Search info-to-cover. */
   onOptimizeAction?: (action: Action) => void;
   domainSlug?: string;
-}
-
-/* ── Coverage status ───────────────────────────────────────────────── */
-const TINT: Record<Coverage, string> = { red: '#FCE9E9', yellow: '#FBEFD6', green: '#E4F5EA' };
+  /** CIE immutable Knowledge Graph (optional — enables Knowledge Coverage UI). */
+  knowledgeGraph?: import('../../lib/knowledgeEngine/types').KnowledgeGraph | null;
+  knowledgeCoverageReport?: import('../../lib/knowledgeEngine/types').KnowledgeCoverageReport | null;
+};
 
 /* ── Reusable: hover tooltip (portal → never clipped by the panel overflow) ── */
 const Tip = ({ text, children, block }: { text: string; children: React.ReactNode; block?: boolean }) => {
@@ -108,14 +111,14 @@ const Popover = ({ iconD, title, fillIcon, children }: { iconD: string; title: s
     <div ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
       <button
         type="button" title={title} onClick={() => setOpen((v) => !v)}
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: open ? '#f4f4f5' : 'transparent', cursor: 'pointer', color: '#52525c' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = open ? '#f4f4f5' : 'transparent'; }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: open ? 'var(--koala-bg-secondary)' : 'transparent', cursor: 'pointer', color: 'var(--koala-text-secondary)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = open ? 'var(--koala-bg-secondary)' : 'transparent'; }}
       >
         <svg viewBox="0 0 24 24" width={18} height={18}><path {...(fillIcon ? { fill: 'currentColor' } : { fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const })} d={iconD} /></svg>
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(24,26,34,0.16), 0 2px 6px rgba(24,26,34,0.08)', padding: '8px 0', minWidth: 224, zIndex: 350, fontFamily: F, animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'var(--koala-bg-primary)', borderRadius: 12, boxShadow: '0 8px 24px rgba(24,26,34,0.16), 0 2px 6px rgba(24,26,34,0.08)', padding: '8px 0', minWidth: 224, zIndex: 350, fontFamily: F, animation: 'growOut 0.16s cubic-bezier(0.16,1,0.3,1)' }}>
           {children(() => setOpen(false))}
         </div>
       )}
@@ -124,67 +127,84 @@ const Popover = ({ iconD, title, fillIcon, children }: { iconD: string; title: s
 };
 
 const SecLabel = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ padding: '8px 16px 4px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#9f9fa9', textTransform: 'uppercase' }}>{children}</div>
+  <div style={{ padding: '8px 16px 4px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--koala-text-disabled)', textTransform: 'uppercase' }}>{children}</div>
 );
 
 const Toggle = ({ on }: { on: boolean }) => (
-  <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? '#F84416' : '#d4d4d8', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}>
-    <span style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+  <span style={{ width: 34, height: 20, borderRadius: 999, background: on ? 'var(--koala-text-brand)' : 'var(--koala-border-secondary)', position: 'relative', flexShrink: 0, transition: 'background 0.15s', display: 'inline-block' }}>
+    <span style={{ position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: 'var(--koala-bg-primary)', transition: 'left 0.15s' }} />
   </span>
 );
 const ToggleRow = ({ label, on, onChange }: { label: string; on: boolean; onChange: () => void }) => (
   <button type="button" onClick={onChange} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: F }}>
     <Toggle on={on} />
-    <span style={{ fontSize: 14, color: '#18181b' }}>{label}</span>
+    <span style={{ fontSize: 14, color: 'var(--koala-text-primary)' }}>{label}</span>
   </button>
 );
 
 const Check = () => (
-  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ color: '#18181b', flexShrink: 0 }}><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" style={{ color: 'var(--koala-text-primary)', flexShrink: 0 }}><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
 const MenuItem = ({ label, onClick, checked }: { label: string; onClick: () => void; checked?: boolean }) => (
-  <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 14, color: '#18181b', textAlign: 'left' }}
-    onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
+  <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: F, fontSize: 14, color: 'var(--koala-text-primary)', textAlign: 'left' }}
+    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
     <span>{label}</span>{checked && <Check />}
   </button>
 );
 
 const InfoDot = ({ tip }: { tip: string }) => (
   <Tip text={tip}>
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="#9f9fa9" strokeWidth={1.5} style={{ cursor: 'help' }}><path d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-9-3.75h.008v.008H12z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--koala-text-disabled)" strokeWidth={1.5} style={{ cursor: 'help' }}><path d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-9-3.75h.008v.008H12z" strokeLinecap="round" strokeLinejoin="round" /></svg>
   </Tip>
 );
 
 const copy = (text: string) => { try { navigator.clipboard?.writeText(text); } catch { /* ignore */ } };
 
 /* ── Term chip ─────────────────────────────────────────────────────── */
+const COV_APPEARANCE: Record<Coverage, BadgeAppearance> = {
+  red: 'danger',
+  yellow: 'warning',
+  green: 'success',
+};
+
 const TermChip = ({ term, showCount, showRange }: { term: NlpTerm; showCount: boolean; showRange: boolean }) => {
   const cur = term.current_count ?? 0;
-  const tint = TINT[termCoverage(term)];
+  const appearance = COV_APPEARANCE[termCoverage(term)];
   return (
     <Tip text={termUsageHint(term)}>
-      <div style={{ display: 'inline-flex', alignItems: 'stretch', borderRadius: 9999, background: tint, fontFamily: F, maxWidth: '100%' }}>
-        <span style={{ padding: showCount ? '5px 8px 5px 12px' : '5px 12px', fontSize: 13, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{term.term}</span>
+      <Badge
+        appearance={appearance}
+        size="md"
+        style={{
+          borderRadius: 9999,
+          height: 'auto',
+          maxWidth: '100%',
+          fontFamily: F,
+          padding: showCount ? '2px 2px 2px 10px' : '5px 12px',
+          gap: 0,
+        }}
+      >
+        <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{term.term}</span>
         {showCount && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', background: '#fff', borderRadius: 9999, margin: 2, padding: '2px 10px', flexShrink: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#18181b' }}>{cur}</span>
-            {showRange && <span style={{ fontSize: 13, color: '#9f9fa9' }}>/{term.target_count}</span>}
+          <span style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--koala-bg-primary)', borderRadius: 9999, margin: 2, padding: '2px 10px', flexShrink: 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-primary)' }}>{cur}</span>
+            {showRange && <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)' }}>/{term.target_count}</span>}
           </span>
         )}
-      </div>
+      </Badge>
     </Tip>
   );
 };
 
-const Chevron = ({ open, size = 16, color = '#9f9fa9' }: { open: boolean; size?: number; color?: string }) => (
+const Chevron = ({ open, size = 16, color = 'var(--koala-text-disabled)' }: { open: boolean; size?: number; color?: string }) => (
   <svg viewBox="0 0 20 20" width={size} height={size} style={{ color, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
     <path fill="currentColor" fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
   </svg>
 );
 
-/* Status dot — covered (#1AB25E) / uncovered (muted #D4D4D8), per design.md delta/checklist tokens. */
+/* Status dot — covered (var(--koala-status-success)) / uncovered (muted var(--koala-border-secondary)), per design.md delta/checklist tokens. */
 const StatusDot = ({ covered }: { covered: boolean }) => (
-  <span style={{ width: 8, height: 8, borderRadius: 9999, background: covered ? '#1AB25E' : '#D4D4D8', flexShrink: 0 }} />
+  <span style={{ width: 8, height: 8, borderRadius: 9999, background: covered ? 'var(--koala-status-success)' : 'var(--koala-border-secondary)', flexShrink: 0 }} />
 );
 
 /* Grouped accordion card inside AI Search (e.g. "Upfront Intent Alignment"). */
@@ -196,13 +216,13 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ background: '#f4f4f5', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ background: 'var(--koala-bg-secondary)', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button type="button" onClick={() => setOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b', textAlign: 'left' }}>{title}</span>
+        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', textAlign: 'left' }}>{title}</span>
         {badge && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, padding: '0 6px', borderRadius: 4, border: '1px solid #F5C4A0', color: '#F84416', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{badge}</span>
+          <Badge appearance="brand" size="sm" style={{ textTransform: 'uppercase', letterSpacing: '0.03em', fontWeight: 700 }}>{badge}</Badge>
         )}
-        <span style={{ marginLeft: 'auto' }}><Chevron open={open} color="#18181b" /></span>
+        <span style={{ marginLeft: 'auto' }}><Chevron open={open} color="var(--koala-text-primary)" /></span>
       </button>
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -213,7 +233,7 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                     <StatusDot covered={it.covered} />
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? '#9f9fa9' : '#18181b', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '19px', color: it.covered ? 'var(--koala-text-disabled)' : 'var(--koala-text-primary)', textDecoration: it.covered ? 'line-through' : 'none' }}>{it.text}</span>
                   </span>
                   {it.sources && it.sources.length > 0 ? (
                     <SourceRow sources={it.sources} muted={it.covered} />
@@ -225,13 +245,13 @@ const InfoCard = ({ title, badge, items, defaultOpen = true }: {
                     </span>
                   ) : null}
                   {it.covered ? (
-                    <span style={{ flexShrink: 0, fontSize: 12, color: '#9f9fa9' }}>Covered</span>
+                    <span style={{ flexShrink: 0, fontSize: 12, color: 'var(--koala-text-disabled)' }}>Covered</span>
                   ) : null}
                 </div>
                 {!it.covered && it.missing && it.missing.length > 0 && (
                   <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {it.missing.map((m, k) => (
-                      <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: '#52525c' }}>{m}</li>
+                      <li key={k} style={{ fontSize: 12, lineHeight: '16px', color: 'var(--koala-text-secondary)' }}>{m}</li>
                     ))}
                   </ul>
                 )}
@@ -255,7 +275,7 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
   if (source.kind === 'ai_overview') {
     return (
       <Tip text="Google AI Overviews">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5 }}>
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5 }}>
           <AiOverviewIcon />
         </span>
       </Tip>
@@ -264,35 +284,35 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
   if (source.kind === 'ai_mode' || source.kind === 'google') {
     return (
       <Tip text={tip}>
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5, fontSize: 10, fontWeight: 700, color: '#3086FF' }}>G</span>
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5, fontSize: 10, fontWeight: 700, color: '#3086FF' }}>G</span>
       </Tip>
     );
   }
   if (source.kind === 'openai') {
     return (
       <Tip text="ChatGPT / OpenAI">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5, fontSize: 9, fontWeight: 700, color: '#18181b' }}>AI</span>
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5, fontSize: 9, fontWeight: 700, color: 'var(--koala-text-primary)' }}>AI</span>
       </Tip>
     );
   }
   if (source.kind === 'gemini') {
     return (
       <Tip text="Google Gemini">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5, fontSize: 9, fontWeight: 700, color: '#3086FF' }}>G</span>
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5, fontSize: 9, fontWeight: 700, color: '#3086FF' }}>G</span>
       </Tip>
     );
   }
   if (source.kind === 'perplexity') {
     return (
       <Tip text="Perplexity">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#1a1a2e', marginRight: -5, fontSize: 8, fontWeight: 700, color: '#20B8CD' }}>P</span>
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: '#1a1a2e', marginRight: -5, fontSize: 8, fontWeight: 700, color: '#20B8CD' }}>P</span>
       </Tip>
     );
   }
   if (source.kind === 'reddit') {
     return (
       <Tip text="Reddit">
-        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#FF4500', marginRight: -5, fontSize: 8, fontWeight: 700, color: '#fff' }}>R</span>
+        <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: '#FF4500', marginRight: -5, fontSize: 8, fontWeight: 700, color: 'var(--koala-text-on-brand)' }}>R</span>
       </Tip>
     );
   }
@@ -300,11 +320,11 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
   const img = source.domain ? faviconUrl(source.domain) : undefined;
   const inner = img
     ? <img alt="" width={14} height={14} src={img} style={{ display: 'block' }} />
-    : <span style={{ fontSize: 9, color: '#52525c' }}>•</span>;
+    : <span style={{ fontSize: 9, color: 'var(--koala-text-secondary)' }}>•</span>;
   if (href) {
     return (
       <Tip text={tip}>
-        <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5, textDecoration: 'none' }}>
+        <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5, textDecoration: 'none' }}>
           {inner}
         </a>
       </Tip>
@@ -312,7 +332,7 @@ const SourceIcon = ({ source }: { source: InfoSource }) => {
   }
   return (
     <Tip text={tip}>
-      <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid #fff', background: '#fff', marginRight: -5 }}>
+      <span style={{ display: 'flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, border: '2px solid var(--koala-bg-primary)', background: 'var(--koala-bg-primary)', marginRight: -5 }}>
         {inner}
       </span>
     </Tip>
@@ -338,7 +358,7 @@ const FactRow = ({
     onMouseEnter={(e) => { const btn = e.currentTarget.querySelector('[data-copy]') as HTMLElement | null; if (btn) btn.style.opacity = '1'; }}
     onMouseLeave={(e) => { const btn = e.currentTarget.querySelector('[data-copy]') as HTMLElement | null; if (btn) btn.style.opacity = '0'; }}
   >
-    <span style={{ fontSize: 14, lineHeight: '19px', color: fact.covered ? '#9f9fa9' : '#18181b', textDecoration: fact.covered ? 'line-through' : 'none' }}>{fact.text}</span>
+    <span style={{ fontSize: 14, lineHeight: '19px', color: fact.covered ? 'var(--koala-text-disabled)' : 'var(--koala-text-primary)', textDecoration: fact.covered ? 'line-through' : 'none' }}>{fact.text}</span>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
       <SourceRow sources={fact.sources} muted={fact.covered} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
@@ -346,12 +366,12 @@ const FactRow = ({
           type="button"
           data-copy
           onClick={() => copy(fact.text)}
-          style={{ opacity: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#52525c', fontFamily: F, padding: 0, transition: 'opacity 0.15s ease' }}
+          style={{ opacity: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--koala-text-secondary)', fontFamily: F, padding: 0, transition: 'opacity 0.15s ease' }}
         >
           Copy
         </button>
         {fact.covered ? (
-          <span style={{ fontSize: 12, color: '#9f9fa9', flexShrink: 0 }}>Covered</span>
+          <span style={{ fontSize: 12, color: 'var(--koala-text-disabled)', flexShrink: 0 }}>Covered</span>
         ) : null}
       </div>
     </div>
@@ -367,16 +387,16 @@ const TopicGroupCard = ({
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ background: '#f4f4f5', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ background: 'var(--koala-bg-secondary)', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button type="button" onClick={() => setOpen((v) => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#18181b', textAlign: 'left', flex: 1 }}>{group.title}</span>
-        <Chevron open={open} color="#18181b" />
+        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', textAlign: 'left', flex: 1 }}>{group.title}</span>
+        <Chevron open={open} color="var(--koala-text-primary)" />
       </button>
       {open && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {group.facts.map((fact, idx) => (
             <React.Fragment key={fact.id}>
-              {idx > 0 && <div style={{ borderTop: '1px solid #e4e4e7' }} />}
+              {idx > 0 && <div style={{ borderTop: '1px solid var(--koala-border-primary)' }} />}
               <FactRow fact={fact} />
             </React.Fragment>
           ))}
@@ -389,10 +409,10 @@ const TopicGroupCard = ({
 /* ── Bottom metric ─────────────────────────────────────────────────── */
 const MetricBottom = ({ label, value, range }: { label: string; value: number; range: string }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2 }}>
-    <span style={{ fontSize: 11, fontWeight: 400, lineHeight: '14px', color: '#3f3f47', fontFamily: F }}>{label}</span>
+    <span style={{ fontSize: 11, fontWeight: 400, lineHeight: '14px', color: 'var(--koala-text-secondary)', fontFamily: F }}>{label}</span>
     <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, lineHeight: '14px', color: '#000', fontFamily: F }}>{value.toLocaleString()}</span>
-      <span style={{ fontSize: 11, fontWeight: 400, lineHeight: '14px', color: '#52525c', fontFamily: F }}>{range}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, lineHeight: '14px', color: 'var(--koala-text-primary)', fontFamily: F }}>{value.toLocaleString()}</span>
+      <span style={{ fontSize: 11, fontWeight: 400, lineHeight: '14px', color: 'var(--koala-text-secondary)', fontFamily: F }}>{range}</span>
     </span>
   </div>
 );
@@ -408,6 +428,7 @@ const WriteOptimizePanel = ({
   html, keyword, paaQuestions,
   onBack, highlightTerms, onHighlightTermsChange,
   initialSection, scoreDeltas,
+  knowledgeGraph, knowledgeCoverageReport,
 }: Props) => {
   const [tab, setTab] = useState<'all' | 'headings'>('all');
   const [seoOpen, setSeoOpen] = useState(true);
@@ -483,6 +504,31 @@ const WriteOptimizePanel = ({
     [aiSummary, coverageItems, competitorOutlinesCache, coverageSnapshot?.topics],
   );
   const hasTopicAccordions = infoTopics.intent.length > 0 || infoTopics.topics.some((t) => t.facts.length > 0);
+  const cieClaims = knowledgeGraph?.claims;
+  const hasCie = Boolean(cieClaims && cieClaims.length > 0);
+  const coverageById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const item of knowledgeCoverageReport?.items || []) {
+      m.set(item.claimId, item.coverage);
+    }
+    return m;
+  }, [knowledgeCoverageReport]);
+  const cieClusters = useMemo(() => {
+    if (!cieClaims?.length) return [] as Array<{ cluster: string; claims: CanonicalClaim[] }>;
+    const map = new Map<string, CanonicalClaim[]>();
+    for (const c of cieClaims) {
+      const key = c.cluster || 'Unassigned';
+      const list = map.get(key) || [];
+      list.push(c);
+      map.set(key, list);
+    }
+    return [...map.entries()]
+      .map(([cluster, claims]) => ({ cluster, claims }))
+      .sort((a, b) => b.claims.length - a.claims.length);
+  }, [cieClaims]);
+
+  const [openClusters, setOpenClusters] = useState<Record<string, boolean>>({});
+  const [openClaimId, setOpenClaimId] = useState<string | null>(null);
 
   const allInfoFacts = useMemo(() => [
     ...infoTopics.intent.map((f) => ({ text: f.text, covered: f.covered })),
@@ -544,11 +590,11 @@ const WriteOptimizePanel = ({
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button type="button" onClick={onBack} title="Back" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid #e4e4e7', background: '#fff', cursor: 'pointer', color: '#18181b' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}>
+          <button type="button" onClick={onBack} title="Back" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-primary)', cursor: 'pointer', color: 'var(--koala-text-primary)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-primary)'; }}>
             <svg viewBox="0 0 24 24" width={18} height={18}><path fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="m15 18l-6-6l6-6" /></svg>
           </button>
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>Write &amp; Optimize</span>
+          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Write &amp; Optimize</span>
         </div>
       </div>
 
@@ -582,9 +628,9 @@ const WriteOptimizePanel = ({
               fontFamily: F,
             }}
           >
-            <Chevron open={effortOpen} color="#18181b" />
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>Effort</span>
-            <span style={{ fontSize: 15, color: '#9f9fa9', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Chevron open={effortOpen} color="var(--koala-text-primary)" />
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Effort</span>
+            <span style={{ fontSize: 15, color: 'var(--koala-text-disabled)', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               Hard to replicate
               <InfoDot tip="Signals that are hard to cheaply replicate with one prompt — not an AI detector" />
             </span>
@@ -616,7 +662,7 @@ const WriteOptimizePanel = ({
         {effortOpen && (
           <div ref={effortRevealRef} style={{ paddingBottom: 8 }}>
             {visibleEffortItems.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: '#9f9fa9', fontStyle: 'italic', padding: '4px 0 8px' }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--koala-text-disabled)', fontStyle: 'italic', padding: '4px 0 8px' }}>
                 No signals match the current display filters.
               </p>
             ) : (
@@ -633,9 +679,9 @@ const WriteOptimizePanel = ({
       {/* SEO Entities subheader */}
       <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <button type="button" onClick={() => { setSeoOpen((v) => !v); if (!seoOpen) { setEffortOpen(false); setAiOpen(false); } }} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
-          <Chevron open={seoOpen} color="#18181b" />
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>SEO</span>
-          <span style={{ fontSize: 15, color: '#9f9fa9', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Chevron open={seoOpen} color="var(--koala-text-primary)" />
+          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)' }}>SEO</span>
+          <span style={{ fontSize: 15, color: 'var(--koala-text-disabled)', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             Entities to cover
             <InfoDot tip="Based on top-ranking pages, these are the entities to include to optimize for SEO" />
           </span>
@@ -679,10 +725,10 @@ const WriteOptimizePanel = ({
       {seoOpen && (
         <div style={{ padding: '10px 16px 0' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <svg viewBox="0 0 24 24" width={18} height={18} style={{ position: 'absolute', left: 12, color: '#52525c', pointerEvents: 'none' }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" /></svg>
+            <svg viewBox="0 0 24 24" width={18} height={18} style={{ position: 'absolute', left: 12, color: 'var(--koala-text-secondary)', pointerEvents: 'none' }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607" /></svg>
             <input
               value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search entities"
-              style={{ width: '100%', boxSizing: 'border-box', height: 40, padding: '0 12px 0 38px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', fontSize: 14, fontFamily: F, color: '#18181b' }}
+              style={{ width: '100%', boxSizing: 'border-box', height: 40, padding: '0 12px 0 38px', borderRadius: 8, border: '1px solid var(--koala-border-secondary)', outline: 'none', fontSize: 14, fontFamily: F, color: 'var(--koala-text-primary)' }}
             />
           </div>
         </div>
@@ -690,17 +736,17 @@ const WriteOptimizePanel = ({
 
       {/* Tabs */}
       {seoOpen && (
-        <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'flex-end', gap: 16, borderBottom: '1px solid #f4f4f5' }}>
+        <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'flex-end', gap: 16, borderBottom: '1px solid var(--koala-bg-secondary)' }}>
           {([['all', 'All', terms.length], ['headings', 'Headings', headingTerms.length]] as const).map(([key, label, count]) => {
             const on = tab === key;
             return (
               <button key={key} type="button" onClick={() => setTab(key)} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 0 10px', background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 14, fontWeight: 600, color: on ? '#18181b' : '#52525c', fontFamily: F,
-                borderBottom: on ? '2px solid #F84416' : '2px solid transparent', marginBottom: -1,
+                fontSize: 14, fontWeight: 600, color: on ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)', fontFamily: F,
+                borderBottom: on ? '2px solid var(--koala-text-brand)' : '2px solid transparent', marginBottom: -1,
               }}>
                 {label}
-                <span style={{ background: on ? '#F84416' : '#52525c', color: '#fff', fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '1px 6px' }}>{count}</span>
+                <span style={{ background: on ? 'var(--koala-text-brand)' : 'var(--koala-text-secondary)', color: 'var(--koala-bg-primary)', fontSize: 11, fontWeight: 500, borderRadius: 4, padding: '1px 6px' }}>{count}</span>
               </button>
             );
           })}
@@ -712,9 +758,9 @@ const WriteOptimizePanel = ({
         {seoOpen && (
           <div ref={seoRevealRef}>
             {terms.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms yet — run deep analysis.</p>
+            <p style={{ fontSize: 13, color: 'var(--koala-text-disabled)', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms yet — run deep analysis.</p>
           ) : list.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#9f9fa9', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms match the current filters.</p>
+            <p style={{ fontSize: 13, color: 'var(--koala-text-disabled)', textAlign: 'center', padding: '24px 0', fontStyle: 'italic' }}>No terms match the current filters.</p>
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {list.map((t) => <TermChip key={t.term} term={t} showCount={countRanges} showRange={showRanges} />)}
@@ -724,13 +770,18 @@ const WriteOptimizePanel = ({
         )}
 
         {/* AI Search collapsible */}
-        <div ref={aiRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 0 4px', marginTop: 8, borderTop: '1px solid #f4f4f5' }}>
+        <div ref={aiRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '14px 0 4px', marginTop: 8, borderTop: '1px solid var(--koala-bg-secondary)' }}>
           <button type="button" onClick={() => { setAiOpen((v) => !v); if (!aiOpen) { setEffortOpen(false); setSeoOpen(false); } }} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: F }}>
-            <svg viewBox="0 0 20 20" width={16} height={16} style={{ flexShrink: 0, color: '#9f9fa9', transform: aiOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}><path fill="currentColor" fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b', whiteSpace: 'nowrap' }}>AI Search</span>
-            <span style={{ fontSize: 15, color: '#9f9fa9', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              Info to cover
-              <InfoDot tip="Based on LLM answers, this is the information that drives citations. Cover it to appear in AI search." />
+            <svg viewBox="0 0 20 20" width={16} height={16} style={{ flexShrink: 0, color: 'var(--koala-text-disabled)', transform: aiOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}><path fill="currentColor" fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--koala-text-primary)', whiteSpace: 'nowrap' }}>
+              {hasCie ? 'Knowledge Coverage' : 'AI Search'}
+            </span>
+            <span style={{ fontSize: 15, color: 'var(--koala-text-disabled)', display: 'inline-flex', alignItems: 'center', gap: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {hasCie ? 'Claims · sources' : 'Info to cover'}
+              <InfoDot tip={hasCie
+                ? 'Canonical claims from TOP-N with provenance. Cover them to raise Knowledge Coverage.'
+                : 'Based on LLM answers, this is the information that drives citations. Cover it to appear in AI search.'}
+              />
             </span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
@@ -761,11 +812,93 @@ const WriteOptimizePanel = ({
         </div>
         {aiOpen && (
           <div ref={aiRevealRef} style={{ padding: '6px 0 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <p style={{ fontSize: 12, color: '#71717b', margin: 0, fontFamily: F, lineHeight: '17px' }}>
-              Based on LLM answers, this is the information that drives citations. Cover it to appear in AI search.
+            <p style={{ fontSize: 12, color: 'var(--koala-text-tertiary)', margin: 0, fontFamily: F, lineHeight: '17px' }}>
+              {hasCie
+                ? 'Shared knowledge reconstructed from TOP-N (+ Official / PAA). Open a claim for Source Explorer.'
+                : 'Based on LLM answers, this is the information that drives citations. Cover it to appear in AI search.'}
             </p>
 
-            {hasTopicAccordions ? (
+            {hasCie ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {knowledgeCoverageReport?.writerMetrics && (
+                  <p style={{ margin: 0, fontSize: 12, fontFamily: F, color: 'var(--koala-text-secondary)' }}>
+                    Coverage {knowledgeCoverageReport.writerMetrics.coveragePct}% ·{' '}
+                    {knowledgeCoverageReport.writerMetrics.claimsUsed}/{knowledgeCoverageReport.writerMetrics.claimsTotal} claims
+                  </p>
+                )}
+                {cieClusters.map(({ cluster, claims }) => {
+                  const open = openClusters[cluster] !== false;
+                  return (
+                    <div
+                      key={cluster}
+                      style={{
+                        border: '1px solid var(--koala-border-primary)',
+                        borderRadius: 12,
+                        background: 'var(--koala-bg-primary)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpenClusters((prev) => ({ ...prev, [cluster]: !open }))}
+                        style={{
+                          display: 'flex',
+                          width: '100%',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          padding: '10px 12px',
+                          border: 'none',
+                          background: 'var(--koala-bg-tertiary)',
+                          cursor: 'pointer',
+                          fontFamily: F,
+                        }}
+                      >
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)' }}>{cluster}</span>
+                        <span style={{ fontSize: 11, color: 'var(--koala-text-tertiary)' }}>{claims.length}</span>
+                      </button>
+                      {open && (
+                        <div style={{ padding: '8px 12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {claims.map((claim) => {
+                            const cov = coverageById.get(claim.id);
+                            const expanded = openClaimId === claim.id;
+                            return (
+                              <div key={claim.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenClaimId(expanded ? null : claim.id)}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    border: 'none',
+                                    background: 'none',
+                                    padding: 0,
+                                    cursor: 'pointer',
+                                    fontFamily: F,
+                                  }}
+                                >
+                                  <span style={{ fontSize: 12, color: 'var(--koala-text-primary)', lineHeight: '18px' }}>
+                                    {claim.statement}
+                                  </span>
+                                  <span style={{ display: 'block', marginTop: 4, fontSize: 10, color: 'var(--koala-text-tertiary)' }}>
+                                    {cov || claim.importance}
+                                    {claim.consensusExplanation?.percent != null
+                                      ? ` · ${claim.consensusExplanation.percent}%`
+                                      : ''}
+                                  </span>
+                                </button>
+                                {expanded && <SourceExplorer claim={claim} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : hasTopicAccordions ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {infoTopics.intent.length > 0 && (
                   <InfoCard
@@ -782,7 +915,7 @@ const WriteOptimizePanel = ({
                 ))}
               </div>
             ) : (
-              <p style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F, fontStyle: 'italic' }}>
+              <p style={{ fontSize: 12, color: 'var(--koala-text-disabled)', fontFamily: F, fontStyle: 'italic' }}>
                 Run a deep analysis or AI-visibility check to populate this list.
               </p>
             )}
@@ -791,7 +924,7 @@ const WriteOptimizePanel = ({
       </div>
 
       {/* Bottom metrics */}
-      <div style={{ borderTop: '1px solid #f4f4f5', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <div style={{ borderTop: '1px solid var(--koala-bg-secondary)', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <MetricBottom label="Words" value={wordCount} range={wordsRange} />
         <MetricBottom label="Headings" value={headingCount} range={headingsRange} />
         <MetricBottom label="Paragraphs" value={paragraphCount} range={parasRange} />

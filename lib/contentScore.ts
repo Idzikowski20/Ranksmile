@@ -74,6 +74,15 @@ export interface ScoreData {
       at?: string;
       history?: Array<{ score: number; at: string; source: 'heuristic' | 'llm' }>;
    };
+   /** WIE Source A — compact competitor brief (not raw HTML). */
+   competitor_synthesis?: import('./wie/competitorSynthesis').CompetitorSynthesis;
+   /** WIE Think hints from Deep Analysis (policy / narrative / explainability) */
+   wie_policy_hints?: Record<string, unknown>;
+   /** CIE — immutable Knowledge Graph snapshot (when USE_KNOWLEDGE_ENGINE passes gate). */
+   knowledge_graph?: import('./knowledgeEngine/types').KnowledgeGraph;
+   /** CIE — coverage overlay report (never written into frozen graph). */
+   knowledge_coverage_report?: import('./knowledgeEngine/types').KnowledgeCoverageReport;
+   structural_benchmark?: import('./benchmarkIntelligence/types').StructuralBenchmark;
 }
 
 /**

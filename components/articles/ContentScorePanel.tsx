@@ -119,6 +119,8 @@ interface Props {
   /** Background deep analysis (import flow) — replaces panel with progress UI. */
   isDeepAnalyzing?: boolean;
   deepAnalysisUi?: DeepAnalysisUiState | null;
+  /** Bump from editor chrome to open Publish or Export (toolbar Publish button). */
+  openPublishSignal?: number;
 }
 
 /* ── Small circular progress ───────────────────────────────────────── */
@@ -127,7 +129,7 @@ const CircleProgress = ({ value, max, color }: { value: number; max: number; col
   const pct = max > 0 ? Math.min(value / max, 1) : 0;
   return (
     <svg width={16} height={16} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={8} cy={8} r={r} fill="none" stroke="#e4e4e7" strokeWidth={2} />
+      <circle cx={8} cy={8} r={r} fill="none" stroke="var(--koala-border-primary)" strokeWidth={2} />
       <circle cx={8} cy={8} r={r} fill="none" stroke={color} strokeWidth={2}
         strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
         strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.3s' }} />
@@ -203,7 +205,7 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
   const seoScore = competitor.seoScore ?? 0;
 
   return (
-    <div style={{ border: '1px solid #f4f4f5', borderRadius: 8, overflow: 'hidden', background: '#fafafa' }}>
+    <div style={{ border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, overflow: 'hidden', background: 'var(--koala-bg-tertiary)' }}>
       <button
         onClick={() => setOpen((v) => !v)}
         style={{
@@ -217,15 +219,15 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: 12, fontWeight: 600, color: '#18181b', fontFamily: 'var(--font-family-primary)',
+              fontSize: 12, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {competitor.serp_title || competitor.title}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <span style={{ fontSize: 11, color: '#F84416', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
-              <span style={{ fontSize: 11, color: '#9f9fa9' }}>·</span>
-              <span style={{ fontSize: 11, color: '#52525c', fontFamily: 'var(--font-family-primary)' }}>
+              <span style={{ fontSize: 11, color: 'var(--koala-text-brand)', fontFamily: 'var(--font-family-primary)', fontWeight: 500 }}>{domain}</span>
+              <span style={{ fontSize: 11, color: 'var(--koala-text-disabled)' }}>·</span>
+              <span style={{ fontSize: 11, color: 'var(--koala-text-secondary)', fontFamily: 'var(--font-family-primary)' }}>
                 {competitor.word_count.toLocaleString()}w
               </span>
             </div>
@@ -236,18 +238,18 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
             <Gauge score={seoScore} size="sm" />
           </div>
           <svg viewBox="0 0 20 20" width={13} height={13} fill="currentColor"
-            style={{ color: '#9f9fa9', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>
+            style={{ color: 'var(--koala-text-disabled)', transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>
             <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" />
           </svg>
         </div>
       </button>
 
       {open && (
-        <div style={{ borderTop: '1px solid #f4f4f5', padding: '6px 10px 8px' }}>
+        <div style={{ borderTop: '1px solid var(--koala-bg-secondary)', padding: '6px 10px 8px' }}>
           <a
             href={competitor.url} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            style={{ fontSize: 10, color: '#F84416', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
+            style={{ fontSize: 10, color: 'var(--koala-text-brand)', fontFamily: 'var(--font-family-primary)', textDecoration: 'none', wordBreak: 'break-all', display: 'block', marginBottom: 6, lineHeight: 1.4 }}
             onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
             onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
           >
@@ -255,9 +257,9 @@ const CompetitorCard = ({ competitor, defaultOpen }: { competitor: Competitor; d
           </a>
           {competitor.headings.map((h, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginLeft: (h.level - 1) * 8, marginBottom: 1 }}>
-              <span style={{ fontSize: 10, color: '#9f9fa9', fontFamily: 'var(--font-family-primary)', flexShrink: 0, width: 14, textAlign: 'right' }}>h{h.level}</span>
+              <span style={{ fontSize: 10, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)', flexShrink: 0, width: 14, textAlign: 'right' }}>h{h.level}</span>
               <span style={{
-                fontSize: 11, color: h.level === 1 ? '#18181b' : '#3f3f47',
+                fontSize: 11, color: h.level === 1 ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)',
                 fontFamily: 'var(--font-family-primary)', fontWeight: h.level === 1 ? 600 : 400,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4,
               }} title={h.text}>{h.text}</span>
@@ -319,6 +321,7 @@ const ContentScorePanel = ({
   domainSlug,
   isDeepAnalyzing,
   deepAnalysisUi,
+  openPublishSignal,
 }: Props) => {
   const [terms, setTerms] = useState<NlpTerm[]>([]);
   const [view, setView] = useState<'main' | 'write' | 'publish' | 'prepublish'>('main');
@@ -330,6 +333,9 @@ const ContentScorePanel = ({
   useEffect(() => {
     if (isAutoOptimizing) { setWriteSection(null); setView('write'); }
   }, [isAutoOptimizing]);
+  useEffect(() => {
+    if (openPublishSignal && openPublishSignal > 0) setView('publish');
+  }, [openPublishSignal]);
   const [nlpOpen, setNlpOpen] = useState(false);
   const [competitorOpen, setCompetitorOpen] = useState(false);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
@@ -621,6 +627,8 @@ const ContentScorePanel = ({
         onAutoOptimize={onAutoOptimize}
         onOptimizeAction={onOptimizeAction}
         domainSlug={domainSlug}
+        knowledgeGraph={scoreData?.knowledge_graph ?? null}
+        knowledgeCoverageReport={scoreData?.knowledge_coverage_report ?? null}
       />
     );
   }
@@ -678,7 +686,7 @@ const ContentScorePanel = ({
           title={(
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               Content Score
-              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="#9f9fa9" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--koala-text-disabled)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-9-3.75h.008v.008H12z" />
               </svg>
             </span>
@@ -725,16 +733,16 @@ const ContentScorePanel = ({
               <div style={{ padding: '0 12px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {isLoadingCompetitors ? (
                   [1, 2, 3].map((i) => (
-                    <div key={i} style={{ border: '1px solid #f4f4f5', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8 }}>
-                      <div style={{ width: 14, height: 14, borderRadius: 2, background: '#ebebed', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite' }} />
+                    <div key={i} style={{ border: '1px solid var(--koala-bg-secondary)', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8 }}>
+                      <div style={{ width: 14, height: 14, borderRadius: 2, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite' }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ width: '65%', height: 11, borderRadius: 3, background: '#ebebed', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
-                        <div style={{ width: '40%', height: 9, borderRadius: 3, background: '#ebebed', marginTop: 5, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
+                        <div style={{ width: '65%', height: 11, borderRadius: 3, background: 'var(--koala-bg-secondary)', animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.05s' }} />
+                        <div style={{ width: '40%', height: 9, borderRadius: 3, background: 'var(--koala-bg-secondary)', marginTop: 5, animation: 'editorSkeletonPulse 1.6s ease-in-out infinite', animationDelay: '0.1s' }} />
                       </div>
                     </div>
                   ))
                 ) : displayCompetitors.length === 0 ? (
-                  <p style={{ fontSize: 12, color: '#9f9fa9', textAlign: 'center', padding: '10px 0', fontStyle: 'italic' }}>
+                  <p style={{ fontSize: 12, color: 'var(--koala-text-disabled)', textAlign: 'center', padding: '10px 0', fontStyle: 'italic' }}>
                     No competitor data yet. Re-run deep analysis.
                   </p>
                 ) : (
@@ -755,9 +763,9 @@ const ContentScorePanel = ({
             {nlpOpen && (
               <>
                 <div style={{ padding: '0 16px 8px' }}>
-                  <div style={{ background: '#f3f4f0', border: '1px solid #f4f4f5', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? '#1ab25e' : '#d70028'} />
-                    <span style={{ fontSize: 12, color: '#52525c' }}>NLP terms: {coveredCount}/{terms.length} covered</span>
+                  <div style={{ background: 'var(--koala-bg-secondary)', border: '1px solid var(--koala-bg-secondary)', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <CircleProgress value={coveredCount} max={terms.length} color={coveredCount / Math.max(terms.length, 1) > 0.5 ? 'var(--koala-status-success)' : 'var(--koala-status-danger)'} />
+                    <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)' }}>NLP terms: {coveredCount}/{terms.length} covered</span>
                   </div>
                 </div>
                 <KeywordResearchSection
