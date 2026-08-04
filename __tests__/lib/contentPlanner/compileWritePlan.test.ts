@@ -191,6 +191,17 @@ describe('compileWritePlan', () => {
     expect(paragraph?.goal).toBe('faq');
   });
 
+  it('splits ordinary sections into intro/definition/summary by expectedWords', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({ blocks: ['definition'], expectedWords: 300 })],
+    });
+    const compiled = compileWritePlan(plan);
+    const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
+    expect(paragraphs.map((p) => p.goal)).toEqual(['intro', 'definition', 'summary']);
+    const totalWords = paragraphs.reduce((sum, p) => sum + p.expectedWords, 0);
+    expect(totalWords).toBe(300);
+  });
+
   it('round-robin importantTerms onto paragraphs as required keywords', () => {
     const plan = sampleExecutionPlan({
       sections: [sampleSection({ blocks: ['intro', 'definition', 'summary'] })],
@@ -203,6 +214,23 @@ describe('compileWritePlan', () => {
     expect(allTerms).toContain('słowo kluczowe');
     expect(allTerms).toContain('link building');
     expect(allTerms).toContain('audyt');
+    for (const k of paragraphs.flatMap((p) => p.keywords)) {
+      expect(k.required).toBe(true);
+    }
+  });
+
+  it('allocates all importantTerms even when terms outnumber paragraphs', () => {
+    const plan = sampleExecutionPlan({
+      sections: [sampleSection({ blocks: ['intro', 'definition', 'summary'] })],
+    });
+    const compiled = compileWritePlan(plan, {
+      importantTerms: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+    });
+    const paragraphs = compiled.paragraphPlans.filter((p) => p.sectionId === 'sec-intro');
+    const allTerms = paragraphs.flatMap((p) => p.keywords.map((k) => k.term));
+    expect(new Set(allTerms).size).toBe(7);
+    expect(allTerms).toContain('a');
+    expect(allTerms).toContain('g');
     for (const k of paragraphs.flatMap((p) => p.keywords)) {
       expect(k.required).toBe(true);
     }
