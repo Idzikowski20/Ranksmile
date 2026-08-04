@@ -1,5 +1,6 @@
 export * from './types';
 export * from './knowledgePack/types';
+export { buildCompileDiagnostics } from './knowledgePack/compileDiagnostics';
 export { buildIntentBlueprint } from './intentBlueprint';
 export { buildReaderModel } from './readerModel';
 export { buildCompetitorProfile, buildCompetitorProfiles } from './competitorIntelligence';
