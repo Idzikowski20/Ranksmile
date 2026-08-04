@@ -250,17 +250,29 @@ describe('compileWritePlan', () => {
     expect(lastPack.sectionConstraints.some((c) => c.type === 'NoBrandMention')).toBe(false);
   });
 
-  it('leaves transition fields null/empty (no FlowPlanner)', () => {
+  it('fills FlowPlanner transitions on knowledge packs and paragraph plans', () => {
     const plan = sampleExecutionPlan({
-      sections: [sampleSection()],
+      sections: [
+        sampleSection({ id: 's1', heading: 'Wstęp' }),
+        sampleSection({ id: 's2', heading: 'Kroki' }),
+      ],
     });
     const compiled = compileWritePlan(plan);
-    const pack = compiled.knowledgePacks[0];
-    expect(pack.sectionTransitions.fromPrevious).toBeNull();
-    expect(pack.sectionTransitions.toNext).toBeNull();
+
+    const firstPack = compiled.knowledgePacks[0];
+    const lastPack = compiled.knowledgePacks[compiled.knowledgePacks.length - 1];
+    expect(firstPack.sectionTransitions.fromPrevious).toBeNull();
+    expect(firstPack.sectionTransitions.toNext).toBe('Kroki');
+    expect(lastPack.sectionTransitions.fromPrevious).toBe('Wstęp');
+    expect(lastPack.sectionTransitions.toNext).toBeNull();
+
     for (const p of compiled.paragraphPlans) {
-      expect(p.transitionFrom).toBeUndefined();
-      expect(p.transitionTo).toBeUndefined();
+      if (p.id !== compiled.paragraphPlans[0].id) {
+        expect(p.transitionFrom).toBeTruthy();
+      }
+      if (p.id !== compiled.paragraphPlans[compiled.paragraphPlans.length - 1].id) {
+        expect(p.transitionTo).toBeTruthy();
+      }
     }
   });
 

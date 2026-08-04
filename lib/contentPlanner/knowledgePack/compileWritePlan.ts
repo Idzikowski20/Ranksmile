@@ -24,6 +24,7 @@ import { buildKnowledgePack } from './sectionPlanner';
 import { planParagraphs } from './paragraphPlanner';
 import { allocateTerms } from './termAllocator';
 import { allocateNoBrandMentionConstraints } from './constraintAllocator';
+import { planFlow } from './flowPlanner';
 
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -152,10 +153,9 @@ export function compileWritePlan(
     knowledgePacks.push(buildKnowledgePack(section, enrichedParagraphs));
   }
 
-  let paragraphPlans = paragraphPlansBySection.flat();
-  paragraphPlans = allocateTerms(paragraphPlans, importantTerms);
-
-  const finalPacks = allocateNoBrandMentionConstraints(knowledgePacks, allowBrandNiche);
+  const flow = planFlow(knowledgePacks, paragraphPlansBySection.flat());
+  const paragraphPlans = allocateTerms(flow.paragraphs, importantTerms);
+  const finalPacks = allocateNoBrandMentionConstraints(flow.packs, allowBrandNiche);
   const graph = buildGraph(plan, plan.builtAt);
   if (opts?.researchVersion) {
     graph.researchVersion = opts.researchVersion;
