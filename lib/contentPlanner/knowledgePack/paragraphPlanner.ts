@@ -1,6 +1,8 @@
 import type { ContentBlockType, ExecutionPlanSection } from '../types';
 import type { ParagraphGoal, ParagraphPlan } from './types';
 
+const SPECIAL_BLOCKS: ContentBlockType[] = ['checklist', 'steps', 'faq'];
+
 function mapBlockToGoal(block: ContentBlockType): ParagraphGoal {
   switch (block) {
     case 'checklist':
@@ -24,12 +26,16 @@ function mapBlockToGoal(block: ContentBlockType): ParagraphGoal {
   }
 }
 
+function hasOnlySpecialBlocks(blocks: ContentBlockType[]): boolean {
+  return blocks.length > 0 && blocks.every((b) => SPECIAL_BLOCKS.includes(b));
+}
+
 export function planParagraphs(section: ExecutionPlanSection): ParagraphPlan[] {
   if (section.blocks.length === 0 && section.expectedWords === 0) {
     return [];
   }
 
-  const goals: ParagraphGoal[] = section.blocks.length > 0
+  const goals: ParagraphGoal[] = hasOnlySpecialBlocks(section.blocks)
     ? section.blocks.map(mapBlockToGoal)
     : ['intro', 'definition', 'summary'];
 
