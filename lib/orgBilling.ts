@@ -1,8 +1,17 @@
 import type { BillingPeriod } from './billingPlans';
 import db from '../database/database';
+import {
+  BillingSource,
+  captureBillingStack,
+  decideBillingChange,
+  emitBillingEvent,
+  ensureCorrelationId,
+  isEntitledStatus,
+  type BillingAuditContext,
+} from './billingAudit';
 import { ensureBillingTables } from './ensureBillingTables';
 import { queryOne } from './db/query';
-import type { PlanSlug } from './stripePrices';
+import type { LegacyPlanSlug } from './stripePrices';
 
 export type SubscriptionStatus =
   | 'trialing'
@@ -18,10 +27,12 @@ export interface OrgBillingState {
   orgId: number;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
-  planSlug: PlanSlug | null;
+  planSlug: LegacyPlanSlug | null;
   billingPeriod: BillingPeriod | null;
   subscriptionStatus: SubscriptionStatus | null;
   trialEndsAt: string | null;
+  /** Set once a Growth trial has been started — never cleared on cancel. */
+  trialConsumedAt: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   lastCheckoutStartedAt: string | null;
@@ -55,6 +66,7 @@ type OrgBillingRow = {
   billing_period: string | null;
   subscription_status: string | null;
   trial_ends_at: string | null;
+  trial_consumed_at: string | null;
   current_period_end: string | null;
   cancel_at_period_end: number | boolean | null;
   last_checkout_started_at: string | null;
@@ -91,6 +103,7 @@ function mapRow(row: OrgBillingRow): OrgBillingState {
     billingPeriod,
     subscriptionStatus,
     trialEndsAt: row.trial_ends_at,
+    trialConsumedAt: row.trial_consumed_at,
     currentPeriodEnd: row.current_period_end,
     cancelAtPeriodEnd: truthyFlag(row.cancel_at_period_end),
     lastCheckoutStartedAt: row.last_checkout_started_at,
@@ -108,7 +121,7 @@ export async function getOrgBillingState(orgId: number): Promise<OrgBillingState
   await ensureBillingTables();
   const row = await queryOne<OrgBillingRow>(
     `SELECT id, stripe_customer_id, stripe_subscription_id, plan_slug, billing_period,
-            subscription_status, trial_ends_at, current_period_end,
+            subscription_status, trial_ends_at, trial_consumed_at, current_period_end,
             cancel_at_period_end, last_checkout_started_at, starter_nudge_sent_at,
             payment_failed_locked_at, payment_failed_invoice_id,
             payment_failed_subscription_id, payment_failed_customer_id,
@@ -131,18 +144,39 @@ export async function getOrgIdByStripeCustomerId(customerId: string): Promise<nu
 export interface OrgBillingPatch {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
-  planSlug?: PlanSlug | null;
+  planSlug?: LegacyPlanSlug | null;
   billingPeriod?: BillingPeriod | null;
   subscriptionStatus?: SubscriptionStatus | null;
   trialEndsAt?: Date | null;
+  trialConsumedAt?: Date | null;
   currentPeriodEnd?: Date | null;
   cancelAtPeriodEnd?: boolean | null;
   lastCheckoutStartedAt?: Date | null;
   starterNudgeSentAt?: Date | null;
 }
 
-export async function updateOrgBillingState(orgId: number, patch: OrgBillingPatch): Promise<void> {
+export async function updateOrgBillingState(
+  orgId: number,
+  patch: OrgBillingPatch,
+  audit: BillingAuditContext,
+): Promise<void> {
   await ensureBillingTables();
+
+  const before = await getOrgBillingState(orgId);
+  const oldPlan = before?.planSlug ?? null;
+  const oldStatus = before?.subscriptionStatus ?? null;
+
+  const planTouched = patch.planSlug !== undefined;
+  const statusTouched = patch.subscriptionStatus !== undefined;
+  const { changed, decision } = decideBillingChange({
+    oldPlan,
+    newPlan: patch.planSlug,
+    oldStatus,
+    newStatus: patch.subscriptionStatus,
+    planTouched,
+    statusTouched,
+  });
+
   const sets: string[] = ['updated_at = CURRENT_TIMESTAMP'];
   const replacements: unknown[] = [];
 
@@ -170,6 +204,15 @@ export async function updateOrgBillingState(orgId: number, patch: OrgBillingPatc
     sets.push('trial_ends_at = ?');
     replacements.push(patch.trialEndsAt ? patch.trialEndsAt.toISOString() : null);
   }
+  if (patch.trialConsumedAt !== undefined) {
+    if (patch.trialConsumedAt === null) {
+      sets.push('trial_consumed_at = NULL');
+    } else {
+      // Never overwrite an earlier consumption timestamp.
+      sets.push('trial_consumed_at = COALESCE(trial_consumed_at, ?)');
+      replacements.push(patch.trialConsumedAt.toISOString());
+    }
+  }
   if (patch.currentPeriodEnd !== undefined) {
     sets.push('current_period_end = ?');
     replacements.push(patch.currentPeriodEnd ? patch.currentPeriodEnd.toISOString() : null);
@@ -189,4 +232,51 @@ export async function updateOrgBillingState(orgId: number, patch: OrgBillingPatc
 
   replacements.push(orgId);
   await db.query(`UPDATE organizations SET ${sets.join(', ')} WHERE id = ?`, { replacements });
+
+  const correlationId = ensureCorrelationId(audit.correlationId);
+  const newPlan = planTouched ? (patch.planSlug ?? null) : oldPlan;
+  const newStatus = statusTouched ? (patch.subscriptionStatus ?? null) : oldStatus;
+  const subId = patch.stripeSubscriptionId !== undefined
+    ? patch.stripeSubscriptionId
+    : (audit.stripeSubscriptionId ?? before?.stripeSubscriptionId ?? null);
+
+  if (changed && (planTouched || statusTouched)) {
+    await emitBillingEvent({
+      kind: 'PLAN_CHANGED',
+      source: audit.source,
+      reason: audit.reason,
+      decision,
+      correlationId,
+      orgId,
+      actorUserId: audit.actorUserId ?? null,
+      setupIntentId: audit.setupIntentId ?? null,
+      stripeSubscriptionId: subId,
+      oldPlanSlug: oldPlan,
+      newPlanSlug: newPlan,
+      oldStatus,
+      newStatus,
+      stack: captureBillingStack(),
+      meta: audit.meta,
+    });
+
+    if (isEntitledStatus(newStatus) && !isEntitledStatus(oldStatus)) {
+      await emitBillingEvent({
+        kind: 'ENTITLEMENT_GRANTED',
+        source: audit.source,
+        reason: audit.reason,
+        decision: 'ALLOW',
+        correlationId,
+        orgId,
+        actorUserId: audit.actorUserId ?? null,
+        setupIntentId: audit.setupIntentId ?? null,
+        stripeSubscriptionId: subId,
+        oldPlanSlug: oldPlan,
+        newPlanSlug: newPlan,
+        oldStatus,
+        newStatus,
+        meta: audit.meta,
+      });
+    }
+  }
+  // No PLAN_CHANGED when nothing effectively changed (avoids SKIP spam in logs/ledger).
 }

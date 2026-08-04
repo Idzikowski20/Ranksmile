@@ -12,6 +12,8 @@ export type AoTraceStep =
   | 'invariant_gate'
   | 'semantic_gate'
   | 'candidate_score_gate'
+  | 'rx_quality_gate'
+  | 'opening_policy_enforce'
   | 'score_gate'
   | 'final_gate'
   | 'accepted'

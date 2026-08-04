@@ -41,6 +41,20 @@ jest.mock('../../lib/stripePrices', () => ({ getStripePriceId: jest.fn().mockRet
 jest.mock('../../lib/billingPlans', () => ({
   getCheckoutPlan: jest.fn().mockReturnValue({ slug: 'growth', name: 'Growth', priceMonthly: 59 }),
 }));
+jest.mock('../../lib/getBootstrap', () => ({
+  getBootstrap: jest.fn(async () => ({
+    access: {
+      schemaVersion: 1,
+      policyVersion: 1,
+      generatedAt: '2026-08-03T00:00:00.000Z',
+      appState: 'BILLING_REQUIRED',
+      reason: 'NO_ACTIVE_ENTITLEMENT',
+      billing: { state: 'NONE' },
+      workspace: { state: 'NONE' },
+      redirect: { redirect: '/plans', replace: true, reason: 'NO_ACTIVE_ENTITLEMENT' },
+    },
+  })),
+}));
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import cancelHandler from '../../pages/api/billing/cancel';
@@ -108,7 +122,15 @@ describe('billing mutation guards', () => {
   it.each<[string, ApiHandler, NextApiRequest]>([
     ['cancel', cancelHandler, postReq({}, '/api/billing/cancel')],
     ['portal', portalHandler, postReq({}, '/api/billing/portal')],
-    ['update-customer', updateCustomerHandler, postReq({ billingEmail: 'billing@example.com' }, '/api/billing/update-customer')],
+    ['update-customer', updateCustomerHandler, postReq({
+      billingEmail: 'billing@example.com',
+      address: {
+        line1: 'Street 1',
+        city: 'Berlin',
+        postal_code: '10115',
+        country: 'DE',
+      },
+    }, '/api/billing/update-customer')],
     ['checkout-session', checkoutSessionHandler, postReq({ planSlug: 'growth', billing: 'monthly', mode: 'trial' }, '/api/billing/checkout-session')],
     ['create-subscription', createSubscriptionHandler, postReq({
       planSlug: 'growth',
@@ -143,6 +165,7 @@ describe('billing mutation guards', () => {
       billingPeriod: 'monthly',
       subscriptionStatus: 'active',
       trialEndsAt: null,
+    trialConsumedAt: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
       lastCheckoutStartedAt: null,

@@ -4,6 +4,8 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import GeneratingStage from './GeneratingStage';
+import { Badge } from '../koala/core';
+import { StatusBadge, type StatusTone } from '../koala/primitives/StatusBadge';
 
 type PipelineJob = {
   id: number;
@@ -38,6 +40,10 @@ const QUEUE_LABEL: Record<string, string> = {
 
 function queueLabel(q: string): string {
   return QUEUE_LABEL[q] || q.replace(/_/g, ' ');
+}
+
+function queueStatusTone(status: string): StatusTone {
+  return status === 'running' ? 'running' : 'queued';
 }
 
 function isActiveStatus(status: string): boolean {
@@ -167,8 +173,10 @@ export default function PipelineStatusStrip(props: { articleId: number | string 
               className={`pipeline-queue-chip pipeline-queue-chip--${j.status}`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
-              {queueLabel(j.queue)}
-              <em>{j.status === 'queued' ? 'queued' : 'running'}</em>
+              <Badge appearance="neutral" size="sm" style={{ height: 'auto', padding: '0 4px', background: 'transparent', border: 'none' }}>
+                {queueLabel(j.queue)}
+              </Badge>
+              <StatusBadge status={queueStatusTone(j.status)} label={j.status === 'queued' ? 'queued' : 'running'} />
             </span>
           ))}
         </div>

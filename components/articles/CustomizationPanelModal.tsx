@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Checkbox, Select } from '../koala/core';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import CompetitorsSection from '../competitors/CompetitorsSection';
 
@@ -102,21 +103,6 @@ const Toggle = ({ on }: { on: boolean }) => (
       position: 'absolute', top: 0, left: on ? 16 : 0, width: 16, height: 16, borderRadius: '50%',
       background: '#fff', boxShadow: '0 1px 2px rgba(24,26,34,0.2)', transition: 'left 0.25s',
     }} />
-  </span>
-);
-
-const Checkbox = ({ checked, size = 20 }: { checked: boolean; size?: number }) => (
-  <span style={{
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size,
-    borderRadius: 4, flexShrink: 0,
-    background: checked ? C.purple : '#fff',
-    boxShadow: checked ? 'none' : `inset 0 0 0 1px ${C.g40}, 0px 1px 2px 0px rgba(26,29,40,0.06)`,
-  }}>
-    {checked && (
-      <svg viewBox="0 0 20 20" width={size * 0.8} height={size * 0.8}>
-        <path fill="#fff" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" />
-      </svg>
-    )}
   </span>
 );
 
@@ -267,68 +253,29 @@ const LearnMore = () => (
 const AdjustCard = ({ label, value, range, onMinus, onPlus, dropdown, dropdownValue, dropdownOptions, onSelectOption }: {
   label?: React.ReactNode; value: number; range: string; onMinus: () => void; onPlus: () => void;
   dropdown?: boolean; dropdownValue?: string; dropdownOptions?: string[]; onSelectOption?: (v: string) => void;
-}) => {
-  const [open, setOpen] = useState(false);
-  const ddRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDoc = (e: MouseEvent) => { if (ddRef.current && !ddRef.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, height: 200, width: 224 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <span style={{ padding: 4, display: 'flex' }}><RefreshIcon /></span>
-        {dropdown ? (
-          <div ref={ddRef} style={{ position: 'relative' }}>
-            <button type="button" onClick={() => setOpen((o) => !o)} style={{
-              display: 'flex', alignItems: 'center', height: 40, padding: '2px 8px 2px 12px', gap: 4,
-              border: `1px solid ${open ? C.purple40 : C.g40}`, borderRadius: 8, background: '#fff', cursor: 'pointer',
-              boxShadow: open ? '0 0 0 4px rgba(242,153,100,0.1)' : '0px 1px 2px 0px rgba(26,29,40,0.06)', fontFamily: F,
-              transition: 'border-color 0.15s, box-shadow 0.15s',
-            }}>
-              <span style={{ fontSize: 14, color: C.text }}>{dropdownValue}</span>
-              <svg viewBox="0 0 20 20" width={20} height={20} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><path fill={C.text} fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06" clipRule="evenodd" /></svg>
-            </button>
-            {open && (
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 4px)', left: 0, minWidth: '100%', zIndex: 200,
-                background: '#fff', borderRadius: 6, padding: '4px 0', boxShadow: '0px 8px 16px rgba(24,26,34,0.12), 0px 1px 2px rgba(24,26,34,0.1)',
-                animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
-              }}>
-                {(dropdownOptions || []).map((opt) => {
-                  const sel = opt === dropdownValue;
-                  return (
-                    <button key={opt} type="button" onClick={() => { onSelectOption?.(opt); setOpen(false); }} style={{
-                      display: 'flex', alignItems: 'center', gap: 8, width: '100%', margin: '0 4px', padding: '8px 16px',
-                      border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6,
-                      fontSize: 14, fontWeight: 500, color: C.g120, fontFamily: F, whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = C.g5; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      {opt}
-                      {sel && <svg viewBox="0 0 20 20" width={16} height={16} style={{ marginLeft: 'auto' }}><path fill={C.text} fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          <span style={{ padding: '8px 16px', fontSize: 14, color: C.g100, fontFamily: F, userSelect: 'none' }}>{label}</span>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <StepBtn kind="minus" onClick={onMinus} />
-        <div style={{ width: 75, textAlign: 'center', fontSize: 20, lineHeight: '1.75rem', fontWeight: 500, color: C.text, fontFamily: F }}>{value}</div>
-        <StepBtn kind="plus" onClick={onPlus} />
-      </div>
-      <div style={{ marginTop: 8, fontSize: 16, color: C.g100, fontFamily: F }}>{range}</div>
+}) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, height: 200, width: 224 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <span style={{ padding: 4, display: 'flex' }}><RefreshIcon /></span>
+      {dropdown ? (
+        <Select
+          size="sm"
+          value={dropdownValue || ''}
+          options={(dropdownOptions || []).map((opt) => ({ value: opt, label: opt }))}
+          onChange={(v) => onSelectOption?.(v)}
+        />
+      ) : (
+        <span style={{ padding: '8px 16px', fontSize: 14, color: C.g100, fontFamily: F, userSelect: 'none' }}>{label}</span>
+      )}
     </div>
-  );
-};
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <StepBtn kind="minus" onClick={onMinus} />
+      <div style={{ width: 75, textAlign: 'center', fontSize: 20, lineHeight: '1.75rem', fontWeight: 500, color: C.text, fontFamily: F }}>{value}</div>
+      <StepBtn kind="plus" onClick={onPlus} />
+    </div>
+    <div style={{ marginTop: 8, fontSize: 16, color: C.g100, fontFamily: F }}>{range}</div>
+  </div>
+);
 
 /* ── Terms tab pill ────────────────────────────────────────────── */
 const TermTab = ({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) => (
@@ -369,7 +316,7 @@ const TermChip = ({ term }: { term: Term }) => (
       width: 16, height: 16, borderRadius: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       background: term.heading ? C.yellow : C.g80, color: '#fff', fontSize: 11, fontWeight: 400, lineHeight: '1rem', flexShrink: 0,
     }}>H</span>
-    <Checkbox checked size={16} />
+    <Checkbox checked readOnly size="sm" />
   </div>
 );
 
@@ -706,7 +653,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                   <tbody>
                     {TOPICS.map((t) => (
                       <tr key={t.topic} style={{ borderBottom: `1px solid ${C.g10}` }}>
-                        <td style={{ padding: '8px 12px', textAlign: 'center' }}><Checkbox checked={t.checked} /></td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}><Checkbox checked={t.checked} readOnly /></td>
                         <td style={{ padding: '8px 12px', fontSize: 14 }}>{t.topic}</td>
                         <td style={{ padding: '8px 12px' }}><SourceBadge source={t.source} /></td>
                         <td />
@@ -739,7 +686,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                 <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
                   <thead>
                     <tr style={{ fontSize: 12, textTransform: 'uppercase', fontWeight: 500, color: C.g100, borderBottom: `1px solid ${C.g20}` }}>
-                      <th style={{ width: 16, padding: '8px 12px' }}><Checkbox checked={false} /></th>
+                      <th style={{ width: 16, padding: '8px 12px' }}><Checkbox checked={false} readOnly /></th>
                       <th style={{ padding: '8px 12px', textAlign: 'left' }}>Custom Topic</th>
                       <th style={{ width: 180, padding: '8px 12px', textAlign: 'left' }}>Source</th>
                       <th style={{ width: 32 }} />
@@ -747,7 +694,7 @@ const CustomizationPanelModal = ({ open, slug, keyword, onClose }: Props) => {
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ padding: '8px 12px' }}><Checkbox checked /></td>
+                      <td style={{ padding: '8px 12px' }}><Checkbox checked readOnly /></td>
                       <td style={{ padding: '8px 12px' }}>
                         <input placeholder="Create new topic..." style={{
                           width: '100%', minHeight: 40, padding: '0 12px', boxSizing: 'border-box', fontSize: 14, fontFamily: F,

@@ -10,19 +10,6 @@ export interface CheckoutPlan {
 
 export const CHECKOUT_PLANS: CheckoutPlan[] = [
   {
-    slug: 'starter',
-    name: 'Starter',
-    priceMonthly: 29,
-    priceYearly: 24,
-    features: [
-      'Create and Optimize 10 Documents',
-      'Track 15 AI Prompts, refreshed weekly',
-      'Keyword Research - 50 / month',
-      'Site Audit — 100 pages per crawl',
-      '1 Brand Space',
-    ],
-  },
-  {
     slug: 'growth',
     name: 'Growth',
     priceMonthly: 59,
@@ -70,10 +57,22 @@ export const getCheckoutPlan = (slugOrName: string): CheckoutPlan | undefined =>
   return CHECKOUT_PLANS.find((plan) => plan.slug === normalized || normalizePlan(plan.name) === normalized);
 };
 
-export const getPlanCheckoutHref = (slugOrName: string, billing: BillingPeriod): string => {
+export type CheckoutMode = 'trial' | 'upfront';
+
+/**
+ * Growth defaults to trial; Scale / Agency always upfront.
+ * Pass mode explicitly when Growth trial was already consumed.
+ */
+export const getPlanCheckoutHref = (
+  slugOrName: string,
+  billing: BillingPeriod,
+  mode?: CheckoutMode,
+): string => {
   const plan = getCheckoutPlan(slugOrName);
   const slug = plan?.slug ?? normalizePlan(slugOrName);
-  return `/billing/checkout/${slug}?billing=${billing}`;
+  const resolved: CheckoutMode = mode
+    ?? (slug === 'growth' ? 'trial' : 'upfront');
+  return `/billing/checkout/${slug}?billing=${billing}&mode=${resolved}`;
 };
 
 export const getPlanPeriodPrice = (plan: CheckoutPlan, billing: BillingPeriod): number => (

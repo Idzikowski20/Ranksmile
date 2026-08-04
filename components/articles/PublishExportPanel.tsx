@@ -71,24 +71,24 @@ const download = (filename: string, content: string, type: string) => {
 
 /* ── Reusable bits ─────────────────────────────────────────────────── */
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b', fontFamily: F }}>{children}</span>
+  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: F }}>{children}</span>
 );
 
-const Divider = () => <div style={{ minHeight: 1, height: 1, flexShrink: 0, background: '#f4f4f5', alignSelf: 'stretch' }} />;
+const Divider = () => <div style={{ minHeight: 1, height: 1, flexShrink: 0, background: 'var(--koala-bg-secondary)', alignSelf: 'stretch' }} />;
 
 const CopyIconBtn = ({ onClick, title }: { onClick: () => void; title: string }) => (
   <button type="button" title={title} onClick={onClick}
-    style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#3f3f47', display: 'inline-flex', lineHeight: 1 }}
-    onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+    style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: 'var(--koala-text-secondary)', display: 'inline-flex', lineHeight: 1 }}
+    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}>
     <svg viewBox="0 0 24 24" width={16} height={16}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" /></svg>
   </button>
 );
 
 const ExportCard = ({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) => (
   <button type="button" onClick={onClick}
-    style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 16px', borderRadius: 12, border: '1px solid #e4e4e7', background: '#f4f4f5', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#18181b', fontFamily: F, transition: 'opacity 0.15s' }}
+    style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 16px', borderRadius: 12, border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: F, transition: 'opacity 0.15s' }}
     onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}>
-    <span style={{ display: 'inline-flex', color: '#18181b' }}>{icon}</span>
+    <span style={{ display: 'inline-flex', color: 'var(--koala-text-primary)' }}>{icon}</span>
     {label}
   </button>
 );
@@ -151,11 +151,11 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button type="button" onClick={onBack} title="Back"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, border: 'none', background: '#f4f4f5', cursor: 'pointer', color: '#18181b' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', cursor: 'pointer', color: 'var(--koala-text-primary)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}>
             <svg viewBox="0 0 20 20" width={20} height={20}><path fill="currentColor" fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0" clipRule="evenodd" /></svg>
           </button>
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>Publish or Export</span>
+          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Publish or Export</span>
         </div>
       </div>
 
@@ -167,28 +167,28 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           {/* Title */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#3f3f47', fontFamily: F }}>Title</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: F }}>Title</span>
               <CopyIconBtn title="Copy title" onClick={() => copy(metaTitle, 'Title')} />
             </div>
             <textarea
               value={metaTitle} maxLength={70} placeholder="Meta title…" rows={2} readOnly={readOnly}
               onChange={(e) => onMetaTitleChange(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', minHeight: 60, padding: '8px 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: '#18181b', lineHeight: '20px', background: readOnly ? '#f3f4f0' : '#fff', cursor: readOnly ? 'default' : 'text' }}
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 60, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--koala-border-secondary)', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: 'var(--koala-text-primary)', lineHeight: '20px', background: readOnly ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)', cursor: readOnly ? 'default' : 'text' }}
             />
-            <span style={{ alignSelf: 'flex-end', fontSize: 13, color: metaTitle.length >= 70 ? '#e5484d' : '#52525c', fontFamily: F }}>{metaTitle.length}/70</span>
+            <span style={{ alignSelf: 'flex-end', fontSize: 13, color: metaTitle.length >= 70 ? '#e5484d' : 'var(--koala-text-secondary)', fontFamily: F }}>{metaTitle.length}/70</span>
           </div>
           {/* Description */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#3f3f47', fontFamily: F }}>Description</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-secondary)', fontFamily: F }}>Description</span>
               <CopyIconBtn title="Copy description" onClick={() => copy(metaDescription, 'Description')} />
             </div>
             <textarea
               value={metaDescription} maxLength={156} placeholder="Meta description…" rows={5} readOnly={readOnly}
               onChange={(e) => onMetaDescriptionChange(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', minHeight: 116, padding: '8px 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: '#18181b', lineHeight: '20px', background: readOnly ? '#f3f4f0' : '#fff', cursor: readOnly ? 'default' : 'text' }}
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 116, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--koala-border-secondary)', outline: 'none', resize: 'vertical', fontSize: 14, fontFamily: F, color: 'var(--koala-text-primary)', lineHeight: '20px', background: readOnly ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)', cursor: readOnly ? 'default' : 'text' }}
             />
-            <span style={{ alignSelf: 'flex-end', fontSize: 13, color: metaDescription.length >= 156 ? '#e5484d' : '#52525c', fontFamily: F }}>{metaDescription.length}/156</span>
+            <span style={{ alignSelf: 'flex-end', fontSize: 13, color: metaDescription.length >= 156 ? '#e5484d' : 'var(--koala-text-secondary)', fontFamily: F }}>{metaDescription.length}/156</span>
           </div>
         </div>
 
@@ -199,7 +199,7 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
           <SectionTitle>Featured image</SectionTitle>
           {featuredImage?.url ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e4e4e7', background: '#f3f4f0', lineHeight: 0 }}>
+              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-secondary)', lineHeight: 0 }}>
                 {/* Native img keeps intrinsic aspect ratio — Next/Image width/height was squashing previews. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -211,16 +211,16 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               <input
                 type="text" value={featuredImage.alt} placeholder="Alt text…" readOnly={readOnly}
                 onChange={(e) => onFeaturedImageChange?.({ url: featuredImage.url, alt: e.target.value })}
-                style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', fontSize: 14, fontFamily: F, color: '#18181b', background: readOnly ? '#f3f4f0' : '#fff' }}
+                style={{ width: '100%', boxSizing: 'border-box', height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid var(--koala-border-secondary)', outline: 'none', fontSize: 14, fontFamily: F, color: 'var(--koala-text-primary)', background: readOnly ? 'var(--koala-bg-secondary)' : 'var(--koala-bg-primary)' }}
               />
               {!readOnly && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Replace</button>
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Replace</button>
                   <button type="button" onClick={() => onFeaturedImageChange?.(null)}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#e5484d', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Remove</button>
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: '#e5484d', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-status-danger-bg)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>Remove</button>
                 </div>
               )}
             </div>
@@ -231,15 +231,15 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
               onDragOver={(e) => { if (readOnly) return; e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => { e.preventDefault(); setDragOver(false); readImage(e.dataTransfer.files?.[0]); }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '28px 16px', borderRadius: 12, border: `1.5px dashed ${dragOver ? '#F5C4A0' : '#d4d4d8'}`, background: dragOver ? 'rgba(242,153,100,0.05)' : '#fff', cursor: readOnly ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'border-color 0.15s, background 0.15s', opacity: readOnly ? 0.6 : 1 }}>
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '28px 16px', borderRadius: 12, border: `1.5px dashed ${dragOver ? '#F5C4A0' : 'var(--koala-border-secondary)'}`, background: dragOver ? 'rgba(242,153,100,0.05)' : 'var(--koala-bg-primary)', cursor: readOnly ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'border-color 0.15s, background 0.15s', opacity: readOnly ? 0.6 : 1 }}>
               <svg width={42} height={42} viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="6" y="3" width="15" height="13" rx="2.5" fill="#C7BCFB" />
-                <rect x="3" y="7" width="15" height="13" rx="2.5" fill="#F84416" />
-                <circle cx="7.5" cy="11.5" r="1.6" fill="#fff" />
-                <path d="M4 18l4.2-4 3 2.6 3-2.8L18 18" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <rect x="3" y="7" width="15" height="13" rx="2.5" fill="var(--koala-text-brand)" />
+                <circle cx="7.5" cy="11.5" r="1.6" fill="var(--koala-bg-primary)" />
+                <path d="M4 18l4.2-4 3 2.6 3-2.8L18 18" stroke="var(--koala-bg-primary)" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
-              <span style={{ fontSize: 14, color: '#52525c', fontFamily: F }}>Drop your image here, or <span style={{ color: '#F84416', fontWeight: 600 }}>browse</span></span>
-              <span style={{ fontSize: 12, color: '#9f9fa9', fontFamily: F }}>Supports: PNG, JPG, JPEG, WEBP</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-secondary)', fontFamily: F }}>Drop your image here, or <span style={{ color: 'var(--koala-text-brand)', fontWeight: 600 }}>browse</span></span>
+              <span style={{ fontSize: 12, color: 'var(--koala-text-disabled)', fontFamily: F }}>Supports: PNG, JPG, JPEG, WEBP</span>
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" hidden onChange={(e) => readImage(e.target.files?.[0])} />
@@ -254,36 +254,36 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
             {wpLoading ? (
               /* Skeleton until the connection status resolves — never flash "Not connected". */
               <>
-                <div style={{ height: 38, borderRadius: 6, background: '#f4f4f5' }} />
-                <div style={{ height: 14, width: 180, borderRadius: 6, background: '#f4f4f5' }} />
+                <div style={{ height: 38, borderRadius: 6, background: 'var(--koala-bg-secondary)' }} />
+                <div style={{ height: 14, width: 180, borderRadius: 6, background: 'var(--koala-bg-secondary)' }} />
               </>
             ) : (
               <>
                 <button type="button" disabled={wpBtnDisabled} onClick={wpBtnDisabled ? undefined : (wp.connected ? () => setWpModalOpen(true) : () => router.push('/settings/wordpress'))}
-                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: '#18181b', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: wpBtnDisabled ? 'not-allowed' : 'pointer', opacity: wpBtnDisabled ? 0.5 : 1, transition: 'background 0.15s' }}
-                  onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = '#F84416'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#18181b'; }}>
+                  style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '9px 16px', borderRadius: 6, border: 'none', background: 'var(--koala-text-primary)', color: 'var(--koala-bg-primary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: wpBtnDisabled ? 'not-allowed' : 'pointer', opacity: wpBtnDisabled ? 0.5 : 1, transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => { if (!wpBtnDisabled) e.currentTarget.style.background = 'var(--koala-text-brand)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-text-primary)'; }}>
                   {WpLogo}
                   WordPress
                 </button>
 
                 {/* Why the button is disabled — content must be saved before it ships. */}
                 {wpBlocked && (
-                  <span style={{ fontSize: 13, color: '#52525c', fontFamily: F }}>
+                  <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)', fontFamily: F }}>
                     {saveState === 'saving' ? 'Saving changes…' : 'Save your changes to publish to WordPress.'}
                   </span>
                 )}
 
                 {/* Connection status, with the actions stacked beneath it */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#18181b', fontFamily: F, minWidth: 0 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? '#1AB25E' : '#e5484d', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: wp.connected ? 'var(--koala-status-success)' : '#e5484d', flexShrink: 0 }} />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{wp.connected ? `Connected to ${wpHost}` : 'Not connected to any WordPress site'}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
                     {wp.connected && wp.published && wp.postUrl && (
                       <a href={wp.postUrl} target="_blank" rel="noreferrer noopener"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, textDecoration: 'none', whiteSpace: 'nowrap', lineHeight: 1 }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: F, textDecoration: 'none', whiteSpace: 'nowrap', lineHeight: 1 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}>
                         {IcoExternal}
                         View post
                       </a>
@@ -292,9 +292,9 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
                       href="/settings/wordpress"
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#3f3f47', fontFamily: F, whiteSpace: 'nowrap', lineHeight: 1, textDecoration: 'none' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--koala-text-secondary)', fontFamily: F, whiteSpace: 'nowrap', lineHeight: 1, textDecoration: 'none' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-primary)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}
                     >
                       {IcoManage}
                       Manage
@@ -334,10 +334,10 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
         {/* Social media */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px' }}>
           <SectionTitle>Social media</SectionTitle>
-          <span style={{ fontSize: 14, color: '#18181b', fontFamily: F }}>Create a social media post from your content</span>
+          <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F }}>Create a social media post from your content</span>
           <button type="button" disabled={!articleId} onClick={() => articleId && setSocialModalOpen(true)}
-            style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px #e4e4e7', background: 'transparent', color: '#3f3f47', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: articleId ? 'pointer' : 'not-allowed', opacity: articleId ? 1 : 0.5, transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { if (articleId) e.currentTarget.style.background = '#f4f4f5'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+            style={{ width: '100%', padding: '9px 16px', borderRadius: 6, border: 'none', boxShadow: 'inset 0 0 0 1px var(--koala-border-primary)', background: 'transparent', color: 'var(--koala-text-secondary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: articleId ? 'pointer' : 'not-allowed', opacity: articleId ? 1 : 0.5, transition: 'background 0.15s' }}
+            onMouseEnter={(e) => { if (articleId) e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
             Create Social Media Post
           </button>
         </div>
@@ -345,19 +345,19 @@ const PublishExportPanel = ({ articleId, score, html, plainText, title, metaTitl
         {/* Time to move on? */}
         {!isDone && doneCardOpen && (
           <div style={{ padding: '4px 16px 16px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid #e4e4e7', borderRadius: 12, padding: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--koala-border-primary)', borderRadius: 12, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b', fontFamily: F }}>Time to move on?</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--koala-text-primary)', fontFamily: F }}>Time to move on?</span>
                 <button type="button" title="Dismiss" onClick={() => setDoneCardOpen(false)}
-                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#3f3f47', display: 'inline-flex', lineHeight: 1 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#18181b'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3f3f47'; }}>
+                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--koala-text-secondary)', display: 'inline-flex', lineHeight: 1 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-secondary)'; }}>
                   <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
               </div>
-              <span style={{ fontSize: 14, color: '#18181b', fontFamily: F }}>Update the article status or keep going to complete the process</span>
+              <span style={{ fontSize: 14, color: 'var(--koala-text-primary)', fontFamily: F }}>Update the article status or keep going to complete the process</span>
               <button type="button" onClick={onMarkDone}
-                style={{ alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 6, border: 'none', background: '#f4f4f5', color: '#18181b', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#e4e4e7'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#f4f4f5'; }}>
+                style={{ alignSelf: 'flex-start', padding: '7px 16px', borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-primary)', fontSize: 14, fontWeight: 600, fontFamily: F, cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}>
                 Mark as done
               </button>
             </div>

@@ -5,6 +5,29 @@ import toast from 'react-hot-toast';
 import WizardShell from '../../components/articles/WizardShell';
 import GeneratingStage from '../../components/articles/GeneratingStage';
 import { clearWizardState } from '../../lib/wizardState';
+import { isUsableArticleHtml } from '../../lib/articleHtmlUsable';
+import { shouldSkipFreshGenerate } from '../../lib/generateResume';
+
+async function fetchArticleContent(articleId: string): Promise<{
+  content: string;
+  instructions: string;
+  voiceId: string;
+}> {
+  const artRes = await fetch(`/api/articles/${articleId}`);
+  const artData = await artRes.json().catch(() => ({})) as {
+    article?: { content?: string | null; wizard_state?: string | null };
+  };
+  let instructions = '';
+  let voiceId = 'serp';
+  if (artData.article?.wizard_state) {
+    try {
+      const ws = JSON.parse(artData.article.wizard_state) as { instructions?: string; voiceId?: string };
+      instructions = ws.instructions || '';
+      voiceId = ws.voiceId || 'serp';
+    } catch { /* ignore bad wizard_state */ }
+  }
+  return { content: artData.article?.content || '', instructions, voiceId };
+}
 
 const GeneratingPage: NextPage = () => {
   const router = useRouter();
@@ -44,47 +67,42 @@ const GeneratingPage: NextPage = () => {
     });
 
     (async () => {
-      let instructions = '';
-      let voiceId = 'serp';
-      try {
-        const artRes = await fetch(`/api/articles/${articleId}`);
-        const artData = await artRes.json().catch(() => ({}));
-        const article = artData.article as { wizard_state?: string | null } | undefined;
-        if (article?.wizard_state) {
-          const ws = JSON.parse(article.wizard_state) as { instructions?: string; voiceId?: string };
-          instructions = ws.instructions || '';
-          voiceId = ws.voiceId || 'serp';
-        }
-      } catch { /* ignore */ }
+      const pre = await fetchArticleContent(articleId).catch(() => ({
+        content: '', instructions: '', voiceId: 'serp',
+      }));
+      const { instructions, voiceId } = pre;
 
-      // Resume only an in-flight *generate* job. Looking up by articleId alone used to
-      // return the finished deep_analysis job (status=done) and skip /generate entirely.
+      // Resume only an in-flight *generate* job. A prior "done" with empty HTML must
+      // NOT skip — that left article 170 stuck on a stub after an empty LLM result.
       try {
         const progRes = await fetch(
           `/api/articles/job-progress?articleId=${encodeURIComponent(articleId)}&jobType=article_generate`,
         );
         if (progRes.ok) {
-          const prog = await progRes.json().catch(() => ({}));
-          if (prog.status === 'running' && prog.jobId) {
+          const prog = await progRes.json().catch(() => ({})) as { status?: string; jobId?: string };
+          const articleHtml = (await fetchArticleContent(articleId).catch(() => ({ content: '' }))).content;
+          const action = shouldSkipFreshGenerate({ jobStatus: prog.status, articleHtml });
+          if (action === 'poll' && prog.jobId) {
             await pollJob(prog.jobId);
+            const after = await fetchArticleContent(articleId);
+            if (!isUsableArticleHtml(after.content)) {
+              throw new Error('Generation finished without usable article content');
+            }
             clearWizardState(articleId);
             setFinished(true);
             return;
           }
-          if (prog.status === 'queued' && prog.jobId) {
-            await pollJob(prog.jobId);
+          if (action === 'finish') {
             clearWizardState(articleId);
             setFinished(true);
             return;
           }
-          if (prog.status === 'done') {
-            clearWizardState(articleId);
-            setFinished(true);
-            return;
-          }
-          // failed / unknown → fall through and start a fresh generate
+          // fresh → fall through
         }
-      } catch { /* start fresh */ }
+      } catch (e) {
+        // Only swallow lookup errors; content-empty after poll must surface.
+        if (e instanceof Error && e.message.includes('usable article')) throw e;
+      }
 
       const genRes = await fetch(`/api/articles/${articleId}/generate`, {
         method: 'POST',
@@ -101,12 +119,16 @@ const GeneratingPage: NextPage = () => {
       const genData = await genRes.json().catch(() => ({}));
       if (!genRes.ok) throw new Error(genData?.error || 'Generation failed');
       await pollJob(genData.jobId as string);
+      const after = await fetchArticleContent(articleId);
+      if (!isUsableArticleHtml(after.content)) {
+        throw new Error('Generation finished without usable article content');
+      }
       clearWizardState(articleId);
       setFinished(true);
     })().catch((e: unknown) => {
       const msg = e instanceof Error ? e.message : 'Generation failed';
       toast.error(msg);
-      setFinished(true);
+      // Stay on this page so a retry (reload) can start a fresh generate.
     });
 
     return undefined;
@@ -120,12 +142,14 @@ const GeneratingPage: NextPage = () => {
 
   return (
     <WizardShell title="Creating your article">
-      <GeneratingStage
-        size="lg"
-        title="Creating your article"
-        status={progressMessage}
-        progressPct={progressPct}
-      />
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: 48 }}>
+        <GeneratingStage
+          size="lg"
+          title="Creating your article"
+          status={progressMessage}
+          progressPct={progressPct}
+        />
+      </div>
     </WizardShell>
   );
 };

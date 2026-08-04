@@ -126,7 +126,6 @@ const PrivacyPage: NextPage = () => (
       <li>Transactional email (e.g. Resend)</li>
       <li>Caching / queues (Redis hosting)</li>
       <li>Error monitoring (Sentry)</li>
-      <li>Product analytics (PostHog)</li>
       <li>Cloud hosting / CDN for the application</li>
       <li>AI model providers when you use AI features</li>
     </ul>

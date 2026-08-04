@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type Stripe from 'stripe';
 import { getStripe, getStripeWebhookSecret } from '../../../lib/stripe';
-import { getPostHogClient } from '../../../lib/posthog-server';
 import { readRawBody } from '../../../lib/readRawBody';
 import {
   orgIdFromMetadata,
   syncCheckoutSessionToOrg,
   syncSubscriptionToOrg,
 } from '../../../lib/stripeBillingSync';
-import { getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
+import { getOrgBillingState, getOrgIdByStripeCustomerId, updateOrgBillingState } from '../../../lib/orgBilling';
+import { BillingSource, ensureCorrelationId } from '../../../lib/billingAudit';
 import db from '../../../database/database';
 import { getCheckoutPlan } from '../../../lib/billingPlans';
 import { getAppOrigin } from '../../../lib/appOrigin';
@@ -90,20 +90,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const orgId = await resolveOrgId(stripe, session.metadata, session.customer)
           ?? (session.client_reference_id ? Number(session.client_reference_id) : null);
         if (orgId) {
-          await syncCheckoutSessionToOrg(orgId, session);
+          const corr = ensureCorrelationId(
+            session.metadata?.checkout_attempt_id || session.id,
+          );
+          await syncCheckoutSessionToOrg(orgId, session, {
+            source: BillingSource.WEBHOOK_SUB,
+            reason: 'checkout.session.completed',
+            correlationId: corr,
+            meta: { eventId: event.id },
+          });
           if (session.subscription && typeof session.subscription === 'string') {
             const subscription = await stripe.subscriptions.retrieve(session.subscription);
-            await syncSubscriptionToOrg(orgId, subscription);
-          }
-          try {
-            const ph = getPostHogClient();
-            ph.capture({
-              distinctId: `org_${orgId}`,
-              event: 'subscription_activated',
-              properties: { plan_slug: session.metadata?.plan_slug, billing: session.metadata?.billing },
+            await syncSubscriptionToOrg(orgId, subscription, undefined, {
+              source: BillingSource.WEBHOOK_SUB,
+              reason: 'checkout.session.completed',
+              correlationId: corr,
+              meta: { eventId: event.id },
             });
-            await ph.flush();
-          } catch { /* non-critical */ }
+          }
         }
         break;
       }
@@ -111,7 +115,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
         const orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
-        if (orgId) await syncSubscriptionToOrg(orgId, subscription);
+        if (orgId) {
+          await syncSubscriptionToOrg(orgId, subscription, undefined, {
+            source: BillingSource.WEBHOOK_SUB,
+            reason: event.type,
+            correlationId: ensureCorrelationId(
+              subscription.metadata?.checkout_attempt_id || subscription.id,
+            ),
+            meta: { eventId: event.id },
+          });
+        }
 
         if (subscription.status === 'incomplete_expired' && orgId) {
           const fresh = await stripe.subscriptions.retrieve(subscription.id);
@@ -126,7 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 toEmail: to,
                 payload: {
                   subject: ABANDONED_CHECKOUT_SUBJECT,
-                  checkoutUrl: `${origin}/billing/checkout/starter?billing=monthly&mode=trial`,
+                  checkoutUrl: `${origin}/billing/checkout/growth?billing=monthly&mode=trial`,
                 },
               });
             }
@@ -139,23 +152,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const fresh = await stripe.subscriptions.retrieve(subscription.id).catch(() => subscription);
         const orgId = await resolveOrgId(stripe, fresh.metadata, fresh.customer);
         if (orgId) {
-          await syncSubscriptionToOrg(orgId, fresh);
-          // Deleted → no paid access; clear current sub id when this was the tracked one
+          const corr = ensureCorrelationId(
+            fresh.metadata?.checkout_attempt_id || fresh.id,
+          );
+          const billing = await getOrgBillingState(orgId);
+          await syncSubscriptionToOrg(orgId, fresh, undefined, {
+            source: BillingSource.WEBHOOK_SUB,
+            reason: 'customer.subscription.deleted',
+            correlationId: corr,
+            meta: { eventId: event.id },
+          });
+          // Only clear tracked sub id when THIS subscription was the one on the org
+          // (create-subscription cancels dangling trials — must not wipe a newer sub).
+          const clearsTracked = !billing?.stripeSubscriptionId
+            || billing.stripeSubscriptionId === fresh.id;
           await updateOrgBillingState(orgId, {
-            subscriptionStatus: 'canceled',
-            stripeSubscriptionId: null,
+            subscriptionStatus: clearsTracked ? 'canceled' : billing?.subscriptionStatus ?? 'canceled',
+            stripeSubscriptionId: clearsTracked ? null : billing?.stripeSubscriptionId,
+            planSlug: clearsTracked ? null : undefined,
+            billingPeriod: clearsTracked ? null : undefined,
+            trialEndsAt: clearsTracked ? null : undefined,
             cancelAtPeriodEnd: false,
             currentPeriodEnd: fresh.ended_at ? new Date(fresh.ended_at * 1000) : null,
+          }, {
+            source: BillingSource.WEBHOOK_SUB,
+            reason: clearsTracked ? 'subscription.deleted.clear_tracked' : 'subscription.deleted.keep_newer',
+            correlationId: corr,
+            stripeSubscriptionId: fresh.id,
+            meta: { eventId: event.id },
           });
-          try {
-            const ph = getPostHogClient();
-            ph.capture({
-              distinctId: `org_${orgId}`,
-              event: 'subscription_cancelled',
-              properties: { plan_slug: fresh.metadata?.plan_slug },
-            });
-            await ph.flush();
-          } catch { /* non-critical */ }
+        }
+        break;
+      }
+      case 'setup_intent.succeeded': {
+        const setupIntent = event.data.object as Stripe.SetupIntent;
+        if (setupIntent.metadata?.checkout_mode !== 'trial') break;
+        const orgId = await resolveOrgId(stripe, setupIntent.metadata, setupIntent.customer);
+        const userId = setupIntent.metadata?.user_id;
+        if (!orgId || !userId) break;
+        const { activateTrialFromSetupIntent } = await import('../../../lib/billingActivateTrial');
+        const result = await activateTrialFromSetupIntent(stripe, {
+          orgId,
+          userId,
+          setupIntent,
+          source: BillingSource.WEBHOOK_SETUP,
+        });
+        if (!result.ok) {
+          console.warn('[stripe webhook] activate-trial', result.error);
         }
         break;
       }
@@ -169,7 +212,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const subscription = await stripe.subscriptions.retrieve(subId);
           const orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
           if (orgId) {
-            await syncSubscriptionToOrg(orgId, subscription);
+            await syncSubscriptionToOrg(orgId, subscription, undefined, {
+              source: BillingSource.WEBHOOK_SUB,
+              reason: 'invoice.paid',
+              correlationId: ensureCorrelationId(
+                subscription.metadata?.checkout_attempt_id || subscription.id,
+              ),
+              meta: { eventId: event.id },
+            });
 
             const customerId = customerIdOf(invoice.customer) ?? customerIdOf(subscription.customer);
             if (customerId) {
@@ -223,7 +273,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (subId) {
           const subscription = await stripe.subscriptions.retrieve(subId);
           const orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
-          if (orgId) await syncSubscriptionToOrg(orgId, subscription);
+          if (orgId) {
+            await syncSubscriptionToOrg(orgId, subscription, undefined, {
+              source: BillingSource.WEBHOOK_SUB,
+              reason: 'invoice.payment_succeeded',
+              correlationId: ensureCorrelationId(
+                subscription.metadata?.checkout_attempt_id || subscription.id,
+              ),
+              meta: { eventId: event.id },
+            });
+          }
         }
         break;
       }
@@ -244,7 +303,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lockedSubscriptionId = subscription.id;
           if (!customerId) customerId = customerIdOf(subscription.customer);
           orgId = await resolveOrgId(stripe, subscription.metadata, subscription.customer);
-          if (orgId) await syncSubscriptionToOrg(orgId, subscription);
+          if (orgId) {
+            await syncSubscriptionToOrg(orgId, subscription, undefined, {
+              source: BillingSource.WEBHOOK_SUB,
+              reason: 'invoice.payment_failed',
+              correlationId: ensureCorrelationId(
+                subscription.metadata?.checkout_attempt_id || subscription.id,
+              ),
+              meta: { eventId: event.id },
+            });
+          }
           const slug = subscription.metadata?.plan_slug;
           if (slug) {
             const plan = getCheckoutPlan(slug);
@@ -323,15 +391,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             updateUrl,
           },
         });
-        try {
-          const ph = getPostHogClient();
-          ph.capture({
-            distinctId: `org_${orgId}`,
-            event: 'payment_failed',
-            properties: { plan_name: planName },
-          });
-          await ph.flush();
-        } catch { /* non-critical */ }
         break;
       }
       case 'checkout.session.expired': {
@@ -353,7 +412,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           toEmail: to,
           payload: {
             subject: ABANDONED_CHECKOUT_SUBJECT,
-            checkoutUrl: `${origin}/billing/checkout/starter?billing=monthly&mode=trial`,
+            checkoutUrl: `${origin}/billing/checkout/growth?billing=monthly&mode=trial`,
           },
         });
         break;

@@ -46,6 +46,7 @@ class Ranksmile_Installer {
 		self::set_activation_transients();
 		self::update_ranksmile_database();
 		self::make_version_related_actions();
+		self::migrate_option_keys_180();
 		self::send_tracking_data();
 		self::update_ranksmile_version();
 
@@ -114,6 +115,30 @@ class Ranksmile_Installer {
 	 *
 	 * @return void
 	 */
+
+	/**
+	 * One-shot option key migration for 1.8 (copy → delete).
+	 */
+	private static function migrate_option_keys_180() {
+		$last = get_option( 'ranksmile_version', false );
+		if ( $last && version_compare( (string) $last, '1.8.0', '>=' ) ) {
+			return;
+		}
+		$map = array(
+			'wpranksmile_api_access_key' => 'ranksmile_api_access_key',
+		);
+		foreach ( $map as $old => $new ) {
+			$val = get_option( $old, null );
+			if ( null === $val || false === $val ) {
+				continue;
+			}
+			if ( false === get_option( $new, false ) ) {
+				update_option( $new, $val, false );
+			}
+			delete_option( $old );
+		}
+	}
+
 	private static function update_ranksmile_version() {
 		update_option( 'ranksmile_version', Ranksmile()->version );
 	}

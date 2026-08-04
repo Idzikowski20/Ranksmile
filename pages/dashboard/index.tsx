@@ -6,7 +6,7 @@ import { CSSTransition } from 'react-transition-group';
 import { useQuery, useQueryClient } from 'react-query';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { KoalaPage, DashboardLayout as KoalaDashboardLayout } from '../../components/koala/layout';
-import { MetricWidget, FeedbackPopover } from '../../components/koala/product';
+import { FeedbackPopover, Card, AnalyticsMetricItem } from '../../components/koala/product';
 import { Button } from '../../components/koala/core';
 import { useFetchDomains } from '../../services/domains';
 import { useWorkspaces } from '../../services/workspaces';
@@ -17,6 +17,7 @@ import Settings from '../../components/settings/Settings';
 import AddDomain from '../../components/domains/AddDomain';
 import DashboardGreeting from '../../components/dashboard/DashboardGreeting';
 import GetStartedCard from '../../components/dashboard/GetStartedCard';
+import QuickStartSection from '../../components/dashboard/QuickStartSection';
 import BrandPerformance from '../../components/dashboard/BrandPerformance';
 import AiVisibilityPerformance from '../../components/dashboard/AiVisibilityPerformance';
 import RecommendationsSection, { RecommendationItem } from '../../components/dashboard/RecommendationsSection';
@@ -113,6 +114,8 @@ const DashboardPage: NextPage = () => {
   );
   const recommendationsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}/recommendations` : '/dashboard');
   const settingsHref = workspaceHref(activeWsId, primaryDomain ? `/sites/${primaryDomain.slug}` : '/dashboard');
+  const createHref = workspaceHref(activeWsId, '/articles/new');
+  const optimizeHref = workspaceHref(activeWsId, '/articles');
 
   const { data: aiHistory, isLoading: aiHistoryLoading } = useAiVisHistory(activeDomainSlug ?? undefined);
   const aiScans = useMemo(
@@ -248,7 +251,7 @@ const DashboardPage: NextPage = () => {
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <KoalaPage maxWidth={880}>
+        <KoalaPage maxWidth="100%">
           <div ref={revealRef}>
             <KoalaDashboardLayout
               slots={[
@@ -269,26 +272,44 @@ const DashboardPage: NextPage = () => {
                           )}
                         </FeedbackPopover>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16 }}>
-                        <MetricWidget
-                          title="Clicks (30d)"
-                          value={sitesLoading ? '—' : clicksTotal}
-                          delta={sitesLoading ? undefined : `${deltaPct >= 0 ? '+' : ''}${deltaPct}%`}
-                          deltaPositive={deltaPct >= 0}
-                          state={sitesLoading ? 'loading' : 'success'}
-                        />
-                        <MetricWidget
-                          title="Recommendations"
-                          value={recommendationsLoading ? '—' : recommendations.length}
-                          state={recommendationsLoading ? 'loading' : 'success'}
-                        />
-                        <MetricWidget
-                          title="Recent articles"
-                          value={articlesLoading ? '—' : recentlyEdited.length}
-                          state={articlesLoading ? 'loading' : 'success'}
-                        />
-                      </div>
+                      <Card elevated style={{ padding: 24 }}>
+                        <div
+                          className="performance-metrics-grid"
+                          style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 24, width: '100%', minWidth: 0 }}
+                        >
+                          <AnalyticsMetricItem
+                            icon="CursorClick"
+                            label="Clicks"
+                            value={String(clicksTotal)}
+                            delta={sitesLoading ? null : `${deltaPct >= 0 ? '+' : ''}${deltaPct}%`}
+                            deltaPositive={deltaPct >= 0}
+                            period="Last 30 days"
+                            loading={sitesLoading}
+                          />
+                          <AnalyticsMetricItem
+                            icon="Article"
+                            label="Articles"
+                            value={String(recentlyEdited.length)}
+                            period="Last 30 days"
+                            loading={articlesLoading}
+                          />
+                          <AnalyticsMetricItem
+                            icon="Lightbulb"
+                            label="Recommendations"
+                            value={String(recommendations.length)}
+                            period="Last 30 days"
+                            loading={recommendationsLoading}
+                            last
+                          />
+                        </div>
+                      </Card>
                       <GetStartedCard />
+                      <QuickStartSection
+                        createHref={createHref}
+                        optimizeHref={optimizeHref}
+                        recommendationsHref={recommendationsHref}
+                        recommendationsCount={recommendationsLoading ? 0 : recommendations.length}
+                      />
                     </div>
                   ),
                 },

@@ -23,7 +23,13 @@ export type IconProps = {
  * Koala Icon_Bold = Phosphor Bold (Figma Icons `3950:146150`, ~1300 glyphs).
  */
 export function Icon({ name, size = 20, weight = 'bold', color = 'currentColor', className, style }: IconProps) {
-  const Comp = (Phosphor as Record<string, unknown>)[name] as PhosphorComponent | undefined;
+  const raw = (Phosphor as Record<string, unknown>)[name];
+  // Phosphor icons are forwardRef objects (typeof === 'object'); plain functions also ok.
+  const Comp = (
+    typeof raw === 'function' || (raw != null && typeof raw === 'object' && '$$typeof' in (raw as object))
+      ? raw
+      : undefined
+  ) as PhosphorComponent | undefined;
   if (!Comp) {
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console

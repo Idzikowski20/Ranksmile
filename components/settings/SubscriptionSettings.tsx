@@ -10,6 +10,7 @@ import { resolveSubscriptionBadge, SubscriptionStatusRow } from './SubscriptionS
 import type { SubscriptionDetails } from '../../lib/subscriptionDetails';
 import type { UpcomingPaymentDetails } from '../../lib/subscriptionFormat';
 import { formatMoney, formatUpcomingTotal } from '../../lib/subscriptionFormat';
+import { Icon } from '../koala/icons/Icon';
 
 function ShellEscapeOverlay({
   onClose,
@@ -56,15 +57,6 @@ const TrashIcon = () => (
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const GreenCheckBadge = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
-    <path
-      d="M8.603 3.799A4.5 4.5 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.5 4.5 0 0 1 3.498 1.307a4.5 4.5 0 0 1 1.307 3.497A4.5 4.5 0 0 1 21.75 12a4.5 4.5 0 0 1-1.549 3.397a4.5 4.5 0 0 1-1.307 3.497a4.5 4.5 0 0 1-3.497 1.307A4.5 4.5 0 0 1 12 21.75a4.5 4.5 0 0 1-3.397-1.549a4.5 4.5 0 0 1-3.498-1.306a4.5 4.5 0 0 1-1.307-3.498A4.5 4.5 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.5 4.5 0 0 1 1.307-3.497a4.5 4.5 0 0 1 3.497-1.307m7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094z"
-      fill="var(--koala-status-success)"
     />
   </svg>
 );
@@ -338,7 +330,7 @@ const CancelSubscriptionModal = ({ accessUntilLabel, onClose, onProceed }: {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Keep headline row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 14, color: 'var(--koala-text-primary)' }}>
-                <GreenCheckBadge />
+                <Icon name="CheckCircle" size={20} weight="fill" color="var(--koala-status-success)" />
                 <span>Keep your work and progress</span>
               </div>
 

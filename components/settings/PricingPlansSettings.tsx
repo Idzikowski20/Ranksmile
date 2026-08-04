@@ -17,43 +17,25 @@ import {
   trackPricingEvent,
   type PlanSlug,
 } from '../../lib/pricing/planDefinition';
-import type { RecommendedPlanSlug } from '../../lib/pricing/planRecommender';
 import { Alert, Button, Link, SegmentedControl } from '../koala/core';
-import { ComparePricingTable, PricingCard } from '../koala/product';
-import type { PricingCardAction } from '../koala/product';
-import { KoalaPanel, KoalaPanelHeader, KoalaPanelBody } from '../koala/layout';
-import PlanRecommenderBanner from './PlanRecommenderBanner';
+import { ComparePricingTable, PricingCard, PricingFaqSection } from '../koala/product';
+import type { FaqItem, PricingCardAction } from '../koala/product';
+import { KoalaPanel } from '../koala/layout';
 
-const FAQ_ITEMS = [
-  { q: 'How does the 7-day trial work?', a: 'You get full access to all features in the chosen plan for 7 days, no credit card required. Cancel anytime before the trial ends to avoid being charged.' },
-  { q: 'What payment methods do you accept?', a: 'We accept all major credit and debit cards (Visa, Mastercard, Amex) as well as PayPal and bank transfers for annual plans.' },
-  { q: 'Can I upgrade or downgrade my account after purchase?', a: 'Yes, you can change your plan at any time from the billing settings. Upgrades take effect immediately; downgrades apply at the next billing cycle.' },
-  { q: 'Where does the keyword and visibility data come from?', a: 'We combine first-party Google Search Console data (for your own pages), live SERP analysis, and a keyword database for search volume, difficulty, and competitor research — so the numbers are accurate without you connecting a Google Ads account.' },
-  { q: 'What languages do you support?', a: 'Content analysis and optimization work across all major languages, including Polish, English, German, French, Spanish, and more.' },
-  { q: 'How do AI Visibility prompts work?', a: 'We periodically query AI engines (ChatGPT, Gemini, Perplexity, and Google AI surfaces) with your tracked prompts and report whether and how your brand is mentioned, so you can optimize to win the citation.' },
-  { q: 'What happens if I reach a monthly limit?', a: 'Usage limits (documents, AI prompts, keyword research, competitor gaps) reset at the start of each billing cycle. If you need more, you can add an overage pack or upgrade to a higher plan at any time.' },
-  { q: 'What is your cancellation policy?', a: 'You can cancel your subscription at any time. Your access continues until the end of the current billing period, after which it will not renew.' },
-  { q: 'If I choose the annual plan, do I have to pay upfront for the entire year?', a: 'Yes, annual plans are billed upfront for the full year, which is how we are able to offer the discounted rate compared to monthly billing.' },
+const FAQ_ITEMS: FaqItem[] = [
+  { category: 'billing', q: 'How does the 7-day trial work?', a: 'Growth includes a one-time 7-day free trial with full plan access. A card is required to start the trial; you will not be charged until the trial ends. Scale and Agency are billed upfront (monthly or yearly) with no trial. Each organization can use the free trial only once.' },
+  { category: 'billing', q: 'What payment methods do you accept?', a: 'We accept all major credit and debit cards (Visa, Mastercard, Amex) as well as PayPal and bank transfers for annual plans.' },
+  { category: 'billing', q: 'Can I upgrade or downgrade my account after purchase?', a: 'Yes, you can change your plan at any time from the billing settings. Upgrades take effect immediately; downgrades apply at the next billing cycle.' },
+  { category: 'billing', q: 'If I choose the annual plan, do I have to pay upfront for the entire year?', a: 'Yes, annual plans are billed upfront for the full year, which is how we are able to offer the discounted rate compared to monthly billing.' },
+  { category: 'billing', q: 'What is your cancellation policy?', a: 'You can cancel your subscription at any time. Your access continues until the end of the current billing period, after which it will not renew.' },
+  { category: 'billing', q: 'What happens if I reach a monthly limit?', a: 'Usage limits (documents, AI prompts, keyword research, competitor gaps) reset at the start of each billing cycle. If you need more, you can add an overage pack or upgrade to a higher plan at any time.' },
+  { category: 'product', q: 'Where does the keyword and visibility data come from?', a: 'We combine first-party Google Search Console data (for your own pages), live SERP analysis, and a keyword database for search volume, difficulty, and competitor research — so the numbers are accurate without you connecting a Google Ads account.' },
+  { category: 'product', q: 'What languages do you support?', a: 'Content analysis and optimization work across all major languages, including Polish, English, German, French, Spanish, and more.' },
+  { category: 'product', q: 'How do AI Visibility prompts work?', a: 'We periodically query AI engines (ChatGPT, Gemini, Perplexity, and Google AI surfaces) with your tracked prompts and report whether and how your brand is mentioned, so you can optimize to win the citation.' },
+  { category: 'usage', q: 'How many Brand Spaces do I get?', a: 'Growth includes 5 Brand Spaces, Scale includes 15, and Agency is unlimited. Each Brand Space maps to a site or client workspace with its own tracking and content.' },
+  { category: 'usage', q: 'What counts as a document?', a: 'A document is any article or page you create or optimize in the Content Editor. Drafts and published pieces both count toward your plan limit.' },
+  { category: 'usage', q: 'Do unused AI prompts roll over?', a: 'No — AI prompt allowances reset with each billing cycle. Upgrade or add capacity if you need more headroom mid-cycle.' },
 ];
-
-const ChevronDown = ({ open }: { open: boolean }) => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    aria-hidden="true"
-    style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', color: 'var(--koala-text-secondary)' }}
-  >
-    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const StarFilled = () => (
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="#FACC15" aria-hidden="true">
-    <path d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382z" />
-  </svg>
-);
 
 function hierarchyHint(current: PlanSlug | null, slug: PlanSlug): string | null {
   if (current !== slug) return null;
@@ -65,9 +47,7 @@ function hierarchyHint(current: PlanSlug | null, slug: PlanSlug): string | null 
 
 const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
   const router = useRouter();
-  const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [billing, setBilling] = useState<BillingPeriod>('yearly');
-  const [recommendedSlug, setRecommendedSlug] = useState<RecommendedPlanSlug>('growth');
 
   const { data: subscriptionData } = useQuery(
     'subscriptionDetails',
@@ -80,6 +60,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
   );
   const locked = subscriptionData?.subscription?.lockedPlanSlug ?? null;
   const currentPlanSlug: PlanSlug | null = isPlanSlug(locked) ? locked : null;
+  const trialEligible = subscriptionData?.subscription?.trialEligible !== false;
   const paymentFailedLocked = subscriptionData?.subscription?.paymentFailedLocked === true;
   const paymentFailedLockedAt = subscriptionData?.subscription?.paymentFailedLockedAt ?? null;
   const lockedLabel = paymentFailedLockedAt
@@ -93,12 +74,6 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
     trackPricingEvent({ type: 'billing_toggle', billing: next });
   };
 
-  const handleSeePlan = useCallback((planSlug: RecommendedPlanSlug) => {
-    setRecommendedSlug(planSlug);
-    if (typeof document === 'undefined') return;
-    document.querySelector(`[data-plan="${planSlug}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, []);
-
   const handleAction = useCallback((action: PricingCardAction) => {
     trackPricingEvent({
       type: 'cta_click',
@@ -111,16 +86,14 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
       toast('Contact our sales team!');
       return;
     }
-    void router.push(getPlanCheckoutHref(action.slug, action.billing));
-  }, [router]);
+    const mode = action.slug === 'growth' && trialEligible ? 'trial' : 'upfront';
+    void router.push(getPlanCheckoutHref(action.slug, action.billing, mode));
+  }, [router, trialEligible]);
 
   const resolveCta = useCallback(
     (slug: PlanSlug) => resolveCtaState(currentPlanSlug, slug),
     [currentPlanSlug],
   );
-
-  const starter = getPlanDefinition('starter');
-  const starterCta = resolveCta('starter');
 
   return (
     <div
@@ -129,7 +102,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: 48,
+        gap: 64,
         fontFamily: 'var(--font-family-primary)',
       }}
     >
@@ -206,35 +179,19 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
         </div>
       </div>
 
-      <PlanRecommenderBanner
-        billing={billing}
-        onBillingChange={handleBillingChange}
-        onRecommendChange={setRecommendedSlug}
-        onSeePlan={handleSeePlan}
-        currentPlanSlug={currentPlanSlug}
-      />
-
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 16,
-          /* Bottoms flush; Recommended ribbon sits above neighbors (Koala pricing). */
-          alignItems: 'end',
+          alignItems: 'stretch',
         }}
       >
         {PRICING_GRID_SLUGS.map((slug) => {
           const plan = getPlanDefinition(slug);
           const ctaState = resolveCta(slug);
-          const isSliderPick = recommendedSlug === slug;
           return (
-            <div
-              key={slug}
-              style={{
-                outline: isSliderPick && ctaState !== 'current' ? '3px solid rgba(248,68,22,0.25)' : undefined,
-                borderRadius: 24,
-              }}
-            >
+            <div key={slug} data-plan={slug} style={{ display: 'flex', minHeight: 0 }}>
               <PricingCard
                 slug={plan.slug}
                 name={plan.name}
@@ -242,6 +199,7 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
                 price={planDisplayPrice(plan, billing)}
                 billing={billing}
                 ctaState={ctaState}
+                trialEligible={trialEligible}
                 benefits={plan.cardBenefits}
                 recommended={Boolean(plan.recommended)}
                 showMostPopularBadge={Boolean(plan.recommended)}
@@ -254,116 +212,18 @@ const PricingPlansSettings = ({ onSkip }: { onSkip?: () => void } = {}) => {
         })}
       </div>
 
-      {/* Starter discovery */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Not sure yet?</span>
-          <span style={{ fontSize: 15, color: 'var(--koala-text-secondary)' }}>Start smaller</span>
-          <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--koala-text-secondary)', maxWidth: 360, textAlign: 'right' }}>
-            Choose Starter to get going. Upgrade anytime as your needs grow.
-          </span>
-        </div>
-        <KoalaPanel>
-          <KoalaPanelBody>
-            <div
-              data-plan="starter"
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 24,
-                flexWrap: 'wrap',
-                opacity: starterCta === 'current' ? 0.72 : 1,
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--koala-text-primary)' }}>
-                  {starter.name}
-                  {starterCta === 'current' ? (
-                    <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 600, color: 'var(--koala-text-secondary)' }}>Current plan</span>
-                  ) : null}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--koala-text-primary)' }}>
-                    €{planDisplayPrice(starter, billing)}
-                  </span>
-                  <span style={{ fontSize: 13, color: 'var(--koala-text-secondary)' }}>per month</span>
-                </div>
-                <p style={{ fontSize: 13, color: 'var(--koala-text-secondary)', lineHeight: 1.5, maxWidth: 380, margin: '6px 0 0' }}>
-                  {starter.desc}
-                </p>
-                {hierarchyHint(currentPlanSlug, 'starter') ? (
-                  <span style={{ fontSize: 12, color: 'var(--koala-text-secondary)', marginTop: 4 }}>
-                    {hierarchyHint(currentPlanSlug, 'starter')}
-                  </span>
-                ) : null}
-              </div>
-              <div style={{ paddingTop: 4, flexShrink: 0 }}>
-                <Button
-                  type="button"
-                  variant="transparent"
-                  size="sm"
-                  disabled={starterCta === 'current'}
-                  onClick={() => handleAction({ slug: 'starter', billing, ctaState: starterCta })}
-                >
-                  {starterCta === 'current' ? 'Current plan' : 'Start with Starter'}
-                </Button>
-              </div>
-            </div>
-          </KoalaPanelBody>
-        </KoalaPanel>
-      </div>
-
-      <ComparePricingTable
-        billing={billing}
-        sections={COMPARE_SECTIONS}
-        resolveCta={resolveCta}
-        onAction={handleAction}
-      />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 2 }}>
-          {[0, 1, 2, 3, 4].map((i) => <StarFilled key={i} />)}
-        </div>
-        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)' }}>Rated 4.7 / 5 stars</span>
-      </div>
-
-      <KoalaPanel noPadding>
-        <KoalaPanelHeader title="FAQ" />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {FAQ_ITEMS.map((item, i) => {
-            const open = faqOpen === i;
-            return (
-              <div key={item.q} style={{ borderBottom: i < FAQ_ITEMS.length - 1 ? '1px solid var(--koala-border-primary)' : 'none' }}>
-                <button
-                  type="button"
-                  onClick={() => setFaqOpen((prev) => (prev === i ? null : i))}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '16px 20px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    gap: 12,
-                    textAlign: 'left',
-                  }}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--koala-text-primary)', lineHeight: 1.4 }}>{item.q}</span>
-                  <ChevronDown open={open} />
-                </button>
-                {open ? (
-                  <div style={{ padding: '0 20px 16px' }}>
-                    <p style={{ margin: 0, fontSize: 13, color: 'var(--koala-text-secondary)', lineHeight: 1.6 }}>{item.a}</p>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
+      <KoalaPanel>
+        <div style={{ padding: 16 }}>
+          <ComparePricingTable
+            billing={billing}
+            sections={COMPARE_SECTIONS}
+            resolveCta={resolveCta}
+            onAction={handleAction}
+          />
         </div>
       </KoalaPanel>
+
+      <PricingFaqSection items={FAQ_ITEMS} />
     </div>
   );
 };

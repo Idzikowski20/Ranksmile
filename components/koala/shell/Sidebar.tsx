@@ -17,7 +17,7 @@ type Props = {
 
 const SEO_ICONS: Record<string, string> = {
   performance: 'ChartLineUp',
-  'site-audit': 'MagnifyingGlass',
+  'site-audit': 'Gauge',
   recommendations: 'Fire',
   'content-audit': 'Files',
   'keyword-list': 'ListBullets',

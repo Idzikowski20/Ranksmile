@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AUDIT_COUNTRIES } from '../../lib/countryLang';
-import { Button } from '../koala/core';
+import { Button, Chip } from '../koala/core';
 import { ShellPortal, overlayZ } from '../koala/overlay/ShellPortal';
 import CountryFlag from './CountryFlag';
 
@@ -104,12 +104,14 @@ const CreateAuditModal = ({ onClose, onCreate, submitting, defaultCountry = 'PL'
             >
                <span style={{ color: '#52525C', display: 'inline-flex', flexShrink: 0 }}><KeyIcon /></span>
                {chips.map((c) => (
-                  <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F4F4F5', borderRadius: 9999, padding: '3px 6px 3px 10px', fontSize: 13, color: '#18181B', fontFamily: FONT }}>
+                  <Chip
+                     key={c}
+                     size="sm"
+                     aria-label={`Remove ${c}`}
+                     onDismiss={(e) => { e.stopPropagation(); setChips((x) => x.filter((k) => k !== c)); }}
+                  >
                      {c}
-                     <button type="button" onClick={(e) => { e.stopPropagation(); setChips((x) => x.filter((k) => k !== c)); }} aria-label={`Remove ${c}`} style={{ border: 'none', background: 'transparent', color: '#9F9FA9', cursor: 'pointer', display: 'inline-flex', padding: 0 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-                     </button>
-                  </span>
+                  </Chip>
                ))}
                <input
                   id="audit-kw-input"

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Gauge } from '../koala/core';
+import { Gauge, MenuList, MenuListItem } from '../koala/core';
 import { AuditCardDTO } from '../../lib/auditTypes';
 
 const FONT = 'var(--font-family-primary)';
@@ -116,20 +116,26 @@ const AuditCard = ({ item, onOpen, onDelete }: { item: AuditCardDTO; onOpen: (id
                            <DotsIcon />
                         </button>
                         {menuOpen && (
-                           <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 100, display: 'flex', flexDirection: 'column', padding: 6, borderRadius: 8, background: '#fff', boxShadow: '0px 8px 16px 0px rgba(24,26,34,0.06), 0px 2px 8px 0px rgba(24,26,34,0.03), 0px 1px 2px 0px rgba(24,26,34,0.06)', border: '1px solid #F4F4F5', minWidth: 200, animation: 'growOut 0.2s cubic-bezier(0.16,1,0.3,1)', transformOrigin: '100% 0' }} onClick={(e) => e.stopPropagation()}>
-                              <div role="button" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#2F2F34', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }} onClick={shareLink}>
-                                 <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185" /></svg>
-                                 Get shareable link
-                              </div>
-                              {onDelete && (
-                                 <>
-                                    <div style={{ height: 1, background: '#F4F4F5', margin: '4px -6px' }} />
-                                    <div role="button" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 6, fontSize: 14, fontWeight: 500, color: '#EF4444', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#FEF2F2'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }} onClick={del}>
-                                       <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0" /></svg>
-                                       Delete
-                                    </div>
-                                 </>
-                              )}
+                           <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 100, minWidth: 200 }} onClick={(e) => e.stopPropagation()}>
+                              <MenuList>
+                                 <MenuListItem
+                                    label="Get shareable link"
+                                    leadingItems={(
+                                       <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185" /></svg>
+                                    )}
+                                    onClick={shareLink}
+                                 />
+                                 {onDelete && (
+                                    <MenuListItem
+                                       label="Delete"
+                                       priority="danger"
+                                       leadingItems={(
+                                          <svg viewBox="0 0 24 24" width="20" height="20" style={{ flexShrink: 0 }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0" /></svg>
+                                       )}
+                                       onClick={del}
+                                    />
+                                 )}
+                              </MenuList>
                            </div>
                         )}
                      </div>

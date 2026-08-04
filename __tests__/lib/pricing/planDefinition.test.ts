@@ -8,10 +8,10 @@ import {
 } from '../../../lib/pricing/planDefinition';
 
 describe('planDefinition hierarchy + CTA', () => {
-  it('resolves previous / next along PlanHierarchy', () => {
-    expect(previousPlan('starter')).toBeNull();
-    expect(nextPlan('starter')).toBe('growth');
-    expect(previousPlan('growth')).toBe('starter');
+  it('resolves previous / next along PlanHierarchy (Starter retired)', () => {
+    expect(previousPlan('growth')).toBeNull();
+    expect(nextPlan('growth')).toBe('scale');
+    expect(previousPlan('scale')).toBe('growth');
     expect(nextPlan('agency')).toBeNull();
   });
 
@@ -20,9 +20,15 @@ describe('planDefinition hierarchy + CTA', () => {
     expect(resolveCtaState('growth', 'growth')).toBe('current');
     expect(resolveCtaState('growth', 'scale')).toBe('upgrade');
     expect(resolveCtaState('scale', 'growth')).toBe('downgrade');
+    expect(resolveCtaState('starter', 'growth')).toBe('upgrade');
   });
 
   it('builds CTA labels from state', () => {
+    expect(ctaLabel('subscribe', 'Growth', { planSlug: 'growth', trialEligible: true }))
+      .toBe('Get 7 days free trial');
+    expect(ctaLabel('subscribe', 'Growth', { planSlug: 'growth', trialEligible: false }))
+      .toBe('Start Growth');
+    expect(ctaLabel('subscribe', 'Scale', { planSlug: 'scale' })).toBe('Start Scale');
     expect(ctaLabel('upgrade', 'Scale')).toBe('Upgrade to Scale');
     expect(ctaLabel('current', 'Growth')).toBe('Current plan');
   });

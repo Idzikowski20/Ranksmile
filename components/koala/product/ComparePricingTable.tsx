@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import styled from '@emotion/styled';
-import { Button } from '../core';
 import { Icon } from '../icons/Icon';
 import type {
   CompareCell,
@@ -11,7 +10,6 @@ import type {
 import {
   COMPARE_SECTIONS,
   PRICING_GRID_SLUGS,
-  ctaLabel,
   getPlanDefinition,
   planDisplayPrice,
   trackPricingEvent,
@@ -20,8 +18,6 @@ import type { BillingPeriod } from '../../../lib/billingPlans';
 import type { PricingCardAction } from './PricingCard';
 import { semantic } from '../tokens/semantic';
 import { typeface, textScale, fontWeight } from '../tokens/typography';
-import { spacing } from '../tokens/spacing';
-import { radius } from '../tokens/effects';
 
 export type ComparePricingTableProps = {
   billing: BillingPeriod;
@@ -34,127 +30,136 @@ export type ComparePricingTableProps = {
 const Root = styled.section`
   font-family: ${typeface.body};
   width: 100%;
-`;
-
-const Title = styled.h2`
-  margin: 0 0 ${spacing.md};
-  font-size: ${textScale['2xl'].fontSize};
-  line-height: ${textScale['2xl'].lineHeight};
-  font-weight: ${fontWeight.bold};
-  color: ${semantic.text.primary};
-  text-align: center;
-`;
-
-const Sub = styled.p`
-  margin: 0 0 ${spacing['2xl']};
-  font-size: ${textScale.base.fontSize};
-  color: ${semantic.text.secondary};
-  text-align: center;
+  background: ${semantic.background.primary};
 `;
 
 const Desktop = styled.div`
   display: none;
   @media (min-width: 900px) {
     display: block;
+    width: 100%;
     overflow-x: auto;
   }
+`;
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  min-width: 720px;
+  align-items: start;
+`;
+
+const Col = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+`;
+
+const HeaderCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  justify-content: center;
+  padding: 24px 0;
+  border-bottom: 1px solid ${semantic.border.primary};
+  box-sizing: border-box;
+  min-height: 152px;
+`;
+
+const HeaderSpacer = styled(HeaderCell)`
+  /* feature column header — blank to match Figma left column */
+`;
+
+const PlanTitle = styled.p`
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: ${fontWeight.bold};
+  letter-spacing: -1px;
+  color: ${semantic.text.primary};
+`;
+
+const PriceRow = styled.div`
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  white-space: nowrap;
+`;
+
+const Amount = styled.span`
+  font-size: 48px;
+  line-height: 52px;
+  font-weight: ${fontWeight.bold};
+  letter-spacing: -0.24px;
+  color: ${semantic.text.primary};
+`;
+
+const Euro = styled.span`
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 400;
+  letter-spacing: -1px;
+  color: #434343;
+`;
+
+const Freq = styled.span`
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  color: ${semantic.text.secondary};
+`;
+
+const SectionBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+`;
+
+const Cell = styled.div<{ $align?: 'left' | 'center'; $title?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: ${(p) => (p.$align === 'center' ? 'center' : 'flex-start')};
+  height: 72px;
+  padding: 16px 12px 16px 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid ${semantic.border.primary};
+  background: ${semantic.background.primary};
+  font-size: ${(p) => (p.$title ? '18px' : '16px')};
+  line-height: ${(p) => (p.$title ? '26px' : '24px')};
+  font-weight: ${(p) => (p.$title ? fontWeight.bold : fontWeight.medium)};
+  letter-spacing: ${(p) => (p.$title ? '-0.5px' : '-0.25px')};
+  color: ${(p) => (p.$title ? semantic.text.primary : semantic.text.secondary)};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const Mobile = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${spacing.md};
+  gap: 16px;
   @media (min-width: 900px) {
     display: none;
   }
 `;
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
-`;
-
-const ThFeature = styled.th`
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: ${semantic.background.primary};
-  text-align: left;
-  padding: ${spacing.md};
-  width: 28%;
+const MobilePlanHead = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-bottom: 16px;
   border-bottom: 1px solid ${semantic.border.primary};
-  font-size: ${textScale.sm.fontSize};
-  color: ${semantic.text.secondary};
 `;
 
-const ThPlan = styled.th`
+const MobilePlan = styled.div`
   text-align: center;
-  padding: ${spacing.lg} ${spacing.md};
-  border-bottom: 1px solid ${semantic.border.primary};
-  vertical-align: top;
-  background: ${semantic.background.primary};
-`;
-
-const PlanName = styled.div`
-  font-size: ${textScale.lg.fontSize};
-  font-weight: ${fontWeight.bold};
-  color: ${semantic.text.primary};
-  margin-bottom: 4px;
-`;
-
-const PlanPrice = styled.div`
-  font-size: ${textScale.base.fontSize};
-  color: ${semantic.text.secondary};
-  margin-bottom: ${spacing.md};
-`;
-
-const SectionRow = styled.tr`
-  th {
-    text-align: left;
-    padding: ${spacing.lg} ${spacing.md} ${spacing.sm};
-    font-size: ${textScale.base.fontSize};
-    font-weight: ${fontWeight.bold};
-    color: ${semantic.text.primary};
-    background: ${semantic.background.secondary};
-    position: sticky;
-    left: 0;
-    z-index: 1;
-  }
-  td {
-    background: ${semantic.background.secondary};
-    border-bottom: 1px solid ${semantic.border.primary};
-  }
-`;
-
-const TdFeature = styled.th`
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: ${semantic.background.primary};
-  text-align: left;
-  padding: ${spacing.md};
-  font-size: ${textScale.sm.fontSize};
-  font-weight: ${fontWeight.medium};
-  color: ${semantic.text.secondary};
-  border-bottom: 1px solid ${semantic.border.primary};
-`;
-
-const TdCell = styled.td`
-  text-align: center;
-  padding: ${spacing.md};
-  border-bottom: 1px solid ${semantic.border.primary};
-  font-size: ${textScale.sm.fontSize};
-  color: ${semantic.text.primary};
-  vertical-align: middle;
 `;
 
 const Accordion = styled.div`
-  border: 1px solid ${semantic.border.primary};
-  border-radius: ${radius.card.default};
-  overflow: hidden;
-  background: ${semantic.background.primary};
+  border-bottom: 1px solid ${semantic.border.primary};
 `;
 
 const AccordionHead = styled.button`
@@ -162,47 +167,52 @@ const AccordionHead = styled.button`
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  gap: ${spacing.md};
-  padding: ${spacing.md} ${spacing.lg};
+  gap: 12px;
+  padding: 20px 0;
   border: none;
-  background: ${semantic.background.secondary};
+  background: transparent;
   font: inherit;
+  font-size: 18px;
   font-weight: ${fontWeight.bold};
+  letter-spacing: -0.5px;
   color: ${semantic.text.primary};
   cursor: pointer;
   text-align: left;
 `;
 
-const AccordionBody = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
 const FeatureBlock = styled.div`
-  padding: ${spacing.md} ${spacing.lg};
-  border-top: 1px solid ${semantic.border.primary};
+  padding: 0 0 16px;
 `;
 
 const FeatureLabel = styled.div`
-  font-size: ${textScale.sm.fontSize};
+  font-size: 16px;
   font-weight: ${fontWeight.medium};
-  color: ${semantic.text.primary};
-  margin-bottom: ${spacing.sm};
+  color: ${semantic.text.secondary};
+  letter-spacing: -0.25px;
+  margin-bottom: 8px;
 `;
 
 const PlanValueRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: ${spacing.md};
-  padding: 4px 0;
-  font-size: ${textScale.sm.fontSize};
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 14px;
   color: ${semantic.text.secondary};
 `;
 
 function CellView({ cell }: { cell: CompareCell }) {
   if (cell.kind === 'check') {
-    return <Icon name="Check" size={18} weight="bold" color={semantic.status.success} aria-label="Included" />;
+    return (
+      <Icon
+        name="Check"
+        size={24}
+        weight="bold"
+        color={semantic.status.success}
+        aria-label="Included"
+      />
+    );
   }
   if (cell.kind === 'dash') {
     return <span aria-label="Not included">—</span>;
@@ -210,17 +220,18 @@ function CellView({ cell }: { cell: CompareCell }) {
   return <span>{cell.value}</span>;
 }
 
-/** Feature comparison — desktop table + mobile accordion. */
+/** Koala pricing table section — Figma `3141:52681`. */
 export function ComparePricingTable({
   billing,
   sections,
-  resolveCta,
-  onAction,
+  resolveCta: _resolveCta,
+  onAction: _onAction,
   className,
 }: ComparePricingTableProps) {
   const rows = sections ?? COMPARE_SECTIONS;
+  const planCols = PRICING_GRID_SLUGS.map((slug) => getPlanDefinition(slug));
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries((sections ?? COMPARE_SECTIONS).map((s) => [s.id, true])),
+    Object.fromEntries(rows.map((s) => [s.id, true])),
   );
 
   const toggleSection = (id: string) => {
@@ -231,93 +242,60 @@ export function ComparePricingTable({
     });
   };
 
-  const planCols = PRICING_GRID_SLUGS.map((slug) => getPlanDefinition(slug));
-
   return (
-    <Root className={className} aria-labelledby="compare-pricing-heading">
-      <Title id="compare-pricing-heading">Compare plans</Title>
-      <Sub>Feature-by-feature — pick the tier that matches your workspace.</Sub>
-
+    <Root className={className} aria-label="Compare plans">
       <Desktop>
-        <Table>
-          <thead>
-            <tr>
-              <ThFeature scope="col">Feature</ThFeature>
-              {planCols.map((plan) => {
-                const ctaState = resolveCta(plan.slug);
-                return (
-                  <ThPlan key={plan.slug} scope="col">
-                    <PlanName>{plan.name}</PlanName>
-                    <PlanPrice>
-                      €{planDisplayPrice(plan, billing)}/month
-                    </PlanPrice>
-                    <Button
-                      type="button"
-                      variant={plan.recommended && ctaState !== 'current' ? 'primary' : 'secondary'}
-                      size="sm"
-                      disabled={ctaState === 'current'}
-                      onClick={() => {
-                        trackPricingEvent({
-                          type: 'compare_cta_click',
-                          slug: plan.slug,
-                          ctaState,
-                          billing,
-                        });
-                        onAction({ slug: plan.slug, billing, ctaState });
-                      }}
-                    >
-                      {ctaLabel(ctaState, plan.name)}
-                    </Button>
-                  </ThPlan>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
+        <Grid>
+          <Col>
+            <HeaderSpacer aria-hidden />
             {rows.map((section) => (
-              <React.Fragment key={section.id}>
-                <SectionRow>
-                  <th scope="colgroup" colSpan={1}>{section.title}</th>
-                  <td colSpan={planCols.length} />
-                </SectionRow>
+              <SectionBlock key={section.id}>
+                <Cell $title>{section.title}</Cell>
                 {section.rows.map((row) => (
-                  <tr key={row.id}>
-                    <TdFeature scope="row">{row.label}</TdFeature>
-                    {PRICING_GRID_SLUGS.map((slug) => (
-                      <TdCell key={slug}>
-                        <CellView cell={row.cells[slug]} />
-                      </TdCell>
-                    ))}
-                  </tr>
+                  <Cell key={row.id}>{row.label}</Cell>
                 ))}
-              </React.Fragment>
+              </SectionBlock>
             ))}
-          </tbody>
-        </Table>
+          </Col>
+
+          {planCols.map((plan) => (
+            <Col key={plan.slug}>
+              <HeaderCell>
+                <PlanTitle>{plan.name}</PlanTitle>
+                <PriceRow>
+                  <Amount>{planDisplayPrice(plan, billing)}</Amount>
+                  <Euro>€</Euro>
+                  <Freq>/month</Freq>
+                </PriceRow>
+              </HeaderCell>
+              {rows.map((section) => (
+                <SectionBlock key={`${plan.slug}-${section.id}`}>
+                  <Cell $align="center" aria-hidden />
+                  {section.rows.map((row) => (
+                    <Cell key={row.id} $align="center">
+                      <CellView cell={row.cells[plan.slug]} />
+                    </Cell>
+                  ))}
+                </SectionBlock>
+              ))}
+            </Col>
+          ))}
+        </Grid>
       </Desktop>
 
       <Mobile>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-          {planCols.map((plan) => {
-            const ctaState = resolveCta(plan.slug);
-            return (
-              <div key={plan.slug} style={{ textAlign: 'center' }}>
-                <PlanName style={{ fontSize: 14 }}>{plan.name}</PlanName>
-                <PlanPrice style={{ fontSize: 12 }}>€{planDisplayPrice(plan, billing)}/mo</PlanPrice>
-                <Button
-                  type="button"
-                  variant={plan.recommended && ctaState !== 'current' ? 'primary' : 'secondary'}
-                  size="sm"
-                  disabled={ctaState === 'current'}
-                  style={{ width: '100%' }}
-                  onClick={() => onAction({ slug: plan.slug, billing, ctaState })}
-                >
-                  {ctaLabel(ctaState, plan.name)}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+        <MobilePlanHead>
+          {planCols.map((plan) => (
+            <MobilePlan key={plan.slug}>
+              <PlanTitle style={{ fontSize: 16, lineHeight: '22px' }}>{plan.name}</PlanTitle>
+              <PriceRow style={{ justifyContent: 'center', marginTop: 8 }}>
+                <Amount style={{ fontSize: 28, lineHeight: '32px' }}>{planDisplayPrice(plan, billing)}</Amount>
+                <Euro style={{ fontSize: 16 }}>€</Euro>
+                <Freq style={{ fontSize: 13 }}>/mo</Freq>
+              </PriceRow>
+            </MobilePlan>
+          ))}
+        </MobilePlanHead>
 
         {rows.map((section) => {
           const open = openSections[section.id] !== false;
@@ -329,10 +307,10 @@ export function ComparePricingTable({
                 onClick={() => toggleSection(section.id)}
               >
                 {section.title}
-                <Icon name={open ? 'CaretUp' : 'CaretDown'} size={16} weight="bold" />
+                <Icon name={open ? 'CaretUp' : 'CaretDown'} size={20} weight="bold" />
               </AccordionHead>
               {open ? (
-                <AccordionBody>
+                <div>
                   {section.rows.map((row) => (
                     <FeatureBlock key={row.id}>
                       <FeatureLabel>{row.label}</FeatureLabel>
@@ -344,7 +322,7 @@ export function ComparePricingTable({
                       ))}
                     </FeatureBlock>
                   ))}
-                </AccordionBody>
+                </div>
               ) : null}
             </Accordion>
           );

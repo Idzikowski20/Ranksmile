@@ -4,8 +4,9 @@
  */
 import { ensurePipelineJobsTables } from './ensurePipelineJobsTables';
 import db from '../database/database';
+import { USE_GEMINI_FLASH, chatLlm } from './ai/deepseek';
 
-export type LlmProvider = 'deepseek' | 'openai' | 'anthropic' | 'ollama';
+export type LlmProvider = 'deepseek' | 'openai' | 'anthropic' | 'ollama' | 'gemini';
 
 export type LlmGatewayRequest = {
   provider?: LlmProvider;
@@ -35,6 +36,7 @@ export type LlmGatewayResponse = {
 
 const MODEL_DEFAULTS: Record<LlmProvider, string> = {
   deepseek: 'deepseek-chat',
+  gemini: 'gemini-3.6-flash',
   openai: 'gpt-4o-mini',
   anthropic: 'claude-3-5-haiku-latest',
   ollama: 'llama3.2',
@@ -45,6 +47,7 @@ export function estimateLlmCost(provider: LlmProvider, promptChars: number, comp
   const tokens = (promptChars + completionChars) / 4;
   const rates: Record<LlmProvider, number> = {
     deepseek: 0.0000003,
+    gemini: 0.0000003,
     openai: 0.0000005,
     anthropic: 0.000001,
     ollama: 0,
@@ -96,14 +99,18 @@ async function callProvider(
   maxTokens: number,
   opts?: { seed?: number; responseFormat?: 'json_object' | 'text' },
 ): Promise<string> {
-  if (provider === 'deepseek' || provider === 'openai') {
-    const key =
-      provider === 'deepseek' ? process.env.DEEPSEEK_API_KEY || '' : process.env.OPENAI_API_KEY || '';
-    const base =
-      provider === 'deepseek' ? 'https://api.deepseek.com' : 'https://api.openai.com';
-    if (!key) throw new Error(`${provider} API key not configured`);
+  if (provider === 'deepseek' || provider === 'openai' || provider === 'gemini') {
+    // TEMP: route "deepseek" requests through Gemini OpenAI-compat while the switch is on.
+    const resolved =
+      provider === 'gemini' || (provider === 'deepseek' && USE_GEMINI_FLASH)
+        ? chatLlm()
+        : provider === 'deepseek'
+          ? { apiKey: process.env.DEEPSEEK_API_KEY || '', url: 'https://api.deepseek.com/v1/chat/completions', model, provider: 'deepseek' as const }
+          : { apiKey: process.env.OPENAI_API_KEY || '', url: 'https://api.openai.com/v1/chat/completions', model, provider: 'openai' as const };
+    const key = resolved.apiKey;
+    if (!key) throw new Error(`${resolved.provider} API key not configured`);
     const body: Record<string, unknown> = {
-      model,
+      model: resolved.model || model,
       messages,
       temperature,
       max_tokens: maxTokens,
@@ -112,7 +119,7 @@ async function callProvider(
     if (opts?.responseFormat === 'json_object') {
       body.response_format = { type: 'json_object' };
     }
-    const res = await fetch(`${base}/v1/chat/completions`, {
+    const res = await fetch(resolved.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -120,7 +127,7 @@ async function callProvider(
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`${provider} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) throw new Error(`${resolved.provider} HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
@@ -153,7 +160,7 @@ async function callProvider(
 
 export async function llmGateway(req: LlmGatewayRequest): Promise<LlmGatewayResponse> {
   const chain: LlmProvider[] = [
-    req.provider || 'deepseek',
+    req.provider || (USE_GEMINI_FLASH ? 'gemini' : 'deepseek'),
     ...(req.fallbackProviders || ['openai']),
   ].filter((p, i, a) => a.indexOf(p) === i);
 

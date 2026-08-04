@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { KeywordIntentBadge } from '../koala/product/helpers/KeywordIntentBadge';
+import type { SearchIntent } from '../../lib/organicResearch/types';
 
 interface Suggestion {
    keyword: string;
@@ -8,12 +10,12 @@ interface Suggestion {
    cpc?: number;
 }
 
-const INTENT: Record<string, { label: string; bg: string; color: string }> = {
-   informational: { label: 'Info', bg: 'var(--koala-bg-info-secondary, #EAF2FE)', color: 'var(--koala-text-info, #2563EB)' },
-   commercial: { label: 'Comm', bg: 'var(--koala-bg-accent-secondary, #FFF0EB)', color: 'var(--koala-brand, #F84416)' },
-   transactional: { label: 'Trans', bg: 'var(--koala-bg-success-secondary, #E4F5EA)', color: 'var(--koala-text-success, #1AB25E)' },
-   navigational: { label: 'Nav', bg: 'var(--koala-bg-tertiary, #F4F4F5)', color: 'var(--koala-text-secondary, #52525C)' },
-};
+const INTENT_VALUES = new Set<string>(['informational', 'commercial', 'transactional', 'navigational']);
+
+function parseIntent(intent?: string): SearchIntent {
+   if (!intent || !INTENT_VALUES.has(intent)) return null;
+   return intent as SearchIntent;
+}
 
 interface Props {
    keywords: string[];
@@ -345,11 +347,14 @@ const KeywordSuggestInput = ({ keywords, onAdd, onRemove, country = 'US', placeh
                      >
                         {s.keyword}
                      </span>
-                     {s.intent && INTENT[s.intent] && (
-                        <span title={`Search intent: ${s.intent}`} style={{ flexShrink: 0, marginRight: 6, padding: '2px 7px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: INTENT[s.intent].bg, color: INTENT[s.intent].color, fontFamily: 'var(--font-family-primary)' }}>
-                           {INTENT[s.intent].label}
-                        </span>
-                     )}
+                     {(() => {
+                        const intent = parseIntent(s.intent);
+                        return intent ? (
+                           <span style={{ flexShrink: 0, marginRight: 6 }}>
+                              <KeywordIntentBadge intent={intent} label />
+                           </span>
+                        ) : null;
+                     })()}
                      {hasVolumeData && (
                         <>
                            <div style={{ width: 72, display: 'flex', alignItems: 'center' }}>

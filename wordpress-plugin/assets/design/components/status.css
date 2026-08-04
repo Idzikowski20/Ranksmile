@@ -1,0 +1,13 @@
+﻿.ranksmile-admin .rs-status { display: flex; gap: var(--rs-space-3); align-items: flex-start; }
+.ranksmile-admin .rs-status__dot {
+  width: 10px; height: 10px; border-radius: 999px; margin-top: 6px; flex-shrink: 0; background: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-status--connected .rs-status__dot { background: var(--rs-status-success); }
+.ranksmile-admin .rs-status--disconnected .rs-status__dot { background: var(--rs-text-tertiary); }
+.ranksmile-admin .rs-status--syncing .rs-status__dot { background: var(--rs-status-info); }
+.ranksmile-admin .rs-status--warning .rs-status__dot { background: var(--rs-status-warning); }
+.ranksmile-admin .rs-status--error .rs-status__dot { background: var(--rs-status-danger); }
+.ranksmile-admin .rs-status--disabled .rs-status__dot { background: var(--rs-border-strong); }
+.ranksmile-admin .rs-status__title { margin: 0; font-weight: 600; font-size: var(--rs-text-md); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-status__desc { margin: var(--rs-space-1) 0 0; font-size: var(--rs-text-sm); color: var(--rs-text-secondary); }
+.ranksmile-admin .rs-status__action { margin-top: var(--rs-space-2); }

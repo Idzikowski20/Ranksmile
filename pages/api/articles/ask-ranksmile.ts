@@ -15,6 +15,7 @@ import { ensureUserTenancy } from '../../../lib/tenancy';
 import { getOrgUsage5h, recordAiTokens } from '../../../lib/aiTokenUsage';
 import { getErrorMessage } from '../../../lib/errors';
 import { withOrgPaymentAccess } from '../../../lib/requireOrgPaymentAccess';
+import { chatLlm } from '../../../lib/ai/deepseek';
 
 export const config = { maxDuration: 60, api: { responseLimit: '10mb' } };
 
@@ -161,8 +162,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' });
+    const llm = chatLlm();
+    if (!llm.apiKey) return res.status(500).json({ error: `${llm.keyEnv} not configured` });
 
     const action = detectRanksmileAction(prompt, mode as 'selection' | 'article');
 
@@ -172,7 +173,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // ── Scoring awareness (only when needed) ───────────────────────
     let scoringBlock = '';
-    if (shouldUseScoring(prompt, action) && keyword && process.env.DEEPSEEK_API_KEY) {
+    if (shouldUseScoring(prompt, action) && keyword && llm.apiKey) {
       try {
         const scoreResult = await scoreContent(
           leanContent,
@@ -284,14 +285,14 @@ RULES:
       .filter((h: RanksmileHistoryTurn) => h && typeof h.message === 'string' && h.message.trim())
       .map((h: RanksmileHistoryTurn) => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.message }));
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetch(llm.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${llm.apiKey}`,
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: llm.model,
         max_tokens: 32000,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -303,7 +304,7 @@ RULES:
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[ask-ranksmile] DeepSeek error:', err);
+      console.error('[ask-ranksmile] LLM error:', err);
       return res.status(500).json({ error: 'AI request failed' });
     }
 

@@ -5,21 +5,21 @@ import AnalysisCircuitBoard from '../ranksmile/AnalysisCircuitBoard';
 
 const Spinner = () => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: 'spin 0.8s linear infinite' }}>
-    <circle cx={12} cy={12} r={9} fill="none" stroke="#E4E4E7" strokeWidth={2} />
-    <path d="M12 3a9 9 0 0 1 8.5 5.5" fill="none" stroke="#52525C" strokeWidth={2} strokeLinecap="round" />
+    <circle cx={12} cy={12} r={9} fill="none" stroke="var(--koala-border-primary)" strokeWidth={2} />
+    <path d="M12 3a9 9 0 0 1 8.5 5.5" fill="none" stroke="var(--koala-text-secondary)" strokeWidth={2} strokeLinecap="round" />
   </svg>
 );
 
 const CheckIcon = () => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M6 12.5l3.5 3.5L18 8" stroke="#9F9FA9" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M6 12.5l3.5 3.5L18 8" stroke="var(--koala-text-disabled)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const StepRow = ({ step }: { step: DeepAnalysisUiStep }) => {
   const isRunning = step.status === 'running';
   const isDone = step.status === 'done';
-  const textColor = isRunning ? '#18181B' : isDone ? '#9F9FA9' : '#A1A1AA';
+  const textColor = isRunning ? 'var(--koala-text-primary)' : isDone ? 'var(--koala-text-disabled)' : 'var(--koala-text-disabled)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -32,7 +32,7 @@ const StepRow = ({ step }: { step: DeepAnalysisUiStep }) => {
             color: textColor,
             fontWeight: isRunning ? 500 : 400,
             background: isRunning
-              ? 'linear-gradient(90deg, #52525C 0%, #18181B 50%, #52525C 100%)'
+              ? 'linear-gradient(90deg, var(--koala-text-secondary) 0%, var(--koala-text-primary) 50%, var(--koala-text-secondary) 100%)'
               : undefined,
             backgroundSize: isRunning ? '200% 100%' : undefined,
             WebkitBackgroundClip: isRunning ? 'text' : undefined,
@@ -51,7 +51,7 @@ const StepRow = ({ step }: { step: DeepAnalysisUiStep }) => {
             alignItems: 'center',
             gap: 6,
             fontSize: 12,
-            color: '#52525C',
+            color: 'var(--koala-text-secondary)',
             fontFamily: 'var(--font-family-primary)',
             overflow: 'hidden',
           }}
@@ -76,8 +76,8 @@ const EngineIcons = () => (
           width: 24,
           height: 24,
           borderRadius: 9999,
-          border: '1px solid #E4E4E7',
-          background: '#FFFFFF',
+          border: '1px solid var(--koala-border-primary)',
+          background: 'var(--koala-bg-primary)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -88,7 +88,7 @@ const EngineIcons = () => (
         </svg>
       </div>
     ))}
-    <div style={{ marginRight: -4, width: 24, height: 24, borderRadius: 9999, border: '1px solid #E4E4E7', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ marginRight: -4, width: 24, height: 24, borderRadius: 9999, border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M15.6823 8.18368C15.6823 7.63986 15.6382 7.0931 15.5442 6.55811H7.99829V9.63876H12.3194C12.1401 10.6323 11.564 11.5113 10.7203 12.0698V14.0687H13.2983C14.8122 12.6753 15.6823 10.6176 15.6823 8.18368Z" fill="#4285F4" />
         <path d="M7.99812 16C10.1558 16 11.9753 15.2915 13.3011 14.0687L10.7231 12.0698C10.0058 12.5578 9.07988 12.8341 8.00106 12.8341C5.91398 12.8341 4.14436 11.426 3.50942 9.53296H0.849121V11.5936C2.2072 14.295 4.97332 16 7.99812 16Z" fill="#34A853" />
@@ -96,9 +96,9 @@ const EngineIcons = () => (
         <path d="M7.99812 3.16589C9.13867 3.14825 10.241 3.57743 11.067 4.36523L13.3511 2.0812C11.9048 0.723121 9.98526 -0.0235266 7.99812 -1.02057e-05C4.97332 -1.02057e-05 2.2072 1.70493 0.849121 4.40932L3.50648 6.46995C4.13848 4.57394 5.91104 3.16589 7.99812 3.16589Z" fill="#EA4335" />
       </svg>
     </div>
-    <div style={{ marginRight: -4, width: 24, height: 24, borderRadius: 9999, border: '1px solid #E4E4E7', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ marginRight: -4, width: 24, height: 24, borderRadius: 9999, border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width={14} height={14} viewBox="0 0 18 18" fill="none">
-        <path d="M14.1461 8.6792C13.1338 8.24322 12.2484 7.64599 11.4884 6.88676C10.7292 6.12753 10.1312 5.24138 9.696 4.22907C9.52952 3.84162 9.3944 3.44222 9.29138 3.03311C9.25778 2.89948 9.13834 2.80542 9.00023 2.80542C8.86211 2.80542 8.74267 2.89948 8.70907 3.03311C8.60605 3.44222 8.47167 3.84013 8.30445 4.22907C7.86847 5.24138 7.27124 6.12753 6.512 6.88676C5.75277 7.64525 4.86663 8.24322 3.85432 8.6792C3.46686 8.84568 3.06746 8.98081 2.65836 9.08383C2.52473 9.11742 2.43066 9.23687 2.43066 9.37498C2.43066 9.51309 2.52473 9.63254 2.65836 9.66613C3.06746 9.76915 3.46537 9.90353 3.85432 10.0708C4.86663 10.5067 5.75202 11.104 6.512 11.8632C7.27124 12.6224 7.86922 13.5086 8.30445 14.5209C8.47167 14.9091 8.60605 15.3077 8.70907 15.7168C8.72535 15.7818 8.76283 15.8394 8.81556 15.8807C8.8683 15.9219 8.93328 15.9444 9.00023 15.9445C9.13834 15.9445 9.25778 15.8505 9.29138 15.7168C9.3944 15.3077 9.52878 14.9098 9.696 14.5209C10.132 13.5086 10.7292 12.6232 11.4884 11.8632C12.2477 11.104 13.1338 10.506 14.1461 10.0708C14.5343 9.90353 14.933 9.76915 15.3421 9.66613C15.407 9.64985 15.4647 9.61238 15.5059 9.55964C15.5472 9.50691 15.5696 9.44193 15.5698 9.37498C15.5698 9.23687 15.4757 9.11742 15.3421 9.08383C14.933 8.98081 14.5351 8.84643 14.1461 8.6792Z" fill="#F84416" />
+        <path d="M14.1461 8.6792C13.1338 8.24322 12.2484 7.64599 11.4884 6.88676C10.7292 6.12753 10.1312 5.24138 9.696 4.22907C9.52952 3.84162 9.3944 3.44222 9.29138 3.03311C9.25778 2.89948 9.13834 2.80542 9.00023 2.80542C8.86211 2.80542 8.74267 2.89948 8.70907 3.03311C8.60605 3.44222 8.47167 3.84013 8.30445 4.22907C7.86847 5.24138 7.27124 6.12753 6.512 6.88676C5.75277 7.64525 4.86663 8.24322 3.85432 8.6792C3.46686 8.84568 3.06746 8.98081 2.65836 9.08383C2.52473 9.11742 2.43066 9.23687 2.43066 9.37498C2.43066 9.51309 2.52473 9.63254 2.65836 9.66613C3.06746 9.76915 3.46537 9.90353 3.85432 10.0708C4.86663 10.5067 5.75202 11.104 6.512 11.8632C7.27124 12.6224 7.86922 13.5086 8.30445 14.5209C8.47167 14.9091 8.60605 15.3077 8.70907 15.7168C8.72535 15.7818 8.76283 15.8394 8.81556 15.8807C8.8683 15.9219 8.93328 15.9444 9.00023 15.9445C9.13834 15.9445 9.25778 15.8505 9.29138 15.7168C9.3944 15.3077 9.52878 14.9098 9.696 14.5209C10.132 13.5086 10.7292 12.6232 11.4884 11.8632C12.2477 11.104 13.1338 10.506 14.1461 10.0708C14.5343 9.90353 14.933 9.76915 15.3421 9.66613C15.407 9.64985 15.4647 9.61238 15.5059 9.55964C15.5472 9.50691 15.5696 9.44193 15.5698 9.37498C15.5698 9.23687 15.4757 9.11742 15.3421 9.08383C14.933 8.98081 14.5351 8.84643 14.1461 8.6792Z" fill="var(--koala-text-brand)" />
       </svg>
     </div>
   </div>
@@ -153,7 +153,7 @@ const DeepAnalysisProgressPanel = ({ state }: Props) => (
             style={{
               height: '100%',
               width: `${progressFromState(state)}%`,
-              background: '#F84416',
+              background: 'var(--koala-text-brand)',
               borderRadius: 999,
               transition: 'width 0.4s ease',
             }}
@@ -165,7 +165,7 @@ const DeepAnalysisProgressPanel = ({ state }: Props) => (
 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>AI Search</span>
+        <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>AI Search</span>
         <EngineIcons />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -177,8 +177,8 @@ const DeepAnalysisProgressPanel = ({ state }: Props) => (
 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: '#18181B' }}>Google Search results</span>
-        <div style={{ border: '1px solid #E4E4E7', background: '#FFFFFF', borderRadius: 9999, padding: 4, display: 'flex' }}>
+        <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--koala-text-primary)' }}>Google Search results</span>
+        <div style={{ border: '1px solid var(--koala-border-primary)', background: 'var(--koala-bg-primary)', borderRadius: 9999, padding: 4, display: 'flex' }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M15.6823 8.18368C15.6823 7.63986 15.6382 7.0931 15.5442 6.55811H7.99829V9.63876H12.3194C12.1401 10.6323 11.564 11.5113 10.7203 12.0698V14.0687H13.2983C14.8122 12.6753 15.6823 10.6176 15.6823 8.18368Z" fill="#4285F4" />
             <path d="M7.99812 16C10.1558 16 11.9753 15.2915 13.3011 14.0687L10.7231 12.0698C10.0058 12.5578 9.07988 12.8341 8.00106 12.8341C5.91398 12.8341 4.14436 11.426 3.50942 9.53296H0.849121V11.5936C2.2072 14.295 4.97332 16 7.99812 16Z" fill="#34A853" />

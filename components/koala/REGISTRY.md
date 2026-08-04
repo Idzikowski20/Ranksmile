@@ -21,7 +21,10 @@ If it exists → reuse. If not → import once and append a row.
 | Semantic tokens | Variables | `tokens/semantic.ts` | — | ranksmile-frontend | Stable |
 | Themes L/D/C/M | Themes | `tokens/themes.ts` + `theme/KoalaThemeProvider.tsx` | auth-sign-in-* | ranksmile-frontend | Stable |
 | Button | `3950:55874` | `primitives/Button.tsx` | gallery-button-* | ranksmile-frontend | Stable |
-| Badge (contract) | Product | `core/badge/badge.tsx` (`appearance`/`size`/`icon`) | — | ranksmile-frontend | Stable |
+| Badge (contract) | `3950:55510` | `core/badge/badge.tsx` (`appearance`/`size`/`icon`) | — | ranksmile-frontend | Stable |
+| Chip | `11196:273025` | `core/chip/chip.tsx` | — | ranksmile-frontend | Stable |
+| Checkbox | `3950:55875` | `core/checkbox/checkbox.tsx` | — | ranksmile-frontend | Stable |
+| Avatar | `3950:49867` | `core/avatar.tsx` (`badge`: status/flag/certificate) | — | ranksmile-frontend | Stable |
 | KeywordIntentBadge | Product | `product/helpers/KeywordIntentBadge.tsx` | — | ranksmile-frontend | Stable |
 | KeywordDifficultyDot | Product | `product/helpers/KeywordDifficultyDot.tsx` | — | ranksmile-frontend | Stable |
 | TrendDeltaBadge | Product | `product/helpers/TrendDeltaBadge.tsx` | — | ranksmile-frontend | Stable |
@@ -30,12 +33,13 @@ If it exists → reuse. If not → import once and append a row.
 | Card | Product | `product/Card.tsx` | gallery-card-* | ranksmile-frontend | Stable |
 | Tooltip | `3950:179137` | `core/tooltip` | gallery-tooltip-* | ranksmile-frontend | Stable |
 | Dialog | `2612:115790` | `primitives/Modal.tsx` | gallery-dialog-* | ranksmile-frontend | Stable |
-| Select | `6106:100172` | `primitives/Select.tsx` | gallery-select-* | ranksmile-frontend | Stable |
+| Select | `3950:55879` | `core/select/select.tsx` (+ `CompactSelect`) | gallery-select-* | ranksmile-frontend | Stable |
 | WidgetShell (+ state) | Dashboard | `product/widgets.tsx` | gallery-widget-* | ranksmile-frontend | Stable |
 | Chart (presets SoT) | Product / Figma charts | `charts/Chart.tsx` | gallery-widget / dashboard-chart | ranksmile-frontend | Stable |
 | Sparkline (appearances) | `6988:208171` | `charts/Sparkline.tsx` | gallery-widget | ranksmile-frontend | Stable |
 | Chart presets | Viz layer | `charts/presets.ts` (internal) | — | ranksmile-frontend | Stable |
 | ChartWidget / MetricWidget | Dashboard | `product/widgets.tsx` | dashboard-chart | ranksmile-frontend | Stable |
+| RadialComparisonWidget | `9963:582207` | `product/RadialComparisonWidget.tsx` | — | ranksmile-frontend | Draft |
 | DataTable (+ Head/Cell) | `6944:212812` / `6955:31325` | `core/dataTable/dataTable.tsx` | — | ranksmile-frontend | Stable |
 | DataToolbar (filter/sort/selection) | `9421:371318` | `product/DataToolbar.tsx` | — | ranksmile-frontend | Stable |
 | TablePattern | Product | `product/TablePattern.tsx` | — | ranksmile-frontend | Stable |
@@ -52,10 +56,10 @@ If it exists → reuse. If not → import once and append a row.
 | MenuList | `6106:100172` | `core/menuList.tsx` | — | ranksmile-frontend | Stable |
 | Toast | Product | `lib/toast.tsx` | — | ranksmile-frontend | Stable |
 | FeedbackPopover | Product | `product/FeedbackPopover.tsx` | — | ranksmile-frontend | Stable |
+| ActivityFeed | `10251:72895` | `product/ActivityFeed.tsx` | — | ranksmile-frontend | Stable |
 | DangerZone | Settings | `forms/DangerZone.tsx` | — | ranksmile-frontend | Stable |
 | CreateTeamDialog | `7900:165760` | `product/CreateTeamDialog.tsx` | — | ranksmile-frontend | Draft |
 | Enable2FADialog | `10018:306013` | `product/Enable2FADialog.tsx` | — | ranksmile-frontend | Draft |
-| SharePopoverContent | `9944:532658` | `product/SharePopoverContent.tsx` | — | ranksmile-frontend | Stable |
 | Automations calendar | `6230:327018` / `9472:40560` | `components/automations/AutomationsCalendar.tsx` | — | ranksmile-frontend | Draft |
 | Add automation event dialog | `5874:190606` | `components/automations/AddEventDialog.tsx` | — | ranksmile-frontend | Draft |
 | BenefitItem | `3089:39824` | `product/BenefitItem.tsx` | — | ranksmile-frontend | Draft |

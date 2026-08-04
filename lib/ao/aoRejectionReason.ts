@@ -23,4 +23,5 @@ export type AoRejectionReason =
   | 'INVALID_HTML'
   | 'PRESERVATION'
   | 'FINAL_REGRESSION'
-  | 'ACTION_MISMATCH';
+  | 'ACTION_MISMATCH'
+  | 'RX_QUALITY_VETO';

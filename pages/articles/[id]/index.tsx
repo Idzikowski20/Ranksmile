@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import AppShell from '../../../components/common/AppShell';
 import { Button } from '../../../components/koala/core';
-import { SharePopoverContent } from '../../../components/koala/product/SharePopoverContent';
+import { Icon } from '../../../components/koala/icons';
 import ContentScorePanel from '../../../components/articles/ContentScorePanel';
 import InternalLinksPanel from '../../../components/articles/InternalLinksPanel';
 import KeywordSuggestInput from '../../../components/articles/KeywordSuggestInput';
@@ -49,10 +49,6 @@ import type { SectionEvent } from '../../../lib/optimizeSectionEvents';
 import { buildReviewDoc } from '../../../lib/optimizeReviewDoc';
 import { optimizeStore } from '../../../components/articles/optimizeStore';
 import { useBackgroundDeepAnalysis } from '../../../hooks/useBackgroundDeepAnalysis';
-import { useArticleChannel } from '../../../lib/ably/useArticleChannel';
-import { ABLY_EVENTS } from '../../../lib/ably/channel';
-import { ablyIgnore } from '../../../lib/ably/safe';
-import { throttle } from '../../../lib/throttle';
 import { prefersReducedMotion } from '../../../lib/motion/gsap';
 import type { ArticleEditorHandle } from '../../../lib/types/editor';
 import type { Editor } from '@tiptap/core';
@@ -148,14 +144,22 @@ const IconBtn = ({
     style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       width: 32, height: 32, borderRadius: 8, border: 'none',
-      background: active ? '#f4f4f5' : 'transparent', cursor: disabled ? 'not-allowed' : 'pointer',
+      background: active ? 'var(--koala-bg-secondary)' : 'transparent', cursor: disabled ? 'not-allowed' : 'pointer',
       opacity: disabled ? 0.4 : 1,
-      color: danger ? '#dc2626' : (active ? '#18181b' : '#3f3f47'),
+      color: danger ? 'var(--koala-status-danger)' : (active ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)'),
       padding: 0, transition: 'color 0.15s, background 0.15s',
       fontFamily: 'var(--font-family-primary)',
     }}
-    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.color = danger ? '#b91c1c' : '#09090b'; }}
-    onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.color = danger ? '#dc2626' : '#3f3f47'; }}
+    onMouseEnter={(e) => {
+      if (disabled) return;
+      e.currentTarget.style.color = danger ? 'var(--koala-status-danger)' : 'var(--koala-text-primary)';
+      e.currentTarget.style.background = 'var(--koala-bg-secondary)';
+    }}
+    onMouseLeave={(e) => {
+      if (disabled) return;
+      e.currentTarget.style.color = danger ? 'var(--koala-status-danger)' : (active ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)');
+      e.currentTarget.style.background = active ? 'var(--koala-bg-secondary)' : 'transparent';
+    }}
   >
     {children}
   </button>
@@ -181,22 +185,22 @@ const MenuRow = ({ icon, label, sub, chevron, onClick, disabled }: { icon: React
     style={{
       display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '8px 14px',
       border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
-      fontFamily: 'var(--font-family-primary)', color: '#18181B', opacity: disabled ? 0.45 : 1,
+      fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)', opacity: disabled ? 0.45 : 1,
     }}
-    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#f3f4f0'; }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }}
     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
   >
-    <span style={{ color: '#18181B', display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
+    <span style={{ color: 'var(--koala-text-primary)', display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
     <span style={{ flex: 1, minWidth: 0 }}>
       <span style={{ display: 'block', fontSize: 15, fontWeight: 500, lineHeight: '20px' }}>{label}</span>
-      {sub && <span style={{ display: 'block', fontSize: 12, color: '#71717b', lineHeight: '16px' }}>{sub}</span>}
+      {sub && <span style={{ display: 'block', fontSize: 12, color: 'var(--koala-text-tertiary)', lineHeight: '16px' }}>{sub}</span>}
     </span>
-    {chevron && <span style={{ color: '#71717b', display: 'inline-flex', flexShrink: 0 }}><IcoChevronR /></span>}
+    {chevron && <span style={{ color: 'var(--koala-text-tertiary)', display: 'inline-flex', flexShrink: 0 }}><IcoChevronR /></span>}
   </button>
 );
 
 /* Voice picker popover (Search voices / SERP based / Custom voices / Add Custom Voice) */
-const Check18 = () => (<svg viewBox="0 0 20 20" width={18} height={18} style={{ marginLeft: 'auto' }}><path fill="#18181B" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>);
+const Check18 = () => (<svg viewBox="0 0 20 20" width={18} height={18} style={{ marginLeft: 'auto' }}><path fill="var(--koala-text-primary)" fillRule="evenodd" d="M16.705 4.153a.75.75 0 0 1 .142 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893l7.48-9.817a.75.75 0 0 1 1.05-.143" clipRule="evenodd" /></svg>);
 
 const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
   const router = useRouter();
@@ -216,13 +220,13 @@ const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
 
   const ql = q.trim().toLowerCase();
   const filtered = ql ? voices.filter((v) => v.name.toLowerCase().includes(ql)) : voices;
-  const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 15, fontWeight: 500, color: '#18181B', fontFamily: 'var(--font-family-primary)', textAlign: 'left' };
+  const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 15, fontWeight: 500, color: 'var(--koala-text-primary)', fontFamily: 'var(--font-family-primary)', textAlign: 'left' };
 
   return (
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
-        background: '#fff', borderRadius: 12, padding: '8px 0', minWidth: 280, maxWidth: 320,
+        background: 'var(--koala-bg-primary)', borderRadius: 12, padding: '8px 0', minWidth: 280, maxWidth: 320,
         boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
         animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)', fontFamily: 'var(--font-family-primary)', ...style,
       }}
@@ -230,102 +234,33 @@ const VoicePopover = ({ style }: { style?: React.CSSProperties }) => {
       <div style={{ padding: '4px 12px 8px' }}>
         <input
           placeholder="Search voices" value={q} onChange={(e) => setQ(e.target.value)} onClick={(e) => e.stopPropagation()}
-          style={{ width: '100%', height: 40, padding: '0 12px', boxSizing: 'border-box', borderRadius: 8, border: '1px solid #d4d4d8', outline: 'none', fontSize: 14, fontFamily: 'var(--font-family-primary)', color: '#18181B' }}
+          style={{ width: '100%', height: 40, padding: '0 12px', boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--koala-border-secondary)', outline: 'none', fontSize: 14, fontFamily: 'var(--font-family-primary)', color: 'var(--koala-text-primary)' }}
         />
       </div>
 
       <div style={{ maxHeight: 240, overflowY: 'auto' }} className="styled-scrollbar">
-        <div style={{ padding: '6px 16px 4px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: '#9f9fa9', letterSpacing: '0.04em' }}>Built-in voices</div>
+        <div style={{ padding: '6px 16px 4px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--koala-text-disabled)', letterSpacing: '0.04em' }}>Built-in voices</div>
         <button type="button" onClick={() => setSelected('serp')} style={rowStyle}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
           <span style={{ flex: 1 }}>SERP based</span>
           {selected === 'serp' && <Check18 />}
         </button>
         {filtered.map((v) => (
           <button key={v.id} type="button" onClick={() => setSelected(v.id)} style={rowStyle}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}</span>
             {selected === v.id && <Check18 />}
           </button>
         ))}
       </div>
 
-      <div style={{ height: 1, background: '#f4f4f5', margin: '4px 0' }} />
+      <div style={{ height: 1, background: 'var(--koala-bg-secondary)', margin: '4px 0' }} />
       <button type="button" onClick={() => router.push('/settings/custom_voices')} style={rowStyle}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-        <svg viewBox="0 0 24 24" width={18} height={18}><path d="M12 5v14M5 12h14" stroke="#18181B" strokeWidth={2} strokeLinecap="round" /></svg>
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <svg viewBox="0 0 24 24" width={18} height={18}><path d="M12 5v14M5 12h14" stroke="var(--koala-text-primary)" strokeWidth={2} strokeLinecap="round" /></svg>
         Add Custom Voice
       </button>
     </div>
-  );
-};
-
-/* Share popover — Koala SharePopoverContent in portal shell. */
-const SharePopover = ({ articleId, onClose, style }: { articleId: string; onClose: () => void; style?: React.CSSProperties }) => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const [token, setToken] = useState('');
-
-  useEffect(() => {
-    fetch(`/api/articles/${articleId}/share-link`).then((r) => r.json()).then((d) => { if (d.token) setToken(d.token); }).catch(() => {});
-  }, [articleId]);
-
-  const commentLink = token ? `${origin}/drafts/s/${token}` : '';
-  if (!commentLink) {
-    return (
-      <div onClick={(e) => e.stopPropagation()} style={{ ...style, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 24px rgba(24,26,34,0.12)' }}>
-        <span style={{ fontSize: 14, color: '#71717B' }}>Loading share link…</span>
-      </div>
-    );
-  }
-  return (
-    <div onClick={(e) => e.stopPropagation()} style={{ ...style }}>
-      <SharePopoverContent url={commentLink} title="Ranksmile draft" onClose={onClose} />
-    </div>
-  );
-};
-
-/** Portal Share popover — escapes `.koala-panel { overflow: hidden }` on the toolbar. */
-const SharePopoverPortal = ({
-  anchorRef,
-  popoverRef,
-  articleId,
-  onClose,
-}: {
-  anchorRef: React.RefObject<HTMLDivElement | null>;
-  popoverRef: React.RefObject<HTMLDivElement | null>;
-  articleId: string;
-  onClose: () => void;
-}) => {
-  const [style, setStyle] = useState<React.CSSProperties | null>(null);
-
-  useEffect(() => {
-    const place = () => {
-      const el = anchorRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      setStyle({
-        position: 'fixed',
-        top: rect.bottom + 8,
-        right: Math.max(12, window.innerWidth - rect.right),
-        zIndex: 350,
-      });
-    };
-    place();
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
-    return () => {
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
-    };
-  }, [anchorRef]);
-
-  if (!style || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div ref={popoverRef as React.LegacyRef<HTMLDivElement>}>
-      <SharePopover articleId={articleId} onClose={onClose} style={style} />
-    </div>,
-    document.body,
   );
 };
 
@@ -344,7 +279,7 @@ const bcFmtDate = (iso?: string): string => {
 };
 
 const BcChevron = () => (
-  <svg viewBox="0 0 24 24" width={20} height={20} style={{ flexShrink: 0, color: '#3F3F47' }}>
+  <svg className="ce-breadcrumb__chevron" viewBox="0 0 24 24" width={20} height={20} aria-hidden>
     <path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M8.293 5.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1 0 1.414l-6 6a1 1 0 0 1-1.414-1.414L13.586 12 8.293 6.707a1 1 0 0 1 0-1.414" />
   </svg>
 );
@@ -363,61 +298,58 @@ const EditorBreadcrumb = ({ domain, title, keywords, language, createdAt, modifi
 
   const loc = BC_COUNTRY[(language || 'pl').toLowerCase()] || BC_COUNTRY.en;
   const kwList = keywords.length ? keywords : [];
-  const f = 'var(--font-family-primary)';
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, paddingLeft: 8 }}>
-      <Link href="/dashboard" style={{ display: 'inline-flex', flexShrink: 0 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8 }}>
-          <img alt="" width={20} height={20} style={{ borderRadius: 4 }} src={`https://www.google.com/s2/favicons?domain=${domain || 'ranksmile'}&sz=32`} />
-        </span>
+    <div className="ce-breadcrumb">
+      <Link href="/dashboard" className="ce-breadcrumb__favicon">
+        <img alt="" width={20} height={20} src={`https://www.google.com/s2/favicons?domain=${domain || 'ranksmile'}&sz=32`} />
       </Link>
-      <div className="ce-bc-rest" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-      <BcChevron />
-      <Link href="/articles" style={{ color: '#9F9FA9', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none', fontFamily: f, fontSize: 14 }}>Articles</Link>
-      <BcChevron />
-      <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, position: 'relative' }}>
-        <span style={{ display: 'block', color: '#fff', fontWeight: 600, fontFamily: f, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, maxWidth: 'min(460px, 34vw)' }}>{title || 'Untitled'}</span>
-        <button type="button" aria-label="Article info" onClick={() => setOpen((v) => !v)}
-          style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#9F9FA9', display: 'inline-flex', flexShrink: 0 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#9F9FA9'; }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" /></svg>
-        </button>
+      <div className="ce-breadcrumb__rest">
+        <BcChevron />
+        <Link href="/articles" className="ce-breadcrumb__trail">Articles</Link>
+        <BcChevron />
+        <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, position: 'relative' }}>
+          <span className="ce-breadcrumb__current">{title || 'Untitled'}</span>
+          <button type="button" aria-label="Article info" className="ce-breadcrumb__info" onClick={() => setOpen((v) => !v)}>
+            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" /></svg>
+          </button>
 
-        {open && (
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 200, width: 300, maxWidth: 'calc(100vw - 24px)', background: '#fff', borderRadius: 12, padding: '12px 16px', boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: f, animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                <span style={{ fontSize: 13, color: '#52525C' }}>Keywords{kwList.length ? ` (${kwList.length})` : ''}</span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B', wordBreak: 'break-word' }}>{kwList.length ? kwList.join(', ') : '—'}</span>
+          {open && (
+            <div className="ce-breadcrumb__popover" onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                  <span className="ce-breadcrumb__popover-label">Keywords{kwList.length ? ` (${kwList.length})` : ''}</span>
+                  <span className="ce-breadcrumb__popover-value" style={{ wordBreak: 'break-word' }}>{kwList.length ? kwList.join(', ') : '—'}</span>
+                </div>
+                {kwList.length > 0 && (
+                  <button
+                    type="button"
+                    aria-label="Copy keywords"
+                    className="ce-breadcrumb__icon-btn"
+                    onClick={() => { navigator.clipboard?.writeText(kwList.join(', ')); toast.success('Keywords copied'); }}
+                  >
+                    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}><path d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" /></svg>
+                  </button>
+                )}
               </div>
-              {kwList.length > 0 && (
-                <button type="button" aria-label="Copy keywords" onClick={() => { navigator.clipboard?.writeText(kwList.join(', ')); toast.success('Keywords copied'); }}
-                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: '#3F3F47', display: 'inline-flex', flexShrink: 0 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#18181B'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#3F3F47'; }}>
-                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}><path d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" /></svg>
-                </button>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span className="ce-breadcrumb__popover-label">Location</span>
+                <span className="ce-breadcrumb__popover-value" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <img alt="" width={18} height={13} style={{ borderRadius: 2 }} src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${loc.cc}.svg`} />
+                  {loc.name}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span className="ce-breadcrumb__popover-label">Last Modified</span>
+                <span className="ce-breadcrumb__popover-value">{bcFmtDate(modifiedAt)}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span className="ce-breadcrumb__popover-label">Created</span>
+                <span className="ce-breadcrumb__popover-value">{bcFmtDate(createdAt)}</span>
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 13, color: '#52525C' }}>Location</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500, color: '#18181B' }}>
-                <img alt="" width={18} height={13} style={{ borderRadius: 2 }} src={`https://cdn.jsdelivr.net/npm/flag-icons@6.11.1/flags/4x3/${loc.cc}.svg`} />
-                {loc.name}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 13, color: '#52525C' }}>Last Modified</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{bcFmtDate(modifiedAt)}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 13, color: '#52525C' }}>Created</span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#18181B' }}>{bcFmtDate(createdAt)}</span>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -449,6 +381,8 @@ const ArticleEditorPage: NextPage = () => {
   const [showAddDomain, setShowAddDomain] = useState(false);
   const [showInternalLinksPanel, setShowInternalLinksPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  /** Bumped by toolbar Publish → ContentScorePanel opens Publish or Export. */
+  const [openPublishSignal, setOpenPublishSignal] = useState(0);
   // Ranksmile docks into the right panel: ArticleEditor notifies open-state; the dock <div> is the portal target.
   const [ranksmileDockOpen, setRanksmileDockOpen] = useState(false);
   const [ranksmileDockEl, setRanksmileDockEl] = useState<HTMLElement | null>(null);
@@ -456,7 +390,6 @@ const ArticleEditorPage: NextPage = () => {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [commentThreads, setCommentThreads] = useState<Thread[]>([]);
   const [commentsVersion, setCommentsVersion] = useState(0);
   // Comment identity = signed-in user + Google/GSC profile photo (same source as the topbar).
@@ -470,13 +403,11 @@ const ArticleEditorPage: NextPage = () => {
   }, []);
   const commentAuthor: CommentAuthor = useMemo(() => ({
     name: session?.data?.user?.name || session?.data?.user?.email || 'You',
-    color: '#F84416',
+    color: 'var(--koala-text-brand)',
     avatar: gscPicture || undefined,
   }), [session?.data?.user?.name, session?.data?.user?.email, gscPicture]);
   const actionsRef = useRef<HTMLDivElement>(null);
   const voiceRef = useRef<HTMLDivElement>(null);
-  const shareRef = useRef<HTMLDivElement>(null);
-  const sharePopoverRef = useRef<HTMLDivElement>(null);
   const [domainBaseUrl, setDomainBaseUrl] = useState('');
   const [linkBar, setLinkBar] = useState<{ count: number; preLinkHtml: string; positions: number[] } | null>(null);
   const [linkNavIdx, setLinkNavIdx] = useState(0);
@@ -620,63 +551,6 @@ const ArticleEditorPage: NextPage = () => {
       .then(d => setCommentThreads(d.threads || []))
       .catch(() => {});
   }, [id, commentsVersion]);
-
-  // Owner watches the same channel so reviewer comments appear live in the editor.
-  const { channel: ownerChannel } = useArticleChannel({ articleId: article?.id ?? null });
-  useEffect(() => {
-    if (!ownerChannel) return undefined;
-    const onComment = () => setCommentsVersion((v) => v + 1);
-    ablyIgnore(ownerChannel.subscribe(ABLY_EVENTS.comment, onComment));
-    ablyIgnore(ownerChannel.presence.enter({ role: 'owner' }));
-    return () => {
-      ownerChannel.unsubscribe(ABLY_EVENTS.comment, onComment);
-      ablyIgnore(ownerChannel.presence.leave());
-    };
-  }, [ownerChannel]);
-
-  const [reviewers, setReviewers] = useState<string[]>([]);
-  useEffect(() => {
-    if (!ownerChannel) return undefined;
-    const refresh = () => ablyIgnore(
-      ownerChannel.presence.get()
-        .then((members) => setReviewers(members
-          .filter((m) => (m.data as { role?: string } | undefined)?.role === 'viewer')
-          .map((m) => ((m.data as { name?: string } | undefined)?.name) || 'Guest'))),
-    );
-    ablyIgnore(ownerChannel.presence.subscribe(['enter', 'leave', 'update'], refresh));
-    refresh();
-    return () => {
-      ownerChannel.presence.unsubscribe();
-      ablyIgnore(ownerChannel.presence.leave());
-    };
-  }, [ownerChannel]);
-
-  // Live broadcast to viewers. Ably caps a single message at ~64KB; above this we
-  // signal a refetch instead of shipping the whole document inline.
-  const MAX_LIVE_HTML = 56 * 1024;
-  const ownerChannelRef = useRef<typeof ownerChannel>(null);
-  useEffect(() => { ownerChannelRef.current = ownerChannel; }, [ownerChannel]);
-
-  // Monotonic revision: bumped on every content change; caret events carry the rev
-  // of the doc they were measured against so the viewer never draws a stale caret.
-  const contentRevRef = useRef(0);
-
-  const publishContentRef = useRef(
-    throttle((html: string, rev: number) => {
-      const ch = ownerChannelRef.current;
-      if (!ch) return;
-      if (html.length > MAX_LIVE_HTML) void ch.publish(ABLY_EVENTS.content, { tooLarge: true, rev });
-      else void ch.publish(ABLY_EVENTS.content, { html, rev });
-    }, 500),
-  );
-
-  // Caret is throttled tighter than content (tiny payload, wants to feel smooth).
-  const publishCaretRef = useRef(
-    throttle((from: number, to: number, rev: number) => {
-      const ch = ownerChannelRef.current;
-      if (ch) void ch.publish(ABLY_EVENTS.caret, { from, to, rev });
-    }, 75),
-  );
 
   // Listen for Pixabay open events dispatched from TipTap image node toolbar
   useEffect(() => {
@@ -834,16 +708,15 @@ const ArticleEditorPage: NextPage = () => {
   }, [id, analysisReloadKey]);
 
   useEffect(() => {
-    if (!actionsMenu && !voiceOpen && !shareOpen) return undefined;
+    if (!actionsMenu && !voiceOpen) return undefined;
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
       if (voiceOpen && voiceRef.current && !voiceRef.current.contains(t)) setVoiceOpen(false);
-      if (shareOpen && !shareRef.current?.contains(t) && !sharePopoverRef.current?.contains(t)) setShareOpen(false);
       if (actionsMenu && actionsRef.current && !actionsRef.current.contains(t)) { setActionsMenu(false); setVoiceOpen(false); }
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, [actionsMenu, voiceOpen, shareOpen]);
+  }, [actionsMenu, voiceOpen]);
 
   const handleEditorChange = useCallback(
     (html: string, text: string, words: number, headings: number, paragraphs: number) => {
@@ -852,32 +725,9 @@ const ArticleEditorPage: NextPage = () => {
       setWordCount(words);
       setHeadingCount(headings);
       setParagraphCount(paragraphs);
-      contentRevRef.current += 1; // new doc revision
-      publishContentRef.current(html, contentRevRef.current); // live mirror (throttled, best-effort)
     },
     [],
   );
-
-  // Publish caret position on every selection change.
-  // The editor mounts asynchronously (dynamic import), so poll until it exists.
-  useEffect(() => {
-    let ed: ReturnType<NonNullable<typeof editorRef.current>['getEditor']> | null = null;
-    const onSel = () => {
-      if (!ed) return;
-      const { from, to } = ed.state.selection;
-      publishCaretRef.current(from, to, contentRevRef.current);
-    };
-    const tryBind = () => {
-      const e = editorRef.current?.getEditor?.();
-      if (e && !ed) { ed = e; e.on('selectionUpdate', onSel); return true; }
-      return false;
-    };
-    if (!tryBind()) {
-      const iv = setInterval(() => { if (tryBind()) clearInterval(iv); }, 200);
-      return () => { clearInterval(iv); if (ed) ed.off('selectionUpdate', onSel); };
-    }
-    return () => { if (ed) ed.off('selectionUpdate', onSel); };
-  }, [article?.id]);
 
   const handleMetaTitleChange = useCallback((v: string) => {
     setArticle((prev) => prev ? { ...prev, meta_title: v } : prev);
@@ -1163,6 +1013,18 @@ const ArticleEditorPage: NextPage = () => {
     };
   }, [router.events]);
 
+  const openPublishPanel = useCallback(async () => {
+    try { await doSave(); } catch { /* open anyway */ }
+    if (ranksmileDockOpen) editorRef.current?.toggleRanksmile?.();
+    setShowHistory(false);
+    setShowInternalLinksPanel(false);
+    setPanelCollapsed(false);
+    setVoiceOpen(false);
+    setActionsMenu(false);
+    setOpenPublishSignal((n) => n + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- doSave closes over latest editor state
+  }, [ranksmileDockOpen]);
+
   const handleAcceptReject = async (action: 'accept' | 'reject') => {
     if (!id) return;
     try {
@@ -1237,9 +1099,9 @@ const ArticleEditorPage: NextPage = () => {
     <button
       type="button"
       onClick={() => openCompareVersions(preHtml)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--koala-bg-primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-disabled)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-bg-primary)'; }}
     >
       <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9" /></svg>
       Compare versions
@@ -1781,8 +1643,8 @@ const ArticleEditorPage: NextPage = () => {
         hideMobileNav
       >
         {/* Ranksmile-style loading screen inside the editor gray wrapper */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f4f4f5', padding: 8, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', background: '#fff', borderRadius: 12, border: '1px solid #e4e4e7', overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: 8, position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', background: 'var(--koala-bg-primary)', borderRadius: 12, border: '1px solid var(--koala-border-primary)', overflow: 'hidden' }}>
             <EditorLoading />
           </div>
         </div>
@@ -1792,8 +1654,8 @@ const ArticleEditorPage: NextPage = () => {
 
   if (!article) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f3f4f0', gap: 16 }}>
-        <p style={{ color: '#9f9fa9' }}>Article not found.</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--koala-bg-secondary)', gap: 16 }}>
+        <p style={{ color: 'var(--koala-text-disabled)' }}>Article not found.</p>
         <Link href="/articles"><a style={{ color: 'var(--color-surface-raised)' }}>← Back to list</a></Link>
       </div>
     );
@@ -1836,12 +1698,12 @@ const ArticleEditorPage: NextPage = () => {
         [data-ranksmile-image] { margin: 0.5rem 0; }
         .ranksmile-image-group {
           display: flex; flex-direction: column; gap: 0.5rem;
-          background: #fff; border-radius: 0.5rem; overflow: hidden;
+          background: var(--koala-bg-primary); border-radius: 0.5rem; overflow: hidden;
           padding-bottom: 0.25rem;
           position: relative;
         }
         .ProseMirror-selectednode .ranksmile-image-group {
-          outline: 2px solid #51A2FF; border-radius: 0.5rem;
+          outline: 2px solid var(--koala-border-focus); border-radius: 0.5rem;
         }
         .ranksmile-image-container {
           position: relative; overflow: hidden;
@@ -1850,7 +1712,7 @@ const ArticleEditorPage: NextPage = () => {
         .group:hover .ranksmile-image-container { border-radius: 0; }
         .ranksmile-image-overlay {
           position: absolute; inset: 0; z-index: 4;
-          background: #18181B; opacity: 0;
+          background: var(--koala-text-primary); opacity: 0;
           display: flex; align-items: center; justify-content: center;
           transition: opacity 0.1s ease-in-out;
           border-radius: 0;
@@ -1877,38 +1739,38 @@ const ArticleEditorPage: NextPage = () => {
         .group:hover .ranksmile-image-toolbar { max-height: 300px; }
         .ranksmile-toolbar-inner {
           display: flex; flex-direction: column; gap: 1px;
-          background: #fff; border-radius: 0.5rem;
+          background: var(--koala-bg-primary); border-radius: 0.5rem;
         }
         .ranksmile-toolbar-prompt-row {
           display: flex; align-items: flex-end; justify-content: space-between;
           min-height: 48px; padding: 0.5rem 0.75rem;
-          background: #F4F4F5; border-radius: 0.5rem 0.5rem 0 0;
+          background: var(--koala-bg-secondary); border-radius: 0.5rem 0.5rem 0 0;
         }
         .ranksmile-toolbar-prompt-icon {
           display: flex; align-items: flex-end; justify-content: center;
           width: 21px; height: 100%; padding-bottom: 0.375rem;
-          color: #3F3F47; flex-shrink: 0;
+          color: var(--koala-text-secondary); flex-shrink: 0;
         }
         .ranksmile-toolbar-prompt-input {
           flex: 1; min-height: 28px; border: none; background: transparent;
           padding: 0.25rem 0; font-size: 0.875rem; line-height: 1.25rem;
-          color: #18181B; resize: none; outline: none;
+          color: var(--koala-text-primary); resize: none; outline: none;
           font-family: var(--font-family-primary);
           box-shadow: none;
         }
-        .ranksmile-toolbar-prompt-input::placeholder { color: #52525C; }
+        .ranksmile-toolbar-prompt-input::placeholder { color: var(--koala-text-secondary); }
         .ranksmile-toolbar-send-btn {
           display: inline-flex; align-items: center; justify-content: center;
           padding: 0.375rem; border: none; border-radius: 0.375rem;
-          background: #F4F4F5; color: #18181B; cursor: pointer;
+          background: var(--koala-bg-secondary); color: var(--koala-text-primary); cursor: pointer;
           flex-shrink: 0; transition: background 0.15s;
         }
         .ranksmile-toolbar-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .ranksmile-toolbar-send-btn:not(:disabled):hover { background: #E4E4E7; }
+        .ranksmile-toolbar-send-btn:not(:disabled):hover { background: var(--koala-border-primary); }
         .ranksmile-toolbar-actions-row {
           display: flex; align-items: center; gap: 0.5rem;
           height: 48px; padding: 0.5rem 0.75rem;
-          background: #f3f4f0; border-radius: 0 0 0.5rem 0.5rem;
+          background: var(--koala-bg-secondary); border-radius: 0 0 0.5rem 0.5rem;
         }
         .ranksmile-toolbar-actions-left {
           display: flex; align-items: center; gap: 0.5rem; flex: 1;
@@ -1924,12 +1786,12 @@ const ArticleEditorPage: NextPage = () => {
           transition: background 0.15s; white-space: nowrap;
         }
         .ranksmile-btn-ghost {
-          background: #F4F4F5; color: #18181B;
+          background: var(--koala-bg-secondary); color: var(--koala-text-primary);
         }
-        .ranksmile-btn-ghost:hover { background: #E4E4E7; }
-        .ranksmile-btn-ghost:active { background: #D4D4D8; }
+        .ranksmile-btn-ghost:hover { background: var(--koala-border-primary); }
+        .ranksmile-btn-ghost:active { background: var(--koala-border-secondary); }
         .ranksmile-toolbar-drag-text {
-          font-size: 0.875rem; line-height: 1.25rem; color: #3F3F47;
+          font-size: 0.875rem; line-height: 1.25rem; color: var(--koala-text-secondary);
           overflow: hidden; white-space: nowrap;
         }
         .ranksmile-btn-delete {
@@ -1940,11 +1802,11 @@ const ArticleEditorPage: NextPage = () => {
         }
         .ranksmile-btn-delete:hover { opacity: 0.8; }
         .ranksmile-audio-bars { display: flex; gap: 0.125rem; }
-        .ranksmile-audio-bar { width: 4px; height: 12px; background: #1AB25E; }
+        .ranksmile-audio-bar { width: 4px; height: 12px; background: var(--koala-status-success); }
         /* ── Glow effect during AI image generation ─────────────── */
         @keyframes ranksmileGlow {
-          0%, 100% { box-shadow: 0 0 15px rgba(99, 13, 227, 0.3), 0 0 35px rgba(99, 13, 227, 0.15), 0 0 60px rgba(99, 13, 227, 0.08); }
-          50%      { box-shadow: 0 0 25px rgba(99, 13, 227, 0.5), 0 0 55px rgba(99, 13, 227, 0.3), 0 0 90px rgba(99, 13, 227, 0.15); }
+          0%, 100% { box-shadow: 0 0 15px color-mix(in srgb, var(--koala-text-brand) 30%, transparent), 0 0 35px color-mix(in srgb, var(--koala-text-brand) 15%, transparent); }
+          50%      { box-shadow: 0 0 25px color-mix(in srgb, var(--koala-text-brand) 50%, transparent), 0 0 55px color-mix(in srgb, var(--koala-text-brand) 30%, transparent); }
         }
         .ranksmile-image-generating .ranksmile-image-group::before {
           content: '';
@@ -1964,32 +1826,31 @@ const ArticleEditorPage: NextPage = () => {
         }
         .ranksmile-alt-input {
           flex: 1; border: none; outline: none; padding-right: 0.75rem;
-          font-size: 0.875rem; line-height: 1.25rem; color: #3F3F47;
+          font-size: 0.875rem; line-height: 1.25rem; color: var(--koala-text-secondary);
           background: transparent; font-family: var(--font-family-primary);
         }
-        .ranksmile-alt-input::placeholder { color: #52525C; }
-        .ranksmile-alt-input:disabled { background: #fff; }
+        .ranksmile-alt-input::placeholder { color: var(--koala-text-secondary); }
+        .ranksmile-alt-input:disabled { background: var(--koala-bg-primary); }
         .ranksmile-alt-clear-btn {
           display: inline-flex; align-items: center; justify-content: center;
           border: none; border-radius: 0; background: transparent;
           padding: 0; font-size: 0.875rem; line-height: 1.25rem;
-          color: #3F3F47; cursor: pointer; font-family: var(--font-family-primary);
+          color: var(--koala-text-secondary); cursor: pointer; font-family: var(--font-family-primary);
           font-weight: 600; visibility: hidden; white-space: nowrap;
           transition: color 0.15s;
         }
         .group:hover .ranksmile-alt-clear-btn { visibility: visible; }
-        .ranksmile-alt-clear-btn:hover { color: #2F2F34; }
-        .ranksmile-alt-clear-btn:active { color: #09090B; }
+        .ranksmile-alt-clear-btn:hover { color: var(--koala-bg-inverse); }
+        .ranksmile-alt-clear-btn:active { color: var(--koala-text-primary); }
       `}</style>
 
-      {/* ── Gray zone (bg-gray-5 equivalent) ──────────────────────── */}
+      {/* ── Editor workspace ─────────────────────────────────────── */}
       <div
         style={{
           flex: 1,
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          background: '#f4f4f5',
           padding: 4,
           gap: 0,
           position: 'relative',
@@ -2018,35 +1879,20 @@ const ArticleEditorPage: NextPage = () => {
             style={{
               position: 'absolute', bottom: 12, left: 12, zIndex: 80,
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.92)', border: '1px solid #ececef', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
-              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: '#71717a',
+              background: 'rgba(255,255,255,0.92)', border: '1px solid var(--koala-border-primary)', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
+              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: 'var(--koala-text-tertiary)',
               fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
             }}
           >
             {autoSaveState === 'saving' ? (
-              <div style={{ width: 13, height: 13, border: '2px solid #e4e4e7', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+              <div style={{ width: 13, height: 13, border: '2px solid var(--koala-border-primary)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
             ) : (
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--koala-status-warning)', flexShrink: 0 }} />
             )}
             {autoSaveState === 'saving' ? 'Saving…' : 'Unsaved'}
           </div>
           )}
 
-          {/* ── Reviewer presence indicator (floating, bottom-right) ── */}
-          {reviewers.length > 0 && (
-          <div
-            title={reviewers.join(', ')}
-            style={{
-              position: 'absolute', bottom: 12, right: 12, zIndex: 80,
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.92)', border: '1px solid #ececef', boxShadow: '0 1px 3px rgba(24,26,34,0.08)',
-              backdropFilter: 'blur(6px)', fontSize: 12, fontWeight: 500, color: '#52525c',
-              fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap', pointerEvents: 'none',
-            }}
-          >
-            <span>👀 {reviewers.length} reviewing</span>
-          </div>
-          )}
 
           {/* ── Editor card (white rounded, padding-right for panel) ── */}
           <div
@@ -2054,9 +1900,9 @@ const ArticleEditorPage: NextPage = () => {
             style={{
               flex: 1,
               minWidth: 0,
-              background: '#fff',
+              background: 'var(--koala-bg-primary)',
               borderRadius: 12,
-              border: '1px solid #e4e4e7',
+              border: '1px solid var(--koala-border-primary)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -2114,7 +1960,7 @@ const ArticleEditorPage: NextPage = () => {
                 style={{
                   position: 'absolute', inset: 0, zIndex: 30,
                   display: 'flex', flexDirection: 'column',
-                  background: '#fff', borderRadius: 12,
+                  background: 'var(--koala-bg-primary)', borderRadius: 12,
                 }}
               >
                 <EditorLoading message="Analyzing imported content…" />
@@ -2132,14 +1978,14 @@ const ArticleEditorPage: NextPage = () => {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18, delay: 0.12 }}
               style={{
-                position: 'absolute', top: 14, right: 12, zIndex: shareOpen ? 150 : 95, display: 'flex', alignItems: 'center', gap: 6,
+                position: 'absolute', top: 14, right: 12, zIndex: 95, display: 'flex', alignItems: 'center', gap: 6,
               }}>
               <div ref={actionsRef} style={{ position: 'relative', display: 'inline-flex' }}>
                 <IconBtn disabled={editorLocked} onClick={() => { setActionsMenu((o) => !o); setVoiceOpen(false); }} title="More"><IcoDots /></IconBtn>
                 {actionsMenu && (
                   <div style={{
                     position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200, minWidth: 244,
-                    background: '#fff', borderRadius: 12, padding: '6px 0',
+                    background: 'var(--koala-bg-primary)', borderRadius: 12, padding: '6px 0',
                     boxShadow: '0px 8px 24px rgba(24,26,34,0.16), 0px 2px 6px rgba(24,26,34,0.08)',
                     animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
                   }}>
@@ -2159,18 +2005,16 @@ const ArticleEditorPage: NextPage = () => {
                 )}
               </div>
               <IconBtn disabled={editorLocked} onClick={() => setPanelCollapsed(false)} title="Show side panel"><IcoPanel /></IconBtn>
-              <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={editorLocked}
-                  onClick={() => { setShareOpen((v) => !v); setVoiceOpen(false); }}
-                >
-                  Share
-                </Button>
-                {shareOpen && <SharePopoverPortal anchorRef={shareRef} popoverRef={sharePopoverRef} articleId={String(id)} onClose={() => setShareOpen(false)} />}
-              </div>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={editorLocked || !id}
+                icon={<Icon name="UploadSimple" size={16} weight="bold" />}
+                onClick={() => { void openPublishPanel(); }}
+              >
+                Publish
+              </Button>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2178,7 +2022,7 @@ const ArticleEditorPage: NextPage = () => {
           {/* ── Right panel (absolute, two cards stacked) ───────────
               Plain div (not motion enter-from-offscreen): parent has overflow:hidden,
               so initial x: PANEL_W+24 parks the panel outside the clip and it can stay
-              invisible if the spring never commits — empty gray gutter, no Share/score. */}
+              invisible if the spring never commits — empty gray gutter, no Publish/score. */}
           {!panelCollapsed && (
           <div
             className="ce-right-panel"
@@ -2192,8 +2036,8 @@ const ArticleEditorPage: NextPage = () => {
               zIndex: 90,
             }}
           >
-            {/* Top card: action icons + share */}
-            <div className="koala-panel editor-side-toolbar" style={{ position: 'relative', zIndex: shareOpen || voiceOpen ? 150 : undefined }}>
+            {/* Top card: action icons + preview */}
+            <div className="koala-panel editor-side-toolbar" style={{ position: 'relative', zIndex: voiceOpen ? 150 : undefined }}>
               {/* Left: action icon buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {/* Mark / unmark as done */}
@@ -2203,7 +2047,7 @@ const ArticleEditorPage: NextPage = () => {
                     onClick={() => handleAcceptReject(article.status === 'accepted' ? 'reject' : 'accept')}
                     title={article.status === 'accepted' ? 'Unmark as done' : 'Mark as done'}
                   >
-                    <span style={{ color: article.status === 'accepted' ? '#18181b' : '#3f3f47', display: 'inline-flex' }}>
+                    <span style={{ color: article.status === 'accepted' ? 'var(--koala-text-primary)' : 'var(--koala-text-secondary)', display: 'inline-flex' }}>
                       {article.status === 'accepted' ? <IcoDoneFilled /> : <IcoDoneOutline />}
                     </span>
                   </IconBtn>
@@ -2230,24 +2074,22 @@ const ArticleEditorPage: NextPage = () => {
                 </span>
               </div>
 
-              {/* Right: panel toggle + Share */}
+              {/* Right: panel toggle + Publish */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span data-tour="hide-panel" style={{ display: 'inline-flex' }}>
                   <IconBtn disabled={editorLocked} onClick={() => { setPanelCollapsed(true); setVoiceOpen(false); }} title="Hide side panel"><IcoPanel /></IconBtn>
                 </span>
-                <div ref={shareRef} style={{ position: 'relative', display: 'inline-flex' }}>
-                  <Button
-                    data-tour="share"
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    disabled={editorLocked}
-                    onClick={() => { setShareOpen((v) => !v); setVoiceOpen(false); }}
-                  >
-                    Share
-                  </Button>
-                  {shareOpen && <SharePopoverPortal anchorRef={shareRef} popoverRef={sharePopoverRef} articleId={String(id)} onClose={() => setShareOpen(false)} />}
-                </div>
+                <Button
+                  data-tour="publish"
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={editorLocked || !id}
+                  icon={<Icon name="UploadSimple" size={16} weight="bold" />}
+                  onClick={() => { void openPublishPanel(); }}
+                >
+                  Publish
+                </Button>
               </div>
             </div>
 
@@ -2272,6 +2114,7 @@ const ArticleEditorPage: NextPage = () => {
                     metaDescription={article.meta_description || ''}
                     isDeepAnalyzing={isDeepAnalyzing}
                     deepAnalysisUi={deepAnalysisUi}
+                    openPublishSignal={openPublishSignal}
                   />
                 </div>
               ) : ranksmileDockOpen ? (
@@ -2366,6 +2209,7 @@ const ArticleEditorPage: NextPage = () => {
                       readabilityAccepted={readabilityAcceptKey}
                       isDeepAnalyzing={isDeepAnalyzing}
                       deepAnalysisUi={deepAnalysisUi}
+                      openPublishSignal={openPublishSignal}
                     />
                   </div>
                 </>
@@ -2380,15 +2224,15 @@ const ArticleEditorPage: NextPage = () => {
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
             zIndex: 10000, width: 520, maxWidth: 'calc(100vw - 40px)',
-            background: '#09090b', borderRadius: 10,
+            background: 'var(--koala-text-primary)', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
           }}>
-            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
             <span
               key={autoOptimizeStatus}
               style={{
-                fontSize: 13, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)',
+                fontSize: 13, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)',
                 flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 animation: 'fadeSlideIn 0.25s ease',
               }}
@@ -2397,7 +2241,7 @@ const ArticleEditorPage: NextPage = () => {
             </span>
             <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexShrink: 0 }}>
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} style={{ width: 3, borderRadius: 2, background: '#F84416', animation: `barPulse 1s ease-in-out ${i * 0.15}s infinite`, height: 14 }} />
+                <div key={i} style={{ width: 3, borderRadius: 2, background: 'var(--koala-text-brand)', animation: `barPulse 1s ease-in-out ${i * 0.15}s infinite`, height: 14 }} />
               ))}
             </div>
           </div>
@@ -2465,13 +2309,13 @@ const ArticleEditorPage: NextPage = () => {
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
             zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
-            background: '#09090b', borderRadius: 10,
+            background: 'var(--koala-text-primary)', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 16px', height: 52, gap: 12,
           }}>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)' }}>Optimize AI Readability</span>
-            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: '#F84416', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: '#fff', fontFamily: 'var(--font-family-primary)' }}>Working</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)' }}>Optimize AI Readability</span>
+            <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.15)', borderTopColor: 'var(--koala-text-brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: 'var(--koala-bg-primary)', fontFamily: 'var(--font-family-primary)' }}>Working</span>
           </div>
         )}
 
@@ -2480,11 +2324,11 @@ const ArticleEditorPage: NextPage = () => {
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
             zIndex: 500, minWidth: 560, maxWidth: 'calc(100vw - 40px)',
-            background: '#09090b', borderRadius: 10,
+            background: 'var(--koala-text-primary)', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 10px 0 16px', height: 52, gap: 16,
           }}>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>Optimize AI Readability</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>Optimize AI Readability</span>
 
             {/* Compare versions */}
             {compareVersionsButton(readabilityBar.preHtml)}
@@ -2498,9 +2342,9 @@ const ArticleEditorPage: NextPage = () => {
                 if (editor) editor.commands.setContent(preHtml);
                 setReadabilityBar(null);
               }}
-              style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#fff'; }}
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-bg-primary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 8px', borderRadius: 6, transition: 'color 0.15s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-disabled)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-bg-primary)'; }}
             >
               Cancel
             </button>
@@ -2522,7 +2366,7 @@ const ArticleEditorPage: NextPage = () => {
                   toast.error('Could not save version');
                 }
               }}
-              style={{ fontSize: 13, fontWeight: 600, color: '#18181b', background: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'opacity 0.15s', flexShrink: 0 }}
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-text-primary)', background: 'var(--koala-bg-primary)', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'opacity 0.15s', flexShrink: 0 }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
             >
@@ -2546,19 +2390,19 @@ const ArticleEditorPage: NextPage = () => {
           <div style={{
             position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
             zIndex: 500, width: 560, maxWidth: 'calc(100vw - 40px)',
-            background: '#09090b', borderRadius: 10,
+            background: 'var(--koala-text-primary)', borderRadius: 10,
             boxShadow: '0 8px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)',
             display: 'flex', alignItems: 'center', padding: '0 10px 0 16px', height: 52, gap: 10,
           }}>
             {/* Link count badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#F84416', flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: '#a1a1aa', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--koala-text-brand)', flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: 'var(--koala-text-disabled)', fontFamily: 'var(--font-family-primary)', whiteSpace: 'nowrap' }}>
                 {linkBar.count} link{linkBar.count !== 1 ? 's' : ''} inserted
               </span>
             </div>
 
-            <div style={{ width: 1, height: 18, background: '#27272a', flexShrink: 0 }} />
+            <div style={{ width: 1, height: 18, background: 'var(--koala-border-primary)', flexShrink: 0 }} />
 
             {/* Navigation ↑↓ */}
             <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
@@ -2576,9 +2420,9 @@ const ArticleEditorPage: NextPage = () => {
                       editor.chain().focus().setTextSelection({ from: positions[next], to: positions[next] + 1 }).scrollIntoView().run();
                     }
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 6, border: 'none', background: '#1c1c1f', color: '#a1a1aa', cursor: 'pointer', fontSize: 13, transition: 'background 0.15s, color 0.15s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#27272a'; e.currentTarget.style.color = '#fff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#1c1c1f'; e.currentTarget.style.color = '#a1a1aa'; }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 6, border: 'none', background: 'var(--koala-bg-secondary)', color: 'var(--koala-text-disabled)', cursor: 'pointer', fontSize: 13, transition: 'background 0.15s, color 0.15s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-border-primary)'; e.currentTarget.style.color = 'var(--koala-text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-bg-secondary)'; e.currentTarget.style.color = 'var(--koala-text-disabled)'; }}
                 >
                   {label}
                 </button>
@@ -2595,9 +2439,9 @@ const ArticleEditorPage: NextPage = () => {
                 if (editor) editor.commands.setContent(linkBar.preLinkHtml);
                 setLinkBar(null);
               }}
-              style={{ fontSize: 13, fontWeight: 500, color: '#71717a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 10px', borderRadius: 6, transition: 'color 0.15s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#a1a1aa'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#71717a'; }}
+              style={{ fontSize: 13, fontWeight: 500, color: 'var(--koala-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '6px 10px', borderRadius: 6, transition: 'color 0.15s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--koala-text-disabled)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--koala-text-tertiary)'; }}
             >
               Discard
             </button>
@@ -2606,9 +2450,9 @@ const ArticleEditorPage: NextPage = () => {
             <button
               type="button"
               onClick={() => setLinkBar(null)}
-              style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#F84416', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'background 0.15s', flexShrink: 0 }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#6d28d9'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#F84416'; }}
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--koala-bg-primary)', background: 'var(--koala-text-brand)', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'var(--font-family-primary)', padding: '7px 16px', transition: 'background 0.15s', flexShrink: 0 }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--koala-text-brand)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--koala-text-brand)'; }}
             >
               Accept links
             </button>

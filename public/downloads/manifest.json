@@ -1,0 +1,11 @@
+{
+  "pluginVersion": "1.8.0.0",
+  "build": "20260803T141306Z",
+  "commit": "local",
+  "api": "v1",
+  "minimumApp": "0.0.0",
+  "designSystem": "rsds-v1",
+  "theme": "light",
+  "name": "Ranksmile \u2013 WordPress Plugin",
+  "download": "/downloads/ranksmile-plugin.zip"
+}

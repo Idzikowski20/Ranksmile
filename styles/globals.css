@@ -456,10 +456,10 @@ body {
 
 :root {
    --topbar-height: 48px;
-   --topbar-bg: #ffffff;
-   --topbar-panel: #ffffff;
-   --topbar-muted: #575757;
-   --topbar-text: #1a1a1a;
+   --topbar-bg: var(--koala-bg-primary);
+   --topbar-panel: var(--koala-bg-primary);
+   --topbar-muted: var(--koala-text-secondary);
+   --topbar-text: var(--koala-text-primary);
    --shell-noise-image: url('/textures/noise.svg');
    --shell-noise-size: 250px;
    --shell-gradient-image: url('/textures/gradient.svg');
@@ -1078,7 +1078,7 @@ body {
    min-height: 0;
    display: flex;
    flex-direction: column;
-   background: #f4f4f5;
+   background: var(--koala-bg-secondary);
    border-radius: 12px;
    overflow: hidden;
 }
@@ -1614,17 +1614,16 @@ html.editor-route .app-content {
    border-color: #E4E4E7 !important;
 }
 
-/* Dashboard Quick Start grid ? 1 col on mobile, 2 on sm+ */
-@media (max-width: 639px) {
+/* Dashboard Quick Start grid — 1 col mobile, 3 on sm+ */
+@media (max-width: 767px) {
    .dashboard-quickstart-grid {
-      grid-template-columns: repeat(1, 1fr) !important;
+      grid-template-columns: 1fr !important;
    }
 }
 
 /* Quick start card hover */
 .quickstart-card:hover {
-   background: #F4F4F5 !important;
-   color: #F84416 !important;
+   color: var(--koala-text-brand) !important;
 }
 
 /* Recently edited ? 1 col on mobile, 3 on desktop */
@@ -2751,9 +2750,22 @@ html.editor-route .app-content {
 
 /* ??? Avatar ???????????????????????????????????????????????????????????????? */
 .koala-avatar {
+   position: relative;
    display: inline-flex; align-items: center; justify-content: center;
-   border-radius: 50%; overflow: hidden; flex-shrink: 0;
+   /* radius only on __media — root must stay square so badge can paint past the circle */
+   border-radius: 0;
+   flex-shrink: 0;
    box-sizing: border-box;
+   overflow: visible;
+}
+.koala-avatar:not(.koala-avatar--badged) {
+   border-radius: 50%;
+   overflow: hidden;
+}
+.koala-avatar__media {
+   width: 100%; height: 100%;
+   border-radius: 50%; overflow: hidden;
+   display: inline-flex; align-items: center; justify-content: center;
 }
 .koala-avatar-image { width: 100%; height: 100%; object-fit: cover; display: block; }
 .koala-avatar-initial {
@@ -2763,10 +2775,51 @@ html.editor-route .app-content {
    font-family: var(--font-family-primary);
    user-select: none;
 }
+.koala-avatar__badge {
+   position: absolute;
+   right: -1px;
+   bottom: -1px;
+   z-index: 1;
+   border-radius: 50%;
+   box-sizing: border-box;
+   border: 2px solid var(--koala-bg-primary);
+   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   overflow: visible;
+   pointer-events: none;
+}
+.koala-avatar__badge--status {
+   background: var(--koala-status-success);
+   overflow: hidden;
+}
+.koala-avatar__badge--flag {
+   background: var(--koala-bg-primary);
+   overflow: hidden;
+}
+.koala-avatar__badge--flag > span {
+   border-radius: 50% !important;
+   width: 100% !important;
+   height: 100% !important;
+   box-shadow: none !important;
+}
+.koala-avatar__badge--certificate {
+   border: none;
+   background: transparent;
+   box-shadow: none;
+   overflow: visible;
+   /* room for scalloped seal — do not force square clip via fixed box alone */
+   line-height: 0;
+}
+.koala-avatar__badge--certificate svg {
+   display: block;
+   overflow: visible;
+}
 .koala-avatar-button {
    display: inline-flex; align-items: center; justify-content: center;
    border: none; background: transparent; cursor: pointer; padding: 0;
-   border-radius: 50%; overflow: hidden; flex-shrink: 0; box-sizing: border-box;
+   border-radius: 50%; overflow: visible; flex-shrink: 0; box-sizing: border-box;
 }
 .koala-avatar-button:hover { opacity: 0.92; }
 
@@ -2812,11 +2865,26 @@ html.editor-route .app-content {
 
 /* ??? Pagination ??????????????????????????????????????????????????????????? */
 .koala-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 16px; font-family: var(--font-family-primary); }
-.koala-pagination-caption { font-size: 13px; color: #575757; margin-right: auto; }
-.koala-pagination-controls { display: flex; gap: 4px; }
+.koala-pagination-caption { font-size: 13px; color: var(--koala-text-secondary, #575757); margin-right: auto; }
+.koala-pagination-controls { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .koala-pagination-controls button {
   border-radius: 12px !important;
-  border-color: #e5e5e5 !important;
+  border-color: var(--koala-border-primary, #e5e5e5) !important;
+  min-width: 32px;
+  justify-content: center;
+}
+.koala-pagination-page.is-active {
+  border-color: transparent !important;
+}
+.koala-pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 32px;
+  font-size: 14px;
+  color: var(--koala-text-tertiary);
+  user-select: none;
 }
 
 /* ??? Segmented control ???????????????????????????????????????????????????? */
@@ -3633,7 +3701,18 @@ html.editor-route .app-content {
 }
 .performance-metrics-grid,
 .performance-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 24px;
   min-width: 0;
+  width: 100%;
+}
+.performance-summary-card {
+  padding: 20px 24px !important;
+}
+.performance-analytics-item {
+  min-width: 140px;
 }
 .performance-metric-card {
   min-width: 0;
@@ -3650,15 +3729,6 @@ html.editor-route .app-content {
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
-}
-.performance-data-table-wrap {
-  overflow-x: auto;
-  max-width: 100%;
-  min-width: 0;
-}
-.performance-data-table {
-  width: 100%;
-  border-collapse: collapse;
 }
 .performance-line-chart {
   position: relative;
@@ -3685,8 +3755,13 @@ html.editor-route .app-content {
   .performance-filters-mobile { display: block; width: 100%; }
   .performance-metrics-grid,
   .performance-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
+    gap: 16px !important;
+  }
+  .performance-analytics-item {
+    flex: 1 1 calc(50% - 8px) !important;
+    min-width: calc(50% - 8px) !important;
+    padding-right: 0 !important;
+    border-right: none !important;
   }
   .performance-metric-card {
     padding: 12px !important;
@@ -3704,32 +3779,161 @@ html.editor-route .app-content {
     align-items: flex-start;
     gap: 8px;
   }
-  .performance-data-table {
-    table-layout: fixed;
-  }
-  .performance-data-table th:first-child,
-  .performance-data-table td:first-child {
-    width: 46%;
-    min-width: 0;
-    max-width: none;
-    padding-left: 12px !important;
-    padding-right: 8px !important;
-  }
-  .performance-data-table th,
-  .performance-data-table td {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-  }
-  .performance-data-table .performance-col-secondary {
-    display: none;
+  .performance-col-secondary {
+    display: none !important;
   }
 }
 
 .article-list-card {
-  background: var(--koala-bg-primary);
+  background: transparent;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  align-items: stretch;
+  gap: 0;
+  min-height: 112px;
+  border-radius: 16px;
+  border: none;
+  overflow: visible;
+  user-select: none;
+  transition: background-color 0.15s ease;
+  font-family: var(--font-family-primary);
+}
+.article-list-card:hover,
+.article-list-card.is-selected {
+  background: var(--koala-bg-secondary, #f5f5f5);
+}
+
+.article-list-card-gauge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 16px 12px 16px 16px;
+  border-right: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.article-list-card:hover .article-list-card-gauge,
+.article-list-card.is-selected .article-list-card-gauge {
+  border-right-color: var(--koala-border-primary, #e5e5e5);
+}
+
+.article-list-card-main {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  padding: 16px 16px 16px 8px;
+}
+
+.article-list-card-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.article-list-card-cols .article-list-card-meta-badge {
+  pointer-events: auto;
+}
+
+.article-list-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.article-list-card-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.25px;
+  color: var(--koala-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-list-card-keyword {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.42px;
+  color: var(--koala-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-list-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.article-list-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.4px;
+}
+
+.article-list-card-meta-label {
+  color: var(--koala-text-secondary);
+  font-weight: 400;
+}
+
+.article-list-card-meta-value {
+  color: var(--koala-text-primary);
+  font-weight: 600;
+}
+
+/* Figma hover Button Group — top-right, overhangs card edge */
+.article-card-hover-actions {
+  position: absolute;
+  top: -16px;
+  right: 16px;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  padding: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--koala-border-primary, #e5e5e5);
+  background: var(--koala-bg-primary, #fff);
+  box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.04);
+}
+.article-list-card:hover .article-card-hover-actions,
+.article-list-card:focus-within .article-card-hover-actions {
+  display: flex;
+}
+
+.article-card-hover-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--koala-text-primary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s ease;
+  box-sizing: border-box;
+}
+.article-card-hover-btn:hover {
+  background: var(--koala-bg-secondary, #f5f5f5);
 }
 /* Bulk select bar ? stay inside framed shell (body 8px pad + overflow:hidden) */
 .article-bulk-bar {
@@ -3765,35 +3969,30 @@ html.editor-route .app-content {
 @media (max-width: 767px) {
   .article-list-card.article-list-item {
     height: auto !important;
-    min-height: 112px;
-    padding-right: 12px !important;
-    gap: 8px !important;
+    min-height: 96px;
   }
   .article-list-card-gauge {
     padding-left: 12px !important;
-    padding-right: 4px !important;
+    padding-right: 8px !important;
   }
   .article-list-card-main {
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding: 12px 12px 12px 4px;
   }
   .article-list-card-cols {
     gap: 10px !important;
   }
-  .article-list-card-bottom {
-    flex-wrap: wrap;
-    row-gap: 8px;
+  .article-list-card-meta {
+    gap: 10px 12px;
   }
-  .article-list-card-loc {
-    width: 100%;
-    justify-content: flex-start;
-    margin-bottom: 0 !important;
+  .article-card-hover-actions {
+    right: 8px;
   }
 }
 
 @media (max-width: 479px) {
-  .article-list-card-country span {
-    display: none;
+  .article-list-card-title {
+    font-size: 15px;
+    line-height: 22px;
   }
 }
 .koala-panel--flush .koala-panel-body { padding: 0; }
@@ -4381,40 +4580,8 @@ html.editor-route .app-content {
 }
 
 /* Deep analysis (article import / new content) — Koala semantic tokens */
-.deep-analysis-engines {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.deep-analysis-engine-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.deep-analysis-engine-label {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--koala-text-primary);
-  font-family: var(--font-family-primary);
-}
-.deep-analysis-engine-icons {
-  display: flex;
-  flex-direction: row;
-  flex-shrink: 0;
-}
-.deep-analysis-engine-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid var(--koala-border-primary);
-  background: var(--koala-bg-primary);
-  margin-right: -6px;
-  padding: 3px;
+.deep-analysis-panel.koala-panel {
+  background: transparent;
 }
 .deep-analysis-pipeline-live {
   margin-bottom: 20px;
@@ -4525,7 +4692,6 @@ html.editor-route .app-content {
 .deep-analysis-step-icon__done { color: var(--koala-status-success); }
 .deep-analysis-step-icon__error { color: var(--koala-status-danger); }
 .deep-analysis-step-icon__pending { color: var(--koala-border-strong); }
-.deep-analysis-engine-icon__muted { stroke: var(--koala-text-tertiary); }
 
 /* ??? New Content ? generating (article preview stage) ????????????????????? */
 .nc-gen {
@@ -4635,14 +4801,14 @@ html.editor-route .app-content {
   font-size: 22px;
   line-height: 28px;
   font-weight: 600;
-  color: #181225;
+  color: var(--koala-text-primary, #1A1A1A);
   font-family: var(--font-family-primary);
 }
 .nc-gen-status {
   margin: 0;
   font-size: 14px;
   line-height: 20px;
-  color: #6A6772;
+  color: var(--koala-text-secondary, #575757);
   font-family: var(--font-family-primary);
   min-height: 20px;
 }
@@ -4651,15 +4817,15 @@ html.editor-route .app-content {
   max-width: 360px;
   height: 6px;
   border-radius: 9999px;
-  background: #F0F0F2;
-  border: 1px solid #e5e5e5;
+  background: var(--koala-bg-secondary, #F5F5F5);
+  border: 1px solid var(--koala-border-primary, #e5e5e5);
   overflow: hidden;
   box-sizing: border-box;
 }
 .nc-gen-progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: #F84416;
+  background: var(--koala-brand, #F84416);
   transition: width 300ms ease;
 }
 .nc-gen-progress-fill--indeterminate {
@@ -4670,7 +4836,7 @@ html.editor-route .app-content {
   margin: -16px 0 0;
   font-size: 12px;
   font-weight: 500;
-  color: #6A6772;
+  color: var(--koala-text-secondary, #575757);
   font-family: var(--font-family-primary);
   font-variant-numeric: tabular-nums;
 }
@@ -4899,16 +5065,18 @@ html.editor-route .app-content {
   padding: 24px 16px;
 }
 
-/* ??? Content editor side panel (Sentry-style) ????????????????????????????? */
+/* Content editor side panel — Koala chrome (same surface as panel body) */
 .editor-side-toolbar {
   padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  border: 1px solid #e4e4e7;
+  background: var(--koala-bg-primary);
+  border: 1px solid var(--koala-border-primary);
   border-radius: 12px;
   overflow: visible;
+  color: var(--koala-text-secondary);
 }
 .editor-side-panel-card {
   flex: 1;
@@ -4916,8 +5084,9 @@ html.editor-route .app-content {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #e4e4e7;
+  border: 1px solid var(--koala-border-primary);
   border-radius: 12px;
+  background: var(--koala-bg-primary);
 }
 .editor-side-panel {
   display: flex;
@@ -4925,7 +5094,7 @@ html.editor-route .app-content {
   width: 100%;
   height: 100%;
   font-family: var(--font-family-primary);
-  color: #181225;
+  color: var(--koala-text-primary);
 }
 
 /* ??? Pipeline queue strip (Content Score) ????????????????????????????????? */
@@ -4940,7 +5109,7 @@ html.editor-route .app-content {
   background: transparent;
   font-family: var(--font-family-primary);
   font-size: 12px;
-  color: #181225;
+  color: var(--koala-text-primary);
 }
 .pipeline-queue-strip--active {
   border: none;
@@ -4966,13 +5135,13 @@ html.editor-route .app-content {
 }
 .pipeline-queue-title {
   font-weight: 500;
-  color: #181225;
+  color: var(--koala-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .pipeline-queue-meta {
-  color: #6A6772;
+  color: var(--koala-text-secondary);
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -4980,7 +5149,7 @@ html.editor-route .app-content {
   position: relative;
   height: 4px;
   border-radius: 999px;
-  background: #f5f5f5;
+  background: var(--koala-bg-secondary);
   overflow: hidden;
 }
 .pipeline-queue-track-fill {
@@ -4989,9 +5158,9 @@ html.editor-route .app-content {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(242, 153, 100, 0.4) 40%,
-    #F84416 50%,
-    rgba(242, 153, 100, 0.4) 60%,
+    color-mix(in srgb, var(--koala-text-brand) 40%, transparent) 40%,
+    var(--koala-text-brand) 50%,
+    color-mix(in srgb, var(--koala-text-brand) 40%, transparent) 60%,
     transparent 100%
   );
   background-size: 200% 100%;
@@ -5005,7 +5174,7 @@ html.editor-route .app-content {
   height: 8px;
   margin-top: -4px;
   border-radius: 999px;
-  background: #F84416;
+  background: var(--koala-text-brand);
   animation: pipelineHopper 1.8s ease-in-out infinite;
 }
 .pipeline-queue-chips {
@@ -5019,37 +5188,37 @@ html.editor-route .app-content {
   gap: 6px;
   padding: 2px 8px;
   border-radius: 6px;
-  border: 1px solid #e5e5e5;
-  background: #fff;
-  color: #302E36;
+  border: 1px solid var(--koala-border-primary);
+  background: var(--koala-bg-primary);
+  color: var(--koala-text-primary);
   font-size: 11px;
   animation: pipelineChipIn 0.28s ease-out both;
 }
 .pipeline-queue-chip em {
   font-style: normal;
-  color: #6A6772;
+  color: var(--koala-text-secondary);
   font-weight: 500;
 }
 .pipeline-queue-chip--queued em {
-  color: #F84416;
+  color: var(--koala-text-brand);
 }
 .pipeline-queue-chip--running {
-  border-color: #F84416;
+  border-color: var(--koala-text-brand);
 }
 .pipeline-queue-chip--running em {
-  color: #F84416;
+  color: var(--koala-text-brand);
   animation: aoPulseDot 1.2s ease-in-out infinite;
 }
 .pipeline-queue-hint {
   margin: 0;
   font-size: 11px;
   line-height: 1.35;
-  color: #6A6772;
+  color: var(--koala-text-secondary);
 }
 .pipeline-queue-error {
   margin: 0;
   font-size: 11px;
-  color: #B42318;
+  color: var(--koala-status-danger);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5059,9 +5228,9 @@ html.editor-route .app-content {
   to { transform: translateY(0); }
 }
 @keyframes pipelineDotPulse {
-  0% { box-shadow: 0 0 0 0 rgba(242, 153, 100, 0.55); }
-  70% { box-shadow: 0 0 0 8px rgba(242, 153, 100, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(242, 153, 100, 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--koala-text-brand) 55%, transparent); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 @keyframes pipelineTrackShimmer {
   0% { background-position: 100% 0; }
@@ -5087,7 +5256,7 @@ html.editor-route .app-content {
 }
 .editor-side-panel-cta {
   padding: 12px 16px;
-  border-top: 1px solid #f0f0f2;
+  border-top: 1px solid var(--koala-border-primary);
 }
 .editor-side-panel-running {
   display: flex;
@@ -5095,13 +5264,13 @@ html.editor-route .app-content {
   justify-content: space-between;
   gap: 12px;
   font-size: 14px;
-  color: #52525c;
+  color: var(--koala-text-secondary);
 }
 .editor-side-panel-running-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid #d4d4d8;
-  border-top-color: #F84416;
+  border: 2px solid var(--koala-border-secondary);
+  border-top-color: var(--koala-text-brand);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -5126,14 +5295,14 @@ html.editor-route .app-content {
   padding: 12px 16px;
   background: transparent;
   border: none;
-  border-top: 1px solid #f0f0f2;
+  border-top: 1px solid var(--koala-border-primary);
   cursor: pointer;
   font-family: var(--font-family-primary);
   transition: background 150ms ease;
   text-align: left;
 }
 .editor-workflow-row:hover:not(:disabled) {
-  background: rgba(0, 0, 32, 0.04);
+  background: var(--koala-bg-secondary);
 }
 .editor-workflow-row:disabled {
   opacity: 0.45;
@@ -5153,27 +5322,27 @@ html.editor-route .app-content {
 }
 .editor-workflow-num {
   font-size: 13px;
-  color: #9f9fa9;
+  color: var(--koala-text-disabled);
   flex-shrink: 0;
 }
 .editor-workflow-label {
   font-size: 13px;
   font-weight: 600;
-  color: #181225;
+  color: var(--koala-text-primary);
 }
 .editor-workflow-meta {
   font-size: 11px;
-  color: #9f9fa9;
+  color: var(--koala-text-disabled);
 }
 .editor-workflow-badge {
   font-size: 10px;
-  color: #9f9fa9;
-  background: #f4f4f5;
+  color: var(--koala-text-disabled);
+  background: var(--koala-bg-secondary);
   border-radius: 9999px;
   padding: 1px 6px;
 }
 .editor-workflow-chevron {
-  color: #9f9fa9;
+  color: var(--koala-text-disabled);
   flex-shrink: 0;
   transition: transform 150ms ease;
 }
@@ -5197,18 +5366,18 @@ html.editor-route .app-content {
   text-align: center;
   font-size: 11px;
   font-weight: 700;
-  color: #000;
-  background: rgb(224 241 227);
+  color: var(--koala-text-primary);
+  background: var(--koala-status-success-bg);
   border-radius: 6px;
   padding: 2px 4px;
 }
 .editor-side-panel-metrics {
-  border-top: 1px solid #f0f0f2;
+  border-top: 1px solid var(--koala-border-primary);
   padding: 12px 16px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  background: #f5f5f5;
+  background: var(--koala-bg-primary);
   flex-shrink: 0;
 }
 .editor-side-metric {
@@ -5222,7 +5391,7 @@ html.editor-route .app-content {
   font-size: 11px;
   font-weight: 400;
   line-height: 14px;
-  color: #52525c;
+  color: var(--koala-text-secondary);
 }
 .editor-side-metric-value {
   display: flex;
@@ -5233,13 +5402,13 @@ html.editor-route .app-content {
   font-size: 11px;
   font-weight: 600;
   line-height: 14px;
-  color: #181225;
+  color: var(--koala-text-primary);
 }
 .editor-side-metric-range {
   font-size: 11px;
   font-weight: 400;
   line-height: 14px;
-  color: #52525c;
+  color: var(--koala-text-secondary);
 }
 
 /* ?? Content settings modal (editor customize) ??????????????????? */
@@ -7370,13 +7539,18 @@ html.koala-shell[data-theme="cream"] .app-content {
 .koala-ws-select__avatar-wrap {
   position: relative;
   flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  overflow: visible;
+}
+.koala-ws-select--compact .koala-ws-select__avatar-wrap {
   width: 24px;
   height: 24px;
 }
 .koala-ws-select__avatar {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 100%;
+  height: 100%;
   border-radius: 999px;
   overflow: hidden;
 }
@@ -7384,16 +7558,32 @@ html.koala-shell[data-theme="cream"] .app-content {
   border-radius: 999px !important;
   box-shadow: none;
 }
-.koala-ws-select__status {
+.koala-ws-select__badge {
   position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--koala-status-success);
-  border: 2px solid var(--koala-bg-primary);
-  box-shadow: 0 0.5px 1px rgba(0,0,0,0.06);
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--koala-bg-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--koala-bg-primary);
+}
+.koala-ws-select--compact .koala-ws-select__badge {
+  width: 10px;
+  height: 10px;
+}
+.koala-ws-select__badge--flag > span {
+  border-radius: 50% !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-shadow: none !important;
 }
 .koala-ws-select__text {
   flex: 1;
@@ -7413,21 +7603,13 @@ html.koala-shell[data-theme="cream"] .app-content {
   flex-shrink: 0;
   color: var(--koala-text-tertiary);
 }
-/* Positioning shell only — chrome lives on MenuList (avoids double border). */
+/* Single MenuList surface (no nested Popover panel — that painted gray square corners). */
 .koala-ws-select__menu {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 4px);
-  z-index: 80;
-  width: max(280px, 100%);
+  width: min(320px, calc(100vw - 16px));
   min-width: 280px;
-  max-width: min(320px, calc(100vw - 16px));
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 0;
-  box-shadow: none;
-  color: var(--koala-text-primary);
   box-sizing: border-box;
 }
 .koala-ws-select__menu > .koala-menu-list {
@@ -7435,6 +7617,8 @@ html.koala-shell[data-theme="cream"] .app-content {
   min-width: 0;
   max-width: none;
   box-sizing: border-box;
+  /* Stronger than MenuList default shadow.md — Surfer-style elevation */
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 .koala-ws-select__menu-head {
   display: flex;
@@ -7990,16 +8174,15 @@ html.koala-shell[data-theme="cream"] .app-content {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
+  overflow: visible !important;
 }
-.koala-sidebar-user__status {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--koala-status-success);
-  border: 2px solid var(--koala-bg-primary);
+.koala-sidebar-user--header .koala-sidebar-user__avatar-wrap {
+  /* slightly larger than 28px avatar so certificate seal has paint room */
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .koala-sidebar-user__meta {
   flex: 1;
@@ -8077,7 +8260,8 @@ html.koala-shell[data-theme="cream"] .app-content {
   width: auto;
   min-height: 0;
   padding: 2px;
-  border-radius: 999px;
+  border-radius: 8px;
+  overflow: visible !important;
 }
 .koala-sidebar-user__trigger--header:hover,
 .koala-sidebar-user__trigger--header.koala-sidebar-user__trigger--open {
@@ -8119,10 +8303,107 @@ html.koala-shell[data-theme="cream"] .app-content {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow: visible;
 }
 .koala-header__left { flex: 1; }
 .koala-header__search { flex: 0 1 312px; min-width: 0; max-width: 312px; }
 .koala-header__breadcrumb { flex: 1; min-width: 0; }
+
+/* Editor topbar breadcrumb — 100% Koala tokens */
+.ce-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 8px;
+  font-family: var(--font-family-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.ce-breadcrumb__favicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.ce-breadcrumb__favicon img { border-radius: 4px; display: block; }
+.ce-breadcrumb__rest {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ce-breadcrumb__chevron {
+  flex-shrink: 0;
+  color: var(--koala-text-tertiary);
+}
+.ce-breadcrumb__trail {
+  color: var(--koala-text-secondary);
+  white-space: nowrap;
+  text-decoration: none;
+  font: inherit;
+}
+.ce-breadcrumb__trail:hover { color: var(--koala-text-primary); }
+.ce-breadcrumb__current {
+  display: block;
+  color: var(--koala-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: min(460px, 34vw);
+}
+.ce-breadcrumb__info {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--koala-text-secondary);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.ce-breadcrumb__info:hover { color: var(--koala-text-primary); }
+.ce-breadcrumb__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 200;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  background: var(--koala-bg-primary);
+  border: 1px solid var(--koala-border-primary);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--koala-bg-inverse) 16%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: var(--font-family-primary);
+  animation: growOut 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ce-breadcrumb__popover-label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--koala-text-secondary);
+}
+.ce-breadcrumb__popover-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--koala-text-primary);
+}
+.ce-breadcrumb__icon-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--koala-text-secondary);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.ce-breadcrumb__icon-btn:hover { color: var(--koala-text-primary); }
 
 .koala-header-search {
   display: flex;
@@ -8733,6 +9014,119 @@ html.koala-shell[data-theme="cream"] .app-content {
   font-family: var(--font-family-primary);
 }
 
+/* Mode / context cards — token surfaces (no hardcoded #000/#fff) */
+.koala-wizard-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-family: var(--font-family-primary);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--koala-text-primary);
+  transition: background 0.15s, border-color 0.15s;
+}
+.koala-wizard-card:hover {
+  background: var(--koala-bg-secondary);
+}
+.koala-wizard-card--active {
+  background: var(--koala-bg-secondary);
+  border-color: var(--koala-border-primary);
+}
+.koala-wizard-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--koala-text-primary);
+}
+.koala-wizard-card-desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--koala-text-secondary);
+}
+.koala-wizard-included {
+  background: var(--koala-bg-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-family-primary);
+  color: var(--koala-text-primary);
+}
+.koala-wizard-included-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--koala-text-primary);
+}
+.koala-wizard-included-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--koala-text-secondary);
+}
+.koala-wizard-preview {
+  width: 96px;
+  height: 109px;
+  background: var(--koala-border-primary);
+  border-radius: 8px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+.koala-wizard-preview-inner {
+  width: 100%;
+  height: 100%;
+  background: var(--koala-bg-primary);
+  border-radius: 6px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
+}
+.koala-wizard-preview-line {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--koala-bg-tertiary);
+}
+.koala-wizard-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--koala-bg-secondary);
+  border: 1px solid var(--koala-border-primary);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.koala-wizard-chip-badge {
+  background: var(--koala-text-primary);
+  color: var(--koala-bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.koala-wizard-customize {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--koala-bg-primary);
+  border: 1px solid var(--koala-border-primary);
+  border-radius: 10px;
+}
+
 /* Content type — Template cards (Figma Dialog/Template `8564:560408`) */
 .koala-wizard-shell__column:has(.koala-content-type) {
   max-width: 636px;
@@ -8876,6 +9270,20 @@ html.koala-shell[data-theme="cream"] .app-content {
   .koala-template-card {
     flex: 1 1 100%;
     min-width: 0;
+  }
+}
+
+/* Auth pages — fill framed desktop shell without 100vh overflow; full viewport on mobile */
+@media (max-width: 1023px) {
+  .auth-page {
+    min-height: 100dvh !important;
+    height: auto !important;
+  }
+}
+@media (min-width: 1024px) {
+  .auth-page {
+    height: 100%;
+    min-height: 0;
   }
 }
 

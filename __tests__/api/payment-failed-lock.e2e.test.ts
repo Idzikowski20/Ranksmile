@@ -118,6 +118,7 @@ describe('payment failed lock (webhook + access enforcement)', () => {
     billingPeriod: 'monthly',
     subscriptionStatus: 'active',
     trialEndsAt: null,
+    trialConsumedAt: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     lastCheckoutStartedAt: null,
@@ -284,6 +285,19 @@ describe('payment failed lock (webhook + access enforcement)', () => {
           };
         }
         return;
+      }
+
+      if (sql.includes('user_onboarding')) {
+        return [[{ completed: 1 }]];
+      }
+      if (sql.includes("status = 'ready'") && /COUNT/i.test(sql)) {
+        return [[{ n: 1 }]];
+      }
+      if (sql.includes("status = 'ready'") && sql.includes('SELECT id')) {
+        return [[{ id: 1 }]];
+      }
+      if (sql.includes("status = 'setup'")) {
+        return [[]];
       }
 
       return;

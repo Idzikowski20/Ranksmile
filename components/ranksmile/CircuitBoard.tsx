@@ -136,7 +136,6 @@ function CircuitBoard({
         width,
         height,
         borderRadius: 8,
-        background: isDark ? 'var(--koala-bg-inverse)' : 'var(--koala-bg-secondary)',
         border: isDark ? '1px solid var(--koala-border-strong)' : '1px solid var(--koala-border-primary)',
         fontFamily: 'var(--font-family-primary)',
         ...style,

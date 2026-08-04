@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
-import { Checkbox } from '../koala/core';
+import { CompactSelect, Select } from '../koala/core';
 import Modal from '../koala/core/modal/modal';
 import Button from '../koala/core/button/button';
 import Input from '../koala/core/input/input';
@@ -38,9 +38,7 @@ interface Props {
 const IcoX = ({ size = 22 }: { size?: number }) => (
   <svg viewBox="0 0 24 24" width={size} height={size}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
 );
-const IcoChevron = ({ open }: { open?: boolean }) => (
-  <svg viewBox="0 0 24 24" width={18} height={18} style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m19.5 8.25l-7.5 7.5l-7.5-7.5" /></svg>
-);
+
 const IcoInfo = () => (<svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor"><path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75s-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12m9.75-3a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5m-.75 2.25a.75.75 0 0 1 1.5 0v5a.75.75 0 0 1-1.5 0z" /></svg>);
 const IcoDocPlus = () => (<svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor"><path fillRule="evenodd" clipRule="evenodd" d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875M12.75 12a.75.75 0 0 0-1.5 0v2.25H9a.75.75 0 0 0 0 1.5h2.25V18a.75.75 0 0 0 1.5 0v-2.25H15a.75.75 0 0 0 0-1.5h-2.25z" /><path d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434a9.77 9.77 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375z" /></svg>);
 const IcoSync = () => (<svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M16.023 9.348h4.992M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>);
@@ -52,87 +50,10 @@ const Label = ({ children }: { children: React.ReactNode }) => (
   <span style={{ fontSize: 13, fontWeight: 500, color: '#3f3f47' }}>{children}</span>
 );
 
-// Design-system input/dropdown surfaces (design.md §9 + shadows): border #D4D4D8 r8, dropdown
-// shadow + growOut animation, focus ring on inputs.
-const fieldStyle: React.CSSProperties = {
-  width: '100%', height: 40, padding: '0 12px', borderRadius: 8, border: '1px solid #d4d4d8',
-  background: '#fff', color: '#18181b', fontSize: 14, fontFamily: F, outline: 'none', boxSizing: 'border-box',
-  boxShadow: '0px 1px 2px 0px rgba(26,29,40,0.06)',
-};
-const triggerStyle: React.CSSProperties = { ...fieldStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' };
-const popoverStyle: React.CSSProperties = {
-  position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 30, maxHeight: 240, overflowY: 'auto',
-  background: '#fff', border: '1px solid #e4e4e7', borderRadius: 10, padding: 6,
-  boxShadow: '0px 18px 40px 0px rgba(17,24,39,0.14), 0px 8px 18px 0px rgba(17,24,39,0.09), 0px 2px 6px 0px rgba(17,24,39,0.06)',
-  animation: 'growOut 0.18s cubic-bezier(0.16,1,0.3,1)',
-};
-
-const Select = ({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: Opt[] }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
-  const current = options.find((o) => String(o.value) === value);
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen((v) => !v)} style={triggerStyle}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: current ? '#18181b' : '#9f9fa9' }}>{current ? current.label : '– Select –'}</span>
-        <span style={{ color: '#52525c', display: 'inline-flex', flexShrink: 0 }}><IcoChevron open={open} /></span>
-      </button>
-      {open && (
-        <div className="styled-scrollbar" style={popoverStyle}>
-          {options.map((o) => {
-            const sel = String(o.value) === value;
-            return (
-              <button type="button" key={String(o.value)} onClick={() => { onChange(String(o.value)); setOpen(false); }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 6, border: 'none', background: sel ? '#f4f4f5' : 'transparent', cursor: 'pointer', fontSize: 14, color: '#18181b', fontFamily: F }}
-                onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = sel ? '#f4f4f5' : 'transparent'; }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
-                {sel && <svg width={16} height={16} viewBox="0 0 20 20" fill="none"><path d="M16.7 5.2 8.7 15.7l-4.5-4.5" stroke="#18181b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Multi-select dropdown for categories / tags — uses the shared design-system Checkbox.
-const MultiSelect = ({ values, onChange, options }: { values: Array<string | number>; onChange: (v: Array<string | number>) => void; options: Opt[] }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
-  const toggle = (v: string | number) => onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v]);
-  const selectedLabels = options.filter((o) => values.includes(o.value)).map((o) => o.label);
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen((v) => !v)} style={triggerStyle}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedLabels.length ? '#18181b' : '#9f9fa9' }}>{selectedLabels.length ? selectedLabels.join(', ') : '– Select options –'}</span>
-        <span style={{ color: '#52525c', display: 'inline-flex', flexShrink: 0 }}><IcoChevron open={open} /></span>
-      </button>
-      {open && (
-        <div className="styled-scrollbar" style={popoverStyle}>
-          {options.length === 0 && <div style={{ padding: '8px 10px', fontSize: 13, color: '#9f9fa9' }}>None available</div>}
-          {options.map((o) => (
-            <div key={String(o.value)} onClick={() => toggle(o.value)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, cursor: 'pointer' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f0'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-              <Checkbox checked={values.includes(o.value)} onChange={() => toggle(o.value)} />
-              <span style={{ fontSize: 14, color: '#18181b' }}>{o.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+const toSelectOptions = (options: Opt[]) => options.map((o) => ({
+  value: String(o.value),
+  label: decodeLabel(o.label),
+}));
 
 const WordPressExportModal = ({ articleId, onClose }: Props) => {
   const [opts, setOpts] = useState<Options | null>(null);
@@ -301,11 +222,33 @@ const WordPressExportModal = ({ articleId, onClose }: Props) => {
               </div>
               <span style={{ fontSize: 14, color: '#52525c' }}>{mode === 'create' ? 'A new post will be created with the following settings:' : 'The linked post will be updated with the following settings:'}</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Status</Label><Select value={status} onChange={setStatus} options={opts.statuses} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Type</Label><Select value={type} onChange={setType} options={opts.types.length ? opts.types : [{ value: 'post', label: 'Post' }]} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Category</Label><MultiSelect values={categories} onChange={setCategories} options={opts.categories} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Tags</Label><MultiSelect values={tags} onChange={setTags} options={opts.tags} /></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Author</Label><Select value={author} onChange={setAuthor} options={opts.authors.length ? opts.authors : [{ value: '', label: 'Default' }]} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Status</Label><Select size="md" width="100%" placeholder="– Select –" value={status} onChange={setStatus} options={toSelectOptions(opts.statuses)} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Type</Label><Select size="md" width="100%" placeholder="– Select –" value={type} onChange={setType} options={toSelectOptions(opts.types.length ? opts.types : [{ value: 'post', label: 'Post' }])} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Label>Category</Label>
+                <CompactSelect
+                  multiple
+                  size="sm"
+                  value={categories}
+                  triggerLabel="– Select options –"
+                  emptyMessage="None available"
+                  options={opts.categories.map((o) => ({ value: o.value, label: decodeLabel(o.label), textValue: decodeLabel(o.label) }))}
+                  onChange={(selected) => setCategories(selected.map((o) => o.value))}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Label>Tags</Label>
+                <CompactSelect
+                  multiple
+                  size="sm"
+                  value={tags}
+                  triggerLabel="– Select options –"
+                  emptyMessage="None available"
+                  options={opts.tags.map((o) => ({ value: o.value, label: decodeLabel(o.label), textValue: decodeLabel(o.label) }))}
+                  onChange={(selected) => setTags(selected.map((o) => o.value))}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Author</Label><Select size="md" width="100%" placeholder="– Select –" value={author} onChange={setAuthor} options={toSelectOptions(opts.authors.length ? opts.authors : [{ value: '', label: 'Default' }])} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta title</Label><Input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} /></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><Label>Meta description</Label><Input value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} /></div>
             </div>

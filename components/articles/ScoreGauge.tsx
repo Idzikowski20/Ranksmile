@@ -43,7 +43,7 @@ const DeltaBadge = ({ delta, placement }: { delta: number; placement: 'right' | 
   const up = delta > 0;
   const base: React.CSSProperties = {
     position: 'absolute', display: 'inline-flex', alignItems: 'center', gap: 2,
-    color: up ? '#1AB25E' : '#DC2626', fontSize: 13, fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap',
+    color: up ? 'var(--koala-status-success)' : 'var(--koala-status-danger)', fontSize: 13, fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap',
     fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-family-primary)', pointerEvents: 'none',
   };
   const pos: React.CSSProperties = placement === 'right'
@@ -100,7 +100,7 @@ const CountUpNumber = ({ value, font }: { value: number; font: number }) => {
     };
   }, [value, reduced]);
   return (
-    <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: font, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+    <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: font, color: 'var(--koala-text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
       {display}
     </span>
   );
@@ -123,24 +123,24 @@ const ScoreGauge = ({ score, compact, size: sizeProp, pending, delta, deltaPlace
     <div style={{ position: 'relative', width: size, height: size }}>
       <svg viewBox="0 0 100 100" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         <g>
-          <path fill="none" strokeWidth={12} strokeLinecap="round" d={LEFT} stroke="#E4E4E7" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
+          <path fill="none" strokeWidth={12} strokeLinecap="round" d={LEFT} stroke="var(--koala-border-primary)" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
           <path fill="none" strokeWidth={12} strokeLinecap="round" d={LEFT} stroke={color} strokeDasharray="111.70107212763709 9999" strokeDashoffset={offset} style={fillStyle} />
-          <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke="#E4E4E7" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
+          <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke="var(--koala-border-primary)" strokeDasharray="111.70107212763709 9999" opacity={0.5} />
           <path fill="none" strokeWidth={12} strokeLinecap="round" d={RIGHT} stroke={color} strokeDasharray="111.70107212763709 9999" strokeDashoffset={offset} style={fillStyle} />
         </g>
         {TICKS.map((d) => (
-          <path key={d} d={d} stroke="black" strokeOpacity={0.3} strokeWidth={1.5} strokeLinecap="butt" />
+          <path key={d} d={d} stroke="var(--koala-text-primary)" strokeOpacity={0.3} strokeWidth={1.5} strokeLinecap="butt" />
         ))}
       </svg>
 
       {/* Numbers: no AnimatePresence odometer — exit/enter + overflow:hidden left blank SEO digits in prod. */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {pending ? (
-          <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#9f9fa9', fontVariantNumeric: 'tabular-nums' }}>—</span>
+          <span style={{ fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: 'var(--koala-text-disabled)', fontVariantNumeric: 'tabular-nums' }}>—</span>
         ) : size >= 90 ? (
           <CountUpNumber value={s} font={numberFont} />
         ) : (
-          <span style={{ display: 'inline-block', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: '#18181B', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+          <span style={{ display: 'inline-block', fontFamily: 'var(--font-family-primary)', fontWeight: 700, fontSize: numberFont, color: 'var(--koala-text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
             {s}
           </span>
         )}

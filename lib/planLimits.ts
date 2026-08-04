@@ -34,7 +34,7 @@ export interface PlanLimitMetric extends PlanLimitDefinition {
 }
 
 export interface PlanSummaryData {
-  planSlug: PlanSlug;
+  planSlug: PlanSlug | 'starter';
   planName: string;
   billingPeriod: BillingPeriod | null;
   subscriptionStatus: string | null;
@@ -44,7 +44,7 @@ export interface PlanSummaryData {
   overallPct: number;
 }
 
-export const PLAN_LIMITS: Record<PlanSlug, PlanLimitDefinition[]> = {
+export const PLAN_LIMITS: Record<PlanSlug | 'starter', PlanLimitDefinition[]> = {
   starter: [
     { key: 'documents', label: 'Documents', limit: 10 },
     { key: 'aiPrompts', label: 'AI Prompts', limit: 15 },
@@ -77,7 +77,7 @@ export const PLAN_LIMITS: Record<PlanSlug, PlanLimitDefinition[]> = {
 
 export const DEFAULT_PLAN_SLUG: PlanSlug = 'growth';
 
-export const SITE_AUDIT_PAGE_LIMITS: Record<PlanSlug, number> = {
+export const SITE_AUDIT_PAGE_LIMITS: Record<PlanSlug | 'starter', number> = {
   starter: 100,
   growth: 100,
   scale: 100,
@@ -86,12 +86,12 @@ export const SITE_AUDIT_PAGE_LIMITS: Record<PlanSlug, number> = {
 
 export const DEFAULT_SITE_AUDIT_PAGE_LIMIT = 100;
 
-export function getSiteAuditPageLimit(planSlug: PlanSlug | null | undefined): number {
+export function getSiteAuditPageLimit(planSlug: PlanSlug | 'starter' | null | undefined): number {
   if (!planSlug) return DEFAULT_SITE_AUDIT_PAGE_LIMIT;
   return SITE_AUDIT_PAGE_LIMITS[planSlug] ?? DEFAULT_SITE_AUDIT_PAGE_LIMIT;
 }
 
-export function resolvePlanSlug(slug: string | null | undefined): PlanSlug {
+export function resolvePlanSlug(slug: string | null | undefined): PlanSlug | 'starter' {
   if (slug === 'starter' || slug === 'growth' || slug === 'scale' || slug === 'agency') return slug;
   return DEFAULT_PLAN_SLUG;
 }

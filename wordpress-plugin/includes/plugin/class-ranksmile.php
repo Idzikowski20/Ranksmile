@@ -124,7 +124,7 @@ class Ranksmile {
 		add_action( 'rest_api_init', array( $this, 'register_connection_api_endpoints' ) );
 
 		add_action( 'wp_ajax_generate_connection_url', array( $this, 'get_ajax_ranksmile_connect_url' ) );
-		add_action( 'wp_ajax_disconnect_surfer', array( $this, 'disconnect_ranksmile_from_wp' ) );
+		add_action( 'wp_ajax_disconnect_ranksmile', array( $this, 'disconnect_ranksmile_from_wp' ) );
 
 		add_action( 'wp_ajax_check_connection_status', array( $this, 'check_connection_status' ) );
 
@@ -212,7 +212,7 @@ class Ranksmile {
 			'/disconnect/',
 			array(
 				'methods'             => 'DELETE',
-				'callback'            => array( $this, 'disconnect_surfer' ),
+				'callback'            => array( $this, 'disconnect_ranksmile' ),
 				'permission_callback' => function ( $request ) {
 					return $this->verify_request_permission( $request );
 				},
@@ -351,7 +351,7 @@ class Ranksmile {
 	 */
 	public function verify_request_permission( $request ) {
 		$received_token = $this->get_bearer_token();
-		$saved_token    = get_option( 'wpranksmile_api_access_key', false );
+		$saved_token    = get_option( 'ranksmile_api_access_key', false );
 
 		if ( null !== $received_token && false !== $saved_token && $received_token === $saved_token ) {
 			return true;
@@ -419,7 +419,7 @@ class Ranksmile {
 
 		if ( false !== $token && $this->verify_connection_token( $token ) ) {
 			$api_key     = sanitize_text_field( wp_unslash( $request['api_key'] ) );
-			$token_saved = update_option( 'wpranksmile_api_access_key', $api_key, false );
+			$token_saved = update_option( 'ranksmile_api_access_key', $api_key, false );
 			delete_option( 'ranksmile_connection_token' );
 
 			$connection_details = array(
@@ -466,7 +466,7 @@ class Ranksmile {
 	 *
 	 * @return WP_REST_Response
 	 */
-	public function disconnect_surfer() {
+	public function disconnect_ranksmile() {
 		$this->make_disconnection_cleanup();
 		$response = new WP_REST_Response();
 
@@ -529,7 +529,7 @@ class Ranksmile {
 	 * @return void
 	 */
 	private function make_disconnection_cleanup() {
-		delete_option( 'wpranksmile_api_access_key' );
+		delete_option( 'ranksmile_api_access_key' );
 		delete_option( 'ranksmile_connection_details' );
 	}
 
@@ -1430,7 +1430,7 @@ class Ranksmile {
 	 * @param string $method - method to send. (Optional, default: POST).
 	 */
 	public function make_ranksmile_request( $endpoint, $params, $method = 'POST' ) {
-		$token   = get_option( 'wpranksmile_api_access_key', false );
+		$token   = get_option( 'ranksmile_api_access_key', false );
 		$api_url = Ranksmile()->get_plugin()->get_api_url() . $endpoint;
 
 		if ( false === $token ) {
@@ -1559,7 +1559,7 @@ class Ranksmile {
 
 		wp_localize_script(
 			'ranksmile-guidelines-debug',
-			'wpranksmile_guidelines_debug',
+			'ranksmile_guidelines_debug',
 			array(
 				'ranksmile_url' => $ranksmile_url,
 			),
@@ -1567,7 +1567,7 @@ class Ranksmile {
 
 		wp_localize_script(
 			'ranksmile-general',
-			'wpsurfer',
+			'ranksmile',
 			array(
 				// General usage.
 				'ajaxurl'                => admin_url( 'admin-ajax.php' ),
@@ -1575,14 +1575,14 @@ class Ranksmile {
 				'baseurl'                => Ranksmile()->get_baseurl(),
 				// Ranksmile general usage.
 				'wp_language'            => strtolower( $this->get_language_code() ),
-				'learnmore_url'          => 'https://ranksmile.pl/en/collections/3548643-wpsurfer',
+				'learnmore_url'          => 'https://ranksmile.pl/en/collections/3548643-wordpress-plugin',
 				'config_url'             => admin_url( 'admin.php?page=ranksmile#header_core' ),
 				'apiurl'                 => Ranksmile()->get_plugin()->get_api_url(),
 				'ranksmileurl'              => $ranksmile_url,
 				'locations'              => Ranksmile()->get_plugin()->ranksmile_hardcoded_location(),
 				'organization_name'      => ( isset( $connection_details ) && isset( $connection_details['organization_name'] ) ) ? $connection_details['organization_name'] : '',
 				// Ranksmile connection details.
-				'api_key'                => get_option( 'wpranksmile_api_access_key', null ),
+				'api_key'                => get_option( 'ranksmile_api_access_key', null ),
 				'connected'              => Ranksmile()->get_plugin()->is_ranksmile_connected(),
 				'emails_enabled'         => Ranksmile()->get_plugin()->get_gsc()->performance_report_email_notification_enabled(),
 				// Ranksmile post details.
@@ -1594,6 +1594,7 @@ class Ranksmile {
 				'default_post_location'  => get_post_meta( get_the_ID(), 'ranksmile_location', true ),
 				// Security.
 				'ranksmile_ajax_nonce'      => wp_create_nonce( 'ranksmile-ajax-nonce' ),
+				'version'                 => RANKSMILE_VERSION,
 				// Integrations.
 				'disable_elementor'      => Ranksmile()->get_ranksmile_settings()->get_option( 'content-importer', 'disable_elementor', false ),
 			)

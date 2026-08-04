@@ -1,13 +1,17 @@
 /**
  * Single source of truth for pricing surfaces (cards, compare table, recommender, CTA).
  * UI never invents prices/limits/CTA labels — it reads this model.
+ *
+ * Starter is retired from sale; legacy orgs may still have plan_slug=starter in DB.
  */
 import { getCheckoutPlan } from '../billingPlans';
 import type { BillingPeriod } from '../billingPlans';
 
-export type PlanSlug = 'starter' | 'growth' | 'scale' | 'agency';
+export type PlanSlug = 'growth' | 'scale' | 'agency';
+/** DB / Stripe may still report Starter for existing subscriptions. */
+export type KnownPlanSlug = PlanSlug | 'starter';
 
-export const PLAN_HIERARCHY: readonly PlanSlug[] = ['starter', 'growth', 'scale', 'agency'] as const;
+export const PLAN_HIERARCHY: readonly PlanSlug[] = ['growth', 'scale', 'agency'] as const;
 
 export type CtaState = 'subscribe' | 'upgrade' | 'downgrade' | 'current' | 'contactSales';
 
@@ -78,20 +82,6 @@ function def(
 }
 
 export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
-  starter: def('starter', {
-    desc: 'Draft and optimize content and start tracking your visibility in Google and AI search results.',
-    cardBenefits: [
-      { label: 'Documents', state: 'partial', value: '10' },
-      { label: 'AI Prompts (weekly)', state: 'partial', value: '15' },
-      { label: 'Keyword Research / month', state: 'partial', value: '50' },
-      { label: 'Site Audit pages / crawl', state: 'partial', value: '100' },
-      { label: 'Brand Spaces', state: 'partial', value: '1' },
-      { label: 'Content Score & AI Writing', state: 'included' },
-      { label: 'API Access', state: 'excluded' },
-      { label: 'White-label', state: 'excluded' },
-    ],
-    footerHints: ['Cancel anytime', 'VAT excluded'],
-  }),
   growth: def('growth', {
     recommended: true,
     desc: 'Win the AI citation and close your content gaps — daily visibility tracking, coverage gaps, and competitor keyword research.',
@@ -105,7 +95,7 @@ export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
       { label: 'Content Ideas & Coverage Gap', state: 'included' },
       { label: 'API Access', state: 'excluded' },
     ],
-    footerHints: ['Cancel anytime', 'VAT excluded'],
+    footerHints: ['7-day free trial', 'Cancel anytime', 'VAT excluded'],
   }),
   scale: def('scale', {
     desc: 'Scale optimization across brands with advanced SERP analysis, API access, and higher limits.',
@@ -118,7 +108,7 @@ export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
       { label: 'API Access', state: 'included' },
       { label: 'White-label', state: 'excluded' },
     ],
-    footerHints: ['Cancel anytime', 'VAT excluded'],
+    footerHints: ['Pay monthly or yearly', 'Cancel anytime', 'VAT excluded'],
   }),
   agency: def('agency', {
     desc: 'Run many brands and clients with uncapped optimization, white-label, and full API access.',
@@ -132,11 +122,11 @@ export const PLAN_DEFINITIONS: Record<PlanSlug, PlanDefinition> = {
       { label: 'Personalized Onboarding', state: 'included' },
       { label: 'Dedicated Success Manager', state: 'included' },
     ],
-    footerHints: ['Cancel anytime', 'VAT excluded'],
+    footerHints: ['Pay monthly or yearly', 'Cancel anytime', 'VAT excluded'],
   }),
 };
 
-/** Paid cards shown in the main pricing grid (Starter is discovery strip). */
+/** Paid cards shown in the main pricing grid. */
 export const PRICING_GRID_SLUGS: readonly PlanSlug[] = ['growth', 'scale', 'agency'] as const;
 
 export function getPlanDefinition(slug: PlanSlug): PlanDefinition {
@@ -144,7 +134,16 @@ export function getPlanDefinition(slug: PlanSlug): PlanDefinition {
 }
 
 export function isPlanSlug(value: string | null | undefined): value is PlanSlug {
-  return value === 'starter' || value === 'growth' || value === 'scale' || value === 'agency';
+  return value === 'growth' || value === 'scale' || value === 'agency';
+}
+
+export function isKnownPlanSlug(value: string | null | undefined): value is KnownPlanSlug {
+  return value === 'starter' || isPlanSlug(value);
+}
+
+function rankOf(slug: KnownPlanSlug): number {
+  if (slug === 'starter') return -1;
+  return PLAN_HIERARCHY.indexOf(slug);
 }
 
 export function previousPlan(slug: PlanSlug): PlanSlug | null {
@@ -157,21 +156,30 @@ export function nextPlan(slug: PlanSlug): PlanSlug | null {
   return i >= 0 && i < PLAN_HIERARCHY.length - 1 ? PLAN_HIERARCHY[i + 1] : null;
 }
 
-export function resolveCtaState(current: PlanSlug | null, target: PlanSlug): CtaState {
+export function resolveCtaState(current: KnownPlanSlug | null, target: PlanSlug): CtaState {
   if (current == null) return 'subscribe';
-  if (!isPlanSlug(current)) return 'subscribe';
+  if (!isKnownPlanSlug(current)) return 'subscribe';
   if (current === target) return 'current';
-  const cur = PLAN_DEFINITIONS[current].rank;
-  const tgt = PLAN_DEFINITIONS[target].rank;
+  const cur = rankOf(current);
+  const tgt = rankOf(target);
   if (tgt > cur) return 'upgrade';
   if (tgt < cur) return 'downgrade';
   return 'current';
 }
 
-export function ctaLabel(state: CtaState, planName: string): string {
+export type CtaLabelOptions = {
+  planSlug?: PlanSlug;
+  /** Growth free trial still available for this org (default true when unknown). */
+  trialEligible?: boolean;
+};
+
+export function ctaLabel(state: CtaState, planName: string, opts?: CtaLabelOptions): string {
   switch (state) {
     case 'subscribe':
-      return `Start with ${planName}`;
+      if (opts?.planSlug === 'growth' && opts.trialEligible !== false) {
+        return 'Get 7 days free trial';
+      }
+      return `Start ${planName}`;
     case 'upgrade':
       return `Upgrade to ${planName}`;
     case 'downgrade':
@@ -181,7 +189,7 @@ export function ctaLabel(state: CtaState, planName: string): string {
     case 'contactSales':
       return 'Contact sales';
     default:
-      return `Start with ${planName}`;
+      return `Start ${planName}`;
   }
 }
 
@@ -203,7 +211,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'documents',
         label: 'Documents to create & optimize',
         cells: {
-          starter: { kind: 'text', value: '10' },
           growth: { kind: 'text', value: '30' },
           scale: { kind: 'text', value: '100' },
           agency: { kind: 'text', value: 'Unlimited*' },
@@ -213,7 +220,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'ai-prompts',
         label: 'AI prompts tracked',
         cells: {
-          starter: { kind: 'text', value: '15 / week' },
           growth: { kind: 'text', value: '50 / day' },
           scale: { kind: 'text', value: '100 / day' },
           agency: { kind: 'text', value: '250 / day' },
@@ -223,7 +229,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'ai-engines',
         label: 'AI Visibility engines',
         cells: {
-          starter: { kind: 'text', value: '2' },
           growth: { kind: 'text', value: '4' },
           scale: { kind: 'text', value: '5' },
           agency: { kind: 'text', value: '5' },
@@ -233,7 +238,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'ai-writing',
         label: 'Content Score & AI Writing',
         cells: {
-          starter: { kind: 'check' },
           growth: { kind: 'check' },
           scale: { kind: 'check' },
           agency: { kind: 'check' },
@@ -249,7 +253,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'keyword-research',
         label: 'Keyword Research / month',
         cells: {
-          starter: { kind: 'text', value: '50' },
           growth: { kind: 'text', value: '200' },
           scale: { kind: 'text', value: '500' },
           agency: { kind: 'text', value: '2,000' },
@@ -259,7 +262,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'competitor-gap',
         label: 'Competitor Keyword Gap / month',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'text', value: '25' },
           scale: { kind: 'text', value: '60' },
           agency: { kind: 'text', value: '250' },
@@ -269,7 +271,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'site-audit',
         label: 'Site Audit pages / crawl',
         cells: {
-          starter: { kind: 'text', value: '100' },
           growth: { kind: 'text', value: '100' },
           scale: { kind: 'text', value: '100' },
           agency: { kind: 'text', value: '1,000' },
@@ -285,7 +286,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'brand-spaces',
         label: 'Brand Spaces',
         cells: {
-          starter: { kind: 'text', value: '1' },
           growth: { kind: 'text', value: '5' },
           scale: { kind: 'text', value: '15' },
           agency: { kind: 'text', value: 'Unlimited*' },
@@ -295,7 +295,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'templates',
         label: 'Templates & Custom Voices',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'check' },
           scale: { kind: 'check' },
           agency: { kind: 'check' },
@@ -311,7 +310,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'api',
         label: 'API Access',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'dash' },
           scale: { kind: 'check' },
           agency: { kind: 'check' },
@@ -321,7 +319,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'white-label',
         label: 'White-label',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'dash' },
           scale: { kind: 'dash' },
           agency: { kind: 'check' },
@@ -331,7 +328,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'serp',
         label: 'Advanced SERP Analysis',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'dash' },
           scale: { kind: 'check' },
           agency: { kind: 'check' },
@@ -347,7 +343,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'priority',
         label: 'Priority Support',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'dash' },
           scale: { kind: 'check' },
           agency: { kind: 'check' },
@@ -357,7 +352,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'onboarding',
         label: 'Personalized Onboarding',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'dash' },
           scale: { kind: 'dash' },
           agency: { kind: 'check' },
@@ -367,7 +361,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'success-manager',
         label: 'Dedicated Success Manager',
         cells: {
-          starter: { kind: 'dash' },
           growth: { kind: 'dash' },
           scale: { kind: 'dash' },
           agency: { kind: 'check' },
@@ -383,7 +376,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'cancel',
         label: 'Cancel anytime',
         cells: {
-          starter: { kind: 'check' },
           growth: { kind: 'check' },
           scale: { kind: 'check' },
           agency: { kind: 'check' },
@@ -393,7 +385,6 @@ export const COMPARE_SECTIONS: CompareSection[] = [
         id: 'yearly',
         label: 'Yearly billing discount',
         cells: {
-          starter: { kind: 'text', value: `${PLAN_DEFINITIONS.starter.yearlySavePct}%` },
           growth: { kind: 'text', value: `${PLAN_DEFINITIONS.growth.yearlySavePct}%` },
           scale: { kind: 'text', value: `${PLAN_DEFINITIONS.scale.yearlySavePct}%` },
           agency: { kind: 'text', value: `${PLAN_DEFINITIONS.agency.yearlySavePct}%` },

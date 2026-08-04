@@ -1,0 +1,494 @@
+/* === action-bar.css === */
+.ranksmile-admin .rs-action-bar {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--rs-space-4);
+  margin-bottom: var(--rs-space-6);
+}
+.ranksmile-admin .rs-action-bar__copy { min-width: 0; flex: 1; }
+.ranksmile-admin .rs-action-bar__title { margin: 0; font-family: var(--rs-font-heading); font-size: var(--rs-text-2xl); font-weight: 700; line-height: var(--rs-leading-2xl); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-action-bar__desc { margin: var(--rs-space-2) 0 0; font-size: var(--rs-text-md); color: var(--rs-text-secondary); max-width: 560px; }
+.ranksmile-admin .rs-action-bar__actions { display: flex; flex-wrap: wrap; gap: var(--rs-space-2); }
+
+/* === badge.css === */
+.ranksmile-admin .rs-badge {
+  display: inline-flex; align-items: center; gap: var(--rs-space-1);
+  padding: 2px var(--rs-space-2); border-radius: 999px;
+  font-size: var(--rs-text-xs); font-weight: 500; line-height: var(--rs-leading-xs);
+  background: var(--rs-bg-secondary); color: var(--rs-text-secondary);
+}
+.ranksmile-admin .rs-badge--success { background: var(--rs-status-success-bg); color: var(--rs-status-success); }
+.ranksmile-admin .rs-badge--warning { background: var(--rs-status-warning-bg); color: #9a6b00; }
+.ranksmile-admin .rs-badge--danger { background: var(--rs-status-danger-bg); color: var(--rs-status-danger); }
+
+/* === button.css === */
+.ranksmile-admin .rs-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--rs-space-2);
+  height: 36px; padding: 0 var(--rs-space-4); border-radius: var(--rs-radius-btn);
+  border: var(--rs-border-width) var(--rs-border-style) transparent;
+  font-family: var(--rs-font-body); font-size: var(--rs-text-md); font-weight: 500; line-height: var(--rs-leading-md);
+  cursor: pointer; text-decoration: none; transition: background var(--rs-transition-fast), border-color var(--rs-transition-fast), color var(--rs-transition-fast);
+}
+.ranksmile-admin .rs-btn:focus-visible { outline: none; box-shadow: var(--rs-shadow-focus); }
+.ranksmile-admin .rs-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ranksmile-admin .rs-btn--primary { background: var(--rs-brand); color: var(--rs-text-on-brand); }
+.ranksmile-admin .rs-btn--primary:hover:not(:disabled) { background: var(--rs-brand-hover); color: var(--rs-text-on-brand); }
+.ranksmile-admin .rs-btn--secondary { background: var(--rs-bg-primary); color: var(--rs-text-primary); border-color: var(--rs-border-strong); }
+.ranksmile-admin .rs-btn--secondary:hover:not(:disabled) { background: var(--rs-bg-secondary); }
+.ranksmile-admin .rs-btn--ghost { background: transparent; color: var(--rs-text-secondary); }
+.ranksmile-admin .rs-btn--sm { height: 32px; padding: 0 var(--rs-space-3); font-size: var(--rs-text-sm); }
+
+/* === card.css === */
+.ranksmile-admin .rs-card {
+  background: var(--rs-bg-primary); border: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  border-radius: var(--rs-radius-card); box-shadow: var(--rs-shadow-card); overflow: hidden;
+}
+.ranksmile-admin .rs-card__header { padding: var(--rs-space-4) var(--rs-space-5); border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border); }
+.ranksmile-admin .rs-card__title { margin: 0; font-family: var(--rs-font-heading); font-size: var(--rs-text-lg); font-weight: 700; color: var(--rs-text-primary); }
+.ranksmile-admin .rs-card__body { padding: var(--rs-space-5); }
+.ranksmile-admin .rs-card__footer { padding: var(--rs-space-4) var(--rs-space-5); border-top: var(--rs-border-width) var(--rs-border-style) var(--rs-border); background: var(--rs-bg-tertiary); }
+.ranksmile-admin .rs-grid { display: grid; gap: var(--rs-space-4); }
+.ranksmile-admin .rs-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ranksmile-admin .rs-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 960px) {
+  .ranksmile-admin .rs-grid--2, .ranksmile-admin .rs-grid--3 { grid-template-columns: 1fr; }
+}
+
+/* === empty.css === */
+.ranksmile-admin .rs-empty {
+  text-align: center; padding: var(--rs-space-8) var(--rs-space-6);
+  border: var(--rs-border-width) dashed var(--rs-border); border-radius: var(--rs-radius-card); background: var(--rs-bg-tertiary);
+}
+.ranksmile-admin .rs-empty__title { margin: 0 0 var(--rs-space-2); font-size: var(--rs-text-lg); font-weight: 700; color: var(--rs-text-primary); }
+.ranksmile-admin .rs-empty__desc { margin: 0 0 var(--rs-space-5); font-size: var(--rs-text-md); color: var(--rs-text-secondary); max-width: 420px; margin-left: auto; margin-right: auto; }
+
+/* === field.css === */
+.ranksmile-admin .rs-field { display: flex; flex-direction: column; gap: var(--rs-space-2); margin-bottom: var(--rs-space-4); }
+.ranksmile-admin .rs-label { font-size: var(--rs-text-md); font-weight: 500; color: var(--rs-text-primary); }
+.ranksmile-admin .rs-hint { font-size: var(--rs-text-sm); color: var(--rs-text-secondary); margin: 0; }
+.ranksmile-admin .rs-input, .ranksmile-admin .rs-select, .ranksmile-admin .rs-textarea,
+.ranksmile-admin input[type=text], .ranksmile-admin input[type=password], .ranksmile-admin input[type=email],
+.ranksmile-admin select, .ranksmile-admin textarea {
+  width: 100%; max-width: 480px; box-sizing: border-box;
+  height: 40px; padding: 0 var(--rs-space-3);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border-strong);
+  border-radius: var(--rs-radius-sm); background: var(--rs-bg-primary); color: var(--rs-text-primary);
+  font-family: var(--rs-font-body); font-size: var(--rs-text-md);
+}
+.ranksmile-admin textarea, .ranksmile-admin .rs-textarea { height: auto; min-height: 96px; padding: var(--rs-space-3); }
+.ranksmile-admin .rs-input:focus-visible, .ranksmile-admin input:focus-visible, .ranksmile-admin select:focus-visible, .ranksmile-admin textarea:focus-visible {
+  outline: none; box-shadow: var(--rs-shadow-focus); border-color: var(--rs-brand);
+}
+
+/* === nav.css === */
+.ranksmile-admin .rs-settings-nav__group { margin-top: 8px; }
+.ranksmile-admin .rs-settings-nav__group-title {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-settings-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ranksmile-admin .rs-settings-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--rs-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background-color var(--rs-transition-fast), color var(--rs-transition-fast);
+}
+.ranksmile-admin .rs-settings-nav__item-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.ranksmile-admin .rs-settings-nav__item:hover {
+  background: var(--rs-bg-secondary);
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-settings-nav__item--active {
+  background: color-mix(in srgb, var(--rs-brand) 10%, var(--rs-bg-primary));
+  color: var(--rs-brand);
+}
+.ranksmile-admin .rs-settings-nav__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ranksmile-admin .rs-settings-nav__item.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.ranksmile-admin .rs-settings-nav__item:focus-visible {
+  outline: none;
+  box-shadow: var(--rs-shadow-focus);
+}
+
+/* Legacy rs-nav (wizard / emails) */
+.ranksmile-admin .rs-nav { display: flex; flex-direction: column; gap: var(--rs-space-4); padding: 0 var(--rs-space-3); }
+.ranksmile-admin .rs-nav__group-label {
+  margin: 0 0 var(--rs-space-2); padding: 0 var(--rs-space-2);
+  font-size: var(--rs-text-xs); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-nav__link {
+  display: block; padding: var(--rs-space-2) var(--rs-space-3); border-radius: var(--rs-radius-sm);
+  color: var(--rs-text-secondary); text-decoration: none; font-size: var(--rs-text-md); font-weight: 500;
+  transition: background var(--rs-transition-fast), color var(--rs-transition-fast);
+}
+.ranksmile-admin .rs-nav__link:hover { background: var(--rs-bg-secondary); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-nav__link.is-active { background: color-mix(in srgb, var(--rs-brand) 12%, transparent); color: var(--rs-brand); }
+.ranksmile-admin .rs-nav__link.is-disabled { opacity: .45; pointer-events: none; }
+.ranksmile-admin .rs-nav__link:focus-visible { outline: none; box-shadow: var(--rs-shadow-focus); }
+
+/* === notice.css === */
+.ranksmile-admin .rs-notice {
+  display: flex; gap: var(--rs-space-3); align-items: flex-start;
+  padding: var(--rs-space-3) var(--rs-space-4); border-radius: var(--rs-radius-sm);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border); font-size: var(--rs-text-md);
+}
+.ranksmile-admin .rs-notice--success { background: var(--rs-status-success-bg); border-color: var(--rs-status-success); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-notice--warning { background: var(--rs-status-warning-bg); border-color: var(--rs-status-warning); }
+.ranksmile-admin .rs-notice--error { background: var(--rs-status-danger-bg); border-color: var(--rs-status-danger); }
+.ranksmile-admin .rs-notice--info { background: var(--rs-status-info-bg); border-color: var(--rs-status-info); }
+.ranksmile-admin .rs-notice-stack { display: flex; flex-direction: column; gap: var(--rs-space-2); margin-bottom: var(--rs-space-4); }
+
+/* === shell.css === */
+/**
+ * RSDS shell — Ranksmile app Settings layout (sidebar + main).
+ */
+.ranksmile-admin {
+  font-family: var(--rs-font-body);
+  color: var(--rs-text-primary);
+  background: transparent;
+  margin: 0 16px 16px 0;
+  border: none;
+  border-radius: 0;
+  min-height: calc(100vh - 64px);
+  overflow: hidden;
+}
+.ranksmile-admin *,
+.ranksmile-admin *::before,
+.ranksmile-admin *::after { box-sizing: border-box; }
+
+.ranksmile-admin .rs-settings-shell {
+  display: flex;
+  min-height: calc(100vh - 64px);
+  width: 100%;
+  background: var(--rs-bg-primary);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  border-radius: var(--rs-radius-card);
+  overflow: hidden;
+}
+
+.ranksmile-admin .rs-settings-nav {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  background: var(--rs-bg-primary);
+}
+
+.ranksmile-admin .rs-settings-nav__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ranksmile-admin .rs-settings-nav__title {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.06px;
+  color: var(--rs-text-secondary);
+}
+
+.ranksmile-admin .rs-settings-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--rs-bg-primary);
+}
+
+.ranksmile-admin .rs-settings-header {
+  padding: 28px 32px 20px;
+  border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  background: var(--rs-bg-primary);
+}
+
+.ranksmile-admin .rs-settings-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--rs-space-4);
+}
+
+.ranksmile-admin .rs-settings-header__copy { min-width: 0; flex: 1; }
+
+.ranksmile-admin .rs-settings-header__title {
+  margin: 0;
+  font-family: var(--rs-font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 30px;
+  color: var(--rs-text-primary);
+}
+
+.ranksmile-admin .rs-settings-header__subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--rs-text-secondary);
+  letter-spacing: -0.25px;
+  max-width: 560px;
+}
+
+.ranksmile-admin .rs-settings-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rs-space-2);
+  flex-shrink: 0;
+}
+
+.ranksmile-admin .rs-settings-body {
+  padding: 8px 32px 48px;
+  max-width: 920px;
+  margin: 0;
+  background: transparent;
+}
+
+/* Settings sections — dividers only (app General style) */
+.ranksmile-admin .rs-settings-section {
+  border: none;
+  border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  padding: 28px 0;
+  margin: 0;
+  background: transparent;
+}
+.ranksmile-admin .rs-settings-section:last-child { border-bottom: none; }
+.ranksmile-admin .rs-settings-section__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-settings-section__body {
+  padding: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ranksmile-admin .rs-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ranksmile-admin .rs-settings-row__label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-settings-row__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--rs-text-secondary);
+}
+
+@media (max-width: 1023px) {
+  .ranksmile-admin .rs-settings-shell { flex-direction: column; overflow: auto; }
+  .ranksmile-admin .rs-settings-nav {
+    width: 100%;
+    border-right: none;
+    border-bottom: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+    max-height: 220px;
+  }
+  .ranksmile-admin .rs-settings-header { padding: 20px 16px 16px; }
+  .ranksmile-admin .rs-settings-body { padding: 8px 16px 40px; }
+}
+
+/* Hide default WP page title chrome when our shell owns the page */
+.ranksmile-admin ~ #wpfooter { margin-left: 0; }
+
+.ranksmile-admin .notice,
+.ranksmile-admin .e-notice,
+.ranksmile-admin .updated,
+.ranksmile-admin .error,
+.ranksmile-admin .update-nag {
+  display: none !important;
+}
+.ranksmile-admin-notices-host {
+  margin: 0 16px 12px 0;
+}
+.ranksmile-admin-notices-host .notice,
+.ranksmile-admin-notices-host .e-notice {
+  display: block !important;
+  margin: 0 0 8px;
+}
+
+/* Legacy shell hooks kept for wizard / older templates */
+.ranksmile-admin .rs-shell { display: flex; flex-direction: column; min-height: 70vh; }
+.ranksmile-admin .rs-shell__main { display: flex; flex: 1; min-height: 0; }
+.ranksmile-admin .rs-shell__content { flex: 1; padding: var(--rs-space-6); background: var(--rs-bg-primary); min-width: 0; }
+
+/* === skeleton.css === */
+.ranksmile-admin .rs-skeleton {
+  display: block; border-radius: var(--rs-radius-sm); background: linear-gradient(90deg, var(--rs-bg-secondary) 25%, var(--rs-bg-tertiary) 50%, var(--rs-bg-secondary) 75%);
+  background-size: 200% 100%; animation: rs-skel 1.2s ease infinite;
+}
+.ranksmile-admin .rs-skeleton--title { height: 20px; width: 40%; margin-bottom: var(--rs-space-3); }
+.ranksmile-admin .rs-skeleton--line { height: 14px; width: 100%; margin-bottom: var(--rs-space-2); }
+.ranksmile-admin .rs-skeleton--card { height: 120px; width: 100%; }
+@keyframes rs-skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ranksmile-admin .rs-skeleton { animation: none; }
+}
+
+/* === status.css === */
+.ranksmile-admin .rs-status { display: flex; gap: var(--rs-space-3); align-items: flex-start; }
+.ranksmile-admin .rs-status__dot {
+  width: 10px; height: 10px; border-radius: 999px; margin-top: 6px; flex-shrink: 0; background: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-status--connected .rs-status__dot { background: var(--rs-status-success); }
+.ranksmile-admin .rs-status--disconnected .rs-status__dot { background: var(--rs-text-tertiary); }
+.ranksmile-admin .rs-status--syncing .rs-status__dot { background: var(--rs-status-info); }
+.ranksmile-admin .rs-status--warning .rs-status__dot { background: var(--rs-status-warning); }
+.ranksmile-admin .rs-status--error .rs-status__dot { background: var(--rs-status-danger); }
+.ranksmile-admin .rs-status--disabled .rs-status__dot { background: var(--rs-border-strong); }
+.ranksmile-admin .rs-status__title { margin: 0; font-weight: 600; font-size: var(--rs-text-md); color: var(--rs-text-primary); }
+.ranksmile-admin .rs-status__desc { margin: var(--rs-space-1) 0 0; font-size: var(--rs-text-sm); color: var(--rs-text-secondary); }
+.ranksmile-admin .rs-status__action { margin-top: var(--rs-space-2); }
+
+/* === wizard.css === */
+/* Connection wizard — Koala-inspired, RSDS tokens */
+.ranksmile-admin .rs-connect-wizard {
+  display: flex;
+  justify-content: center;
+  padding: var(--rs-space-6) 0 var(--rs-space-8);
+}
+.ranksmile-admin .rs-connect-wizard__card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--rs-bg-primary);
+  border: var(--rs-border-width) var(--rs-border-style) var(--rs-border);
+  border-radius: var(--rs-radius-card);
+  padding: var(--rs-space-7) var(--rs-space-6);
+  box-shadow: var(--rs-shadow-card);
+  text-align: center;
+}
+.ranksmile-admin .rs-connect-wizard__logo {
+  display: block;
+  margin: 0 auto var(--rs-space-5);
+}
+.ranksmile-admin .rs-connect-wizard__steps {
+  list-style: none;
+  margin: 0 0 var(--rs-space-6);
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rs-space-2);
+  position: relative;
+}
+.ranksmile-admin .rs-connect-wizard__steps::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 14px;
+  height: 1px;
+  background: var(--rs-border);
+  z-index: 0;
+}
+.ranksmile-admin .rs-connect-wizard__step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.ranksmile-admin .rs-connect-wizard__step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--rs-bg-secondary);
+  color: var(--rs-text-tertiary);
+  border: 1px solid var(--rs-border);
+}
+.ranksmile-admin .rs-connect-wizard__step.is-active .rs-connect-wizard__step-dot {
+  background: var(--rs-brand);
+  border-color: var(--rs-brand);
+  color: var(--rs-text-on-brand);
+}
+.ranksmile-admin .rs-connect-wizard__step.is-done .rs-connect-wizard__step-dot {
+  background: var(--rs-status-success-bg);
+  border-color: var(--rs-status-success);
+  color: var(--rs-status-success);
+}
+.ranksmile-admin .rs-connect-wizard__step-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--rs-text-tertiary);
+}
+.ranksmile-admin .rs-connect-wizard__step.is-active .rs-connect-wizard__step-label {
+  color: var(--rs-brand);
+}
+.ranksmile-admin .rs-connect-wizard__title {
+  margin: 0 0 var(--rs-space-3);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 28px;
+  color: var(--rs-text-primary);
+}
+.ranksmile-admin .rs-connect-wizard__desc {
+  margin: 0 auto var(--rs-space-6);
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--rs-text-secondary);
+}
+.ranksmile-admin .rs-connect-wizard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--rs-space-2);
+}
+
+/* Legacy rs-wizard hooks */
+.ranksmile-admin .rs-wizard { display: flex; flex-direction: column; gap: var(--rs-space-4); }

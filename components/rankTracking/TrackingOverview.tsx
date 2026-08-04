@@ -1,6 +1,7 @@
 import React from 'react';
 import type { RankAnalyticsSummary, RankSummaryChartPoint } from '../../lib/types/rankTracking';
 import { Chart } from '../koala/charts/Chart';
+import { Chip } from '../koala/core';
 import { Icon } from '../koala/icons/Icon';
 import { TrendDeltaBadge } from '../koala/product/helpers/TrendDeltaBadge';
 
@@ -132,25 +133,9 @@ export function TrackingMovementCards({
 
 function ChartPeriodChip({ label }: { label: string }) {
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        height: 28,
-        padding: '0 10px',
-        borderRadius: 999,
-        border: '1px solid var(--koala-border-primary)',
-        background: 'var(--koala-bg-primary)',
-        fontSize: 13,
-        fontWeight: 500,
-        color: 'var(--koala-text-primary)',
-        fontFamily: FONT,
-      }}
-    >
+    <Chip size="sm" icon={<Icon name="CaretDown" size={12} weight="bold" color="var(--koala-text-secondary)" />}>
       {label}
-      <Icon name="CaretDown" size={12} weight="bold" color="var(--koala-text-secondary)" />
-    </span>
+    </Chip>
   );
 }
 

@@ -187,7 +187,7 @@ class Ranksmile_Tracking {
 		$tracking_data = $this->get_general_tracking_data();
 
 		$api_url = Ranksmile()->get_plugin()->get_api_url() . '/track_environment';
-		$token   = get_option( 'wpranksmile_api_access_key', false );
+		$token   = get_option( 'ranksmile_api_access_key', false );
 
 		$args = array(
 			'method'  => 'POST',
@@ -284,7 +284,7 @@ class Ranksmile_Tracking {
 		);
 
 		$api_url = Ranksmile()->get_plugin()->get_api_url() . '/track_event';
-		$token   = get_option( 'wpranksmile_api_access_key', false );
+		$token   = get_option( 'ranksmile_api_access_key', false );
 
 		$args = array(
 			'method'  => 'POST',

@@ -67,7 +67,6 @@ export function isLocalServiceUrl(url: string): boolean {
 export function logResolvedSidecarUrl(): void {
   try {
     const url = sidecarUrl();
-    console.log(`[serviceUrls] sidecarUrl=${url}`);
     if (/onrender\.com/i.test(url)) {
       console.warn('[serviceUrls] WARNING: sidecar resolves to Render host');
     }

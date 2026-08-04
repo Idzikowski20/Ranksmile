@@ -9,12 +9,13 @@ import { blocksNewPaidCheckout } from './billingPlanLock';
 import type { OrgBillingState } from './orgBilling';
 import type { PlanSlug } from './stripePrices';
 import { getStripePriceId } from './stripePrices';
+import { clientSecretFromSubscriptionInvoice } from './stripeInvoiceClientSecret';
 
-const PLAN_RANK: Record<PlanSlug, number> = {
-  starter: 1,
-  growth: 2,
-  scale: 3,
-  agency: 4,
+const PLAN_RANK: Record<string, number> = {
+  starter: 0, // legacy — still below Growth for upgrade checks
+  growth: 1,
+  scale: 2,
+  agency: 3,
 };
 
 export function planRank(slug: string): number | null {
@@ -190,7 +191,7 @@ export async function applySubscriptionUpgrade(
     proration_behavior: 'always_invoice',
     ...(args.prorationDate ? { proration_date: args.prorationDate } : {}),
     payment_behavior: 'pending_if_incomplete',
-    expand: ['latest_invoice.payment_intent'],
+    expand: ['latest_invoice.confirmation_secret'],
     metadata: {
       ...subscription.metadata,
       org_id: String(args.orgId),
@@ -201,22 +202,17 @@ export async function applySubscriptionUpgrade(
     },
   });
 
-  const invoice = updated.latest_invoice;
-  if (invoice && typeof invoice === 'object') {
-    const pi = (invoice as Stripe.Invoice & {
-      payment_intent?: Stripe.PaymentIntent | string | null;
-    }).payment_intent;
-    if (pi && typeof pi === 'object' && pi.status !== 'succeeded' && pi.client_secret) {
-      return {
-        subscription: updated,
-        result: {
-          status: 'requires_payment',
-          subscriptionId: updated.id,
-          clientSecret: pi.client_secret,
-          intentType: 'payment',
-        },
-      };
-    }
+  const secret = clientSecretFromSubscriptionInvoice(updated);
+  if (secret) {
+    return {
+      subscription: updated,
+      result: {
+        status: 'requires_payment',
+        subscriptionId: updated.id,
+        clientSecret: secret.clientSecret,
+        intentType: 'payment',
+      },
+    };
   }
 
   return {

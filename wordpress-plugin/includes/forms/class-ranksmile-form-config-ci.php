@@ -40,32 +40,16 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$this->repo = parent::REPO_OPTIONS;
 
 		$field = new Ranksmile_Form_Element_Header( 'header_core' );
-		$field->set_label( __( 'Optimize with Ranksmile', 'ranksmileseo' ) );
-		if ( $connected ) {
-			$field->set_hint( __( 'Boost your SEO game with our seamless content transfer between Ranksmile Content Editor and WordPress ', 'ranksmileseo' ) );
-		}
+		$field->set_label( __( 'Advanced options', 'ranksmileseo' ) );
+		$field->set_hint( __( 'Parser defaults, tracking, and developer tools.', 'ranksmileseo' ) );
 		$field->set_row_classes( 'ranksmile-admin-config-form__single-header-row' );
 		$this->add_field( $field );
 
-		$field = new Ranksmile_Form_Element_Text( 'ranksmile_api_public_key' );
-		$field->set_label( __( 'Ranksmile account', 'ranksmileseo' ) );
-		$field->set_renderer( array( $this, 'render_connection_button' ) );
-		$this->add_field( $field );
-
-		$field = new Ranksmile_Form_Element_Text( 'ranksmile_gsc_connection' );
-		$field->set_label( __( 'Google Search Console integration', 'ranksmileseo' ) );
-		$field->set_renderer( array( $this, 'render_gsc_connection' ) );
-		$this->add_field( $field );
-
-		$field = new Ranksmile_Form_Element_Header( 'header_settings_section' );
-		$field->set_label( __( 'Settings', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected ranksmile-admin-config-form__section-header' );
-		$this->add_field( $field );
-
+		/* Connection + GSC live on Dashboard wizard — Advanced only keeps export/debug options. */
 		$field = new Ranksmile_Form_Element_Header( 'header_content_importer' );
 		$field->set_label( __( 'Export settings from Ranksmile\'s Content Editor', 'ranksmileseo' ) );
-		$field->set_hint( '' );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_hint( __( 'Defaults used when importing content from Ranksmile into WordPress.', 'ranksmileseo' ) );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$this->render_content_import_defaults_section();
@@ -76,7 +60,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 
 		$this->render_developer_mode_section();
 
-		$this->display_submit = $connected;
+		$this->display_submit = true;
 	}
 
 	/**
@@ -93,7 +77,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( Parsers_Controller::CLASSIC_EDITOR, __( 'Classic Editor', 'ranksmileseo' ) );
 		$field->add_option( Parsers_Controller::GUTENBERG, __( 'Gutenberg', 'ranksmileseo' ) );
 		$field->add_option( Parsers_Controller::ELEMENTOR, __( 'Elementor', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$custom_options = apply_filters( 'ranksmile_page_templates', array() );
@@ -110,7 +94,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		foreach ( $custom_options as $label => $value ) {
 			$field->add_option( $value, $label );
 		}
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$elementor_templates = get_posts( array( 'post_type' => 'elementor_library' ) );
@@ -122,7 +106,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		foreach ( $elementor_templates as $template ) {
 			$field->add_option( $template->ID, $template->post_title );
 		}
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Select( 'default_seo_plugin' );
@@ -132,7 +116,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( 'aioseo', __( 'All in One SEO', 'ranksmileseo' ) );
 		$field->add_option( 'rank_math', __( 'Rank Math', 'ranksmileseo' ) );
 		$field->add_option( 'yoast', __( 'Yoast SEO', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$all_users = get_users(
@@ -145,7 +129,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field = new Ranksmile_Form_Element_Select( 'default_post_author' );
 		$field->set_label( __( 'Author', 'ranksmileseo' ) );
 		$field->add_option( '', __( '- Select an option -', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		foreach ( $all_users as $user ) {
 			$field->add_option( $user->ID, $user->display_name );
 		}
@@ -160,7 +144,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field = new Ranksmile_Form_Element_Select( 'default_category' );
 		$field->set_label( __( 'Category', 'ranksmileseo' ) );
 		$field->add_option( '', __( '- Select an option -', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		foreach ( $categories as $category ) {
 			$field->add_option( $category->term_id, $category->name );
 		}
@@ -175,7 +159,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field = new Ranksmile_Form_Element_Select( 'default_tags' );
 		$field->set_label( __( 'Tag', 'ranksmileseo' ) );
 		$field->add_option( '', __( '- Select an option -', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		foreach ( $tags as $tag ) {
 			$field->add_option( $tag->term_id, $tag->name );
 		}
@@ -185,7 +169,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->set_label( '' );
 		$field->add_option( 1, __( 'Disable Ranksmile writing guidelines in Elementor editor', 'ranksmileseo' ) );
 		$field->set_renderer( array( $this, 'render_switch' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Select( 'image_processing_mode' );
@@ -194,7 +178,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( 'sync', __( 'Synchronous (immediate)', 'ranksmileseo' ) );
 		$field->add_option( 'async', __( 'Asynchronous (background)', 'ranksmileseo' ) );
 		$field->add_option( 'auto', __( 'Auto (async for 8+ images)', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Checkbox( 'internal_links_rel' );
@@ -204,7 +188,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( 'noreferrer', __( 'noreferrer', 'ranksmileseo' ) );
 		$field->add_option( 'nofollow', __( 'nofollow', 'ranksmileseo' ) );
 		$field->add_option( 'dofollow', __( 'dofollow', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Select( 'internal_links_target' );
@@ -214,7 +198,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( '_blank', __( '_blank', 'ranksmileseo' ) );
 		$field->add_option( '_parent', __( '_parent', 'ranksmileseo' ) );
 		$field->add_option( '_top', __( '_top', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Checkbox( 'external_links_rel' );
@@ -224,7 +208,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( 'noreferrer', __( 'noreferrer', 'ranksmileseo' ) );
 		$field->add_option( 'nofollow', __( 'nofollow', 'ranksmileseo' ) );
 		$field->add_option( 'dofollow', __( 'dofollow', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Select( 'external_links_target' );
@@ -234,10 +218,10 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->add_option( '_blank', __( '_blank', 'ranksmileseo' ) );
 		$field->add_option( '_parent', __( '_parent', 'ranksmileseo' ) );
 		$field->add_option( '_top', __( '_top', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 	}
 
@@ -266,7 +250,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 	private function render_tracking_section() {
 		$field = new Ranksmile_Form_Element_Header( 'header_tracking' );
 		$field->set_label( __( 'Improve the plugin', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Checkbox( 'ranksmile_tracking_enabled' );
@@ -276,7 +260,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->set_hint( sprintf( __( 'Help us improve!<br/><br/>We\'d like to analyze how you use the tool to see which features are most helpful. Don\'t worry, it\'s completely anonymous (and no, we can\'t see your Amazon wishlist ;)). We\'re mostly interested in things like what version of PHP or WordPress you\'re using. This helps us make decisions for future plugin updates. <br/><br/>What do you say? <br/><br/>Don’t worry! You can turn off this feature at any time in Ranksmile’s WordPress plugin settings. If you want to learn more, check our <a href="%s" target="_blank">Privacy Policy</a>', 'ranksmileseo' ), Ranksmileseo::get_instance()->get_plugin()->get_privacy_policy_url() ) );
 		$field->set_renderer( array( $this, 'render_switch' ) );
 		$field->set_classes( 'ranksmile-tracking-switch' );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 	}
 
@@ -296,7 +280,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 
 		$field = new Ranksmile_Form_Element_Header( 'header_position_monitor' );
 		$field->set_label( __( 'E-mail notifications', 'ranksmileseo' ) );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 
 		$field = new Ranksmile_Form_Element_Checkbox( 'ranksmile_position_monitor_summary' );
@@ -307,7 +291,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		$field->set_hint( $hint );
 		$field->set_renderer( array( $this, 'render_switch' ) );
 		$field->set_classes( 'ranksmile-position-monitor-notification-switch' );
-		$field->set_row_classes( 'ranksmile-connected' );
+		$field->set_row_classes( 'rs-advanced-field' );
 		$this->add_field( $field );
 	}
 
@@ -350,14 +334,14 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 
 		// phpcs:ignore
 		if ( isset( $_GET['developer_mode'] ) && 1 === intval( $_GET['developer_mode'] ) ) {
-			$field = new Ranksmile_Form_Element_Text( 'wpranksmile_api_access_key' );
+			$field = new Ranksmile_Form_Element_Text( 'ranksmile_api_access_key' );
 		} else {
-			$field = new Ranksmile_Form_Element_Hidden( 'wpranksmile_api_access_key' );
+			$field = new Ranksmile_Form_Element_Hidden( 'ranksmile_api_access_key' );
 		}
 		$field->set_label( __( 'Ranksmile API Key', 'ranksmileseo' ) );
 		$field->set_hint( __( '[DEVELOPER FIELD] API key used to make requests to Ranksmile API.', 'ranksmileseo' ) );
 		$field->set_classes( 'regular-text' );
-		$field->set_value( get_option( 'wpranksmile_api_access_key', false ) );
+		$field->set_value( get_option( 'ranksmile_api_access_key', false ) );
 		$field->add_validator( new Validator_Is_Required() );
 		$this->add_field( $field );
 
@@ -445,8 +429,8 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 					<div class="ranksmile-connection-box--not-connected">
 						<p class="ranksmile-connection-box__actions" style="margin-left: 0px;">
 							<button class="ranksmile-button ranksmile-button--small ranksmile-button--primary ranksmile-button--icon-left ranksmile_make_connection">
-								<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-									<path fill-rule="evenodd" clip-rule="evenodd" d="M5.81787 2.47021C3.6605 2.47021 1.91161 4.2191 1.91161 6.37647V11.114H1.08594L2.6885 13.4377L4.29107 11.114H3.47411V6.37647C3.47411 5.08205 4.52345 4.03271 5.81787 4.03271H13.9141C15.0837 4.03271 16.0319 4.98089 16.0319 6.15053H17.5944C17.5944 4.11795 15.9467 2.47021 13.9141 2.47021H5.81787ZM11.102 13.9185H12.5042C12.7045 13.9185 12.8247 13.7582 12.8247 13.598V7.06752C12.8247 6.8672 12.6645 6.74701 12.5042 6.74701H11.102C10.9016 6.74701 10.7815 6.90727 10.7815 7.06752V13.598C10.7815 13.7582 10.9417 13.9185 11.102 13.9185ZM6.93533 13.9185H8.33757C8.5379 13.9185 8.65809 13.7582 8.65809 13.598V9.4313C8.65809 9.23098 8.49783 9.11079 8.33757 9.11079H6.93533C6.73501 9.11079 6.61482 9.27104 6.61482 9.4313V13.5579C6.61482 13.7582 6.77507 13.9185 6.93533 13.9185ZM15.2149 9.50644H16.0319V14.244C16.0319 15.5384 14.9826 16.5877 13.6881 16.5877H5.59192C4.42228 16.5877 3.4741 15.6395 3.4741 14.4699H1.9116C1.9116 16.5025 3.55934 18.1502 5.59192 18.1502H13.6881C15.8455 18.1502 17.5944 16.4013 17.5944 14.244V9.50644H18.42L16.8175 7.18272L15.2149 9.50644Z" fill="white"/>
+								<svg width="20" height="20" viewBox="0 0 226 226" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+									<path fill-rule="evenodd" clip-rule="evenodd" d="M91.4595 26.5015C102.568 12.8345 123.432 12.8345 134.54 26.5015C140.447 33.7678 149.618 37.5668 158.932 36.6049C176.451 34.7958 191.204 49.5488 189.395 67.0678C188.433 76.382 192.232 85.5535 199.498 91.4595C213.165 102.568 213.165 123.432 199.498 134.54C192.232 140.447 188.433 149.618 189.395 158.932C191.204 176.451 176.451 191.204 158.932 189.395C149.618 188.433 140.447 192.232 134.54 199.498C123.432 213.165 102.568 213.165 91.4595 199.498C85.5535 192.232 76.382 188.433 67.0678 189.395C49.5488 191.204 34.7958 176.451 36.6049 158.932C37.5668 149.618 33.7678 140.447 26.5015 134.54C12.8345 123.432 12.8345 102.568 26.5015 91.4595C33.7678 85.5535 37.5668 76.382 36.6049 67.0678C34.7958 49.5488 49.5488 34.7958 67.0678 36.6049C76.382 37.5668 85.5535 33.7678 91.4595 26.5015ZM73 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M123 112.5a7.5 7.5 0 1 0 15 0a7.5 7.5 0 1 0 -15 0M88 125.5C97 141 113 141 122 125.5C119.5 129 98.5 129 88 125.5Z" fill="white"/>
 								</svg>
 								<?php esc_html_e( 'Log in and integrate with Ranksmile', 'ranksmileseo' ); ?>
 							</button>
@@ -506,7 +490,7 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 							</p>
 
 							<p class="ranksmile-connection-box__actions">
-								<a href="<?php echo esc_attr( Ranksmile()->get_plugin()->get_ranksmile_url() ); ?>/api/gsc/connect?redirect=/wordpress" class="ranksmile-button ranksmile-button--primary ranksmile-button--small" target="_blank">
+								<a href="<?php echo esc_attr( Ranksmile()->get_plugin()->get_ranksmile_url() ); ?>/api/gsc/connect?redirect=/settings/google_search_console" class="ranksmile-button ranksmile-button--primary ranksmile-button--small" target="_blank">
 									<?php esc_html_e( 'Add GSC account to Ranksmile', 'ranksmileseo' ); ?>
 								</a>
 							</p>
@@ -659,9 +643,9 @@ class Ranksmile_Form_Config_Ci extends Ranksmile_Form {
 		}
 
 		// phpcs:ignore
-		if ( isset( $_POST['wpranksmile_api_access_key'] ) ) {
+		if ( isset( $_POST['ranksmile_api_access_key'] ) ) {
 			// phpcs:ignore
-			update_option( 'wpranksmile_api_access_key', sanitize_text_field( wp_unslash( $_POST['wpranksmile_api_access_key'] ) ) );
+			update_option( 'ranksmile_api_access_key', sanitize_text_field( wp_unslash( $_POST['ranksmile_api_access_key'] ) ) );
 		}
 
 		return $saved;

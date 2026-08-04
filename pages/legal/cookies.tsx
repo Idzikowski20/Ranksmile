@@ -65,7 +65,7 @@ const CookiesPage: NextPage = () => (
 
     <h2>3. Analytics and product improvement</h2>
     <p>
-      We may use PostHog (or similar) to understand feature adoption and improve the product. These
+      We may use product analytics tools to understand feature adoption and improve the product. These
       cookies or local storage keys are non-essential. Legal basis: consent where required
       (Art. 6(1)(a) GDPR), otherwise legitimate interests for aggregated product analytics where
       permitted.

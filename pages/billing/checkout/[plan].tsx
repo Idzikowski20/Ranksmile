@@ -3,8 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React from 'react';
 import toast from 'react-hot-toast';
-import posthog from 'posthog-js';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import { loadStripe } from '@stripe/stripe-js';
 import AppShell from '../../../components/common/AppShell';
 import { Icon } from '../../../components/koala/icons';
@@ -24,6 +23,7 @@ import {
   getTrialEndDateLabel,
 } from '../../../lib/billingPlans';
 import { blocksNewPaidCheckout, getLockedCheckoutPlanSlug } from '../../../lib/billingPlanLock';
+import { resolveCheckoutMode } from '../../../lib/billingTrial';
 import { isAllowedSubscriptionChange, type UpgradePreview } from '../../../lib/billingUpgrade';
 import { getOrgBillingState } from '../../../lib/orgBilling';
 import type { SubscriptionDetails } from '../../../lib/subscriptionDetails';
@@ -51,6 +51,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   plan, billing, mode, trialStartLabel, trialEndLabel, nextChargeLabel, stripeCheckoutEnabled,
 }) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [countryOpen, setCountryOpen] = React.useState(false);
   const [country, setCountry] = React.useState(mode === 'upfront' ? 'Poland' : '');
   const [addressLine, setAddressLine] = React.useState('');
@@ -97,10 +98,15 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
     { enabled: isUpgrade && stripeCheckoutEnabled, retry: false, staleTime: 30 * 1000 },
   );
 
-  const goToOrderConfirmation = () => {
+  const goToOrderConfirmation = (confirmationToken?: string | null) => {
+    // Entitlement just changed — force ApplicationShell off stale BILLING_REQUIRED.
+    void queryClient.invalidateQueries(['bootstrap']);
+    if (!confirmationToken) {
+      void router.push('/');
+      return;
+    }
     const q = new URLSearchParams();
-    q.set('plan', plan.slug);
-    q.set('billing', billing);
+    q.set('token', confirmationToken);
     void router.push(`/billing/confirmation/success?${q.toString()}`);
   };
 
@@ -118,6 +124,105 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   const [cardExpiry, setCardExpiry] = React.useState('');
   const [cardCvc, setCardCvc] = React.useState('');
   const [mockErrors, setMockErrors] = React.useState<Record<string, string>>({});
+
+  type TaxPreviewState = {
+    taxAmountCents: number;
+    amountTotalCents: number;
+    taxPercent: number | null;
+    taxLabel: string;
+  };
+  const [taxPreview, setTaxPreview] = React.useState<TaxPreviewState | null>(null);
+  const [taxLoading, setTaxLoading] = React.useState(false);
+
+  const taxCacheRef = React.useRef(new Map<string, TaxPreviewState>());
+
+  const addressReady = Boolean(
+    company.addressValue
+    && company.addressValue.address.line1.trim()
+    && company.addressValue.address.city.trim()
+    && company.addressValue.address.postal_code.trim()
+    && company.addressValue.address.country.trim().length === 2,
+  );
+
+  const addressKey = addressReady && company.addressValue
+    ? [
+      company.addressValue.address.country,
+      company.addressValue.address.postal_code,
+      company.addressValue.address.city,
+      company.addressValue.address.line1,
+      company.addressValue.address.state,
+      company.taxId.trim(),
+      plan.slug,
+      billing,
+    ].join('|')
+    : '';
+
+  React.useEffect(() => {
+    if (!stripeCheckoutEnabled || !addressKey || !company.addressValue) {
+      setTaxPreview(null);
+      setTaxLoading(false);
+      return;
+    }
+
+    const cached = taxCacheRef.current.get(addressKey);
+    if (cached) {
+      setTaxPreview(cached);
+      setTaxLoading(false);
+      return;
+    }
+
+    setTaxLoading(true);
+    setTaxPreview(null);
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const addr = company.addressValue!.address;
+          const res = await fetch('/api/billing/tax-preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: ctrl.signal,
+            body: JSON.stringify({
+              planSlug: plan.slug,
+              billing,
+              taxId: company.taxId.trim() || null,
+              address: {
+                line1: addr.line1,
+                line2: addr.line2,
+                city: addr.city,
+                state: addr.state,
+                postal_code: addr.postal_code,
+                country: addr.country,
+              },
+            }),
+          });
+          const data = await res.json() as TaxPreviewState & { error?: string };
+          if (!res.ok) {
+            setTaxPreview(null);
+            return;
+          }
+          const next = {
+            taxAmountCents: data.taxAmountCents,
+            amountTotalCents: data.amountTotalCents,
+            taxPercent: data.taxPercent,
+            taxLabel: data.taxLabel,
+          };
+          taxCacheRef.current.set(addressKey, next);
+          setTaxPreview(next);
+        } catch (e) {
+          if ((e as { name?: string } | null)?.name === 'AbortError') return;
+          setTaxPreview(null);
+        } finally {
+          if (!ctrl.signal.aborted) setTaxLoading(false);
+        }
+      })();
+    }, 280);
+
+    return () => {
+      window.clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [addressKey, billing, company.addressValue, company.taxId, plan.slug, stripeCheckoutEnabled]);
 
   const handleAddressChange = React.useCallback((event: Parameters<typeof addressFromStripeEvent>[0]) => {
     const parsed = addressFromStripeEvent(event);
@@ -144,6 +249,9 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
     if (!stripeCheckoutEnabled && !country) {
       errors.country = 'Select your country';
     }
+    if (!addressLine.trim()) errors.addressLine = 'Enter street address';
+    if (!city.trim()) errors.city = 'Enter city';
+    if (!zip.trim()) errors.zip = 'Enter postal code';
     setMockErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -165,11 +273,6 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   };
 
   const handleTrialStart = async () => {
-    posthog.capture('checkout_started', {
-      plan: plan.name,
-      billing,
-      mode: 'trial',
-    });
     if (stripeCheckoutEnabled) {
       await stripeRef.current?.submit();
       return;
@@ -204,7 +307,15 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
         return;
       }
       if (data.status === 'upgraded') {
-        goToOrderConfirmation();
+        const issued = await fetch('/api/billing/issue-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planSlug: plan.slug, billing }),
+        });
+        const issuedBody = issued.ok
+          ? await issued.json() as { confirmationToken?: string }
+          : {};
+        goToOrderConfirmation(issuedBody.confirmationToken ?? null);
         return;
       }
       if (data.status === 'requires_payment' && data.clientSecret && data.publishableKey) {
@@ -216,7 +327,7 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
         const result = await stripe.confirmPayment({
           clientSecret: data.clientSecret,
           confirmParams: {
-            return_url: `${window.location.origin}/billing/confirmation/success?plan=${encodeURIComponent(plan.slug)}&billing=${encodeURIComponent(billing)}`,
+            return_url: `${window.location.origin}/dashboard`,
           },
           redirect: 'if_required',
         });
@@ -224,7 +335,15 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
           toast.error(result.error.message ?? 'Payment failed');
           return;
         }
-        goToOrderConfirmation();
+        const issued = await fetch('/api/billing/issue-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planSlug: plan.slug, billing }),
+        });
+        const issuedBody = issued.ok
+          ? await issued.json() as { confirmationToken?: string }
+          : {};
+        goToOrderConfirmation(issuedBody.confirmationToken ?? null);
         return;
       }
       toast.error('Could not complete upgrade');
@@ -236,11 +355,6 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
   };
 
   const handleUpfrontPurchase = async () => {
-    posthog.capture('checkout_started', {
-      plan: plan.name,
-      billing,
-      mode: 'upfront',
-    });
     if (isUpgrade) {
       await handleUpgradePurchase();
       return;
@@ -256,8 +370,8 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
     goToOrderConfirmation();
   };
 
-  const handleStripeSuccess = () => {
-    goToOrderConfirmation();
+  const handleStripeSuccess = (confirmationToken?: string | null) => {
+    goToOrderConfirmation(confirmationToken);
   };
 
   const handleStripeError = (message: string) => {
@@ -313,6 +427,13 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
       onAddressLine={setAddressLine}
       onCity={setCity}
       onZip={setZip}
+      taxPreview={taxPreview}
+      taxLoading={taxLoading}
+      ctaBlocked={
+        stripeCheckoutEnabled
+          ? (!addressReady || taxLoading)
+          : !(addressLine.trim() && city.trim() && zip.trim())
+      }
     />
   );
 
@@ -362,13 +483,28 @@ const CheckoutPage: NextPage<CheckoutProps> = ({
 
 export const getServerSideProps: GetServerSideProps<CheckoutProps> = async (ctx) => {
   const rawPlan = typeof ctx.params?.plan === 'string' ? ctx.params.plan : '';
+  if (rawPlan.trim().toLowerCase() === 'starter') {
+    const billing = ctx.query.billing === 'monthly' ? 'monthly' : 'yearly';
+    const mode = ctx.query.mode === 'upfront' ? 'upfront' : 'trial';
+    return {
+      redirect: {
+        destination: `/billing/checkout/growth?billing=${billing}&mode=${mode}`,
+        permanent: false,
+      },
+    };
+  }
   const plan = getCheckoutPlan(rawPlan);
   if (!plan) return { notFound: true };
 
   const billing = ctx.query.billing === 'monthly' ? 'monthly' : 'yearly';
-  const mode: CheckoutMode = ctx.query.mode === 'upfront' ? 'upfront' : 'trial';
+  const requestedMode: CheckoutMode | undefined = ctx.query.mode === 'upfront'
+    ? 'upfront'
+    : ctx.query.mode === 'trial'
+      ? 'trial'
+      : undefined;
   const now = new Date();
 
+  let billingState: Awaited<ReturnType<typeof getOrgBillingState>> = null;
   try {
     const user = await getCurrentUser(
       ctx.req as unknown as NextApiRequest,
@@ -376,7 +512,7 @@ export const getServerSideProps: GetServerSideProps<CheckoutProps> = async (ctx)
     );
     if (user) {
       const { orgId } = await ensureUserTenancy(user.id);
-      const billingState = await getOrgBillingState(orgId);
+      billingState = await getOrgBillingState(orgId);
       const locked = getLockedCheckoutPlanSlug(billingState);
       if (locked && locked === plan.slug) {
         return {
@@ -389,6 +525,17 @@ export const getServerSideProps: GetServerSideProps<CheckoutProps> = async (ctx)
     }
   } catch {
     // Unauthenticated or tenancy errors — fall through to checkout UI.
+  }
+
+  const mode = resolveCheckoutMode(plan.slug, requestedMode, billingState);
+  // Canonical URL: Scale/Agency never keep ?mode=trial; Growth without eligibility → upfront.
+  if (requestedMode !== mode) {
+    return {
+      redirect: {
+        destination: `/billing/checkout/${plan.slug}?billing=${billing}&mode=${mode}`,
+        permanent: false,
+      },
+    };
   }
 
   const nextCharge = new Date(now);

@@ -55,14 +55,11 @@ interface Props {
   articleId: string;
   onChanged: () => void;
   onClose: () => void;
-  shareUrl?: string;
-  /** Opaque share token for anonymous reviewers; omitted for authenticated owners. */
-  shareToken?: string;
   style?: React.CSSProperties;
 }
 
 /** Figma-style dark bubble holding one comment thread: discussion + replies + reactions. */
-const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, shareUrl, shareToken, style }: Props) => {
+const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, style }: Props) => {
   const [reply, setReply] = useState('');
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -137,13 +134,13 @@ const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, sh
       setTimeout(() => setBursts((prev) => prev.filter((b) => b.id !== id)), 1500);
     }
     // Persist in the background (SSE reconciles other clients).
-    fetch(commentsUrl(articleId, shareToken), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commentId, reaction: { emoji, author: author.name } }) }).catch(() => {});
+    fetch(commentsUrl(articleId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commentId, reaction: { emoji, author: author.name } }) }).catch(() => {});
   };
 
   const api = (method: string, body: Record<string, unknown>) => {
     const url = method === 'DELETE'
-      ? commentsUrl(articleId, shareToken, { commentId: String(body.commentId) })
-      : commentsUrl(articleId, shareToken);
+      ? commentsUrl(articleId, { commentId: String(body.commentId) })
+      : commentsUrl(articleId);
     return fetch(url, method === 'DELETE'
       ? { method }
       : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -152,7 +149,7 @@ const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, sh
 
   const deleteComment = (id: string) => {
     setDeletedIds((prev) => new Set(prev).add(id));
-    fetch(commentsUrl(articleId, shareToken, { commentId: id }), { method: 'DELETE' })
+    fetch(commentsUrl(articleId, { commentId: id }), { method: 'DELETE' })
       .then(() => onChanged())
       .catch(() => setDeletedIds((prev) => { const n = new Set(prev); n.delete(id); return n; }));
   };
@@ -164,13 +161,13 @@ const CommentThreadBubble = ({ thread, author, articleId, onChanged, onClose, sh
     // Show the reply instantly with a "Sending…" state; persist in the background.
     const tmp = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     setPendingReplies((prev) => [...prev, { id: tmp, parentId: thread.id, quote: '', text, images: [], author: author.name, color: author.color, avatar: author.avatar, resolved: false, reactions: {}, createdAt: Date.now(), updatedAt: null, pending: true }]);
-    fetch(commentsUrl(articleId, shareToken), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parentId: thread.id, text, author: author.name, color: author.color, avatar: author.avatar || '' }) })
+    fetch(commentsUrl(articleId), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parentId: thread.id, text, author: author.name, color: author.color, avatar: author.avatar || '' }) })
       .then(() => onChanged())
       .catch(() => setPendingReplies((prev) => prev.filter((p) => p.id !== tmp)));
   };
 
   const copyLink = () => {
-    const base = shareUrl || (typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '');
+    const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
     try { navigator.clipboard?.writeText(`${base}#c-${thread.id}`); } catch { /* ignore */ }
     setMenuOpen(false);
   };

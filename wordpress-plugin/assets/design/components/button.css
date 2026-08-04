@@ -1,0 +1,15 @@
+﻿.ranksmile-admin .rs-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--rs-space-2);
+  height: 36px; padding: 0 var(--rs-space-4); border-radius: var(--rs-radius-btn);
+  border: var(--rs-border-width) var(--rs-border-style) transparent;
+  font-family: var(--rs-font-body); font-size: var(--rs-text-md); font-weight: 500; line-height: var(--rs-leading-md);
+  cursor: pointer; text-decoration: none; transition: background var(--rs-transition-fast), border-color var(--rs-transition-fast), color var(--rs-transition-fast);
+}
+.ranksmile-admin .rs-btn:focus-visible { outline: none; box-shadow: var(--rs-shadow-focus); }
+.ranksmile-admin .rs-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ranksmile-admin .rs-btn--primary { background: var(--rs-brand); color: var(--rs-text-on-brand); }
+.ranksmile-admin .rs-btn--primary:hover:not(:disabled) { background: var(--rs-brand-hover); color: var(--rs-text-on-brand); }
+.ranksmile-admin .rs-btn--secondary { background: var(--rs-bg-primary); color: var(--rs-text-primary); border-color: var(--rs-border-strong); }
+.ranksmile-admin .rs-btn--secondary:hover:not(:disabled) { background: var(--rs-bg-secondary); }
+.ranksmile-admin .rs-btn--ghost { background: transparent; color: var(--rs-text-secondary); }
+.ranksmile-admin .rs-btn--sm { height: 32px; padding: 0 var(--rs-space-3); font-size: var(--rs-text-sm); }

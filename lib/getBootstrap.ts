@@ -8,6 +8,15 @@ import {
   findSetupWorkspaceId,
   type Workspace,
 } from './workspaces';
+import { getOrgBillingState } from './orgBilling';
+import { ensureUserTenancy } from './tenancy';
+import { isPaymentFailedLocked } from './paymentFailedLock';
+import {
+  buildAccessSnapshot,
+  projectBillingState,
+  projectWorkspaceState,
+  type AccessSnapshot,
+} from './appAccess';
 
 export type BootstrapData = {
   onboarding: { completed: boolean };
@@ -17,15 +26,20 @@ export type BootstrapData = {
   role: string | null;
   setupWorkspaceId: number | null;
   canCreateSetup: boolean;
+  /** @deprecated Prefer access.redirect.redirect — kept for cold-start callers */
   redirectTo: string | null;
+  access: AccessSnapshot;
   userId?: string;
 };
 
 export type GetBootstrapOptions = {
   activeWorkspaceCookie?: string;
-  /** Compute redirectTo for index / cold-start routing. */
+  /** Compute redirectTo / access.redirect for index / cold-start routing. */
   resolveRedirect?: boolean;
-  /** When resolveRedirect and user needs setup, create the setup workspace (index GSSP only). */
+  /**
+   * When resolveRedirect and app needs a setup workspace (entitled, no ready WS),
+   * create/reuse setup. Never creates workspace before billing entitlement.
+   */
   createSetupIfNeeded?: boolean;
 };
 
@@ -50,36 +64,68 @@ function resolveActiveId(
   return workspaces[0]?.id ?? null;
 }
 
-function computeRedirect(
-  data: Pick<BootstrapData, 'onboarding' | 'email' | 'workspaces' | 'activeId' | 'role' | 'canCreateSetup' | 'setupWorkspaceId'>,
-  setupIdForRedirect: number | null,
-): string | null {
-  if (!data.email.confirmed) return '/auth/confirm-account';
-  if (!data.onboarding.completed) return '/onboarding';
-  if (data.workspaces.length > 0) {
-    const wsId = data.activeId ?? data.workspaces[0].id;
-    return `/workspace/${wsId}/dashboard`;
-  }
-  if (!data.canCreateSetup) return '/no-access';
-  if (setupIdForRedirect) return `/workspace/${setupIdForRedirect}/setup`;
-  return '/onboarding';
-}
-
-/** Single source of truth for session bootstrap (GSSP, API, guards). */
+/** Single source of truth for session bootstrap (GSSP, API, ApplicationShell). */
 export async function getBootstrap(
   userId: string,
   opts: GetBootstrapOptions = {},
 ): Promise<BootstrapData> {
-  const [onboardingCompleted, emailStatus, workspaces, role, setupWorkspaceId] = await Promise.all([
+  const { orgId } = await ensureUserTenancy(userId);
+
+  const [onboardingCompleted, emailStatus, workspaces, role, setupWorkspaceId, billing] = await Promise.all([
     getOnboardingCompleted(userId),
     getConfirmationStatus(userId),
     listWorkspaces(userId),
     getCallerRole(userId),
     findSetupWorkspaceId(userId),
+    getOrgBillingState(orgId),
   ]);
 
   const canCreateSetup = role === 'owner' || role === 'admin';
   const activeId = resolveActiveId(workspaces, opts.activeWorkspaceCookie);
+
+  const billingState = projectBillingState({
+    subscriptionStatus: billing?.subscriptionStatus ?? null,
+    paymentFailedLocked: isPaymentFailedLocked(billing),
+  });
+  let workspaceState = projectWorkspaceState({
+    readyCount: workspaces.length,
+    setupId: setupWorkspaceId,
+  });
+
+  let setupId = setupWorkspaceId;
+
+  // Only materialize setup workspace when billing already entitles the org.
+  const entitled = billingState === 'TRIAL' || billingState === 'ACTIVE';
+  if (
+    opts.createSetupIfNeeded
+    && opts.resolveRedirect
+    && onboardingCompleted
+    && emailStatus.confirmed
+    && entitled
+    && workspaces.length === 0
+    && canCreateSetup
+    && !setupId
+  ) {
+    setupId = await createSetupWorkspace(userId);
+    workspaceState = projectWorkspaceState({
+      readyCount: workspaces.length,
+      setupId,
+    });
+  }
+
+  const access = buildAccessSnapshot({
+    emailConfirmed: emailStatus.confirmed,
+    onboardingCompleted,
+    billingState,
+    billingSince: billing?.paymentFailedLockedAt
+      ?? billing?.trialEndsAt
+      ?? billing?.currentPeriodEnd
+      ?? null,
+    workspaceState,
+    setupWorkspaceId: setupId,
+    activeWorkspaceId: activeId,
+    canCreateSetup,
+  });
 
   const base: BootstrapData = {
     onboarding: { completed: onboardingCompleted },
@@ -87,26 +133,11 @@ export async function getBootstrap(
     workspaces,
     activeId,
     role,
-    setupWorkspaceId,
+    setupWorkspaceId: setupId,
     canCreateSetup,
-    redirectTo: null,
+    redirectTo: opts.resolveRedirect ? access.redirect.redirect : null,
+    access,
   };
 
-  if (!opts.resolveRedirect) return base;
-
-  let setupIdForRedirect = setupWorkspaceId;
-  if (
-    onboardingCompleted
-    && emailStatus.confirmed
-    && workspaces.length === 0
-    && canCreateSetup
-    && !setupIdForRedirect
-    && opts.createSetupIfNeeded
-  ) {
-    setupIdForRedirect = await createSetupWorkspace(userId);
-    base.setupWorkspaceId = setupIdForRedirect;
-  }
-
-  base.redirectTo = computeRedirect(base, setupIdForRedirect);
   return base;
 }

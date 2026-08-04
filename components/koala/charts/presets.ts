@@ -1,4 +1,4 @@
-import { formatCompactNumber, formatNumber, formatRank } from './formatters';
+import { formatCompactNumber, formatNumber, formatPercent, formatRank } from './formatters';
 import type { ChartPresetName, RendererConfig } from './types';
 
 /** Preset → RendererConfig. Single source of truth for chart chrome. */
@@ -11,9 +11,14 @@ const PRESETS: Record<ChartPresetName, RendererConfig> = {
     showGrid: true,
     reverseY: false,
     minimal: false,
-    valueFormatter: (v) => formatCompactNumber(v),
+    valueFormatter: (v, seriesLabel) => {
+      if (seriesLabel === 'CTR') return formatPercent(v, 1).replace(/^\+/, '');
+      if (seriesLabel === 'Position') return formatRank(v);
+      return formatCompactNumber(v);
+    },
     compactLabels: false,
     areaGradient: true,
+    independentY: true,
   },
   KeywordTrend: {
     variant: 'bar',
